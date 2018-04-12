@@ -42,6 +42,21 @@ for shader in root.iter(namespace + "FxCompile"):
 
         file.write("_6_0 ")
 
+        file.write("-D SHADERCOMPILER_SPIRV -D ");
+        
+        if profile == "Vertex":
+            file.write("SPIRV_SHADERTYPE_VS")
+        if profile == "Pixel":
+            file.write("SPIRV_SHADERTYPE_PS")
+        if profile == "Geometry":
+            file.write("SPIRV_SHADERTYPE_GS")
+        if profile == "Hull":
+            file.write("SPIRV_SHADERTYPE_HS")
+        if profile == "Domain":
+            file.write("SPIRV_SHADERTYPE_DS")
+        if profile == "Compute":
+            file.write("SPIRV_SHADERTYPE_CS")
+
         file.write(" -spirv -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso \n")
 
 

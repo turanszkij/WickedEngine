@@ -1,12 +1,34 @@
 #ifndef _WICKEDENGINE_SHADERINTEROP_H_
 #define _WICKEDENGINE_SHADERINTEROP_H_
 
+// Descriptor layout counts:
+#define GPU_RESOURCE_HEAP_CBV_COUNT		15
+#define GPU_RESOURCE_HEAP_SRV_COUNT		64
+#define GPU_RESOURCE_HEAP_UAV_COUNT		8
+#define GPU_SAMPLER_HEAP_COUNT			16
+
+
+// Vulkan Descriptor layout offsets:
+#define VULKAN_DESCRIPTOR_SET_OFFSET_CBV				0
+
+#define VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE		VULKAN_DESCRIPTOR_SET_OFFSET_CBV + GPU_RESOURCE_HEAP_CBV_COUNT
+#define VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER	VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + GPU_RESOURCE_HEAP_SRV_COUNT
+#define VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER	VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + GPU_RESOURCE_HEAP_SRV_COUNT
+
+#define VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE		VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + GPU_RESOURCE_HEAP_SRV_COUNT
+#define VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER	VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + GPU_RESOURCE_HEAP_UAV_COUNT
+#define VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER	VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + GPU_RESOURCE_HEAP_UAV_COUNT
+
+#define VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER			VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + GPU_RESOURCE_HEAP_UAV_COUNT
+
+
+
 #include "ConstantBufferMapping.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
 
 
-#ifdef __cplusplus
+#ifdef __cplusplus // not invoking shader compiler, but included in engine source
 
 // Application-side types:
 
@@ -29,6 +51,64 @@ typedef XMINT4 int4;
 #else
 
 // Shader - side types:
+
+#ifdef SHADERCOMPILER_SPIRV // invoking Vulkan shader compiler (HLSL -> SPIRV)
+
+#if defined(SPIRV_SHADERTYPE_VS)
+#define VULKAN_DESCRIPTOR_SET_ID 0
+#elif defined(SPIRV_SHADERTYPE_HS)
+#define VULKAN_DESCRIPTOR_SET_ID 1
+#elif defined(SPIRV_SHADERTYPE_DS)
+#define VULKAN_DESCRIPTOR_SET_ID 2
+#elif defined(SPIRV_SHADERTYPE_GS)
+#define VULKAN_DESCRIPTOR_SET_ID 3
+#elif defined(SPIRV_SHADERTYPE_PS)
+#define VULKAN_DESCRIPTOR_SET_ID 4
+#elif defined(SPIRV_SHADERTYPE_CS)
+#define VULKAN_DESCRIPTOR_SET_ID 5
+#else
+#error You must specify a shader type when compiling spirv to resolve descriptor sets! (eg. #define SPIRV_SHADERTYPE_VS)
+#endif
+
+
+#define CBUFFER(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_CBV, VULKAN_DESCRIPTOR_SET_ID)]] cbuffer name
+
+#define RAWBUFFER(name,slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] ByteAddressBuffer name
+#define RWRAWBUFFER(name,slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RWByteAddressBuffer name
+
+#define TYPEDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] Buffer< type > name
+#define RWTYPEDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RWBuffer< type > name
+
+#define STRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] StructuredBuffer< type > name
+#define RWSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RWStructuredBuffer< type > name
+#define ROVSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedStructuredBuffer< type > name
+
+
+#define TEXTURE1D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture1D< type > name;
+#define TEXTURE1DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture1DArray< type > name;
+#define RWTEXTURE1D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture1D< type > name;
+
+#define TEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture2D< type > name;
+#define TEXTURE2DMS(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DMS< type > name;
+#define TEXTURE2DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DArray< type > name;
+#define RWTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture2D< type > name;
+#define ROVTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture2D< type > name;
+
+#define TEXTURECUBE(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] TextureCube< type > name;
+#define TEXTURECUBEARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] TextureCubeArray< type > name;
+
+#define TEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture3D< type > name;
+#define RWTEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture3D< type > name;
+#define ROVTEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture3D< type > name;
+
+
+#define SAMPLERSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER, VULKAN_DESCRIPTOR_SET_ID)]] SamplerState name;
+#define SAMPLERCOMPARISONSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER, VULKAN_DESCRIPTOR_SET_ID)]] SamplerComparisonState name;
+
+
+
+#else // invoking DirectX shader compiler
+
 
 #define CBUFFER(name, slot) cbuffer name : register(b ## slot)
 
@@ -63,6 +143,8 @@ typedef XMINT4 int4;
 
 #define SAMPLERSTATE(name, slot) SamplerState name : register(s ## slot);
 #define SAMPLERCOMPARISONSTATE(name, slot) SamplerComparisonState name : register(s ## slot);
+
+#endif // invoking vulkan/directx
 
 #endif // __cplusplus
 

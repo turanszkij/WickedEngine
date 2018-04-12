@@ -42,6 +42,8 @@ for shader in root.iter(namespace + "FxCompile"):
 
         file.write("_6_0 ")
 
+        file.write(" -D SHADER_MODEL_6 ");
+
         file.write(" -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso \n")
 
 

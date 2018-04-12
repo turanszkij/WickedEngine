@@ -12,9 +12,12 @@
 
 namespace wiGraphicsTypes
 {
+	struct FrameResources;
+	struct DescriptorTableFrameAllocator;
 
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
+		friend struct DescriptorTableFrameAllocator;
 	private:
 
 		VkInstance instance;
@@ -43,8 +46,11 @@ namespace wiGraphicsTypes
 		VkPipelineLayout defaultPipelineLayout_Graphics;
 		VkPipelineLayout defaultPipelineLayout_Compute;
 		VkDescriptorSetLayout defaultDescriptorSetlayouts[SHADERSTAGE_COUNT];
+		uint32_t descriptorCount;
 
-		VkBuffer nullBuffer;
+		VkBuffer	nullBuffer;
+		VkImage		nullImage;
+		VkSampler	nullSampler;
 
 		struct FrameResources
 		{
@@ -56,19 +62,19 @@ namespace wiGraphicsTypes
 
 			struct DescriptorTableFrameAllocator
 			{
-				VkDevice device;
+				GraphicsDevice_Vulkan* device;
 				VkDescriptorPool descriptorPool;
 				VkDescriptorSet descriptorSet_CPU[SHADERSTAGE_COUNT];
 				std::vector<VkDescriptorSet> descriptorSet_GPU[SHADERSTAGE_COUNT];
 				UINT ringOffset[SHADERSTAGE_COUNT];
 				bool dirty[SHADERSTAGE_COUNT];
 
-				DescriptorTableFrameAllocator(VkDevice device, UINT maxRenameCount, VkDescriptorSetLayout* defaultDescriptorSetlayouts);
+				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();
 
-				void reset(VkDevice device, VkBuffer nullBuffer);
-				void update(SHADERSTAGE stage, UINT slot, VkBuffer descriptor, VkDevice device, VkCommandBuffer commandList);
-				void validate(VkDevice device, VkCommandBuffer commandList, VkPipelineLayout pipelineLayout_Graphics, VkPipelineLayout pipelineLayout_Compute);
+				void reset();
+				void update(SHADERSTAGE stage, UINT slot, VkBuffer descriptor, VkCommandBuffer commandList);
+				void validate(VkCommandBuffer commandList);
 			};
 			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];
 

@@ -2,7 +2,7 @@
 #include "wiGraphicsDevice_Vulkan.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
-#include "ResourceMapping.h"
+#include "ShaderInterop.h"
 
 #include <sstream>
 #include <vector>
@@ -392,17 +392,37 @@ namespace wiGraphicsTypes
 
 
 
-
-	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(VkDevice device, UINT maxRenameCount, VkDescriptorSetLayout* defaultDescriptorSetlayouts) : device(device)
+	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount) : device(device)
 	{
 		// Create descriptor pool:
 		{
 			uint32_t numTables = SHADERSTAGE_COUNT * (maxRenameCount + 1); // (gpu * maxRenameCount) + (1 * cpu staging table)
 
-			VkDescriptorPoolSize tableLayout[1] = {};
+			VkDescriptorPoolSize tableLayout[8] = {};
 
 			tableLayout[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			tableLayout[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
+
+			tableLayout[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			tableLayout[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+
+			tableLayout[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+			tableLayout[2].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+
+			tableLayout[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			tableLayout[3].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+
+			tableLayout[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			tableLayout[4].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+
+			tableLayout[5].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+			tableLayout[5].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+
+			tableLayout[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+			tableLayout[6].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+
+			tableLayout[7].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+			tableLayout[7].descriptorCount = GPU_SAMPLER_HEAP_COUNT;
 
 
 			std::vector<VkDescriptorPoolSize> poolSizes;
@@ -423,7 +443,7 @@ namespace wiGraphicsTypes
 			poolInfo.maxSets = numTables;
 			//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
-			if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+			if (vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
 				throw std::runtime_error("failed to create descriptor pool!");
 			}
 
@@ -436,9 +456,9 @@ namespace wiGraphicsTypes
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 			allocInfo.descriptorPool = descriptorPool;
 			allocInfo.descriptorSetCount = SHADERSTAGE_COUNT;
-			allocInfo.pSetLayouts = defaultDescriptorSetlayouts;
+			allocInfo.pSetLayouts = device->defaultDescriptorSetlayouts;
 
-			if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSet_CPU) != VK_SUCCESS) {
+			if (vkAllocateDescriptorSets(device->device, &allocInfo, descriptorSet_CPU) != VK_SUCCESS) {
 				throw std::runtime_error("failed to allocate descriptor set!");
 			}
 		}
@@ -453,12 +473,12 @@ namespace wiGraphicsTypes
 
 			for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 			{
-				allocInfo.pSetLayouts = &defaultDescriptorSetlayouts[stage];
+				allocInfo.pSetLayouts = &device->defaultDescriptorSetlayouts[stage];
 				descriptorSet_GPU[stage].resize(SHADERSTAGE_COUNT * maxRenameCount);
 
 				for (uint32_t i = 0; i < maxRenameCount; ++i)
 				{
-					if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet_GPU[stage][i]) != VK_SUCCESS) {
+					if (vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet_GPU[stage][i]) != VK_SUCCESS) {
 						throw std::runtime_error("failed to allocate descriptor set!");
 					}
 				}
@@ -479,9 +499,9 @@ namespace wiGraphicsTypes
 	}
 	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
-		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+		vkDestroyDescriptorPool(device->device, descriptorPool, nullptr);
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset(VkDevice device, VkBuffer nullBuffer)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset()
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
@@ -492,7 +512,7 @@ namespace wiGraphicsTypes
 			// STAGING CPU descriptor table needs to be initialized:
 
 			VkDescriptorBufferInfo bufferInfo = {};
-			bufferInfo.buffer = nullBuffer;
+			bufferInfo.buffer = device->nullBuffer;
 			bufferInfo.offset = 0;
 			bufferInfo.range = VK_WHOLE_SIZE;
 
@@ -511,10 +531,10 @@ namespace wiGraphicsTypes
 				writeDescriptors[i].pTexelBufferView = nullptr; // Optional
 			}
 
-			vkUpdateDescriptorSets(device, ARRAYSIZE(writeDescriptors), writeDescriptors, 0, nullptr);
+			vkUpdateDescriptorSets(device->device, ARRAYSIZE(writeDescriptors), writeDescriptors, 0, nullptr);
 		}
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, VkBuffer descriptor, VkDevice device, VkCommandBuffer commandList)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, VkBuffer descriptor, VkCommandBuffer commandList)
 	{
 		//if (descriptor == nullptr)
 		//{
@@ -530,7 +550,7 @@ namespace wiGraphicsTypes
 
 		//device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(VkDevice device, VkCommandBuffer commandList, VkPipelineLayout pipelineLayout_Graphics, VkPipelineLayout pipelineLayout_Compute)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(VkCommandBuffer commandList)
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
@@ -555,17 +575,17 @@ namespace wiGraphicsTypes
 					copyDescriptors[i].dstArrayElement = 0;
 				}
 
-				vkUpdateDescriptorSets(device, 0, nullptr, ARRAYSIZE(copyDescriptors), copyDescriptors);
+				vkUpdateDescriptorSets(device->device, 0, nullptr, ARRAYSIZE(copyDescriptors), copyDescriptors);
 
 
 				// 2.) Bind GPU visible descriptor table which we just updated:
 				if (stage == CS)
 				{
-					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout_Compute, 0, 1, &descriptorSet_GPU[stage][ringOffset[stage]], 0, nullptr);
+					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_COMPUTE, device->defaultPipelineLayout_Compute, 0, 1, &descriptorSet_GPU[stage][ringOffset[stage]], 0, nullptr);
 				}
 				else
 				{
-					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout_Graphics, stage, 1, &descriptorSet_GPU[stage][ringOffset[stage]], 0, nullptr);
+					vkCmdBindDescriptorSets(commandList, VK_PIPELINE_BIND_POINT_GRAPHICS, device->defaultPipelineLayout_Graphics, stage, 1, &descriptorSet_GPU[stage][ringOffset[stage]], 0, nullptr);
 				}
 
 
@@ -1075,7 +1095,136 @@ namespace wiGraphicsTypes
 		// Create default pipeline:
 		{
 
-			// ??? what about different srv types though?
+
+			// The desired layout will be as such (per shader stage):
+			//
+			//	=====================================================================================================================
+			//	|	DX11 name											|	Vulkan name				|	Descriptor count			|
+			//	|====================================================================================================================
+			//	|	cbuffer												|	Uniform Buffer			|	GPU_RESOURCE_HEAP_CBV_COUNT |
+			//	|														|							|								|
+			//	|	Texture												|	Sampled Image			|	GPU_RESOURCE_HEAP_SRV_COUNT |
+			//	|	Buffer												|	Uniform Texel Buffer	|	GPU_RESOURCE_HEAP_SRV_COUNT |
+			//	|	StructuredBuffer, ByteAddressBuffer					|	Storage Buffer			|	GPU_RESOURCE_HEAP_SRV_COUNT |
+			//	|														|							|								|
+			//	|	RWTexture											|	Storage Image			|	GPU_RESOURCE_HEAP_UAV_COUNT |
+			//	|	RWBuffer											|	Storage Texel Buffer	|	GPU_RESOURCE_HEAP_UAV_COUNT |
+			//	|	RWStructuredBuffer, RWByteAddressBuffer				|	Storage Buffer			|	GPU_RESOURCE_HEAP_UAV_COUNT |
+			//	|														|							|								|
+			//	|	SamplerState										|	Sampler					|	GPU_SAMPLER_HEAP_COUNT		|
+			//	=====================================================================================================================
+
+			std::vector<VkDescriptorSetLayoutBinding> layoutBindings = {};
+
+			int j = 0;
+			int offset = j;
+
+			// NOTE: we will create the layoutBinding beforehand, but only change the shader stage binding later:
+
+			// Constant Buffers:
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_CBV);
+			for (; j < GPU_RESOURCE_HEAP_CBV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+			// Shader Resource Views:
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE);
+			for (; j < offset + GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER);
+			for (; j < offset + GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER);
+			for (; j < offset + GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+
+			// Unordered Access Views:
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE);
+			for (; j < offset + GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER);
+			for (; j < offset + GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER);
+			for (; j < offset + GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+
+			// Samplers:
+			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER);
+			for (; j < offset + GPU_SAMPLER_HEAP_COUNT; ++j)
+			{
+				VkDescriptorSetLayoutBinding layoutBinding = {};
+				layoutBinding.stageFlags = 0;
+				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				layoutBinding.binding = j;
+				layoutBinding.descriptorCount = 1;
+				layoutBindings.push_back(layoutBinding);
+			}
+			offset = j;
+
+			descriptorCount = j;
+
 
 			for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 			{
@@ -1103,49 +1252,11 @@ namespace wiGraphicsTypes
 					break;
 				}
 
-				std::vector<VkDescriptorSetLayoutBinding> layoutBindings = {};
-
-				int j = 0;
-
-				for(; j < GPU_RESOURCE_HEAP_CBV_COUNT; ++j)
+				// all stages will have the same layout, just different shader stage visibility:
+				for (auto& x : layoutBindings)
 				{
-					VkDescriptorSetLayoutBinding layoutBinding = {};
-					layoutBinding.stageFlags = vkstage;
-					layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-					layoutBinding.binding = j;
-					layoutBinding.descriptorCount = 1;
-					layoutBindings.push_back(layoutBinding);
+					x.stageFlags = vkstage;
 				}
-
-				//for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
-				//{
-				//	VkDescriptorSetLayoutBinding layoutBinding = {};
-				//	layoutBinding.stageFlags = vkstage;
-				//	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-				//	layoutBinding.binding = j;
-				//	layoutBinding.descriptorCount = 1;
-				//	layoutBindings.push_back(layoutBinding);
-				//}
-
-				//for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
-				//{
-				//	VkDescriptorSetLayoutBinding layoutBinding = {};
-				//	layoutBinding.stageFlags = vkstage;
-				//	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-				//	layoutBinding.binding = j;
-				//	layoutBinding.descriptorCount = 1;
-				//	layoutBindings.push_back(layoutBinding);
-				//}
-
-				//for (; j < GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT + GPU_SAMPLER_HEAP_COUNT; ++j)
-				//{
-				//	VkDescriptorSetLayoutBinding layoutBinding = {};
-				//	layoutBinding.stageFlags = vkstage;
-				//	layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-				//	layoutBinding.binding = j;
-				//	layoutBinding.descriptorCount = 1;
-				//	layoutBindings.push_back(layoutBinding);
-				//}
 
 				VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
 				descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1382,7 +1493,7 @@ namespace wiGraphicsTypes
 				// Create immediate resource allocators:
 				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 				{
-					frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(device, 1024, defaultDescriptorSetlayouts);
+					frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
 				}
 
@@ -1479,6 +1590,51 @@ namespace wiGraphicsTypes
 			res = vkBindBufferMemory(device, nullBuffer, mem, 0);
 			assert(res == VK_SUCCESS);
 		}
+		{
+			VkImageCreateInfo imageInfo = {};
+			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			imageInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageInfo.extent.width = 1;
+			imageInfo.extent.height = 1;
+			imageInfo.extent.depth = 1;
+			imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+			imageInfo.arrayLayers = 1;
+			imageInfo.mipLevels = 1;
+			imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageInfo.usage = 0;
+			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+			imageInfo.flags = 0;
+
+			VkResult res = vkCreateImage(device, &imageInfo, nullptr, &nullImage);
+			assert(res == VK_SUCCESS);
+
+
+			// Allocate resource backing memory:
+			VkMemoryRequirements memRequirements;
+			vkGetImageMemoryRequirements(device, nullImage, &memRequirements);
+
+			VkMemoryAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			allocInfo.allocationSize = memRequirements.size;
+			allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+			VkDeviceMemory mem;
+			if (vkAllocateMemory(device, &allocInfo, nullptr, &mem) != VK_SUCCESS) {
+				throw std::runtime_error("failed to allocate image memory!");
+			}
+
+			res = vkBindImageMemory(device, nullImage, mem, 0);
+			assert(res == VK_SUCCESS);
+		}
+		{
+			VkSamplerCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+			VkResult res = vkCreateSampler(device, &createInfo, nullptr, &nullSampler);
+			assert(res == VK_SUCCESS);
+		}
 
 
 		// Preinitialize staging descriptor tables:
@@ -1486,7 +1642,7 @@ namespace wiGraphicsTypes
 		{
 			for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 			{
-				frame.ResourceDescriptorsGPU[threadID]->reset(device, nullBuffer);
+				frame.ResourceDescriptorsGPU[threadID]->reset();
 			}
 		}
 
@@ -2026,12 +2182,11 @@ namespace wiGraphicsTypes
 	HRESULT GraphicsDevice_Vulkan::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
 		pSamplerState->desc = *pSamplerDesc;
-		pSamplerState->resource_Vulkan = new VkSampler*;
 
 		VkSamplerCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-		if (vkCreateSampler(device, &createInfo, nullptr, static_cast<VkSampler*>(pSamplerState->resource_Vulkan)) != VK_SUCCESS) {
+		if (vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create sampler!");
 		}
 
@@ -2044,7 +2199,6 @@ namespace wiGraphicsTypes
 	HRESULT GraphicsDevice_Vulkan::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 	{
 		pso->desc = *pDesc;
-
 
 		std::vector<VkAttachmentDescription> attachments;
 		std::vector<VkAttachmentReference> colorAttachmentRefs;
@@ -2379,28 +2533,39 @@ namespace wiGraphicsTypes
 
 
 		// Blending:
-		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachment.blendEnable = VK_FALSE;
-		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(subpass.colorAttachmentCount);
+		for (size_t i = 0; i < colorBlendAttachments.size(); ++i)
+		{
+			colorBlendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+			colorBlendAttachments[i].blendEnable = VK_FALSE;
+			colorBlendAttachments[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+			colorBlendAttachments[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+			colorBlendAttachments[i].colorBlendOp = VK_BLEND_OP_ADD; // Optional
+			colorBlendAttachments[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+			colorBlendAttachments[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+			colorBlendAttachments[i].alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+		}
 
 		VkPipelineColorBlendStateCreateInfo colorBlending = {};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
+		colorBlending.pAttachments = colorBlendAttachments.data();
 		colorBlending.blendConstants[0] = 0.0f; // Optional
 		colorBlending.blendConstants[1] = 0.0f; // Optional
 		colorBlending.blendConstants[2] = 0.0f; // Optional
 		colorBlending.blendConstants[3] = 0.0f; // Optional
 
 		pipelineInfo.pColorBlendState = &colorBlending;
+
+
+		// Tessellation:
+		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
+		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+		tessellationInfo.patchControlPoints = 3;
+
+		pipelineInfo.pTessellationState = &tessellationInfo;
 
 
 
@@ -2429,6 +2594,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 	{
+		return S_OK;
+
 		VkComputePipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 		pipelineInfo.layout = defaultPipelineLayout_Compute;
@@ -2621,7 +2788,7 @@ namespace wiGraphicsTypes
 
 
 			// reset descriptor allocators:
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullBuffer);
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset();
 
 			// reset immediate resource allocators:
 			GetFrameResources().resourceBuffer[threadID]->clear();
@@ -2778,15 +2945,15 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		//vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		//vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID), defaultPipelineLayout_Graphics, defaultPipelineLayout_Compute);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		//vkCmdDraw(GetDirectCommandList(threadID), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
@@ -2806,7 +2973,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID), defaultPipelineLayout_Graphics, defaultPipelineLayout_Compute);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		//vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
