@@ -1122,15 +1122,15 @@ namespace wiGraphicsTypes
 			//	|	DX11 Memory Type	|	Slot	|	HLSL name								||	Vulkan name				|	Descriptor count				|
 			//	|===============================================================================||==============================================================|
 			//	|	ImmediateIndexable	|	b		|	cbuffer, ConstantBuffer					||	Uniform Buffer			|	GPU_RESOURCE_HEAP_CBV_COUNT		|
-			//	|						|			|											||							|									|
+			//	|-----------------------|-----------|-------------------------------------------||--------------------------|-----------------------------------|
 			//	|	ShaderResourceView	|	t		|	Texture									||	Sampled Image			|	GPU_RESOURCE_HEAP_SRV_COUNT		|
 			//	|						|			|	Buffer									||	Uniform Texel Buffer	|	GPU_RESOURCE_HEAP_SRV_COUNT		|
 			//	|						|			|	StructuredBuffer, ByteAddressBuffer		||	Storage Buffer			|	GPU_RESOURCE_HEAP_SRV_COUNT		|
-			//	|						|			|											||							|									|
+			//	|-----------------------|-----------|-------------------------------------------||--------------------------|-----------------------------------|
 			//	|	UnorderedAccessView	|	u		|	RWTexture								||	Storage Image			|	GPU_RESOURCE_HEAP_UAV_COUNT		|
 			//	|						|			|	RWBuffer								||	Storage Texel Buffer	|	GPU_RESOURCE_HEAP_UAV_COUNT		|
 			//	|						|			|	RWStructuredBuffer, RWByteAddressBuffer	||	Storage Buffer			|	GPU_RESOURCE_HEAP_UAV_COUNT		|
-			//	|						|			|											||							|									|
+			//	|-----------------------|-----------|-------------------------------------------||--------------------------|-----------------------------------|
 			//	|	Sampler				|	s		|	SamplerState							||	Sampler					|	GPU_SAMPLER_HEAP_COUNT			|
 			//	================================================================================||===============================================================
 			//
