@@ -1420,6 +1420,9 @@ namespace wiGraphicsTypes
 			if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &defaultRenderPass) != VK_SUCCESS) {
 				throw std::runtime_error("failed to create render pass!");
 			}
+
+			memset(renderPassActive, 0, sizeof(renderPassActive));
+			memset(attachments, 0, sizeof(attachments));
 		}
 
 		// Create frame resources:
@@ -1991,7 +1994,7 @@ namespace wiGraphicsTypes
 		}
 
 
-		if ((*ppTexture2D)->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if ((*ppTexture2D)->desc.BindFlags & BIND_SHADER_RESOURCE || (*ppTexture2D)->desc.BindFlags & BIND_RENDER_TARGET || (*ppTexture2D)->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
 			UINT arraySize = (*ppTexture2D)->desc.ArraySize;
 			UINT sampleCount = (*ppTexture2D)->desc.SampleDesc.Count;
@@ -2819,6 +2822,10 @@ namespace wiGraphicsTypes
 
 			// reset immediate resource allocators:
 			GetFrameResources().resourceBuffer[threadID]->clear();
+
+			memset(renderPassActive, 0, sizeof(renderPassActive));
+			memset(attachments, 0, sizeof(attachments));
+			attachmentCount = 0;
 		}
 
 		RESOLUTIONCHANGED = false;
@@ -2878,12 +2885,61 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		assert(NumViews <= 8);
+		for (UINT i = 0; i < NumViews; ++i)
+		{
+			attachments[threadID][i] = static_cast<VkImageView>(ppRenderTargets[i]->SRV_Vulkan); // SRV -> RTV
+		}
+		attachmentCount = NumViews;
+
+		if (depthStencilTexture != nullptr)
+		{
+			attachments[threadID][attachmentCount] = static_cast<VkImageView>(depthStencilTexture->SRV_Vulkan); // SRV -> DSV
+			attachmentCount++;
+		}
+
 	}
 	void GraphicsDevice_Vulkan::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		//VkClearValue clearColor = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
+
+		//VkClearAttachment clearInfo = {};
+		//clearInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//clearInfo.clearValue = clearColor;
+		//clearInfo.colorAttachment = 0;
+
+		//VkClearRect rect = {};
+		//rect.baseArrayLayer = 0;
+		//rect.layerCount = 1;
+		//rect.rect.offset.x = 0;
+		//rect.rect.offset.y = 0;
+		//rect.rect.extent.width = SCREENWIDTH;
+		//rect.rect.extent.height = SCREENHEIGHT;
+
+		//vkCmdClearAttachments(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), 1, &clearInfo, 1, &rect);
 	}
 	void GraphicsDevice_Vulkan::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		//VkClearValue clearColor;
+		//clearColor.depthStencil.depth = Depth;
+		//clearColor.depthStencil.stencil = Stencil;
+
+		//VkClearAttachment clearInfo = {};
+		//clearInfo.aspectMask = 0;
+		//clearInfo.aspectMask |= ClearFlags & CLEAR_DEPTH ? VK_IMAGE_ASPECT_DEPTH_BIT : 0;
+		//clearInfo.aspectMask |= ClearFlags & CLEAR_STENCIL ? VK_IMAGE_ASPECT_STENCIL_BIT : 0;
+		//clearInfo.clearValue = clearColor;
+		//clearInfo.colorAttachment = 0;
+
+		//VkClearRect rect = {};
+		//rect.baseArrayLayer = 0;
+		//rect.layerCount = 1;
+		//rect.rect.offset.x = 0;
+		//rect.rect.offset.y = 0;
+		//rect.rect.extent.width = SCREENWIDTH;
+		//rect.rect.extent.height = SCREENHEIGHT;
+
+		//vkCmdClearAttachments(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), 1, &clearInfo, 1, &rect);
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -2973,6 +3029,42 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
 		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+
+		VkRenderPass renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
+
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderPass;
+		framebufferInfo.attachmentCount = attachmentCount;
+		framebufferInfo.pAttachments = attachments[threadID];
+		framebufferInfo.width = swapChainExtent.width;
+		framebufferInfo.height = swapChainExtent.height;
+		framebufferInfo.layers = 1;
+
+		VkFramebuffer frameBuffer;
+		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+
+
+		static const VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = renderPass;
+		renderPassInfo.framebuffer = frameBuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+
+
+		if (renderPassActive[threadID])
+		{
+			vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
+		}
+		vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		renderPassActive[threadID] = true;
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{

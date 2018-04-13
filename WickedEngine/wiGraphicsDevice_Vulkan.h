@@ -52,6 +52,10 @@ namespace wiGraphicsTypes
 		VkImage		nullImage;
 		VkSampler	nullSampler;
 
+		bool renderPassActive[GRAPHICSTHREAD_COUNT];
+		VkImageView attachments[GRAPHICSTHREAD_COUNT][9];
+		uint32_t attachmentCount = 0;
+
 		struct FrameResources
 		{
 			VkFence frameFence;
