@@ -1092,27 +1092,30 @@ namespace wiGraphicsTypes
 		// Create default pipeline:
 		{
 
-
-			// The desired descriptor layout will be as such (per shader stage):
 			//
-			//	We are mapping HLSL constructs to Vulkan descriptor type equivalents. The difference is that DX11 manages resource bindings by "Memory Type"
+			//								##################################################################################
+			//								##		The desired descriptor layout will be as such (per shader stage)		##
+			//								##################################################################################
+			//
+			//	- We are mapping HLSL constructs to Vulkan descriptor type equivalents. The difference is that DX11 manages resource bindings by "Memory Type"
 			//		but HLSL has distinctive resource types which map to them. Vulkan API has a more straight forward mapping but we are emulating the
 			//		DX11 system for now...
 			//
-			//	We are creating this table (descriptor set) for every shader stage. The SPIR-V shaders will have set and layout bindings compiled
+			//	- We are creating this table (descriptor set) for every shader stage. The SPIR-V shaders will have set and layout bindings compiled
 			//		into them for each resource. 
 			//			- The [layout set] binding will correspond to shader stage
 			//				- except in compute shader because it will have only single descriptor table, special logic will handle that
 			//			- The [layout location] binding will correspond to Vulkan name offset inside the set which is hard coded 
 			//				(eg. see VULKAN_DESCRIPTOR_SET_OFFSET_CBV in ShaderInterop_Vulkan.h)
 			//
-			//	Left hand side of this table is essentially DX12-like descriptor table layout (per stage)
+			//	- Left hand side of this table is essentially DX12-like descriptor table layout (per stage)
 			//		- DX12 maps perfectly to DX11 regarding table layout
-			//	Right hand side is corresponding Vulkan layout (per stage).
+			//	- Right hand side is corresponding Vulkan layout (per stage).
 			//		- Vulkan implementation has bigger tables. 
 			//			- CBV table has same amount like DX12
 			//			- SRV table has 3x amount of DX12
-			//			- CBV table has 3x amount of DX12
+			//			- UAV table has 3x amount of DX12
+			//				- UAV counter buffer would take +1x but not used for now...
 			//			- Sampler table has same amount like DX12
 			//
 			//	================================================================================||===============================================================
