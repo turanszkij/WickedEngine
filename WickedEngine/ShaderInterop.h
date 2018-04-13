@@ -43,8 +43,8 @@ typedef XMINT4 int4;
 #define VULKAN_DESCRIPTOR_SET_ID 3
 #elif defined(SPIRV_SHADERTYPE_PS)
 #define VULKAN_DESCRIPTOR_SET_ID 4
-#elif defined(SPIRV_SHADERTYPE_CS)
-#define VULKAN_DESCRIPTOR_SET_ID 5
+#elif defined(SPIRV_SHADERTYPE_CS) // cs is different in that it only has single descriptor table, so we will index the first
+#define VULKAN_DESCRIPTOR_SET_ID 0
 #else
 #error You must specify a shader type when compiling spirv to resolve descriptor sets! (eg. #define SPIRV_SHADERTYPE_VS)
 #endif
