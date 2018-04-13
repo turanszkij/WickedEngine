@@ -2,7 +2,7 @@
 #include "wiGraphicsDevice_Vulkan.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
-#include "ShaderInterop.h"
+#include "ShaderInterop_Vulkan.h"
 
 #include <sstream>
 #include <vector>
@@ -1096,23 +1096,34 @@ namespace wiGraphicsTypes
 		{
 
 
-			// The desired layout will be as such (per shader stage):
+			// The desired descriptor layout will be as such (per shader stage):
 			//
-			//	=====================================================================================================================
-			//	|	DX11 name											|	Vulkan name				|	Descriptor count			|
-			//	|====================================================================================================================
-			//	|	cbuffer												|	Uniform Buffer			|	GPU_RESOURCE_HEAP_CBV_COUNT |
-			//	|														|							|								|
-			//	|	Texture												|	Sampled Image			|	GPU_RESOURCE_HEAP_SRV_COUNT |
-			//	|	Buffer												|	Uniform Texel Buffer	|	GPU_RESOURCE_HEAP_SRV_COUNT |
-			//	|	StructuredBuffer, ByteAddressBuffer					|	Storage Buffer			|	GPU_RESOURCE_HEAP_SRV_COUNT |
-			//	|														|							|								|
-			//	|	RWTexture											|	Storage Image			|	GPU_RESOURCE_HEAP_UAV_COUNT |
-			//	|	RWBuffer											|	Storage Texel Buffer	|	GPU_RESOURCE_HEAP_UAV_COUNT |
-			//	|	RWStructuredBuffer, RWByteAddressBuffer				|	Storage Buffer			|	GPU_RESOURCE_HEAP_UAV_COUNT |
-			//	|														|							|								|
-			//	|	SamplerState										|	Sampler					|	GPU_SAMPLER_HEAP_COUNT		|
-			//	=====================================================================================================================
+			//	We are mapping HLSL constructs to Vulkan descriptor type equivalents. The difference is that DX11 manages resource bindings by "Memory Type"
+			//		but HLSL has distinctive resource types which map to them. Vulkan API has a more straight forward mapping but we are emulating the
+			//		DX11 system for now...
+			//
+			//	We are creating this table (descriptor set) for every shader stage. The SPIR-V shaders will have set and layout bindings compiled
+			//		into them for each resource. 
+			//			- The [layout set] binding will correspond to shader stage
+			//			- The [layout location] binding will correspond to Vulkan name offset inside the set which is hard coded 
+			//				(eg. see VULKAN_DESCRIPTOR_SET_OFFSET_CBV in ShaderInterop_Vulkan.h)
+			//
+			//	============================||===================================================================================================================
+			//	|	DX11 Memory Type		||	HLSL name											|	Vulkan name				|	Descriptor count			|
+			//	|===========================||==================================================================================================================|
+			//	|	ImmediateIndexable		||	cbuffer, ConstantBuffer								|	Uniform Buffer			|	GPU_RESOURCE_HEAP_CBV_COUNT |
+			//	|							||														|							|								|
+			//	|	ShaderResourceView		||	Texture												|	Sampled Image			|	GPU_RESOURCE_HEAP_SRV_COUNT |
+			//	|							||	Buffer												|	Uniform Texel Buffer	|	GPU_RESOURCE_HEAP_SRV_COUNT |
+			//	|							||	StructuredBuffer, ByteAddressBuffer					|	Storage Buffer			|	GPU_RESOURCE_HEAP_SRV_COUNT |
+			//	|							||														|							|								|
+			//	|	UnorderedAccessView		||	RWTexture											|	Storage Image			|	GPU_RESOURCE_HEAP_UAV_COUNT |
+			//	|							||	RWBuffer											|	Storage Texel Buffer	|	GPU_RESOURCE_HEAP_UAV_COUNT |
+			//	|							||	RWStructuredBuffer, RWByteAddressBuffer				|	Storage Buffer			|	GPU_RESOURCE_HEAP_UAV_COUNT |
+			//	|							||														|							|								|
+			//	|	Sampler					||	SamplerState										|	Sampler					|	GPU_SAMPLER_HEAP_COUNT		|
+			//	============================||===================================================================================================================
+			//
 
 			std::vector<VkDescriptorSetLayoutBinding> layoutBindings = {};
 
