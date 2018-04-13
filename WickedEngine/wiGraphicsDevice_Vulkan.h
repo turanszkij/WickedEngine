@@ -48,9 +48,11 @@ namespace wiGraphicsTypes
 		VkDescriptorSetLayout defaultDescriptorSetlayouts[SHADERSTAGE_COUNT];
 		uint32_t descriptorCount;
 
-		VkBuffer	nullBuffer;
-		VkImage		nullImage;
-		VkSampler	nullSampler;
+		VkBuffer		nullBuffer;
+		VkBufferView	nullBufferView;
+		VkImage			nullImage;
+		VkImageView		nullImageView;
+		VkSampler		nullSampler;
 
 		bool renderPassActive[GRAPHICSTHREAD_COUNT];
 		VkImageView attachments[GRAPHICSTHREAD_COUNT][9];
