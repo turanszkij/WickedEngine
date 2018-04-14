@@ -1137,6 +1137,39 @@ namespace wiGraphicsTypes
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
+	inline VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
+	{
+		switch (value)
+		{
+		case COMPARISON_NEVER:
+			return VK_COMPARE_OP_NEVER;
+			break;
+		case COMPARISON_LESS:
+			return VK_COMPARE_OP_LESS;
+			break;
+		case COMPARISON_EQUAL:
+			return VK_COMPARE_OP_EQUAL;
+			break;
+		case COMPARISON_LESS_EQUAL:
+			return VK_COMPARE_OP_LESS_OR_EQUAL;
+			break;
+		case COMPARISON_GREATER:
+			return VK_COMPARE_OP_GREATER;
+			break;
+		case COMPARISON_NOT_EQUAL:
+			return VK_COMPARE_OP_NOT_EQUAL;
+			break;
+		case COMPARISON_GREATER_EQUAL:
+			return VK_COMPARE_OP_GREATER_OR_EQUAL;
+			break;
+		case COMPARISON_ALWAYS:
+			return VK_COMPARE_OP_ALWAYS;
+			break;
+		default:
+			break;
+		}
+		return VK_COMPARE_OP_NEVER;
+	}
 
 
 	// Engine functions
@@ -1917,20 +1950,6 @@ namespace wiGraphicsTypes
 		// Initiate first commands:
 		for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 		{
-			VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
-
-			VkRenderPassBeginInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = defaultRenderPass;
-			renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = swapChainExtent;
-			renderPassInfo.clearValueCount = 1;
-			renderPassInfo.pClearValues = &clearColor;
-
-			// Begin presentation render pass...
-			vkCmdBeginRenderPass(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
 			VkRect2D scissors[8];
 			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
 			{
@@ -2808,6 +2827,7 @@ namespace wiGraphicsTypes
 		{
 			depthstencil.depthTestEnable = pDesc->dss->desc.DepthEnable ? 1 : 0;
 			depthstencil.depthWriteEnable = pDesc->dss->desc.DepthWriteMask != DEPTH_WRITE_MASK_ZERO;
+			depthstencil.depthCompareOp = _ConvertComparisonFunc(pDesc->dss->desc.DepthFunc);
 
 			depthstencil.stencilTestEnable = pDesc->dss->desc.StencilEnable ? 1 : 0;
 		}
@@ -2980,6 +3000,7 @@ namespace wiGraphicsTypes
 			vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 		}
 		renderPassActive[GRAPHICSTHREAD_IMMEDIATE] = true;
+		renderPassDirty[GRAPHICSTHREAD_IMMEDIATE] = false;
 
 
 		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
@@ -3308,13 +3329,13 @@ namespace wiGraphicsTypes
 				voffsets[i] = offsets[i];
 			}
 		}
-		vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+		//vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
 		if (indexBuffer != nullptr)
 		{
-			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			//vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
@@ -3467,6 +3488,47 @@ namespace wiGraphicsTypes
 		// TODO: realloc on wrap or something
 
 
+
+
+
+		//VkBufferMemoryBarrier barrier = {};
+		//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		//barrier.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
+		//barrier.srcAccessMask = 0;
+		//if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		//{
+		//	barrier.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+		//}
+		//else if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		//{
+		//	barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+		//}
+		//else if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		//{
+		//	barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+		//}
+		//else
+		//{
+		//	barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		//}
+		//barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		//vkCmdPipelineBarrier(
+		//	GetDirectCommandList(threadID),
+		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	1, &barrier,
+		//	0, nullptr
+		//);
+
+
+
+
+
+
+
 		// provide immediate buffer allocation address and issue deferred data copy:
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 4);
 
@@ -3478,6 +3540,25 @@ namespace wiGraphicsTypes
 		copyQueueLock.lock();
 		vkCmdCopyBuffer(copyCommandBuffer, GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
 		copyQueueLock.unlock();
+
+
+
+
+
+		//VkAccessFlags tmp = barrier.srcAccessMask;
+		//barrier.srcAccessMask = barrier.dstAccessMask;
+		//barrier.dstAccessMask = tmp;
+
+		//vkCmdPipelineBarrier(
+		//	GetDirectCommandList(threadID),
+		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	1, &barrier,
+		//	0, nullptr
+		//);
+
 
 
 
@@ -3544,7 +3625,7 @@ namespace wiGraphicsTypes
 		//barrier.subresourceRange.baseMipLevel = 0;
 		//barrier.subresourceRange.levelCount = 1;
 		//vkCmdPipelineBarrier(
-		//	GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE),
+		//	GetDirectCommandList(threadID),
 		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		//	VK_DEPENDENCY_BY_REGION_BIT,

@@ -1592,13 +1592,27 @@ void wiRenderer::LoadShaders()
 											desc.DSFormat = DSFormat_full;
 											break;
 										case SHADERTYPE_FORWARD:
-											desc.numRTs = 2;
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
 											desc.RTFormats[0] = RTFormat_hdr;
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
 											desc.DSFormat = DSFormat_full;
 											break;
 										case SHADERTYPE_TILEDFORWARD:
-											desc.numRTs = 2;
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
 											desc.RTFormats[0] = RTFormat_hdr;
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
 											desc.DSFormat = DSFormat_full;
@@ -1698,9 +1712,8 @@ void wiRenderer::LoadShaders()
 			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
-			desc.numRTs = 2;
+			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			desc.DSFormat = DSFormat_full;
 
 			desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
@@ -1743,9 +1756,9 @@ void wiRenderer::LoadShaders()
 			desc.bs = blendStates[BSTYPE_DECAL];
 			desc.dss = depthStencils[DSSTYPE_DECAL];
 
-			desc.numRTs = 2;
+			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_gbuffer_0;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			//desc.RTFormats[1] = RTFormat_gbuffer_1;
 
 			RECREATE(PSO_decal);
 			device->CreateGraphicsPSO(&desc, PSO_decal);
