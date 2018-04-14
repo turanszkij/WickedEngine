@@ -2817,7 +2817,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	}
 	deviceContexts[threadID]->RSSetViewports(NumViewports, d3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 	GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
@@ -2862,7 +2862,7 @@ void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *p
 
 	deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slotUAV, countUAV, UAVs, nullptr);
 }
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
 	ID3D11RenderTargetView* renderTargetViews[8];

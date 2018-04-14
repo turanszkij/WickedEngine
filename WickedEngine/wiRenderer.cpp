@@ -4866,7 +4866,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 									{
 										// render transparent shadowmap:
-										Texture* rts[] = {
+										Texture2D* rts[] = {
 											Light::shadowMapArray_Transparent
 										};
 										GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
@@ -4922,7 +4922,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 								{
 									// render transparent shadowmap:
-									Texture* rts[] = {
+									Texture2D* rts[] = {
 										Light::shadowMapArray_Transparent
 									};
 									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
@@ -5722,7 +5722,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				probe->isUpToDate = true;
 			}
 
-			GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
+			GetDevice()->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
 			const float clearColor[4] = { 0,0,0,1 };
 			GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe->textureIndex);
 			GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);

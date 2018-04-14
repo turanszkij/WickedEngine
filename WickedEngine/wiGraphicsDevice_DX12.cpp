@@ -3165,7 +3165,7 @@ namespace wiGraphicsTypes
 		}
 		GetDirectCommandList(threadID)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
@@ -3178,7 +3178,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptors[8] = {};
 		for (UINT i = 0; i < NumViews; ++i)

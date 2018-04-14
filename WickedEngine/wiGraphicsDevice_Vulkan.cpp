@@ -542,7 +542,7 @@ namespace wiGraphicsTypes
 				for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
 				{
 					imageInfo[i].imageView = device->nullImageView;
-					imageInfo->imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				}
 
 				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -597,7 +597,7 @@ namespace wiGraphicsTypes
 				for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
 				{
 					imageInfo[i].imageView = device->nullImageView;
-					imageInfo->imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 				}
 
 				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -1639,7 +1639,10 @@ namespace wiGraphicsTypes
 			}
 
 			memset(renderPassActive, 0, sizeof(renderPassActive));
+			memset(renderPassDirty, 0, sizeof(renderPassDirty));
 			memset(attachments, 0, sizeof(attachments));
+			memset(attachmentCount, 0, sizeof(attachmentCount));
+			memset(attachmentsExtents, 0, sizeof(attachmentsExtents));
 		}
 
 		// Create frame resources:
@@ -1876,28 +1879,6 @@ namespace wiGraphicsTypes
 			res = vkBindImageMemory(device, nullImage, mem, 0);
 			assert(res == VK_SUCCESS);
 
-			VkImageMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.image = nullImage;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = 1;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = 1;
-			vkCmdPipelineBarrier(
-				GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE),
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT,
-				0, nullptr, 
-				0, nullptr,
-				1, &barrier
-			);
-
 
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1929,6 +1910,36 @@ namespace wiGraphicsTypes
 			{
 				frame.ResourceDescriptorsGPU[threadID]->reset();
 			}
+		}
+
+
+
+		// Initiate first commands:
+		for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
+		{
+			VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
+
+			VkRenderPassBeginInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = defaultRenderPass;
+			renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = swapChainExtent;
+			renderPassInfo.clearValueCount = 1;
+			renderPassInfo.pClearValues = &clearColor;
+
+			// Begin presentation render pass...
+			vkCmdBeginRenderPass(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			VkRect2D scissors[8];
+			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
+			{
+				scissors[i].offset.x = 0;
+				scissors[i].offset.y = 0;
+				scissors[i].extent.width = 65535;
+				scissors[i].extent.height = 65535;
+			}
+			vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
 		}
 
 	}
@@ -2964,6 +2975,13 @@ namespace wiGraphicsTypes
 
 
 
+		if (renderPassActive[GRAPHICSTHREAD_IMMEDIATE])
+		{
+			vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
+		}
+		renderPassActive[GRAPHICSTHREAD_IMMEDIATE] = true;
+
+
 		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
 
 		VkRenderPassBeginInfo renderPassInfo = {};
@@ -3078,6 +3096,16 @@ namespace wiGraphicsTypes
 			res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[threadID], &beginInfo);
 			assert(res == VK_SUCCESS);
 
+			VkRect2D scissors[8];
+			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
+			{
+				scissors[i].offset.x = 0;
+				scissors[i].offset.y = 0;
+				scissors[i].extent.width = 65535;
+				scissors[i].extent.height = 65535;
+			}
+			vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
+
 
 			// reset descriptor allocators:
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset();
@@ -3086,8 +3114,10 @@ namespace wiGraphicsTypes
 			GetFrameResources().resourceBuffer[threadID]->clear();
 
 			memset(renderPassActive, 0, sizeof(renderPassActive));
+			memset(renderPassDirty, 0, sizeof(renderPassDirty));
 			memset(attachments, 0, sizeof(attachments));
-			attachmentCount = 0;
+			memset(attachmentCount, 0, sizeof(attachmentCount));
+			memset(attachmentsExtents, 0, sizeof(attachmentsExtents));
 		}
 
 		RESOLUTIONCHANGED = false;
@@ -3141,24 +3171,32 @@ namespace wiGraphicsTypes
 		}
 		vkCmdSetViewport(GetDirectCommandList(threadID), 0, NumViewports, viewports);
 	}
-	void GraphicsDevice_Vulkan::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+	void GraphicsDevice_Vulkan::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 	}
-	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
 			attachments[threadID][i] = static_cast<VkImageView>(ppRenderTargets[i]->SRV_Vulkan); // SRV -> RTV
+
+			attachmentsExtents[threadID].width = ppRenderTargets[i]->desc.Width;
+			attachmentsExtents[threadID].height = ppRenderTargets[i]->desc.Height;
 		}
-		attachmentCount = NumViews;
+		attachmentCount[threadID] = NumViews;
 
 		if (depthStencilTexture != nullptr)
 		{
-			attachments[threadID][attachmentCount] = static_cast<VkImageView>(depthStencilTexture->SRV_Vulkan); // SRV -> DSV
-			attachmentCount++;
+			attachments[threadID][attachmentCount[threadID]] = static_cast<VkImageView>(depthStencilTexture->SRV_Vulkan); // SRV -> DSV
+			attachmentCount[threadID]++;
+
+			attachmentsExtents[threadID].width = depthStencilTexture->desc.Width;
+			attachmentsExtents[threadID].height = depthStencilTexture->desc.Height;
 		}
+
+		renderPassDirty[threadID] = true;
 
 	}
 	void GraphicsDevice_Vulkan::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
@@ -3256,28 +3294,28 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
 	{
-		//VkDeviceSize voffsets[8] = {};
-		//VkBuffer vbuffers[8] = {};
-		//assert(count <= 8);
-		//for (int i = 0; i < count; ++i)
-		//{
-		//	if (vertexBuffers[i] != nullptr)
-		//	{
-		//		vbuffers[i] = static_cast<VkBuffer>(vertexBuffers[i]->resource_Vulkan);
-		//	}
-		//	if (offsets != nullptr)
-		//	{
-		//		voffsets[i] = offsets[i];
-		//	}
-		//}
-		//vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+		VkDeviceSize voffsets[8] = {};
+		VkBuffer vbuffers[8] = {};
+		assert(count <= 8);
+		for (int i = 0; i < count; ++i)
+		{
+			if (vertexBuffers[i] != nullptr)
+			{
+				vbuffers[i] = static_cast<VkBuffer>(vertexBuffers[i]->resource_Vulkan);
+			}
+			if (offsets != nullptr)
+			{
+				voffsets[i] = offsets[i];
+			}
+		}
+		vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
-		//if (indexBuffer != nullptr)
-		//{
-		//	vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
-		//}
+		if (indexBuffer != nullptr)
+		{
+			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+		}
 	}
 	void GraphicsDevice_Vulkan::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
 	{
@@ -3291,43 +3329,47 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
-
-		VkRenderPass renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
-
-		VkFramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = attachmentCount;
-		framebufferInfo.pAttachments = attachments[threadID];
-		framebufferInfo.width = swapChainExtent.width;
-		framebufferInfo.height = swapChainExtent.height;
-		framebufferInfo.layers = 1;
-
-		VkFramebuffer frameBuffer;
-		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create framebuffer!");
-		}
-
-
-		static const VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = renderPass;
-		renderPassInfo.framebuffer = frameBuffer;
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChainExtent;
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
-
-
-		if (renderPassActive[threadID])
+		if (renderPassDirty[threadID] || !renderPassActive[threadID])
 		{
-			vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
+			VkRenderPass renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
+
+			VkFramebufferCreateInfo framebufferInfo = {};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = renderPass;
+			framebufferInfo.attachmentCount = attachmentCount[threadID];
+			framebufferInfo.pAttachments = attachments[threadID];
+			framebufferInfo.width = attachmentsExtents[threadID].width;
+			framebufferInfo.height = attachmentsExtents[threadID].height;
+			framebufferInfo.layers = 1;
+
+			// leak!!
+			VkFramebuffer frameBuffer;
+			if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create framebuffer!");
+			}
+
+
+			VkClearValue clearColor[9] = {};
+
+			VkRenderPassBeginInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = renderPass;
+			renderPassInfo.framebuffer = frameBuffer;
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = swapChainExtent;
+			renderPassInfo.clearValueCount = attachmentCount[threadID];
+			renderPassInfo.pClearValues = clearColor;
+
+			if (renderPassActive[threadID])
+			{
+				vkCmdEndRenderPass(GetDirectCommandList(threadID));
+			}
+			vkCmdBeginRenderPass(GetDirectCommandList(threadID), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			renderPassDirty[threadID] = false;
+			renderPassActive[threadID] = true;
 		}
-		vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		renderPassActive[threadID] = true;
+
+		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
@@ -3355,6 +3397,12 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
+		if (renderPassActive[threadID])
+		{
+			vkCmdEndRenderPass(GetDirectCommandList(threadID));
+		}
+		renderPassActive[threadID] = false;
+
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
@@ -3482,6 +3530,28 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
 	{
+
+		//VkImageMemoryBarrier barrier = {};
+		//barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		//barrier.image = nullImage;
+		//barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		//barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		//barrier.srcAccessMask = 0;
+		//barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		//barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//barrier.subresourceRange.baseArrayLayer = 0;
+		//barrier.subresourceRange.layerCount = 1;
+		//barrier.subresourceRange.baseMipLevel = 0;
+		//barrier.subresourceRange.levelCount = 1;
+		//vkCmdPipelineBarrier(
+		//	GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE),
+		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	0, nullptr,
+		//	1, &barrier
+		//);
 	}
 
 

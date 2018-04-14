@@ -55,8 +55,10 @@ namespace wiGraphicsTypes
 		VkSampler		nullSampler;
 
 		bool renderPassActive[GRAPHICSTHREAD_COUNT];
+		bool renderPassDirty[GRAPHICSTHREAD_COUNT];
 		VkImageView attachments[GRAPHICSTHREAD_COUNT][9];
-		uint32_t attachmentCount = 0;
+		uint32_t attachmentCount[GRAPHICSTHREAD_COUNT];
+		VkExtent2D attachmentsExtents[GRAPHICSTHREAD_COUNT];
 
 		struct FrameResources
 		{
@@ -166,9 +168,9 @@ namespace wiGraphicsTypes
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) override;
-		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 			GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		virtual void BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
+		virtual void BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
 		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
 		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
 		virtual void BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;

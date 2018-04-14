@@ -212,12 +212,12 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	if (viewID >= 0)
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (depth ? depth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture2D**)&renderTargets[viewID], (depth ? depth->GetTexture() : nullptr), threadID);
 		resolvedMSAAUptodate[viewID] = false;
 	}
 	else
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture2D**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
 		for (auto& x : resolvedMSAAUptodate)
 		{
 			x = false;
@@ -229,12 +229,12 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool 
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	if (viewID >= 0)
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture2D**)&renderTargets[viewID], (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 		resolvedMSAAUptodate[viewID] = false;
 	}
 	else
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture2D**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 		for (auto& x : resolvedMSAAUptodate)
 		{
 			x = false;
