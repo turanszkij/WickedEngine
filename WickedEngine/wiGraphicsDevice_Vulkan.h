@@ -9,6 +9,7 @@
 #include "Include_Vulkan.h"
 
 #include <vector>
+#include <unordered_map>
 
 namespace wiGraphicsTypes
 {
@@ -59,6 +60,9 @@ namespace wiGraphicsTypes
 		VkImageView attachments[GRAPHICSTHREAD_COUNT][9];
 		uint32_t attachmentCount[GRAPHICSTHREAD_COUNT];
 		VkExtent2D attachmentsExtents[GRAPHICSTHREAD_COUNT];
+
+		wiSpinLock frameBufferLock;
+		std::unordered_map<GraphicsPSO*, VkFramebuffer> renderPassFrameBuffers;
 
 		struct FrameResources
 		{

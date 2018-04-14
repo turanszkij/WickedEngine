@@ -3354,20 +3354,32 @@ namespace wiGraphicsTypes
 		{
 			VkRenderPass renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
 
-			VkFramebufferCreateInfo framebufferInfo = {};
-			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = renderPass;
-			framebufferInfo.attachmentCount = attachmentCount[threadID];
-			framebufferInfo.pAttachments = attachments[threadID];
-			framebufferInfo.width = attachmentsExtents[threadID].width;
-			framebufferInfo.height = attachmentsExtents[threadID].height;
-			framebufferInfo.layers = 1;
-
-			// leak!!
 			VkFramebuffer frameBuffer;
-			if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
-				throw std::runtime_error("failed to create framebuffer!");
+
+			frameBufferLock.lock();
+			auto& it = renderPassFrameBuffers.find(pso);
+			if (it == renderPassFrameBuffers.end())
+			{
+				VkFramebufferCreateInfo framebufferInfo = {};
+				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+				framebufferInfo.renderPass = renderPass;
+				framebufferInfo.attachmentCount = attachmentCount[threadID];
+				framebufferInfo.pAttachments = attachments[threadID];
+				framebufferInfo.width = attachmentsExtents[threadID].width;
+				framebufferInfo.height = attachmentsExtents[threadID].height;
+				framebufferInfo.layers = 1;
+
+				if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create framebuffer!");
+				}
+
+				renderPassFrameBuffers[pso] = frameBuffer;
 			}
+			else
+			{
+				frameBuffer = it->second;
+			}
+			frameBufferLock.unlock();
 
 
 			VkClearValue clearColor[9] = {};
@@ -3377,7 +3389,7 @@ namespace wiGraphicsTypes
 			renderPassInfo.renderPass = renderPass;
 			renderPassInfo.framebuffer = frameBuffer;
 			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = swapChainExtent;
+			renderPassInfo.renderArea.extent = attachmentsExtents[threadID];
 			renderPassInfo.clearValueCount = attachmentCount[threadID];
 			renderPassInfo.pClearValues = clearColor;
 
