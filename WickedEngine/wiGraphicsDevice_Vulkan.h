@@ -16,6 +16,16 @@ namespace wiGraphicsTypes
 	struct FrameResources;
 	struct DescriptorTableFrameAllocator;
 
+	struct QueueFamilyIndices {
+		int graphicsFamily = -1;
+		int presentFamily = -1;
+		int copyFamily = -1;
+
+		bool isComplete() {
+			return graphicsFamily >= 0 && presentFamily >= 0 && copyFamily >= 0;
+		}
+	};
+
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
 		friend struct DescriptorTableFrameAllocator;
@@ -26,6 +36,7 @@ namespace wiGraphicsTypes
 		VkSurfaceKHR surface;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device;
+		QueueFamilyIndices queueIndices;
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
 

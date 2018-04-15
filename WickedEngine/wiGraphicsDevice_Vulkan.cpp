@@ -86,15 +86,6 @@ namespace wiGraphicsTypes
 	}
 
 	// Queue families:
-	struct QueueFamilyIndices {
-		int graphicsFamily = -1;
-		int presentFamily = -1;
-		int copyFamily = -1;
-
-		bool isComplete() {
-			return graphicsFamily >= 0 && presentFamily >= 0 && copyFamily >= 0;
-		}
-	};
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
 		QueueFamilyIndices indices;
 
@@ -116,7 +107,7 @@ namespace wiGraphicsTypes
 				indices.graphicsFamily = i;
 			}
 
-			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+			if (queueFamily.queueCount > 0 && queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT) {
 				indices.copyFamily = i;
 			}
 
@@ -1292,10 +1283,10 @@ namespace wiGraphicsTypes
 				throw std::runtime_error("failed to find a suitable GPU!");
 			}
 
-			QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
+			queueIndices = findQueueFamilies(physicalDevice, surface);
 
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<int> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+			std::set<int> uniqueQueueFamilies = { queueIndices.graphicsFamily, queueIndices.presentFamily, queueIndices.copyFamily };
 
 			float queuePriority = 1.0f;
 			for (int queueFamily : uniqueQueueFamilies) {
@@ -1333,9 +1324,9 @@ namespace wiGraphicsTypes
 				throw std::runtime_error("failed to create logical device!");
 			}
 
-			vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
-			vkGetDeviceQueue(device, indices.copyFamily, 0, &copyQueue);
+			vkGetDeviceQueue(device, queueIndices.graphicsFamily, 0, &graphicsQueue);
+			vkGetDeviceQueue(device, queueIndices.presentFamily, 0, &presentQueue);
+			vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
 		}
 
 
@@ -1593,10 +1584,9 @@ namespace wiGraphicsTypes
 			createInfo.imageArrayLayers = 1;
 			createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-			QueueFamilyIndices indices = findQueueFamilies(physicalDevice, surface);
-			uint32_t queueFamilyIndices[] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
+			uint32_t queueFamilyIndices[] = { (uint32_t)queueIndices.graphicsFamily, (uint32_t)queueIndices.presentFamily };
 
-			if (indices.graphicsFamily != indices.presentFamily) {
+			if (queueIndices.graphicsFamily != queueIndices.presentFamily) {
 				createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 				createInfo.queueFamilyIndexCount = 2;
 				createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -2068,9 +2058,20 @@ namespace wiGraphicsTypes
 			}
 		}
 
-		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
 		bufferInfo.flags = 0;
+
+		// Allow access from copy queue:
+		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+
+		uint32_t queueFamilyIndices[] = { 
+			static_cast<uint32_t>(queueIndices.graphicsFamily), 
+			static_cast<uint32_t>(queueIndices.copyFamily) 
+		};
+		bufferInfo.pQueueFamilyIndices = queueFamilyIndices;
+		bufferInfo.queueFamilyIndexCount = ARRAYSIZE(queueFamilyIndices);
+
+
 
 		VkResult res;
 		res = vkCreateBuffer(device, &bufferInfo, nullptr, reinterpret_cast<VkBuffer*>(&ppBuffer->resource_Vulkan));
@@ -2101,13 +2102,13 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint8_t* dest = bufferUploader->allocate(pDesc->ByteWidth, 4);
-			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth);
+			uint8_t* dest = bufferUploader->allocate(memRequirements.size, memRequirements.alignment);
+			memcpy(dest, pInitialData->pSysMem, memRequirements.size);
 
 			VkBufferCopy copyRegion = {};
-			copyRegion.size = pDesc->ByteWidth;
-			copyRegion.srcOffset = 0;
-			copyRegion.dstOffset = bufferUploader->calculateOffset(dest);
+			copyRegion.size = memRequirements.size;
+			copyRegion.srcOffset = bufferUploader->calculateOffset(dest);
+			copyRegion.dstOffset = 0;
 
 			copyQueueLock.lock();
 			vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
@@ -2245,7 +2246,7 @@ namespace wiGraphicsTypes
 				memcpy(dest, pInitialData[slice].pSysMem, pInitialData[slice].SysMemPitch * height);  // double check!!
 
 				VkBufferImageCopy& copyRegion = copyRegions[slice];
-				copyRegion.bufferOffset = 0;
+				copyRegion.bufferOffset = textureUploader->calculateOffset(dest);
 				copyRegion.bufferRowLength = 0;
 				copyRegion.bufferImageHeight = 0;
 
@@ -3686,11 +3687,11 @@ namespace wiGraphicsTypes
 
 		VkBufferCopy copyRegion = {};
 		copyRegion.size = dataSize;
-		copyRegion.srcOffset = 0;
-		copyRegion.dstOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
+		copyRegion.srcOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
+		copyRegion.dstOffset = 0;
 
 		copyQueueLock.lock();
-		vkCmdCopyBuffer(copyCommandBuffer, GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
+		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
 		copyQueueLock.unlock();
 
 	}
@@ -3755,15 +3756,15 @@ namespace wiGraphicsTypes
 
 
 		// provide immediate buffer allocation address and issue deferred data copy:
-		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 4);
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 256);
 
 		VkBufferCopy copyRegion = {};
 		copyRegion.size = dataSize;
-		copyRegion.srcOffset = 0;
-		copyRegion.dstOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
+		copyRegion.srcOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
+		copyRegion.dstOffset = position;
 
 		copyQueueLock.lock();
-		vkCmdCopyBuffer(copyCommandBuffer, GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
+		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
 		copyQueueLock.unlock();
 
 
