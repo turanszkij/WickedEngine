@@ -2278,15 +2278,216 @@ namespace wiGraphicsTypes
 
 		if ((*ppTexture2D)->desc.BindFlags & BIND_RENDER_TARGET)
 		{
+			UINT arraySize = (*ppTexture2D)->desc.ArraySize;
+			UINT sampleCount = (*ppTexture2D)->desc.SampleDesc.Count;
+			bool multisampled = sampleCount > 1;
+
+			VkImageViewCreateInfo rtv_desc = {};
+			rtv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			rtv_desc.flags = 0;
+			rtv_desc.image = static_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+			rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			rtv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			rtv_desc.subresourceRange.baseArrayLayer = 0;
+			rtv_desc.subresourceRange.layerCount = 1;
+			rtv_desc.subresourceRange.baseMipLevel = 0;
+			rtv_desc.subresourceRange.levelCount = 1;
+
+			rtv_desc.format = _ConvertFormat((*ppTexture2D)->desc.Format);
+
+
+			if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+			{
+				// TextureCube, TextureCubeArray...
+				UINT slices = arraySize / 6;
+
+				if (arraySize > 6)
+				{
+					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+				}
+				else
+				{
+					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+				}
+
+				if ((*ppTexture2D)->independentRTVCubemapFaces)
+				{
+					// independent faces
+					for (UINT i = 0; i < arraySize; ++i)
+					{
+						rtv_desc.subresourceRange.baseArrayLayer = i;
+						rtv_desc.subresourceRange.layerCount = 1;
+
+						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(nullptr);
+						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+				else if ((*ppTexture2D)->independentRTVArraySlices)
+				{
+					// independent cubemaps
+					for (UINT i = 0; i < slices; ++i)
+					{
+						rtv_desc.subresourceRange.baseArrayLayer = i * 6;
+						rtv_desc.subresourceRange.layerCount = 6;
+
+						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(nullptr);
+						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+
+				{
+					// Create full-resource RTVs:
+					rtv_desc.subresourceRange.baseArrayLayer = 0;
+					rtv_desc.subresourceRange.layerCount = (*ppTexture2D)->desc.ArraySize;
+					rtv_desc.subresourceRange.baseMipLevel = 0;
+					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
+
+					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->RTV_Vulkan));
+					hr = res == VK_SUCCESS;
+					assert(SUCCEEDED(hr));
+				}
+			}
+			else
+			{
+				if (arraySize > 1 && (*ppTexture2D)->independentRTVArraySlices)
+				{
+					if (multisampled)
+					{
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+					}
+					else
+					{
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					}
+					UINT slices = arraySize;
+
+					// independent slices
+					for (UINT i = 0; i < slices; ++i)
+					{
+						rtv_desc.subresourceRange.baseArrayLayer = i;
+						rtv_desc.subresourceRange.layerCount = 1;
+
+						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(nullptr);
+						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+
+				{
+					// Create full-resource RTV:
+
+					if (arraySize > 1)
+					{
+						if (multisampled)
+						{
+							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+						}
+						else
+						{
+							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+						}
+					}
+					else
+					{
+						if (multisampled)
+						{
+							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
+						}
+						else
+						{
+							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+						}
+					}
+
+					rtv_desc.subresourceRange.baseArrayLayer = 0;
+					rtv_desc.subresourceRange.layerCount = (*ppTexture2D)->desc.ArraySize;
+					rtv_desc.subresourceRange.baseMipLevel = 0;
+					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
+
+					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->RTV_Vulkan));
+					hr = res == VK_SUCCESS;
+					assert(SUCCEEDED(hr));
+				}
+
+			}
 		}
 
 
 		if ((*ppTexture2D)->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
+			UINT arraySize = (*ppTexture2D)->desc.ArraySize;
+			UINT sampleCount = (*ppTexture2D)->desc.SampleDesc.Count;
+			bool multisampled = sampleCount > 1;
+
+			VkImageViewCreateInfo dsv_desc = {};
+			dsv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			dsv_desc.flags = 0;
+			dsv_desc.image = static_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+			dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			dsv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			dsv_desc.subresourceRange.baseArrayLayer = 0;
+			dsv_desc.subresourceRange.layerCount = 1;
+			dsv_desc.subresourceRange.baseMipLevel = 0;
+			dsv_desc.subresourceRange.levelCount = 1;
+
+			dsv_desc.format = _ConvertFormat((*ppTexture2D)->desc.Format);
+
+
+			if (arraySize > 1)
+			{
+				if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				{
+					if (arraySize > 6)
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+					}
+					else
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+					}
+				}
+				else
+				{
+					if (multisampled)
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+					}
+					else
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					}
+				}
+
+			}
+			else
+			{
+				if (multisampled)
+				{
+					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
+				}
+				else
+				{
+					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				}
+			}
+
+			// Create full-resource DSV:
+			dsv_desc.subresourceRange.baseArrayLayer = 0;
+			dsv_desc.subresourceRange.layerCount = (*ppTexture2D)->desc.ArraySize;
+			dsv_desc.subresourceRange.baseMipLevel = 0;
+			dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
+
+			res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->DSV_Vulkan));
+			hr = res == VK_SUCCESS;
+			assert(SUCCEEDED(hr));
 		}
 
 
-		if ((*ppTexture2D)->desc.BindFlags & BIND_SHADER_RESOURCE || (*ppTexture2D)->desc.BindFlags & BIND_RENDER_TARGET || (*ppTexture2D)->desc.BindFlags & BIND_DEPTH_STENCIL)
+		if ((*ppTexture2D)->desc.BindFlags & BIND_SHADER_RESOURCE)
 		{
 			UINT arraySize = (*ppTexture2D)->desc.ArraySize;
 			UINT sampleCount = (*ppTexture2D)->desc.SampleDesc.Count;
@@ -3201,7 +3402,7 @@ namespace wiGraphicsTypes
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			attachments[threadID][i] = static_cast<VkImageView>(ppRenderTargets[i]->SRV_Vulkan); // SRV -> RTV
+			attachments[threadID][i] = static_cast<VkImageView>(ppRenderTargets[i]->RTV_Vulkan);
 
 			attachmentsExtents[threadID].width = ppRenderTargets[i]->desc.Width;
 			attachmentsExtents[threadID].height = ppRenderTargets[i]->desc.Height;
@@ -3210,7 +3411,7 @@ namespace wiGraphicsTypes
 
 		if (depthStencilTexture != nullptr)
 		{
-			attachments[threadID][attachmentCount[threadID]] = static_cast<VkImageView>(depthStencilTexture->SRV_Vulkan); // SRV -> DSV
+			attachments[threadID][attachmentCount[threadID]] = static_cast<VkImageView>(depthStencilTexture->DSV_Vulkan);
 			attachmentCount[threadID]++;
 
 			attachmentsExtents[threadID].width = depthStencilTexture->desc.Width;
@@ -3329,13 +3530,13 @@ namespace wiGraphicsTypes
 				voffsets[i] = offsets[i];
 			}
 		}
-		//vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+		vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
 		if (indexBuffer != nullptr)
 		{
-			//vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
@@ -3350,6 +3551,18 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
+		uint32_t desiredAttachmentCount = pso->desc.numRTs;
+		if (pso->desc.DSFormat != FORMAT_UNKNOWN)
+		{
+			desiredAttachmentCount++;
+		}
+
+		if (desiredAttachmentCount != attachmentCount[threadID])
+		{
+			renderPassDirty[threadID] = true;
+			attachmentCount[threadID] = desiredAttachmentCount;
+		}
+
 		if (renderPassDirty[threadID] || !renderPassActive[threadID])
 		{
 			VkRenderPass renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
