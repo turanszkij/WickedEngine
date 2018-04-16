@@ -66,14 +66,29 @@ namespace wiGraphicsTypes
 		VkImageView		nullImageView;
 		VkSampler		nullSampler;
 
-		bool renderPassActive[GRAPHICSTHREAD_COUNT];
-		bool renderPassDirty[GRAPHICSTHREAD_COUNT];
-		VkImageView attachments[GRAPHICSTHREAD_COUNT][9];
-		uint32_t attachmentCount[GRAPHICSTHREAD_COUNT];
-		VkExtent2D attachmentsExtents[GRAPHICSTHREAD_COUNT];
 
-		wiSpinLock frameBufferLock;
-		std::unordered_map<GraphicsPSO*, VkFramebuffer> renderPassFrameBuffers;
+		struct RenderPassManager
+		{
+			bool active = false;
+			bool dirty = true;
+
+			VkImageView attachments[9] = {};
+			uint32_t attachmentCount = 0;
+			VkExtent2D attachmentsExtents = {};
+
+			VkClearValue clearColor[9] = {};
+
+			VkPipeline pso = nullptr;
+			VkRenderPass renderPass = nullptr;
+
+			std::unordered_map<VkPipeline, VkFramebuffer> renderPassFrameBuffers;
+
+			void reset();
+			void disable(VkCommandBuffer commandBuffer);
+			void validate(VkDevice device, VkCommandBuffer commandBuffer);
+		};
+		RenderPassManager renderPass[GRAPHICSTHREAD_COUNT];
+
 
 		struct FrameResources
 		{
@@ -134,7 +149,7 @@ namespace wiGraphicsTypes
 			uint8_t*				dataCur;
 			uint8_t*				dataEnd;
 
-			UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t size);
+			UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, const QueueFamilyIndices& queueIndices, size_t size);
 			~UploadBuffer();
 
 			uint8_t* allocate(size_t dataSize, size_t alignment);

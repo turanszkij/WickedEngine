@@ -309,13 +309,25 @@ namespace wiGraphicsTypes
 
 
 
-	GraphicsDevice_Vulkan::UploadBuffer::UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, size_t size) : device(device)
+	GraphicsDevice_Vulkan::UploadBuffer::UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, const QueueFamilyIndices& queueIndices, size_t size) : device(device)
 	{
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.flags = 0;
+
+
+		// Allow access from copy queue:
+		bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+
+		uint32_t queueFamilyIndices[] = {
+			static_cast<uint32_t>(queueIndices.graphicsFamily),
+			static_cast<uint32_t>(queueIndices.copyFamily)
+		};
+		bufferInfo.pQueueFamilyIndices = queueFamilyIndices;
+		bufferInfo.queueFamilyIndexCount = ARRAYSIZE(queueFamilyIndices);
+
 
 		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &resource);
 		assert(res == VK_SUCCESS);
@@ -808,6 +820,80 @@ namespace wiGraphicsTypes
 				}
 
 			}
+		}
+	}
+
+
+
+
+	void GraphicsDevice_Vulkan::RenderPassManager::reset()
+	{
+		active = false;
+		dirty = true;
+
+		memset(attachments, 0, sizeof(attachments));
+		attachmentCount = 0;
+
+		memset(clearColor, 0, sizeof(clearColor));
+	}
+	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
+	{
+		if (active)
+		{
+			vkCmdEndRenderPass(commandBuffer);
+		}
+		active = false;
+	}
+	void GraphicsDevice_Vulkan::RenderPassManager::validate(VkDevice device, VkCommandBuffer commandBuffer)
+	{
+		if (attachmentCount == 0)
+		{
+			return;
+		}
+
+		if (dirty || !active)
+		{
+			VkFramebuffer frameBuffer;
+
+			auto& it = renderPassFrameBuffers.find(pso);
+			if (it == renderPassFrameBuffers.end())
+			{
+				VkFramebufferCreateInfo framebufferInfo = {};
+				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+				framebufferInfo.renderPass = renderPass;
+				framebufferInfo.attachmentCount = attachmentCount;
+				framebufferInfo.pAttachments = attachments;
+				framebufferInfo.width = attachmentsExtents.width;
+				framebufferInfo.height = attachmentsExtents.height;
+				framebufferInfo.layers = 1;
+
+				if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create framebuffer!");
+				}
+
+				renderPassFrameBuffers[pso] = frameBuffer;
+			}
+			else
+			{
+				frameBuffer = it->second;
+			}
+
+			VkRenderPassBeginInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = renderPass;
+			renderPassInfo.framebuffer = frameBuffer;
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = attachmentsExtents;
+			renderPassInfo.clearValueCount = attachmentCount;
+			renderPassInfo.pClearValues = clearColor;
+
+			if (active)
+			{
+				vkCmdEndRenderPass(commandBuffer);
+			}
+			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			dirty = false;
+			active = true;
 		}
 	}
 
@@ -1661,11 +1747,6 @@ namespace wiGraphicsTypes
 				throw std::runtime_error("failed to create render pass!");
 			}
 
-			memset(renderPassActive, 0, sizeof(renderPassActive));
-			memset(renderPassDirty, 0, sizeof(renderPassDirty));
-			memset(attachments, 0, sizeof(attachments));
-			memset(attachmentCount, 0, sizeof(attachmentCount));
-			memset(attachmentsExtents, 0, sizeof(attachmentsExtents));
 		}
 
 		// Create frame resources:
@@ -1823,8 +1904,8 @@ namespace wiGraphicsTypes
 
 
 		// Create resource upload buffers
-		bufferUploader = new UploadBuffer(physicalDevice, device, 256 * 1024 * 1024);
-		textureUploader = new UploadBuffer(physicalDevice, device, 256 * 1024 * 1024);
+		bufferUploader = new UploadBuffer(physicalDevice, device, queueIndices, 256 * 1024 * 1024);
+		textureUploader = new UploadBuffer(physicalDevice, device, queueIndices, 256 * 1024 * 1024);
 
 
 		// Create default null descriptors:
@@ -2021,7 +2102,7 @@ namespace wiGraphicsTypes
 
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = ppBuffer->desc.ByteWidth;
+		bufferInfo.size = ppBuffer->desc.ByteWidth /** BACKBUFFER_COUNT*/;
 		bufferInfo.usage = 0;
 		if (ppBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 		{
@@ -2087,13 +2168,13 @@ namespace wiGraphicsTypes
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT /*| VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
 
 		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&ppBuffer->resourceMemory_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate buffer memory!");
 		}
 
-		res = vkBindBufferMemory(device, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), reinterpret_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan), 0);
+		res = vkBindBufferMemory(device, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), static_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan), 0);
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
 
@@ -2102,6 +2183,14 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
+			//void* data;
+			//vkMapMemory(device, static_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan), 0, memRequirements.size, 0, &data);
+			//memcpy(data, pInitialData->pSysMem, memRequirements.size / BACKBUFFER_COUNT);
+			//memcpy((void*)((size_t)data + memRequirements.size / BACKBUFFER_COUNT), pInitialData->pSysMem, memRequirements.size / BACKBUFFER_COUNT);
+			//memcpy((void*)((size_t)data + 2 * (memRequirements.size / BACKBUFFER_COUNT)), pInitialData->pSysMem, memRequirements.size / BACKBUFFER_COUNT);
+			//vkUnmapMemory(device, static_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan));
+
+
 			uint8_t* dest = bufferUploader->allocate(memRequirements.size, memRequirements.alignment);
 			memcpy(dest, pInitialData->pSysMem, memRequirements.size);
 
@@ -2114,6 +2203,53 @@ namespace wiGraphicsTypes
 			vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
 			copyQueueLock.unlock();
 		}
+
+
+		//uint8_t* dest = bufferUploader->allocate(memRequirements.size, memRequirements.alignment);
+		//memset(dest, 0xFF, memRequirements.size);
+
+		//VkBufferCopy copyRegion = {};
+		//copyRegion.size = memRequirements.size;
+		//copyRegion.srcOffset = bufferUploader->calculateOffset(dest);
+		//copyRegion.dstOffset = 0;
+
+		//copyQueueLock.lock();
+		//vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
+
+		//VkBufferMemoryBarrier barrier = {};
+		//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		//barrier.buffer = static_cast<VkBuffer>(ppBuffer->resource_Vulkan);
+		//barrier.srcAccessMask = 0;
+		//if (ppBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		//{
+		//	barrier.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+		//}
+		//else if (ppBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		//{
+		//	barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+		//}
+		//else if (ppBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		//{
+		//	barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+		//}
+		//else
+		//{
+		//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		//}
+		//barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		//barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+		//barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+
+		//vkCmdPipelineBarrier(
+		//	copyCommandBuffer,
+		//	VK_PIPELINE_STAGE_TRANSFER_BIT,
+		//	VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	1, &barrier,
+		//	0, nullptr
+		//);
+		copyQueueLock.unlock();
 
 
 
@@ -2268,7 +2404,34 @@ namespace wiGraphicsTypes
 			}
 
 			copyQueueLock.lock();
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = static_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+			barrier.dstQueueFamilyIndex = queueIndices.copyFamily;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = pDesc->ArraySize;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = pDesc->MipLevels;
+
+			vkCmdPipelineBarrier(
+				copyCommandBuffer,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+
 			vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, static_cast<VkImage>((*ppTexture2D)->resource_Vulkan), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
+
 			copyQueueLock.unlock();
 
 		}
@@ -3167,6 +3330,9 @@ namespace wiGraphicsTypes
 
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.commandBufferCount = 1;
+			submitInfo.pCommandBuffers = &copyCommandBuffer;
+
 			if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
 				throw std::runtime_error("failed to submit copy command buffer!");
 			}
@@ -3197,13 +3363,7 @@ namespace wiGraphicsTypes
 
 
 
-		if (renderPassActive[GRAPHICSTHREAD_IMMEDIATE])
-		{
-			vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
-		}
-		renderPassActive[GRAPHICSTHREAD_IMMEDIATE] = true;
-		renderPassDirty[GRAPHICSTHREAD_IMMEDIATE] = false;
-
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].disable(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 
 		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
 
@@ -3218,6 +3378,16 @@ namespace wiGraphicsTypes
 
 		// Begin presentation render pass...
 		vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].active = true;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].dirty = false;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentCount = 1;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].attachments[0] = GetFrameResources().swapChainImageView;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentsExtents = swapChainExtent;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].clearColor[0] = clearColor;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].renderPass = defaultRenderPass;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].pso = nullptr;
+		//renderPass[GRAPHICSTHREAD_IMMEDIATE].validate(device, GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 
 
 		VkClearAttachment clearInfo = {};
@@ -3244,7 +3414,7 @@ namespace wiGraphicsTypes
 		uint64_t currentframe = GetFrameCount() % BACKBUFFER_COUNT;
 
 		// ...end presentation render pass
-		vkCmdEndRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].disable(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 
 		if (vkEndCommandBuffer(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
@@ -3336,11 +3506,7 @@ namespace wiGraphicsTypes
 			// reset immediate resource allocators:
 			GetFrameResources().resourceBuffer[threadID]->clear();
 
-			memset(renderPassActive, 0, sizeof(renderPassActive));
-			memset(renderPassDirty, 0, sizeof(renderPassDirty));
-			memset(attachments, 0, sizeof(attachments));
-			memset(attachmentCount, 0, sizeof(attachmentCount));
-			memset(attachmentsExtents, 0, sizeof(attachmentsExtents));
+			renderPass[threadID].reset();
 		}
 
 		RESOLUTIONCHANGED = false;
@@ -3403,23 +3569,23 @@ namespace wiGraphicsTypes
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			attachments[threadID][i] = static_cast<VkImageView>(ppRenderTargets[i]->RTV_Vulkan);
+			renderPass[threadID].attachments[i] = static_cast<VkImageView>(ppRenderTargets[i]->RTV_Vulkan);
 
-			attachmentsExtents[threadID].width = ppRenderTargets[i]->desc.Width;
-			attachmentsExtents[threadID].height = ppRenderTargets[i]->desc.Height;
+			renderPass[threadID].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
+			renderPass[threadID].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
 		}
-		attachmentCount[threadID] = NumViews;
+		renderPass[threadID].attachmentCount = NumViews;
 
 		if (depthStencilTexture != nullptr)
 		{
-			attachments[threadID][attachmentCount[threadID]] = static_cast<VkImageView>(depthStencilTexture->DSV_Vulkan);
-			attachmentCount[threadID]++;
+			renderPass[threadID].attachments[renderPass[threadID].attachmentCount] = static_cast<VkImageView>(depthStencilTexture->DSV_Vulkan);
+			renderPass[threadID].attachmentCount++;
 
-			attachmentsExtents[threadID].width = depthStencilTexture->desc.Width;
-			attachmentsExtents[threadID].height = depthStencilTexture->desc.Height;
+			renderPass[threadID].attachmentsExtents.width = depthStencilTexture->desc.Width;
+			renderPass[threadID].attachmentsExtents.height = depthStencilTexture->desc.Height;
 		}
 
-		renderPassDirty[threadID] = true;
+		renderPass[threadID].dirty = true;
 
 	}
 	void GraphicsDevice_Vulkan::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
@@ -3558,63 +3724,20 @@ namespace wiGraphicsTypes
 			desiredAttachmentCount++;
 		}
 
-		if (desiredAttachmentCount != attachmentCount[threadID])
+		if (desiredAttachmentCount != renderPass[threadID].attachmentCount)
 		{
-			renderPassDirty[threadID] = true;
-			attachmentCount[threadID] = desiredAttachmentCount;
+			renderPass[threadID].dirty = true;
+			renderPass[threadID].attachmentCount = desiredAttachmentCount;
 		}
 
-		if (renderPassDirty[threadID] || !renderPassActive[threadID])
+		if (renderPass[threadID].pso != pso->pipeline_Vulkan || renderPass[threadID].renderPass != pso->renderPass_Vulkan)
 		{
-			VkRenderPass renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
-
-			VkFramebuffer frameBuffer;
-
-			frameBufferLock.lock();
-			auto& it = renderPassFrameBuffers.find(pso);
-			if (it == renderPassFrameBuffers.end())
-			{
-				VkFramebufferCreateInfo framebufferInfo = {};
-				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufferInfo.renderPass = renderPass;
-				framebufferInfo.attachmentCount = attachmentCount[threadID];
-				framebufferInfo.pAttachments = attachments[threadID];
-				framebufferInfo.width = attachmentsExtents[threadID].width;
-				framebufferInfo.height = attachmentsExtents[threadID].height;
-				framebufferInfo.layers = 1;
-
-				if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create framebuffer!");
-				}
-
-				renderPassFrameBuffers[pso] = frameBuffer;
-			}
-			else
-			{
-				frameBuffer = it->second;
-			}
-			frameBufferLock.unlock();
-
-
-			VkClearValue clearColor[9] = {};
-
-			VkRenderPassBeginInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = renderPass;
-			renderPassInfo.framebuffer = frameBuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = attachmentsExtents[threadID];
-			renderPassInfo.clearValueCount = attachmentCount[threadID];
-			renderPassInfo.pClearValues = clearColor;
-
-			if (renderPassActive[threadID])
-			{
-				vkCmdEndRenderPass(GetDirectCommandList(threadID));
-			}
-			vkCmdBeginRenderPass(GetDirectCommandList(threadID), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-			renderPassDirty[threadID] = false;
-			renderPassActive[threadID] = true;
+			renderPass[threadID].dirty = true;
+			renderPass[threadID].pso = static_cast<VkPipeline>(pso->pipeline_Vulkan);
+			renderPass[threadID].renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
 		}
+
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 
 		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
@@ -3644,14 +3767,14 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
-		if (renderPassActive[threadID])
-		{
-			vkCmdEndRenderPass(GetDirectCommandList(threadID));
-		}
-		renderPassActive[threadID] = false;
+		//if (renderPassActive[threadID])
+		//{
+		//	vkCmdEndRenderPass(GetDirectCommandList(threadID));
+		//}
+		//renderPassActive[threadID] = false;
 
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
-		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		//GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		//vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3681,6 +3804,52 @@ namespace wiGraphicsTypes
 		dataSize = min((int)buffer->desc.ByteWidth, dataSize);
 		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
 
+
+
+		renderPass[threadID].disable(GetDirectCommandList(threadID));
+
+
+
+
+		VkPipelineStageFlags stages = 0;
+
+		VkBufferMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
+		barrier.srcAccessMask = 0;
+		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		{
+			barrier.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		else if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		{
+			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		}
+		else if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		{
+			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		}
+		else
+		{
+			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		//vkCmdPipelineBarrier(
+		//	GetDirectCommandList(threadID),
+		//	stages,
+		//	VK_PIPELINE_STAGE_TRANSFER_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	1, &barrier,
+		//	0, nullptr
+		//);
+
+
 		// issue data copy:
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 4);
 		memcpy(dest, data, dataSize);
@@ -3690,9 +3859,29 @@ namespace wiGraphicsTypes
 		copyRegion.srcOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
 		copyRegion.dstOffset = 0;
 
-		copyQueueLock.lock();
 		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
-		copyQueueLock.unlock();
+
+
+
+
+
+
+		//VkAccessFlags tmp = barrier.srcAccessMask;
+		//barrier.srcAccessMask = barrier.dstAccessMask;
+		//barrier.dstAccessMask = tmp;
+
+		//vkCmdPipelineBarrier(
+		//	GetDirectCommandList(threadID),
+		//	VK_PIPELINE_STAGE_TRANSFER_BIT,
+		//	stages,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	1, &barrier,
+		//	0, nullptr
+		//);
+
+
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 
 	}
 	void* GraphicsDevice_Vulkan::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
@@ -3717,41 +3906,48 @@ namespace wiGraphicsTypes
 
 
 
-		//VkBufferMemoryBarrier barrier = {};
-		//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//barrier.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
-		//barrier.srcAccessMask = 0;
-		//if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
-		//{
-		//	barrier.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
-		//}
-		//else if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
-		//{
-		//	barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
-		//}
-		//else if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
-		//{
-		//	barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
-		//}
-		//else
-		//{
-		//	barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		//}
-		//barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		//vkCmdPipelineBarrier(
-		//	GetDirectCommandList(threadID),
-		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//	VK_DEPENDENCY_BY_REGION_BIT,
-		//	0, nullptr,
-		//	1, &barrier,
-		//	0, nullptr
-		//);
+		renderPass[threadID].disable(GetDirectCommandList(threadID));
 
 
 
 
+		VkPipelineStageFlags stages = 0;
+
+		VkBufferMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
+		barrier.srcAccessMask = 0;
+		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		{
+			barrier.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		else if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		{
+			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		}
+		else if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		{
+			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		}
+		else
+		{
+			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		vkCmdPipelineBarrier(
+			GetDirectCommandList(threadID),
+			stages,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+			0, nullptr,
+			1, &barrier,
+			0, nullptr
+		);
 
 
 
@@ -3763,29 +3959,30 @@ namespace wiGraphicsTypes
 		copyRegion.srcOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
 		copyRegion.dstOffset = position;
 
-		copyQueueLock.lock();
 		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, static_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
-		copyQueueLock.unlock();
 
 
 
 
 
-		//VkAccessFlags tmp = barrier.srcAccessMask;
-		//barrier.srcAccessMask = barrier.dstAccessMask;
-		//barrier.dstAccessMask = tmp;
-
-		//vkCmdPipelineBarrier(
-		//	GetDirectCommandList(threadID),
-		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//	VK_DEPENDENCY_BY_REGION_BIT,
-		//	0, nullptr,
-		//	1, &barrier,
-		//	0, nullptr
-		//);
 
 
+		VkAccessFlags tmp = barrier.srcAccessMask;
+		barrier.srcAccessMask = barrier.dstAccessMask;
+		barrier.dstAccessMask = tmp;
+
+		vkCmdPipelineBarrier(
+			GetDirectCommandList(threadID),
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			stages,
+			VK_DEPENDENCY_BY_REGION_BIT,
+			0, nullptr,
+			1, &barrier,
+			0, nullptr
+		);
+
+
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 
 
 		// Thread safety is compromised!
@@ -3797,6 +3994,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
 	{
+		//vkUnmapMemory(device, static_cast<VkDeviceMemory>(buffer->resourceMemory_Vulkan));
 	}
 	bool GraphicsDevice_Vulkan::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
