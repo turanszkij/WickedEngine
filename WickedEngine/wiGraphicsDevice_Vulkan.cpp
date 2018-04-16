@@ -545,7 +545,7 @@ namespace wiGraphicsTypes
 				for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
 				{
 					imageInfo[i].imageView = device->nullImageView;
-					imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 				}
 
 				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -3365,7 +3365,8 @@ namespace wiGraphicsTypes
 
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].disable(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 
-		VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
+		//VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
+		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -3632,9 +3633,56 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		if (resource != nullptr && resource->resource_Vulkan != nullptr)
+		{
+			if (arrayIndex < 0)
+			{
+				if (resource->SRV_Vulkan != nullptr)
+				{
+
+					Texture* tex = dynamic_cast<Texture*>(resource);
+
+					if (tex != nullptr)
+					{
+						VkDescriptorImageInfo imageInfo = {};
+						imageInfo.imageView = static_cast<VkImageView>(tex->SRV_Vulkan);
+						imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+						VkWriteDescriptorSet descriptorWrite = {};
+						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+						descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE;
+						descriptorWrite.dstArrayElement = slot;
+						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+						descriptorWrite.descriptorCount = 1;
+						descriptorWrite.pBufferInfo = nullptr;
+						descriptorWrite.pImageInfo = &imageInfo;
+						descriptorWrite.pTexelBufferView = nullptr;
+
+						vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+						GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+					}
+
+
+				}
+			}
+			else
+			{
+				assert(resource->additionalSRVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+
+
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::BindResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindResource(stage, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -3674,8 +3722,8 @@ namespace wiGraphicsTypes
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1;
 			descriptorWrite.pBufferInfo = &bufferInfo;
-			descriptorWrite.pImageInfo = nullptr; // Optional
-			descriptorWrite.pTexelBufferView = nullptr; // Optional
+			descriptorWrite.pImageInfo = nullptr;
+			descriptorWrite.pTexelBufferView = nullptr;
 
 			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
@@ -3752,12 +3800,18 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		vkCmdDrawIndexed(GetDirectCommandList(threadID), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		vkCmdDraw(GetDirectCommandList(threadID), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		vkCmdDrawIndexed(GetDirectCommandList(threadID), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3839,15 +3893,15 @@ namespace wiGraphicsTypes
 		}
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-		//vkCmdPipelineBarrier(
-		//	GetDirectCommandList(threadID),
-		//	stages,
-		//	VK_PIPELINE_STAGE_TRANSFER_BIT,
-		//	VK_DEPENDENCY_BY_REGION_BIT,
-		//	0, nullptr,
-		//	1, &barrier,
-		//	0, nullptr
-		//);
+		vkCmdPipelineBarrier(
+			GetDirectCommandList(threadID),
+			stages,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+			0, nullptr,
+			1, &barrier,
+			0, nullptr
+		);
 
 
 		// issue data copy:
@@ -3866,19 +3920,19 @@ namespace wiGraphicsTypes
 
 
 
-		//VkAccessFlags tmp = barrier.srcAccessMask;
-		//barrier.srcAccessMask = barrier.dstAccessMask;
-		//barrier.dstAccessMask = tmp;
+		VkAccessFlags tmp = barrier.srcAccessMask;
+		barrier.srcAccessMask = barrier.dstAccessMask;
+		barrier.dstAccessMask = tmp;
 
-		//vkCmdPipelineBarrier(
-		//	GetDirectCommandList(threadID),
-		//	VK_PIPELINE_STAGE_TRANSFER_BIT,
-		//	stages,
-		//	VK_DEPENDENCY_BY_REGION_BIT,
-		//	0, nullptr,
-		//	1, &barrier,
-		//	0, nullptr
-		//);
+		vkCmdPipelineBarrier(
+			GetDirectCommandList(threadID),
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			stages,
+			VK_DEPENDENCY_BY_REGION_BIT,
+			0, nullptr,
+			1, &barrier,
+			0, nullptr
+		);
 
 
 		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
@@ -4035,28 +4089,40 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
 	{
+		//renderPass[threadID].disable(GetDirectCommandList(threadID));
 
-		//VkImageMemoryBarrier barrier = {};
-		//barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		//barrier.image = nullImage;
-		//barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		//barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		//barrier.srcAccessMask = 0;
-		//barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		//barrier.subresourceRange.baseArrayLayer = 0;
-		//barrier.subresourceRange.layerCount = 1;
-		//barrier.subresourceRange.baseMipLevel = 0;
-		//barrier.subresourceRange.levelCount = 1;
-		//vkCmdPipelineBarrier(
-		//	GetDirectCommandList(threadID),
-		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//	VK_DEPENDENCY_BY_REGION_BIT,
-		//	0, nullptr,
-		//	0, nullptr,
-		//	1, &barrier
-		//);
+		//for (UINT i = 0; i < NumBarriers; ++i)
+		//{
+
+		//	Texture* tex = dynamic_cast<Texture*>(resources[i]);
+
+		//	if (tex != nullptr)
+		//	{
+		//		VkImageMemoryBarrier barrier = {};
+		//		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		//		barrier.image = nullImage;
+		//		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		//		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		//		barrier.srcAccessMask = 0;
+		//		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		//		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//		barrier.subresourceRange.baseArrayLayer = 0;
+		//		barrier.subresourceRange.layerCount = 1;
+		//		barrier.subresourceRange.baseMipLevel = 0;
+		//		barrier.subresourceRange.levelCount = 1;
+		//		vkCmdPipelineBarrier(
+		//			GetDirectCommandList(threadID),
+		//			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//			VK_DEPENDENCY_BY_REGION_BIT,
+		//			0, nullptr,
+		//			0, nullptr,
+		//			1, &barrier
+		//		);
+		//	}
+
+		//}
+
 	}
 
 
