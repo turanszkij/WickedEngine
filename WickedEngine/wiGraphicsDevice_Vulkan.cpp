@@ -519,21 +519,33 @@ namespace wiGraphicsTypes
 
 			std::vector<VkWriteDescriptorSet> initWrites;
 
-			VkDescriptorBufferInfo bufferInfo = {};
-			bufferInfo.buffer = device->nullBuffer;
-			bufferInfo.offset = 0;
-			bufferInfo.range = VK_WHOLE_SIZE;
+			VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
+			for (int i = 0; i < ARRAYSIZE(bufferInfo); ++i)
+			{
+				bufferInfo[i].buffer = device->nullBuffer;
+				bufferInfo[i].offset = 0;
+				bufferInfo[i].range = VK_WHOLE_SIZE;
+			}
 
-			VkDescriptorImageInfo imageInfo = {};
-			imageInfo.imageView = device->nullImageView;
-			imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
+			for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
+			{
+				imageInfo[i].imageView = device->nullImageView;
+				imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+			}
 
-			VkBufferView bufferViews = {};
-			bufferViews = device->nullBufferView;
+			VkBufferView bufferViews[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
+			for (int i = 0; i < ARRAYSIZE(bufferViews); ++i)
+			{
+				bufferViews[i] = device->nullBufferView;
+			}
 
-			VkDescriptorImageInfo samplerInfo = {};
-			samplerInfo.imageView = nullptr;
-			samplerInfo.sampler = device->nullSampler;
+			VkDescriptorImageInfo samplerInfo[GPU_SAMPLER_HEAP_COUNT] = {};
+			for (int i = 0; i < ARRAYSIZE(samplerInfo); ++i)
+			{
+				samplerInfo[i].imageView = nullptr;
+				samplerInfo[i].sampler = device->nullSampler;
+			}
 
 			int offset = 0;
 
@@ -541,22 +553,19 @@ namespace wiGraphicsTypes
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_CBV);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_CBV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = &bufferInfo;
-					writeDescriptors.pImageInfo = nullptr;
-					writeDescriptors.pTexelBufferView = nullptr;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
+				writeDescriptors.pBufferInfo = bufferInfo;
+				writeDescriptors.pImageInfo = nullptr;
+				writeDescriptors.pTexelBufferView = nullptr;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 
@@ -564,66 +573,57 @@ namespace wiGraphicsTypes
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = nullptr;
-					writeDescriptors.pImageInfo = &imageInfo;
-					writeDescriptors.pTexelBufferView = nullptr;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+				writeDescriptors.pBufferInfo = nullptr;
+				writeDescriptors.pImageInfo = imageInfo;
+				writeDescriptors.pTexelBufferView = nullptr;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 			// SRV - Typed Buffer:
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = nullptr;
-					writeDescriptors.pImageInfo = nullptr;
-					writeDescriptors.pTexelBufferView = &bufferViews;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+				writeDescriptors.pBufferInfo = nullptr;
+				writeDescriptors.pImageInfo = nullptr;
+				writeDescriptors.pTexelBufferView = bufferViews;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 			// SRV - Untyped Buffer:
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = &bufferInfo;
-					writeDescriptors.pImageInfo = nullptr;
-					writeDescriptors.pTexelBufferView = nullptr;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+				writeDescriptors.pBufferInfo = bufferInfo;
+				writeDescriptors.pImageInfo = nullptr;
+				writeDescriptors.pTexelBufferView = nullptr;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 
@@ -631,66 +631,57 @@ namespace wiGraphicsTypes
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = nullptr;
-					writeDescriptors.pImageInfo = &imageInfo;
-					writeDescriptors.pTexelBufferView = nullptr;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+				writeDescriptors.pBufferInfo = nullptr;
+				writeDescriptors.pImageInfo = imageInfo;
+				writeDescriptors.pTexelBufferView = nullptr;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 			// UAV - Typed Buffer:
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = nullptr;
-					writeDescriptors.pImageInfo = nullptr;
-					writeDescriptors.pTexelBufferView = &bufferViews;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+				writeDescriptors.pBufferInfo = nullptr;
+				writeDescriptors.pImageInfo = nullptr;
+				writeDescriptors.pTexelBufferView = bufferViews;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 			// UAV - Untyped Buffer:
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER);
 
-				for (int i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = &bufferInfo;
-					writeDescriptors.pImageInfo = nullptr;
-					writeDescriptors.pTexelBufferView = nullptr;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+				writeDescriptors.pBufferInfo = bufferInfo;
+				writeDescriptors.pImageInfo = nullptr;
+				writeDescriptors.pTexelBufferView = nullptr;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 
@@ -699,22 +690,19 @@ namespace wiGraphicsTypes
 			{
 				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER);
 
-				for (int i = 0; i < GPU_SAMPLER_HEAP_COUNT; ++i)
-				{
-					VkWriteDescriptorSet writeDescriptors = {};
-					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptors.dstSet = descriptorSet_CPU[stage];
-					writeDescriptors.dstArrayElement = 0;
-					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-					writeDescriptors.dstBinding = offset;
-					writeDescriptors.descriptorCount = 1;
-					writeDescriptors.pBufferInfo = nullptr;
-					writeDescriptors.pImageInfo = &samplerInfo;
-					writeDescriptors.pTexelBufferView = nullptr;
-					initWrites.push_back(writeDescriptors);
+				VkWriteDescriptorSet writeDescriptors = {};
+				writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptors.dstSet = descriptorSet_CPU[stage];
+				writeDescriptors.dstArrayElement = 0;
+				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+				writeDescriptors.dstBinding = offset;
+				writeDescriptors.descriptorCount = GPU_SAMPLER_HEAP_COUNT;
+				writeDescriptors.pBufferInfo = nullptr;
+				writeDescriptors.pImageInfo = samplerInfo;
+				writeDescriptors.pTexelBufferView = nullptr;
+				initWrites.push_back(writeDescriptors);
 
-					offset += writeDescriptors.descriptorCount;
-				}
+				offset += writeDescriptors.descriptorCount;
 
 			}
 
@@ -942,6 +930,7 @@ namespace wiGraphicsTypes
 				vkCmdEndRenderPass(commandBuffer);
 			}
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pso);
 			dirty = false;
 			active = true;
 		}
@@ -2241,14 +2230,6 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			//void* data;
-			//vkMapMemory(device, static_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan), 0, memRequirements.size, 0, &data);
-			//memcpy(data, pInitialData->pSysMem, memRequirements.size / BACKBUFFER_COUNT);
-			//memcpy((void*)((size_t)data + memRequirements.size / BACKBUFFER_COUNT), pInitialData->pSysMem, memRequirements.size / BACKBUFFER_COUNT);
-			//memcpy((void*)((size_t)data + 2 * (memRequirements.size / BACKBUFFER_COUNT)), pInitialData->pSysMem, memRequirements.size / BACKBUFFER_COUNT);
-			//vkUnmapMemory(device, static_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan));
-
-
 			uint8_t* dest = bufferUploader->allocate(memRequirements.size, memRequirements.alignment);
 			memcpy(dest, pInitialData->pSysMem, memRequirements.size);
 
@@ -2258,56 +2239,66 @@ namespace wiGraphicsTypes
 			copyRegion.dstOffset = 0;
 
 			copyQueueLock.lock();
-			vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
+			{
+
+				VkBufferMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				barrier.buffer = static_cast<VkBuffer>(ppBuffer->resource_Vulkan);
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+				barrier.srcQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.copyFamily;
+
+				vkCmdPipelineBarrier(
+					copyCommandBuffer,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr,
+					1, &barrier,
+					0, nullptr
+				);
+
+
+				vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
+
+
+				VkAccessFlags tmp = barrier.srcAccessMask;
+				barrier.srcAccessMask = barrier.dstAccessMask;
+
+				if (ppBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+				{
+					barrier.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+				}
+				else if (ppBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+				{
+					barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+				}
+				else if (ppBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+				{
+					barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+				}
+				else
+				{
+					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				}
+
+				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+
+				vkCmdPipelineBarrier(
+					copyCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr,
+					1, &barrier,
+					0, nullptr
+				);
+			}
 			copyQueueLock.unlock();
 		}
-
-
-		//uint8_t* dest = bufferUploader->allocate(memRequirements.size, memRequirements.alignment);
-		//memset(dest, 0xFF, memRequirements.size);
-
-		//VkBufferCopy copyRegion = {};
-		//copyRegion.size = memRequirements.size;
-		//copyRegion.srcOffset = bufferUploader->calculateOffset(dest);
-		//copyRegion.dstOffset = 0;
-
-		//copyQueueLock.lock();
-		//vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, static_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
-
-		//VkBufferMemoryBarrier barrier = {};
-		//barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		//barrier.buffer = static_cast<VkBuffer>(ppBuffer->resource_Vulkan);
-		//barrier.srcAccessMask = 0;
-		//if (ppBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
-		//{
-		//	barrier.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
-		//}
-		//else if (ppBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
-		//{
-		//	barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
-		//}
-		//else if (ppBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
-		//{
-		//	barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
-		//}
-		//else
-		//{
-		//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		//}
-		//barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		//barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-		//barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
-
-		//vkCmdPipelineBarrier(
-		//	copyCommandBuffer,
-		//	VK_PIPELINE_STAGE_TRANSFER_BIT,
-		//	VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//	VK_DEPENDENCY_BY_REGION_BIT,
-		//	0, nullptr,
-		//	1, &barrier,
-		//	0, nullptr
-		//);
-		copyQueueLock.unlock();
 
 
 
@@ -2462,34 +2453,52 @@ namespace wiGraphicsTypes
 			}
 
 			copyQueueLock.lock();
+			{
+				VkImageMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.image = static_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrier.subresourceRange.baseArrayLayer = 0;
+				barrier.subresourceRange.layerCount = pDesc->ArraySize;
+				barrier.subresourceRange.baseMipLevel = 0;
+				barrier.subresourceRange.levelCount = pDesc->MipLevels;
 
-			VkImageMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.image = static_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
-			barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-			barrier.dstQueueFamilyIndex = queueIndices.copyFamily;
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
-			barrier.subresourceRange.layerCount = pDesc->ArraySize;
-			barrier.subresourceRange.baseMipLevel = 0;
-			barrier.subresourceRange.levelCount = pDesc->MipLevels;
+				vkCmdPipelineBarrier(
+					copyCommandBuffer,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
 
-			vkCmdPipelineBarrier(
-				copyCommandBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
+				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, static_cast<VkImage>((*ppTexture2D)->resource_Vulkan), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
 
-			vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, static_cast<VkImage>((*ppTexture2D)->resource_Vulkan), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
 
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+
+				vkCmdPipelineBarrier(
+					copyCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
+			}
 			copyQueueLock.unlock();
 
 		}
@@ -2949,7 +2958,7 @@ namespace wiGraphicsTypes
 			VkAttachmentDescription attachment = {};
 			attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
 			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -3210,7 +3219,7 @@ namespace wiGraphicsTypes
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.cullMode = VK_CULL_MODE_NONE;
 		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -3291,10 +3300,10 @@ namespace wiGraphicsTypes
 		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
 		colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
 		colorBlending.pAttachments = colorBlendAttachments.data();
-		colorBlending.blendConstants[0] = 0.0f; // Optional
-		colorBlending.blendConstants[1] = 0.0f; // Optional
-		colorBlending.blendConstants[2] = 0.0f; // Optional
-		colorBlending.blendConstants[3] = 0.0f; // Optional
+		colorBlending.blendConstants[0] = 1.0f;
+		colorBlending.blendConstants[1] = 1.0f;
+		colorBlending.blendConstants[2] = 1.0f;
+		colorBlending.blendConstants[3] = 1.0f;
 
 		pipelineInfo.pColorBlendState = &colorBlending;
 
@@ -3327,7 +3336,7 @@ namespace wiGraphicsTypes
 
 		VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline_Vulkan));
 		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
-		//assert(SUCCEEDED(hr));
+		assert(SUCCEEDED(hr));
 
 		return hr;
 	}
@@ -3368,7 +3377,7 @@ namespace wiGraphicsTypes
 
 		VkResult res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline_Vulkan));
 		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
-		//assert(SUCCEEDED(hr));
+		assert(SUCCEEDED(hr));
 
 		return hr;
 	}
@@ -3842,10 +3851,6 @@ namespace wiGraphicsTypes
 			renderPass[threadID].pso = static_cast<VkPipeline>(pso->pipeline_Vulkan);
 			renderPass[threadID].renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
 		}
-
-		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
-
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
@@ -3853,21 +3858,25 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDraw(GetDirectCommandList(threadID), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 	{
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDrawIndexed(GetDirectCommandList(threadID), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDraw(GetDirectCommandList(threadID), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 	{
+		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDrawIndexed(GetDirectCommandList(threadID), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
@@ -3993,7 +4002,7 @@ namespace wiGraphicsTypes
 		);
 
 
-		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
+		//renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 
 	}
 	void* GraphicsDevice_Vulkan::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
@@ -4094,7 +4103,7 @@ namespace wiGraphicsTypes
 		);
 
 
-		renderPass[threadID].validate(device, GetDirectCommandList(threadID));
+		//renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 
 
 		// Thread safety is compromised!
@@ -4152,31 +4161,34 @@ namespace wiGraphicsTypes
 		//for (UINT i = 0; i < NumBarriers; ++i)
 		//{
 
-		//	Texture* tex = dynamic_cast<Texture*>(resources[i]);
-
-		//	if (tex != nullptr)
+		//	if (stateBefore == RESOURCE_STATE_RENDER_TARGET)
 		//	{
-		//		VkImageMemoryBarrier barrier = {};
-		//		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		//		barrier.image = nullImage;
-		//		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		//		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		//		barrier.srcAccessMask = 0;
-		//		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		//		barrier.subresourceRange.baseArrayLayer = 0;
-		//		barrier.subresourceRange.layerCount = 1;
-		//		barrier.subresourceRange.baseMipLevel = 0;
-		//		barrier.subresourceRange.levelCount = 1;
-		//		vkCmdPipelineBarrier(
-		//			GetDirectCommandList(threadID),
-		//			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		//			VK_DEPENDENCY_BY_REGION_BIT,
-		//			0, nullptr,
-		//			0, nullptr,
-		//			1, &barrier
-		//		);
+		//		Texture* tex = dynamic_cast<Texture*>(resources[i]);
+
+		//		if (tex != nullptr)
+		//		{
+		//			VkImageMemoryBarrier barrier = {};
+		//			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		//			barrier.image = static_cast<VkImage>(tex->resource_Vulkan);
+		//			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		//			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+		//			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		//			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		//			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//			barrier.subresourceRange.baseArrayLayer = 0;
+		//			barrier.subresourceRange.layerCount = 1;
+		//			barrier.subresourceRange.baseMipLevel = 0;
+		//			barrier.subresourceRange.levelCount = 1;
+		//			vkCmdPipelineBarrier(
+		//				GetDirectCommandList(threadID),
+		//				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//				VK_DEPENDENCY_BY_REGION_BIT,
+		//				0, nullptr,
+		//				0, nullptr,
+		//				1, &barrier
+		//			);
+		//		}
 		//	}
 
 		//}
