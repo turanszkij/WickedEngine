@@ -517,162 +517,209 @@ namespace wiGraphicsTypes
 
 			// STAGING CPU descriptor table needs to be initialized:
 
-			VkWriteDescriptorSet writeDescriptors = {};
-			writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			writeDescriptors.dstSet = descriptorSet_CPU[stage];
-			writeDescriptors.dstArrayElement = 0;
+			std::vector<VkWriteDescriptorSet> initWrites;
+
+			VkDescriptorBufferInfo bufferInfo = {};
+			bufferInfo.buffer = device->nullBuffer;
+			bufferInfo.offset = 0;
+			bufferInfo.range = VK_WHOLE_SIZE;
+
+			VkDescriptorImageInfo imageInfo = {};
+			imageInfo.imageView = device->nullImageView;
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+			VkBufferView bufferViews = {};
+			bufferViews = device->nullBufferView;
+
+			VkDescriptorImageInfo samplerInfo = {};
+			samplerInfo.imageView = nullptr;
+			samplerInfo.sampler = device->nullSampler;
+
+			int offset = 0;
 
 			// CBV:
 			{
-				VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_CBV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(bufferInfo); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_CBV);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_CBV_COUNT; ++i)
 				{
-					bufferInfo[i].buffer = device->nullBuffer;
-					bufferInfo[i].offset = 0;
-					bufferInfo[i].range = VK_WHOLE_SIZE;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = &bufferInfo;
+					writeDescriptors.pImageInfo = nullptr;
+					writeDescriptors.pTexelBufferView = nullptr;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
-				writeDescriptors.pBufferInfo = bufferInfo;
-				writeDescriptors.pImageInfo = nullptr;
-				writeDescriptors.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 
 			// SRV - Texture:
 			{
-				VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
 				{
-					imageInfo[i].imageView = device->nullImageView;
-					imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = nullptr;
+					writeDescriptors.pImageInfo = &imageInfo;
+					writeDescriptors.pTexelBufferView = nullptr;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
-				writeDescriptors.pBufferInfo = nullptr;
-				writeDescriptors.pImageInfo = imageInfo;
-				writeDescriptors.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 			// SRV - Typed Buffer:
 			{
-				VkBufferView bufferViews[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(bufferViews); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
 				{
-					bufferViews[i] = device->nullBufferView;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = nullptr;
+					writeDescriptors.pImageInfo = nullptr;
+					writeDescriptors.pTexelBufferView = &bufferViews;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
-				writeDescriptors.pBufferInfo = nullptr;
-				writeDescriptors.pImageInfo = nullptr;
-				writeDescriptors.pTexelBufferView = bufferViews;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 			// SRV - Untyped Buffer:
 			{
-				VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(bufferInfo); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_SRV_COUNT; ++i)
 				{
-					bufferInfo[i].buffer = device->nullBuffer;
-					bufferInfo[i].offset = 0;
-					bufferInfo[i].range = VK_WHOLE_SIZE;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = &bufferInfo;
+					writeDescriptors.pImageInfo = nullptr;
+					writeDescriptors.pTexelBufferView = nullptr;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
-				writeDescriptors.pBufferInfo = bufferInfo;
-				writeDescriptors.pImageInfo = nullptr;
-				writeDescriptors.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 
 			// UAV - Texture:
 			{
-				VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_UAV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
 				{
-					imageInfo[i].imageView = device->nullImageView;
-					imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = nullptr;
+					writeDescriptors.pImageInfo = &imageInfo;
+					writeDescriptors.pTexelBufferView = nullptr;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
-				writeDescriptors.pBufferInfo = nullptr;
-				writeDescriptors.pImageInfo = imageInfo;
-				writeDescriptors.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 			// UAV - Typed Buffer:
 			{
-				VkBufferView bufferViews[GPU_RESOURCE_HEAP_UAV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(bufferViews); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
 				{
-					bufferViews[i] = device->nullBufferView;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = nullptr;
+					writeDescriptors.pImageInfo = nullptr;
+					writeDescriptors.pTexelBufferView = &bufferViews;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
-				writeDescriptors.pBufferInfo = nullptr;
-				writeDescriptors.pImageInfo = nullptr;
-				writeDescriptors.pTexelBufferView = bufferViews;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 			// UAV - Untyped Buffer:
 			{
-				VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_UAV_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(bufferInfo); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER);
+
+				for (int i = 0; i < GPU_RESOURCE_HEAP_UAV_COUNT; ++i)
 				{
-					bufferInfo[i].buffer = device->nullBuffer;
-					bufferInfo[i].offset = 0;
-					bufferInfo[i].range = VK_WHOLE_SIZE;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = &bufferInfo;
+					writeDescriptors.pImageInfo = nullptr;
+					writeDescriptors.pTexelBufferView = nullptr;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER;
-				writeDescriptors.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
-				writeDescriptors.pBufferInfo = bufferInfo;
-				writeDescriptors.pImageInfo = nullptr;
-				writeDescriptors.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 
 
 			// Sampler:
 			{
-				VkDescriptorImageInfo imageInfo[GPU_SAMPLER_HEAP_COUNT] = {};
-				for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
+				assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER);
+
+				for (int i = 0; i < GPU_SAMPLER_HEAP_COUNT; ++i)
 				{
-					imageInfo[i].imageView = nullptr;
-					imageInfo[i].sampler = device->nullSampler;
+					VkWriteDescriptorSet writeDescriptors = {};
+					writeDescriptors.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					writeDescriptors.dstSet = descriptorSet_CPU[stage];
+					writeDescriptors.dstArrayElement = 0;
+					writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+					writeDescriptors.dstBinding = offset;
+					writeDescriptors.descriptorCount = 1;
+					writeDescriptors.pBufferInfo = nullptr;
+					writeDescriptors.pImageInfo = &samplerInfo;
+					writeDescriptors.pTexelBufferView = nullptr;
+					initWrites.push_back(writeDescriptors);
+
+					offset += writeDescriptors.descriptorCount;
 				}
 
-				writeDescriptors.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-				writeDescriptors.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER;
-				writeDescriptors.descriptorCount = GPU_SAMPLER_HEAP_COUNT;
-				writeDescriptors.pBufferInfo = nullptr;
-				writeDescriptors.pImageInfo = imageInfo;
-				writeDescriptors.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(device->device, 1, &writeDescriptors, 0, nullptr);
 			}
 
 
+			vkUpdateDescriptorSets(device->device, static_cast<uint32_t>(initWrites.size()), initWrites.data(), 0, nullptr);
 
 		}
 	}
@@ -1473,12 +1520,13 @@ namespace wiGraphicsTypes
 
 			// Constant Buffers:
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_CBV);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_CBV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
@@ -1486,36 +1534,39 @@ namespace wiGraphicsTypes
 
 			// Shader Resource Views:
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
 			}
 
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
 			}
 
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_SRV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
@@ -1524,36 +1575,39 @@ namespace wiGraphicsTypes
 
 			// Unordered Access Views:
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
 			}
 
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
 			}
 
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER);
+			for (int j = 0; j < GPU_RESOURCE_HEAP_UAV_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
@@ -1562,12 +1616,13 @@ namespace wiGraphicsTypes
 
 			// Samplers:
 			assert(offset == VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER);
+			for (int j = 0; j < GPU_SAMPLER_HEAP_COUNT; ++j)
 			{
 				VkDescriptorSetLayoutBinding layoutBinding = {};
 				layoutBinding.stageFlags = 0;
 				layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 				layoutBinding.binding = offset;
-				layoutBinding.descriptorCount = GPU_SAMPLER_HEAP_COUNT;
+				layoutBinding.descriptorCount = 1;
 				layoutBindings.push_back(layoutBinding);
 
 				offset += layoutBinding.descriptorCount;
@@ -3654,8 +3709,8 @@ namespace wiGraphicsTypes
 						VkWriteDescriptorSet descriptorWrite = {};
 						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-						descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE;
-						descriptorWrite.dstArrayElement = slot;
+						descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+						descriptorWrite.dstArrayElement = 0;
 						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 						descriptorWrite.descriptorCount = 1;
 						descriptorWrite.pBufferInfo = nullptr;
@@ -3720,8 +3775,8 @@ namespace wiGraphicsTypes
 			VkWriteDescriptorSet descriptorWrite = {};
 			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-			descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV;
-			descriptorWrite.dstArrayElement = slot;
+			descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot;
+			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1;
 			descriptorWrite.pBufferInfo = &bufferInfo;

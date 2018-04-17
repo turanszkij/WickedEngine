@@ -51,39 +51,39 @@ typedef XMINT4 int4;
 
 #define globallycoherent /*nothing*/
 
-#define CBUFFER(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_CBV, VULKAN_DESCRIPTOR_SET_ID)]] cbuffer name
+#define CBUFFER(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot, VULKAN_DESCRIPTOR_SET_ID)]] cbuffer name
 
-#define RAWBUFFER(name,slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] ByteAddressBuffer name
-#define RWRAWBUFFER(name,slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RWByteAddressBuffer name
+#define RAWBUFFER(name,slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] ByteAddressBuffer name
+#define RWRAWBUFFER(name,slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWByteAddressBuffer name
 
-#define TYPEDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] Buffer< type > name
-#define RWTYPEDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RWBuffer< type > name
+#define TYPEDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] Buffer< type > name
+#define RWTYPEDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWBuffer< type > name
 
-#define STRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] StructuredBuffer< type > name
-#define RWSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RWStructuredBuffer< type > name
-#define ROVSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedStructuredBuffer< type > name
-
-
-#define TEXTURE1D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture1D< type > name;
-#define TEXTURE1DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture1DArray< type > name;
-#define RWTEXTURE1D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture1D< type > name;
-
-#define TEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture2D< type > name;
-#define TEXTURE2DMS(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DMS< type > name;
-#define TEXTURE2DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DArray< type > name;
-#define RWTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture2D< type > name;
-#define ROVTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture2D< type > name;
-
-#define TEXTURECUBE(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] TextureCube< type > name;
-#define TEXTURECUBEARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] TextureCubeArray< type > name;
-
-#define TEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] Texture3D< type > name;
-#define RWTEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture3D< type > name;
-#define ROVTEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture3D< type > name;
+#define STRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] StructuredBuffer< type > name
+#define RWSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWStructuredBuffer< type > name
+#define ROVSTRUCTUREDBUFFER(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedStructuredBuffer< type > name
 
 
-#define SAMPLERSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER, VULKAN_DESCRIPTOR_SET_ID)]] SamplerState name;
-#define SAMPLERCOMPARISONSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER, VULKAN_DESCRIPTOR_SET_ID)]] SamplerComparisonState name;
+#define TEXTURE1D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture1D< type > name;
+#define TEXTURE1DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture1DArray< type > name;
+#define RWTEXTURE1D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture1D< type > name;
+
+#define TEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture2D< type > name;
+#define TEXTURE2DMS(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DMS< type > name;
+#define TEXTURE2DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DArray< type > name;
+#define RWTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture2D< type > name;
+#define ROVTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture2D< type > name;
+
+#define TEXTURECUBE(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] TextureCube< type > name;
+#define TEXTURECUBEARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] TextureCubeArray< type > name;
+
+#define TEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture3D< type > name;
+#define RWTEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture3D< type > name;
+#define ROVTEXTURE3D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture3D< type > name;
+
+
+#define SAMPLERSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot, VULKAN_DESCRIPTOR_SET_ID)]] SamplerState name;
+#define SAMPLERCOMPARISONSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot, VULKAN_DESCRIPTOR_SET_ID)]] SamplerComparisonState name;
 
 
 
