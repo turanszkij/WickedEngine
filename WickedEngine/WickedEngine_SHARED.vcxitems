@@ -248,7 +248,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\nv_dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
@@ -529,7 +531,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_image.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />

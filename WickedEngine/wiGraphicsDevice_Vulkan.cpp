@@ -4,6 +4,9 @@
 #include "wiHelper.h"
 #include "ShaderInterop_Vulkan.h"
 
+#include "Utility/stb_image.h"
+#include "Utility/nv_dds.h"
+
 #include <sstream>
 #include <vector>
 #include <cstring>
@@ -4130,6 +4133,117 @@ namespace wiGraphicsTypes
 	{
 		HRESULT hr = E_FAIL;
 		(*ppTexture) = new Texture2D();
+
+		if (!fileName.substr(fileName.length() - 4).compare(std::string(".dds")))
+		{
+			// Load dds
+
+			nv_dds::CDDSImage img;
+			img.load(fileName, false);
+
+			if (img.is_valid())
+			{
+				Texture2DDesc desc;
+				desc.ArraySize = 1;
+				desc.BindFlags = BIND_SHADER_RESOURCE;
+				desc.CPUAccessFlags = 0;
+				desc.Height = img.get_height();
+				desc.Width = img.get_width();
+				desc.MipLevels = 1;
+				desc.MiscFlags = 0;
+				desc.Usage = USAGE_IMMUTABLE;
+
+				switch (img.get_format())
+				{
+				case GL_RGB:
+				case GL_RGBA:
+					desc.Format = FORMAT_R8G8B8A8_UNORM;
+					break;
+				case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+					desc.Format = FORMAT_BC1_UNORM;
+					break;
+				case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+					desc.Format = FORMAT_BC1_UNORM;
+					break;
+				case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+					desc.Format = FORMAT_BC3_UNORM;
+					break;
+				case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+					desc.Format = FORMAT_BC5_UNORM;
+					break;
+				default:
+					desc.Format = FORMAT_R8G8B8A8_UNORM;
+					break;
+				}
+
+				std::vector<SubresourceData> InitData;
+
+				if (img.is_cubemap())
+				{
+					assert(0); // TODO
+				}
+				if (img.is_volume())
+				{
+					assert(0); // TODO
+				}
+
+				if (img.get_num_mipmaps() > 0)
+				{
+					InitData.resize(img.get_num_mipmaps());
+
+					desc.MipLevels = img.get_num_mipmaps();
+
+					for (UINT i = 0; i < img.get_num_mipmaps(); ++i)
+					{
+						const nv_dds::CSurface& surf = img.get_mipmap(i);
+
+						InitData[i].pSysMem = static_cast<uint8_t*>(surf); // call operator
+						InitData[i].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height());
+					}
+				}
+				else
+				{
+					// single mip
+					InitData.resize(1);
+
+					InitData[0].pSysMem = static_cast<uint8_t*>(img); // call operator
+					InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height());
+				}
+
+				CreateTexture2D(&desc, InitData.data(), ppTexture);
+
+			}
+
+		}
+		else
+		{
+			const int channelCount = 4;
+			int width, height, bpp;
+			unsigned char* rgb = stbi_load(fileName.c_str(), &width, &height, &bpp, channelCount);
+
+			if (rgb != nullptr)
+			{
+				Texture2DDesc desc;
+				desc.ArraySize = 1;
+				desc.BindFlags = BIND_SHADER_RESOURCE;
+				desc.CPUAccessFlags = 0;
+				desc.Format = FORMAT_R8G8B8A8_UNORM;
+				desc.Height = static_cast<uint32_t>(height);
+				desc.Width = static_cast<uint32_t>(width);
+				desc.MipLevels = 1;
+				desc.MiscFlags = 0;
+				desc.Usage = USAGE_IMMUTABLE;
+
+				SubresourceData InitData;
+				InitData.pSysMem = rgb;
+				InitData.SysMemPitch = static_cast<UINT>(width * channelCount);
+
+				CreateTexture2D(&desc, &InitData, ppTexture);
+			}
+
+			stbi_image_free(rgb);
+		}
+
 
 		return hr;
 	}
