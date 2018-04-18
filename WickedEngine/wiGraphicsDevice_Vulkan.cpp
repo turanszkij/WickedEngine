@@ -873,6 +873,8 @@ namespace wiGraphicsTypes
 		attachmentCount = 0;
 
 		memset(clearColor, 0, sizeof(clearColor));
+
+		fbo = nullptr;
 	}
 	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
 	{
@@ -891,29 +893,32 @@ namespace wiGraphicsTypes
 
 		if (dirty || !active)
 		{
-			VkFramebuffer frameBuffer;
+			VkFramebuffer frameBuffer = fbo;
 
-			auto& it = renderPassFrameBuffers.find(pso);
-			if (it == renderPassFrameBuffers.end())
+			if (frameBuffer == nullptr)
 			{
-				VkFramebufferCreateInfo framebufferInfo = {};
-				framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebufferInfo.renderPass = renderPass;
-				framebufferInfo.attachmentCount = attachmentCount;
-				framebufferInfo.pAttachments = attachments;
-				framebufferInfo.width = attachmentsExtents.width;
-				framebufferInfo.height = attachmentsExtents.height;
-				framebufferInfo.layers = 1;
+				auto& it = renderPassFrameBuffers.find(pso);
+				if (it == renderPassFrameBuffers.end())
+				{
+					VkFramebufferCreateInfo framebufferInfo = {};
+					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+					framebufferInfo.renderPass = renderPass;
+					framebufferInfo.attachmentCount = attachmentCount;
+					framebufferInfo.pAttachments = attachments;
+					framebufferInfo.width = attachmentsExtents.width;
+					framebufferInfo.height = attachmentsExtents.height;
+					framebufferInfo.layers = 1;
 
-				if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
-					throw std::runtime_error("failed to create framebuffer!");
+					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create framebuffer!");
+					}
+
+					renderPassFrameBuffers[pso] = frameBuffer;
 				}
-
-				renderPassFrameBuffers[pso] = frameBuffer;
-			}
-			else
-			{
-				frameBuffer = it->second;
+				else
+				{
+					frameBuffer = it->second;
+				}
 			}
 
 			VkRenderPassBeginInfo renderPassInfo = {};
@@ -930,7 +935,10 @@ namespace wiGraphicsTypes
 				vkCmdEndRenderPass(commandBuffer);
 			}
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pso);
+			if (pso != nullptr)
+			{
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pso);
+			}
 			dirty = false;
 			active = true;
 		}
@@ -1285,6 +1293,90 @@ namespace wiGraphicsTypes
 			break;
 		}
 		return VK_COMPARE_OP_NEVER;
+	}
+	inline VkBlendFactor _ConvertBlend(BLEND value)
+	{
+		switch (value)
+		{
+		case BLEND_ZERO:
+			return VK_BLEND_FACTOR_ZERO;
+			break;
+		case BLEND_ONE:
+			return VK_BLEND_FACTOR_ONE;
+			break;
+		case BLEND_SRC_COLOR:
+			return VK_BLEND_FACTOR_SRC_COLOR;
+			break;
+		case BLEND_INV_SRC_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+			break;
+		case BLEND_SRC_ALPHA:
+			return VK_BLEND_FACTOR_SRC_ALPHA;
+			break;
+		case BLEND_INV_SRC_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			break;
+		case BLEND_DEST_ALPHA:
+			return VK_BLEND_FACTOR_DST_ALPHA;
+			break;
+		case BLEND_INV_DEST_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+			break;
+		case BLEND_DEST_COLOR:
+			return VK_BLEND_FACTOR_DST_COLOR;
+			break;
+		case BLEND_INV_DEST_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+			break;
+		case BLEND_SRC_ALPHA_SAT:
+			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+			break;
+		case BLEND_BLEND_FACTOR:
+			return VK_BLEND_FACTOR_CONSTANT_COLOR;
+			break;
+		case BLEND_INV_BLEND_FACTOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+			break;
+		case BLEND_SRC1_COLOR:
+			return VK_BLEND_FACTOR_SRC1_COLOR;
+			break;
+		case BLEND_INV_SRC1_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+			break;
+		case BLEND_SRC1_ALPHA:
+			return VK_BLEND_FACTOR_SRC1_ALPHA;
+			break;
+		case BLEND_INV_SRC1_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+			break;
+		default:
+			break;
+		}
+		return VK_BLEND_FACTOR_ZERO;
+	}
+	inline VkBlendOp _ConvertBlendOp(BLEND_OP value)
+	{
+		switch (value)
+		{
+		case BLEND_OP_ADD:
+			return VK_BLEND_OP_ADD;
+			break;
+		case BLEND_OP_SUBTRACT:
+			return VK_BLEND_OP_SUBTRACT;
+			break;
+		case BLEND_OP_REV_SUBTRACT:
+			return VK_BLEND_OP_REVERSE_SUBTRACT;
+			break;
+		case BLEND_OP_MIN:
+			return VK_BLEND_OP_MIN;
+			break;
+		case BLEND_OP_MAX:
+			return VK_BLEND_OP_MAX;
+			break;
+		default:
+			break;
+		}
+		return VK_BLEND_OP_ADD;
 	}
 
 
@@ -2068,6 +2160,18 @@ namespace wiGraphicsTypes
 		// Initiate first commands:
 		for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 		{
+			VkViewport viewports[6];
+			for (UINT i = 0; i < ARRAYSIZE(viewports); ++i)
+			{
+				viewports[i].x = 0;
+				viewports[i].y = 0;
+				viewports[i].width = static_cast<float>(SCREENWIDTH);
+				viewports[i].height = static_cast<float>(SCREENHEIGHT);
+				viewports[i].minDepth = 0;
+				viewports[i].maxDepth = 1;
+			}
+			vkCmdSetViewport(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(viewports), viewports);
+
 			VkRect2D scissors[8];
 			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
 			{
@@ -2077,6 +2181,9 @@ namespace wiGraphicsTypes
 				scissors[i].extent.height = 65535;
 			}
 			vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
+
+			float blendConstants[] = { 1,1,1,1 };
+			vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
 		}
 
 	}
@@ -2167,7 +2274,7 @@ namespace wiGraphicsTypes
 		{
 			if (ppBuffer->desc.Format == FORMAT_UNKNOWN)
 			{
-				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
 			else
 			{
@@ -2978,6 +3085,14 @@ namespace wiGraphicsTypes
 		subpass.colorAttachmentCount = pDesc->numRTs;
 		subpass.pColorAttachments = colorAttachmentRefs.data();
 
+		//VkSubpassDependency dependency = {};
+		//dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		//dependency.dstSubpass = 0;
+		//dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		//dependency.srcAccessMask = 0;
+		//dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		//dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 		VkAttachmentDescription depthAttachment = {};
 		VkAttachmentReference depthAttachmentRef = {};
 		if (pDesc->DSFormat != FORMAT_UNKNOWN)
@@ -3004,6 +3119,8 @@ namespace wiGraphicsTypes
 		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
+		//renderPassInfo.dependencyCount = 1;
+		//renderPassInfo.pDependencies = &dependency;
 
 		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, reinterpret_cast<VkRenderPass*>(&pso->renderPass_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create render pass!");
@@ -3160,6 +3277,7 @@ namespace wiGraphicsTypes
 				}
 			}
 
+			uint32_t offset = 0;
 			uint32_t i = 0;
 			for (auto& x : pDesc->il->desc)
 			{
@@ -3171,7 +3289,8 @@ namespace wiGraphicsTypes
 				if (attr.offset == APPEND_ALIGNED_ELEMENT)
 				{
 					// need to manually resolve this from the format spec.
-					attr.offset = GetFormatStride(x.Format);
+					attr.offset = offset;
+					offset += GetFormatStride(x.Format);
 				}
 
 				attributes.push_back(attr);
@@ -3222,9 +3341,48 @@ namespace wiGraphicsTypes
 		rasterizer.cullMode = VK_CULL_MODE_NONE;
 		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
-		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-		rasterizer.depthBiasClamp = 0.0f; // Optional
-		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+		rasterizer.depthBiasConstantFactor = 0.0f;
+		rasterizer.depthBiasClamp = 0.0f;
+		rasterizer.depthBiasSlopeFactor = 0.0f;
+
+		if (pDesc->rs != nullptr)
+		{
+			const RasterizerStateDesc& desc = pDesc->rs->desc;
+
+			rasterizer.depthClampEnable = desc.DepthClipEnable;
+
+			switch (desc.FillMode)
+			{
+			case FILL_WIREFRAME:
+				rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+				break;
+			case FILL_SOLID:
+			default:
+				rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+				break;
+			}
+
+			switch (desc.CullMode)
+			{
+			case CULL_BACK:
+				rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+				break;
+			case CULL_FRONT:
+				rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+				break;
+			case CULL_NONE:
+			default:
+				rasterizer.cullMode = VK_CULL_MODE_NONE;
+				break;
+			}
+
+			rasterizer.frontFace = desc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+			rasterizer.depthBiasEnable = desc.DepthBias != 0;
+			rasterizer.depthBiasConstantFactor = static_cast<float>(desc.DepthBias);
+			rasterizer.depthBiasClamp = desc.DepthBiasClamp;
+			rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
+
+		}
 
 		pipelineInfo.pRasterizationState = &rasterizer;
 
@@ -3272,10 +3430,10 @@ namespace wiGraphicsTypes
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		multisampling.minSampleShading = 1.0f; // Optional
-		multisampling.pSampleMask = nullptr; // Optional
-		multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
-		multisampling.alphaToOneEnable = VK_FALSE; // Optional
+		multisampling.minSampleShading = 1.0f;
+		multisampling.pSampleMask = nullptr;
+		multisampling.alphaToCoverageEnable = VK_FALSE;
+		multisampling.alphaToOneEnable = VK_FALSE;
 
 		pipelineInfo.pMultisampleState = &multisampling;
 
@@ -3284,20 +3442,40 @@ namespace wiGraphicsTypes
 		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(subpass.colorAttachmentCount);
 		for (size_t i = 0; i < colorBlendAttachments.size(); ++i)
 		{
-			colorBlendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-			colorBlendAttachments[i].blendEnable = VK_FALSE;
-			colorBlendAttachments[i].srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-			colorBlendAttachments[i].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-			colorBlendAttachments[i].colorBlendOp = VK_BLEND_OP_ADD; // Optional
-			colorBlendAttachments[i].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-			colorBlendAttachments[i].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-			colorBlendAttachments[i].alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+			RenderTargetBlendStateDesc desc = pDesc->bs != nullptr ? pDesc->bs->desc.RenderTarget[i] : RenderTargetBlendStateDesc();
+
+			colorBlendAttachments[i].blendEnable = desc.BlendEnable ? VK_TRUE : VK_FALSE;
+
+			colorBlendAttachments[i].colorWriteMask = 0;
+			if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_RED)
+			{
+				colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+			}
+			if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_GREEN)
+			{
+				colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+			}
+			if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_BLUE)
+			{
+				colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+			}
+			if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_ALPHA)
+			{
+				colorBlendAttachments[i].colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+			}
+
+			colorBlendAttachments[i].srcColorBlendFactor = _ConvertBlend(desc.SrcBlend);
+			colorBlendAttachments[i].dstColorBlendFactor = _ConvertBlend(desc.DestBlend);
+			colorBlendAttachments[i].colorBlendOp = _ConvertBlendOp(desc.BlendOp);
+			colorBlendAttachments[i].srcAlphaBlendFactor = _ConvertBlend(desc.SrcBlendAlpha);
+			colorBlendAttachments[i].dstAlphaBlendFactor = _ConvertBlend(desc.DestBlendAlpha);
+			colorBlendAttachments[i].alphaBlendOp = _ConvertBlendOp(desc.BlendOpAlpha);
 		}
 
 		VkPipelineColorBlendStateCreateInfo colorBlending = {};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+		colorBlending.logicOp = VK_LOGIC_OP_COPY;
 		colorBlending.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
 		colorBlending.pAttachments = colorBlendAttachments.data();
 		colorBlending.blendConstants[0] = 1.0f;
@@ -3322,8 +3500,8 @@ namespace wiGraphicsTypes
 		VkDynamicState dynamicStates[] = {
 			VK_DYNAMIC_STATE_VIEWPORT,
 			VK_DYNAMIC_STATE_SCISSOR,
-			//VK_DYNAMIC_STATE_LINE_WIDTH,
-			VK_DYNAMIC_STATE_STENCIL_REFERENCE
+			VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+			VK_DYNAMIC_STATE_BLEND_CONSTANTS
 		};
 
 		VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -3435,27 +3613,29 @@ namespace wiGraphicsTypes
 		//VkClearValue clearColor = { (FRAMECOUNT % 256) / 255.0f, 0.0f, 0.0f, 1.0f };
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-		VkRenderPassBeginInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = defaultRenderPass;
-		renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChainExtent;
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
+		//VkRenderPassBeginInfo renderPassInfo = {};
+		//renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		//renderPassInfo.renderPass = defaultRenderPass;
+		//renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
+		//renderPassInfo.renderArea.offset = { 0, 0 };
+		//renderPassInfo.renderArea.extent = swapChainExtent;
+		//renderPassInfo.clearValueCount = 1;
+		//renderPassInfo.pClearValues = &clearColor;
 
 		// Begin presentation render pass...
-		vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		//vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		
-		renderPass[GRAPHICSTHREAD_IMMEDIATE].active = true;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].dirty = false;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentCount = 1;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].attachments[0] = GetFrameResources().swapChainImageView;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentsExtents = swapChainExtent;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].clearColor[0] = clearColor;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].renderPass = defaultRenderPass;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].pso = nullptr;
-		//renderPass[GRAPHICSTHREAD_IMMEDIATE].validate(device, GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].active = false;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].dirty = true;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentCount = 1;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachments[0] = GetFrameResources().swapChainImageView;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentsExtents = swapChainExtent;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].clearColor[0] = clearColor;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].renderPass = defaultRenderPass;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].pso = nullptr;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].fbo = GetFrameResources().swapChainFramebuffer;
+
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].validate(device, GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 
 
 		VkClearAttachment clearInfo = {};
@@ -3480,18 +3660,46 @@ namespace wiGraphicsTypes
 		VkResult res;
 
 		uint64_t currentframe = GetFrameCount() % BACKBUFFER_COUNT;
+		uint32_t imageIndex;
+		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+		assert(imageIndex == currentframe);
+
+
 
 		// ...end presentation render pass
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].disable(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
+
+
+
+
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.image = swapChainImages[imageIndex];
+		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		vkCmdPipelineBarrier(
+			GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE),
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
+
+
 
 		if (vkEndCommandBuffer(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to record command buffer!");
 		}
 
-
-		uint32_t imageIndex;
-		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-		assert(imageIndex == currentframe);
 
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -3557,6 +3765,18 @@ namespace wiGraphicsTypes
 			res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[threadID], &beginInfo);
 			assert(res == VK_SUCCESS);
 
+			VkViewport viewports[6];
+			for (UINT i = 0; i < ARRAYSIZE(viewports); ++i)
+			{
+				viewports[i].x = 0;
+				viewports[i].y = 0;
+				viewports[i].width = static_cast<float>(SCREENWIDTH);
+				viewports[i].height = static_cast<float>(SCREENHEIGHT);
+				viewports[i].minDepth = 0;
+				viewports[i].maxDepth = 1;
+			}
+			vkCmdSetViewport(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(viewports), viewports);
+
 			VkRect2D scissors[8];
 			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
 			{
@@ -3566,6 +3786,9 @@ namespace wiGraphicsTypes
 				scissors[i].extent.height = 65535;
 			}
 			vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
+
+			float blendConstants[] = { 1,1,1,1 };
+			vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
 
 
 			// reset descriptor allocators:
@@ -3704,39 +3927,85 @@ namespace wiGraphicsTypes
 		{
 			if (arrayIndex < 0)
 			{
-				if (resource->SRV_Vulkan != nullptr)
+				Texture* tex = dynamic_cast<Texture*>(resource);
+
+				if (tex != nullptr && resource->SRV_Vulkan != nullptr)
 				{
+					VkDescriptorImageInfo imageInfo = {};
+					imageInfo.imageView = static_cast<VkImageView>(tex->SRV_Vulkan);
+					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-					Texture* tex = dynamic_cast<Texture*>(resource);
+					VkWriteDescriptorSet descriptorWrite = {};
+					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+					descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+					descriptorWrite.dstArrayElement = 0;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					descriptorWrite.descriptorCount = 1;
+					descriptorWrite.pBufferInfo = nullptr;
+					descriptorWrite.pImageInfo = &imageInfo;
+					descriptorWrite.pTexelBufferView = nullptr;
 
-					if (tex != nullptr)
+					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+				}
+				else
+				{
+					GPUBuffer* buffer = dynamic_cast<GPUBuffer*>(resource);
+
+					if (buffer != nullptr)
 					{
-						VkDescriptorImageInfo imageInfo = {};
-						imageInfo.imageView = static_cast<VkImageView>(tex->SRV_Vulkan);
-						imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+						if (buffer->desc.Format == FORMAT_UNKNOWN)
+						{
+							// structured buffer, raw buffer:
 
-						VkWriteDescriptorSet descriptorWrite = {};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-						descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pBufferInfo = nullptr;
-						descriptorWrite.pImageInfo = &imageInfo;
-						descriptorWrite.pTexelBufferView = nullptr;
+							VkDescriptorBufferInfo bufferInfo = {};
+							bufferInfo.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
+							bufferInfo.offset = 0;
+							bufferInfo.range = buffer->desc.ByteWidth;
 
-						vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-						GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+							VkWriteDescriptorSet descriptorWrite = {};
+							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot;
+							descriptorWrite.dstArrayElement = 0;
+							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+							descriptorWrite.descriptorCount = 1;
+							descriptorWrite.pBufferInfo = &bufferInfo;
+							descriptorWrite.pImageInfo = nullptr;
+							descriptorWrite.pTexelBufferView = nullptr;
+
+							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+
+						}
+						else if(resource->SRV_Vulkan != nullptr)
+						{
+							// typed buffer:
+
+							VkWriteDescriptorSet descriptorWrite = {};
+							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot;
+							descriptorWrite.dstArrayElement = 0;
+							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+							descriptorWrite.descriptorCount = 1;
+							descriptorWrite.pBufferInfo = nullptr;
+							descriptorWrite.pImageInfo = nullptr;
+							descriptorWrite.pTexelBufferView = reinterpret_cast<VkBufferView*>(&buffer->SRV_Vulkan);
+
+							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+
+						}
 					}
 
-
 				}
+
 			}
 			else
 			{
 				assert(resource->additionalSRVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-
 
 			}
 		}
@@ -3830,6 +4099,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
 	{
+		float blendConstants[] = { value.x,value.y,value.z,value.w };
+		vkCmdSetBlendConstants(GetDirectCommandList(threadID), blendConstants);
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
@@ -3850,6 +4121,8 @@ namespace wiGraphicsTypes
 			renderPass[threadID].dirty = true;
 			renderPass[threadID].pso = static_cast<VkPipeline>(pso->pipeline_Vulkan);
 			renderPass[threadID].renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
+
+			vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, renderPass[threadID].pso);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
@@ -3888,14 +4161,10 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
-		//if (renderPassActive[threadID])
-		//{
-		//	vkCmdEndRenderPass(GetDirectCommandList(threadID));
-		//}
-		//renderPassActive[threadID] = false;
+		renderPass[threadID].disable(GetDirectCommandList(threadID));
 
-		//GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
-		//vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -3972,7 +4241,7 @@ namespace wiGraphicsTypes
 
 
 		// issue data copy:
-		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 4);
+		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 256);
 		memcpy(dest, data, dataSize);
 
 		VkBufferCopy copyRegion = {};

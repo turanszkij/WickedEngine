@@ -14,5 +14,9 @@ VertextoPixel main(float2 inPos : POSITION, float2 inTex : TEXCOORD0)
 	
 	Out.tex=inTex;
 
+#ifdef SHADERCOMPILER_SPIRV
+	Out.pos.y = -Out.pos.y;
+#endif 
+
 	return Out;
 }

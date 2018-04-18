@@ -80,6 +80,7 @@ namespace wiGraphicsTypes
 
 			VkPipeline pso = nullptr;
 			VkRenderPass renderPass = nullptr;
+			VkFramebuffer fbo = nullptr;
 
 			std::unordered_map<VkPipeline, VkFramebuffer> renderPassFrameBuffers;
 
