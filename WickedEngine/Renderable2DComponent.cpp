@@ -136,11 +136,6 @@ void Renderable2DComponent::Compose()
 	fx.presentFullScreen = true;
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 
-	GPUResource* res[] = {
-		rtFinal.GetTexture()
-	};
-	wiRenderer::GetDevice()->TransitionBarrier(res, 1, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PIXEL_SHADER_RESOURCE, GRAPHICSTHREAD_IMMEDIATE);
-
 	wiImage::Draw(rtFinal.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderableComponent::Compose();
