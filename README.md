@@ -18,9 +18,34 @@
 ### Overview:
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
-The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer coming.
+The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
 
-The interface is designed to be somewhat similar to the widely popular XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the widely popular Lua scripting language for faster iteration times and more flexible code structure.
+For testing quickly, this solution contains several projects which you can build out of the box with Visual Studio 2017. You can run the "Editor" or the "Tests" project to check out features. 
+You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
+Additionally, you can use some command line arguments to quickly customize the application:
+
+<table>
+  <tr>
+    <th>Argument</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>dx12</td>
+    <td>Create DirectX 12 rendering device</td>
+  </tr>
+  <tr>
+    <td>vulkan</td>
+    <td>Create Vulkan rendering device</td>
+  </tr>
+  <tr>
+    <td>debugdevice</td>
+    <td>Create rendering device with debug layer enabled for validation</td>
+  </tr>
+  <tr>
+    <td>hlsl6</td>
+    <td>Reroute shader loading path to use shader model 6 shaders (DirectX 12 only)</td>
+  </tr>
+</table>
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -44,7 +69,13 @@ The interface is designed to be somewhat similar to the widely popular XNA frame
 
 ### Getting started: 
 
-Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. Then set the following dependencies to this library in Visual Studio this way in the implementing project:
+The interface is designed to be somewhat similar to the widely popular XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. 
+However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the 
+widely popular Lua scripting language for faster iteration times and more flexible code structure.
+
+Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
+For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
+Then set the following dependencies to this library in Visual Studio this way in the implementing project:
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
@@ -55,7 +86,10 @@ Wicked Engine is provided as a static library. This means, that when creating a 
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
-in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. But this will not render anything for you yet, because first you must initialize the engine. For this, you should create a main program component by deriving from MainComponent class of Wicked Engine and initialize it appropriately by calling its Initialize() and SetWindow() functions, and calling its run() function inside the main message loop. You should also activate a RenderableComponent for the rendering to begin. You can see an example for this inside the Tests and Editor projects.
+in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. 
+But this will not render anything for you yet, because first you must initialize the engine. For this, you should create a main program component by deriving from MainComponent class of 
+Wicked Engine and initialize it appropriately by calling its Initialize() and SetWindow() functions, and calling its run() function inside the main message loop. 
+You should also activate a RenderableComponent for the rendering to begin. You can see an example for this inside the Tests and Editor projects.
 
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 
