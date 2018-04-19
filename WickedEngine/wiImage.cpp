@@ -109,6 +109,7 @@ void wiImage::LoadShaders()
 			}
 			desc.ps = imagePS[i];
 			desc.rs = &rasterizerState;
+			desc.pt = TRIANGLESTRIP;
 
 			for (int j = 0; j < BLENDMODE_COUNT; ++j)
 			{
@@ -147,6 +148,7 @@ void wiImage::LoadShaders()
 			desc.bs = &blendStates[BLENDMODE_OPAQUE];
 			desc.dss = &depthStencilStates[STENCILMODE_DISABLED];
 			desc.rs = &rasterizerState;
+			desc.pt = TRIANGLELIST;
 
 			if (i == POSTPROCESS_DOWNSAMPLEDEPTHBUFFER || i == POSTPROCESS_REPROJECTDEPTHBUFFER)
 			{
@@ -200,6 +202,7 @@ void wiImage::LoadShaders()
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 		desc.DSFormat = wiRenderer::DSFormat_full;
+		desc.pt = TRIANGLELIST;
 		device->CreateGraphicsPSO(&desc, &deferredPSO);
 	}));
 
@@ -344,8 +347,6 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 	device->EventBegin("Image", threadID);
 
 	bool fullScreenEffect = false;
-
-	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
 	device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
 
@@ -652,8 +653,6 @@ void wiImage::DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_spec
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("DeferredComposition", threadID);
-
-	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST,threadID);
 
 	device->BindStencilRef(stencilRef, threadID);
 

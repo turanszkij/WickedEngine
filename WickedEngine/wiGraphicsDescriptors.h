@@ -28,19 +28,12 @@ namespace wiGraphicsTypes
 	};
 	enum PRIMITIVETOPOLOGY
 	{
+		UNDEFINED_TOPOLOGY,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
 		LINELIST,
 		PATCHLIST,
-	}; 
-	enum PRIMITIVE_TOPOLOGY_TYPE
-	{
-		PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED,
-		PRIMITIVE_TOPOLOGY_TYPE_POINT,
-		PRIMITIVE_TOPOLOGY_TYPE_LINE,
-		PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-		PRIMITIVE_TOPOLOGY_TYPE_PATCH
 	};
 	enum COMPARISON_FUNC
 	{
@@ -653,7 +646,7 @@ namespace wiGraphicsTypes
 		RasterizerState*		rs;
 		DepthStencilState*		dss;
 		VertexLayout*			il;
-		PRIMITIVE_TOPOLOGY_TYPE	ptt;
+		PRIMITIVETOPOLOGY		pt;
 		UINT					numRTs;
 		FORMAT					RTFormats[8];
 		FORMAT					DSFormat;
@@ -671,7 +664,7 @@ namespace wiGraphicsTypes
 			SAFE_INIT(rs);
 			SAFE_INIT(dss);
 			SAFE_INIT(il);
-			ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			pt = TRIANGLELIST;
 			numRTs = 0;
 			for (int i = 0; i < ARRAYSIZE(RTFormats); ++i)
 			{

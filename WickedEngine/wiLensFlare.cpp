@@ -34,8 +34,6 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("LensFlare", threadID);
 
-		device->BindPrimitiveTopology(POINTLIST,threadID);
-
 		device->BindGraphicsPSO(&PSO, threadID);
 
 		ConstantBuffer cb;
@@ -88,7 +86,7 @@ void wiLensFlare::LoadShaders()
 	desc.bs = &blendState;
 	desc.rs = &rasterizerState;
 	desc.dss = &depthStencilState;
-	desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	desc.pt = POINTLIST;
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 	device->CreateGraphicsPSO(&desc, &PSO);

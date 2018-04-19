@@ -2773,6 +2773,7 @@ void GraphicsDevice_DX11::PresentEnd()
 	memset(prev_stencilRef, 0, sizeof(prev_stencilRef));
 	memset(prev_dss, 0, sizeof(prev_dss));
 	memset(prev_il, 0, sizeof(prev_il));
+	memset(prev_pt, 0, sizeof(prev_pt));
 
 	FRAMECOUNT++;
 
@@ -3133,31 +3134,7 @@ void GraphicsDevice_DX11::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUF
 	ID3D11Buffer* res = indexBuffer != nullptr ? indexBuffer->resource_DX11 : nullptr;
 	deviceContexts[threadID]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
 }
-void GraphicsDevice_DX11::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
-{
-	D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	switch (type)
-	{
-	case TRIANGLELIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		break;
-	case TRIANGLESTRIP:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-		break;
-	case POINTLIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-		break;
-	case LINELIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-		break;
-	case PATCHLIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-		break;
-	default:
-		break;
-	};
-	deviceContexts[threadID]->IASetPrimitiveTopology(d3dType);
-}
+
 void GraphicsDevice_DX11::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 {
 	stencilRef[threadID] = value;
@@ -3236,6 +3213,35 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 	{
 		deviceContexts[threadID]->IASetInputLayout(il);
 		prev_il[threadID] = il;
+	}
+
+	if (prev_pt[threadID] != desc.pt)
+	{
+		D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		switch (desc.pt)
+		{
+		case TRIANGLELIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			break;
+		case TRIANGLESTRIP:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			break;
+		case POINTLIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+			break;
+		case LINELIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+			break;
+		case PATCHLIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+			break;
+		default:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+			break;
+		};
+		deviceContexts[threadID]->IASetPrimitiveTopology(d3dType);
+
+		prev_pt[threadID] = desc.pt;
 	}
 }
 void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)

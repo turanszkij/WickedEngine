@@ -3310,18 +3310,21 @@ namespace wiGraphicsTypes
 		//		TODO: This doesn't match DX12!
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		switch (pDesc->ptt)
+		switch (pDesc->pt)
 		{
-		case PRIMITIVE_TOPOLOGY_TYPE_POINT:
+		case POINTLIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_LINE:
+		case LINELIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE:
+		case TRIANGLESTRIP:
+			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+			break;
+		case TRIANGLELIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_PATCH:
+		case PATCHLIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 			break;
 		default:
@@ -4090,9 +4093,6 @@ namespace wiGraphicsTypes
 		{
 			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), static_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
-	}
-	void GraphicsDevice_Vulkan::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
-	{
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 	{

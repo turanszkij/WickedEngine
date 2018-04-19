@@ -563,8 +563,6 @@ void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparen
 			}
 		}
 
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-
 		device->BindConstantBuffer(VS, cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
 		device->BindResource(VS, particleBuffer, 0, threadID);

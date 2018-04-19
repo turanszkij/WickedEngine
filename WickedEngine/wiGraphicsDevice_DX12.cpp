@@ -2941,22 +2941,23 @@ namespace wiGraphicsTypes
 		desc.SampleDesc.Quality = pDesc->sampleDesc.Quality;
 		desc.SampleMask = pDesc->sampleMask;
 
-		switch (pDesc->ptt)
+		switch (pDesc->pt)
 		{
-		case PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_POINT:
+		case POINTLIST:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_LINE:
+		case LINELIST:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE:
+		case TRIANGLELIST:
+		case TRIANGLESTRIP:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_PATCH:
+		case PATCHLIST:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+			break;
+		default:
+			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 			break;
 		}
 
@@ -3384,10 +3385,21 @@ namespace wiGraphicsTypes
 		}
 		GetDirectCommandList(threadID)->IASetIndexBuffer(&res);
 	}
-	void GraphicsDevice_DX12::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 	{
+		GetDirectCommandList(threadID)->OMSetStencilRef(value);
+	}
+	void GraphicsDevice_DX12::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
+	{
+		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
+		GetDirectCommandList(threadID)->OMSetBlendFactor(blendFactor);
+	}
+	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
+	{
+		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
+
 		D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		switch (type)
+		switch (pso->desc.pt)
 		{
 		case TRIANGLELIST:
 			d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -3408,19 +3420,6 @@ namespace wiGraphicsTypes
 			break;
 		};
 		GetDirectCommandList(threadID)->IASetPrimitiveTopology(d3dType);
-	}
-	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
-	{
-		GetDirectCommandList(threadID)->OMSetStencilRef(value);
-	}
-	void GraphicsDevice_DX12::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
-	{
-		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
-		GetDirectCommandList(threadID)->OMSetBlendFactor(blendFactor);
-	}
-	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
-	{
-		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
 	}
 	void GraphicsDevice_DX12::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{

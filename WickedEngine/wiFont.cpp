@@ -289,8 +289,6 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("Font", threadID);
 
-	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-
 	device->BindGraphicsPSO(PSO, threadID);
 
 	UINT vboffset;
