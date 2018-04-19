@@ -874,6 +874,7 @@ namespace wiGraphicsTypes
 
 		memset(clearColor, 0, sizeof(clearColor));
 
+		renderPass = nullptr;
 		fbo = nullptr;
 	}
 	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
@@ -3672,27 +3673,27 @@ namespace wiGraphicsTypes
 
 
 
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.image = swapChainImages[imageIndex];
-		barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-		barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		vkCmdPipelineBarrier(
-			GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE),
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-			VK_DEPENDENCY_BY_REGION_BIT,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
+		//VkImageMemoryBarrier barrier = {};
+		//barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		//barrier.image = swapChainImages[imageIndex];
+		//barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		//barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		//barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		//barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		//barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		//barrier.subresourceRange.baseArrayLayer = 0;
+		//barrier.subresourceRange.layerCount = 1;
+		//barrier.subresourceRange.baseMipLevel = 0;
+		//barrier.subresourceRange.levelCount = 1;
+		//vkCmdPipelineBarrier(
+		//	GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE),
+		//	VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//	VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		//	VK_DEPENDENCY_BY_REGION_BIT,
+		//	0, nullptr,
+		//	0, nullptr,
+		//	1, &barrier
+		//);
 
 
 
@@ -4120,7 +4121,10 @@ namespace wiGraphicsTypes
 		{
 			renderPass[threadID].dirty = true;
 			renderPass[threadID].pso = static_cast<VkPipeline>(pso->pipeline_Vulkan);
-			renderPass[threadID].renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
+			if (renderPass[threadID].renderPass != defaultRenderPass)
+			{
+				renderPass[threadID].renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
+			}
 
 			vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, renderPass[threadID].pso);
 		}
