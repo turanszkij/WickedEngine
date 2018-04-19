@@ -1452,7 +1452,7 @@ namespace wiGraphicsTypes
 	// Engine functions
 	ID3D12GraphicsCommandList* GraphicsDevice_DX12::GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
 
-	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
+	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
 	{
 		FULLSCREEN = fullscreen;
 
@@ -1468,20 +1468,23 @@ namespace wiGraphicsTypes
 
 		HRESULT hr = E_FAIL;
 
-#if defined(_DEBUG) && !defined(WINSTORE_SUPPORT)
-		// Enable the debug layer.
-		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll",
-			nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-		auto pD3D12GetDebugInterface =
-			reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(
-				GetProcAddress(dx12, "D3D12GetDebugInterface"));
-		if (pD3D12GetDebugInterface)
+#if !defined(WINSTORE_SUPPORT)
+		if (debuglayer)
 		{
-			ID3D12Debug* debugController;
-			if (SUCCEEDED(pD3D12GetDebugInterface(
-				IID_PPV_ARGS(&debugController))))
+			// Enable the debug layer.
+			HMODULE dx12 = LoadLibraryEx(L"d3d12.dll",
+				nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+			auto pD3D12GetDebugInterface =
+				reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(
+					GetProcAddress(dx12, "D3D12GetDebugInterface"));
+			if (pD3D12GetDebugInterface)
 			{
-				debugController->EnableDebugLayer();
+				ID3D12Debug* debugController;
+				if (SUCCEEDED(pD3D12GetDebugInterface(
+					IID_PPV_ARGS(&debugController))))
+				{
+					debugController->EnableDebugLayer();
+				}
 			}
 		}
 #endif

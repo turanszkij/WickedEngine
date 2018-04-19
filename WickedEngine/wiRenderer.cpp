@@ -19,9 +19,6 @@
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
-#include "wiGraphicsDevice_DX11.h"
-#include "wiGraphicsDevice_DX12.h"
-#include "wiGraphicsDevice_Vulkan.h"
 #include "wiTranslator.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
@@ -122,17 +119,6 @@ wiWaterPlane wiRenderer::waterPlane;
 
 wiRenderer::wiRenderer()
 {
-}
-
-void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
-{
-	SAFE_DELETE(graphicsDevice);
-#ifdef WICKEDENGINE_BUILD_VULKAN
-	graphicsDevice = new GraphicsDevice_Vulkan(window, fullscreen);
-#else
-	graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
-	//graphicsDevice = new GraphicsDevice_DX12(window, fullscreen);
-#endif
 }
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)

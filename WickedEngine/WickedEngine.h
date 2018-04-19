@@ -57,6 +57,7 @@
 #include "wiRectPacker.h"
 #include "wiProfiler.h"
 #include "wiOcean.h"
+#include "wiStartupArguments.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"
@@ -67,6 +68,10 @@
 #include "TiledDeferredRenderableComponent.h"
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
+
+#include "wiGraphicsDevice_DX11.h"
+#include "wiGraphicsDevice_DX12.h"
+#include "wiGraphicsDevice_Vulkan.h"
 
 #ifdef _WIN32
 

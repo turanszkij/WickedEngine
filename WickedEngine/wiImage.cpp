@@ -129,7 +129,7 @@ void wiImage::LoadShaders()
 
 					desc.numRTs = 1;
 
-					desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+					desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 					device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0]);
 
 					desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
@@ -176,13 +176,13 @@ void wiImage::LoadShaders()
 			else if (i == POSTPROCESS_TONEMAP)
 			{
 				desc.numRTs = 1;
-				desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+				desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 			}
 			else if (i == POSTPROCESS_BLOOMSEPARATE || i == POSTPROCESS_BLUR_H || POSTPROCESS_BLUR_V)
 			{
 				// todo: bloom and DoF blur should really be HDR lol...
 				desc.numRTs = 1;
-				desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+				desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 			}
 			else
 			{

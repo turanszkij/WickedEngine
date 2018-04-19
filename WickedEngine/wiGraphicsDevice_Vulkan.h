@@ -162,7 +162,7 @@ namespace wiGraphicsTypes
 
 
 	public:
-		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false);
+		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
 
 		~GraphicsDevice_Vulkan();
 

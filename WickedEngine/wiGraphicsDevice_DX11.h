@@ -48,7 +48,7 @@ namespace wiGraphicsTypes
 		PRIMITIVETOPOLOGY prev_pt[GRAPHICSTHREAD_COUNT] = {};
 
 	public:
-		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false);
+		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
 
 		~GraphicsDevice_DX11();
 

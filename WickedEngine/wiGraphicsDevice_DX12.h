@@ -140,7 +140,7 @@ namespace wiGraphicsTypes
 
 
 	public:
-		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false);
+		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
 
 		~GraphicsDevice_DX12();
 

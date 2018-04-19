@@ -25,11 +25,6 @@ namespace wiGraphicsTypes
 	const std::vector<const char*> validationLayers = {
 		"VK_LAYER_LUNARG_standard_validation"
 	};
-#ifdef NDEBUG
-	bool enableValidationLayers = false;
-#else
-	bool enableValidationLayers = true;
-#endif
 	bool checkValidationLayerSupport() {
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -1384,8 +1379,10 @@ namespace wiGraphicsTypes
 	// Engine functions
 	VkCommandBuffer GraphicsDevice_Vulkan::GetDirectCommandList(GRAPHICSTHREAD threadID) { return GetFrameResources().commandBuffers[threadID]; }
 
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
 	{
+		BACKBUFFER_FORMAT = FORMAT::FORMAT_B8G8R8A8_UNORM;
+
 		FULLSCREEN = fullscreen;
 
 		RECT rect = RECT();
@@ -1417,6 +1414,9 @@ namespace wiGraphicsTypes
 		//}
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+
+
+		bool enableValidationLayers = debuglayer;
 		
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
 			//throw std::runtime_error("validation layers requested, but not available!");
