@@ -18,34 +18,8 @@
 ### Overview:
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
-The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
-
-For testing quickly, this solution contains several projects which you can build out of the box with Visual Studio 2017. You can run the "Editor" or the "Tests" project to check out features. 
-You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
-Additionally, you can use some command line arguments to quickly customize the application:
-
-<table>
-  <tr>
-    <th>Argument</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>dx12</td>
-    <td>Create DirectX 12 rendering device</td>
-  </tr>
-  <tr>
-    <td>vulkan</td>
-    <td>Create Vulkan rendering device</td>
-  </tr>
-  <tr>
-    <td>debugdevice</td>
-    <td>Create rendering device with debug layer enabled for validation</td>
-  </tr>
-  <tr>
-    <td>hlsl6</td>
-    <td>Reroute shader loading path to use shader model 6 shaders (DirectX 12 only)</td>
-  </tr>
-</table>
+The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code shall not contain
+any parts with other licensing.
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -54,6 +28,45 @@ Additionally, you can use some command line arguments to quickly customize the a
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
 ![Promo](logo/promo.png)
+
+To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. 
+- You can run the "Editor" or the "Tests" project to check out features and play aroud in a 3D environment, load models, scripts, etc. 
+- You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
+- Be sure to build in "Release" mode for optimal performance. Debugging support will be reduced.
+
+The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
+You can specify command line arguments for each application to switch between render devices or other settings. Currently the list of options:
+<table>
+  <tr>
+    <th>Argument</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>dx12</td>
+    <td>Create DirectX 12 rendering device (Windows 10 required)</td>
+  </tr>
+  <tr>
+    <td>vulkan</td>
+    <td>Create Vulkan rendering device*. (Only if engine was built with Vulkan SDK installed)</td>
+  </tr>
+  <tr>
+    <td>debugdevice</td>
+    <td>Create rendering device with debug layer enabled for validation. Performance will be degraded.</td>
+  </tr>
+  <tr>
+    <td>hlsl6</td>
+    <td>Reroute shader loading path to use shader model 6 shaders** (DirectX 12 only)</td>
+  </tr>
+</table>
+
+* Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
+Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
+is automatic if you start the application with Vulkan support.
+This feature is experimental, not tested thoroughly yet.
+
+** To load HLSL 6 shaders, replicate the exact steps as with SPIR-V, but the pyhton script you should run is called "generate_shader_buildtask_spirv.py" which will generate "build_HLSL6.bat". 
+This feature is experimental, not tested thoroughly yet.
+
 
 ### Platforms:
 - Windows PC Desktop (x86, x64)
@@ -109,7 +122,8 @@ When everything is initialized properly, you should see a black screen. From thi
 
 ### Scripting API:
 
-You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running.
+You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
+contain a scripting input method toggled by the "Home" key. A blue screen will be presented where the user can type in LUA commands. It is very minimal in regards to input methods.
 For further details, please check the scripting API documentation: [Wicked Engine Scripting API](Documentation/ScriptingAPI-Documentation.md)
 
 
@@ -117,7 +131,7 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 The editor is now available but also work in progress. Just build the editor project and run it, then you will be presented with a blank scene.
 You can import files exported from Blender (.wio) with the scipt described below. You can also save models into the .wimf format from the Editor
-and open them. 
+and open them. You can also open OBJ format models, which are very simple model files, not supporting many features provided by the engine.
 Test model and scene files are now available in the WickedEngine/models directory.
 
 
@@ -146,6 +160,9 @@ Notes on exporting:
 	
 
 ### Graphics:
+
+Please feel free to learn/copy/use any shaders or rendering techniques that you can find here. General information about the engine that might help you port these to your own solution
+is summarized in the image below:
 
 ![InformationSheet](Documentation/information_sheet.png)
 
