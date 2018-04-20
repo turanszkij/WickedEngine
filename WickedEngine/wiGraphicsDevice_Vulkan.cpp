@@ -1490,8 +1490,10 @@ namespace wiGraphicsTypes
 			std::vector<VkPhysicalDevice> devices(deviceCount);
 			vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
-			for (const auto& device : devices) {
-				if (isDeviceSuitable(device, surface)) {
+			for (const auto& device : devices) 
+			{
+				if (isDeviceSuitable(device, surface)) 
+				{
 					physicalDevice = device;
 					break;
 				}
@@ -1849,7 +1851,7 @@ namespace wiGraphicsTypes
 			VkAttachmentDescription colorAttachment = {};
 			colorAttachment.format = swapChainImageFormat;
 			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -4402,9 +4404,9 @@ namespace wiGraphicsTypes
 		for (UINT i = 0; i < numRects; ++i)
 		{
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
-			scissors[i].extent.height = abs(rects[i].bottom - rects[i].top);
+			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
 			scissors[i].offset.x = rects[i].left;
-			scissors[i].offset.y = rects[i].bottom;
+			scissors[i].offset.y = rects[i].top;
 		}
 		vkCmdSetScissor(GetDirectCommandList(threadID), 0, numRects, scissors);
 	}
