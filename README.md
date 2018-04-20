@@ -30,7 +30,7 @@ any parts with other licensing.
 ![Promo](logo/promo.png)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. 
-- You can run the "Editor" or the "Tests" project to check out features and play aroud in a 3D environment, load models, scripts, etc. 
+- You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
 - You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
 - Be sure to build in "Release" mode for optimal performance. Debugging support will be reduced.
 
@@ -59,12 +59,12 @@ You can specify command line arguments for each application to switch between re
   </tr>
 </table>
 
-* Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
+* *Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
 Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
 is automatic if you start the application with Vulkan support.
 This feature is experimental, not tested thoroughly yet.
 
-** To load HLSL 6 shaders, replicate the exact steps as with SPIR-V, but the pyhton script you should run is called "generate_shader_buildtask_spirv.py" which will generate "build_HLSL6.bat". 
+* **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V, but the pyhton script you should run is called "generate_shader_buildtask_spirv.py" which will generate "build_HLSL6.bat". 
 This feature is experimental, not tested thoroughly yet.
 
 
