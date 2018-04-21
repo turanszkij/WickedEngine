@@ -277,6 +277,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 		friend class GraphicsDevice_Vulkan;
 	private:
+		TextureDesc									desc;
 		ID3D11RenderTargetView*						RTV_DX11;
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				RTV_DX12;
@@ -289,6 +290,7 @@ namespace wiGraphicsTypes
 		bool										independentSRVMIPs;
 		bool										independentUAVMIPs;
 	public:
+		const TextureDesc& GetDesc() const { return desc; }
 
 		Texture();
 		virtual ~Texture();
@@ -312,13 +314,9 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Texture1D*			texture1D_DX11;
-
-		Texture1DDesc				desc;
 	public:
 		Texture1D();
 		virtual ~Texture1D();
-
-		Texture1DDesc GetDesc() const { return desc; }
 	};
 
 	class Texture2D : public Texture
@@ -335,13 +333,9 @@ namespace wiGraphicsTypes
 		std::vector<wiHandle>						additionalDSVs_Vulkan;
 
 		ID3D11Texture2D*							texture2D_DX11;
-
-		Texture2DDesc								desc;
 	public:
 		Texture2D();
 		virtual ~Texture2D();
-
-		Texture2DDesc GetDesc() const { return desc; }
 	};
 
 	class Texture3D : public Texture
@@ -351,13 +345,9 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Texture3D*			texture3D_DX11;
-
-		Texture3DDesc				desc;
 	public:
 		Texture3D();
 		virtual ~Texture3D();
-
-		Texture3DDesc GetDesc() const { return desc; }
 	};
 
 
@@ -421,6 +411,23 @@ namespace wiGraphicsTypes
 		ComputePSO();
 		~ComputePSO();
 	};
+
+	class RenderPass
+	{
+		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
+	private:
+		RenderPassDesc desc;
+
+	public:
+		const RenderPassDesc& GetDesc() const { return desc; }
+
+		RenderPass();
+		~RenderPass();
+
+	};
+
 }
 
 #endif // _GRAPHICSRESOURCE_H_

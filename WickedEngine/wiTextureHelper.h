@@ -53,7 +53,7 @@ public:
 		}
 		using namespace wiGraphicsTypes;
 
-		Texture2DDesc textureDesc;
+		TextureDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = width;
 		textureDesc.Height = height;

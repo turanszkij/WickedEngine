@@ -35,7 +35,7 @@ public:
 
 	wiGraphicsTypes::Texture2D* GetTexture(int viewID = 0) const { return renderTargets[viewID]; }
 	wiGraphicsTypes::Texture2D* GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int viewID = 0);
-	wiGraphicsTypes::Texture2DDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->GetDesc(); }
+	wiGraphicsTypes::TextureDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->GetDesc(); }
 	UINT GetMipCount();
 	bool IsInitialized() const { return (numViews > 0 || depth != nullptr); }
 };

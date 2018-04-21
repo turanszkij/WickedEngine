@@ -830,7 +830,7 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	return DXGI_FORMAT_UNKNOWN;
 }
 
-inline D3D11_TEXTURE1D_DESC _ConvertTexture1DDesc(const Texture1DDesc* pDesc)
+inline D3D11_TEXTURE1D_DESC _ConvertTextureDesc1D(const TextureDesc* pDesc)
 {
 	D3D11_TEXTURE1D_DESC desc;
 	desc.Width = pDesc->Width;
@@ -844,7 +844,7 @@ inline D3D11_TEXTURE1D_DESC _ConvertTexture1DDesc(const Texture1DDesc* pDesc)
 
 	return desc;
 }
-inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
+inline D3D11_TEXTURE2D_DESC _ConvertTextureDesc2D(const TextureDesc* pDesc)
 {
 	D3D11_TEXTURE2D_DESC desc;
 	desc.Width = pDesc->Width;
@@ -861,7 +861,7 @@ inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
 
 	return desc;
 }
-inline D3D11_TEXTURE3D_DESC _ConvertTexture3DDesc(const Texture3DDesc* pDesc)
+inline D3D11_TEXTURE3D_DESC _ConvertTextureDesc3D(const TextureDesc* pDesc)
 {
 	D3D11_TEXTURE3D_DESC desc;
 	desc.Width = pDesc->Width;
@@ -1327,9 +1327,9 @@ inline USAGE _ConvertUsage_Inv(D3D11_USAGE value)
 	return USAGE_DEFAULT;
 }
 
-inline Texture1DDesc _ConvertTexture1DDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc)
+inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc)
 {
-	Texture1DDesc desc;
+	TextureDesc desc;
 	desc.Width = pDesc->Width;
 	desc.MipLevels = pDesc->MipLevels;
 	desc.ArraySize = pDesc->ArraySize;
@@ -1341,9 +1341,9 @@ inline Texture1DDesc _ConvertTexture1DDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc
 
 	return desc;
 }
-inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
+inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
 {
-	Texture2DDesc desc;
+	TextureDesc desc;
 	desc.Width = pDesc->Width;
 	desc.Height = pDesc->Height;
 	desc.MipLevels = pDesc->MipLevels;
@@ -1358,9 +1358,9 @@ inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc
 
 	return desc;
 }
-inline Texture3DDesc _ConvertTexture3DDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
+inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
 {
-	Texture3DDesc desc;
+	TextureDesc desc;
 	desc.Width = pDesc->Width;
 	desc.Height = pDesc->Height;
 	desc.Depth = pDesc->Depth;
@@ -1697,7 +1697,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
+HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 {
 	if ((*ppTexture1D) == nullptr)
 	{
@@ -1705,7 +1705,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 	}
 	(*ppTexture1D)->desc = *pDesc;
 
-	D3D11_TEXTURE1D_DESC desc = _ConvertTexture1DDesc(&(*ppTexture1D)->desc);
+	D3D11_TEXTURE1D_DESC desc = _ConvertTextureDesc1D(&(*ppTexture1D)->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1748,7 +1748,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
+HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 {
 	if ((*ppTexture2D) == nullptr)
 	{
@@ -1768,7 +1768,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 		}
 	}
 
-	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(&(*ppTexture2D)->desc);
+	D3D11_TEXTURE2D_DESC desc = _ConvertTextureDesc2D(&(*ppTexture2D)->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1831,7 +1831,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
+HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 {
 	if ((*ppTexture3D) == nullptr)
 	{
@@ -1839,7 +1839,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const S
 	}
 	(*ppTexture3D)->desc = *pDesc;
 
-	D3D11_TEXTURE3D_DESC desc = _ConvertTexture3DDesc(&(*ppTexture3D)->desc);
+	D3D11_TEXTURE3D_DESC desc = _ConvertTextureDesc3D(&(*ppTexture3D)->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -3504,7 +3504,7 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const std::string& fileName, 
 	else {
 		D3D11_TEXTURE2D_DESC desc;
 		(*ppTexture)->texture2D_DX11->GetDesc(&desc);
-		(*ppTexture)->desc = _ConvertTexture2DDesc_Inv(&desc);
+		(*ppTexture)->desc = _ConvertTextureDesc_Inv(&desc);
 	}
 
 	return hr;

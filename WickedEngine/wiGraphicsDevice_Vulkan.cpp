@@ -2444,11 +2444,11 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
+	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 	{
 		return E_FAIL;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
+	HRESULT GraphicsDevice_Vulkan::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 	{
 		if ((*ppTexture2D) == nullptr)
 		{
@@ -2958,7 +2958,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
+	HRESULT GraphicsDevice_Vulkan::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 	{
 		return E_FAIL;
 	}
@@ -4485,7 +4485,7 @@ namespace wiGraphicsTypes
 
 			if (img.is_valid())
 			{
-				Texture2DDesc desc;
+				TextureDesc desc;
 				desc.ArraySize = 1;
 				desc.BindFlags = BIND_SHADER_RESOURCE;
 				desc.CPUAccessFlags = 0;
@@ -4565,7 +4565,7 @@ namespace wiGraphicsTypes
 
 			if (rgb != nullptr)
 			{
-				Texture2DDesc desc;
+				TextureDesc desc;
 				desc.ArraySize = 1;
 				desc.BindFlags = BIND_SHADER_RESOURCE;
 				desc.CPUAccessFlags = 0;

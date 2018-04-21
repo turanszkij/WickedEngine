@@ -82,7 +82,7 @@ void createBufferAndUAV(void* data, UINT byte_width, UINT byte_stride, GPUBuffer
 void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D** ppTex)
 {
 	// Create 2D texture
-	Texture2DDesc tex_desc;
+	TextureDesc tex_desc;
 	tex_desc.Width = width;
 	tex_desc.Height = height;
 	tex_desc.MipLevels = 0;

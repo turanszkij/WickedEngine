@@ -143,7 +143,7 @@ void Renderable3DComponent::ResizeBuffers()
 
 
 	SAFE_DELETE(smallDepth);
-	Texture2DDesc desc;
+	TextureDesc desc;
 	desc.ArraySize = 1;
 	desc.BindFlags = BIND_DEPTH_STENCIL;
 	desc.CPUAccessFlags = 0;

@@ -3513,7 +3513,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		if (textures[TEXTYPE_2D_CLOUDS] == nullptr)
 		{
-			Texture2DDesc desc;
+			TextureDesc desc;
 			desc.ArraySize = 1;
 			desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 			desc.CPUAccessFlags = 0;
@@ -4670,7 +4670,7 @@ void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuali
 	Light::shadowMapArray_Transparent = new Texture2D;
 	Light::shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
 
-	Texture2DDesc desc;
+	TextureDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.Width = SHADOWRES_2D;
 	desc.Height = SHADOWRES_2D;
@@ -4700,7 +4700,7 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 	Light::shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
 	Light::shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
 
-	Texture2DDesc desc;
+	TextureDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.Width = SHADOWRES_CUBE;
 	desc.Height = SHADOWRES_CUBE;
@@ -5584,7 +5584,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
 	{
-		Texture2DDesc desc;
+		TextureDesc desc;
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.CPUAccessFlags = 0;
@@ -5605,7 +5605,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	static Texture2D* envrenderingDepthBuffer = nullptr;
 	if (envrenderingDepthBuffer == nullptr)
 	{
-		Texture2DDesc desc;
+		TextureDesc desc;
 		desc.ArraySize = 6;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.CPUAccessFlags = 0;
@@ -5776,7 +5776,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
-		Texture3DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = voxelSceneData.res;
 		desc.Height = voxelSceneData.res;
@@ -5796,7 +5796,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
-		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+		TextureDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
@@ -5975,7 +5975,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	}
 	if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
 	{
-		Texture2DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.ArraySize = 1;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
@@ -6028,7 +6028,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
 
-		Texture2DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = (UINT)_width;
 		desc.Height = (UINT)_height;
@@ -6117,7 +6117,7 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
 
-	Texture2DDesc desc = src->GetDesc();
+	TextureDesc desc = src->GetDesc();
 
 	GetDevice()->BindComputePSO(CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
 	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
@@ -6134,7 +6134,7 @@ void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	Texture2DDesc desc = texture->GetDesc();
+	TextureDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -6187,7 +6187,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	Texture3DDesc desc = texture->GetDesc();
+	TextureDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -6244,9 +6244,9 @@ void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float rand
 {
 	GetDevice()->EventBegin("Cloud Generator", threadID);
 
-	Texture2DDesc src_desc = wiTextureHelper::getInstance()->getRandom64x64()->GetDesc();
+	TextureDesc src_desc = wiTextureHelper::getInstance()->getRandom64x64()->GetDesc();
 
-	Texture2DDesc dst_desc = dst->GetDesc();
+	TextureDesc dst_desc = dst->GetDesc();
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
 	GetDevice()->BindResource(CS, wiTextureHelper::getInstance()->getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
@@ -6318,7 +6318,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 					SAFE_DELETE(atlasTexture);
 
-					Texture2DDesc desc;
+					TextureDesc desc;
 					ZeroMemory(&desc, sizeof(desc));
 					desc.Width = (UINT)bins[0].size.w;
 					desc.Height = (UINT)bins[0].size.h;
@@ -6352,7 +6352,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 			}
 			
 			rect_xywhf rect = storedTextures[decal->texture];
-			Texture2DDesc desc = atlasTexture->GetDesc();
+			TextureDesc desc = atlasTexture->GetDesc();
 			decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 		}
 
@@ -6550,7 +6550,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		// lower power of two
 		//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
 
-		Texture2DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = 256;
 		desc.Height = desc.Width;
@@ -6580,14 +6580,14 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	if (luminance_map != nullptr)
 	{
 		// Pass 1 : Create luminance map from scene tex
-		Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
+		TextureDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
 		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
 		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
-		Texture2DDesc luminance_avg_desc;
+		TextureDesc luminance_avg_desc;
 		for (size_t i = 0; i < luminance_avg.size(); ++i)
 		{
 			luminance_avg_desc = luminance_avg[i]->GetDesc();

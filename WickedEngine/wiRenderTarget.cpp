@@ -45,7 +45,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 
 	if (!depthOnly)
 	{
-		Texture2DDesc textureDesc;
+		TextureDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = width;
 		textureDesc.Height = height;
@@ -101,7 +101,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 
 	if (!depthOnly)
 	{
-		Texture2DDesc textureDesc;
+		TextureDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = size;
 		textureDesc.Height = size;
@@ -139,7 +139,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 }
 void wiRenderTarget::Add(FORMAT format)
 {
-	Texture2DDesc desc = GetTexture(0)->GetDesc();
+	TextureDesc desc = GetTexture(0)->GetDesc();
 	desc.Format = format;
 
 	if (!renderTargets.empty())
@@ -259,7 +259,7 @@ Texture2D* wiRenderTarget::GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int v
 }
 UINT wiRenderTarget::GetMipCount()
 {
-	Texture2DDesc desc = GetDesc();
+	TextureDesc desc = GetDesc();
 
 	if (desc.MipLevels>0)
 		return desc.MipLevels;

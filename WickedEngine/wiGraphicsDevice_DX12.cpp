@@ -1136,9 +1136,9 @@ namespace wiGraphicsTypes
 		return static_cast<RESOURCE_STATES>(value);
 	}
 	
-	inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D12_RESOURCE_DESC& desc)
+	inline TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
-		Texture2DDesc retVal;
+		TextureDesc retVal;
 
 		retVal.Format = _ConvertFormat_Inv(desc.Format);
 		retVal.Width = (UINT)desc.Width;
@@ -2132,7 +2132,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
+	HRESULT GraphicsDevice_DX12::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 	{
 		if ((*ppTexture1D) == nullptr)
 		{
@@ -2145,7 +2145,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
+	HRESULT GraphicsDevice_DX12::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 	{
 		if ((*ppTexture2D) == nullptr)
 		{
@@ -2714,7 +2714,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
+	HRESULT GraphicsDevice_DX12::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 	{
 		if ((*ppTexture3D) == nullptr)
 		{
@@ -3721,7 +3721,7 @@ namespace wiGraphicsTypes
 		}
 		else { 
 			D3D12_RESOURCE_DESC desc = (*ppTexture)->resource_DX12->GetDesc();
-			(*ppTexture)->desc = _ConvertTexture2DDesc_Inv(desc);
+			(*ppTexture)->desc = _ConvertTextureDesc_Inv(desc);
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Format = desc.Format;
