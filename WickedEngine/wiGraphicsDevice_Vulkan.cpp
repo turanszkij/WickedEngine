@@ -4405,8 +4405,8 @@ namespace wiGraphicsTypes
 		{
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
 			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
-			scissors[i].offset.x = rects[i].left;
-			scissors[i].offset.y = rects[i].top;
+			scissors[i].offset.x = max(0, rects[i].left);
+			scissors[i].offset.y = max(0, rects[i].top);
 		}
 		vkCmdSetScissor(GetDirectCommandList(threadID), 0, numRects, scissors);
 	}
