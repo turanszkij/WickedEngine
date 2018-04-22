@@ -3933,6 +3933,15 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_Vulkan::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
+
+		if (ppUAVs != nullptr)
+		{
+			for (int i = 0; i < countUAV; ++i)
+			{
+				BindUnorderedAccessResource(PS, ppUAVs[i], slotUAV + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -4079,15 +4088,110 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		if (resource != nullptr && resource->resource_Vulkan != nullptr)
+		{
+			if (arrayIndex < 0)
+			{
+				Texture* tex = dynamic_cast<Texture*>(resource);
+
+				if (tex != nullptr && resource->UAV_Vulkan != nullptr)
+				{
+					VkDescriptorImageInfo imageInfo = {};
+					imageInfo.imageView = static_cast<VkImageView>(tex->UAV_Vulkan);
+					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+					VkWriteDescriptorSet descriptorWrite = {};
+					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+					descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
+					descriptorWrite.dstArrayElement = 0;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					descriptorWrite.descriptorCount = 1;
+					descriptorWrite.pBufferInfo = nullptr;
+					descriptorWrite.pImageInfo = &imageInfo;
+					descriptorWrite.pTexelBufferView = nullptr;
+
+					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+				}
+				else
+				{
+					GPUBuffer* buffer = dynamic_cast<GPUBuffer*>(resource);
+
+					if (buffer != nullptr)
+					{
+						if (buffer->desc.Format == FORMAT_UNKNOWN)
+						{
+							// structured buffer, raw buffer:
+
+							VkDescriptorBufferInfo bufferInfo = {};
+							bufferInfo.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
+							bufferInfo.offset = 0;
+							bufferInfo.range = buffer->desc.ByteWidth;
+
+							VkWriteDescriptorSet descriptorWrite = {};
+							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot;
+							descriptorWrite.dstArrayElement = 0;
+							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+							descriptorWrite.descriptorCount = 1;
+							descriptorWrite.pBufferInfo = &bufferInfo;
+							descriptorWrite.pImageInfo = nullptr;
+							descriptorWrite.pTexelBufferView = nullptr;
+
+							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+
+						}
+						else if (resource->UAV_Vulkan != nullptr)
+						{
+							// typed buffer:
+
+							VkWriteDescriptorSet descriptorWrite = {};
+							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot;
+							descriptorWrite.dstArrayElement = 0;
+							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+							descriptorWrite.descriptorCount = 1;
+							descriptorWrite.pBufferInfo = nullptr;
+							descriptorWrite.pImageInfo = nullptr;
+							descriptorWrite.pTexelBufferView = reinterpret_cast<VkBufferView*>(&buffer->UAV_Vulkan);
+
+							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+
+						}
+					}
+
+				}
+
+			}
+			else
+			{
+				assert(resource->additionalUAVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
+		if (resources != nullptr)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				BindUnorderedAccessResource(stage, resources[i], slot + i, threadID, -1);
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		BindUnorderedAccessResource(CS, resource, slot, threadID, arrayIndex);
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
+		BindUnorderedAccessResources(CS, resources, slot, count, threadID);
 	}
 	void GraphicsDevice_Vulkan::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
 	{

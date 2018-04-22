@@ -3178,7 +3178,7 @@ namespace wiGraphicsTypes
 		{
 			for (int i = 0; i < countUAV; ++i)
 			{
-				BindUnorderedAccessResourceCS(ppUAVs[i], slotUAV + i, threadID, -1);
+				BindUnorderedAccessResource(PS, ppUAVs[i], slotUAV + i, threadID, -1);
 			}
 		}
 	}
