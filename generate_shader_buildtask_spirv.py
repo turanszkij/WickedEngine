@@ -60,7 +60,7 @@ for shader in root.iter(namespace + "FxCompile"):
         if profile == "Compute":
             file.write("SPIRV_SHADERTYPE_CS")
 
-        file.write(" -spirv -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
+        file.write(" -spirv -fvk-use-dx-layout -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
 
         ## Append to error log:
         file.write(" 2>>../build_SPIRV_errors.log \n")
