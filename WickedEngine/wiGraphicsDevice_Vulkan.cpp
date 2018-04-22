@@ -3382,7 +3382,6 @@ namespace wiGraphicsTypes
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 
 		// Primitive type:
-		//		TODO: This doesn't match DX12!
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		switch (pDesc->pt)
@@ -3498,7 +3497,8 @@ namespace wiGraphicsTypes
 			depthstencil.depthWriteEnable = pDesc->dss->desc.DepthWriteMask != DEPTH_WRITE_MASK_ZERO;
 			depthstencil.depthCompareOp = _ConvertComparisonFunc(pDesc->dss->desc.DepthFunc);
 
-			depthstencil.stencilTestEnable = pDesc->dss->desc.StencilEnable ? 1 : 0;
+			// TODO stencil!
+			depthstencil.stencilTestEnable = /*pDesc->dss->desc.StencilEnable ? 1 : 0*/ VK_FALSE;
 		}
 
 		pipelineInfo.pDepthStencilState = &depthstencil;
