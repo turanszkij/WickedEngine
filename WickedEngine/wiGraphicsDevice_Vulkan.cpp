@@ -864,11 +864,6 @@ namespace wiGraphicsTypes
 		active = false;
 		dirty = true;
 
-
-		memset(textures, 0, sizeof(textures));
-		memset(clearTextures, 0, sizeof(clearTextures));
-		clearCount = 0;
-
 		memset(attachments, 0, sizeof(attachments));
 		attachmentCount = 0;
 
@@ -876,6 +871,8 @@ namespace wiGraphicsTypes
 
 		renderPass = nullptr;
 		fbo = nullptr;
+
+		clearRequests.clear();
 	}
 	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
 	{
@@ -946,32 +943,50 @@ namespace wiGraphicsTypes
 
 			VkClearAttachment clearInfos[9];
 			UINT realClearCount = 0;
-			for (UINT i = 0; i < clearCount; ++i)
+			bool remainingClearRequests = false;
+			for (UINT i = 0; i < clearRequests.size(); ++i)
 			{
-				for (UINT j = 0; j < ARRAYSIZE(textures); ++j)
+				if (clearRequests[i].attachment == nullptr)
 				{
-					if (clearTextures[i] == textures[j])
-					{
-						if (clearTextures[i]->desc.BindFlags & BIND_DEPTH_STENCIL)
-						{
-							clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-							clearInfos[realClearCount].clearValue = clearColor[i];
-							clearInfos[realClearCount].colorAttachment = 0;
+					continue;
+				}
 
-							realClearCount++;
-						}
-						else
+				for (UINT j = 0; j < attachmentCount; ++j)
+				{
+					if (clearRequests[i].attachment == attachments[j])
+					{
+						if (clearRequests[i].clearFlags == 0)
 						{
 							clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-							clearInfos[realClearCount].clearValue = clearColor[i];
+							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
 							clearInfos[realClearCount].colorAttachment = j;
 
 							realClearCount++;
+							clearRequests[i].attachment = nullptr;
+						}
+						else
+						{
+							clearInfos[realClearCount].aspectMask = 0;
+							if (clearRequests[i].clearFlags & CLEAR_DEPTH)
+							{
+								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+							}
+							if (clearRequests[i].clearFlags & CLEAR_STENCIL)
+							{
+								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+							}
+							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
+							clearInfos[realClearCount].colorAttachment = 0;
+
+							realClearCount++;
+							clearRequests[i].attachment = nullptr;
 						}
 
 						continue;
 					}
 				}
+
+				remainingClearRequests = true;
 			}
 			if (realClearCount > 0)
 			{
@@ -985,8 +1000,11 @@ namespace wiGraphicsTypes
 
 				vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
 			}
-			memset(clearTextures, 0, sizeof(clearTextures));
-			clearCount = 0;
+
+			if (!remainingClearRequests)
+			{
+				clearRequests.clear();
+			}
 
 		}
 	}
@@ -3914,12 +3932,9 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		memset(renderPass[threadID].textures, 0, sizeof(renderPass[threadID].textures));
-
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			renderPass[threadID].textures[i] = ppRenderTargets[i];
 			renderPass[threadID].attachments[i] = static_cast<VkImageView>(ppRenderTargets[i]->RTV_Vulkan);
 
 			renderPass[threadID].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
@@ -3941,16 +3956,23 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		renderPass[threadID].clearTextures[renderPass[threadID].clearCount] = pTexture;
-		renderPass[threadID].clearColor[renderPass[threadID].clearCount] = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
-		renderPass[threadID].clearCount++;
+		RenderPassManager::ClearRequest clear;
+
+		clear.attachment = static_cast<VkImageView>(pTexture->RTV_Vulkan);
+		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
+
+		renderPass[threadID].clearRequests.push_back(clear);
 	}
 	void GraphicsDevice_Vulkan::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		renderPass[threadID].clearTextures[renderPass[threadID].clearCount] = pTexture;
-		renderPass[threadID].clearColor[renderPass[threadID].clearCount].depthStencil.depth = Depth;
-		renderPass[threadID].clearColor[renderPass[threadID].clearCount].depthStencil.stencil = Stencil;
-		renderPass[threadID].clearCount++;
+		RenderPassManager::ClearRequest clear;
+
+		clear.attachment = static_cast<VkImageView>(pTexture->DSV_Vulkan);
+		clear.clearValue.depthStencil.depth = Depth;
+		clear.clearValue.depthStencil.stencil = Stencil;
+		clear.clearFlags = ClearFlags;
+
+		renderPass[threadID].clearRequests.push_back(clear);
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{

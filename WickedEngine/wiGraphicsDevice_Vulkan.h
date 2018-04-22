@@ -72,20 +72,24 @@ namespace wiGraphicsTypes
 			bool active = false;
 			bool dirty = true;
 
-			uint32_t clearCount = 0;
-			Texture* clearTextures[9] = {};
-			VkClearValue clearColor[9] = {};
-
-			Texture* textures[9] = {};
 			VkImageView attachments[9] = {};
 			uint32_t attachmentCount = 0;
 			VkExtent2D attachmentsExtents = {};
+			VkClearValue clearColor[9] = {};
 
 			VkPipeline pso = nullptr;
 			VkRenderPass renderPass = nullptr;
 			VkFramebuffer fbo = nullptr;
 
 			std::unordered_map<VkPipeline, VkFramebuffer> renderPassFrameBuffers;
+
+			struct ClearRequest
+			{
+				VkImageView attachment = nullptr;
+				VkClearValue clearValue = {};
+				uint32_t clearFlags = 0;
+			};
+			std::vector<ClearRequest> clearRequests;
 
 			void reset();
 			void disable(VkCommandBuffer commandBuffer);
