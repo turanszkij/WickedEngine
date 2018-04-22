@@ -941,69 +941,73 @@ namespace wiGraphicsTypes
 			active = true;
 
 
-			VkClearAttachment clearInfos[9];
-			UINT realClearCount = 0;
-			bool remainingClearRequests = false;
-			for (UINT i = 0; i < clearRequests.size(); ++i)
+			// Performing texture clear requests if needed:
+			if (!clearRequests.empty())
 			{
-				if (clearRequests[i].attachment == nullptr)
+				VkClearAttachment clearInfos[9];
+				UINT realClearCount = 0;
+				bool remainingClearRequests = false;
+				for (UINT i = 0; i < clearRequests.size(); ++i)
 				{
-					continue;
-				}
-
-				for (UINT j = 0; j < attachmentCount; ++j)
-				{
-					if (clearRequests[i].attachment == attachments[j])
+					if (clearRequests[i].attachment == nullptr)
 					{
-						if (clearRequests[i].clearFlags == 0)
-						{
-							clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-							clearInfos[realClearCount].colorAttachment = j;
-
-							realClearCount++;
-							clearRequests[i].attachment = nullptr;
-						}
-						else
-						{
-							clearInfos[realClearCount].aspectMask = 0;
-							if (clearRequests[i].clearFlags & CLEAR_DEPTH)
-							{
-								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-							}
-							if (clearRequests[i].clearFlags & CLEAR_STENCIL)
-							{
-								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-							}
-							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-							clearInfos[realClearCount].colorAttachment = 0;
-
-							realClearCount++;
-							clearRequests[i].attachment = nullptr;
-						}
-
 						continue;
 					}
+
+					for (UINT j = 0; j < attachmentCount; ++j)
+					{
+						if (clearRequests[i].attachment == attachments[j])
+						{
+							if (clearRequests[i].clearFlags == 0)
+							{
+								clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+								clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
+								clearInfos[realClearCount].colorAttachment = j;
+
+								realClearCount++;
+								clearRequests[i].attachment = nullptr;
+							}
+							else
+							{
+								clearInfos[realClearCount].aspectMask = 0;
+								if (clearRequests[i].clearFlags & CLEAR_DEPTH)
+								{
+									clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+								}
+								if (clearRequests[i].clearFlags & CLEAR_STENCIL)
+								{
+									clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+								}
+								clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
+								clearInfos[realClearCount].colorAttachment = 0;
+
+								realClearCount++;
+								clearRequests[i].attachment = nullptr;
+							}
+
+							continue;
+						}
+					}
+
+					remainingClearRequests = true;
+				}
+				if (realClearCount > 0)
+				{
+					VkClearRect rect = {};
+					rect.baseArrayLayer = 0;
+					rect.layerCount = 1;
+					rect.rect.offset.x = 0;
+					rect.rect.offset.y = 0;
+					rect.rect.extent.width = attachmentsExtents.width;
+					rect.rect.extent.height = attachmentsExtents.height;
+
+					vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
 				}
 
-				remainingClearRequests = true;
-			}
-			if (realClearCount > 0)
-			{
-				VkClearRect rect = {};
-				rect.baseArrayLayer = 0;
-				rect.layerCount = 1;
-				rect.rect.offset.x = 0;
-				rect.rect.offset.y = 0;
-				rect.rect.extent.width = attachmentsExtents.width;
-				rect.rect.extent.height = attachmentsExtents.height;
-
-				vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
-			}
-
-			if (!remainingClearRequests)
-			{
-				clearRequests.clear();
+				if (!remainingClearRequests)
+				{
+					clearRequests.clear();
+				}
 			}
 
 		}
