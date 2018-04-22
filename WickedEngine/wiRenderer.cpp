@@ -1228,9 +1228,9 @@ void wiRenderer::LoadShaders()
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -5090,22 +5090,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						&Mesh::impostorVB_POS,
 						&Mesh::impostorVB_TEX,
 						&Mesh::impostorVB_POS,
-						dynamicVertexBufferPool,
 						dynamicVertexBufferPool
 					};
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Mesh::Vertex_POS),
-						sizeof(InstBuf),
-						sizeof(InstBuf),
+						sizeof(InstBuf)
 					};
 					UINT offsets[] = {
 						0,
 						0,
 						0,
-						instancesOffset,
-						instancesOffset + sizeof(Instance)
+						instancesOffset
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
@@ -5344,22 +5341,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
 							mesh->vertexBuffer_TEX,
 							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE != nullptr ? mesh->streamoutBuffer_PRE : mesh->vertexBuffer_POS),
-							dynamicVertexBufferPool,
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
 							sizeof(Mesh::Vertex_POS),
 							sizeof(Mesh::Vertex_TEX),
 							sizeof(Mesh::Vertex_POS),
-							sizeof(InstBuf),
-							sizeof(InstBuf),
+							sizeof(InstBuf)
 						};
 						UINT offsets[] = {
 							mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 							0,
 							mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-							instancesOffset,
-							instancesOffset + sizeof(Instance)
+							instancesOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 					}
@@ -7158,22 +7152,19 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
 		mesh->vertexBuffer_TEX,
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE != nullptr ? mesh->streamoutBuffer_PRE : mesh->vertexBuffer_POS),
-		dynamicVertexBufferPool,
 		dynamicVertexBufferPool
 	};
 	UINT strides[] = {
 		sizeof(Mesh::Vertex_POS),
 		sizeof(Mesh::Vertex_TEX),
 		sizeof(Mesh::Vertex_POS),
-		sizeof(InstBuf),
 		sizeof(InstBuf)
 	};
 	UINT offsets[] = {
 		mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 		0,
 		mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-		instancesOffset,
-		instancesOffset + sizeof(InstancePrev)
+		instancesOffset
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 

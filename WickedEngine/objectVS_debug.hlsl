@@ -1,6 +1,12 @@
 #include "globals.hlsli"
 
-float4 main(float4 pos : POSITION_NORMAL_WIND) : SV_POSITION
+float4 main(float4 inPos : POSITION_NORMAL_WIND) : SV_POSITION
 {
-	return mul(float4(pos.xyz, 1), g_xTransform);
+	float4 pos = mul(float4(inPos.xyz, 1), g_xTransform);
+
+#ifdef SHADERCOMPILER_SPIRV
+	pos.y = -pos.y;
+#endif 
+
+	return pos;
 }
