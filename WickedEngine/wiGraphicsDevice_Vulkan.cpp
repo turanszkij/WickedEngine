@@ -3354,11 +3354,17 @@ namespace wiGraphicsTypes
 			}
 
 			uint32_t offset = 0;
-			uint32_t i = 0;
+			uint32_t i = 0; 
+			lastBinding = 0xFFFFFFFF;
 			for (auto& x : pDesc->il->desc)
 			{
 				VkVertexInputAttributeDescription attr = {};
 				attr.binding = x.InputSlot;
+				if (attr.binding != lastBinding)
+				{
+					lastBinding = attr.binding;
+					offset = 0;
+				}
 				attr.format = _ConvertFormat(x.Format);
 				attr.location = i; 
 				attr.offset = x.AlignedByteOffset;
