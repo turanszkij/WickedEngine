@@ -4669,10 +4669,10 @@ namespace wiGraphicsTypes
 					desc.Format = FORMAT_BC1_UNORM;
 					break;
 				case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-					desc.Format = FORMAT_BC3_UNORM;
+					desc.Format = FORMAT_BC2_UNORM;
 					break;
 				case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-					desc.Format = FORMAT_BC5_UNORM;
+					desc.Format = FORMAT_BC3_UNORM;
 					break;
 				default:
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
