@@ -99,12 +99,15 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 		for (float x = -range.x; x <= range.x; x += step.x)
 		{
 			samples += 1.0f;
+#ifndef SHADERCOMPILER_SPIRV
 			// SampleCmpLevelZero also makes a comparison by using a comparison sampler
 			// It compares the reference depth value to the depthmap value.
-			// Returns 0.0 if all samples in a bilinear kernel are greater than reference value
-			// Returns 1.0 if all samples in a bilinear kernel are less or equal than refernce value
 			// Can return in between values based on bilinear filtering
 			accdepth += texture_depth.SampleCmpLevelZero(samplercmp, xSunPos.xy + float2(x, y), referenceDepth).r;
+#else
+			// But samplecmplevelzero seems to not work in GS with my vulkan driver?
+			accdepth += texture_depth.SampleLevel(sampler_point_clamp, xSunPos.xy + float2(x, y), 0).r >= referenceDepth ? 1 : 0;
+#endif
 		}
 	}
 	accdepth /= samples;
