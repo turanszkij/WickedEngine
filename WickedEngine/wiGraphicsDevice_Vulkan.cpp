@@ -2562,10 +2562,8 @@ namespace wiGraphicsTypes
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		}
-		if (pInitialData != nullptr)
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		}
+		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
 		if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
@@ -4341,6 +4339,18 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{
+		//todo
+		//VkImageCopy copy;
+		//copy.extent.width = pDst->desc.Width;
+		//copy.extent.height = pDst->desc.Height;
+		//copy.extent.depth = 1;
+
+		//copy.dstOffset = 0;
+
+		//vkCmdCopyImage(GetDirectCommandList(threadID),
+		//	static_cast<VkImage>(pSrc->resource_Vulkan), VK_IMAGE_LAYOUT_GENERAL,
+		//	static_cast<VkImage>(pDst->resource_Vulkan), VK_IMAGE_LAYOUT_UNDEFINED,
+		//	1, &copy);
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
 	{
