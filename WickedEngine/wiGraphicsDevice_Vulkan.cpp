@@ -4330,6 +4330,20 @@ namespace wiGraphicsTypes
 
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+
+		VkMemoryBarrier barrier;
+		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(GetDirectCommandList(threadID), 
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
+			VK_DEPENDENCY_BY_REGION_BIT, 
+			0, nullptr, 
+			0, nullptr, 
+			0, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -4584,6 +4598,7 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::WaitForGPU()
 	{
+		vkQueueWaitIdle(presentQueue);
 	}
 
 	void GraphicsDevice_Vulkan::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
