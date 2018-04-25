@@ -5402,6 +5402,11 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
+		//GPUResource* res[] =
+		//{
+		//	resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]
+		//};
+		//GetDevice()->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_GENERIC_READ, threadID);
 		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 

@@ -1591,6 +1591,8 @@ namespace wiGraphicsTypes
 				queueCreateInfos.push_back(queueCreateInfo);
 			}
 
+			vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+
 			VkPhysicalDeviceFeatures deviceFeatures = {};
 			vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
@@ -4334,14 +4336,14 @@ namespace wiGraphicsTypes
 		VkMemoryBarrier barrier;
 		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 		barrier.pNext = nullptr;
-		barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 
 		vkCmdPipelineBarrier(GetDirectCommandList(threadID), 
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
 			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
-			VK_DEPENDENCY_BY_REGION_BIT, 
-			0, nullptr, 
+			0, 
+			1, &barrier, 
 			0, nullptr, 
 			0, nullptr);
 	}
@@ -4598,7 +4600,7 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::WaitForGPU()
 	{
-		vkQueueWaitIdle(presentQueue);
+		//vkQueueWaitIdle(presentQueue);
 	}
 
 	void GraphicsDevice_Vulkan::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
@@ -4617,6 +4619,26 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
 	{
+		//if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_GENERIC_READ)
+		//{
+		//	VkBufferMemoryBarrier barrier = {};
+		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		//	barrier.pNext = nullptr;
+		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource_Vulkan);
+		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
+		//	barrier.offset = 0;
+		//	barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		//	barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+		//	vkCmdPipelineBarrier(GetDirectCommandList(threadID),
+		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//		VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//		0,
+		//		0, nullptr,
+		//		1, &barrier,
+		//		0, nullptr);
+		//}
+
+
 		//renderPass[threadID].disable(GetDirectCommandList(threadID));
 
 		//for (UINT i = 0; i < NumBarriers; ++i)

@@ -40,6 +40,8 @@ namespace wiGraphicsTypes
 		VkQueue graphicsQueue;
 		VkQueue presentQueue;
 
+		VkPhysicalDeviceProperties physicalDeviceProperties;
+
 		VkQueue copyQueue;
 		VkCommandPool copyCommandPool;
 		VkCommandBuffer copyCommandBuffer;
