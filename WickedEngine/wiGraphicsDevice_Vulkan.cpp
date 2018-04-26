@@ -2439,7 +2439,7 @@ namespace wiGraphicsTypes
 					copyCommandBuffer,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_DEPENDENCY_BY_REGION_BIT,
+					0,
 					0, nullptr,
 					1, &barrier,
 					0, nullptr
@@ -2476,7 +2476,7 @@ namespace wiGraphicsTypes
 					copyCommandBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_DEPENDENCY_BY_REGION_BIT,
+					0,
 					0, nullptr,
 					1, &barrier,
 					0, nullptr
@@ -2609,7 +2609,7 @@ namespace wiGraphicsTypes
 
 			uint32_t width = pDesc->Width;
 			uint32_t height = pDesc->Height;
-			for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+			for (UINT slice = 0; slice < pDesc->MipLevels; ++slice)
 			{
 				memcpy(dest, pInitialData[slice].pSysMem, pInitialData[slice].SysMemPitch * height);  // double check!!
 
@@ -2656,7 +2656,7 @@ namespace wiGraphicsTypes
 					copyCommandBuffer,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_DEPENDENCY_BY_REGION_BIT,
+					0,
 					0, nullptr,
 					0, nullptr,
 					1, &barrier
@@ -2676,7 +2676,7 @@ namespace wiGraphicsTypes
 					copyCommandBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_DEPENDENCY_BY_REGION_BIT,
+					0,
 					0, nullptr,
 					0, nullptr,
 					1, &barrier
@@ -4237,10 +4237,12 @@ namespace wiGraphicsTypes
 		VkDeviceSize voffsets[8] = {};
 		VkBuffer vbuffers[8] = {};
 		assert(count <= 8);
+		bool valid = false;
 		for (int i = 0; i < count; ++i)
 		{
 			if (vertexBuffers[i] != nullptr)
 			{
+				valid = true;
 				vbuffers[i] = static_cast<VkBuffer>(vertexBuffers[i]->resource_Vulkan);
 			}
 			if (offsets != nullptr)
@@ -4248,7 +4250,11 @@ namespace wiGraphicsTypes
 				voffsets[i] = offsets[i];
 			}
 		}
-		vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+
+		if (valid)
+		{
+			vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+		}
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{
@@ -4333,19 +4339,19 @@ namespace wiGraphicsTypes
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
 		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 
-		VkMemoryBarrier barrier;
-		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
-		barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+		//VkMemoryBarrier barrier;
+		//barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		//barrier.pNext = nullptr;
+		//barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		//barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 
-		vkCmdPipelineBarrier(GetDirectCommandList(threadID), 
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 
-			0, 
-			1, &barrier, 
-			0, nullptr, 
-			0, nullptr);
+		//vkCmdPipelineBarrier(GetDirectCommandList(threadID), 
+		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+		//	0, 
+		//	1, &barrier, 
+		//	0, nullptr, 
+		//	0, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
@@ -4619,6 +4625,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
 	{
+		//renderPass[threadID].disable(GetDirectCommandList(threadID));
+
 		//if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_GENERIC_READ)
 		//{
 		//	VkBufferMemoryBarrier barrier = {};
@@ -4631,7 +4639,25 @@ namespace wiGraphicsTypes
 		//	barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 		//	vkCmdPipelineBarrier(GetDirectCommandList(threadID),
 		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//		VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+		//		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//		0,
+		//		0, nullptr,
+		//		1, &barrier,
+		//		0, nullptr);
+		//}
+		//else if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
+		//{
+		//	VkBufferMemoryBarrier barrier = {};
+		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		//	barrier.pNext = nullptr;
+		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource_Vulkan);
+		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
+		//	barrier.offset = 0;
+		//	barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		//	barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+		//	vkCmdPipelineBarrier(GetDirectCommandList(threadID),
+		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//		VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
 		//		0,
 		//		0, nullptr,
 		//		1, &barrier,
@@ -4639,7 +4665,6 @@ namespace wiGraphicsTypes
 		//}
 
 
-		//renderPass[threadID].disable(GetDirectCommandList(threadID));
 
 		//for (UINT i = 0; i < NumBarriers; ++i)
 		//{
@@ -4748,7 +4773,7 @@ namespace wiGraphicsTypes
 						const nv_dds::CSurface& surf = img.get_mipmap(i);
 
 						InitData[i].pSysMem = static_cast<uint8_t*>(surf); // call operator
-						InitData[i].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height());
+						InitData[i].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height());
 					}
 				}
 				else
