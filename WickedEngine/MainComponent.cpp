@@ -13,8 +13,15 @@
 #include "wiFrameRate.h"
 #include "wiProfiler.h"
 #include "wiInitializer.h"
+#include "wiStartupArguments.h"
+
+#include "wiGraphicsDevice_DX11.h"
+#include "wiGraphicsDevice_DX12.h"
+#include "wiGraphicsDevice_Vulkan.h"
+
 
 using namespace std;
+using namespace wiGraphicsTypes;
 
 MainComponent::MainComponent()
 {
@@ -50,6 +57,38 @@ MainComponent::~MainComponent()
 
 void MainComponent::Initialize()
 {
+
+	// User can also create a graphics device if custom logic is desired, but he must do before this function!
+	if (wiRenderer::graphicsDevice == nullptr)
+	{
+
+		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
+
+		if (wiStartupArguments::HasArgument("vulkan"))
+		{
+#ifdef WICKEDENGINE_BUILD_VULKAN
+			wiRenderer::SHADERPATH += "spirv/";
+			wiRenderer::graphicsDevice = new GraphicsDevice_Vulkan(window, fullscreen, debugdevice);
+#else
+			wiHelper::messageBox("Vulkan SDK not found during building the application! Vulkan API disabled!", "Error");
+#endif
+		}
+		else if (wiStartupArguments::HasArgument("dx12"))
+		{
+			if (wiStartupArguments::HasArgument("hlsl6"))
+			{
+				wiRenderer::SHADERPATH += "hlsl6/";
+			}
+			wiRenderer::graphicsDevice = new GraphicsDevice_DX12(window, fullscreen, debugdevice);
+		}
+		else
+		{
+			wiRenderer::graphicsDevice = new GraphicsDevice_DX11(window, fullscreen, debugdevice);
+		}
+
+	}
+
+
 	wiInitializer::InitializeComponents();
 
 	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
@@ -192,9 +231,25 @@ void MainComponent::Compose()
 		stringstream ss("");
 		if (infoDisplay.watermark)
 		{
-			ss << string("Wicked Engine ") + wiVersion::GetVersionString();
+			ss << string("Wicked Engine ") + wiVersion::GetVersionString() + " ";
+
+			if (dynamic_cast<GraphicsDevice_DX11*>(wiRenderer::GetDevice()))
+			{
+				ss << "[DX11]";
+			}
+			else if (dynamic_cast<GraphicsDevice_DX12*>(wiRenderer::GetDevice()))
+			{
+				ss << "[DX12]";
+			}
+#ifdef WICKEDENGINE_BUILD_VULKAN
+			else if (dynamic_cast<GraphicsDevice_Vulkan*>(wiRenderer::GetDevice()))
+			{
+				ss << "[Vulkan]";
+			}
+#endif
+
 #ifdef _DEBUG
-			ss << " [DEBUG]";
+			ss << "[DEBUG]";
 #endif
 			ss << endl;
 		}
@@ -252,8 +307,6 @@ bool MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANC
 		screenH = rect.bottom - rect.top;
 	}
 
-	wiRenderer::InitDevice(window, fullscreen);
-
 	wiWindowRegistration::GetInstance()->RegisterWindow(window);
 
 	return true;
@@ -263,7 +316,6 @@ bool MainComponent::SetWindow(wiWindowRegistration::window_type window)
 {
 	screenW = (int)window->Bounds.Width;
 	screenH = (int)window->Bounds.Height;
-	wiRenderer::InitDevice(window, fullscreen);
 
 	this->window = window;
 

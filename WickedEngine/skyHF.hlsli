@@ -7,7 +7,20 @@ float3 GetDynamicSkyColor(in float3 normal)
 {
 	float aboveHorizon = saturate(pow(saturate(normal.y), 0.25f + g_xWorld_Fog.z) / (g_xWorld_Fog.z + 1));
 	float3 sky = lerp(GetHorizonColor(), GetZenithColor(), aboveHorizon);
-	float3 sun = normal.y > 0 ? max(saturate(dot(GetSunDirection(), normal) > 0.9998 ? 1 : 0)*GetSunColor() * 1000, 0) : 0;
+
+#ifdef SHADERCOMPILER_SPIRV
+	//compiler bug workaround:
+	uint ucol = EntityArray[g_xFrame_SunEntityArrayIndex].color;
+	float3 sunc;
+
+	sunc.x = (float)((ucol >> 0) & 0x000000FF) / 255.0f;
+	sunc.y = (float)((ucol >> 8) & 0x000000FF) / 255.0f;
+	sunc.z = (float)((ucol >> 16) & 0x000000FF) / 255.0f;
+#else
+	float3 sunc = GetSunColor();
+#endif
+
+	float3 sun = normal.y > 0 ? max(saturate(dot(GetSunDirection(), normal) > 0.9998 ? 1 : 0)*sunc * 1000, 0) : 0;
 	return sky + sun;
 }
 

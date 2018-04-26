@@ -11,7 +11,10 @@ file = open("build_SPIRV.bat", "w")
 
 outputdir = "spirv"
 
-## First, ensure that we have the optuput directory:
+## First, set error log output:
+file.write("2>build_SPIRV_errors.log cls \n")
+
+## Then, ensure that we have the optuput directory:
 file.write("cd WickedEngine\shaders \n")
 file.write("mkdir " + outputdir + "\n")
 file.write("cd .. \n")
@@ -42,8 +45,27 @@ for shader in root.iter(namespace + "FxCompile"):
 
         file.write("_6_0 ")
 
-        file.write(" -spirv -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso \n")
+        file.write("-D SHADERCOMPILER_SPIRV -D ");
+        
+        if profile == "Vertex":
+            file.write("SPIRV_SHADERTYPE_VS")
+        if profile == "Pixel":
+            file.write("SPIRV_SHADERTYPE_PS")
+        if profile == "Geometry":
+            file.write("SPIRV_SHADERTYPE_GS")
+        if profile == "Hull":
+            file.write("SPIRV_SHADERTYPE_HS")
+        if profile == "Domain":
+            file.write("SPIRV_SHADERTYPE_DS")
+        if profile == "Compute":
+            file.write("SPIRV_SHADERTYPE_CS")
+
+        file.write(" -spirv -fvk-use-dx-layout -flegacy-macro-expansion -Fo " + "shaders/" + outputdir + "/" + os.path.splitext(name)[0] + ".cso ")
+
+        ## Append to error log:
+        file.write(" 2>>../build_SPIRV_errors.log \n")
 
 
+file.write("cd .. \n")
     
 file.close()

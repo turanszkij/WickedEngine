@@ -1,5 +1,6 @@
 #include "wiGraphicsDevice_DX12.h"
 #include "Include_DX12.h"
+#include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
@@ -1135,9 +1136,9 @@ namespace wiGraphicsTypes
 		return static_cast<RESOURCE_STATES>(value);
 	}
 	
-	inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D12_RESOURCE_DESC& desc)
+	inline TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
-		Texture2DDesc retVal;
+		TextureDesc retVal;
 
 		retVal.Format = _ConvertFormat_Inv(desc.Format);
 		retVal.Width = (UINT)desc.Width;
@@ -1150,7 +1151,7 @@ namespace wiGraphicsTypes
 
 	// Local Helpers:
 
-	size_t Align(size_t uLocation, size_t uAlign)
+	inline size_t Align(size_t uLocation, size_t uAlign)
 	{
 		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
 		{
@@ -1187,10 +1188,6 @@ namespace wiGraphicsTypes
 
 
 
-#define GPU_RESOURCE_HEAP_CBV_COUNT		15
-#define GPU_RESOURCE_HEAP_SRV_COUNT		64
-#define GPU_RESOURCE_HEAP_UAV_COUNT		8
-#define GPU_SAMPLER_HEAP_COUNT			16
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount)
 	{
 		if (type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER)
@@ -1230,7 +1227,7 @@ namespace wiGraphicsTypes
 		SAFE_RELEASE(heap_GPU);
 		SAFE_DELETE_ARRAY(boundDescriptors);
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
 	{
 		memset(boundDescriptors, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE*)*SHADERSTAGE_COUNT*itemCount);
 
@@ -1455,7 +1452,7 @@ namespace wiGraphicsTypes
 	// Engine functions
 	ID3D12GraphicsCommandList* GraphicsDevice_DX12::GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
 
-	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
+	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
 	{
 		FULLSCREEN = fullscreen;
 
@@ -1471,20 +1468,23 @@ namespace wiGraphicsTypes
 
 		HRESULT hr = E_FAIL;
 
-#if defined(_DEBUG) && !defined(WINSTORE_SUPPORT)
-		// Enable the debug layer.
-		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll",
-			nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-		auto pD3D12GetDebugInterface =
-			reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(
-				GetProcAddress(dx12, "D3D12GetDebugInterface"));
-		if (pD3D12GetDebugInterface)
+#if !defined(WINSTORE_SUPPORT)
+		if (debuglayer)
 		{
-			ID3D12Debug* debugController;
-			if (SUCCEEDED(pD3D12GetDebugInterface(
-				IID_PPV_ARGS(&debugController))))
+			// Enable the debug layer.
+			HMODULE dx12 = LoadLibraryEx(L"d3d12.dll",
+				nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+			auto pD3D12GetDebugInterface =
+				reinterpret_cast<PFN_D3D12_GET_DEBUG_INTERFACE>(
+					GetProcAddress(dx12, "D3D12GetDebugInterface"));
+			if (pD3D12GetDebugInterface)
 			{
-				debugController->EnableDebugLayer();
+				ID3D12Debug* debugController;
+				if (SUCCEEDED(pD3D12GetDebugInterface(
+					IID_PPV_ARGS(&debugController))))
+				{
+					debugController->EnableDebugLayer();
+				}
 			}
 		}
 #endif
@@ -1889,8 +1889,8 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
 			*nullSampler,*nullCBV,*nullSRV,*nullUAV
 		};
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[GRAPHICSTHREAD_IMMEDIATE]), nullDescriptors);
+		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
 
 
 		D3D12_RECT pRects[8];
@@ -2132,7 +2132,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
+	HRESULT GraphicsDevice_DX12::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 	{
 		if ((*ppTexture1D) == nullptr)
 		{
@@ -2145,7 +2145,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
+	HRESULT GraphicsDevice_DX12::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 	{
 		if ((*ppTexture2D) == nullptr)
 		{
@@ -2682,7 +2682,7 @@ namespace wiGraphicsTypes
 		}
 
 
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		if ((*ppTexture2D)->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
 			assert((*ppTexture2D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
 
@@ -2714,7 +2714,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
+	HRESULT GraphicsDevice_DX12::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 	{
 		if ((*ppTexture3D) == nullptr)
 		{
@@ -2944,22 +2944,23 @@ namespace wiGraphicsTypes
 		desc.SampleDesc.Quality = pDesc->sampleDesc.Quality;
 		desc.SampleMask = pDesc->sampleMask;
 
-		switch (pDesc->ptt)
+		switch (pDesc->pt)
 		{
-		case PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED:
-			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_POINT:
+		case POINTLIST:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_LINE:
+		case LINELIST:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE:
+		case TRIANGLELIST:
+		case TRIANGLESTRIP:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			break;
-		case PRIMITIVE_TOPOLOGY_TYPE_PATCH:
+		case PATCHLIST:
 			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+			break;
+		default:
+			desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 			break;
 		}
 
@@ -3119,8 +3120,8 @@ namespace wiGraphicsTypes
 			D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
 				*nullSampler,*nullCBV,*nullSRV,*nullUAV
 			};
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, GetDirectCommandList((GRAPHICSTHREAD)threadID), nullDescriptors);
-			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device,  GetDirectCommandList((GRAPHICSTHREAD)threadID), nullDescriptors);
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
+			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
 			GetFrameResources().resourceBuffer[threadID]->clear();
 
 
@@ -3168,7 +3169,7 @@ namespace wiGraphicsTypes
 		}
 		GetDirectCommandList(threadID)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 		GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
@@ -3177,11 +3178,11 @@ namespace wiGraphicsTypes
 		{
 			for (int i = 0; i < countUAV; ++i)
 			{
-				BindUnorderedAccessResourceCS(ppUAVs[i], slotUAV + i, threadID, -1);
+				BindUnorderedAccessResource(PS, ppUAVs[i], slotUAV + i, threadID, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptors[8] = {};
 		for (UINT i = 0; i < NumViews; ++i)
@@ -3387,10 +3388,21 @@ namespace wiGraphicsTypes
 		}
 		GetDirectCommandList(threadID)->IASetIndexBuffer(&res);
 	}
-	void GraphicsDevice_DX12::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 	{
+		GetDirectCommandList(threadID)->OMSetStencilRef(value);
+	}
+	void GraphicsDevice_DX12::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
+	{
+		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
+		GetDirectCommandList(threadID)->OMSetBlendFactor(blendFactor);
+	}
+	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
+	{
+		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
+
 		D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		switch (type)
+		switch (pso->desc.pt)
 		{
 		case TRIANGLELIST:
 			d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -3411,19 +3423,6 @@ namespace wiGraphicsTypes
 			break;
 		};
 		GetDirectCommandList(threadID)->IASetPrimitiveTopology(d3dType);
-	}
-	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
-	{
-		GetDirectCommandList(threadID)->OMSetStencilRef(value);
-	}
-	void GraphicsDevice_DX12::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
-	{
-		const float blendFactor[4] = { value.x, value.y, value.z, value.w };
-		GetDirectCommandList(threadID)->OMSetBlendFactor(blendFactor);
-	}
-	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
-	{
-		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
 	}
 	void GraphicsDevice_DX12::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
@@ -3722,7 +3721,7 @@ namespace wiGraphicsTypes
 		}
 		else { 
 			D3D12_RESOURCE_DESC desc = (*ppTexture)->resource_DX12->GetDesc();
-			(*ppTexture)->desc = _ConvertTexture2DDesc_Inv(desc);
+			(*ppTexture)->desc = _ConvertTextureDesc_Inv(desc);
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Format = desc.Format;

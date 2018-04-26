@@ -1439,7 +1439,7 @@ void EditorComponent::Compose()
 	//static Texture2D* clouds = nullptr;
 	//if (clouds == nullptr)
 	//{
-	//	Texture2DDesc desc;
+	//	TextureDesc desc;
 	//	desc.ArraySize = 1;
 	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 	//	desc.CPUAccessFlags = 0;

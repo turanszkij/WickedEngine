@@ -830,7 +830,7 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	return DXGI_FORMAT_UNKNOWN;
 }
 
-inline D3D11_TEXTURE1D_DESC _ConvertTexture1DDesc(const Texture1DDesc* pDesc)
+inline D3D11_TEXTURE1D_DESC _ConvertTextureDesc1D(const TextureDesc* pDesc)
 {
 	D3D11_TEXTURE1D_DESC desc;
 	desc.Width = pDesc->Width;
@@ -844,7 +844,7 @@ inline D3D11_TEXTURE1D_DESC _ConvertTexture1DDesc(const Texture1DDesc* pDesc)
 
 	return desc;
 }
-inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
+inline D3D11_TEXTURE2D_DESC _ConvertTextureDesc2D(const TextureDesc* pDesc)
 {
 	D3D11_TEXTURE2D_DESC desc;
 	desc.Width = pDesc->Width;
@@ -861,7 +861,7 @@ inline D3D11_TEXTURE2D_DESC _ConvertTexture2DDesc(const Texture2DDesc* pDesc)
 
 	return desc;
 }
-inline D3D11_TEXTURE3D_DESC _ConvertTexture3DDesc(const Texture3DDesc* pDesc)
+inline D3D11_TEXTURE3D_DESC _ConvertTextureDesc3D(const TextureDesc* pDesc)
 {
 	D3D11_TEXTURE3D_DESC desc;
 	desc.Width = pDesc->Width;
@@ -1327,9 +1327,9 @@ inline USAGE _ConvertUsage_Inv(D3D11_USAGE value)
 	return USAGE_DEFAULT;
 }
 
-inline Texture1DDesc _ConvertTexture1DDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc)
+inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc)
 {
-	Texture1DDesc desc;
+	TextureDesc desc;
 	desc.Width = pDesc->Width;
 	desc.MipLevels = pDesc->MipLevels;
 	desc.ArraySize = pDesc->ArraySize;
@@ -1341,9 +1341,9 @@ inline Texture1DDesc _ConvertTexture1DDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc
 
 	return desc;
 }
-inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
+inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
 {
-	Texture2DDesc desc;
+	TextureDesc desc;
 	desc.Width = pDesc->Width;
 	desc.Height = pDesc->Height;
 	desc.MipLevels = pDesc->MipLevels;
@@ -1358,9 +1358,9 @@ inline Texture2DDesc _ConvertTexture2DDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc
 
 	return desc;
 }
-inline Texture3DDesc _ConvertTexture3DDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
+inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
 {
-	Texture3DDesc desc;
+	TextureDesc desc;
 	desc.Width = pDesc->Width;
 	desc.Height = pDesc->Height;
 	desc.Depth = pDesc->Depth;
@@ -1382,7 +1382,7 @@ const void* const __nullBlob[1024] = {}; // this is initialized to nullptrs!
 
 // Engine functions
 
-GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen) : GraphicsDevice()
+GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
 {
 	FULLSCREEN = fullscreen;
 
@@ -1407,7 +1407,11 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	}
 
 	UINT createDeviceFlags = 0;
-	//createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+
+	if (debuglayer)
+	{
+		createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	}
 
 	D3D_DRIVER_TYPE driverTypes[] =
 	{
@@ -1693,7 +1697,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
+HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 {
 	if ((*ppTexture1D) == nullptr)
 	{
@@ -1701,7 +1705,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 	}
 	(*ppTexture1D)->desc = *pDesc;
 
-	D3D11_TEXTURE1D_DESC desc = _ConvertTexture1DDesc(&(*ppTexture1D)->desc);
+	D3D11_TEXTURE1D_DESC desc = _ConvertTextureDesc1D(&(*ppTexture1D)->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1744,7 +1748,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const Texture1DDesc* pDesc, const S
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
+HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 {
 	if ((*ppTexture2D) == nullptr)
 	{
@@ -1764,7 +1768,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 		}
 	}
 
-	D3D11_TEXTURE2D_DESC desc = _ConvertTexture2DDesc(&(*ppTexture2D)->desc);
+	D3D11_TEXTURE2D_DESC desc = _ConvertTextureDesc2D(&(*ppTexture2D)->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1827,7 +1831,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const Texture2DDesc* pDesc, const S
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
+HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 {
 	if ((*ppTexture3D) == nullptr)
 	{
@@ -1835,7 +1839,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const Texture3DDesc* pDesc, const S
 	}
 	(*ppTexture3D)->desc = *pDesc;
 
-	D3D11_TEXTURE3D_DESC desc = _ConvertTexture3DDesc(&(*ppTexture3D)->desc);
+	D3D11_TEXTURE3D_DESC desc = _ConvertTextureDesc3D(&(*ppTexture3D)->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -2773,6 +2777,7 @@ void GraphicsDevice_DX11::PresentEnd()
 	memset(prev_stencilRef, 0, sizeof(prev_stencilRef));
 	memset(prev_dss, 0, sizeof(prev_dss));
 	memset(prev_il, 0, sizeof(prev_il));
+	memset(prev_pt, 0, sizeof(prev_pt));
 
 	FRAMECOUNT++;
 
@@ -2817,7 +2822,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	}
 	deviceContexts[threadID]->RSSetViewports(NumViewports, d3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 	GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
@@ -2862,7 +2867,7 @@ void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture* const *p
 
 	deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slotUAV, countUAV, UAVs, nullptr);
 }
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
 	ID3D11RenderTargetView* renderTargetViews[8];
@@ -3133,31 +3138,7 @@ void GraphicsDevice_DX11::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUF
 	ID3D11Buffer* res = indexBuffer != nullptr ? indexBuffer->resource_DX11 : nullptr;
 	deviceContexts[threadID]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
 }
-void GraphicsDevice_DX11::BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID)
-{
-	D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	switch (type)
-	{
-	case TRIANGLELIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		break;
-	case TRIANGLESTRIP:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-		break;
-	case POINTLIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
-		break;
-	case LINELIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-		break;
-	case PATCHLIST:
-		d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-		break;
-	default:
-		break;
-	};
-	deviceContexts[threadID]->IASetPrimitiveTopology(d3dType);
-}
+
 void GraphicsDevice_DX11::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 {
 	stencilRef[threadID] = value;
@@ -3236,6 +3217,35 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 	{
 		deviceContexts[threadID]->IASetInputLayout(il);
 		prev_il[threadID] = il;
+	}
+
+	if (prev_pt[threadID] != desc.pt)
+	{
+		D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		switch (desc.pt)
+		{
+		case TRIANGLELIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			break;
+		case TRIANGLESTRIP:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			break;
+		case POINTLIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+			break;
+		case LINELIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+			break;
+		case PATCHLIST:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+			break;
+		default:
+			d3dType = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+			break;
+		};
+		deviceContexts[threadID]->IASetPrimitiveTopology(d3dType);
+
+		prev_pt[threadID] = desc.pt;
 	}
 }
 void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
@@ -3494,7 +3504,7 @@ HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const std::string& fileName, 
 	else {
 		D3D11_TEXTURE2D_DESC desc;
 		(*ppTexture)->texture2D_DX11->GetDesc(&desc);
-		(*ppTexture)->desc = _ConvertTexture2DDesc_Inv(&desc);
+		(*ppTexture)->desc = _ConvertTextureDesc_Inv(&desc);
 	}
 
 	return hr;

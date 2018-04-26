@@ -20,6 +20,10 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 
 	Out.pos2D = Out.pos;
 
+#ifdef SHADERCOMPILER_SPIRV
+	Out.pos.y = -Out.pos.y;
+#endif 
+
 	return Out;
 }
 

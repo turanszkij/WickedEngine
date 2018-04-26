@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 // Calculate average luminance by reduction
 
-RWTexture2D<float> tex : register(u0);
+RWTEXTURE2D(tex, float, 0);
 
 
 #define SIZEX 16

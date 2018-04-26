@@ -478,8 +478,6 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(&PSO[material->blendFlag][shaderType], threadID);
 	}
 
-	device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLELIST, threadID);
-
 	device->BindConstantBuffer(VS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 	GPUResource* res[] = {

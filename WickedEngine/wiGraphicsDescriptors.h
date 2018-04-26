@@ -15,6 +15,7 @@ namespace wiGraphicsTypes
 	class RasterizerState;
 	class DepthStencilState;
 	class VertexLayout;
+	class Texture;
 
 	enum SHADERSTAGE
 	{
@@ -28,19 +29,12 @@ namespace wiGraphicsTypes
 	};
 	enum PRIMITIVETOPOLOGY
 	{
+		UNDEFINED_TOPOLOGY,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
 		LINELIST,
 		PATCHLIST,
-	}; 
-	enum PRIMITIVE_TOPOLOGY_TYPE
-	{
-		PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED,
-		PRIMITIVE_TOPOLOGY_TYPE_POINT,
-		PRIMITIVE_TOPOLOGY_TYPE_LINE,
-		PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-		PRIMITIVE_TOPOLOGY_TYPE_PATCH
 	};
 	enum COMPARISON_FUNC
 	{
@@ -417,34 +411,13 @@ namespace wiGraphicsTypes
 
 		SampleDesc() :Count( 1 ), Quality( 0 ) {}
 	};
-	struct Texture1DDesc
-	{
-		UINT Width;
-		UINT MipLevels;
-		UINT ArraySize;
-		FORMAT Format;
-		USAGE Usage;
-		UINT BindFlags;
-		UINT CPUAccessFlags;
-		UINT MiscFlags;
-
-		Texture1DDesc():
-			Width(0),
-			MipLevels(1),
-			ArraySize(1),
-			Format(FORMAT_UNKNOWN),
-			Usage(USAGE_DEFAULT),
-			BindFlags(0),
-			CPUAccessFlags(0),
-			MiscFlags(0)
-		{}
-	};
-	struct Texture2DDesc
+	struct TextureDesc
 	{
 		UINT Width;
 		UINT Height;
-		UINT MipLevels;
+		UINT Depth;
 		UINT ArraySize;
+		UINT MipLevels;
 		FORMAT Format;
 		SampleDesc SampleDesc;
 		USAGE Usage;
@@ -452,34 +425,11 @@ namespace wiGraphicsTypes
 		UINT CPUAccessFlags;
 		UINT MiscFlags;
 
-		Texture2DDesc():
-			Width(0),
-			Height(0),
-			MipLevels(1),
-			ArraySize(1),
-			Format(FORMAT_UNKNOWN),
-			Usage(USAGE_DEFAULT),
-			BindFlags(0),
-			CPUAccessFlags(0),
-			MiscFlags(0)
-		{}
-	};
-	struct Texture3DDesc
-	{
-		UINT Width;
-		UINT Height;
-		UINT Depth;
-		UINT MipLevels;
-		FORMAT Format;
-		USAGE Usage;
-		UINT BindFlags;
-		UINT CPUAccessFlags;
-		UINT MiscFlags;
-
-		Texture3DDesc():
+		TextureDesc() :
 			Width(0),
 			Height(0),
 			Depth(0),
+			ArraySize(1),
 			MipLevels(1),
 			Format(FORMAT_UNKNOWN),
 			Usage(USAGE_DEFAULT),
@@ -653,7 +603,7 @@ namespace wiGraphicsTypes
 		RasterizerState*		rs;
 		DepthStencilState*		dss;
 		VertexLayout*			il;
-		PRIMITIVE_TOPOLOGY_TYPE	ptt;
+		PRIMITIVETOPOLOGY		pt;
 		UINT					numRTs;
 		FORMAT					RTFormats[8];
 		FORMAT					DSFormat;
@@ -671,7 +621,7 @@ namespace wiGraphicsTypes
 			SAFE_INIT(rs);
 			SAFE_INIT(dss);
 			SAFE_INIT(il);
-			ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			pt = TRIANGLELIST;
 			numRTs = 0;
 			for (int i = 0; i < ARRAYSIZE(RTFormats); ++i)
 			{
@@ -691,6 +641,14 @@ namespace wiGraphicsTypes
 		{
 			SAFE_INIT(cs);
 		}
+	};
+	struct RenderPassDesc
+	{
+		Texture* RTs[8] = {};
+		Texture* DS = nullptr;
+		UINT NumRTs = 0;
+
+		RenderPassDesc() {}
 	};
 	struct IndirectDrawArgsInstanced
 	{

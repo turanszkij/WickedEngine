@@ -18,19 +18,19 @@ namespace wiGraphicsTypes
 		int SCREENWIDTH, SCREENHEIGHT;
 		bool FULLSCREEN;
 		bool RESOLUTIONCHANGED;
-		static FORMAT BACKBUFFER_FORMAT;
+		FORMAT BACKBUFFER_FORMAT;
 		static const UINT BACKBUFFER_COUNT = 2;
 		bool TESSELLATION, MULTITHREADED_RENDERING, CONSERVATIVE_RASTERIZATION, RASTERIZER_ORDERED_VIEWS, UNORDEREDACCESSTEXTURE_LOAD_EXT;
 	public:
 		GraphicsDevice() 
-			:FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false), RESOLUTIONCHANGED(false),
+			:FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false), RESOLUTIONCHANGED(false), BACKBUFFER_FORMAT(FORMAT_R10G10B10A2_UNORM),
 			TESSELLATION(false), MULTITHREADED_RENDERING(false), CONSERVATIVE_RASTERIZATION(false),RASTERIZER_ORDERED_VIEWS(false), UNORDEREDACCESSTEXTURE_LOAD_EXT(false)
 		{}
 
 		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) = 0;
-		virtual HRESULT CreateTexture1D(const Texture1DDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D) = 0;
-		virtual HRESULT CreateTexture2D(const Texture2DDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) = 0;
-		virtual HRESULT CreateTexture3D(const Texture3DDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D) = 0;
+		virtual HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D) = 0;
+		virtual HRESULT CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) = 0;
+		virtual HRESULT CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D) = 0;
 		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 			const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout) = 0;
 		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) = 0;
@@ -63,7 +63,6 @@ namespace wiGraphicsTypes
 
 
 		virtual void SetResolution(int width, int height) = 0;
-		
 
 		virtual Texture2D GetBackBuffer() = 0;
 
@@ -78,20 +77,22 @@ namespace wiGraphicsTypes
 		};
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability);
 
+		uint32_t GetFormatStride(FORMAT value);
+
 		XMMATRIX GetScreenProjection()
 		{
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
-		static FORMAT GetBackBufferFormat();
+		FORMAT GetBackBufferFormat() { return BACKBUFFER_FORMAT; }
 		static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
+		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
 			GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
-		virtual void BindRenderTargets(UINT NumViews, Texture* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
+		virtual void BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
@@ -104,7 +105,6 @@ namespace wiGraphicsTypes
 		virtual void BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindVertexBuffers(GPUBuffer *const* vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindPrimitiveTopology(PRIMITIVETOPOLOGY type, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindStencilRef(UINT value, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID) = 0;

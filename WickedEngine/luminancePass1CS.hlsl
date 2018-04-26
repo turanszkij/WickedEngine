@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 // Just calculate luminance into power of two texture
 
-RWTexture2D<float> tex : register(u0);
+RWTEXTURE2D(tex, float, 0);
 
 [numthreads(16, 16, 1)]
 void main(

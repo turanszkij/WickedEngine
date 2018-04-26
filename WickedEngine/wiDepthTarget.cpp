@@ -23,7 +23,7 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 	SAFE_DELETE(texture_resolvedMSAA);
 	resolvedMSAAUptodate = false;
 
-	Texture2DDesc depthDesc;
+	TextureDesc depthDesc;
 	ZeroMemory(&depthDesc, sizeof(depthDesc));
 
 	// Set up the description of the depth buffer.
@@ -55,7 +55,7 @@ void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 	SAFE_DELETE(texture_resolvedMSAA);
 	resolvedMSAAUptodate = false;
 
-	Texture2DDesc depthGPUBufferDesc;
+	TextureDesc depthGPUBufferDesc;
 	ZeroMemory(&depthGPUBufferDesc, sizeof(depthGPUBufferDesc));
 
 	// Set up the description of the depth buffer.

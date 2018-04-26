@@ -9,5 +9,11 @@ float4 main(Input_Object_POS input) : SV_POSITION
 
 	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
 
-	return mul(surface.position, g_xCamera_VP);
+	float4 pos = mul(surface.position, g_xCamera_VP);
+
+#ifdef SHADERCOMPILER_SPIRV
+	pos.y = -pos.y;
+#endif 
+
+	return pos;
 }

@@ -52,10 +52,9 @@ class wiRenderer
 {
 public:
 	static wiGraphicsTypes::GraphicsDevice* graphicsDevice;
-	static wiGraphicsTypes::GraphicsDevice* GetDevice() { return graphicsDevice; }
+	static wiGraphicsTypes::GraphicsDevice* GetDevice() { assert(graphicsDevice != nullptr);  return graphicsDevice; }
 
 
-	static void InitDevice(wiWindowRegistration::window_type window, bool fullscreen = false);
 	static void Present(std::function<void()> drawToScreen1=nullptr, std::function<void()> drawToScreen2=nullptr, std::function<void()> drawToScreen3=nullptr);
 
 	

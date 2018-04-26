@@ -20,6 +20,6 @@ public:
 
 	wiGraphicsTypes::Texture2D* GetTexture() const { return texture; }
 	wiGraphicsTypes::Texture2D* GetTextureResolvedMSAA(GRAPHICSTHREAD threadID);
-	wiGraphicsTypes::Texture2DDesc GetDesc() const { return GetTexture()->GetDesc(); }
+	wiGraphicsTypes::TextureDesc GetDesc() const { return GetTexture()->GetDesc(); }
 };
 

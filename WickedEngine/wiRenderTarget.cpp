@@ -45,7 +45,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 
 	if (!depthOnly)
 	{
-		Texture2DDesc textureDesc;
+		TextureDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = width;
 		textureDesc.Height = height;
@@ -101,7 +101,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 
 	if (!depthOnly)
 	{
-		Texture2DDesc textureDesc;
+		TextureDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = size;
 		textureDesc.Height = size;
@@ -139,7 +139,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 }
 void wiRenderTarget::Add(FORMAT format)
 {
-	Texture2DDesc desc = GetTexture(0)->GetDesc();
+	TextureDesc desc = GetTexture(0)->GetDesc();
 	desc.Format = format;
 
 	if (!renderTargets.empty())
@@ -212,12 +212,12 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	if (viewID >= 0)
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (depth ? depth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture2D**)&renderTargets[viewID], (depth ? depth->GetTexture() : nullptr), threadID);
 		resolvedMSAAUptodate[viewID] = false;
 	}
 	else
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture2D**)renderTargets.data(), (depth ? depth->GetTexture() : nullptr), threadID);
 		for (auto& x : resolvedMSAAUptodate)
 		{
 			x = false;
@@ -229,12 +229,12 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool 
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
 	if (viewID >= 0)
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture**)&renderTargets[viewID], (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : 1, disableColor ? nullptr : (Texture2D**)&renderTargets[viewID], (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 		resolvedMSAAUptodate[viewID] = false;
 	}
 	else
 	{
-		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(disableColor ? 0 : numViews, disableColor ? nullptr : (Texture2D**)renderTargets.data(), (getDepth ? getDepth->GetTexture() : nullptr), threadID);
 		for (auto& x : resolvedMSAAUptodate)
 		{
 			x = false;
@@ -259,7 +259,7 @@ Texture2D* wiRenderTarget::GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int v
 }
 UINT wiRenderTarget::GetMipCount()
 {
-	Texture2DDesc desc = GetDesc();
+	TextureDesc desc = GetDesc();
 
 	if (desc.MipLevels>0)
 		return desc.MipLevels;

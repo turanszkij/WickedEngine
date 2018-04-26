@@ -82,7 +82,7 @@ void createBufferAndUAV(void* data, UINT byte_width, UINT byte_stride, GPUBuffer
 void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D** ppTex)
 {
 	// Create 2D texture
-	Texture2DDesc tex_desc;
+	TextureDesc tex_desc;
 	tex_desc.Width = width;
 	tex_desc.Height = height;
 	tex_desc.MipLevels = 0;
@@ -251,7 +251,6 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 
-	//device->BindCS(m_pUpdateSpectrumCS, threadID);
 	device->BindComputePSO(&CPSO_updateSpectrum, threadID);
 
 	// Buffers
@@ -293,7 +292,6 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 
 
 	// Update displacement map:
-	//device->BindCS(m_pUpdateDisplacementMapCS, threadID);
 	device->BindComputePSO(&CPSO_updateDisplacementMap, threadID);
 	GPUResource* cs_uavs[] = { m_pDisplacementMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
@@ -303,7 +301,6 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
 	// Update gradient map:
-	//device->BindCS(m_pUpdateGradientFoldingCS, threadID);
 	device->BindComputePSO(&CPSO_updateGradientFolding, threadID);
 	cs_uavs[0] = { m_pGradientMap };
 	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
@@ -315,7 +312,6 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// Unbind
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
 	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	//device->BindCS(nullptr, threadID);
 
 
 	device->GenerateMips(m_pGradientMap, threadID);
@@ -333,12 +329,6 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 
 	bool wire = wiRenderer::IsWireRender();
 
-	//device->BindVS(g_pOceanSurfVS, threadID);
-	//device->BindPS(wire ? g_pWireframePS : g_pOceanSurfPS, threadID);
-
-
-	device->BindPrimitiveTopology(TRIANGLELIST, threadID);
-
 	if (wire)
 	{
 		device->BindGraphicsPSO(&PSO_wire, threadID);
@@ -347,13 +337,6 @@ void wiOcean::Render(const Camera* camera, float time, GRAPHICSTHREAD threadID)
 	{
 		device->BindGraphicsPSO(&PSO, threadID);
 	}
-
-	//device->BindVertexLayout(nullptr, threadID);
-
-	//device->BindRasterizerState(wire ? wireRS : rasterizerState, threadID);
-	//device->BindDepthStencilState(depthStencilState, 0, threadID);
-	//device->BindBlendState(blendState, threadID);
-
 
 
 	const uint2 dim = uint2(160 * surfaceDetail, 90 * surfaceDetail);

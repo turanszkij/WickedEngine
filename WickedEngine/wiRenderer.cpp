@@ -19,8 +19,6 @@
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
-#include "wiGraphicsDevice_DX11.h"
-#include "wiGraphicsDevice_DX12.h"
 #include "wiTranslator.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
@@ -121,13 +119,6 @@ wiWaterPlane wiRenderer::waterPlane;
 
 wiRenderer::wiRenderer()
 {
-}
-
-void wiRenderer::InitDevice(wiWindowRegistration::window_type window, bool fullscreen)
-{
-	SAFE_DELETE(graphicsDevice);
-	graphicsDevice = new GraphicsDevice_DX11(window, fullscreen);
-	//graphicsDevice = new GraphicsDevice_DX12(window, fullscreen);
 }
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
@@ -1237,9 +1228,9 @@ void wiRenderer::LoadShaders()
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -1587,13 +1578,27 @@ void wiRenderer::LoadShaders()
 											desc.DSFormat = DSFormat_full;
 											break;
 										case SHADERTYPE_FORWARD:
-											desc.numRTs = 2;
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
 											desc.RTFormats[0] = RTFormat_hdr;
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
 											desc.DSFormat = DSFormat_full;
 											break;
 										case SHADERTYPE_TILEDFORWARD:
-											desc.numRTs = 2;
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
 											desc.RTFormats[0] = RTFormat_hdr;
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
 											desc.DSFormat = DSFormat_full;
@@ -1630,11 +1635,11 @@ void wiRenderer::LoadShaders()
 
 										if (tessellation)
 										{
-											desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+											desc.pt = PATCHLIST;
 										}
 										else
 										{
-											desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+											desc.pt = TRIANGLELIST;
 										}
 
 										RECREATE(PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
@@ -1668,7 +1673,7 @@ void wiRenderer::LoadShaders()
 			desc.bs = blendStates[BSTYPE_ADDITIVE];
 			desc.rs = rasterizers[DSSTYPE_DEFAULT];
 			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			desc.pt = TRIANGLELIST;
 
 			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_hdr;
@@ -1693,9 +1698,8 @@ void wiRenderer::LoadShaders()
 			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
-			desc.numRTs = 2;
+			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_hdr;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			desc.DSFormat = DSFormat_full;
 
 			desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
@@ -1738,9 +1742,9 @@ void wiRenderer::LoadShaders()
 			desc.bs = blendStates[BSTYPE_DECAL];
 			desc.dss = depthStencils[DSSTYPE_DECAL];
 
-			desc.numRTs = 2;
+			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_gbuffer_0;
-			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			//desc.RTFormats[1] = RTFormat_gbuffer_1;
 
 			RECREATE(PSO_decal);
 			device->CreateGraphicsPSO(&desc, PSO_decal);
@@ -1751,6 +1755,7 @@ void wiRenderer::LoadShaders()
 			desc.rs = rasterizers[RSTYPE_OCCLUDEE];
 			desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
 			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.pt = TRIANGLESTRIP;
 
 			desc.DSFormat = DSFormat_small;
 
@@ -1844,6 +1849,7 @@ void wiRenderer::LoadShaders()
 
 			// deferred lights:
 
+			desc.pt = TRIANGLELIST;
 			desc.rs = rasterizers[RSTYPE_BACK];
 			desc.bs = blendStates[BSTYPE_DEFERREDLIGHT];
 
@@ -2065,7 +2071,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+				desc.pt = LINELIST;
 				break;
 			case DEBUGRENDERING_TRANSLATOR_SOLIDPART:
 				desc.vs = vertexShaders[VSTYPE_LINE];
@@ -2074,6 +2080,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
 				desc.bs = blendStates[BSTYPE_ADDITIVE];
+				desc.pt = TRIANGLELIST;
 				break;
 			case DEBUGRENDERING_ENVPROBE:
 				desc.vs = vertexShaders[VSTYPE_SPHERE];
@@ -2081,6 +2088,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_DEFAULT];
 				desc.rs = rasterizers[RSTYPE_FRONT];
 				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.pt = TRIANGLELIST;
 				break;
 			case DEBUGRENDERING_GRID:
 				desc.vs = vertexShaders[VSTYPE_LINE];
@@ -2089,7 +2097,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+				desc.pt = LINELIST;
 				break;
 			case DEBUGRENDERING_CUBE:
 				desc.vs = vertexShaders[VSTYPE_LINE];
@@ -2098,7 +2106,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+				desc.pt = LINELIST;
 				break;
 			case DEBUGRENDERING_LINES:
 				desc.vs = vertexShaders[VSTYPE_LINE];
@@ -2107,7 +2115,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+				desc.pt = LINELIST;
 				break;
 			case DEBUGRENDERING_BONELINES:
 				desc.vs = vertexShaders[VSTYPE_LINE];
@@ -2116,7 +2124,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_LINE;
+				desc.pt = LINELIST;
 				break;
 			case DEBUGRENDERING_EMITTER:
 				desc.vs = vertexShaders[VSTYPE_OBJECT_DEBUG];
@@ -2125,6 +2133,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.pt = TRIANGLELIST;
 				break;
 			case DEBUGRENDERING_VOXEL:
 				desc.vs = vertexShaders[VSTYPE_VOXEL];
@@ -2133,7 +2142,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_DEFAULT];
 				desc.rs = rasterizers[RSTYPE_BACK];
 				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.ptt = PRIMITIVE_TOPOLOGY_TYPE_POINT;
+				desc.pt = POINTLIST;
 				break;
 			case DEBUGRENDERING_FORCEFIELD_POINT:
 				desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT];
@@ -2141,6 +2150,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.rs = rasterizers[RSTYPE_BACK];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
+				desc.pt = TRIANGLELIST;
 				break;
 			case DEBUGRENDERING_FORCEFIELD_PLANE:
 				desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE];
@@ -2148,6 +2158,7 @@ void wiRenderer::LoadShaders()
 				desc.dss = depthStencils[DSSTYPE_XRAY];
 				desc.rs = rasterizers[RSTYPE_FRONT];
 				desc.bs = blendStates[BSTYPE_TRANSPARENT];
+				desc.pt = TRIANGLESTRIP;
 				break;
 			}
 
@@ -3419,7 +3430,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					CSTYPES targetCS = CSTYPE_SKINNING_LDS;
 
-					if (!GetLDSSkinningEnabled() || armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
+					//if (!GetLDSSkinningEnabled() || armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
 					{
 						// If we have more bones that can fit into LDS, we switch to a skinning shader which loads from device memory:
 						targetCS = CSTYPE_SKINNING;
@@ -3454,6 +3465,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
 					GetDevice()->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
+					//GetDevice()->TransitionBarrier(sos, ARRAYSIZE(sos), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, threadID);
 				}
 				else if (mesh->hasDynamicVB())
 				{
@@ -3502,7 +3514,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		if (textures[TEXTYPE_2D_CLOUDS] == nullptr)
 		{
-			Texture2DDesc desc;
+			TextureDesc desc;
 			desc.ArraySize = 1;
 			desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 			desc.CPUAccessFlags = 0;
@@ -3549,8 +3561,6 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		//GetDevice()->BindPS(nullptr, threadID);
 
 		GetDevice()->BindGraphicsPSO(PSO_occlusionquery, threadID);
-
-		GetDevice()->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
 		int queryID = 0;
 
@@ -3767,8 +3777,6 @@ void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
 	if(debugBoneLines)
 	{
 		GetDevice()->EventBegin("DebugBoneLines", threadID);
-
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_BONELINES], threadID);
 
@@ -3798,8 +3806,6 @@ void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
 		return;
 
 	GetDevice()->EventBegin("DebugLines", threadID);
-
-	GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 
 	GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
 
@@ -3831,8 +3837,6 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 	if(debugPartitionTree || !renderableBoxes.empty())
 	{
 		GetDevice()->EventBegin("DebugBoxes", threadID);
-
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 		
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
@@ -3899,7 +3903,6 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
 				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
 			}
 
@@ -3930,7 +3933,6 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
 				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_WIREPART], threadID);
 			}
 
@@ -3964,7 +3966,6 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				sb.mTransform = XMMatrixTranspose(mat);
 				sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
 				GetDevice()->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
 			}
@@ -3983,8 +3984,6 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 
 
 		// Envmap spheres:
-
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
 
@@ -4009,8 +4008,6 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 
 
 		// Local proxy boxes:
-
-		GetDevice()->BindPrimitiveTopology(LINELIST, threadID);
 
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
@@ -4044,8 +4041,6 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 	if(gridHelper)
 	{
 		GetDevice()->EventBegin("GridHelper", threadID);
-
-		GetDevice()->BindPrimitiveTopology(LINELIST,threadID);
 
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
 
@@ -4115,8 +4110,6 @@ void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->EventBegin("Debug Voxels", threadID);
 
-		GetDevice()->BindPrimitiveTopology(POINTLIST, threadID);
-
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
 
 
@@ -4136,8 +4129,6 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 	if (debugEmitters || !renderableBoxes.empty()) 
 	{
 		GetDevice()->EventBegin("DebugEmitters", threadID);
-
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 		
 		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
 
@@ -4185,12 +4176,10 @@ void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 				switch (force->type)
 				{
 				case ENTITY_TYPE_FORCEFIELD_POINT:
-					GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 					GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
 					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
 					break;
 				case ENTITY_TYPE_FORCEFIELD_PLANE:
-					GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 					GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
 					GetDevice()->Draw(14, 0, threadID); // box
 					break;
@@ -4371,8 +4360,6 @@ void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 	GetDevice()->EventBegin("Light Render", threadID);
 	wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
-
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
 		GetDevice()->BindGraphicsPSO(PSO_enviromentallight, threadID);
@@ -4448,8 +4435,6 @@ void wiRenderer::DrawLightVisualizers(Camera* camera, GRAPHICSTHREAD threadID)
 	if(!culledLights.empty())
 	{
 		GetDevice()->EventBegin("Light Visualizer Render", threadID);
-
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 
 		GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 		GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
@@ -4565,8 +4550,6 @@ void wiRenderer::DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID)
 	if (!culledLights.empty())
 	{
 		GetDevice()->EventBegin("Volumetric Light Render", threadID);
-
-		GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 
 		for (int type = 0; type < Light::LIGHTTYPE_COUNT; ++type)
@@ -4688,7 +4671,7 @@ void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuali
 	Light::shadowMapArray_Transparent = new Texture2D;
 	Light::shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
 
-	Texture2DDesc desc;
+	TextureDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.Width = SHADOWRES_2D;
 	desc.Height = SHADOWRES_2D;
@@ -4718,7 +4701,7 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 	Light::shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
 	Light::shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
 
-	Texture2DDesc desc;
+	TextureDesc desc;
 	ZeroMemory(&desc, sizeof(desc));
 	desc.Width = SHADOWRES_CUBE;
 	desc.Height = SHADOWRES_CUBE;
@@ -4758,8 +4741,6 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 		if (!culledLights.empty())
 		{
 			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
-
-			GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 			int shadowCounter_2D = 0;
 			int shadowCounter_Cube = 0;
@@ -4861,7 +4842,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 									{
 										// render transparent shadowmap:
-										Texture* rts[] = {
+										Texture2D* rts[] = {
 											Light::shadowMapArray_Transparent
 										};
 										GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
@@ -4917,7 +4898,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 								{
 									// render transparent shadowmap:
-									Texture* rts[] = {
+									Texture2D* rts[] = {
 										Light::shadowMapArray_Transparent
 									};
 									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index);
@@ -5001,8 +4982,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		GraphicsDevice* device = GetDevice();
 
 		device->EventBegin("RenderMeshes", threadID);
-
-		device->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
@@ -5112,22 +5091,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						&Mesh::impostorVB_POS,
 						&Mesh::impostorVB_TEX,
 						&Mesh::impostorVB_POS,
-						dynamicVertexBufferPool,
 						dynamicVertexBufferPool
 					};
 					UINT strides[] = {
 						sizeof(Mesh::Vertex_POS),
 						sizeof(Mesh::Vertex_TEX),
 						sizeof(Mesh::Vertex_POS),
-						sizeof(InstBuf),
-						sizeof(InstBuf),
+						sizeof(InstBuf)
 					};
 					UINT offsets[] = {
 						0,
 						0,
 						0,
-						instancesOffset,
-						instancesOffset + sizeof(Instance)
+						instancesOffset
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 				}
@@ -5169,21 +5145,12 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			const float tessF = mesh->getTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
 
-			PRIMITIVETOPOLOGY realTOPOLOGY = TRIANGLELIST;
-
 			if (tessellatorRequested)
 			{
 				TessellationCB tessCB;
 				tessCB.tessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
 				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
 				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
-				realTOPOLOGY = PATCHLIST;
-			}
-
-			if (prevTOPOLOGY != realTOPOLOGY)
-			{
-				prevTOPOLOGY = realTOPOLOGY;
-				device->BindPrimitiveTopology(realTOPOLOGY, threadID);
 			}
 
 			bool forceAlphaTestForDithering = false;
@@ -5375,22 +5342,19 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
 							mesh->vertexBuffer_TEX,
 							mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE != nullptr ? mesh->streamoutBuffer_PRE : mesh->vertexBuffer_POS),
-							dynamicVertexBufferPool,
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
 							sizeof(Mesh::Vertex_POS),
 							sizeof(Mesh::Vertex_TEX),
 							sizeof(Mesh::Vertex_POS),
-							sizeof(InstBuf),
-							sizeof(InstBuf),
+							sizeof(InstBuf)
 						};
 						UINT offsets[] = {
 							mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 							0,
 							mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-							instancesOffset,
-							instancesOffset + sizeof(Instance)
+							instancesOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 					}
@@ -5439,6 +5403,12 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
+		//GPUResource* res[] =
+		//{
+		//	resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]
+		//};
+		//GetDevice()->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_GENERIC_READ, threadID);
+
 		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
@@ -5503,8 +5473,6 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRA
 void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("DrawSky", threadID);
-
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST,threadID);
 	
 	if (enviroMap != nullptr)
 	{
@@ -5531,8 +5499,6 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("DrawSun", threadID);
-
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 	GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_SUN], threadID);
 
@@ -5569,8 +5535,6 @@ void wiRenderer::DrawDecals(Camera* camera, GRAPHICSTHREAD threadID)
 		}
 
 		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
-
-		device->BindPrimitiveTopology(PRIMITIVETOPOLOGY::TRIANGLESTRIP, threadID);
 
 		device->BindGraphicsPSO(PSO_decal, threadID);
 
@@ -5621,7 +5585,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
 	{
-		Texture2DDesc desc;
+		TextureDesc desc;
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.CPUAccessFlags = 0;
@@ -5642,7 +5606,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	static Texture2D* envrenderingDepthBuffer = nullptr;
 	if (envrenderingDepthBuffer == nullptr)
 	{
-		Texture2DDesc desc;
+		TextureDesc desc;
 		desc.ArraySize = 6;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.CPUAccessFlags = 0;
@@ -5717,7 +5681,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				probe->isUpToDate = true;
 			}
 
-			GetDevice()->BindRenderTargets(1, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
+			GetDevice()->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
 			const float clearColor[4] = { 0,0,0,1 };
 			GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe->textureIndex);
 			GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
@@ -5774,7 +5738,6 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 			// sky
 			{
-				GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 				if (enviroMap != nullptr)
 				{
@@ -5814,7 +5777,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
-		Texture3DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = voxelSceneData.res;
 		desc.Height = voxelSceneData.res;
@@ -5834,7 +5797,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
-		Texture3DDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+		TextureDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
@@ -6013,7 +5976,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	}
 	if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
 	{
-		Texture2DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.ArraySize = 1;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
@@ -6066,7 +6029,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
 
-		Texture2DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = (UINT)_width;
 		desc.Height = (UINT)_height;
@@ -6155,7 +6118,7 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
 	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
 
-	Texture2DDesc desc = src->GetDesc();
+	TextureDesc desc = src->GetDesc();
 
 	GetDevice()->BindComputePSO(CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
 	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
@@ -6172,7 +6135,7 @@ void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	Texture2DDesc desc = texture->GetDesc();
+	TextureDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -6225,7 +6188,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 }
 void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID)
 {
-	Texture3DDesc desc = texture->GetDesc();
+	TextureDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -6282,9 +6245,9 @@ void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float rand
 {
 	GetDevice()->EventBegin("Cloud Generator", threadID);
 
-	Texture2DDesc src_desc = wiTextureHelper::getInstance()->getRandom64x64()->GetDesc();
+	TextureDesc src_desc = wiTextureHelper::getInstance()->getRandom64x64()->GetDesc();
 
-	Texture2DDesc dst_desc = dst->GetDesc();
+	TextureDesc dst_desc = dst->GetDesc();
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
 	GetDevice()->BindResource(CS, wiTextureHelper::getInstance()->getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
@@ -6356,7 +6319,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 					SAFE_DELETE(atlasTexture);
 
-					Texture2DDesc desc;
+					TextureDesc desc;
 					ZeroMemory(&desc, sizeof(desc));
 					desc.Width = (UINT)bins[0].size.w;
 					desc.Height = (UINT)bins[0].size.h;
@@ -6390,7 +6353,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 			}
 			
 			rect_xywhf rect = storedTextures[decal->texture];
-			Texture2DDesc desc = atlasTexture->GetDesc();
+			TextureDesc desc = atlasTexture->GetDesc();
 			decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 		}
 
@@ -6588,7 +6551,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		// lower power of two
 		//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
 
-		Texture2DDesc desc;
+		TextureDesc desc;
 		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = 256;
 		desc.Height = desc.Width;
@@ -6618,14 +6581,14 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	if (luminance_map != nullptr)
 	{
 		// Pass 1 : Create luminance map from scene tex
-		Texture2DDesc luminance_map_desc = luminance_map->GetDesc();
+		TextureDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
 		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
 		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
-		Texture2DDesc luminance_avg_desc;
+		TextureDesc luminance_avg_desc;
 		for (size_t i = 0; i < luminance_avg.size(); ++i)
 		{
 			luminance_avg_desc = luminance_avg[i]->GetDesc();
@@ -7196,28 +7159,23 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS : mesh->vertexBuffer_POS),
 		mesh->vertexBuffer_TEX,
 		mesh->hasDynamicVB() ? dynamicVertexBufferPool : (mesh->streamoutBuffer_PRE != nullptr ? mesh->streamoutBuffer_PRE : mesh->vertexBuffer_POS),
-		dynamicVertexBufferPool,
 		dynamicVertexBufferPool
 	};
 	UINT strides[] = {
 		sizeof(Mesh::Vertex_POS),
 		sizeof(Mesh::Vertex_TEX),
 		sizeof(Mesh::Vertex_POS),
-		sizeof(InstBuf),
 		sizeof(InstBuf)
 	};
 	UINT offsets[] = {
 		mesh->hasDynamicVB() ? mesh->bufferOffset_POS : 0,
 		0,
 		mesh->hasDynamicVB() ? mesh->bufferOffset_PRE : 0,
-		instancesOffset,
-		instancesOffset + sizeof(InstancePrev)
+		instancesOffset
 	};
 	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
 	GetDevice()->BindIndexBuffer(mesh->indexBuffer, mesh->GetIndexFormat(), 0, threadID);
-
-	GetDevice()->BindPrimitiveTopology(TRIANGLELIST, threadID);
 
 	GetDevice()->BindGraphicsPSO(PSO_captureimpostor, threadID);
 

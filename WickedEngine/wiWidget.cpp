@@ -216,7 +216,8 @@ void wiWidget::LoadShaders()
 		desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
 		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
 		desc.numRTs = 1;
-		desc.RTFormats[0] = GraphicsDevice::GetBackBufferFormat();
+		desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
+		desc.pt = TRIANGLESTRIP;
 		RECREATE(PSO_colorpicker);
 		HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
 		assert(SUCCEEDED(hr));
@@ -1733,7 +1734,6 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
 	wiRenderer::GetDevice()->BindGraphicsPSO(PSO_colorpicker, threadID);
-	wiRenderer::GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP, threadID);
 
 	wiRenderer::MiscCB cb;
 

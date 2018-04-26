@@ -33,6 +33,8 @@ struct ID3D12Resource;
 struct ID3D12PipelineState;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
 
+typedef void* wiHandle;
+
 
 namespace wiGraphicsTypes
 {
@@ -48,6 +50,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11VertexShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -60,6 +63,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11PixelShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -72,6 +76,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11GeometryShader*	resource_DX11;
 		ShaderByteCode			code;
@@ -84,6 +89,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11HullShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -96,6 +102,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DomainShader*		resource_DX11;
 		ShaderByteCode			code;
@@ -108,6 +115,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11ComputeShader*	resource_DX11;
 		ShaderByteCode			code;
@@ -120,15 +128,17 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11SamplerState*				resource_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*	resource_DX12;
+		wiHandle						resource_Vulkan;
 		SamplerDesc desc;
 	public:
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != nullptr; }
 		SamplerDesc GetDesc() { return desc; }
 	};
 
@@ -136,18 +146,25 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	protected:
 		ID3D11ShaderResourceView*					SRV_DX11;					// main resource SRV
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalSRVs_DX12;		// can be used for sub-resources if requested
+		wiHandle									SRV_Vulkan;					// main resource SRV
+		std::vector<wiHandle>						additionalSRVs_Vulkan;		// can be used for sub-resources if requested
 
 		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
 		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
 		D3D12_CPU_DESCRIPTOR_HANDLE*				UAV_DX12;					// main resource UAV
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
+		wiHandle									UAV_Vulkan;					// main resource UAV
+		std::vector<wiHandle>						additionalUAVs_Vulkan;		// can be used for sub-resources if requested
 
 		ID3D12Resource*								resource_DX12;
+		wiHandle									resource_Vulkan;
+		wiHandle									resourceMemory_Vulkan;
 
 		GPUResource();
 		virtual ~GPUResource();
@@ -157,6 +174,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Buffer*								resource_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				CBV_DX12;
@@ -165,7 +183,7 @@ namespace wiGraphicsTypes
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != nullptr; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
@@ -173,6 +191,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		size_t byteOffset;
 		uint64_t residentFrame;
@@ -188,6 +207,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11InputLayout*	resource_DX11;
 
@@ -201,6 +221,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11BlendState*	resource_DX11;
 		BlendStateDesc desc;
@@ -215,6 +236,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DepthStencilState*	resource_DX11;
 		DepthStencilStateDesc desc;
@@ -229,6 +251,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11RasterizerState*	resource_DX11;
 		RasterizerStateDesc desc;
@@ -252,17 +275,22 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
+		TextureDesc									desc;
 		ID3D11RenderTargetView*						RTV_DX11;
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				RTV_DX12;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalRTVs_DX12;
+		wiHandle									RTV_Vulkan;
+		std::vector<wiHandle>						additionalRTVs_Vulkan;
 		bool										independentRTVArraySlices;
 		bool										independentRTVCubemapFaces;
 		bool										independentSRVArraySlices;
 		bool										independentSRVMIPs;
 		bool										independentUAVMIPs;
 	public:
+		const TextureDesc& GetDesc() const { return desc; }
 
 		Texture();
 		virtual ~Texture();
@@ -283,49 +311,43 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Texture1D*			texture1D_DX11;
-
-		Texture1DDesc				desc;
 	public:
 		Texture1D();
 		virtual ~Texture1D();
-
-		Texture1DDesc GetDesc() const { return desc; }
 	};
 
 	class Texture2D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DepthStencilView*						DSV_DX11;
 		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
 		D3D12_CPU_DESCRIPTOR_HANDLE*				DSV_DX12;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalDSVs_DX12;
-		ID3D11Texture2D*							texture2D_DX11;
+		wiHandle									DSV_Vulkan;
+		std::vector<wiHandle>						additionalDSVs_Vulkan;
 
-		Texture2DDesc								desc;
+		ID3D11Texture2D*							texture2D_DX11;
 	public:
 		Texture2D();
 		virtual ~Texture2D();
-
-		Texture2DDesc GetDesc() const { return desc; }
 	};
 
 	class Texture3D : public Texture
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Texture3D*			texture3D_DX11;
-
-		Texture3DDesc				desc;
 	public:
 		Texture3D();
 		virtual ~Texture3D();
-
-		Texture3DDesc GetDesc() const { return desc; }
 	};
 
 
@@ -335,6 +357,7 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		std::vector<ID3D11Query*>	resource_DX11;
 		std::vector<int>			active;
@@ -359,8 +382,11 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
+		wiHandle						renderPass_Vulkan;
+		wiHandle						pipeline_Vulkan;
 		GraphicsPSODesc desc;
 
 	public:
@@ -373,8 +399,10 @@ namespace wiGraphicsTypes
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
+		wiHandle						pipeline_Vulkan;
 		ComputePSODesc desc;
 
 	public:
@@ -383,6 +411,23 @@ namespace wiGraphicsTypes
 		ComputePSO();
 		~ComputePSO();
 	};
+
+	class RenderPass
+	{
+		friend class GraphicsDevice_DX11;
+		friend class GraphicsDevice_DX12;
+		friend class GraphicsDevice_Vulkan;
+	private:
+		RenderPassDesc desc;
+
+	public:
+		const RenderPassDesc& GetDesc() const { return desc; }
+
+		RenderPass();
+		~RenderPass();
+
+	};
+
 }
 
 #endif // _GRAPHICSRESOURCE_H_

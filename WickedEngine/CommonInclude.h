@@ -8,9 +8,16 @@
 // Platform specific:
 #include <SDKDDKVer.h>
 #include <windows.h>
+
 #ifdef WINSTORE_SUPPORT
 #include <Windows.UI.Core.h>
-#endif
+#endif // WINSTORE_SUPPORT
+
+#if __has_include("vulkan/vulkan.h")
+#define WICKEDENGINE_BUILD_VULKAN
+#endif // HAS VULKAN
+
+
 
 
 // Platform agnostic:

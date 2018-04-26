@@ -1,6 +1,7 @@
 #include "wiGraphicsResource.h"
 #include "Include_DX11.h"
 #include "Include_DX12.h"
+#include "Include_Vulkan.h"
 
 namespace wiGraphicsTypes
 {
@@ -62,6 +63,7 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(resource_DX11);
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(resource_Vulkan);
 	}
 	Sampler::~Sampler()
 	{
@@ -73,9 +75,13 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(SRV_DX11);
 		SAFE_INIT(SRV_DX12);
+		SAFE_INIT(SRV_Vulkan);
 		SAFE_INIT(UAV_DX11);
 		SAFE_INIT(UAV_DX12);
+		SAFE_INIT(UAV_Vulkan);
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(resource_Vulkan);
+		SAFE_INIT(resourceMemory_Vulkan);
 	}
 	GPUResource::~GPUResource()
 	{
@@ -111,10 +117,12 @@ namespace wiGraphicsTypes
 	GPUBuffer::GPUBuffer() : GPUResource()
 	{
 		SAFE_INIT(resource_DX11);
+		SAFE_INIT(CBV_DX12);
 	}
 	GPUBuffer::~GPUBuffer()
 	{
 		SAFE_RELEASE(resource_DX11);
+		SAFE_DELETE(CBV_DX12);
 	}
 
 	VertexLayout::VertexLayout()
@@ -170,6 +178,7 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(RTV_DX11);
 		SAFE_INIT(RTV_DX12);
+		SAFE_INIT(RTV_Vulkan);
 	}
 	Texture::~Texture()
 	{
@@ -220,6 +229,7 @@ namespace wiGraphicsTypes
 		SAFE_INIT(texture2D_DX11);
 		SAFE_INIT(DSV_DX11);
 		SAFE_INIT(DSV_DX12);
+		SAFE_INIT(DSV_Vulkan);
 	}
 	Texture2D::~Texture2D()
 	{
@@ -262,6 +272,8 @@ namespace wiGraphicsTypes
 	GraphicsPSO::GraphicsPSO()
 	{
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(pipeline_Vulkan);
+		SAFE_INIT(renderPass_Vulkan);
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
@@ -271,6 +283,7 @@ namespace wiGraphicsTypes
 	ComputePSO::ComputePSO()
 	{
 		SAFE_INIT(resource_DX12);
+		SAFE_INIT(pipeline_Vulkan);
 	}
 	ComputePSO::~ComputePSO()
 	{

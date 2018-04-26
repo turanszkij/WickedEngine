@@ -118,7 +118,7 @@ Texture2D* wiTextureHelper::wiTextureHelperInstance::getBlackCubeMap()
 		vector4b(unsigned char r=0, unsigned char g=0, unsigned char b=0, unsigned char a=0) :r(r), g(g), b(b), a(a) {}
 	};
 
-	Texture2DDesc texDesc;
+	TextureDesc texDesc;
 	texDesc.Width = width;
 	texDesc.Height = height;
 	texDesc.MipLevels = 1;
