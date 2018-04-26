@@ -13,7 +13,7 @@
 #include <Windows.UI.Core.h>
 #endif // WINSTORE_SUPPORT
 
-#if __has_include("vulkan/vulkan.h")
+#if __has_include("vulkan/vulkan.h") && defined(_WIN64)
 #define WICKEDENGINE_BUILD_VULKAN
 #endif // HAS VULKAN
 
