@@ -866,6 +866,7 @@ namespace wiGraphicsTypes
 
 		memset(attachments, 0, sizeof(attachments));
 		attachmentCount = 0;
+		attachmentLayers = 1;
 
 		memset(clearColor, 0, sizeof(clearColor));
 
@@ -905,7 +906,7 @@ namespace wiGraphicsTypes
 					framebufferInfo.pAttachments = attachments;
 					framebufferInfo.width = attachmentsExtents.width;
 					framebufferInfo.height = attachmentsExtents.height;
-					framebufferInfo.layers = 1;
+					framebufferInfo.layers = attachmentLayers;
 
 					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
 						throw std::runtime_error("failed to create framebuffer!");
@@ -2572,6 +2573,10 @@ namespace wiGraphicsTypes
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
+		if ((*ppTexture2D)->desc.ArraySize > 1)
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR;
+		}
 
 		VkResult res;
 		res = vkCreateImage(device, &imageInfo, nullptr, reinterpret_cast<VkImage*>(&(*ppTexture2D)->resource_Vulkan));
@@ -2842,11 +2847,6 @@ namespace wiGraphicsTypes
 			dsv_desc.image = static_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
 			dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			dsv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-			dsv_desc.subresourceRange.baseArrayLayer = 0;
-			dsv_desc.subresourceRange.layerCount = 1;
-			dsv_desc.subresourceRange.baseMipLevel = 0;
-			dsv_desc.subresourceRange.levelCount = 1;
 
 			dsv_desc.format = _ConvertFormat((*ppTexture2D)->desc.Format);
 
@@ -3958,6 +3958,7 @@ namespace wiGraphicsTypes
 
 			renderPass[threadID].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
 			renderPass[threadID].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
+			renderPass[threadID].attachmentLayers = ppRenderTargets[i]->desc.ArraySize;
 		}
 		renderPass[threadID].attachmentCount = NumViews;
 
@@ -3968,6 +3969,7 @@ namespace wiGraphicsTypes
 
 			renderPass[threadID].attachmentsExtents.width = depthStencilTexture->desc.Width;
 			renderPass[threadID].attachmentsExtents.height = depthStencilTexture->desc.Height;
+			renderPass[threadID].attachmentLayers = depthStencilTexture->desc.ArraySize;
 		}
 
 		renderPass[threadID].dirty = true;

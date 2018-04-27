@@ -88,7 +88,7 @@ This feature is experimental, not tested thoroughly yet.
 
 ### Getting started: 
 
-The interface is designed to be somewhat similar to the widely popular XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. 
+The interface is designed to be somewhat similar to the XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. 
 However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the 
 widely popular Lua scripting language for faster iteration times and more flexible code structure.
 

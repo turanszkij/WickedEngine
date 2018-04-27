@@ -77,6 +77,7 @@ namespace wiGraphicsTypes
 			VkImageView attachments[9] = {};
 			uint32_t attachmentCount = 0;
 			VkExtent2D attachmentsExtents = {};
+			uint32_t attachmentLayers = 0;
 			VkClearValue clearColor[9] = {};
 
 			VkPipeline pso = nullptr;
