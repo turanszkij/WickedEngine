@@ -8,6 +8,8 @@ globallycoherent RWTEXTURE3D(input_output, float4, 0);
 [numthreads(GENERATEMIPCHAIN_3D_BLOCK_SIZE, GENERATEMIPCHAIN_3D_BLOCK_SIZE, GENERATEMIPCHAIN_3D_BLOCK_SIZE)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+#ifndef SHADERCOMPILER_SPIRV
+
 	// Query the texture dimensions (width, height, depth):
 	uint3 dim;
 	input_output.GetDimensions(dim.x, dim.y, dim.z);
@@ -56,4 +58,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		DeviceMemoryBarrier();
 		input_output[DTid] = sum;
 	}
+
+#endif
 }

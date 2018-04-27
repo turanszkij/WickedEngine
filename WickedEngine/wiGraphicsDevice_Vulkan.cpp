@@ -4336,10 +4336,10 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
-		renderPass[threadID].disable(GetDirectCommandList(threadID));
+		//renderPass[threadID].disable(GetDirectCommandList(threadID));
 
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
-		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		//GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		//vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 
 		//VkMemoryBarrier barrier;
 		//barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
