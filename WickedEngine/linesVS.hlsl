@@ -11,8 +11,5 @@ VertexToPixel main( float4 inPos : POSITION, float4 inCol : TEXCOORD0 )
 	Out.pos = mul( inPos, g_xTransform);
 	Out.col = inCol * g_xColor;
 
-#ifdef SHADERCOMPILER_SPIRV
-	Out.pos.y = -Out.pos.y;
-#endif 
 	return Out;
 }

@@ -48,15 +48,15 @@ for shader in root.iter(namespace + "FxCompile"):
         file.write("-D SHADERCOMPILER_SPIRV -D ");
         
         if profile == "Vertex":
-            file.write("SPIRV_SHADERTYPE_VS")
+            file.write("SPIRV_SHADERTYPE_VS -fvk-invert-y")
         if profile == "Pixel":
             file.write("SPIRV_SHADERTYPE_PS")
         if profile == "Geometry":
-            file.write("SPIRV_SHADERTYPE_GS")
+            file.write("SPIRV_SHADERTYPE_GS -fvk-invert-y")
         if profile == "Hull":
             file.write("SPIRV_SHADERTYPE_HS")
         if profile == "Domain":
-            file.write("SPIRV_SHADERTYPE_DS")
+            file.write("SPIRV_SHADERTYPE_DS -fvk-invert-y")
         if profile == "Compute":
             file.write("SPIRV_SHADERTYPE_CS")
 

@@ -4,9 +4,5 @@ float4 main(float4 inPos : POSITION_NORMAL_WIND) : SV_POSITION
 {
 	float4 pos = mul(float4(inPos.xyz, 1), g_xTransform);
 
-#ifdef SHADERCOMPILER_SPIRV
-	pos.y = -pos.y;
-#endif 
-
 	return pos;
 }

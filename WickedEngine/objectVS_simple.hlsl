@@ -19,9 +19,5 @@ PixelInputType_Simple main(Input_Object_POS_TEX input)
 	Out.pos = mul(surface.position, g_xCamera_VP);
 	Out.tex = surface.uv;
 
-#ifdef SHADERCOMPILER_SPIRV
-	Out.pos.y = -Out.pos.y;
-#endif 
-
 	return Out;
 }

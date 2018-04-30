@@ -33,9 +33,5 @@ PixelInputType main(Input_Object_ALL input)
 
 	Out.ReflectionMapSamplingPos = mul(surface.position, g_xFrame_MainCamera_ReflVP);
 
-#ifdef SHADERCOMPILER_SPIRV
-	Out.pos.y = -Out.pos.y;
-#endif 
-
 	return Out;
 }

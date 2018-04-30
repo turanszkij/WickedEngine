@@ -11,9 +11,5 @@ float4 main(Input_Object_POS input) : SV_POSITION
 
 	float4 pos = mul(surface.position, g_xCamera_VP);
 
-#ifdef SHADERCOMPILER_SPIRV
-	pos.y = -pos.y;
-#endif 
-
 	return pos;
 }
