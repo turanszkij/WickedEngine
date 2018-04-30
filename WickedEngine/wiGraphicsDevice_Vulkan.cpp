@@ -1448,6 +1448,30 @@ namespace wiGraphicsTypes
 		}
 		return VK_BLEND_OP_ADD;
 	}
+	inline VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+	{
+		switch (value)
+		{
+		case TEXTURE_ADDRESS_WRAP:
+			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			break;
+		case TEXTURE_ADDRESS_MIRROR:
+			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			break;
+		case TEXTURE_ADDRESS_CLAMP:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			break;
+		case TEXTURE_ADDRESS_BORDER:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			break;
+		case TEXTURE_ADDRESS_MIRROR_ONCE:
+			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+			break;
+		default:
+			break;
+		}
+		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	}
 
 
 	// Engine functions
@@ -3115,6 +3139,175 @@ namespace wiGraphicsTypes
 
 		VkSamplerCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		createInfo.flags = 0;
+		createInfo.pNext = nullptr;
+
+
+		switch (pSamplerDesc->Filter)
+		{
+		case FILTER_MIN_MAG_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_MAG_POINT_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_POINT_MAG_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_LINEAR_MAG_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_MAG_LINEAR_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_MIN_MAG_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_ANISOTROPIC:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = true;
+			createInfo.compareEnable = false;
+			break;
+		case FILTER_COMPARISON_MIN_MAG_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_COMPARISON_ANISOTROPIC:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.anisotropyEnable = true;
+			createInfo.compareEnable = true;
+			break;
+		case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
+		case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
+		case FILTER_MINIMUM_ANISOTROPIC:
+		case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
+		case FILTER_MAXIMUM_ANISOTROPIC:
+		default:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.anisotropyEnable = false;
+			createInfo.compareEnable = false;
+			break;
+		}
+
+		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);
+		createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->AddressV);
+		createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
+		createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->MaxAnisotropy);
+		createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
+		createInfo.minLod = pSamplerDesc->MinLOD;
+		createInfo.maxLod = pSamplerDesc->MaxLOD;
+		createInfo.mipLodBias = pSamplerDesc->MipLODBias;
+		createInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		createInfo.unnormalizedCoordinates = VK_FALSE;
 
 		if (vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource_Vulkan)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create sampler!");
@@ -4209,6 +4402,26 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
+		if (sampler != nullptr && sampler->resource_Vulkan != nullptr)
+		{
+			VkDescriptorImageInfo imageInfo = {};
+			imageInfo.sampler = static_cast<VkSampler>(sampler->resource_Vulkan);
+			imageInfo.imageView = VK_NULL_HANDLE;
+
+			VkWriteDescriptorSet descriptorWrite = {};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
+			descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = nullptr;
+			descriptorWrite.pImageInfo = &imageInfo;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+		}
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
