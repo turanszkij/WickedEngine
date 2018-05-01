@@ -119,11 +119,15 @@ namespace wiGraphicsTypes
 				UINT ringOffset[SHADERSTAGE_COUNT];
 				bool dirty[SHADERSTAGE_COUNT];
 
+				// default descriptor table contents:
 				VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
 				VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
 				VkBufferView bufferViews[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
 				VkDescriptorImageInfo samplerInfo[GPU_SAMPLER_HEAP_COUNT] = {};
 				std::vector<VkWriteDescriptorSet> initWrites[SHADERSTAGE_COUNT];
+
+				// descriptor table rename guards:
+				std::vector<wiHandle> boundDescriptors[SHADERSTAGE_COUNT];
 
 				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();

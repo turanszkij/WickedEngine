@@ -675,7 +675,10 @@ namespace wiGraphicsTypes
 				offset += writeDescriptors.descriptorCount;
 
 			}
+
+			boundDescriptors[stage].resize(offset);
 		}
+
 
 		reset();
 
@@ -694,6 +697,8 @@ namespace wiGraphicsTypes
 
 			// STAGING CPU descriptor table needs to be initialized:
 			vkUpdateDescriptorSets(device->device, static_cast<uint32_t>(initWrites[stage].size()), initWrites[stage].data(), 0, nullptr);
+
+			std::fill(boundDescriptors[stage].begin(), boundDescriptors[stage].end(), nullptr);
 
 		}
 	}
@@ -4188,6 +4193,15 @@ namespace wiGraphicsTypes
 
 				if (tex != nullptr && resource->SRV_Vulkan != nullptr)
 				{
+					// Texture:
+
+					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+
+					if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == tex->SRV_Vulkan)
+					{
+						return;
+					}
+
 					VkDescriptorImageInfo imageInfo = {};
 					imageInfo.imageView = static_cast<VkImageView>(tex->SRV_Vulkan);
 					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -4195,7 +4209,7 @@ namespace wiGraphicsTypes
 					VkWriteDescriptorSet descriptorWrite = {};
 					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-					descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+					descriptorWrite.dstBinding = binding;
 					descriptorWrite.dstArrayElement = 0;
 					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 					descriptorWrite.descriptorCount = 1;
@@ -4205,6 +4219,7 @@ namespace wiGraphicsTypes
 
 					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = tex->SRV_Vulkan;
 				}
 				else
 				{
@@ -4216,6 +4231,13 @@ namespace wiGraphicsTypes
 						{
 							// structured buffer, raw buffer:
 
+							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot;
+
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource_Vulkan)
+							{
+								return;
+							}
+
 							VkDescriptorBufferInfo bufferInfo = {};
 							bufferInfo.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
 							bufferInfo.offset = 0;
@@ -4224,7 +4246,7 @@ namespace wiGraphicsTypes
 							VkWriteDescriptorSet descriptorWrite = {};
 							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot;
+							descriptorWrite.dstBinding = binding;
 							descriptorWrite.dstArrayElement = 0;
 							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 							descriptorWrite.descriptorCount = 1;
@@ -4234,16 +4256,24 @@ namespace wiGraphicsTypes
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
 
 						}
 						else if(resource->SRV_Vulkan != nullptr)
 						{
 							// typed buffer:
 
+							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot;
+
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->SRV_Vulkan)
+							{
+								return;
+							}
+
 							VkWriteDescriptorSet descriptorWrite = {};
 							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot;
+							descriptorWrite.dstBinding = binding;
 							descriptorWrite.dstArrayElement = 0;
 							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 							descriptorWrite.descriptorCount = 1;
@@ -4253,7 +4283,7 @@ namespace wiGraphicsTypes
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->SRV_Vulkan;
 						}
 					}
 
@@ -4287,6 +4317,14 @@ namespace wiGraphicsTypes
 
 				if (tex != nullptr && resource->UAV_Vulkan != nullptr)
 				{
+					// Texture:
+					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
+
+					if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == tex->UAV_Vulkan)
+					{
+						return;
+					}
+
 					VkDescriptorImageInfo imageInfo = {};
 					imageInfo.imageView = static_cast<VkImageView>(tex->UAV_Vulkan);
 					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -4294,7 +4332,7 @@ namespace wiGraphicsTypes
 					VkWriteDescriptorSet descriptorWrite = {};
 					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-					descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
+					descriptorWrite.dstBinding = binding;
 					descriptorWrite.dstArrayElement = 0;
 					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 					descriptorWrite.descriptorCount = 1;
@@ -4304,6 +4342,7 @@ namespace wiGraphicsTypes
 
 					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = tex->UAV_Vulkan;
 				}
 				else
 				{
@@ -4315,6 +4354,13 @@ namespace wiGraphicsTypes
 						{
 							// structured buffer, raw buffer:
 
+							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot;
+
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource_Vulkan)
+							{
+								return;
+							}
+
 							VkDescriptorBufferInfo bufferInfo = {};
 							bufferInfo.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
 							bufferInfo.offset = 0;
@@ -4323,7 +4369,7 @@ namespace wiGraphicsTypes
 							VkWriteDescriptorSet descriptorWrite = {};
 							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot;
+							descriptorWrite.dstBinding = binding;
 							descriptorWrite.dstArrayElement = 0;
 							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 							descriptorWrite.descriptorCount = 1;
@@ -4333,16 +4379,24 @@ namespace wiGraphicsTypes
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
 
 						}
 						else if (resource->UAV_Vulkan != nullptr)
 						{
 							// typed buffer:
 
+							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot;
+
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->UAV_Vulkan)
+							{
+								return;
+							}
+
 							VkWriteDescriptorSet descriptorWrite = {};
 							descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 							descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-							descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot;
+							descriptorWrite.dstBinding = binding;
 							descriptorWrite.dstArrayElement = 0;
 							descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 							descriptorWrite.descriptorCount = 1;
@@ -4352,6 +4406,7 @@ namespace wiGraphicsTypes
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->UAV_Vulkan;
 
 						}
 					}
@@ -4394,6 +4449,13 @@ namespace wiGraphicsTypes
 	{
 		if (sampler != nullptr && sampler->resource_Vulkan != nullptr)
 		{
+			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot;
+
+			if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == sampler->resource_Vulkan)
+			{
+				return;
+			}
+
 			VkDescriptorImageInfo imageInfo = {};
 			imageInfo.sampler = static_cast<VkSampler>(sampler->resource_Vulkan);
 			imageInfo.imageView = VK_NULL_HANDLE;
@@ -4401,7 +4463,7 @@ namespace wiGraphicsTypes
 			VkWriteDescriptorSet descriptorWrite = {};
 			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-			descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot;
+			descriptorWrite.dstBinding = binding;
 			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 			descriptorWrite.descriptorCount = 1;
@@ -4411,12 +4473,20 @@ namespace wiGraphicsTypes
 
 			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = sampler->resource_Vulkan;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		if (buffer != nullptr && buffer->resource_Vulkan != nullptr)
 		{
+			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot;
+
+			if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource_Vulkan)
+			{
+				return;
+			}
+
 			VkDescriptorBufferInfo bufferInfo = {};
 			bufferInfo.buffer = static_cast<VkBuffer>(buffer->resource_Vulkan);
 			bufferInfo.offset = 0;
@@ -4425,7 +4495,7 @@ namespace wiGraphicsTypes
 			VkWriteDescriptorSet descriptorWrite = {};
 			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[threadID]->descriptorSet_CPU[stage];
-			descriptorWrite.dstBinding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot;
+			descriptorWrite.dstBinding = binding;
 			descriptorWrite.dstArrayElement = 0;
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1;
@@ -4435,6 +4505,7 @@ namespace wiGraphicsTypes
 
 			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
