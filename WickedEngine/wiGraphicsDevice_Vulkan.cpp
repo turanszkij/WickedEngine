@@ -488,60 +488,35 @@ namespace wiGraphicsTypes
 		}
 
 
+		// Preload default descriptor tables:
 
-
-		// invalidate descriptors in flight:
-		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+		for (int i = 0; i < ARRAYSIZE(bufferInfo); ++i)
 		{
-			ringOffset[stage] = 0;
-			dirty[stage] = false;
+			bufferInfo[i].buffer = device->nullBuffer;
+			bufferInfo[i].offset = 0;
+			bufferInfo[i].range = VK_WHOLE_SIZE;
 		}
 
-	}
-	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
-	{
-		vkDestroyDescriptorPool(device->device, descriptorPool, nullptr);
-	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset()
-	{
+		for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
+		{
+			imageInfo[i].imageView = device->nullImageView;
+			imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		}
+
+		for (int i = 0; i < ARRAYSIZE(bufferViews); ++i)
+		{
+			bufferViews[i] = device->nullBufferView;
+		}
+
+		for (int i = 0; i < ARRAYSIZE(samplerInfo); ++i)
+		{
+			samplerInfo[i].imageView = nullptr;
+			samplerInfo[i].sampler = device->nullSampler;
+		}
+
+
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
-			ringOffset[stage] = 0;
-			dirty[stage] = true; 
-			
-
-			// STAGING CPU descriptor table needs to be initialized:
-
-			std::vector<VkWriteDescriptorSet> initWrites;
-
-			VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-			for (int i = 0; i < ARRAYSIZE(bufferInfo); ++i)
-			{
-				bufferInfo[i].buffer = device->nullBuffer;
-				bufferInfo[i].offset = 0;
-				bufferInfo[i].range = VK_WHOLE_SIZE;
-			}
-
-			VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-			for (int i = 0; i < ARRAYSIZE(imageInfo); ++i)
-			{
-				imageInfo[i].imageView = device->nullImageView;
-				imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-			}
-
-			VkBufferView bufferViews[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-			for (int i = 0; i < ARRAYSIZE(bufferViews); ++i)
-			{
-				bufferViews[i] = device->nullBufferView;
-			}
-
-			VkDescriptorImageInfo samplerInfo[GPU_SAMPLER_HEAP_COUNT] = {};
-			for (int i = 0; i < ARRAYSIZE(samplerInfo); ++i)
-			{
-				samplerInfo[i].imageView = nullptr;
-				samplerInfo[i].sampler = device->nullSampler;
-			}
-
 			int offset = 0;
 
 			// CBV:
@@ -558,7 +533,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = bufferInfo;
 				writeDescriptors.pImageInfo = nullptr;
 				writeDescriptors.pTexelBufferView = nullptr;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -578,7 +553,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = nullptr;
 				writeDescriptors.pImageInfo = imageInfo;
 				writeDescriptors.pTexelBufferView = nullptr;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -597,7 +572,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = nullptr;
 				writeDescriptors.pImageInfo = nullptr;
 				writeDescriptors.pTexelBufferView = bufferViews;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -616,7 +591,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = bufferInfo;
 				writeDescriptors.pImageInfo = nullptr;
 				writeDescriptors.pTexelBufferView = nullptr;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -636,7 +611,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = nullptr;
 				writeDescriptors.pImageInfo = imageInfo;
 				writeDescriptors.pTexelBufferView = nullptr;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -655,7 +630,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = nullptr;
 				writeDescriptors.pImageInfo = nullptr;
 				writeDescriptors.pTexelBufferView = bufferViews;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -674,7 +649,7 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = bufferInfo;
 				writeDescriptors.pImageInfo = nullptr;
 				writeDescriptors.pTexelBufferView = nullptr;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
@@ -695,14 +670,30 @@ namespace wiGraphicsTypes
 				writeDescriptors.pBufferInfo = nullptr;
 				writeDescriptors.pImageInfo = samplerInfo;
 				writeDescriptors.pTexelBufferView = nullptr;
-				initWrites.push_back(writeDescriptors);
+				initWrites[stage].push_back(writeDescriptors);
 
 				offset += writeDescriptors.descriptorCount;
 
 			}
+		}
 
+		reset();
 
-			vkUpdateDescriptorSets(device->device, static_cast<uint32_t>(initWrites.size()), initWrites.data(), 0, nullptr);
+	}
+	GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
+	{
+		vkDestroyDescriptorPool(device->device, descriptorPool, nullptr);
+	}
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset()
+	{
+		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
+		{
+			ringOffset[stage] = 0;
+			dirty[stage] = true; 
+			
+
+			// STAGING CPU descriptor table needs to be initialized:
+			vkUpdateDescriptorSets(device->device, static_cast<uint32_t>(initWrites[stage].size()), initWrites[stage].data(), 0, nullptr);
 
 		}
 	}
@@ -2082,7 +2073,6 @@ namespace wiGraphicsTypes
 				// Create immediate resource allocators:
 				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 				{
-					frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
 				}
 
@@ -2254,7 +2244,7 @@ namespace wiGraphicsTypes
 		{
 			for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 			{
-				frame.ResourceDescriptorsGPU[threadID]->reset();
+				frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 			}
 		}
 

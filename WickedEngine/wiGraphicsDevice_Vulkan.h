@@ -7,6 +7,7 @@
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "Include_Vulkan.h"
+#include "wiGraphicsDevice_SharedInternals.h"
 
 #include <vector>
 #include <unordered_map>
@@ -117,6 +118,12 @@ namespace wiGraphicsTypes
 				std::vector<VkDescriptorSet> descriptorSet_GPU[SHADERSTAGE_COUNT];
 				UINT ringOffset[SHADERSTAGE_COUNT];
 				bool dirty[SHADERSTAGE_COUNT];
+
+				VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
+				VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
+				VkBufferView bufferViews[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
+				VkDescriptorImageInfo samplerInfo[GPU_SAMPLER_HEAP_COUNT] = {};
+				std::vector<VkWriteDescriptorSet> initWrites[SHADERSTAGE_COUNT];
 
 				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();
