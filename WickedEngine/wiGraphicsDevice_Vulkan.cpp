@@ -2452,8 +2452,8 @@ namespace wiGraphicsTypes
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-				barrier.srcQueueFamilyIndex = queueIndices.graphicsFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -2489,8 +2489,8 @@ namespace wiGraphicsTypes
 					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 				}
 
-				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -2675,6 +2675,8 @@ namespace wiGraphicsTypes
 				barrier.subresourceRange.layerCount = pDesc->ArraySize;
 				barrier.subresourceRange.baseMipLevel = 0;
 				barrier.subresourceRange.levelCount = pDesc->MipLevels;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -2693,8 +2695,8 @@ namespace wiGraphicsTypes
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -4703,6 +4705,8 @@ namespace wiGraphicsTypes
 			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		}
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		vkCmdPipelineBarrier(
 			GetDirectCommandList(threadID),
@@ -4803,6 +4807,8 @@ namespace wiGraphicsTypes
 			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		}
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		vkCmdPipelineBarrier(
 			GetDirectCommandList(threadID),
