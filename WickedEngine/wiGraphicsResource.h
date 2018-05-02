@@ -33,7 +33,13 @@ struct ID3D12Resource;
 struct ID3D12PipelineState;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
 
+#ifdef _WIN64
 typedef void* wiHandle;
+#define WI_NULL_HANDLE nullptr
+#else
+typedef uint64_t wiHandle;
+#define WI_NULL_HANDLE 0
+#endif
 
 
 namespace wiGraphicsTypes
@@ -138,7 +144,7 @@ namespace wiGraphicsTypes
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != WI_NULL_HANDLE; }
 		SamplerDesc GetDesc() { return desc; }
 	};
 
@@ -183,7 +189,7 @@ namespace wiGraphicsTypes
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != nullptr; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != WI_NULL_HANDLE; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 

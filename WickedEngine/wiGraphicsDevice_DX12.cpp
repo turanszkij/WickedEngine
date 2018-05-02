@@ -2251,7 +2251,7 @@ namespace wiGraphicsTypes
 
 			UINT64 RequiredSize = 0;
 			device->GetCopyableFootprints(&desc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &RequiredSize);
-			uint8_t* dest = textureUploader->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 			copyQueueLock.lock();
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture2D)->resource_DX12,
@@ -3748,7 +3748,7 @@ namespace wiGraphicsTypes
 
 			UINT64 RequiredSize = 0;
 			device->GetCopyableFootprints(&desc, 0, (UINT)subresources.size(), 0, nullptr, nullptr, nullptr, &RequiredSize);
-			uint8_t* dest = textureUploader->allocate(RequiredSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 			copyQueueLock.lock();
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture)->resource_DX12, 

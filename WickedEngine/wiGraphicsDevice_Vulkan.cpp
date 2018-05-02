@@ -510,7 +510,7 @@ namespace wiGraphicsTypes
 
 		for (int i = 0; i < ARRAYSIZE(samplerInfo); ++i)
 		{
-			samplerInfo[i].imageView = nullptr;
+			samplerInfo[i].imageView = VK_NULL_HANDLE;
 			samplerInfo[i].sampler = device->nullSampler;
 		}
 
@@ -698,7 +698,7 @@ namespace wiGraphicsTypes
 			// STAGING CPU descriptor table needs to be initialized:
 			vkUpdateDescriptorSets(device->device, static_cast<uint32_t>(initWrites[stage].size()), initWrites[stage].data(), 0, nullptr);
 
-			std::fill(boundDescriptors[stage].begin(), boundDescriptors[stage].end(), nullptr);
+			std::fill(boundDescriptors[stage].begin(), boundDescriptors[stage].end(), WI_NULL_HANDLE);
 
 		}
 	}
@@ -866,8 +866,8 @@ namespace wiGraphicsTypes
 
 		memset(clearColor, 0, sizeof(clearColor));
 
-		renderPass = nullptr;
-		fbo = nullptr;
+		renderPass = VK_NULL_HANDLE;
+		fbo = VK_NULL_HANDLE;
 
 		clearRequests.clear();
 	}
@@ -890,7 +890,7 @@ namespace wiGraphicsTypes
 		{
 			VkFramebuffer frameBuffer = fbo;
 
-			if (frameBuffer == nullptr)
+			if (frameBuffer == VK_NULL_HANDLE)
 			{
 				auto& it = renderPassFrameBuffers.find(pso);
 				if (it == renderPassFrameBuffers.end())
@@ -930,7 +930,7 @@ namespace wiGraphicsTypes
 				vkCmdEndRenderPass(commandBuffer);
 			}
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-			if (pso != nullptr)
+			if (pso != VK_NULL_HANDLE)
 			{
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pso);
 			}
@@ -946,7 +946,7 @@ namespace wiGraphicsTypes
 				bool remainingClearRequests = false;
 				for (UINT i = 0; i < clearRequests.size(); ++i)
 				{
-					if (clearRequests[i].attachment == nullptr)
+					if (clearRequests[i].attachment == VK_NULL_HANDLE)
 					{
 						continue;
 					}
@@ -962,7 +962,7 @@ namespace wiGraphicsTypes
 								clearInfos[realClearCount].colorAttachment = j;
 
 								realClearCount++;
-								clearRequests[i].attachment = nullptr;
+								clearRequests[i].attachment = VK_NULL_HANDLE;
 							}
 							else
 							{
@@ -979,7 +979,7 @@ namespace wiGraphicsTypes
 								clearInfos[realClearCount].colorAttachment = 0;
 
 								realClearCount++;
-								clearRequests[i].attachment = nullptr;
+								clearRequests[i].attachment = VK_NULL_HANDLE;
 							}
 
 							continue;
@@ -2435,8 +2435,8 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint8_t* dest = bufferUploader->allocate(memRequirements.size, memRequirements.alignment);
-			memcpy(dest, pInitialData->pSysMem, memRequirements.size);
+			uint8_t* dest = bufferUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
+			memcpy(dest, pInitialData->pSysMem, static_cast<size_t>(memRequirements.size));
 
 			VkBufferCopy copyRegion = {};
 			copyRegion.size = memRequirements.size;
@@ -2511,7 +2511,7 @@ namespace wiGraphicsTypes
 		{
 			VkBufferViewCreateInfo srv_desc = {};
 			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			srv_desc.buffer = reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan);
+			srv_desc.buffer = static_cast<VkBuffer>(ppBuffer->resource_Vulkan);
 			srv_desc.flags = 0;
 			srv_desc.format = _ConvertFormat(ppBuffer->desc.Format);
 			srv_desc.offset = 0;
@@ -2626,7 +2626,7 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint8_t* dest = textureUploader->allocate(memRequirements.size, memRequirements.alignment);
+			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
 
 			VkBufferImageCopy copyRegions[16] = {};
 			assert(pDesc->ArraySize < 16);
@@ -2757,7 +2757,7 @@ namespace wiGraphicsTypes
 						rtv_desc.subresourceRange.baseArrayLayer = i;
 						rtv_desc.subresourceRange.layerCount = 1;
 
-						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(nullptr);
+						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(VK_NULL_HANDLE);
 						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
 						assert(res == VK_SUCCESS);
 					}
@@ -2770,7 +2770,7 @@ namespace wiGraphicsTypes
 						rtv_desc.subresourceRange.baseArrayLayer = i * 6;
 						rtv_desc.subresourceRange.layerCount = 6;
 
-						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(nullptr);
+						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(VK_NULL_HANDLE);
 						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
 						assert(res == VK_SUCCESS);
 					}
@@ -2808,7 +2808,7 @@ namespace wiGraphicsTypes
 						rtv_desc.subresourceRange.baseArrayLayer = i;
 						rtv_desc.subresourceRange.layerCount = 1;
 
-						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(nullptr);
+						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(VK_NULL_HANDLE);
 						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
 						assert(res == VK_SUCCESS);
 					}
@@ -2983,7 +2983,7 @@ namespace wiGraphicsTypes
 							srv_desc.subresourceRange.baseArrayLayer = i * 6;
 							srv_desc.subresourceRange.layerCount = 6;
 
-							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(nullptr);
+							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(VK_NULL_HANDLE);
 							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs_Vulkan.back()));
 							assert(res == VK_SUCCESS);
 						}
@@ -2998,7 +2998,7 @@ namespace wiGraphicsTypes
 							srv_desc.subresourceRange.baseArrayLayer = i;
 							srv_desc.subresourceRange.layerCount = 1;
 
-							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(nullptr);
+							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(VK_NULL_HANDLE);
 							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs_Vulkan.back()));
 							assert(res == VK_SUCCESS);
 						}
@@ -3024,7 +3024,7 @@ namespace wiGraphicsTypes
 							srv_desc.subresourceRange.baseMipLevel = i;
 							srv_desc.subresourceRange.levelCount = 1;
 
-							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(nullptr);
+							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(VK_NULL_HANDLE);
 							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs_Vulkan.back()));
 							assert(res == VK_SUCCESS);
 						}
@@ -3905,7 +3905,7 @@ namespace wiGraphicsTypes
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentsExtents = swapChainExtent;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].clearColor[0] = clearColor;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].renderPass = defaultRenderPass;
-		renderPass[GRAPHICSTHREAD_IMMEDIATE].pso = nullptr;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].pso = VK_NULL_HANDLE;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].fbo = GetFrameResources().swapChainFramebuffer;
 
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].validate(device, GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
@@ -4185,13 +4185,13 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (resource != nullptr && resource->resource_Vulkan != nullptr)
+		if (resource != nullptr && resource->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
 			{
 				Texture* tex = dynamic_cast<Texture*>(resource);
 
-				if (tex != nullptr && resource->SRV_Vulkan != nullptr)
+				if (tex != nullptr && resource->SRV_Vulkan != VK_NULL_HANDLE)
 				{
 					// Texture:
 
@@ -4259,7 +4259,7 @@ namespace wiGraphicsTypes
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
 
 						}
-						else if(resource->SRV_Vulkan != nullptr)
+						else if(resource->SRV_Vulkan != VK_NULL_HANDLE)
 						{
 							// typed buffer:
 
@@ -4309,13 +4309,13 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
-		if (resource != nullptr && resource->resource_Vulkan != nullptr)
+		if (resource != nullptr && resource->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
 			{
 				Texture* tex = dynamic_cast<Texture*>(resource);
 
-				if (tex != nullptr && resource->UAV_Vulkan != nullptr)
+				if (tex != nullptr && resource->UAV_Vulkan != VK_NULL_HANDLE)
 				{
 					// Texture:
 					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
@@ -4382,7 +4382,7 @@ namespace wiGraphicsTypes
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
 
 						}
-						else if (resource->UAV_Vulkan != nullptr)
+						else if (resource->UAV_Vulkan != VK_NULL_HANDLE)
 						{
 							// typed buffer:
 
@@ -4447,7 +4447,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
-		if (sampler != nullptr && sampler->resource_Vulkan != nullptr)
+		if (sampler != nullptr && sampler->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot;
 
@@ -4478,7 +4478,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
-		if (buffer != nullptr && buffer->resource_Vulkan != nullptr)
+		if (buffer != nullptr && buffer->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot;
 

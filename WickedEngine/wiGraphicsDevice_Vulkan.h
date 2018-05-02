@@ -81,15 +81,15 @@ namespace wiGraphicsTypes
 			uint32_t attachmentLayers = 0;
 			VkClearValue clearColor[9] = {};
 
-			VkPipeline pso = nullptr;
-			VkRenderPass renderPass = nullptr;
-			VkFramebuffer fbo = nullptr;
+			VkPipeline pso = VK_NULL_HANDLE;
+			VkRenderPass renderPass = VK_NULL_HANDLE;
+			VkFramebuffer fbo = VK_NULL_HANDLE;
 
 			std::unordered_map<VkPipeline, VkFramebuffer> renderPassFrameBuffers;
 
 			struct ClearRequest
 			{
-				VkImageView attachment = nullptr;
+				VkImageView attachment = VK_NULL_HANDLE;
 				VkClearValue clearValue = {};
 				uint32_t clearFlags = 0;
 			};

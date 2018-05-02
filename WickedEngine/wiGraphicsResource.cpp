@@ -63,7 +63,7 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(resource_DX11);
 		SAFE_INIT(resource_DX12);
-		SAFE_INIT(resource_Vulkan);
+		resource_Vulkan = WI_NULL_HANDLE;
 	}
 	Sampler::~Sampler()
 	{
@@ -75,13 +75,13 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(SRV_DX11);
 		SAFE_INIT(SRV_DX12);
-		SAFE_INIT(SRV_Vulkan);
+		SRV_Vulkan = WI_NULL_HANDLE;
 		SAFE_INIT(UAV_DX11);
 		SAFE_INIT(UAV_DX12);
-		SAFE_INIT(UAV_Vulkan);
+		UAV_Vulkan = WI_NULL_HANDLE;
 		SAFE_INIT(resource_DX12);
-		SAFE_INIT(resource_Vulkan);
-		SAFE_INIT(resourceMemory_Vulkan);
+		resource_Vulkan = WI_NULL_HANDLE;
+		resourceMemory_Vulkan = WI_NULL_HANDLE;
 	}
 	GPUResource::~GPUResource()
 	{
@@ -178,7 +178,7 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(RTV_DX11);
 		SAFE_INIT(RTV_DX12);
-		SAFE_INIT(RTV_Vulkan);
+		RTV_Vulkan = WI_NULL_HANDLE;
 	}
 	Texture::~Texture()
 	{
@@ -229,7 +229,7 @@ namespace wiGraphicsTypes
 		SAFE_INIT(texture2D_DX11);
 		SAFE_INIT(DSV_DX11);
 		SAFE_INIT(DSV_DX12);
-		SAFE_INIT(DSV_Vulkan);
+		DSV_Vulkan = WI_NULL_HANDLE;
 	}
 	Texture2D::~Texture2D()
 	{
@@ -272,8 +272,8 @@ namespace wiGraphicsTypes
 	GraphicsPSO::GraphicsPSO()
 	{
 		SAFE_INIT(resource_DX12);
-		SAFE_INIT(pipeline_Vulkan);
-		SAFE_INIT(renderPass_Vulkan);
+		pipeline_Vulkan = WI_NULL_HANDLE;
+		renderPass_Vulkan = WI_NULL_HANDLE;
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
@@ -283,7 +283,7 @@ namespace wiGraphicsTypes
 	ComputePSO::ComputePSO()
 	{
 		SAFE_INIT(resource_DX12);
-		SAFE_INIT(pipeline_Vulkan);
+		pipeline_Vulkan = WI_NULL_HANDLE;
 	}
 	ComputePSO::~ComputePSO()
 	{

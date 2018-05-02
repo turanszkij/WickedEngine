@@ -19,7 +19,7 @@ namespace wiHelper
 
 		if (file.is_open())
 		{
-			dataSize = file.tellg();
+			dataSize = static_cast<size_t>(file.tellg());
 			file.seekg(0, file.beg);
 			DATA = new char[dataSize];
 			file.read(DATA, dataSize);

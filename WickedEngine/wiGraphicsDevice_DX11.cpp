@@ -3294,7 +3294,7 @@ void GraphicsDevice_DX11::DispatchIndirect(GPUBuffer* args, UINT args_offset, GR
 }
 void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
-	if (arrayIndex >= 0 && texture->additionalSRVs_DX11.size() > arrayIndex)
+	if (arrayIndex >= 0 && static_cast<int>(texture->additionalSRVs_DX11.size()) > arrayIndex)
 	{
 		deviceContexts[threadID]->GenerateMips(texture->additionalSRVs_DX11[arrayIndex]);
 	}

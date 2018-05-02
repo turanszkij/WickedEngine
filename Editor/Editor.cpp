@@ -1633,7 +1633,7 @@ wiArchive* AdvanceHistory()
 {
 	historyPos++;
 
-	while (history.size() > historyPos)
+	while (static_cast<int>(history.size()) > historyPos)
 	{
 		SAFE_DELETE(history.back());
 		history.pop_back();
