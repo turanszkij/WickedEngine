@@ -2631,14 +2631,18 @@ namespace wiGraphicsTypes
 			VkBufferImageCopy copyRegions[16] = {};
 			assert(pDesc->ArraySize < 16);
 
+			size_t cpyoffset = 0;
 			uint32_t width = pDesc->Width;
 			uint32_t height = pDesc->Height;
 			for (UINT slice = 0; slice < pDesc->MipLevels; ++slice)
 			{
-				memcpy(dest, pInitialData[slice].pSysMem, pInitialData[slice].SysMemPitch * height);  // double check!!
+				size_t cpysize = pInitialData[slice].SysMemPitch * height;
+				uint8_t* cpyaddr = dest + cpyoffset;
+				memcpy(cpyaddr, pInitialData[slice].pSysMem, cpysize);
+				cpyoffset += cpysize;
 
 				VkBufferImageCopy& copyRegion = copyRegions[slice];
-				copyRegion.bufferOffset = textureUploader->calculateOffset(dest);
+				copyRegion.bufferOffset = textureUploader->calculateOffset(cpyaddr);
 				copyRegion.bufferRowLength = 0;
 				copyRegion.bufferImageHeight = 0;
 
@@ -4187,6 +4191,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
+
 		if (resource != nullptr && resource->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
@@ -4311,6 +4317,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
+		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
+
 		if (resource != nullptr && resource->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
@@ -4449,6 +4457,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 	{
+		assert(slot < GPU_SAMPLER_HEAP_COUNT);
+
 		if (sampler != nullptr && sampler->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot;
@@ -4480,6 +4490,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
+		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
+
 		if (buffer != nullptr && buffer->resource_Vulkan != VK_NULL_HANDLE)
 		{
 			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot;
@@ -4612,24 +4624,24 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
-		//renderPass[threadID].disable(GetDirectCommandList(threadID));
+		renderPass[threadID].disable(GetDirectCommandList(threadID));
 
-		//GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
-		//vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(GetDirectCommandList(threadID));
+		vkCmdDispatch(GetDirectCommandList(threadID), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 
-		//VkMemoryBarrier barrier;
-		//barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-		//barrier.pNext = nullptr;
-		//barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+		VkMemoryBarrier barrier;
+		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		barrier.pNext = nullptr;
+		barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
-		//vkCmdPipelineBarrier(GetDirectCommandList(threadID), 
-		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
-		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-		//	0, 
-		//	1, &barrier, 
-		//	0, nullptr, 
-		//	0, nullptr);
+		vkCmdPipelineBarrier(GetDirectCommandList(threadID), 
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+			0, 
+			1, &barrier, 
+			0, nullptr, 
+			0, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
