@@ -165,8 +165,8 @@ public:
 		float mWindWaveSize;
 		float mWindRandomness;
 		int mSunEntityArrayIndex;
-		float pad1;
 		BOOL mVoxelRadianceRetargetted;
+		UINT mTemporalAASampleRotation;
 		XMFLOAT2 mTemporalAAJitter;
 		XMFLOAT2 mTemporalAAJitterPrev;
 		XMMATRIX mVP;

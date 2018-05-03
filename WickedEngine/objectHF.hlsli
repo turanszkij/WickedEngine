@@ -474,7 +474,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #if !(defined(TILEDFORWARD) && !defined(TRANSPARENT)) && !defined(ENVMAPRENDERING)
 	// apply dithering:
-	clip(dither(pixel) - input.dither);
+	clip(dither(pixel + GetTemporalAASampleRotation()) - input.dither);
 #endif
 
 

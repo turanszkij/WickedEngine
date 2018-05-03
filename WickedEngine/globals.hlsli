@@ -93,8 +93,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindWaveSize;
 	float		g_xFrame_WindRandomness;
 	int			g_xFrame_SunEntityArrayIndex;
-	float		xPadding1_FrameCB;
 	bool		g_xFrame_VoxelRadianceRetargetted;
+	uint		g_xFrame_TemporalAASampleRotation;
 	float2		g_xFrame_TemporalAAJitter;
 	float2		g_xFrame_TemporalAAJitterPrev;
 	// The following are per frame properties for the main camera:
@@ -161,6 +161,7 @@ inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
 inline float2 GetInternalResolution() { return g_xWorld_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline float GetEmissive(float emissive) { return emissive * 10.0f; }
+inline uint2 GetTemporalAASampleRotation() { return float2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
 
 struct ComputeShaderInput
 {

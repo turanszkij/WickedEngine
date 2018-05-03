@@ -6443,6 +6443,29 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mWindDirection = wind.direction;
 	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
 	cb.mSunEntityArrayIndex = GetSunArrayIndex();
+	cb.mTemporalAASampleRotation = 0;
+	if (GetTemporalAAEnabled())
+	{
+		UINT id = cb.mFrameCount % 4;
+		UINT x = 0;
+		UINT y = 0;
+		switch (id)
+		{
+		case 1:
+			x = 1;
+			break;
+		case 2:
+			y = 1;
+			break;
+		case 3:
+			x = 1;
+			y = 1;
+			break;
+		default:
+			break;
+		}
+		cb.mTemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
+	}
 	cb.mTemporalAAJitter = temporalAAJitter;
 	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
 
