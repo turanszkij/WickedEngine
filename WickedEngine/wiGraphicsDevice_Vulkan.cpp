@@ -5056,27 +5056,21 @@ namespace wiGraphicsTypes
 					assert(0); // TODO
 				}
 
+				desc.MipLevels = 1 + img.get_num_mipmaps();
+				InitData.resize(desc.MipLevels);
+
+				InitData[0].pSysMem = static_cast<uint8_t*>(img); // call operator
+				InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height());
+
 				if (img.get_num_mipmaps() > 0)
 				{
-					InitData.resize(img.get_num_mipmaps());
-
-					desc.MipLevels = img.get_num_mipmaps();
-
 					for (UINT i = 0; i < img.get_num_mipmaps(); ++i)
 					{
 						const nv_dds::CSurface& surf = img.get_mipmap(i);
 
-						InitData[i].pSysMem = static_cast<uint8_t*>(surf); // call operator
-						InitData[i].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height());
+						InitData[i + 1].pSysMem = static_cast<uint8_t*>(surf); // call operator
+						InitData[i + 1].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height());
 					}
-				}
-				else
-				{
-					// single mip
-					InitData.resize(1);
-
-					InitData[0].pSysMem = static_cast<uint8_t*>(img); // call operator
-					InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height());
 				}
 
 				CreateTexture2D(&desc, InitData.data(), ppTexture);
