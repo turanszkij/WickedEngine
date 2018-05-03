@@ -3430,7 +3430,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 					CSTYPES targetCS = CSTYPE_SKINNING_LDS;
 
-					//if (!GetLDSSkinningEnabled() || armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
+					if (!GetLDSSkinningEnabled() || armature->boneCollection.size() > SKINNING_COMPUTE_THREADCOUNT)
 					{
 						// If we have more bones that can fit into LDS, we switch to a skinning shader which loads from device memory:
 						targetCS = CSTYPE_SKINNING;
@@ -5403,12 +5403,6 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
-		//GPUResource* res[] =
-		//{
-		//	resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]
-		//};
-		//GetDevice()->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_GENERIC_READ, threadID);
-
 		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 

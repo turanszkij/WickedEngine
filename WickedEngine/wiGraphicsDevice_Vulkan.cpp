@@ -4651,18 +4651,33 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{
-		//todo
-		//VkImageCopy copy;
-		//copy.extent.width = pDst->desc.Width;
-		//copy.extent.height = pDst->desc.Height;
-		//copy.extent.depth = 1;
+		VkImageCopy copy;
+		copy.extent.width = pDst->desc.Width;
+		copy.extent.height = pDst->desc.Height;
+		copy.extent.depth = 1;
 
-		//copy.dstOffset = 0;
+		copy.srcOffset.x = 0;
+		copy.srcOffset.y = 0;
+		copy.srcOffset.z = 0;
 
-		//vkCmdCopyImage(GetDirectCommandList(threadID),
-		//	static_cast<VkImage>(pSrc->resource_Vulkan), VK_IMAGE_LAYOUT_GENERAL,
-		//	static_cast<VkImage>(pDst->resource_Vulkan), VK_IMAGE_LAYOUT_UNDEFINED,
-		//	1, &copy);
+		copy.dstOffset.x = 0;
+		copy.dstOffset.y = 0;
+		copy.dstOffset.z = 0;
+
+		copy.srcSubresource.aspectMask = pSrc->desc.BindFlags & BIND_DEPTH_STENCIL ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.srcSubresource.baseArrayLayer = 0;
+		copy.srcSubresource.layerCount = 1;
+		copy.srcSubresource.mipLevel = 0;
+
+		copy.dstSubresource.aspectMask = pDst->desc.BindFlags & BIND_DEPTH_STENCIL ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+		copy.dstSubresource.baseArrayLayer = 0;
+		copy.dstSubresource.layerCount = 1;
+		copy.dstSubresource.mipLevel = 0;
+
+		vkCmdCopyImage(GetDirectCommandList(threadID),
+			static_cast<VkImage>(pSrc->resource_Vulkan), VK_IMAGE_LAYOUT_GENERAL,
+			static_cast<VkImage>(pDst->resource_Vulkan), VK_IMAGE_LAYOUT_GENERAL,
+			1, &copy);
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
 	{
@@ -4919,7 +4934,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
 	{
-		//renderPass[threadID].disable(GetDirectCommandList(threadID));
+		renderPass[threadID].disable(GetDirectCommandList(threadID));
 
 		//if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_GENERIC_READ)
 		//{
@@ -4929,11 +4944,13 @@ namespace wiGraphicsTypes
 		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource_Vulkan);
 		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
 		//	barrier.offset = 0;
-		//	barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-		//	barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+		//	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		//	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		//	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		//	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		//	vkCmdPipelineBarrier(GetDirectCommandList(threadID),
 		//		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-		//		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		//		0,
 		//		0, nullptr,
 		//		1, &barrier,
