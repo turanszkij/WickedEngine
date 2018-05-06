@@ -55,7 +55,7 @@ void main(uint3 Gid	: SV_GroupID,
 		float a = distanceBuffer[index];
 		float b = distanceBuffer[nSwapElem];
 
-		if (a > b)
+		if (a < b)
 		{
 			distanceBuffer[index] = b;
 			distanceBuffer[nSwapElem] = a;
