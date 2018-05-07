@@ -96,9 +96,9 @@ public:
 	float motionBlurAmount;
 	float mass = 1.0f;
 
-	float SPH_h = 0.2f;		// smoothing radius
-	float SPH_K = 20.0f;	// pressure constant
-	float SPH_p0 = 20.0f;	// reference density
+	float SPH_h = 1.0f;		// smoothing radius
+	float SPH_K = 250.0f;	// pressure constant
+	float SPH_p0 = 1.0f;	// reference density
 	float SPH_e = 0.018f;	// viscosity constant
 
 	void SetMaxParticleCount(uint32_t value);

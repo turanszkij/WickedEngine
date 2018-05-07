@@ -1,6 +1,14 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
+// enable pressure visualizer debug colors:
+//  green - under reference pressure
+//  red - above reference pressure
+//#define DEBUG_PRESSURE
+
+#define FLOOR_COLLISION
+#define BOX_COLLISION
+
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
@@ -42,7 +50,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 	GroupMemoryBarrierWithGroupSync();
 
-	const uint LDSParticleCount = /*clamp(aliveCount - Gid.x * THREADCOUNT_SIMULATION, 0, THREADCOUNT_SIMULATION)*/ 256;
+	const uint LDSParticleCount = clamp(aliveCount - Gid.x * THREADCOUNT_SIMULATION, 0, THREADCOUNT_SIMULATION);
 
 
 	uint particleIndexA = groupIndex;
@@ -87,15 +95,13 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		}
 	}
 
-	int asd = 0;
-	if (particleA.p > p0) asd = 1;
-	if (particleA.p < p0) asd = -1;
+	bool pressure_debug = particleA.p > p0 ? true : false;
 
 	// Can't be lower than reference density to avoid negative pressure!
-	//particleA.p = max(p0, particleA.p);
+	particleA.p = max(p0, particleA.p);
 
 	// Compute particle pressure:
-	particleA.P = K * (max(p0, particleA.p) - p0);
+	particleA.P = K * (particleA.p - p0);
 
 	// Store the results:
 	LDSParticles[particleIndexA].p = particleA.p;
@@ -106,86 +112,93 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	GroupMemoryBarrierWithGroupSync();
 
 
-	if (particleA.p > 0)
+	// Compute acceleration:
+	float3 a = 0;	// pressure force
+	float3 av = 0;  // viscosity force
+
+	for (i = 0; i < LDSParticleCount; ++i)
 	{
-
-		// Compute acceleration:
-		float3 a = 0;	// pressure force
-		float3 av = 0;  // viscosity force
-
-		for (i = 0; i < LDSParticleCount; ++i)
+		if (i != particleIndexA)
 		{
-			if (i != particleIndexA)
+			uint particleIndexB = i;
+			LDSParticle particleB = LDSParticles[particleIndexB];
+
+			float3 diff = particleA.position - particleB.position;
+			float r2 = dot(diff, diff); // distance squared
+			float r = sqrt(r2);
+
+			//float range = particleA.size + particleB.size; // range of affection
+
+			if (r < h)
 			{
-				uint particleIndexB = i;
-				LDSParticle particleB = LDSParticles[particleIndexB];
+				float3 rNorm = normalize(diff);
+				float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
 
-				float3 diff = particleA.position - particleB.position;
-				float r2 = dot(diff, diff); // distance squared
-				float r = sqrt(r2);
+				a += (particleB.m / particleA.m) * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm;
 
-				//float range = particleA.size + particleB.size; // range of affection
-
-				if (r < h)
-				{
-					float3 rNorm = normalize(diff);
-					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
-
-					a += (particleB.m / particleA.m) * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm;
-
-					float r3 = r2 * r;
-					W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1;
-					av += (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
-				}
-
+				float r3 = r2 * r;
+				W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1;
+				av += (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
 			}
+
 		}
-
-		a *= -1;
-		av *= e;
-
-		float3 force = a + av;
-
-		const float dt = g_xFrame_DeltaTime;
-		particleA.v += dt * force / particleA.p;
-		particleA.position += dt * particleA.v;
-
 	}
+
+	a *= -1;
+	av *= e;
+
+	// gravity:
+	const float3 G = float3(0, -9.8f, 0);
+	float3 gravity = G * particleA.p;
+
+	// apply all forces:
+	float3 force = a + av + gravity;
+
+	// integrate:
+	const float dt = g_xFrame_DeltaTime;
+	particleA.v += dt * force / particleA.p;
+	particleA.position += dt * particleA.v;
+
+	// drag:
+	particleA.v *= 0.98f;
+
 
 	float elastic = 0.9;
 
+#ifdef FLOOR_COLLISION
+	// floor collision:
 	if (particleA.position.y - particleA.size < 0)
 	{
 		particleA.position.y = particleA.size;
 		particleA.v.y *= -elastic;
 	}
+#endif // FLOOR_COLLISION
 
+
+#ifdef BOX_COLLISION
 	// box collision:
-	float extent = 2;
-	if (particleA.position.x + particleA.size > extent)
+	float3 extent = float3(2, 0, 3);
+	if (particleA.position.x + particleA.size > extent.x)
 	{
-		particleA.position.x = extent - particleA.size;
+		particleA.position.x = extent.x - particleA.size;
 		particleA.v.x *= -elastic;
 	}
-	if (particleA.position.x - particleA.size < -extent)
+	if (particleA.position.x - particleA.size < -extent.x)
 	{
-		particleA.position.x = -extent + particleA.size;
+		particleA.position.x = -extent.x + particleA.size;
 		particleA.v.x *= -elastic;
 	}
-	if (particleA.position.z + particleA.size > extent)
+	if (particleA.position.z + particleA.size > extent.z)
 	{
-		particleA.position.z = extent - particleA.size;
+		particleA.position.z = extent.z - particleA.size;
 		particleA.v.z *= -elastic;
 	}
-	if (particleA.position.z - particleA.size < -extent)
+	if (particleA.position.z - particleA.size < -extent.z)
 	{
-		particleA.position.z = -extent + particleA.size;
+		particleA.position.z = -extent.z + particleA.size;
 		particleA.v.z *= -elastic;
 	}
-
-	particleA.v *= 0.99f;
-
-	particleA.v.y -= 0.8f;
+#endif // BOX_COLLISION
 
 
 	if (DTid.x < aliveCount)
@@ -194,17 +207,11 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		particleBuffer[writeIndex].position = particleA.position;
 		particleBuffer[writeIndex].velocity = particleA.v;
 
-		particleBuffer[writeIndex].color_mirror = 0x00FFFFFF;
-		//particleBuffer[writeIndex].color_mirror |= ((uint)particleA.p) & 0xFF;
 
-		if (asd > 0)
-		{
-			particleBuffer[writeIndex].color_mirror = 0xFF;
-		}
-		if (asd < 0)
-		{
-			particleBuffer[writeIndex].color_mirror = 0xFF00;
-		}
+#ifdef DEBUG_PRESSURE
+		// debug pressure:
+		particleBuffer[writeIndex].color_mirror = pressure_debug ? 0xFF : 0xFF00;
+#endif // DEBUG_PRESSURE
 
 	}
 
