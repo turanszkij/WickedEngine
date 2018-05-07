@@ -212,6 +212,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	counters.aliveCount = 0;
 	counters.deadCount = MAX_PARTICLES;
 	counters.realEmitCount = 0;
+	counters.aliveCount_afterSimulation = 0;
 
 	data.pSysMem = &counters;
 	bd.ByteWidth = sizeof(counters);
@@ -394,7 +395,10 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
 
-		if (numThreadGroups>1) bDone = false;
+		if (numThreadGroups > 1)
+		{
+			bDone = false;
+		}
 
 		// sort all buffers of size 512 (and presort bigger ones)
 		device->BindComputePSO(&CPSO_sort, threadID);
