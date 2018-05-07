@@ -69,6 +69,7 @@ public:
 
 	void Update(float dt);
 	void Burst(float num);
+	void Restart();
 
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
@@ -80,6 +81,7 @@ public:
 
 	bool SORTING = false;
 	bool DEPTHCOLLISIONS = false;
+	bool SPH_FLUIDSIMULATION = false;
 
 	PARTICLESHADERTYPE shaderType = SOFT;
 
@@ -92,6 +94,12 @@ public:
 	float count,life,random_life;
 	float scaleX,scaleY,rotation;
 	float motionBlurAmount;
+	float mass = 1.0f;
+
+	float SPH_h = 0.2f;		// smoothing radius
+	float SPH_K = 20.0f;	// pressure constant
+	float SPH_p0 = 20.0f;	// reference density
+	float SPH_e = 0.018f;	// viscosity constant
 
 	void SetMaxParticleCount(uint32_t value);
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }

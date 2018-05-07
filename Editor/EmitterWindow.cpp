@@ -18,7 +18,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(760, 800));
+	emitterWindow->SetSize(XMFLOAT2(800, 1000));
 	emitterWindow->SetEnabled(false);
 	GUI->AddWidget(emitterWindow);
 
@@ -87,8 +87,22 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(depthCollisionsCheckBox);
 
 
+	sphCheckBox = new wiCheckBox("SPH - FluidSim: ");
+	sphCheckBox->SetPos(XMFLOAT2(x + 400, y));
+	sphCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SPH_FLUIDSIMULATION = args.bValue;
+		}
+	});
+	sphCheckBox->SetCheck(false);
+	sphCheckBox->SetTooltip("Enable particle collisions with each other. Simulate with Smooth Particle Hydrodynamics (SPH) solver.");
+	emitterWindow->AddWidget(sphCheckBox);
+
+
 	debugCheckBox = new wiCheckBox("DEBUG: ");
-	debugCheckBox->SetPos(XMFLOAT2(x + 350, y));
+	debugCheckBox->SetPos(XMFLOAT2(x + 500, y));
 	debugCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -252,7 +266,94 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitMotionBlurSlider->SetTooltip("Set the motion blur amount for the particle system.");
 	emitterWindow->AddWidget(emitMotionBlurSlider);
 
+	emitMassSlider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "Mass: ");
+	emitMassSlider->SetSize(XMFLOAT2(360, 30));
+	emitMassSlider->SetPos(XMFLOAT2(x, y += step));
+	emitMassSlider->OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->mass = args.fValue;
+		}
+	});
+	emitMassSlider->SetEnabled(false);
+	emitMassSlider->SetTooltip("Set the mass per particle.");
+	emitterWindow->AddWidget(emitMassSlider);
 
+
+
+
+
+	//////////////// SPH ////////////////////////////
+
+	y += step;
+
+	sph_h_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Smoothing Radius (h): ");
+	sph_h_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_h_Slider->SetPos(XMFLOAT2(x, y += step));
+	sph_h_Slider->OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SPH_h = args.fValue;
+		}
+	});
+	sph_h_Slider->SetEnabled(false);
+	sph_h_Slider->SetTooltip("Set the SPH parameter: smoothing radius");
+	emitterWindow->AddWidget(sph_h_Slider);
+
+	sph_K_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Pressure Constant (K): ");
+	sph_K_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_K_Slider->SetPos(XMFLOAT2(x, y += step));
+	sph_K_Slider->OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SPH_K = args.fValue;
+		}
+	});
+	sph_K_Slider->SetEnabled(false);
+	sph_K_Slider->SetTooltip("Set the SPH parameter: pressure constant");
+	emitterWindow->AddWidget(sph_K_Slider);
+
+	sph_p0_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Reference Density (p0): ");
+	sph_p0_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_p0_Slider->SetPos(XMFLOAT2(x, y += step));
+	sph_p0_Slider->OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SPH_p0 = args.fValue;
+		}
+	});
+	sph_p0_Slider->SetEnabled(false);
+	sph_p0_Slider->SetTooltip("Set the SPH parameter: reference density");
+	emitterWindow->AddWidget(sph_p0_Slider);
+
+	sph_e_Slider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "SPH Viscosity (e): ");
+	sph_e_Slider->SetSize(XMFLOAT2(360, 30));
+	sph_e_Slider->SetPos(XMFLOAT2(x, y += step));
+	sph_e_Slider->OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->SPH_e = args.fValue;
+		}
+	});
+	sph_e_Slider->SetEnabled(false);
+	sph_e_Slider->SetTooltip("Set the SPH parameter: viscosity constant");
+	emitterWindow->AddWidget(sph_e_Slider);
+
+
+
+
+
+
+
+
+	////// UTIL /////////////////
+
+	y += step;
 
 	materialSelectButton = new wiButton("Select Material");
 	materialSelectButton->SetPos(XMFLOAT2(x, y += step));
@@ -269,6 +370,26 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	});
 	materialSelectButton->SetTooltip("Select corresponding material in the Material Window.");
 	emitterWindow->AddWidget(materialSelectButton);
+
+
+
+	restartButton = new wiButton("Restart Emitter");
+	restartButton->SetPos(XMFLOAT2(x + 200, y));
+	restartButton->SetSize(XMFLOAT2(150, 30));
+	restartButton->OnClick([&](wiEventArgs args) {
+		if (materialWnd != nullptr)
+		{
+			auto emitter = GetEmitter();
+			if (emitter != nullptr)
+			{
+				emitter->Restart();
+			}
+		}
+	});
+	restartButton->SetTooltip("Restart particle system emitter");
+	emitterWindow->AddWidget(restartButton);
+
+
 
 
 	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
@@ -325,6 +446,12 @@ void EmitterWindow::SetObject(Object* obj)
 			emitRandomnessSlider->SetValue(emitter->random_factor);
 			emitLifeRandomnessSlider->SetValue(emitter->random_life);
 			emitMotionBlurSlider->SetValue(emitter->motionBlurAmount);
+			emitMassSlider->SetValue(emitter->mass);
+
+			sph_h_Slider->SetValue(emitter->SPH_h);
+			sph_K_Slider->SetValue(emitter->SPH_K);
+			sph_p0_Slider->SetValue(emitter->SPH_p0);
+			sph_e_Slider->SetValue(emitter->SPH_e);
 		}
 
 		emitterWindow->SetEnabled(true);

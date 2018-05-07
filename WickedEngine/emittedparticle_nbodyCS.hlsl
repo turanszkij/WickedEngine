@@ -34,7 +34,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		LDSParticles[groupIndex].position = particleA.position;
 		LDSParticles[groupIndex].size = particleSizeA;
 		LDSParticles[groupIndex].v = particleA.velocity;
-		LDSParticles[groupIndex].m = 1;
+		LDSParticles[groupIndex].m = xParticleMass;
 		LDSParticles[groupIndex].p = 0;
 		LDSParticles[groupIndex].P = 0;
 
@@ -49,12 +49,18 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	LDSParticle particleA = LDSParticles[particleIndexA];
 
 
-	// Compute density field:
+	// SPH params:
+	const float h = xSPH_h;			// smoothing radius
+	const float h2 = xSPH_h2;		// smoothing radius ^ 2
+	const float h3 = xSPH_h3;		// smoothing radius ^ 3
+	const float h6 = xSPH_h6;		// smoothing radius ^ 6
+	const float h9 = xSPH_h9;		// smoothing radius ^ 9
+	const float K = xSPH_K;			// pressure constant
+	const float p0 = xSPH_p0;		// reference density
+	const float e = xSPH_e;			// viscosity constant
 
-	const float h = 1.0f; // smoothing radius
-	const float h2 = h*h;
-	const float h3 = h2 * h;
-	const float h9 = h3 * h3;
+
+	// Compute density field:
 
 	uint i;
 
@@ -68,10 +74,10 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 			float3 diff = particleA.position - particleB.position;
 			float r2 = dot(diff, diff); // distance squared
 
-			float range = particleA.size + particleB.size; // range of affection
-			float range2 = range * range; // range squared
+			//float range = particleA.size + particleB.size; // range of affection
+			//float range2 = range * range; // range squared
 
-			if (r2 < range2)
+			if (r2 < h2)
 			{
 				float W = (315.0f / (64.0f * PI * h9)) * pow(h2 - r2, 3); // poly6 smoothing kernel
 
@@ -81,10 +87,15 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		}
 	}
 
+	int asd = 0;
+	if (particleA.p > p0) asd = 1;
+	if (particleA.p < p0) asd = -1;
+
+	// Can't be lower than reference density to avoid negative pressure!
+	//particleA.p = max(p0, particleA.p);
+
 	// Compute particle pressure:
-	const float K = 20;		// pressure constant
-	const float p0 = 20;		// reference density
-	particleA.P = max(p0, K * (particleA.p - p0));
+	particleA.P = K * (max(p0, particleA.p) - p0);
 
 	// Store the results:
 	LDSParticles[particleIndexA].p = particleA.p;
@@ -101,7 +112,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		// Compute acceleration:
 		float3 a = 0;	// pressure force
 		float3 av = 0;  // viscosity force
-		const float e = 0.018f; // viscosity constant
 
 		for (i = 0; i < LDSParticleCount; ++i)
 		{
@@ -114,33 +124,31 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 				float r2 = dot(diff, diff); // distance squared
 				float r = sqrt(r2);
 
-				float range = particleA.size + particleB.size; // range of affection
+				//float range = particleA.size + particleB.size; // range of affection
 
-				if (r < range)
+				if (r < h)
 				{
 					float3 rNorm = normalize(diff);
-					float W = (-45 / (PI * pow(h, 6))) * pow(h - r, 2); // spiky kernel smoothing function
+					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
 
-					a += -(particleB.m / particleA.m) * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm;
+					a += (particleB.m / particleA.m) * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm;
 
 					float r3 = r2 * r;
-					float h2 = h * h;
-					float h3 = h2 * h;
 					W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1;
-					av += e * (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
+					av += (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
 				}
 
 			}
 		}
 
-		//a *= -1;
-
-		//av *= e;
+		a *= -1;
+		av *= e;
 
 		float3 force = a + av;
 
 		const float dt = g_xFrame_DeltaTime;
 		particleA.v += dt * force / particleA.p;
+		particleA.position += dt * particleA.v;
 
 	}
 
@@ -152,28 +160,28 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		particleA.v.y *= -elastic;
 	}
 
-	//// box collision:
-	//float extent = 4;
-	//if (particleA.position.x + particleA.size > extent)
-	//{
-	//	particleA.position.x = extent - particleA.size;
-	//	particleA.v.x *= -elastic;
-	//}
-	//if (particleA.position.x - particleA.size < -extent)
-	//{
-	//	particleA.position.x = -extent + particleA.size;
-	//	particleA.v.x *= -elastic;
-	//}
-	//if (particleA.position.z + particleA.size > extent)
-	//{
-	//	particleA.position.z = extent - particleA.size;
-	//	particleA.v.z *= -elastic;
-	//}
-	//if (particleA.position.z - particleA.size < -extent)
-	//{
-	//	particleA.position.z = -extent + particleA.size;
-	//	particleA.v.z *= -elastic;
-	//}
+	// box collision:
+	float extent = 2;
+	if (particleA.position.x + particleA.size > extent)
+	{
+		particleA.position.x = extent - particleA.size;
+		particleA.v.x *= -elastic;
+	}
+	if (particleA.position.x - particleA.size < -extent)
+	{
+		particleA.position.x = -extent + particleA.size;
+		particleA.v.x *= -elastic;
+	}
+	if (particleA.position.z + particleA.size > extent)
+	{
+		particleA.position.z = extent - particleA.size;
+		particleA.v.z *= -elastic;
+	}
+	if (particleA.position.z - particleA.size < -extent)
+	{
+		particleA.position.z = -extent + particleA.size;
+		particleA.v.z *= -elastic;
+	}
 
 	particleA.v *= 0.99f;
 
@@ -189,9 +197,13 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		particleBuffer[writeIndex].color_mirror = 0x00FFFFFF;
 		//particleBuffer[writeIndex].color_mirror |= ((uint)particleA.p) & 0xFF;
 
-		if (particleA.p > 0)
+		if (asd > 0)
 		{
 			particleBuffer[writeIndex].color_mirror = 0xFF;
+		}
+		if (asd < 0)
+		{
+			particleBuffer[writeIndex].color_mirror = 0xFF00;
 		}
 
 	}

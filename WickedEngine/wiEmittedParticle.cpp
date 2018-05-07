@@ -279,6 +279,10 @@ void wiEmittedParticle::Burst(float num)
 {
 	emit += num;
 }
+void wiEmittedParticle::Restart()
+{
+	buffersUpToDate = false;
+}
 
 
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
@@ -304,6 +308,17 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xParticleRotation = rotation * XM_PI * 60;
 	cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
 	cb.xEmitterOpacity = material->alpha;
+	cb.xParticleMass = mass;
+
+	// SPH:
+	cb.xSPH_h = SPH_h;
+	cb.xSPH_h2 = SPH_h * SPH_h;
+	cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
+	cb.xSPH_h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
+	cb.xSPH_h9 = cb.xSPH_h3 * cb.xSPH_h3;
+	cb.xSPH_K = SPH_K;
+	cb.xSPH_p0 = SPH_p0;
+	cb.xSPH_e = SPH_e;
 
 	device->UpdateBuffer(constantBuffer, &cb, threadID);
 	device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
@@ -343,10 +358,13 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-	// perform N-body collision response simulation:
-	device->BindComputePSO(&CPSO_nbody, threadID);
-	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+	if (SPH_FLUIDSIMULATION)
+	{
+		// perform N-body collision response simulation:
+		device->BindComputePSO(&CPSO_nbody, threadID);
+		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+	}
 
 	// update CURRENT alive list, write NEW alive list
 	if (SORTING)

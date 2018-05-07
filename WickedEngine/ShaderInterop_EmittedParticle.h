@@ -41,9 +41,21 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleLifeSpan;
 	float		xParticleLifeSpanRandomness;
 
+	float		xParticleMass;
 	float		xParticleMotionBlurAmount;
 	float		xEmitterOpacity;
-	float2		xPadding_EmitterCB;
+	float		xPadding0_EmitterCB;
+
+	float		xSPH_h;		// smoothing radius
+	float		xSPH_h2;	// smoothing radius ^ 2
+	float		xSPH_h3;	// smoothing radius ^ 3
+	float		xSPH_h6;	// smoothing radius ^ 6
+
+	float		xSPH_h9;	// smoothing radius ^ 9
+	float		xSPH_K;		// pressure constant
+	float		xSPH_p0;	// reference density
+	float		xSPH_e;		// viscosity constant
+
 };
 
 CBUFFER(SortConstants, 0)
