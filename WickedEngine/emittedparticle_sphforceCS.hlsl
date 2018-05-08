@@ -9,13 +9,11 @@
 #define FLOOR_COLLISION
 #define BOX_COLLISION
 
-RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
-RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
-RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
+STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
+STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
+STRUCTUREDBUFFER(densityBuffer, float2, 2);
 
-RWSTRUCTUREDBUFFER(densityBuffer, float2, 7);
+RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )

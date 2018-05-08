@@ -1,13 +1,13 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
-RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
-RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
+STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
+STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
 
-RWSTRUCTUREDBUFFER(densityBuffer, float2, 7);
+RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
+RWSTRUCTUREDBUFFER(densityBuffer, float2, 1);
+
+groupshared float3 positions[THREADCOUNT_SIMULATION];
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -25,22 +25,38 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 	uint aliveCount = counterBuffer[0].aliveCount;
 
+	uint particleIndexA;
+	Particle particleA = (Particle)0;
 
 	if (DTid.x < aliveCount)
 	{
-		uint particleIndexA = aliveBuffer_CURRENT[DTid.x];
-		Particle particleA = particleBuffer[particleIndexA];
+		particleIndexA = aliveBuffer_CURRENT[DTid.x];
+		particleA = particleBuffer[particleIndexA];
+	}
 
-		// Compute density field:
-		float density = 0; // (p)
-		for (uint i = 0; i < aliveCount; ++i)
+
+
+	// Compute density field:
+	float density = 0; // (p)
+
+	uint numTiles = 1 + aliveCount / THREADCOUNT_SIMULATION;
+
+	for (uint tile = 0; tile < numTiles; ++tile)
+	{
+		uint offset = tile * THREADCOUNT_SIMULATION;
+
+		positions[groupIndex] = particleBuffer[aliveBuffer_CURRENT[offset + groupIndex]].position;
+
+		GroupMemoryBarrierWithGroupSync();
+
+
+		for (uint i = 0; i < THREADCOUNT_SIMULATION; ++i)
 		{
-			if (i != DTid.x)
+			if (offset + i != DTid.x)
 			{
-				uint particleIndexB = aliveBuffer_CURRENT[i];
-				Particle particleB = particleBuffer[particleIndexB];
+				float3 positionB = positions[i];
 
-				float3 diff = particleA.position - particleB.position;
+				float3 diff = particleA.position - positionB;
 				float r2 = dot(diff, diff); // distance squared
 
 				if (r2 < h2)
@@ -54,6 +70,15 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 			}
 		}
 
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+
+
+
+
+	if (DTid.x < aliveCount)
+	{
 		// Can't be lower than reference density to avoid negative pressure!
 		density = max(p0, density);
 

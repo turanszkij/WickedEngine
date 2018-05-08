@@ -342,7 +342,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		counterBuffer,
 		indirectBuffers,
 		distanceBuffer,
-		densityBuffer
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 	
@@ -376,14 +375,42 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		// 1.) Compute particle density field:
 		device->BindComputePSO(&CPSO_sphdensity, threadID);
+		device->UnBindUnorderedAccessResources(0, 8, threadID);
+		GPUResource* res_density[] = {
+			aliveList[0], // CURRENT alivelist
+			counterBuffer,
+		};
+		device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
+		GPUResource* uav_density[] = {
+			particleBuffer,
+			densityBuffer
+		};
+		device->BindUnorderedAccessResourcesCS(uav_density, 0, ARRAYSIZE(uav_density), threadID);
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 		// 2.) Compute particle pressure forces:
 		device->BindComputePSO(&CPSO_sphforce, threadID);
+		device->UnBindUnorderedAccessResources(0, 8, threadID);
+		GPUResource* res_force[] = {
+			aliveList[0], // CURRENT alivelist
+			counterBuffer,
+			densityBuffer
+		};
+		device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
+		GPUResource* uav_force[] = {
+			particleBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uav_force, 0, ARRAYSIZE(uav_force), threadID);
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnBindResources(0, 3, threadID);
+		device->UnBindUnorderedAccessResources(0, 8, threadID);
 	}
+
+	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 	// update CURRENT alive list, write NEW alive list
 	if (SORTING)
