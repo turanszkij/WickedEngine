@@ -18,10 +18,8 @@ RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
 struct LDSParticle
 {
 	float3 position;
-	float size;
-	float3 v;			// velocity
-	float m;			// mass
 	float p;			// density
+	float3 v;			// velocity
 	float P;			// Pressure
 };
 groupshared LDSParticle LDSParticles[THREADCOUNT_SIMULATION];
@@ -31,22 +29,18 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 {
 	uint aliveCount = counterBuffer[0].aliveCount;
 
+	uint particleIndex = aliveBuffer_CURRENT[DTid.x];
+	Particle particle = (Particle)0;
+
 	if (DTid.x < aliveCount)
 	{
-		uint particleIndexA = aliveBuffer_CURRENT[DTid.x];
-		Particle particleA = particleBuffer[particleIndexA];
-
-		float lifeLerpA = 1 - particleA.life / particleA.maxLife;
-		float particleSizeA = lerp(particleA.sizeBeginEnd.x, particleA.sizeBeginEnd.y, lifeLerpA);
-
-		LDSParticles[groupIndex].position = particleA.position;
-		LDSParticles[groupIndex].size = particleSizeA;
-		LDSParticles[groupIndex].v = particleA.velocity;
-		LDSParticles[groupIndex].m = xParticleMass;
-		LDSParticles[groupIndex].p = 0;
-		LDSParticles[groupIndex].P = 0;
-
+		particle = particleBuffer[particleIndex];
 	}
+
+	LDSParticles[groupIndex].position = particle.position;
+	LDSParticles[groupIndex].v = particle.velocity;
+	LDSParticles[groupIndex].p = 0;
+	LDSParticles[groupIndex].P = 0;
 
 	GroupMemoryBarrierWithGroupSync();
 
@@ -66,6 +60,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float K = xSPH_K;			// pressure constant
 	const float p0 = xSPH_p0;		// reference density
 	const float e = xSPH_e;			// viscosity constant
+	const float mass = xParticleMass;
 
 
 	// Compute density field:
@@ -82,14 +77,12 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 			float3 diff = particleA.position - particleB.position;
 			float r2 = dot(diff, diff); // distance squared
 
-			//float range = particleA.size + particleB.size; // range of affection
-			//float range2 = range * range; // range squared
-
 			if (r2 < h2)
 			{
 				float W = (315.0f / (64.0f * PI * h9)) * pow(h2 - r2, 3); // poly6 smoothing kernel
 
-				particleA.p += particleB.m * W;
+				//particleA.p += particleB.m * W;
+				particleA.p += mass * W; // constant mass
 			}
 
 		}
@@ -113,8 +106,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 
 	// Compute acceleration:
-	float3 a = 0;	// pressure force
-	float3 av = 0;  // viscosity force
+	float3 f_a = 0;	// pressure force
+	float3 f_av = 0;  // viscosity force
 
 	for (i = 0; i < LDSParticleCount; ++i)
 	{
@@ -127,90 +120,95 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 			float r2 = dot(diff, diff); // distance squared
 			float r = sqrt(r2);
 
-			//float range = particleA.size + particleB.size; // range of affection
-
 			if (r < h)
 			{
 				float3 rNorm = normalize(diff);
 				float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
 
-				a += (particleB.m / particleA.m) * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm;
+				//f_a += (particleB.m / particleA.m) * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm;
+				f_a += mass * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm; // constant mass
 
 				float r3 = r2 * r;
 				W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1;
-				av += (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
+				//f_av += (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
+				f_av += mass * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm; // constant mass
 			}
 
 		}
 	}
 
-	a *= -1;
-	av *= e;
+	f_a *= -1;
+	f_av *= e;
 
 	// gravity:
 	const float3 G = float3(0, -9.8f, 0);
-	float3 gravity = G * particleA.p;
 
 	// apply all forces:
-	float3 force = a + av + gravity;
+	float3 force = (f_a + f_av) / particleA.p + G;
 
 	// integrate:
 	const float dt = g_xFrame_DeltaTime;
-	particleA.v += dt * force / particleA.p;
+	particleA.v += dt * force;
 	particleA.position += dt * particleA.v;
 
 	// drag:
 	particleA.v *= 0.98f;
 
 
-	float elastic = 0.9;
-
-#ifdef FLOOR_COLLISION
-	// floor collision:
-	if (particleA.position.y - particleA.size < 0)
-	{
-		particleA.position.y = particleA.size;
-		particleA.v.y *= -elastic;
-	}
-#endif // FLOOR_COLLISION
-
-
-#ifdef BOX_COLLISION
-	// box collision:
-	float3 extent = float3(2, 0, 3);
-	if (particleA.position.x + particleA.size > extent.x)
-	{
-		particleA.position.x = extent.x - particleA.size;
-		particleA.v.x *= -elastic;
-	}
-	if (particleA.position.x - particleA.size < -extent.x)
-	{
-		particleA.position.x = -extent.x + particleA.size;
-		particleA.v.x *= -elastic;
-	}
-	if (particleA.position.z + particleA.size > extent.z)
-	{
-		particleA.position.z = extent.z - particleA.size;
-		particleA.v.z *= -elastic;
-	}
-	if (particleA.position.z - particleA.size < -extent.z)
-	{
-		particleA.position.z = -extent.z + particleA.size;
-		particleA.v.z *= -elastic;
-	}
-#endif // BOX_COLLISION
 
 
 	if (DTid.x < aliveCount)
 	{
-		uint writeIndex = aliveBuffer_CURRENT[DTid.x];
-		particleBuffer[writeIndex].position = particleA.position;
-		particleBuffer[writeIndex].velocity = particleA.v;
+
+
+		float lifeLerp = 1 - particle.life / particle.maxLife;
+		float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+
+
+		float elastic = 0.6;
+
+#ifdef FLOOR_COLLISION
+		// floor collision:
+		if (particleA.position.y - particleSize < 0)
+		{
+			particleA.position.y = particleSize;
+			particleA.v.y *= -elastic;
+		}
+#endif // FLOOR_COLLISION
+
+
+#ifdef BOX_COLLISION
+		// box collision:
+		float3 extent = float3(2, 0, 3);
+		if (particleA.position.x + particleSize > extent.x)
+		{
+			particleA.position.x = extent.x - particleSize;
+			particleA.v.x *= -elastic;
+		}
+		if (particleA.position.x - particleSize < -extent.x)
+		{
+			particleA.position.x = -extent.x + particleSize;
+			particleA.v.x *= -elastic;
+		}
+		if (particleA.position.z + particleSize > extent.z)
+		{
+			particleA.position.z = extent.z - particleSize;
+			particleA.v.z *= -elastic;
+		}
+		if (particleA.position.z - particleSize < -extent.z)
+		{
+			particleA.position.z = -extent.z + particleSize;
+			particleA.v.z *= -elastic;
+		}
+#endif // BOX_COLLISION
+
+		particleBuffer[particleIndex].position = particleA.position;
+		particleBuffer[particleIndex].velocity = particleA.v;
 
 
 #ifdef DEBUG_PRESSURE
 		// debug pressure:
-		particleBuffer[writeIndex].color_mirror = pressure_debug ? 0xFF : 0xFF00;
+		particleBuffer[particleIndex].color_mirror = pressure_debug ? 0xFF : 0xFF00;
 #endif // DEBUG_PRESSURE
 
 	}

@@ -44,7 +44,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleMass;
 	float		xParticleMotionBlurAmount;
 	float		xEmitterOpacity;
-	float		xPadding0_EmitterCB;
+	uint		xEmitterMaxParticleCount;
 
 	float		xSPH_h;		// smoothing radius
 	float		xSPH_h2;	// smoothing radius ^ 2

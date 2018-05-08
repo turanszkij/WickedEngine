@@ -309,6 +309,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
 	cb.xEmitterOpacity = material->alpha;
 	cb.xParticleMass = mass;
+	cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 
 	// SPH:
 	cb.xSPH_h = SPH_h;
