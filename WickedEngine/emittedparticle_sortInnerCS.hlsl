@@ -22,6 +22,8 @@
 
 #include "ShaderInterop_EmittedParticle.h"
 
+#define SORT_SIZE 2048
+
 #if( SORT_SIZE>2048 )
 #error
 #endif
@@ -88,7 +90,7 @@ void main(uint3 Gid	: SV_GroupID,
 			float2 a = g_LDS[index];
 			float2 b = g_LDS[nSwapElem];
 
-			if (a.x > b.x)
+			if (a.x < b.x)
 			{
 				g_LDS[index] = b;
 				g_LDS[nSwapElem] = a;
