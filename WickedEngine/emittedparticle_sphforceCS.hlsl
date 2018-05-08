@@ -4,7 +4,7 @@
 // enable pressure visualizer debug colors:
 //  green - under reference pressure
 //  red - above reference pressure
-#define DEBUG_PRESSURE
+//#define DEBUG_PRESSURE
 
 #define FLOOR_COLLISION
 #define BOX_COLLISION
@@ -14,6 +14,10 @@ STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
 STRUCTUREDBUFFER(densityBuffer, float2, 2);
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
+
+groupshared float3 positions[THREADCOUNT_SIMULATION];
+groupshared float3 velocities[THREADCOUNT_SIMULATION];
+groupshared float2 densities_pressures[THREADCOUNT_SIMULATION];
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -31,34 +35,66 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 	uint aliveCount = counterBuffer[0].aliveCount;
 
+	uint particleIndexA;
+	Particle particleA;
+	float densityA;
+	float pressureA;
 
 	if (DTid.x < aliveCount)
 	{
-		uint particleIndexA = aliveBuffer_CURRENT[DTid.x];
-		Particle particleA = particleBuffer[particleIndexA];
+		particleIndexA = aliveBuffer_CURRENT[DTid.x];
+		particleA = particleBuffer[particleIndexA];
+		densityA = densityBuffer[particleIndexA].x;
+		pressureA = densityBuffer[particleIndexA].y;
+	}
 
-		float densityA = densityBuffer[particleIndexA].x;
-		float pressureA = densityBuffer[particleIndexA].y;
 
-		// Compute acceleration:
-		float3 f_a = 0;	// pressure force
-		float3 f_av = 0;  // viscosity force
 
-		for (uint i = 0; i < aliveCount; ++i)
+	// Compute acceleration:
+	float3 f_a = 0;	// pressure force
+	float3 f_av = 0;  // viscosity force
+
+
+	uint numTiles = 1 + aliveCount / THREADCOUNT_SIMULATION;
+
+	for (uint tile = 0; tile < numTiles; ++tile)
+	{
+		uint offset = tile * THREADCOUNT_SIMULATION;
+		uint id = offset + groupIndex;
+
+
+		if (id < aliveCount)
 		{
-			if (i != DTid.x)
-			{
-				uint particleIndexB = aliveBuffer_CURRENT[i];
-				Particle particleB = particleBuffer[particleIndexB];
+			uint particleIndex = aliveBuffer_CURRENT[id];
+			positions[groupIndex] = particleBuffer[particleIndex].position;
+			velocities[groupIndex] = particleBuffer[particleIndex].velocity;
+			densities_pressures[groupIndex] = densityBuffer[particleIndex];
+		}
+		else
+		{
+			positions[groupIndex] = 1000000; // "infinitely far" try to not contribute non existing particles
+			velocities[groupIndex] = float3(0, 0, 0);
+			densities_pressures[groupIndex] = float2(0, 0);
+		}
 
-				float3 diff = particleA.position - particleB.position;
+		GroupMemoryBarrierWithGroupSync();
+
+
+		for (uint i = 0; i < THREADCOUNT_SIMULATION; ++i)
+		{
+			if (offset + i != DTid.x)
+			{
+				float3 positionB = positions[i];
+
+				float3 diff = particleA.position - positionB;
 				float r2 = dot(diff, diff); // distance squared
 				float r = sqrt(r2);
 
 				if (r < h)
 				{
-					float densityB = densityBuffer[particleIndexB].x;
-					float pressureB = densityBuffer[particleIndexB].y;
+					float3 velocityB = velocities[i];
+					float densityB = densities_pressures[i].x;
+					float pressureB = densities_pressures[i].y;
 
 					float3 rNorm = normalize(diff);
 					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
@@ -69,12 +105,19 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 					float r3 = r2 * r;
 					W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1; // laplacian smoothing function
-					f_av += mass * (1.0f / densityB) * (particleB.velocity - particleA.velocity) * W * rNorm;
+					f_av += mass * (1.0f / densityB) * (velocityB - particleA.velocity) * W * rNorm;
 				}
 
 			}
 		}
 
+
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	if (DTid.x < aliveCount)
+	{
+		// optimize formulae:
 		f_a *= -1;
 		f_av *= e;
 

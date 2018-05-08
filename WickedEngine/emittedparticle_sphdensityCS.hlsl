@@ -26,7 +26,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	uint aliveCount = counterBuffer[0].aliveCount;
 
 	uint particleIndexA;
-	Particle particleA = (Particle)0;
+	Particle particleA;
 
 	if (DTid.x < aliveCount)
 	{
@@ -44,8 +44,17 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	for (uint tile = 0; tile < numTiles; ++tile)
 	{
 		uint offset = tile * THREADCOUNT_SIMULATION;
+		uint id = offset + groupIndex;
 
-		positions[groupIndex] = particleBuffer[aliveBuffer_CURRENT[offset + groupIndex]].position;
+		
+		if (id < aliveCount)
+		{
+			positions[groupIndex] = particleBuffer[aliveBuffer_CURRENT[id]].position;
+		}
+		else
+		{
+			positions[groupIndex] = 1000000; // "infinitely far" try to not contribute non existing particles
+		}
 
 		GroupMemoryBarrierWithGroupSync();
 
