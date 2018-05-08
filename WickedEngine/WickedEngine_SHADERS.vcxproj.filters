@@ -702,7 +702,10 @@
     <FxCompile Include="volumetricLight_DirectionalPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="emittedparticle_nbodyCS.hlsl">
+    <FxCompile Include="emittedparticle_sphdensityCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_sphforceCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
