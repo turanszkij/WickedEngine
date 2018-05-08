@@ -129,7 +129,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 				f_a += mass * ((particleA.P + particleB.P) / (2 * particleA.p * particleB.p)) * W * rNorm; // constant mass
 
 				float r3 = r2 * r;
-				W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1;
+				W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1; // laplacian smoothing function
 				//f_av += (particleB.m / particleA.m) * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm;
 				f_av += mass * (1.0f / particleB.p) * (particleB.v - particleA.v) * W * rNorm; // constant mass
 			}
