@@ -62,7 +62,6 @@ CBUFFER(SortConstants, 0)
 {
 	int4 job_params;
 };
-#define SORT_SIZE 512
 
 #define THREADCOUNT_EMIT 256
 #define THREADCOUNT_SIMULATION 256

@@ -22,6 +22,8 @@
 
 #include "ShaderInterop_EmittedParticle.h"
 
+#define SORT_SIZE 4096
+
 #if( SORT_SIZE>4096 )
 // won't work for arrays>4096
 #error due to LDS size SORT_SIZE must be 4096 or smaller

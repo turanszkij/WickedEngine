@@ -22,6 +22,8 @@
 
 #include "ShaderInterop_EmittedParticle.h"
 
+#define SORT_SIZE 2048
+
 #if( SORT_SIZE>2048 )
 #error
 #endif
