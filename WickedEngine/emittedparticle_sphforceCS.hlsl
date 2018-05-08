@@ -4,7 +4,7 @@
 // enable pressure visualizer debug colors:
 //  green - under reference pressure
 //  red - above reference pressure
-//#define DEBUG_PRESSURE
+#define DEBUG_PRESSURE
 
 #define FLOOR_COLLISION
 #define BOX_COLLISION
@@ -116,7 +116,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 #ifdef BOX_COLLISION
 		// box collision:
-		float3 extent = float3(10, 0, 10);
+		float3 extent = float3(10, 0, 8);
 		if (particleA.position.x + particleSize > extent.x)
 		{
 			particleA.position.x = extent.x - particleSize;
@@ -145,7 +145,12 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 #ifdef DEBUG_PRESSURE
 		// debug pressure:
-		particleBuffer[particleIndexA].color_mirror = pressure_debug ? 0xFF : 0xFF00;
+		float3 color = lerp(float3(1, 1, 1), float3(1, 0, 0), saturate(abs(pressureA - p0) * 0.01f)) * 255;
+		uint uColor = 0;
+		uColor |= (uint)color.r << 0;
+		uColor |= (uint)color.g << 8;
+		uColor |= (uint)color.b << 16;
+		particleBuffer[particleIndexA].color_mirror = uColor;
 #endif // DEBUG_PRESSURE
 
 	}
