@@ -1,9 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-// enable pressure visualizer debug colors:
-//  green - under reference pressure
-//  red - above reference pressure
 //#define DEBUG_PRESSURE
 
 #define FLOOR_COLLISION
@@ -125,7 +122,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		float3 force = (f_a + f_av) / densityA + G;
 
 		// integrate:
-		const float dt = g_xFrame_DeltaTime;
+		//const float dt = g_xFrame_DeltaTime; // variable timestep
+		const float dt = 0.016f; // fixed time step, otherwise simulation will just blow up
 		particleA.velocity += dt * force;
 		particleA.position += dt * particleA.velocity;
 
