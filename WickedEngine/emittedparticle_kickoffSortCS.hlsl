@@ -8,13 +8,13 @@ RWRAWBUFFER(indirectBuffers, 5);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// read real alivecount from after simulation:
-	uint aliveCount_afterSimulation = indirectBuffers.Load(24) / 6;
+	int aliveCount_afterSimulation = indirectBuffers.Load(24) / 6;
 
 	// and store it for the sorting shaders to read:
 	counterBuffer[0].aliveCount_afterSimulation = aliveCount_afterSimulation;
 
 	// calculate threadcount:
-	uint threadCount = ((max(1, aliveCount_afterSimulation) - 1) >> 9) + 1;
+	uint threadCount = ((aliveCount_afterSimulation - 1) >> 9) + 1;
 
 	// and prepare to dispatch the sort for the alive simulated particles:
 	indirectBuffers.Store3(ARGUMENTBUFFER_OFFSET_DISPATCHSORT, uint3(threadCount, 1, 1));

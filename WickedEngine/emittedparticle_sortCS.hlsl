@@ -22,7 +22,7 @@
 
 #include "ShaderInterop_EmittedParticle.h"
 
-#define SORT_SIZE 4096
+#define SORT_SIZE 512
 
 #if( SORT_SIZE>4096 )
 // won't work for arrays>4096
@@ -65,12 +65,12 @@ void main(uint3 Gid	: SV_GroupID,
 
 	// Load shared data
 	uint i;
-	[unroll]for (i = 0; i<2 * ITERATIONS; ++i)
+	[unroll]for (i = 0; i < 2 * ITERATIONS; ++i)
 	{
-		if (GI + i*NUM_THREADS < numElementsInThreadGroup)
+		if (GI + i * NUM_THREADS < numElementsInThreadGroup)
 		{
-			uint loadIndex = GlobalBaseIndex + i*NUM_THREADS;
-			g_LDS[LocalBaseIndex + i*NUM_THREADS] = float2(distanceBuffer[loadIndex], (float)indexBuffer[loadIndex]);
+			uint loadIndex = GlobalBaseIndex + i * NUM_THREADS;
+			g_LDS[LocalBaseIndex + i * NUM_THREADS] = float2(distanceBuffer[loadIndex], (float)indexBuffer[loadIndex]);
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -78,9 +78,9 @@ void main(uint3 Gid	: SV_GroupID,
 	// Bitonic sort
 	for (unsigned int nMergeSize = 2; nMergeSize <= SORT_SIZE; nMergeSize = nMergeSize * 2)
 	{
-		for (uint nMergeSubSize = nMergeSize >> 1; nMergeSubSize>0; nMergeSubSize = nMergeSubSize >> 1)
+		for (uint nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1)
 		{
-			[unroll]for (i = 0; i<ITERATIONS; ++i)
+			[unroll]for (i = 0; i < ITERATIONS; ++i)
 			{
 				int tmp_index = GI + NUM_THREADS * i;
 				int index_low = tmp_index & (nMergeSubSize - 1);
@@ -88,7 +88,7 @@ void main(uint3 Gid	: SV_GroupID,
 				int index = index_high + index_low;
 
 				unsigned int nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + (2 * nMergeSubSize - 1) - index_low : index_high + nMergeSubSize + index_low;
-				if (nSwapElem<numElementsInThreadGroup)
+				if (nSwapElem < numElementsInThreadGroup)
 				{
 					float2 a = g_LDS[index];
 					float2 b = g_LDS[nSwapElem];
@@ -105,12 +105,12 @@ void main(uint3 Gid	: SV_GroupID,
 	}
 
 	// Store shared data
-	[unroll]for (i = 0; i<2 * ITERATIONS; ++i)
+	[unroll]for (i = 0; i < 2 * ITERATIONS; ++i)
 	{
-		if (GI + i*NUM_THREADS < numElementsInThreadGroup)
+		if (GI + i * NUM_THREADS < numElementsInThreadGroup)
 		{
-			uint loadIndex = LocalBaseIndex + i*NUM_THREADS;
-			uint storeIndex = GlobalBaseIndex + i*NUM_THREADS;
+			uint loadIndex = LocalBaseIndex + i * NUM_THREADS;
+			uint storeIndex = GlobalBaseIndex + i * NUM_THREADS;
 			distanceBuffer[storeIndex] = g_LDS[loadIndex].x;
 			indexBuffer[storeIndex] = (uint)g_LDS[loadIndex].y;
 		}

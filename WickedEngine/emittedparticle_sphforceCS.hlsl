@@ -152,7 +152,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 #ifdef BOX_COLLISION
 		// box collision:
-		float3 extent = float3(10, 0, 8);
+		float3 extent = float3(20, 0, 12);
 		if (particleA.position.x + particleSize > extent.x)
 		{
 			particleA.position.x = extent.x - particleSize;

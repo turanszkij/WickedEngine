@@ -269,6 +269,7 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 	retVal += aliveList[1]->GetDesc().ByteWidth;
 	retVal += deadList->GetDesc().ByteWidth;
 	retVal += distanceBuffer->GetDesc().ByteWidth;
+	retVal += densityBuffer->GetDesc().ByteWidth;
 	retVal += counterBuffer->GetDesc().ByteWidth;
 	retVal += indirectBuffers->GetDesc().ByteWidth;
 	retVal += constantBuffer->GetDesc().ByteWidth;
@@ -283,15 +284,22 @@ XMFLOAT3 wiEmittedParticle::GetPosition() const
 
 void wiEmittedParticle::Update(float dt)
 {
+	if (PAUSED)
+		return;
+
 	emit += (float)count*dt;
 }
 void wiEmittedParticle::Burst(float num)
 {
+	if (PAUSED)
+		return;
+
 	emit += num;
 }
 void wiEmittedParticle::Restart()
 {
 	buffersUpToDate = false;
+	PAUSED = false;
 }
 
 
@@ -300,7 +308,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	CreateSelfBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("UpdateEmittedParticles", threadID);
+
 
 	EmittedParticleCB cb;
 	cb.xEmitterWorld = object->world;
@@ -344,7 +352,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		distanceBuffer,
 	};
 	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-	
+
 	GPUResource* resources[] = {
 		wiTextureHelper::getInstance()->getRandom64x64(),
 		object->mesh->indexBuffer,
@@ -352,93 +360,100 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	};
 	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
-	GPUResource* indres[] = {
-		indirectBuffers
-	};
-	device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
-
-	// kick off updating, set up state
-	device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
-	device->Dispatch(1, 1, 1, threadID);
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-	device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
-
-	// emit the required amount if there are free slots in dead list
-	device->BindComputePSO(&CPSO_emit, threadID);
-	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-	if (SPH_FLUIDSIMULATION)
+	if (!PAUSED)
 	{
-		// Smooth Particle Hydrodynamics:
 
-		// 1.) Compute particle density field:
-		device->BindComputePSO(&CPSO_sphdensity, threadID);
-		device->UnBindUnorderedAccessResources(0, 8, threadID);
-		GPUResource* res_density[] = {
-			aliveList[0], // CURRENT alivelist
-			counterBuffer,
+		device->EventBegin("UpdateEmittedParticles", threadID);
+
+		GPUResource* indres[] = {
+			indirectBuffers
 		};
-		device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
-		GPUResource* uav_density[] = {
-			particleBuffer,
-			densityBuffer
-		};
-		device->BindUnorderedAccessResourcesCS(uav_density, 0, ARRAYSIZE(uav_density), threadID);
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
+
+		// kick off updating, set up state
+		device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
+		device->Dispatch(1, 1, 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-		// 2.) Compute particle pressure forces:
-		device->BindComputePSO(&CPSO_sphforce, threadID);
-		device->UnBindUnorderedAccessResources(0, 8, threadID);
-		GPUResource* res_force[] = {
-			aliveList[0], // CURRENT alivelist
-			counterBuffer,
-			densityBuffer
-		};
-		device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
-		GPUResource* uav_force[] = {
-			particleBuffer,
-		};
-		device->BindUnorderedAccessResourcesCS(uav_force, 0, ARRAYSIZE(uav_force), threadID);
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
+
+		// emit the required amount if there are free slots in dead list
+		device->BindComputePSO(&CPSO_emit, threadID);
+		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-		device->UnBindResources(0, 3, threadID);
-		device->UnBindUnorderedAccessResources(0, 8, threadID);
-	}
-
-	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
-	// update CURRENT alive list, write NEW alive list
-	if (SORTING)
-	{
-		if (DEPTHCOLLISIONS)
+		if (SPH_FLUIDSIMULATION)
 		{
-			device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
+			// Smooth Particle Hydrodynamics:
+
+			// 1.) Compute particle density field:
+			device->BindComputePSO(&CPSO_sphdensity, threadID);
+			device->UnBindUnorderedAccessResources(0, 8, threadID);
+			GPUResource* res_density[] = {
+				aliveList[0], // CURRENT alivelist
+				counterBuffer,
+			};
+			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
+			GPUResource* uav_density[] = {
+				particleBuffer,
+				densityBuffer
+			};
+			device->BindUnorderedAccessResourcesCS(uav_density, 0, ARRAYSIZE(uav_density), threadID);
+			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+			// 2.) Compute particle pressure forces:
+			device->BindComputePSO(&CPSO_sphforce, threadID);
+			device->UnBindUnorderedAccessResources(0, 8, threadID);
+			GPUResource* res_force[] = {
+				aliveList[0], // CURRENT alivelist
+				counterBuffer,
+				densityBuffer
+			};
+			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
+			GPUResource* uav_force[] = {
+				particleBuffer,
+			};
+			device->BindUnorderedAccessResourcesCS(uav_force, 0, ARRAYSIZE(uav_force), threadID);
+			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+			device->UnBindResources(0, 3, threadID);
+			device->UnBindUnorderedAccessResources(0, 8, threadID);
+		}
+
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+
+		// update CURRENT alive list, write NEW alive list
+		if (SORTING)
+		{
+			if (DEPTHCOLLISIONS)
+			{
+				device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
+			}
+			else
+			{
+				device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
+			}
 		}
 		else
 		{
-			device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
+			if (DEPTHCOLLISIONS)
+			{
+				device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
+			}
+			else
+			{
+				device->BindComputePSO(&CPSO_simulate, threadID);
+			}
 		}
-	}
-	else
-	{
-		if (DEPTHCOLLISIONS)
-		{
-			device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
-		}
-		else
-		{
-			device->BindComputePSO(&CPSO_simulate, threadID);
-		}
-	}
-	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-	device->EventEnd(threadID);
+		device->EventEnd(threadID);
+
+	}
 
 	if (SORTING)
 	{
@@ -449,48 +464,55 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->Dispatch(1, 1, 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-		// initial sorting:
-		bool bDone = true;
+		//// initial sorting:
+		//bool bDone = true;
+		//{
+		//	// calculate how many threads we'll require:
+		//	//   we'll sort 512 elements per CU (threadgroupsize 256)
+		//	//     maybe need to optimize this or make it changeable during init
+		//	//     TGS=256 is a good intermediate value
 
-		// calculate how many threads we'll require:
-		//   we'll sort 512 elements per CU (threadgroupsize 256)
-		//     maybe need to optimize this or make it changeable during init
-		//     TGS=256 is a good intermediate value
+		//	unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
 
-		unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
+		//	assert(numThreadGroups <= 1024);
 
-		if (numThreadGroups > 1)
-		{
-			bDone = false;
-		}
+		//	if (numThreadGroups > 1)
+		//	{
+		//		bDone = false;
+		//	}
 
-		// sort all buffers of size 512 (and presort bigger ones)
-		device->BindComputePSO(&CPSO_sort, threadID);
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		//	// sort all buffers of size 512 (and presort bigger ones)
+		//	device->BindComputePSO(&CPSO_sort, threadID);
+		//	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
+		//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		//}
+
+		bool bDone = false;
 
 		int presorted = 512;
 		while (!bDone)
 		{
+			// Incremental sorting:
+
 			bDone = true;
 			device->BindComputePSO(&CPSO_sortStep, threadID);
 
 			// prepare thread group description data
-			unsigned int numThreadGroups = 0;
+			uint32_t numThreadGroups = 0;
 
 			if (MAX_PARTICLES > (uint32_t)presorted)
 			{
-				if (MAX_PARTICLES>(uint32_t)presorted * 2)
+				if (MAX_PARTICLES > (uint32_t)presorted * 2)
 					bDone = false;
 
-				unsigned int pow2 = presorted;
-				while (pow2<MAX_PARTICLES)
+				uint32_t pow2 = presorted;
+				while (pow2 < MAX_PARTICLES)
 					pow2 *= 2;
 				numThreadGroups = pow2 >> 9;
 			}
 
-			unsigned int nMergeSize = presorted * 2;
-			for (unsigned int nMergeSubSize = nMergeSize >> 1; nMergeSubSize>256; nMergeSubSize = nMergeSubSize >> 1)
+			uint32_t nMergeSize = presorted * 2;
+			for (uint32_t nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 256; nMergeSubSize = nMergeSubSize >> 1)
 			{
 				SortConstants sc;
 				sc.job_params.x = nMergeSubSize;
@@ -507,15 +529,14 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				sc.job_params.w = 0;
 
 				device->UpdateBuffer(sortCB, &sc, threadID);
-				
+
 				device->Dispatch(numThreadGroups, 1, 1, threadID);
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 			}
 
-			device->BindComputePSO(&CPSO_sortInner, threadID);
-			device->Dispatch(numThreadGroups, 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
+			//device->BindComputePSO(&CPSO_sortInner, threadID);
+			//device->Dispatch(numThreadGroups, 1, 1, threadID);
+			//device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 			presorted *= 2;
 		}

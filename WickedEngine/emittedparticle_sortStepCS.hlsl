@@ -50,7 +50,7 @@ void main(uint3 Gid	: SV_GroupID,
 	uint index = tgp.y + index_high + index_low;
 	uint nSwapElem = tgp.y + index_high + job_params.y + job_params.z*index_low;
 
-	if (nSwapElem<tgp.y + tgp.z)
+	if (nSwapElem < tgp.y + tgp.z)
 	{
 		float a = distanceBuffer[index];
 		float b = distanceBuffer[nSwapElem];

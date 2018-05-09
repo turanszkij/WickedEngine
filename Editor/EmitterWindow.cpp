@@ -18,7 +18,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(800, 1000));
+	emitterWindow->SetSize(XMFLOAT2(800, 1024));
 	emitterWindow->SetEnabled(false);
 	GUI->AddWidget(emitterWindow);
 
@@ -101,8 +101,22 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterWindow->AddWidget(sphCheckBox);
 
 
+	pauseCheckBox = new wiCheckBox("PAUSE: ");
+	pauseCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pauseCheckBox->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->PAUSED = args.bValue;
+		}
+	});
+	pauseCheckBox->SetCheck(false);
+	pauseCheckBox->SetTooltip("Stop simulation update.");
+	emitterWindow->AddWidget(pauseCheckBox);
+
+
 	debugCheckBox = new wiCheckBox("DEBUG: ");
-	debugCheckBox->SetPos(XMFLOAT2(x + 500, y));
+	debugCheckBox->SetPos(XMFLOAT2(x + 120, y));
 	debugCheckBox->OnClick([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -435,6 +449,8 @@ void EmitterWindow::SetObject(Object* obj)
 		{
 			sortCheckBox->SetCheck(emitter->SORTING);
 			depthCollisionsCheckBox->SetCheck(emitter->DEPTHCOLLISIONS);
+			sphCheckBox->SetCheck(emitter->SPH_FLUIDSIMULATION);
+			pauseCheckBox->SetCheck(emitter->PAUSED);
 			maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
 			emitCountSlider->SetValue(emitter->count);

@@ -79,6 +79,7 @@ public:
 
 	bool DEBUG = false;
 	ParticleCounters GetDebugData() { return debugData; }
+	bool PAUSED = false;
 
 	bool SORTING = false;
 	bool DEPTHCOLLISIONS = false;

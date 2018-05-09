@@ -58,6 +58,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		{
 			// simulate:
 
+			float3 force = 0;
 			for (uint i = 0; i < numForceFields; ++i)
 			{
 				LDS_ForceField forceField = forceFields[i];
@@ -74,10 +75,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					dir = forceField.normal;
 				}
 
-				float3 force = dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
-
-				particle.velocity += force * dt;
+				force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
 			}
+			particle.velocity += force * dt;
 
 
 #ifdef DEPTHCOLLISIONS
@@ -112,7 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 
-					const float restitution = 0.4f;
+					const float restitution = 0.98f;
 					particle.velocity = reflect(particle.velocity, surfaceNormal) * restitution;
 				}
 			}

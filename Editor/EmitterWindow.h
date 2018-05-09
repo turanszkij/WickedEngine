@@ -38,6 +38,7 @@ public:
 	wiCheckBox* sortCheckBox;
 	wiCheckBox* depthCollisionsCheckBox;
 	wiCheckBox* sphCheckBox;
+	wiCheckBox* pauseCheckBox;
 	wiCheckBox* debugCheckBox;
 	wiSlider* emitCountSlider;
 	wiSlider* emitSizeSlider;
