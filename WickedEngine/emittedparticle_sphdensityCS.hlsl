@@ -5,7 +5,7 @@ STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(densityBuffer, float2, 1);
+RWSTRUCTUREDBUFFER(densityBuffer, float, 1);
 
 groupshared float3 positions[THREADCOUNT_SIMULATION];
 
@@ -91,11 +91,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		// Can't be lower than reference density to avoid negative pressure!
 		density = max(p0, density);
 
-		// Compute particle pressure (P):
-		float pressure = K * (density - p0);
-
 		// Store the results:
-		densityBuffer[particleIndexA] = float2(density, pressure);
+		densityBuffer[particleIndexA] = density;
 
 	}
 

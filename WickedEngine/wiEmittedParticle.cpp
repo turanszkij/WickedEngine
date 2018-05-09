@@ -213,7 +213,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	data.pSysMem = nullptr;
 
 
-	bd.StructureByteStride = sizeof(float) * 2;
+	bd.StructureByteStride = sizeof(float);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, densityBuffer);
 

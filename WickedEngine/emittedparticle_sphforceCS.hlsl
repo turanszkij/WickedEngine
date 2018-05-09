@@ -11,13 +11,12 @@
 
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
-STRUCTUREDBUFFER(densityBuffer, float2, 2);
+STRUCTUREDBUFFER(densityBuffer, float, 2);
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 
-groupshared float3 positions[THREADCOUNT_SIMULATION];
+groupshared float4 positions_densities[THREADCOUNT_SIMULATION];
 groupshared float3 velocities[THREADCOUNT_SIMULATION];
-groupshared float2 densities_pressures[THREADCOUNT_SIMULATION];
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -44,8 +43,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	{
 		particleIndexA = aliveBuffer_CURRENT[DTid.x];
 		particleA = particleBuffer[particleIndexA];
-		densityA = densityBuffer[particleIndexA].x;
-		pressureA = densityBuffer[particleIndexA].y;
+		densityA = densityBuffer[particleIndexA];
+		pressureA = K * (densityA - p0);
 	}
 
 
@@ -66,15 +65,13 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		if (id < aliveCount)
 		{
 			uint particleIndex = aliveBuffer_CURRENT[id];
-			positions[groupIndex] = particleBuffer[particleIndex].position;
+			positions_densities[groupIndex] = float4(particleBuffer[particleIndex].position, densityBuffer[particleIndex]);
 			velocities[groupIndex] = particleBuffer[particleIndex].velocity;
-			densities_pressures[groupIndex] = densityBuffer[particleIndex];
 		}
 		else
 		{
-			positions[groupIndex] = 1000000; // "infinitely far" try to not contribute non existing particles
+			positions_densities[groupIndex] = float4(1000000, 1000000, 1000000, 0); // "infinitely far" try to not contribute non existing particles, zero density
 			velocities[groupIndex] = float3(0, 0, 0);
-			densities_pressures[groupIndex] = float2(0, 0);
 		}
 
 		GroupMemoryBarrierWithGroupSync();
@@ -84,7 +81,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		{
 			if (offset + i != DTid.x)
 			{
-				float3 positionB = positions[i];
+				float3 positionB = positions_densities[i].xyz;
 
 				float3 diff = particleA.position - positionB;
 				float r2 = dot(diff, diff); // distance squared
@@ -93,8 +90,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 				if (r < h)
 				{
 					float3 velocityB = velocities[i];
-					float densityB = densities_pressures[i].x;
-					float pressureB = densities_pressures[i].y;
+					float densityB = positions_densities[i].w;
+					float pressureB = K * (densityB - p0);
 
 					float3 rNorm = normalize(diff);
 					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
