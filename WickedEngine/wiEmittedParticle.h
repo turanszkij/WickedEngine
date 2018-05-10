@@ -24,6 +24,8 @@ public:
 private:
 	ParticleCounters debugData = {};
 	wiGraphicsTypes::GPUBuffer* debugDataReadbackBuffer;
+	wiGraphicsTypes::GPUBuffer* debugDataReadbackIndexBuffer;
+	wiGraphicsTypes::GPUBuffer* debugDataReadbackDistanceBuffer;
 
 	wiGraphicsTypes::GPUBuffer* particleBuffer;
 	wiGraphicsTypes::GPUBuffer* aliveList[2];

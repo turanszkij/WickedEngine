@@ -40,8 +40,8 @@
 // Structured Buffers
 //--------------------------------------------------------------------------------------
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
+STRUCTUREDBUFFER(distanceBuffer, float, 1);
 RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
-RWSTRUCTUREDBUFFER(distanceBuffer, float, 1);
 
 #define NumElements counterBuffer[0].aliveCount_afterSimulation
 
@@ -61,16 +61,17 @@ void main(uint3 Gid	: SV_GroupID,
 	int GlobalBaseIndex = (Gid.x * SORT_SIZE) + GTid.x;
 	int LocalBaseIndex = GI;
 
-	uint numElementsInThreadGroup = min(SORT_SIZE, NumElements - (Gid.x * SORT_SIZE));
+	int numElementsInThreadGroup = min(SORT_SIZE, NumElements - (Gid.x * SORT_SIZE));
 
 	// Load shared data
-	uint i;
+	int i;
 	[unroll]for (i = 0; i < 2 * ITERATIONS; ++i)
 	{
 		if (GI + i * NUM_THREADS < numElementsInThreadGroup)
 		{
-			uint loadIndex = GlobalBaseIndex + i * NUM_THREADS;
-			g_LDS[LocalBaseIndex + i * NUM_THREADS] = float2(distanceBuffer[loadIndex], (float)indexBuffer[loadIndex]);
+			uint particleIndex = indexBuffer[GlobalBaseIndex + i * NUM_THREADS];
+			float dist = distanceBuffer[particleIndex];
+			g_LDS[LocalBaseIndex + i * NUM_THREADS] = float2(dist, (float)particleIndex);
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -78,7 +79,7 @@ void main(uint3 Gid	: SV_GroupID,
 	// Bitonic sort
 	for (unsigned int nMergeSize = 2; nMergeSize <= SORT_SIZE; nMergeSize = nMergeSize * 2)
 	{
-		for (uint nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1)
+		for (int nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1)
 		{
 			[unroll]for (i = 0; i < ITERATIONS; ++i)
 			{
@@ -93,7 +94,7 @@ void main(uint3 Gid	: SV_GroupID,
 					float2 a = g_LDS[index];
 					float2 b = g_LDS[nSwapElem];
 
-					if (a.x < b.x)
+					if (a.x > b.x)
 					{
 						g_LDS[index] = b;
 						g_LDS[nSwapElem] = a;
@@ -109,10 +110,7 @@ void main(uint3 Gid	: SV_GroupID,
 	{
 		if (GI + i * NUM_THREADS < numElementsInThreadGroup)
 		{
-			uint loadIndex = LocalBaseIndex + i * NUM_THREADS;
-			uint storeIndex = GlobalBaseIndex + i * NUM_THREADS;
-			distanceBuffer[storeIndex] = g_LDS[loadIndex].x;
-			indexBuffer[storeIndex] = (uint)g_LDS[loadIndex].y;
+			indexBuffer[GlobalBaseIndex + i * NUM_THREADS] = (uint)g_LDS[LocalBaseIndex + i * NUM_THREADS].y;
 		}
 	}
 }

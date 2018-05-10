@@ -35,8 +35,8 @@
 // Structured Buffers
 //--------------------------------------------------------------------------------------
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
+STRUCTUREDBUFFER(distanceBuffer, float, 1);
 RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
-RWSTRUCTUREDBUFFER(distanceBuffer, float, 1);
 
 #define NumElements counterBuffer[0].aliveCount_afterSimulation
 
@@ -53,7 +53,7 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	uint4 tgp;
+	int4 tgp;
 
 	tgp.x = Gid.x * 256;
 	tgp.y = 0;
@@ -62,15 +62,16 @@ void main(uint3 Gid	: SV_GroupID,
 
 	int GlobalBaseIndex = tgp.y + tgp.x * 2 + GTid.x;
 	int LocalBaseIndex = GI;
-	uint i;
+	int i;
 
 	// Load shared data
 	[unroll]for (i = 0; i < 2; ++i)
 	{
 		if (GI + i * NUM_THREADS < tgp.w)
 		{
-			uint loadIndex = GlobalBaseIndex + i * NUM_THREADS;
-			g_LDS[LocalBaseIndex + i * NUM_THREADS] = float2(distanceBuffer[loadIndex], (float)indexBuffer[loadIndex]);
+			uint particleIndex = indexBuffer[GlobalBaseIndex + i * NUM_THREADS];
+			float dist = distanceBuffer[particleIndex];
+			g_LDS[LocalBaseIndex + i * NUM_THREADS] = float2(dist, (float)particleIndex);
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -90,7 +91,7 @@ void main(uint3 Gid	: SV_GroupID,
 			float2 a = g_LDS[index];
 			float2 b = g_LDS[nSwapElem];
 
-			if (a.x < b.x)
+			if (a.x > b.x)
 			{
 				g_LDS[index] = b;
 				g_LDS[nSwapElem] = a;
@@ -104,10 +105,7 @@ void main(uint3 Gid	: SV_GroupID,
 	{
 		if (GI + i * NUM_THREADS < tgp.w)
 		{
-			uint loadIndex = LocalBaseIndex + i * NUM_THREADS;
-			uint storeIndex = GlobalBaseIndex + i * NUM_THREADS;
-			distanceBuffer[storeIndex] = g_LDS[loadIndex].x;
-			indexBuffer[storeIndex] = (uint)g_LDS[loadIndex].y;
+			indexBuffer[GlobalBaseIndex + i * NUM_THREADS] = (uint)g_LDS[LocalBaseIndex + i * NUM_THREADS].y;
 		}
 	}
 }

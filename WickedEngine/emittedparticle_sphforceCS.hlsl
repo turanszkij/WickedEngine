@@ -13,7 +13,7 @@ STRUCTUREDBUFFER(densityBuffer, float, 2);
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 
 groupshared float4 positions_densities[THREADCOUNT_SIMULATION];
-groupshared float3 velocities[THREADCOUNT_SIMULATION];
+groupshared float4 velocities_pressures[THREADCOUNT_SIMULATION];
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -62,13 +62,17 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		if (id < aliveCount)
 		{
 			uint particleIndex = aliveBuffer_CURRENT[id];
-			positions_densities[groupIndex] = float4(particleBuffer[particleIndex].position, densityBuffer[particleIndex]);
-			velocities[groupIndex] = particleBuffer[particleIndex].velocity;
+
+			float density = densityBuffer[particleIndex];
+			positions_densities[groupIndex] = float4(particleBuffer[particleIndex].position, density);
+
+			float pressure = K * (density - p0);
+			velocities_pressures[groupIndex] = float4(particleBuffer[particleIndex].velocity, pressure);
 		}
 		else
 		{
 			positions_densities[groupIndex] = float4(1000000, 1000000, 1000000, 0); // "infinitely far" try to not contribute non existing particles, zero density
-			velocities[groupIndex] = float3(0, 0, 0);
+			velocities_pressures[groupIndex] = float4(0, 0, 0, 0);
 		}
 
 		GroupMemoryBarrierWithGroupSync();
@@ -86,9 +90,9 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 				if (r < h)
 				{
-					float3 velocityB = velocities[i];
+					float3 velocityB = velocities_pressures[i].xyz;
 					float densityB = positions_densities[i].w;
-					float pressureB = K * (densityB - p0);
+					float pressureB = velocities_pressures[i].w;
 
 					float3 rNorm = normalize(diff);
 					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function

@@ -8,7 +8,7 @@ RWRAWBUFFER(indirectBuffers, 1);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// read real alivecount from after simulation:
-	int aliveCount_afterSimulation = indirectBuffers.Load(24) / 6;
+	int aliveCount_afterSimulation = indirectBuffers.Load(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES) / 6;
 
 	// and store it for the sorting shaders to read:
 	counterBuffer[0].aliveCount_afterSimulation = aliveCount_afterSimulation;

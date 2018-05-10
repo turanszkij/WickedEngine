@@ -60,6 +60,8 @@ wiEmittedParticle::wiEmittedParticle()
 	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
 	SAFE_INIT(debugDataReadbackBuffer);
+	SAFE_INIT(debugDataReadbackIndexBuffer);
+	SAFE_INIT(debugDataReadbackDistanceBuffer);
 
 	SetMaxParticleCount(10000);
 }
@@ -103,6 +105,8 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
 	SAFE_INIT(debugDataReadbackBuffer);
+	SAFE_INIT(debugDataReadbackIndexBuffer);
+	SAFE_INIT(debugDataReadbackDistanceBuffer);
 
 	SetMaxParticleCount(10000);
 }
@@ -135,6 +139,8 @@ wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
 	SAFE_INIT(indirectBuffers);
 	SAFE_INIT(constantBuffer);
 	SAFE_INIT(debugDataReadbackBuffer);
+	SAFE_INIT(debugDataReadbackIndexBuffer);
+	SAFE_INIT(debugDataReadbackDistanceBuffer);
 
 	SetMaxParticleCount(other.GetMaxParticleCount());
 }
@@ -163,6 +169,8 @@ void wiEmittedParticle::CreateSelfBuffers()
 	SAFE_DELETE(indirectBuffers);
 	SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(debugDataReadbackBuffer);
+	SAFE_DELETE(debugDataReadbackIndexBuffer);
+	SAFE_DELETE(debugDataReadbackDistanceBuffer);
 
 	particleBuffer = new GPUBuffer;
 	aliveList[0] = new GPUBuffer;
@@ -174,7 +182,11 @@ void wiEmittedParticle::CreateSelfBuffers()
 	indirectBuffers = new GPUBuffer;
 	constantBuffer = new GPUBuffer;
 	debugDataReadbackBuffer = new GPUBuffer;
+	debugDataReadbackIndexBuffer = new GPUBuffer;
+	debugDataReadbackDistanceBuffer = new GPUBuffer;
 
+
+	// GPU-local buffer descriptors:
 	GPUBufferDesc bd;
 	bd.Usage = USAGE_DEFAULT;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -182,16 +194,18 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	SubresourceData data;
 
-
-	bd.ByteWidth = sizeof(Particle) * MAX_PARTICLES;
+	// Particle buffer:
 	bd.StructureByteStride = sizeof(Particle);
+	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer);
 
-	bd.ByteWidth = sizeof(uint32_t) * MAX_PARTICLES;
+	// Alive index lists (double buffered):
 	bd.StructureByteStride = sizeof(uint32_t);
+	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[0]);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[1]);
 
+	// Dead index list:
 	uint32_t* indices = new uint32_t[MAX_PARTICLES];
 	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 	{
@@ -202,22 +216,25 @@ void wiEmittedParticle::CreateSelfBuffers()
 	SAFE_DELETE_ARRAY(indices);
 	data.pSysMem = nullptr;
 
+	// Distance buffer:
+	bd.StructureByteStride = sizeof(float);
+	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
 	float* distances = new float[MAX_PARTICLES];
 	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 	{
-		distances[i] = -1;
+		distances[i] = 0;
 	}
 	data.pSysMem = distances;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer);
 	SAFE_DELETE_ARRAY(distances);
 	data.pSysMem = nullptr;
 
-
+	// Density buffer (for SPH simulation):
 	bd.StructureByteStride = sizeof(float);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, densityBuffer);
 
-
+	// Particle System statistics:
 	ParticleCounters counters;
 	counters.aliveCount = 0;
 	counters.deadCount = MAX_PARTICLES;
@@ -230,7 +247,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, counterBuffer);
 	data.pSysMem = nullptr;
 
-
+	// Indirect Execution buffer:
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_DRAWINDIRECT_ARGS;
 	bd.ByteWidth = 
@@ -240,7 +257,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		sizeof(wiGraphicsTypes::IndirectDispatchArgs);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers);
 
-
+	// Constant buffer:
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(EmittedParticleCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
@@ -248,12 +265,29 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.MiscFlags = 0;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer);
 
+	// Debug information CPU-readback buffer:
 	{
 		GPUBufferDesc debugBufDesc = counterBuffer->GetDesc();
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackBuffer);
+	}
+
+	// Sorting debug buffers:
+	{
+		GPUBufferDesc debugBufDesc = aliveList[0]->GetDesc();
+		debugBufDesc.Usage = USAGE_STAGING;
+		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
+		debugBufDesc.BindFlags = 0;
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackIndexBuffer);
+	}
+	{
+		GPUBufferDesc debugBufDesc = distanceBuffer->GetDesc();
+		debugBufDesc.Usage = USAGE_STAGING;
+		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
+		debugBufDesc.BindFlags = 0;
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackDistanceBuffer);
 	}
 }
 
@@ -302,6 +336,7 @@ void wiEmittedParticle::Restart()
 	PAUSED = false;
 }
 
+//#define DEBUG_SORTING // slow but great for debug!!
 
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
@@ -463,7 +498,6 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("SortEmittedParticles", threadID);
 
-
 		// initialize sorting arguments:
 		{
 			GPUResource* uavs[] = {
@@ -475,17 +509,28 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->BindComputePSO(&CPSO_kickoffSort, threadID);
 			device->Dispatch(1, 1, 1, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 		}
+
+
+#ifdef DEBUG_SORTING
+		vector<uint32_t> before(MAX_PARTICLES);
+		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, before.data(), threadID);
+
+		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
+		uint32_t particleCount = debugData.aliveCount_afterSimulation;
+#endif // DEBUG_SORTING
 
 
 		GPUResource* uavs[] = {
 			aliveList[1], // NEW alivelist
-			distanceBuffer,
 		};
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* resources[] = {
 			counterBuffer,
+			distanceBuffer,
 		};
 		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), threadID);
 
@@ -508,7 +553,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputePSO(&CPSO_sort, threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
+			//device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
+			device->Dispatch(numThreadGroups, 1, 1, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		}
 
@@ -567,8 +613,65 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 		device->UnBindResources(0, ARRAYSIZE(resources), threadID);
 
+
+
+#ifdef DEBUG_SORTING
+		vector<uint32_t> after(MAX_PARTICLES);
+		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, after.data(), threadID);
+
+		vector<float> distances(MAX_PARTICLES);
+		device->DownloadBuffer(distanceBuffer, debugDataReadbackDistanceBuffer, distances.data(), threadID);
+
+		if (particleCount > 1)
+		{
+			// CPU sort:
+			for (uint32_t i = 0; i < particleCount - 1; ++i)
+			{
+				for (uint32_t j = i + 1; j < particleCount; ++j)
+				{
+					uint32_t particleIndexA = before[i];
+					uint32_t particleIndexB = before[j];
+
+					float distA = distances[particleIndexA];
+					float distB = distances[particleIndexB];
+
+					if (distA > distB)
+					{
+						before[i] = particleIndexB;
+						before[j] = particleIndexA;
+					}
+				}
+			}
+
+			// Validate:
+			bool valid = true;
+			uint32_t i = 0;
+			for (i = 0; i < particleCount; ++i)
+			{
+				if (before[i] != after[i])
+				{
+					if (distances[before[i]] != distances[after[i]]) // if distances are equal, we just don't care...
+					{
+						valid = false;
+						break;
+					}
+				}
+			}
+
+			assert(valid && "Invalid GPU sorting result!");
+
+			// Also we can reupload CPU sorted particles to verify:
+			if (!valid)
+			{
+				device->UpdateBuffer(aliveList[1], before.data(), threadID);
+			}
+		}
+#endif // DEBUG_SORTING
+
+
 		device->EventEnd(threadID);
 	}
+
 
 
 	if (!PAUSED)
