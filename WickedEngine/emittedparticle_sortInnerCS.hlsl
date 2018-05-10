@@ -34,9 +34,9 @@
 //--------------------------------------------------------------------------------------
 // Structured Buffers
 //--------------------------------------------------------------------------------------
-RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
-RWSTRUCTUREDBUFFER(indexBuffer, uint, 2);
-RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
+STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
+RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
+RWSTRUCTUREDBUFFER(distanceBuffer, float, 1);
 
 #define NumElements counterBuffer[0].aliveCount_afterSimulation
 

@@ -205,7 +205,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	float* distances = new float[MAX_PARTICLES];
 	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 	{
-		distances[i] = FLOAT32_MAX;
+		distances[i] = -1;
 	}
 	data.pSysMem = distances;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer);
@@ -310,60 +310,60 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 
-	EmittedParticleCB cb;
-	cb.xEmitterWorld = object->world;
-	cb.xEmitCount = (UINT)emit;
-	cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
-	cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
-	cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
-	cb.xParticleLifeSpan = life / 60.0f;
-	cb.xParticleLifeSpanRandomness = random_life;
-	cb.xParticleNormalFactor = normal_factor;
-	cb.xParticleRandomFactor = random_factor;
-	cb.xParticleScaling = scaleX;
-	cb.xParticleSize = size;
-	cb.xParticleMotionBlurAmount = motionBlurAmount;
-	cb.xParticleRotation = rotation * XM_PI * 60;
-	cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
-	cb.xEmitterOpacity = material->alpha;
-	cb.xParticleMass = mass;
-	cb.xEmitterMaxParticleCount = MAX_PARTICLES;
-
-	// SPH:
-	cb.xSPH_h = SPH_h;
-	cb.xSPH_h2 = SPH_h * SPH_h;
-	cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
-	cb.xSPH_h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
-	cb.xSPH_h9 = cb.xSPH_h3 * cb.xSPH_h3;
-	cb.xSPH_K = SPH_K;
-	cb.xSPH_p0 = SPH_p0;
-	cb.xSPH_e = SPH_e;
-
-	device->UpdateBuffer(constantBuffer, &cb, threadID);
-	device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
-
-	GPUResource* uavs[] = {
-		particleBuffer,
-		aliveList[0], // CURRENT alivelist
-		aliveList[1], // NEW alivelist
-		deadList,
-		counterBuffer,
-		indirectBuffers,
-		distanceBuffer,
-	};
-	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	GPUResource* resources[] = {
-		wiTextureHelper::getInstance()->getRandom64x64(),
-		object->mesh->indexBuffer,
-		object->mesh->vertexBuffer_POS,
-	};
-	device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
 	if (!PAUSED)
 	{
 
 		device->EventBegin("UpdateEmittedParticles", threadID);
+
+		EmittedParticleCB cb;
+		cb.xEmitterWorld = object->world;
+		cb.xEmitCount = (UINT)emit;
+		cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
+		cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
+		cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
+		cb.xParticleLifeSpan = life / 60.0f;
+		cb.xParticleLifeSpanRandomness = random_life;
+		cb.xParticleNormalFactor = normal_factor;
+		cb.xParticleRandomFactor = random_factor;
+		cb.xParticleScaling = scaleX;
+		cb.xParticleSize = size;
+		cb.xParticleMotionBlurAmount = motionBlurAmount;
+		cb.xParticleRotation = rotation * XM_PI * 60;
+		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
+		cb.xEmitterOpacity = material->alpha;
+		cb.xParticleMass = mass;
+		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
+
+		// SPH:
+		cb.xSPH_h = SPH_h;
+		cb.xSPH_h2 = SPH_h * SPH_h;
+		cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
+		cb.xSPH_h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
+		cb.xSPH_h9 = cb.xSPH_h3 * cb.xSPH_h3;
+		cb.xSPH_K = SPH_K;
+		cb.xSPH_p0 = SPH_p0;
+		cb.xSPH_e = SPH_e;
+
+		device->UpdateBuffer(constantBuffer, &cb, threadID);
+		device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+
+		GPUResource* uavs[] = {
+			particleBuffer,
+			aliveList[0], // CURRENT alivelist
+			aliveList[1], // NEW alivelist
+			deadList,
+			counterBuffer,
+			indirectBuffers,
+			distanceBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* resources[] = {
+			wiTextureHelper::getInstance()->getRandom64x64(),
+			object->mesh->indexBuffer,
+			object->mesh->vertexBuffer_POS,
+		};
+		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 		GPUResource* indres[] = {
 			indirectBuffers
@@ -451,6 +451,10 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
+
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+
 		device->EventEnd(threadID);
 
 	}
@@ -459,35 +463,54 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("SortEmittedParticles", threadID);
 
+
 		// initialize sorting arguments:
-		device->BindComputePSO(&CPSO_kickoffSort, threadID);
-		device->Dispatch(1, 1, 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		{
+			GPUResource* uavs[] = {
+				counterBuffer,
+				indirectBuffers,
+			};
+			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
-		//// initial sorting:
-		//bool bDone = true;
-		//{
-		//	// calculate how many threads we'll require:
-		//	//   we'll sort 512 elements per CU (threadgroupsize 256)
-		//	//     maybe need to optimize this or make it changeable during init
-		//	//     TGS=256 is a good intermediate value
+			device->BindComputePSO(&CPSO_kickoffSort, threadID);
+			device->Dispatch(1, 1, 1, threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		}
 
-		//	unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
 
-		//	assert(numThreadGroups <= 1024);
+		GPUResource* uavs[] = {
+			aliveList[1], // NEW alivelist
+			distanceBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
-		//	if (numThreadGroups > 1)
-		//	{
-		//		bDone = false;
-		//	}
+		GPUResource* resources[] = {
+			counterBuffer,
+		};
+		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), threadID);
 
-		//	// sort all buffers of size 512 (and presort bigger ones)
-		//	device->BindComputePSO(&CPSO_sort, threadID);
-		//	device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
-		//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		//}
+		// initial sorting:
+		bool bDone = true;
+		{
+			// calculate how many threads we'll require:
+			//   we'll sort 512 elements per CU (threadgroupsize 256)
+			//     maybe need to optimize this or make it changeable during init
+			//     TGS=256 is a good intermediate value
 
-		bool bDone = false;
+			unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
+
+			assert(numThreadGroups <= 1024);
+
+			if (numThreadGroups > 1)
+			{
+				bDone = false;
+			}
+
+			// sort all buffers of size 512 (and presort bigger ones)
+			device->BindComputePSO(&CPSO_sort, threadID);
+			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		}
 
 		int presorted = 512;
 		while (!bDone)
@@ -534,23 +557,26 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 			}
 
-			//device->BindComputePSO(&CPSO_sortInner, threadID);
-			//device->Dispatch(numThreadGroups, 1, 1, threadID);
-			//device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->BindComputePSO(&CPSO_sortInner, threadID);
+			device->Dispatch(numThreadGroups, 1, 1, threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
 			presorted *= 2;
 		}
+
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnBindResources(0, ARRAYSIZE(resources), threadID);
 
 		device->EventEnd(threadID);
 	}
 
 
-	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-	device->UnBindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
-	// Swap CURRENT alivelist with NEW alivelist
-	SwapPtr(aliveList[0], aliveList[1]);
-	emit -= (UINT)emit;
+	if (!PAUSED)
+	{
+		// Swap CURRENT alivelist with NEW alivelist
+		SwapPtr(aliveList[0], aliveList[1]);
+		emit -= (UINT)emit;
+	}
 
 	if (DEBUG)
 	{
