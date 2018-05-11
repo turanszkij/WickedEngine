@@ -58,13 +58,13 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	int GlobalBaseIndex = (Gid.x * SORT_SIZE) + GTid.x;
-	int LocalBaseIndex = GI;
+	uint GlobalBaseIndex = (Gid.x * SORT_SIZE) + GTid.x;
+	uint LocalBaseIndex = GI;
 
-	int numElementsInThreadGroup = min(SORT_SIZE, NumElements - (Gid.x * SORT_SIZE));
+	uint numElementsInThreadGroup = min(SORT_SIZE, NumElements - (Gid.x * SORT_SIZE));
 
 	// Load shared data
-	int i;
+	uint i;
 	[unroll]for (i = 0; i < 2 * ITERATIONS; ++i)
 	{
 		if (GI + i * NUM_THREADS < numElementsInThreadGroup)
@@ -77,9 +77,9 @@ void main(uint3 Gid	: SV_GroupID,
 	GroupMemoryBarrierWithGroupSync();
 
 	// Bitonic sort
-	for (unsigned int nMergeSize = 2; nMergeSize <= SORT_SIZE; nMergeSize = nMergeSize * 2)
+	for (uint nMergeSize = 2; nMergeSize <= SORT_SIZE; nMergeSize = nMergeSize * 2)
 	{
-		for (int nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1)
+		for (uint nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 0; nMergeSubSize = nMergeSubSize >> 1)
 		{
 			[unroll]for (i = 0; i < ITERATIONS; ++i)
 			{
@@ -88,7 +88,7 @@ void main(uint3 Gid	: SV_GroupID,
 				int index_high = 2 * (tmp_index - index_low);
 				int index = index_high + index_low;
 
-				unsigned int nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + (2 * nMergeSubSize - 1) - index_low : index_high + nMergeSubSize + index_low;
+				uint nSwapElem = nMergeSubSize == nMergeSize >> 1 ? index_high + (2 * nMergeSubSize - 1) - index_low : index_high + nMergeSubSize + index_low;
 				if (nSwapElem < numElementsInThreadGroup)
 				{
 					float2 a = g_LDS[index];

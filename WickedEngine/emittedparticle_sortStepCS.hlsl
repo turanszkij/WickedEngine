@@ -35,7 +35,7 @@ RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
 void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID)
 {
-	int4 tgp;
+	uint4 tgp;
 
 	tgp.x = Gid.x * 256;
 	tgp.y = 0;

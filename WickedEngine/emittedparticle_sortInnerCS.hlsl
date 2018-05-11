@@ -53,16 +53,16 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	int4 tgp;
+	uint4 tgp;
 
 	tgp.x = Gid.x * 256;
 	tgp.y = 0;
 	tgp.z = NumElements;
 	tgp.w = min(512, max(0, NumElements - Gid.x * 512));
 
-	int GlobalBaseIndex = tgp.y + tgp.x * 2 + GTid.x;
-	int LocalBaseIndex = GI;
-	int i;
+	uint GlobalBaseIndex = tgp.y + tgp.x * 2 + GTid.x;
+	uint LocalBaseIndex = GI;
+	uint i;
 
 	// Load shared data
 	[unroll]for (i = 0; i < 2; ++i)
@@ -84,7 +84,7 @@ void main(uint3 Gid	: SV_GroupID,
 		int index_high = 2 * (tmp_index - index_low);
 		int index = index_high + index_low;
 
-		unsigned int nSwapElem = index_high + nMergeSubSize + index_low;
+		uint nSwapElem = index_high + nMergeSubSize + index_low;
 
 		if (nSwapElem < tgp.w)
 		{

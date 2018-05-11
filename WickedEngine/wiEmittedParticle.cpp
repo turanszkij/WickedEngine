@@ -553,8 +553,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputePSO(&CPSO_sort, threadID);
-			//device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
-			device->Dispatch(numThreadGroups, 1, 1, threadID);
+			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
+			//device->Dispatch(numThreadGroups, 1, 1, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		}
 
