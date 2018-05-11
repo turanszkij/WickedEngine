@@ -598,6 +598,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				sc.job_params.w = 0;
 
 				device->UpdateBuffer(sortCB, &sc, threadID);
+				device->BindConstantBuffer(CS, sortCB, 0, threadID);
 
 				device->Dispatch(numThreadGroups, 1, 1, threadID);
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -728,10 +729,13 @@ void wiEmittedParticle::CleanUp()
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
 	SAFE_DELETE(distanceBuffer);
+	SAFE_DELETE(densityBuffer);
 	SAFE_DELETE(counterBuffer);
 	SAFE_DELETE(indirectBuffers);
 	SAFE_DELETE(constantBuffer);
 	SAFE_DELETE(debugDataReadbackBuffer);
+	SAFE_DELETE(debugDataReadbackIndexBuffer);
+	SAFE_DELETE(debugDataReadbackDistanceBuffer);
 }
 
 
