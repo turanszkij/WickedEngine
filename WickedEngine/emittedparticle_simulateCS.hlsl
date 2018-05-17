@@ -26,9 +26,6 @@ groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
-#ifndef SHADERCOMPILER_SPIRV
-	// TODO: this shader crashes the Vulkan compute pipeline creation...
-
 	uint aliveCount = counterBuffer[0].aliveCount;
 
 	// Load the forcefields into LDS:
@@ -149,5 +146,4 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		}
 	}
 
-#endif // SHADERCOMPILER_SPIRV
 }
