@@ -9,6 +9,8 @@
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 RAWBUFFER(counterBuffer, 1);
 STRUCTUREDBUFFER(densityBuffer, float, 2);
+STRUCTUREDBUFFER(cellIndexBuffer, float, 3);
+STRUCTUREDBUFFER(cellOffsetBuffer, uint, 4);
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 
@@ -50,6 +52,75 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	float3 f_a = 0;	// pressure force
 	float3 f_av = 0;  // viscosity force
 
+
+#ifdef SPH_USE_ACCELERATION_GRID
+
+	// Grid cell is of size [SPH smoothing radius], so position is refitted into that
+	float3 remappedPos = particleA.position / xSPH_h; // optimize div??
+
+	int3 cellIndex = floor(remappedPos);
+
+	[loop]
+	for (int i = -1; i <= 1; ++i)
+	{
+		[loop]
+		for (int j = -1; j <= 1; ++j)
+		{
+			[loop]
+			for (int k = -1; k <= 1; ++k)
+			{
+				const int3 neighborIndex = cellIndex + int3(i, j, k);
+
+				const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
+
+				uint neighborIterator = cellOffsetBuffer[flatNeighborIndex];
+
+				[loop]
+				while (neighborIterator != 0xFFFFFFFF && neighborIterator < aliveCount)
+				{
+					if (neighborIterator != DTid.x)
+					{
+						uint particleIndexB = aliveBuffer_CURRENT[neighborIterator];
+						if ((uint)cellIndexBuffer[particleIndexB] != flatNeighborIndex)
+						{
+							break;
+						}
+
+						// SPH Force evaluation:
+						{
+							float3 positionB = particleBuffer[particleIndexB].position.xyz;
+
+							float3 diff = particleA.position - positionB;
+							float r2 = dot(diff, diff); // distance squared
+							float r = sqrt(r2);
+
+							if (r < h)
+							{
+								float3 velocityB = particleBuffer[particleIndexB].velocity.xyz;
+								float densityB = densityBuffer[particleIndexB];
+								float pressureB = K * (densityB - p0);
+
+								float3 rNorm = normalize(diff);
+								float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
+
+								//float mass = particleB.mass / particleA.mass;
+
+								f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
+
+								float r3 = r2 * r;
+								W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1; // laplacian smoothing function
+								f_av += mass * (1.0f / densityB) * (velocityB - particleA.velocity) * W * rNorm;
+							}
+						}
+					}
+
+					neighborIterator++;
+				}
+			}
+		}
+	}
+
+#else
 
 	uint numTiles = 1 + aliveCount / THREADCOUNT_SIMULATION;
 
@@ -112,6 +183,9 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 		GroupMemoryBarrierWithGroupSync();
 	}
+
+#endif // SPH_USE_ACCELERATION_GRID
+
 
 	if (DTid.x < aliveCount)
 	{

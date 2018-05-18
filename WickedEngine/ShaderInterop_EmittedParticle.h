@@ -70,7 +70,10 @@ static const uint ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION = ARGUMENTBUFFER_OFFS
 static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION + (3 * 4);
 
 
-static const uint SPH_PARTITION_BUCKET_COUNT = 64 * 64 * 64;
+// If this is not defined, SPH will be resolved as N-body simulation (O(n^2) complexity)
+// If this is defined, SPH will be sorted into a hashed grid structure and response lookup will be accelerated
+#define SPH_USE_ACCELERATION_GRID
+static const uint SPH_PARTITION_BUCKET_COUNT = 128 * 128 * 128;
 
 inline uint SPH_GridHash(int3 cellIndex)
 {

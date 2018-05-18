@@ -714,6 +714,12 @@
     <FxCompile Include="emittedparticle_finishUpdateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="emittedparticle_sphpartitionoffsetsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_sphpartitionoffsetsresetCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
