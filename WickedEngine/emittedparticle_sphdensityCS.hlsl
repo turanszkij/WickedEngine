@@ -4,6 +4,8 @@
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 RAWBUFFER(counterBuffer, 1);
 STRUCTUREDBUFFER(particleBuffer, Particle, 2);
+STRUCTUREDBUFFER(cellIndexBuffer, float, 3);
+STRUCTUREDBUFFER(cellOffsetBuffer, uint, 4);
 
 RWSTRUCTUREDBUFFER(densityBuffer, float, 0);
 
@@ -39,6 +41,65 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	// Compute density field:
 	float density = 0; // (p)
 
+#ifdef SPH_USE_ACCELERATION_GRID
+
+	// Grid cell is of size [SPH smoothing radius], so position is refitted into that
+	float3 remappedPos = particleA.position / xSPH_h; // optimize div??
+
+	int3 cellIndex = floor(remappedPos);
+
+	[loop]
+	for (int i = -1; i <= 1; ++i)
+	{
+		[loop]
+		for (int j = -1; j <= 1; ++j)
+		{
+			[loop]
+			for (int k = -1; k <= 1; ++k)
+			{
+				const int3 neighborIndex = cellIndex + int3(i, j, k);
+
+				const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
+
+				uint neighborIterator = cellOffsetBuffer[flatNeighborIndex];
+
+				[loop]
+				while (neighborIterator != 0xFFFFFFFF && neighborIterator < aliveCount)
+				{
+					//if (neighborIterator != DTid.x) // actually, without this check, the whole thing is just more stable
+					{
+						uint particleIndexB = aliveBuffer_CURRENT[neighborIterator];
+						if ((uint)cellIndexBuffer[particleIndexB] != flatNeighborIndex)
+						{
+							break;
+						}
+
+						// SPH Density evaluation:
+						{
+							Particle particleB = particleBuffer[particleIndexB];
+
+							float3 diff = particleA.position - particleB.position;
+							float r2 = dot(diff, diff); // distance squared
+
+							if (r2 < h2)
+							{
+								float W = (315.0f / (64.0f * PI * h9)) * pow(h2 - r2, 3); // poly6 smoothing kernel
+
+								//density += particleB.m * W;
+								density += mass * W; // constant mass
+							}
+						}
+					}
+
+
+					neighborIterator++;
+				}
+			}
+		}
+	}
+
+#else
+
 	uint numTiles = 1 + aliveCount / THREADCOUNT_SIMULATION;
 
 	for (uint tile = 0; tile < numTiles; ++tile)
@@ -61,7 +122,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 		for (uint i = 0; i < THREADCOUNT_SIMULATION; ++i)
 		{
-			if (offset + i != DTid.x)
+			//if (offset + i != DTid.x) // actually, without this check, the whole thing is just more stable
 			{
 				float3 positionB = positions[i];
 
@@ -82,6 +143,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		GroupMemoryBarrierWithGroupSync();
 	}
 
+#endif // SPH_USE_ACCELERATION_GRID
 
 
 

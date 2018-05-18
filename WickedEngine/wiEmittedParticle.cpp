@@ -383,22 +383,27 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
 
 		// kick off updating, set up state
+		device->EventBegin("KickOff Update", threadID);
 		device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
 		device->Dispatch(1, 1, 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->EventEnd(threadID);
 
 		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
 
 		// emit the required amount if there are free slots in dead list
+		device->EventBegin("Emit", threadID);
 		device->BindComputePSO(&CPSO_emit, threadID);
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->EventEnd(threadID);
 
 		if (SPH_FLUIDSIMULATION)
 		{
 			// Smooth Particle Hydrodynamics:
 			device->EventBegin("SPH - Simulation", threadID);
 
+#ifdef SPH_USE_ACCELERATION_GRID
 			// 1.) Assign particles into partitioning grid:
 			device->EventBegin("Partitioning", threadID);
 			device->BindComputePSO(&CPSO_sphpartition, threadID);
@@ -445,6 +450,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
 			device->EventEnd(threadID);
 
+#endif // SPH_USE_ACCELERATION_GRID
+
 			// 5.) Compute particle density field:
 			device->EventBegin("Density Evaluation", threadID);
 			device->BindComputePSO(&CPSO_sphdensity, threadID);
@@ -453,6 +460,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				aliveList[0], // CURRENT alivelist
 				counterBuffer,
 				particleBuffer,
+				sphPartitionCellIndices,
+				sphPartitionCellOffsets,
 			};
 			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
 			GPUResource* uav_density[] = {
@@ -470,7 +479,9 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			GPUResource* res_force[] = {
 				aliveList[0], // CURRENT alivelist
 				counterBuffer,
-				densityBuffer
+				densityBuffer,
+				sphPartitionCellIndices,
+				sphPartitionCellOffsets,
 			};
 			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
 			GPUResource* uav_force[] = {
@@ -487,6 +498,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->EventEnd(threadID);
 		}
 
+		device->EventBegin("Simulate", threadID);
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
@@ -515,6 +527,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->EventEnd(threadID);
 
 
 		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
@@ -595,6 +608,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 	if (!PAUSED)
 	{
 		// finish updating, update draw argument buffer:
+		device->EventBegin("FinishUpdate", threadID);
 		device->BindComputePSO(&CPSO_finishUpdate, threadID);
 
 		GPUResource* res[] = {
@@ -612,6 +626,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 		device->UnBindResources(0, ARRAYSIZE(res), threadID);
+		device->EventEnd(threadID);
 
 
 		// Swap CURRENT alivelist with NEW alivelist
