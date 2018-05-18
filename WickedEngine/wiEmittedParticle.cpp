@@ -15,15 +15,18 @@ using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader[PARTICLESHADERTYPE_COUNT] = {};
-ComputeShader   *wiEmittedParticle::kickoffUpdateCS = nullptr, *wiEmittedParticle::finishUpdateCS = nullptr, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::sphdensityCS = nullptr, *wiEmittedParticle::sphforceCS = nullptr, *wiEmittedParticle::simulateCS = nullptr,
-				 *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
+ComputeShader   *wiEmittedParticle::kickoffUpdateCS = nullptr, *wiEmittedParticle::finishUpdateCS = nullptr, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::sphpartitionCS = nullptr, 
+				*wiEmittedParticle::sphpartitionoffsetsCS = nullptr, *wiEmittedParticle::sphpartitionoffsetsresetCS = nullptr, *wiEmittedParticle::sphdensityCS = nullptr, *wiEmittedParticle::sphforceCS = nullptr, 
+				*wiEmittedParticle::simulateCS = nullptr, *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
+
 BlendState		wiEmittedParticle::blendStates[BLENDMODE_COUNT];
 RasterizerState		wiEmittedParticle::rasterizerState, wiEmittedParticle::wireFrameRS;
 DepthStencilState	wiEmittedParticle::depthStencilState;
 GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 GraphicsPSO wiEmittedParticle::PSO_wire;
-ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finishUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_sphdensity, wiEmittedParticle::CPSO_sphforce, wiEmittedParticle::CPSO_simulate,
-	wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
+ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finishUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_sphpartition, wiEmittedParticle::CPSO_sphpartitionoffsets, 
+				wiEmittedParticle::CPSO_sphpartitionoffsetsreset, wiEmittedParticle::CPSO_sphdensity, wiEmittedParticle::CPSO_sphforce, wiEmittedParticle::CPSO_simulate,
+				wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
 
 wiEmittedParticle::wiEmittedParticle()
 {
@@ -46,19 +49,6 @@ wiEmittedParticle::wiEmittedParticle()
 	rotation = 0;
 
 	motionBlurAmount = 0.0f;
-
-	SAFE_INIT(particleBuffer);
-	SAFE_INIT(aliveList[0]);
-	SAFE_INIT(aliveList[1]);
-	SAFE_INIT(deadList);
-	SAFE_INIT(distanceBuffer);
-	SAFE_INIT(densityBuffer);
-	SAFE_INIT(counterBuffer);
-	SAFE_INIT(indirectBuffers);
-	SAFE_INIT(constantBuffer);
-	SAFE_INIT(debugDataReadbackBuffer);
-	SAFE_INIT(debugDataReadbackIndexBuffer);
-	SAFE_INIT(debugDataReadbackDistanceBuffer);
 
 	SetMaxParticleCount(10000);
 }
@@ -91,20 +81,6 @@ wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::stri
 
 	motionBlurAmount = 0.0f;
 
-
-	SAFE_INIT(particleBuffer);
-	SAFE_INIT(aliveList[0]);
-	SAFE_INIT(aliveList[1]);
-	SAFE_INIT(deadList);
-	SAFE_INIT(distanceBuffer);
-	SAFE_INIT(densityBuffer);
-	SAFE_INIT(counterBuffer);
-	SAFE_INIT(indirectBuffers);
-	SAFE_INIT(constantBuffer);
-	SAFE_INIT(debugDataReadbackBuffer);
-	SAFE_INIT(debugDataReadbackIndexBuffer);
-	SAFE_INIT(debugDataReadbackDistanceBuffer);
-
 	SetMaxParticleCount(10000);
 }
 wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
@@ -124,20 +100,6 @@ wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
 	scaleY = other.scaleY;
 	rotation = other.rotation;
 	motionBlurAmount = other.motionBlurAmount;
-
-
-	SAFE_INIT(particleBuffer);
-	SAFE_INIT(aliveList[0]);
-	SAFE_INIT(aliveList[1]);
-	SAFE_INIT(deadList);
-	SAFE_INIT(distanceBuffer);
-	SAFE_INIT(densityBuffer);
-	SAFE_INIT(counterBuffer);
-	SAFE_INIT(indirectBuffers);
-	SAFE_INIT(constantBuffer);
-	SAFE_INIT(debugDataReadbackBuffer);
-	SAFE_INIT(debugDataReadbackIndexBuffer);
-	SAFE_INIT(debugDataReadbackDistanceBuffer);
 
 	SetMaxParticleCount(other.GetMaxParticleCount());
 }
@@ -161,6 +123,8 @@ void wiEmittedParticle::CreateSelfBuffers()
 	SAFE_DELETE(aliveList[1]);
 	SAFE_DELETE(deadList);
 	SAFE_DELETE(distanceBuffer);
+	SAFE_DELETE(sphPartitionCellIndices);
+	SAFE_DELETE(sphPartitionCellOffsets);
 	SAFE_DELETE(densityBuffer);
 	SAFE_DELETE(counterBuffer);
 	SAFE_DELETE(indirectBuffers);
@@ -174,6 +138,8 @@ void wiEmittedParticle::CreateSelfBuffers()
 	aliveList[1] = new GPUBuffer;
 	deadList = new GPUBuffer;
 	distanceBuffer = new GPUBuffer;
+	sphPartitionCellIndices = new GPUBuffer;
+	sphPartitionCellOffsets = new GPUBuffer;
 	densityBuffer = new GPUBuffer;
 	counterBuffer = new GPUBuffer;
 	indirectBuffers = new GPUBuffer;
@@ -225,6 +191,16 @@ void wiEmittedParticle::CreateSelfBuffers()
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer);
 	SAFE_DELETE_ARRAY(distances);
 	data.pSysMem = nullptr;
+
+	// SPH Partitioning grid indices per particle:
+	bd.StructureByteStride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
+	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellIndices);
+
+	// SPH Partitioning grid cell offsets into particle index list:
+	bd.StructureByteStride = sizeof(uint32_t);
+	bd.ByteWidth = bd.StructureByteStride * SPH_PARTITION_BUCKET_COUNT;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellOffsets);
 
 	// Density buffer (for SPH simulation):
 	bd.StructureByteStride = sizeof(float);
@@ -303,6 +279,8 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 	retVal += aliveList[1]->GetDesc().ByteWidth;
 	retVal += deadList->GetDesc().ByteWidth;
 	retVal += distanceBuffer->GetDesc().ByteWidth;
+	retVal += sphPartitionCellIndices->GetDesc().ByteWidth;
+	retVal += sphPartitionCellOffsets->GetDesc().ByteWidth;
 	retVal += densityBuffer->GetDesc().ByteWidth;
 	retVal += counterBuffer->GetDesc().ByteWidth;
 	retVal += indirectBuffers->GetDesc().ByteWidth;
@@ -419,8 +397,56 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		if (SPH_FLUIDSIMULATION)
 		{
 			// Smooth Particle Hydrodynamics:
+			device->EventBegin("SPH - Simulation", threadID);
 
-			// 1.) Compute particle density field:
+			// 1.) Assign particles into partitioning grid:
+			device->EventBegin("Partitioning", threadID);
+			device->BindComputePSO(&CPSO_sphpartition, threadID);
+			device->UnBindUnorderedAccessResources(0, 8, threadID);
+			GPUResource* res_partition[] = {
+				aliveList[0], // CURRENT alivelist
+				counterBuffer,
+				particleBuffer,
+			};
+			device->BindResources(CS, res_partition, 0, ARRAYSIZE(res_partition), threadID);
+			GPUResource* uav_partition[] = {
+				sphPartitionCellIndices,
+			};
+			device->BindUnorderedAccessResourcesCS(uav_partition, 0, ARRAYSIZE(uav_partition), threadID);
+			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), threadID);
+			device->EventEnd(threadID);
+
+			// 2.) Sort particle index list based on partition grid cell index:
+			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0], threadID);
+
+			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
+			device->EventBegin("PartitionOffsetsReset", threadID);
+			device->BindComputePSO(&CPSO_sphpartitionoffsetsreset, threadID);
+			device->UnBindUnorderedAccessResources(0, 8, threadID);
+			GPUResource* uav_partitionoffsets[] = {
+				sphPartitionCellOffsets,
+			};
+			device->BindUnorderedAccessResourcesCS(uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), threadID);
+			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, threadID);
+			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
+			device->EventEnd(threadID);
+
+			// 4.) Assemble grid cell offsets from the sorted particle index list <--> grid cell index list connection:
+			device->EventBegin("PartitionOffsets", threadID);
+			device->BindComputePSO(&CPSO_sphpartitionoffsets, threadID);
+			GPUResource* res_partitionoffsets[] = {
+				aliveList[0], // CURRENT alivelist
+				counterBuffer,
+				sphPartitionCellIndices,
+			};
+			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), threadID);
+			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
+			device->EventEnd(threadID);
+
+			// 5.) Compute particle density field:
+			device->EventBegin("Density Evaluation", threadID);
 			device->BindComputePSO(&CPSO_sphdensity, threadID);
 			device->UnBindUnorderedAccessResources(0, 8, threadID);
 			GPUResource* res_density[] = {
@@ -434,9 +460,11 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			};
 			device->BindUnorderedAccessResourcesCS(uav_density, 0, ARRAYSIZE(uav_density), threadID);
 			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), threadID);
+			device->EventEnd(threadID);
 
-			// 2.) Compute particle pressure forces:
+			// 6.) Compute particle pressure forces:
+			device->EventBegin("Force Evaluation", threadID);
 			device->BindComputePSO(&CPSO_sphforce, threadID);
 			device->UnBindUnorderedAccessResources(0, 8, threadID);
 			GPUResource* res_force[] = {
@@ -450,10 +478,13 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			};
 			device->BindUnorderedAccessResourcesCS(uav_force, 0, ARRAYSIZE(uav_force), threadID);
 			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), threadID);
+			device->EventEnd(threadID);
 
 			device->UnBindResources(0, 3, threadID);
 			device->UnBindUnorderedAccessResources(0, 8, threadID);
+
+			device->EventEnd(threadID);
 		}
 
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
@@ -663,6 +694,9 @@ void wiEmittedParticle::LoadShaders()
 	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
 	finishUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_finishUpdateCS.cso", wiResourceManager::COMPUTESHADER));
 	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
+	sphpartitionCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphpartitionCS.cso", wiResourceManager::COMPUTESHADER));
+	sphpartitionoffsetsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphpartitionoffsetsCS.cso", wiResourceManager::COMPUTESHADER));
+	sphpartitionoffsetsresetCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphpartitionoffsetsresetCS.cso", wiResourceManager::COMPUTESHADER));
 	sphdensityCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphdensityCS.cso", wiResourceManager::COMPUTESHADER));
 	sphforceCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphforceCS.cso", wiResourceManager::COMPUTESHADER));
 	simulateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
@@ -715,6 +749,15 @@ void wiEmittedParticle::LoadShaders()
 
 		desc.cs = emitCS;
 		device->CreateComputePSO(&desc, &CPSO_emit);
+
+		desc.cs = sphpartitionCS;
+		device->CreateComputePSO(&desc, &CPSO_sphpartition);
+
+		desc.cs = sphpartitionoffsetsCS;
+		device->CreateComputePSO(&desc, &CPSO_sphpartitionoffsets);
+
+		desc.cs = sphpartitionoffsetsresetCS;
+		device->CreateComputePSO(&desc, &CPSO_sphpartitionoffsetsreset);
 
 		desc.cs = sphdensityCS;
 		device->CreateComputePSO(&desc, &CPSO_sphdensity);

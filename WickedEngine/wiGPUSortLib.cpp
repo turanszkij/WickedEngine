@@ -90,6 +90,7 @@ void wiGPUSortLib::Sort(UINT maxCount, GPUBuffer* comparisonBuffer_read, GPUBuff
 	device->UpdateBuffer(sortCB, &sc, threadID);
 	device->BindConstantBuffer(CS, sortCB, CB_GETBINDSLOT(SortConstants), threadID);
 
+	device->UnBindUnorderedAccessResources(0, 8, threadID);
 
 	// initialize sorting arguments:
 	{

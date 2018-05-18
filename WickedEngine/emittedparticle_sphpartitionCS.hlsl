@@ -5,7 +5,7 @@ STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 RAWBUFFER(counterBuffer, 1);
 STRUCTUREDBUFFER(particleBuffer, Particle, 2);
 
-RWSTRUCTUREDBUFFER(cellIndexBuffer, uint, 0);
+RWSTRUCTUREDBUFFER(cellIndexBuffer, float, 0);
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
@@ -17,9 +17,12 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
 
-		int3 cellIndex = floor(particle.position);
+		// Grid cell is of size [SPH smoothing radius], so position is refitted into that
+		float3 remappedPos = particle.position / xSPH_h; // optimize div??
+
+		int3 cellIndex = floor(remappedPos);
 		uint flatCellIndex = SPH_GridHash(cellIndex);
 
-		cellIndexBuffer[particleIndex] = flatCellIndex;
+		cellIndexBuffer[particleIndex] = (float)flatCellIndex;
 	}
 }
