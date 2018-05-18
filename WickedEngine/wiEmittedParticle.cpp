@@ -427,10 +427,10 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			GPUResource* res_density[] = {
 				aliveList[0], // CURRENT alivelist
 				counterBuffer,
+				particleBuffer,
 			};
 			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
 			GPUResource* uav_density[] = {
-				particleBuffer,
 				densityBuffer
 			};
 			device->BindUnorderedAccessResourcesCS(uav_density, 0, ARRAYSIZE(uav_density), threadID);

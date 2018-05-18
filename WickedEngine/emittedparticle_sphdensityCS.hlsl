@@ -3,9 +3,9 @@
 
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
+STRUCTUREDBUFFER(particleBuffer, Particle, 2);
 
-RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(densityBuffer, float, 1);
+RWSTRUCTUREDBUFFER(densityBuffer, float, 0);
 
 groupshared float3 positions[THREADCOUNT_SIMULATION];
 
