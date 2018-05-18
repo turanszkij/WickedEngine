@@ -8,7 +8,6 @@ RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
-RWRAWBUFFER(indirectBuffers, 5);
 RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
 
 #define NUM_LDS_FORCEFIELDS 32
@@ -125,8 +124,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// add to new alive list:
 			uint newAliveIndex;
-			indirectBuffers.InterlockedAdd(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
-			newAliveIndex /= 6; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
+			//indirectBuffers.InterlockedAdd(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
+			//newAliveIndex /= 6; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
+			InterlockedAdd(counterBuffer[0].aliveCount_afterSimulation, 1, newAliveIndex);
 			aliveBuffer_NEW[newAliveIndex] = particleIndex;
 
 #ifdef SORTING

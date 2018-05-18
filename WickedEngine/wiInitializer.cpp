@@ -10,6 +10,7 @@
 #include "wiOcean.h"
 #include "wiHelper.h"
 #include "wiWidget.h"
+#include "wiGPUSortLib.h"
 
 using namespace std;
 
@@ -33,6 +34,8 @@ namespace wiInitializer
 		wiOcean::SetUpStatic();
 
 		wiWidget::LoadShaders();
+
+		wiGPUSortLib::LoadShaders();
 
 		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
 		{

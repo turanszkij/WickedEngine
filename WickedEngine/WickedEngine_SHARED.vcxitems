@@ -240,6 +240,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_FFTGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Ocean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Vulkan.h" />
@@ -254,6 +255,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
@@ -538,6 +540,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp" />

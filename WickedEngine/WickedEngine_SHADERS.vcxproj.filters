@@ -555,18 +555,6 @@
     <FxCompile Include="emittedparticle_simulateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="emittedparticle_sortCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="emittedparticle_sortInnerCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="emittedparticle_sortStepCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="emittedparticle_kickoffSortCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="forceFieldPlaneVisualizerVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -706,6 +694,24 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="emittedparticle_sphforceCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_sphpartitionCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="gpusortlib_kickoffSortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="gpusortlib_sortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="gpusortlib_sortInnerCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="gpusortlib_sortStepCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="emittedparticle_finishUpdateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

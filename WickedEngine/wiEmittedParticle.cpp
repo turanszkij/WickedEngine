@@ -8,25 +8,22 @@
 #include "ResourceMapping.h"
 #include "wiArchive.h"
 #include "wiTextureHelper.h"
+#include "wiGPUSortLib.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader[PARTICLESHADERTYPE_COUNT] = {};
-ComputeShader   *wiEmittedParticle::kickoffUpdateCS, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::sphdensityCS = nullptr, *wiEmittedParticle::sphforceCS = nullptr, *wiEmittedParticle::simulateCS = nullptr,
+ComputeShader   *wiEmittedParticle::kickoffUpdateCS = nullptr, *wiEmittedParticle::finishUpdateCS = nullptr, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::sphdensityCS = nullptr, *wiEmittedParticle::sphforceCS = nullptr, *wiEmittedParticle::simulateCS = nullptr,
 				 *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
-ComputeShader		*wiEmittedParticle::kickoffSortCS = nullptr, *wiEmittedParticle::sortCS = nullptr, *wiEmittedParticle::sortInnerCS = nullptr, *wiEmittedParticle::sortStepCS = nullptr;
-GPUBuffer		*wiEmittedParticle::sortCB = nullptr;
 BlendState		wiEmittedParticle::blendStates[BLENDMODE_COUNT];
 RasterizerState		wiEmittedParticle::rasterizerState, wiEmittedParticle::wireFrameRS;
 DepthStencilState	wiEmittedParticle::depthStencilState;
 GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 GraphicsPSO wiEmittedParticle::PSO_wire;
-ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_sphdensity, wiEmittedParticle::CPSO_sphforce, wiEmittedParticle::CPSO_simulate,
+ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finishUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_sphdensity, wiEmittedParticle::CPSO_sphforce, wiEmittedParticle::CPSO_simulate,
 	wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
-ComputePSO wiEmittedParticle::CPSO_kickoffSort, wiEmittedParticle::CPSO_sort, wiEmittedParticle::CPSO_sortInner, 
-	wiEmittedParticle::CPSO_sortStep;
 
 wiEmittedParticle::wiEmittedParticle()
 {
@@ -253,8 +250,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.ByteWidth = 
 		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
 		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
-		sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced) + 
-		sizeof(wiGraphicsTypes::IndirectDispatchArgs);
+		sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers);
 
 	// Constant buffer:
@@ -337,7 +333,6 @@ void wiEmittedParticle::Restart()
 }
 
 //#define DEBUG_SORTING // slow but great for debug!!
-
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	CreateSelfBuffers();
@@ -496,26 +491,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	if (SORTING)
 	{
-		device->EventBegin("SortEmittedParticles", threadID);
-
-		// initialize sorting arguments:
-		{
-			GPUResource* uavs[] = {
-				counterBuffer,
-				indirectBuffers,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			device->BindComputePSO(&CPSO_kickoffSort, threadID);
-			device->Dispatch(1, 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		}
-
-
 #ifdef DEBUG_SORTING
-		vector<uint32_t> before(MAX_PARTICLES);
+		vector<uint32_t> before(maxCount);
 		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, before.data(), threadID);
 
 		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
@@ -523,104 +500,14 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 #endif // DEBUG_SORTING
 
 
-		GPUResource* uavs[] = {
-			aliveList[1], // NEW alivelist
-		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-		GPUResource* resources[] = {
-			counterBuffer,
-			distanceBuffer,
-		};
-		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), threadID);
-
-		// initial sorting:
-		bool bDone = true;
-		{
-			// calculate how many threads we'll require:
-			//   we'll sort 512 elements per CU (threadgroupsize 256)
-			//     maybe need to optimize this or make it changeable during init
-			//     TGS=256 is a good intermediate value
-
-			unsigned int numThreadGroups = ((MAX_PARTICLES - 1) >> 9) + 1;
-
-			assert(numThreadGroups <= 1024);
-
-			if (numThreadGroups > 1)
-			{
-				bDone = false;
-			}
-
-			// sort all buffers of size 512 (and presort bigger ones)
-			device->BindComputePSO(&CPSO_sort, threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSORT, threadID);
-			//device->Dispatch(numThreadGroups, 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		}
-
-		int presorted = 512;
-		while (!bDone)
-		{
-			// Incremental sorting:
-
-			bDone = true;
-			device->BindComputePSO(&CPSO_sortStep, threadID);
-
-			// prepare thread group description data
-			uint32_t numThreadGroups = 0;
-
-			if (MAX_PARTICLES > (uint32_t)presorted)
-			{
-				if (MAX_PARTICLES > (uint32_t)presorted * 2)
-					bDone = false;
-
-				uint32_t pow2 = presorted;
-				while (pow2 < MAX_PARTICLES)
-					pow2 *= 2;
-				numThreadGroups = pow2 >> 9;
-			}
-
-			uint32_t nMergeSize = presorted * 2;
-			for (uint32_t nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 256; nMergeSubSize = nMergeSubSize >> 1)
-			{
-				SortConstants sc;
-				sc.job_params.x = nMergeSubSize;
-				if (nMergeSubSize == nMergeSize >> 1)
-				{
-					sc.job_params.y = (2 * nMergeSubSize - 1);
-					sc.job_params.z = -1;
-				}
-				else
-				{
-					sc.job_params.y = nMergeSubSize;
-					sc.job_params.z = 1;
-				}
-				sc.job_params.w = 0;
-
-				device->UpdateBuffer(sortCB, &sc, threadID);
-				device->BindConstantBuffer(CS, sortCB, 0, threadID);
-
-				device->Dispatch(numThreadGroups, 1, 1, threadID);
-				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			}
-
-			device->BindComputePSO(&CPSO_sortInner, threadID);
-			device->Dispatch(numThreadGroups, 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-			presorted *= 2;
-		}
-
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		device->UnBindResources(0, ARRAYSIZE(resources), threadID);
-
+		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, 0, aliveList[1], threadID);
 
 
 #ifdef DEBUG_SORTING
-		vector<uint32_t> after(MAX_PARTICLES);
+		vector<uint32_t> after(maxCount);
 		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, after.data(), threadID);
 
-		vector<float> distances(MAX_PARTICLES);
+		vector<float> distances(maxCount);
 		device->DownloadBuffer(distanceBuffer, debugDataReadbackDistanceBuffer, distances.data(), threadID);
 
 		if (particleCount > 1)
@@ -668,15 +555,30 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 		}
 #endif // DEBUG_SORTING
-
-
-		device->EventEnd(threadID);
 	}
-
-
 
 	if (!PAUSED)
 	{
+		// finish updating, update draw argument buffer:
+		device->BindComputePSO(&CPSO_finishUpdate, threadID);
+
+		GPUResource* res[] = {
+			counterBuffer,
+		};
+		device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
+
+		GPUResource* uavs[] = {
+			indirectBuffers,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch(1, 1, 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnBindResources(0, ARRAYSIZE(res), threadID);
+
+
 		// Swap CURRENT alivelist with NEW alivelist
 		SwapPtr(aliveList[0], aliveList[1]);
 		emit -= (UINT)emit;
@@ -687,6 +589,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
 	}
 }
+
 
 void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 {
@@ -754,6 +657,7 @@ void wiEmittedParticle::LoadShaders()
 	
 	
 	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
+	finishUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_finishUpdateCS.cso", wiResourceManager::COMPUTESHADER));
 	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
 	sphdensityCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphdensityCS.cso", wiResourceManager::COMPUTESHADER));
 	sphforceCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphforceCS.cso", wiResourceManager::COMPUTESHADER));
@@ -761,11 +665,6 @@ void wiEmittedParticle::LoadShaders()
 	simulateCS_SORTING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_SORTING.cso", wiResourceManager::COMPUTESHADER));
 	simulateCS_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
 	simulateCS_SORTING_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
-
-	kickoffSortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffSortCS.cso", wiResourceManager::COMPUTESHADER));
-	sortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortCS.cso", wiResourceManager::COMPUTESHADER));
-	sortInnerCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortInnerCS.cso", wiResourceManager::COMPUTESHADER));
-	sortStepCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -807,6 +706,9 @@ void wiEmittedParticle::LoadShaders()
 		desc.cs = kickoffUpdateCS;
 		device->CreateComputePSO(&desc, &CPSO_kickoffUpdate);
 
+		desc.cs = finishUpdateCS;
+		device->CreateComputePSO(&desc, &CPSO_finishUpdate);
+
 		desc.cs = emitCS;
 		device->CreateComputePSO(&desc, &CPSO_emit);
 
@@ -827,34 +729,11 @@ void wiEmittedParticle::LoadShaders()
 
 		desc.cs = simulateCS_SORTING_DEPTHCOLLISIONS;
 		device->CreateComputePSO(&desc, &CPSO_simulate_SORTING_DEPTHCOLLISIONS);
-
-		desc.cs = kickoffSortCS;
-		device->CreateComputePSO(&desc, &CPSO_kickoffSort);
-
-		desc.cs = sortCS;
-		device->CreateComputePSO(&desc, &CPSO_sort);
-
-		desc.cs = sortInnerCS;
-		device->CreateComputePSO(&desc, &CPSO_sortInner);
-
-		desc.cs = sortStepCS;
-		device->CreateComputePSO(&desc, &CPSO_sortStep);
 	}
 
 }
 void wiEmittedParticle::LoadBuffers()
 {
-	GPUBufferDesc bd;
-
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.MiscFlags = 0;
-	bd.ByteWidth = sizeof(SortConstants);
-	sortCB = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sortCB);
-
-
 }
 void wiEmittedParticle::SetUpStates()
 {
@@ -944,10 +823,6 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(simulateCS_SORTING);
 	SAFE_DELETE(simulateCS_DEPTHCOLLISIONS);
 	SAFE_DELETE(simulateCS_SORTING_DEPTHCOLLISIONS);
-	SAFE_DELETE(sortCS);
-	SAFE_DELETE(sortInnerCS);
-	SAFE_DELETE(sortStepCS);
-	SAFE_DELETE(sortCB);
 }
 
 void wiEmittedParticle::Serialize(wiArchive& archive)

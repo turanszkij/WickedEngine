@@ -27,6 +27,7 @@
 #include "ShaderInterop_CloudGenerator.h"
 #include "ShaderInterop_Skinning.h"
 #include "wiWidget.h"
+#include "wiGPUSortLib.h"
 
 #include <algorithm>
 
@@ -2241,6 +2242,7 @@ void wiRenderer::ReloadShaders(const std::string& path)
 	wiOcean::LoadShaders();
 	CSFFT_512x512_Data_t::LoadShaders();
 	wiWidget::LoadShaders();
+	wiGPUSortLib::LoadShaders();
 
 	GetDevice()->UNLOCK();
 }

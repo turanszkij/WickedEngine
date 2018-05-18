@@ -20,13 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "ShaderInterop_EmittedParticle.h"
+#include "ShaderInterop_GPUSortLib.h"
 
 //--------------------------------------------------------------------------------------
 // Structured Buffers
 //--------------------------------------------------------------------------------------
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
-STRUCTUREDBUFFER(distanceBuffer, float, 1);
+STRUCTUREDBUFFER(comparisonBuffer, float, 1);
 RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
 
 #define NumElements counterBuffer[0].aliveCount_afterSimulation
@@ -54,8 +54,8 @@ void main(uint3 Gid	: SV_GroupID,
 	{
 		uint index_a = indexBuffer[index];
 		uint index_b = indexBuffer[nSwapElem];
-		float a = distanceBuffer[index_a];
-		float b = distanceBuffer[index_b];
+		float a = comparisonBuffer[index_a];
+		float b = comparisonBuffer[index_b];
 
 		if (a > b)
 		{

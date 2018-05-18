@@ -33,13 +33,11 @@ private:
 	wiGraphicsTypes::GPUBuffer* distanceBuffer; // for sorting
 	wiGraphicsTypes::GPUBuffer* densityBuffer; // for SPH
 	wiGraphicsTypes::GPUBuffer* counterBuffer;
-	wiGraphicsTypes::GPUBuffer* indirectBuffers; // kickoffUpdate, simulation, draw, kickoffSort
+	wiGraphicsTypes::GPUBuffer* indirectBuffers; // kickoffUpdate, simulation, draw
 	wiGraphicsTypes::GPUBuffer* constantBuffer;
 	void CreateSelfBuffers();
 
-	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *emitCS, *sphdensityCS, *sphforceCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
-	static wiGraphicsTypes::ComputeShader		*kickoffSortCS, *sortCS, *sortInnerCS, *sortStepCS;
-	static wiGraphicsTypes::GPUBuffer			*sortCB;
+	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *finishUpdateCS, *emitCS, *sphdensityCS, *sphforceCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
 	static wiGraphicsTypes::PixelShader			*pixelShader[PARTICLESHADERTYPE_COUNT];
 	static wiGraphicsTypes::BlendState			blendStates[BLENDMODE_COUNT];
@@ -48,8 +46,7 @@ private:
 
 	static wiGraphicsTypes::GraphicsPSO			PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 	static wiGraphicsTypes::GraphicsPSO			PSO_wire;
-	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_emit, CPSO_sphdensity, CPSO_sphforce, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
-	static wiGraphicsTypes::ComputePSO			CPSO_kickoffSort, CPSO_sort, CPSO_sortInner, CPSO_sortStep;
+	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_finishUpdate, CPSO_emit, CPSO_sphdensity, CPSO_sphforce, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
 
 public:
 	static void LoadShaders();

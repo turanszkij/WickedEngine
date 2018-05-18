@@ -58,19 +58,25 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 
 };
 
-CBUFFER(SortConstants, 0)
-{
-	int4 job_params;
-};
-
 #define THREADCOUNT_EMIT 256
 #define THREADCOUNT_SIMULATION 256
 
 static const uint ARGUMENTBUFFER_OFFSET_DISPATCHEMIT = 0;
 static const uint ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION = ARGUMENTBUFFER_OFFSET_DISPATCHEMIT + (3 * 4);
 static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION + (3 * 4);
-static const uint ARGUMENTBUFFER_OFFSET_DISPATCHSORT = ARGUMENTBUFFER_OFFSET_DRAWPARTICLES + (4 * 4);
 
+
+static const uint SPH_PARTITION_BUCKET_COUNT = 64 * 64 * 64;
+
+inline uint SPH_GridHash(int3 cellIndex)
+{
+	const uint p1 = 73856093;   // some large primes 
+	const uint p2 = 19349663;
+	const uint p3 = 83492791;
+	int n = p1 * cellIndex.x ^ p2*cellIndex.y ^ p3*cellIndex.z;
+	n %= SPH_PARTITION_BUCKET_COUNT;
+	return n;
+}
 
 #endif // _SHADERINTEROP_EMITTEDPARTICLE_H_
 

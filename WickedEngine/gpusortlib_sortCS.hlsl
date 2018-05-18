@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "ShaderInterop_EmittedParticle.h"
+#include "ShaderInterop_GPUSortLib.h"
 
 #define SORT_SIZE 512
 
@@ -40,7 +40,7 @@
 // Structured Buffers
 //--------------------------------------------------------------------------------------
 STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
-STRUCTUREDBUFFER(distanceBuffer, float, 1);
+STRUCTUREDBUFFER(comparisonBuffer, float, 1);
 RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
 
 #define NumElements counterBuffer[0].aliveCount_afterSimulation
@@ -70,7 +70,7 @@ void main(uint3 Gid	: SV_GroupID,
 		if (GI + i * NUM_THREADS < numElementsInThreadGroup)
 		{
 			uint particleIndex = indexBuffer[GlobalBaseIndex + i * NUM_THREADS];
-			float dist = distanceBuffer[particleIndex];
+			float dist = comparisonBuffer[particleIndex];
 			g_LDS[LocalBaseIndex + i * NUM_THREADS] = float2(dist, (float)particleIndex);
 		}
 	}
