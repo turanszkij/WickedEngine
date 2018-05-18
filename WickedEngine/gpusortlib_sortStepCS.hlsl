@@ -25,16 +25,16 @@
 //--------------------------------------------------------------------------------------
 // Structured Buffers
 //--------------------------------------------------------------------------------------
-STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
+RAWBUFFER(counterBuffer, 0);
 STRUCTUREDBUFFER(comparisonBuffer, float, 1);
 RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
-
-#define NumElements counterBuffer[0].aliveCount_afterSimulation
 
 [numthreads(256, 1, 1)]
 void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID)
 {
+	uint NumElements = __ReadSortElementCount__;
+
 	uint4 tgp;
 
 	tgp.x = Gid.x * 256;

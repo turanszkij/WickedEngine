@@ -7,7 +7,7 @@
 #define BOX_COLLISION
 
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
-STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
+RAWBUFFER(counterBuffer, 1);
 STRUCTUREDBUFFER(densityBuffer, float, 2);
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
@@ -29,7 +29,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float e = xSPH_e;			// viscosity constant
 	const float mass = xParticleMass;	// constant mass (todo: per particle)
 
-	uint aliveCount = counterBuffer[0].aliveCount;
+	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
 
 	uint particleIndexA;
 	Particle particleA;

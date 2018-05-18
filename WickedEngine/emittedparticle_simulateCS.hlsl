@@ -7,7 +7,7 @@ RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
 RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(counterBuffer, ParticleCounters, 4);
+RWRAWBUFFER(counterBuffer, 4);
 RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
 
 #define NUM_LDS_FORCEFIELDS 32
@@ -25,7 +25,8 @@ groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
-	uint aliveCount = counterBuffer[0].aliveCount;
+	//uint aliveCount = counterBuffer[0].aliveCount;
+	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
 
 	// Load the forcefields into LDS:
 	uint numForceFields = min(g_xFrame_ForceFieldArrayCount, NUM_LDS_FORCEFIELDS);
@@ -124,9 +125,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// add to new alive list:
 			uint newAliveIndex;
-			//indirectBuffers.InterlockedAdd(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, 6, newAliveIndex); // write the draw argument buffer, which should contain particle count * 6
-			//newAliveIndex /= 6; // draw arg buffer contains particle count * 6, so just divide to retrieve correct index
-			InterlockedAdd(counterBuffer[0].aliveCount_afterSimulation, 1, newAliveIndex);
+			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 1, newAliveIndex);
 			aliveBuffer_NEW[newAliveIndex] = particleIndex;
 
 #ifdef SORTING
@@ -141,7 +140,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		{
 			// kill:
 			uint deadIndex;
-			InterlockedAdd(counterBuffer[0].deadCount, 1, deadIndex);
+			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
 		}
 	}

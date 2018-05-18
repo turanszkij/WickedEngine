@@ -2,7 +2,7 @@
 #include "ShaderInterop_EmittedParticle.h"
 
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
-STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 1);
+RAWBUFFER(counterBuffer, 1);
 STRUCTUREDBUFFER(particleBuffer, Particle, 2);
 
 RWSTRUCTUREDBUFFER(densityBuffer, float, 0);
@@ -23,7 +23,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float e = xSPH_e;			// viscosity constant
 	const float mass = xParticleMass;
 
-	uint aliveCount = counterBuffer[0].aliveCount;
+	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
 
 	uint particleIndexA;
 	Particle particleA;

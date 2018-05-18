@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GPUSortLib.h"
 
-STRUCTUREDBUFFER(counterBuffer, ParticleCounters, 0);
+RAWBUFFER(counterBuffer, 0);
 
 RWRAWBUFFER(indirectBuffers, 0);
 
@@ -9,7 +9,7 @@ RWRAWBUFFER(indirectBuffers, 0);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// retrieve GPU itemcount:
-	uint itemCount = counterBuffer[0].aliveCount_afterSimulation;
+	uint itemCount = __ReadSortElementCount__;
 
 	if (itemCount > 0)
 	{

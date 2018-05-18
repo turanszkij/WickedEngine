@@ -241,6 +241,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	data.pSysMem = &counters;
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, counterBuffer);
 	data.pSysMem = nullptr;
 
@@ -267,6 +268,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
+		debugBufDesc.MiscFlags = 0;
 		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackBuffer);
 	}
 
@@ -276,6 +278,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
+		debugBufDesc.MiscFlags = 0;
 		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackIndexBuffer);
 	}
 	{
@@ -283,6 +286,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.Usage = USAGE_STAGING;
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
+		debugBufDesc.MiscFlags = 0;
 		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackDistanceBuffer);
 	}
 }
@@ -500,7 +504,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 #endif // DEBUG_SORTING
 
 
-		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, 0, aliveList[1], threadID);
+		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], threadID);
 
 
 #ifdef DEBUG_SORTING
