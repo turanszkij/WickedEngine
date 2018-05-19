@@ -11,9 +11,12 @@ STRUCTUREDBUFFER(cellOffsetBuffer, uint, 4);
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 
+#ifndef SPH_USE_ACCELERATION_GRID
+// grid structure is not a good fit to exploit shared memory because one threadgroup can load from different initial cells :(
 groupshared float4 positions_densities[THREADCOUNT_SIMULATION];
 groupshared float4 velocities_pressures[THREADCOUNT_SIMULATION];
 groupshared float masses[THREADCOUNT_SIMULATION];
+#endif // SPH_USE_ACCELERATION_GRID
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -22,8 +25,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float h = xSPH_h;			// smoothing radius
 	const float h2 = xSPH_h2;		// smoothing radius ^ 2
 	const float h3 = xSPH_h3;		// smoothing radius ^ 3
-	const float h6 = xSPH_h6;		// smoothing radius ^ 6
-	const float h9 = xSPH_h9;		// smoothing radius ^ 9
 	const float K = xSPH_K;			// pressure constant
 	const float p0 = xSPH_p0;		// reference density
 	const float e = xSPH_e;			// viscosity constant
@@ -60,10 +61,10 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 #ifdef SPH_USE_ACCELERATION_GRID
 
 	// Grid cell is of size [SPH smoothing radius], so position is refitted into that
-	float3 remappedPos = particleA.position  * xSPH_h_rcp;
+	const float3 remappedPos = particleA.position  * xSPH_h_rcp;
+	const int3 cellIndex = floor(remappedPos);
 
-	int3 cellIndex = floor(remappedPos);
-
+	// iterate through all [27] neighbor cells:
 	[loop]
 	for (int i = -1; i <= 1; ++i)
 	{
@@ -73,12 +74,14 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 			[loop]
 			for (int k = -1; k <= 1; ++k)
 			{
+				// hashed cell index is retrieved:
 				const int3 neighborIndex = cellIndex + int3(i, j, k);
-
 				const uint flatNeighborIndex = SPH_GridHash(neighborIndex);
 
+				// look up the offset into particle list from neighbor cell:
 				uint neighborIterator = cellOffsetBuffer[flatNeighborIndex];
 
+				// iterate through neighbor cell particles (if iterator offset is valid):
 				[loop]
 				while (neighborIterator != 0xFFFFFFFF && neighborIterator < aliveCount)
 				{
@@ -87,27 +90,28 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 						uint particleIndexB = aliveBuffer_CURRENT[neighborIterator];
 						if ((uint)cellIndexBuffer[particleIndexB] != flatNeighborIndex)
 						{
+							// here means we stepped out of the neighbor cell list!
 							break;
 						}
 
 						// SPH Force evaluation:
 						{
-							float3 positionB = particleBuffer[particleIndexB].position.xyz;
+							const float3 positionB = particleBuffer[particleIndexB].position.xyz;
 
-							float3 diff = particleA.position - positionB;
-							float r2 = dot(diff, diff); // distance squared
-							float r = sqrt(r2);
+							const float3 diff = particleA.position - positionB;
+							const float r2 = dot(diff, diff); // distance squared
+							const float r = sqrt(r2);
 
 							if (r < h)
 							{
-								float3 velocityB = particleBuffer[particleIndexB].velocity.xyz;
-								float densityB = densityBuffer[particleIndexB];
-								float pressureB = K * (densityB - p0);
+								const float3 velocityB = particleBuffer[particleIndexB].velocity.xyz;
+								const float densityB = densityBuffer[particleIndexB];
+								const float pressureB = K * (densityB - p0);
 
-								float3 rNorm = normalize(diff);
-								float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
+								const float3 rNorm = normalize(diff);
+								float W = xSPH_spiky_constant * pow(h - r, 2); // spiky kernel smoothing function
 
-								float mass = particleBuffer[particleIndexB].mass / particleA.mass;
+								const float mass = particleBuffer[particleIndexB].mass / particleA.mass;
 
 								f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
 
@@ -173,7 +177,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 					float pressureB = velocities_pressures[i].w;
 
 					float3 rNorm = normalize(diff);
-					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
+					float W = xSPH_spiky_constant * pow(h - r, 2); // spiky kernel smoothing function
 
 					float mass = masses[i] / particleA.mass;
 
@@ -211,7 +215,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 #ifdef DEBUG_PRESSURE
 		// debug pressure:
-		float3 color = lerp(float3(1, 1, 1), float3(1, 0, 0), saturate(abs(pressureA - p0) * 0.01f)) * 255;
+		float3 color = lerp(float3(1, 1, 1), float3(1, 0, 0), saturate(pressureA * 0.005f)) * 255;
 		uint uColor = 0;
 		uColor |= (uint)color.r << 0;
 		uColor |= (uint)color.g << 8;

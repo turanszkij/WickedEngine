@@ -85,6 +85,7 @@ public:
 	bool SORTING = false;
 	bool DEPTHCOLLISIONS = false;
 	bool SPH_FLUIDSIMULATION = false;
+	float FIXED_TIMESTEP = -1.0f; // -1 : variable timestep; >=0 : fixed timestep
 
 	PARTICLESHADERTYPE shaderType = SOFT;
 

@@ -346,14 +346,17 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		cb.xEmitterOpacity = material->alpha;
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
+		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
 
 		// SPH:
 		cb.xSPH_h = SPH_h;
 		cb.xSPH_h_rcp = 1.0f / SPH_h;
 		cb.xSPH_h2 = SPH_h * SPH_h;
 		cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
-		cb.xSPH_h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
-		cb.xSPH_h9 = cb.xSPH_h3 * cb.xSPH_h3;
+		const float h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
+		const float h9 = cb.xSPH_h3 * cb.xSPH_h3;
+		cb.xSPH_poly6_constant = (315.0f / (64.0f * XM_PI * h9));
+		cb.xSPH_spiky_constant = (-45 / (XM_PI * h6));
 		cb.xSPH_K = SPH_K;
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;
@@ -938,6 +941,16 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 			archive >> tmp;
 			shaderType = (PARTICLESHADERTYPE)tmp;
 		}
+		if (archive.GetVersion() >= 18)
+		{
+			archive >> mass;
+			archive >> FIXED_TIMESTEP;
+			archive >> SPH_FLUIDSIMULATION;
+			archive >> SPH_h;
+			archive >> SPH_K;
+			archive >> SPH_p0;
+			archive >> SPH_e;
+		}
 
 	}
 	else
@@ -968,5 +981,16 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		{
 			archive << (int)shaderType;
 		}
+		if (archive.GetVersion() >= 18)
+		{
+			archive << mass;
+			archive << FIXED_TIMESTEP;
+			archive << SPH_FLUIDSIMULATION;
+			archive << SPH_h;
+			archive << SPH_K;
+			archive << SPH_p0;
+			archive << SPH_e;
+		}
+
 	}
 }

@@ -6,9 +6,9 @@
 struct Particle
 {
 	float3 position;
-	float rotationalVelocity;
-	float3 force;
 	float mass;
+	float3 force;
+	float rotationalVelocity;
 	float3 velocity;
 	float maxLife;
 	float life;
@@ -52,19 +52,20 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xEmitterOpacity;
 	uint		xEmitterMaxParticleCount;
 
-	float		xSPH_h;		// smoothing radius
-	float		xSPH_h_rcp;	// 1.0f / smoothing radius
-	float		xSPH_h2;	// smoothing radius ^ 2
-	float		xSPH_h3;	// smoothing radius ^ 3
+	float		xSPH_h;					// smoothing radius
+	float		xSPH_h_rcp;				// 1.0f / smoothing radius
+	float		xSPH_h2;				// smoothing radius ^ 2
+	float		xSPH_h3;				// smoothing radius ^ 3
 
-	float		xSPH_h6;	// smoothing radius ^ 6
-	float		xSPH_h9;	// smoothing radius ^ 9
-	float		xSPH_K;		// pressure constant
-	float		xSPH_p0;	// reference density
+	float		xSPH_poly6_constant;	// precomputed Poly6 kernel constant term
+	float		xSPH_spiky_constant;	// precomputed Spiky kernel function constaant term
+	float		xSPH_K;					// pressure constant
+	float		xSPH_p0;				// reference density
 
-	float		xSPH_e;		// viscosity constant
-	uint		xSPH_ENABLED;
-	float2		__padding;
+	float		xSPH_e;					// viscosity constant
+	uint		xSPH_ENABLED;			// is SPH enabled?
+	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
+	float		__padding;
 
 };
 

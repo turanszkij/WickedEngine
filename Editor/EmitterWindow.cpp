@@ -18,7 +18,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
-	emitterWindow->SetSize(XMFLOAT2(800, 1024));
+	emitterWindow->SetSize(XMFLOAT2(800, 1100));
 	emitterWindow->SetEnabled(false);
 	GUI->AddWidget(emitterWindow);
 
@@ -296,6 +296,22 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 
 
+	timestepSlider = new wiSlider(-1, 0.016f, -1, 100000, "Timestep: ");
+	timestepSlider->SetSize(XMFLOAT2(360, 30));
+	timestepSlider->SetPos(XMFLOAT2(x, y += step*2));
+	timestepSlider->OnSlide([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->FIXED_TIMESTEP = args.fValue;
+		}
+	});
+	timestepSlider->SetEnabled(false);
+	timestepSlider->SetTooltip("Adjust timestep for emitter simulation. -1 means variable timestep, positive means fixed timestep.");
+	emitterWindow->AddWidget(timestepSlider);
+
+
+
 
 
 	//////////////// SPH ////////////////////////////
@@ -463,6 +479,7 @@ void EmitterWindow::SetObject(Object* obj)
 			emitLifeRandomnessSlider->SetValue(emitter->random_life);
 			emitMotionBlurSlider->SetValue(emitter->motionBlurAmount);
 			emitMassSlider->SetValue(emitter->mass);
+			timestepSlider->SetValue(emitter->FIXED_TIMESTEP);
 
 			sph_h_Slider->SetValue(emitter->SPH_h);
 			sph_K_Slider->SetValue(emitter->SPH_K);

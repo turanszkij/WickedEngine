@@ -49,8 +49,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 	if (DTid.x < aliveCount)
 	{
-		//const float dt = g_xFrame_DeltaTime;
-		const float dt = 0.016f; // fixed time step, otherwise simulation can just blow up
+		// simulation can be either fixed or variable timestep:
+		const float dt = xEmitterFixedTimestep >= 0 ? xEmitterFixedTimestep : g_xFrame_DeltaTime;
 
 		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];

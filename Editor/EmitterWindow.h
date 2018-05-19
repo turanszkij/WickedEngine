@@ -50,6 +50,7 @@ public:
 	wiSlider* emitLifeRandomnessSlider;
 	wiSlider* emitMotionBlurSlider;
 	wiSlider* emitMassSlider;
+	wiSlider* timestepSlider;
 	wiSlider* sph_h_Slider;
 	wiSlider* sph_K_Slider;
 	wiSlider* sph_p0_Slider;
