@@ -79,6 +79,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		// create new particle:
 		Particle particle;
 		particle.position = pos;
+		particle.force = 0;
+		particle.mass = xParticleMass;
 		particle.velocity = (nor + (randoms.xyz - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
 		particle.rotationalVelocity = xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
 		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (randoms.x - 0.5f) * xParticleLifeSpanRandomness;

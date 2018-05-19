@@ -7,6 +7,8 @@ struct Particle
 {
 	float3 position;
 	float rotationalVelocity;
+	float3 force;
+	float mass;
 	float3 velocity;
 	float maxLife;
 	float life;
@@ -51,14 +53,18 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	uint		xEmitterMaxParticleCount;
 
 	float		xSPH_h;		// smoothing radius
+	float		xSPH_h_rcp;	// 1.0f / smoothing radius
 	float		xSPH_h2;	// smoothing radius ^ 2
 	float		xSPH_h3;	// smoothing radius ^ 3
-	float		xSPH_h6;	// smoothing radius ^ 6
 
+	float		xSPH_h6;	// smoothing radius ^ 6
 	float		xSPH_h9;	// smoothing radius ^ 9
 	float		xSPH_K;		// pressure constant
 	float		xSPH_p0;	// reference density
+
 	float		xSPH_e;		// viscosity constant
+	uint		xSPH_ENABLED;
+	float2		__padding;
 
 };
 
@@ -73,7 +79,7 @@ static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = ARGUMENTBUFFER_OFFSET_DI
 // If this is not defined, SPH will be resolved as N-body simulation (O(n^2) complexity)
 // If this is defined, SPH will be sorted into a hashed grid structure and response lookup will be accelerated
 #define SPH_USE_ACCELERATION_GRID
-static const uint SPH_PARTITION_BUCKET_COUNT = 128 * 128 * 128;
+static const uint SPH_PARTITION_BUCKET_COUNT = 128 * 128 * 64;
 
 inline uint SPH_GridHash(int3 cellIndex)
 {

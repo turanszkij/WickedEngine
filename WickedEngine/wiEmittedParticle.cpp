@@ -9,6 +9,7 @@
 #include "wiArchive.h"
 #include "wiTextureHelper.h"
 #include "wiGPUSortLib.h"
+#include "wiProfiler.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -348,6 +349,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		// SPH:
 		cb.xSPH_h = SPH_h;
+		cb.xSPH_h_rcp = 1.0f / SPH_h;
 		cb.xSPH_h2 = SPH_h * SPH_h;
 		cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
 		cb.xSPH_h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
@@ -355,6 +357,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		cb.xSPH_K = SPH_K;
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;
+		cb.xSPH_ENABLED = SPH_FLUIDSIMULATION ? 1 : 0;
 
 		device->UpdateBuffer(constantBuffer, &cb, threadID);
 		device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
@@ -400,6 +403,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		if (SPH_FLUIDSIMULATION)
 		{
+			wiProfiler::GetInstance().BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
+
 			// Smooth Particle Hydrodynamics:
 			device->EventBegin("SPH - Simulation", threadID);
 
@@ -496,6 +501,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->UnBindUnorderedAccessResources(0, 8, threadID);
 
 			device->EventEnd(threadID);
+
+			wiProfiler::GetInstance().EndRange(threadID);
 		}
 
 		device->EventBegin("Simulate", threadID);

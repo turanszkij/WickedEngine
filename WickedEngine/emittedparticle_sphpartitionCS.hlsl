@@ -18,7 +18,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		Particle particle = particleBuffer[particleIndex];
 
 		// Grid cell is of size [SPH smoothing radius], so position is refitted into that
-		float3 remappedPos = particle.position / xSPH_h; // optimize div??
+		float3 remappedPos = particle.position * xSPH_h_rcp;
 
 		int3 cellIndex = floor(remappedPos);
 		uint flatCellIndex = SPH_GridHash(cellIndex);

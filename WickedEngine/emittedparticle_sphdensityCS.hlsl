@@ -9,7 +9,7 @@ STRUCTUREDBUFFER(cellOffsetBuffer, uint, 4);
 
 RWSTRUCTUREDBUFFER(densityBuffer, float, 0);
 
-groupshared float3 positions[THREADCOUNT_SIMULATION];
+groupshared float4 positions_masses[THREADCOUNT_SIMULATION];
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -23,7 +23,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float K = xSPH_K;			// pressure constant
 	const float p0 = xSPH_p0;		// reference density
 	const float e = xSPH_e;			// viscosity constant
-	const float mass = xParticleMass;
 
 	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
 
@@ -35,6 +34,11 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		particleIndexA = aliveBuffer_CURRENT[DTid.x];
 		particleA = particleBuffer[particleIndexA];
 	}
+	else
+	{
+		particleIndexA = 0xFFFFFFFF;
+		particleA = (Particle)0;
+	}
 
 
 
@@ -44,7 +48,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 #ifdef SPH_USE_ACCELERATION_GRID
 
 	// Grid cell is of size [SPH smoothing radius], so position is refitted into that
-	float3 remappedPos = particleA.position / xSPH_h; // optimize div??
+	float3 remappedPos = particleA.position * xSPH_h_rcp;
 
 	int3 cellIndex = floor(remappedPos);
 
@@ -85,8 +89,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 							{
 								float W = (315.0f / (64.0f * PI * h9)) * pow(h2 - r2, 3); // poly6 smoothing kernel
 
-								//density += particleB.m * W;
-								density += mass * W; // constant mass
+								density += particleB.mass * W;
 							}
 						}
 					}
@@ -110,11 +113,12 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		
 		if (id < aliveCount)
 		{
-			positions[groupIndex] = particleBuffer[aliveBuffer_CURRENT[id]].position;
+			Particle particleB = particleBuffer[aliveBuffer_CURRENT[id]];
+			positions_masses[groupIndex] = float4(particleB.position, particleB.mass);
 		}
 		else
 		{
-			positions[groupIndex] = 1000000; // "infinitely far" try to not contribute non existing particles
+			positions_masses[groupIndex] = float4(1000000, 1000000, 1000000, 0); // "infinitely far" try to not contribute non existing particles, zero mass
 		}
 
 		GroupMemoryBarrierWithGroupSync();
@@ -124,7 +128,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		{
 			//if (offset + i != DTid.x) // actually, without this check, the whole thing is just more stable
 			{
-				float3 positionB = positions[i];
+				float3 positionB = positions_masses[i].xyz;
 
 				float3 diff = particleA.position - positionB;
 				float r2 = dot(diff, diff); // distance squared
@@ -133,8 +137,9 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 				{
 					float W = (315.0f / (64.0f * PI * h9)) * pow(h2 - r2, 3); // poly6 smoothing kernel
 
-					//density += particleB.m * W;
-					density += mass * W; // constant mass
+					float mass = positions_masses[i].w;
+
+					density += mass * W;
 				}
 
 			}

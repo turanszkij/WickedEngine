@@ -3,9 +3,6 @@
 
 //#define DEBUG_PRESSURE
 
-#define FLOOR_COLLISION
-#define BOX_COLLISION
-
 STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
 RAWBUFFER(counterBuffer, 1);
 STRUCTUREDBUFFER(densityBuffer, float, 2);
@@ -16,6 +13,7 @@ RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 
 groupshared float4 positions_densities[THREADCOUNT_SIMULATION];
 groupshared float4 velocities_pressures[THREADCOUNT_SIMULATION];
+groupshared float masses[THREADCOUNT_SIMULATION];
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID )
@@ -29,7 +27,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float K = xSPH_K;			// pressure constant
 	const float p0 = xSPH_p0;		// reference density
 	const float e = xSPH_e;			// viscosity constant
-	const float mass = xParticleMass;	// constant mass (todo: per particle)
 
 	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
 
@@ -45,6 +42,13 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		densityA = densityBuffer[particleIndexA];
 		pressureA = K * (densityA - p0);
 	}
+	else
+	{
+		particleIndexA = 0xFFFFFFFF;
+		particleA = (Particle)0;
+		densityA = 0;
+		pressureA = 0;
+	}
 
 
 
@@ -56,7 +60,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 #ifdef SPH_USE_ACCELERATION_GRID
 
 	// Grid cell is of size [SPH smoothing radius], so position is refitted into that
-	float3 remappedPos = particleA.position / xSPH_h; // optimize div??
+	float3 remappedPos = particleA.position  * xSPH_h_rcp;
 
 	int3 cellIndex = floor(remappedPos);
 
@@ -103,7 +107,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 								float3 rNorm = normalize(diff);
 								float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
 
-								//float mass = particleB.mass / particleA.mass;
+								float mass = particleBuffer[particleIndexB].mass / particleA.mass;
 
 								f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
 
@@ -139,11 +143,14 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 			float pressure = K * (density - p0);
 			velocities_pressures[groupIndex] = float4(particleBuffer[particleIndex].velocity, pressure);
+
+			masses[groupIndex] = particleBuffer[particleIndex].mass;
 		}
 		else
 		{
 			positions_densities[groupIndex] = float4(1000000, 1000000, 1000000, 0); // "infinitely far" try to not contribute non existing particles, zero density
 			velocities_pressures[groupIndex] = float4(0, 0, 0, 0);
+			masses[groupIndex] = 0;
 		}
 
 		GroupMemoryBarrierWithGroupSync();
@@ -168,7 +175,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 					float3 rNorm = normalize(diff);
 					float W = (-45 / (PI * h6)) * pow(h - r, 2); // spiky kernel smoothing function
 
-					//float mass = particleB.mass / particleA.mass;
+					float mass = masses[i] / particleA.mass;
 
 					f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
 
@@ -197,64 +204,9 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		const float3 G = float3(0, -9.8f, 0);
 
 		// apply all forces:
-		float3 force = (f_a + f_av) / densityA + G;
+		particleA.force += (f_a + f_av) / densityA + G;
 
-		// integrate:
-		//const float dt = g_xFrame_DeltaTime; // variable timestep
-		const float dt = 0.016f; // fixed time step, otherwise simulation will just blow up
-		particleA.velocity += dt * force;
-		particleA.position += dt * particleA.velocity;
-
-		// drag:
-		particleA.velocity *= 0.98f;
-
-
-
-
-
-		float lifeLerp = 1 - particleA.life / particleA.maxLife;
-		float particleSize = lerp(particleA.sizeBeginEnd.x, particleA.sizeBeginEnd.y, lifeLerp);
-
-
-		float elastic = 0.6;
-
-#ifdef FLOOR_COLLISION
-		// floor collision:
-		if (particleA.position.y - particleSize < 0)
-		{
-			particleA.position.y = particleSize;
-			particleA.velocity.y *= -elastic;
-		}
-#endif // FLOOR_COLLISION
-
-
-#ifdef BOX_COLLISION
-		// box collision:
-		float3 extent = float3(20, 0, 12);
-		if (particleA.position.x + particleSize > extent.x)
-		{
-			particleA.position.x = extent.x - particleSize;
-			particleA.velocity.x *= -elastic;
-		}
-		if (particleA.position.x - particleSize < -extent.x)
-		{
-			particleA.position.x = -extent.x + particleSize;
-			particleA.velocity.x *= -elastic;
-		}
-		if (particleA.position.z + particleSize > extent.z)
-		{
-			particleA.position.z = extent.z - particleSize;
-			particleA.velocity.z *= -elastic;
-		}
-		if (particleA.position.z - particleSize < -extent.z)
-		{
-			particleA.position.z = -extent.z + particleSize;
-			particleA.velocity.z *= -elastic;
-		}
-#endif // BOX_COLLISION
-
-		particleBuffer[particleIndexA].position = particleA.position;
-		particleBuffer[particleIndexA].velocity = particleA.velocity;
+		particleBuffer[particleIndexA].force = particleA.force;
 
 
 #ifdef DEBUG_PRESSURE

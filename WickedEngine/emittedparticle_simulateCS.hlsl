@@ -21,6 +21,9 @@ struct LDS_ForceField
 };
 groupshared LDS_ForceField forceFields[NUM_LDS_FORCEFIELDS];
 
+#define SPH_FLOOR_COLLISION
+#define SPH_BOX_COLLISION
+
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
@@ -46,7 +49,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 	if (DTid.x < aliveCount)
 	{
-		const float dt = g_xFrame_DeltaTime;
+		//const float dt = g_xFrame_DeltaTime;
+		const float dt = 0.016f; // fixed time step, otherwise simulation can just blow up
 
 		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
@@ -55,7 +59,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		{
 			// simulate:
 
-			float3 force = 0;
 			for (uint i = 0; i < numForceFields; ++i)
 			{
 				LDS_ForceField forceField = forceFields[i];
@@ -72,9 +75,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					dir = forceField.normal;
 				}
 
-				force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
+				particle.force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
 			}
-			particle.velocity += force * dt;
 
 
 #ifdef DEPTHCOLLISIONS
@@ -116,7 +118,61 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 #endif // DEPTHCOLLISIONS
 
+			// integrate:
+			particle.velocity += particle.force * dt;
 			particle.position += particle.velocity * dt;
+
+			// reset force for next frame:
+			particle.force = 0;
+
+			if (xSPH_ENABLED)
+			{
+				// drag: 
+				particle.velocity *= 0.98f;
+
+				// debug collisions:
+
+				float elastic = 0.6;
+
+				float lifeLerp = 1 - particle.life / particle.maxLife;
+				float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+
+#ifdef SPH_FLOOR_COLLISION
+				// floor collision:
+				if (particle.position.y - particleSize < 0)
+				{
+					particle.position.y = particleSize;
+					particle.velocity.y *= -elastic;
+				}
+#endif // FLOOR_COLLISION
+
+
+#ifdef SPH_BOX_COLLISION
+				// box collision:
+				float3 extent = float3(40, 0, 22);
+				if (particle.position.x + particleSize > extent.x)
+				{
+					particle.position.x = extent.x - particleSize;
+					particle.velocity.x *= -elastic;
+				}
+				if (particle.position.x - particleSize < -extent.x)
+				{
+					particle.position.x = -extent.x + particleSize;
+					particle.velocity.x *= -elastic;
+				}
+				if (particle.position.z + particleSize > extent.z)
+				{
+					particle.position.z = extent.z - particleSize;
+					particle.velocity.z *= -elastic;
+				}
+				if (particle.position.z - particleSize < -extent.z)
+				{
+					particle.position.z = -extent.z + particleSize;
+					particle.velocity.z *= -elastic;
+				}
+#endif // BOX_COLLISION
+
+			}
 
 			particle.life -= dt;
 
