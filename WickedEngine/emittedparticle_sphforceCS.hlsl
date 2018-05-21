@@ -108,7 +108,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 								const float densityB = densityBuffer[particleIndexB];
 								const float pressureB = K * (densityB - p0);
 
-								const float3 rNorm = normalize(diff);
+								const float3 rNorm = diff / r;
 								float W = xSPH_spiky_constant * pow(h - r, 2); // spiky kernel smoothing function
 
 								const float mass = particleBuffer[particleIndexB].mass / particleA.mass;
@@ -176,7 +176,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 					float densityB = positions_densities[i].w;
 					float pressureB = velocities_pressures[i].w;
 
-					float3 rNorm = normalize(diff);
+					float3 rNorm = diff / r;
 					float W = xSPH_spiky_constant * pow(h - r, 2); // spiky kernel smoothing function
 
 					float mass = masses[i] / particleA.mass;
@@ -205,7 +205,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 		f_av *= e;
 
 		// gravity:
-		const float3 G = float3(0, -9.8f, 0);
+		const float3 G = float3(0, -9.8f * 2, 0);
 
 		// apply all forces:
 		particleA.force += (f_a + f_av) / densityA + G;
@@ -215,7 +215,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 #ifdef DEBUG_PRESSURE
 		// debug pressure:
-		float3 color = lerp(float3(1, 1, 1), float3(1, 0, 0), saturate(pressureA * 0.005f)) * 255;
+		float3 color = lerp(float3(1, 1, 1), float3(1, 0, 0), pow(saturate(pressureA * 0.0005f), 0.5)) * 255;
 		uint uColor = 0;
 		uColor |= (uint)color.r << 0;
 		uColor |= (uint)color.g << 8;
