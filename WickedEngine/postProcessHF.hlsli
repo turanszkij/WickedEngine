@@ -10,7 +10,7 @@ float2 GetVelocity(in int2 pixel)
 {
 #ifdef DILATE_VELOCITY_BEST_3X3 // search best velocity in 3x3 neighborhood
 
-	float bestDepth = g_xFrame_MainCamera_ZFarP;
+	float bestDepth = 1;
 	int2 bestPixel = int2(0, 0);
 
 	[unroll]
@@ -34,7 +34,7 @@ float2 GetVelocity(in int2 pixel)
 
 #elif defined DILATE_VELOCITY_BEST_FAR // search best velocity in a far reaching 5-tap pattern
 
-	float bestDepth = g_xFrame_MainCamera_ZFarP;
+	float bestDepth = 1;
 	int2 bestPixel = int2(0, 0);
 
 	// top-left

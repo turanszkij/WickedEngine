@@ -30,7 +30,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
+		fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xFrame_MainCamera_ZFarP;
 		float fDepthDiff = vHitCoord.z - fDepth;
 
 		if (fDepthDiff <= 0.0f)
@@ -44,7 +44,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 	vProjectedCoord.xy /= vProjectedCoord.w;
 	vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-	fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
+	fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xFrame_MainCamera_ZFarP;
 	float fDepthDiff = vHitCoord.z - fDepth;
 
 	return float4(vProjectedCoord.xy, fDepth, abs(fDepthDiff) < g_fRayhitThreshold ? 1.0f : 0.0f);
@@ -62,7 +62,7 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
+		fDepth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xFrame_MainCamera_ZFarP;
 
 		float fDepthDiff = vHitCoord.z - fDepth;
 
@@ -80,7 +80,6 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 float4 main(VertexToPixelPostProcess input) : SV_Target
 {
 	float3 N = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).xy);
-	float depth = texture_lineardepth.Load(int3(input.pos.xy, 0));
 	float3 P = getPosition(input.tex, texture_depth.Load(int3(input.pos.xy, 0)));
 
 

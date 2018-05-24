@@ -49,7 +49,7 @@ float4 main(VertexToPixelPostProcess input):SV_Target
 
 	float3 fres = normalize(xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0);
 
-	float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, input.tex, 0);
+	float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, input.tex, 0) * g_xFrame_MainCamera_ZFarP;
 
 	float3 ep = float3(input.tex, depth);
 	float bl = 0.0;
@@ -69,7 +69,7 @@ float4 main(VertexToPixelPostProcess input):SV_Target
 		if (!occFrag.x && !occFrag.y && !occFrag.z)
 			break;
 
-		depthDiff = (depth - (texture_lineardepth.SampleLevel(Sampler, newTex, 0).r));
+		depthDiff = (depth - (texture_lineardepth.SampleLevel(Sampler, newTex, 0).r * g_xFrame_MainCamera_ZFarP));
 
 		bl += step(falloff, depthDiff) * (1.0 - saturate(dot(occFrag.xyz, normal)))
 			* (1 - smoothstep(falloff, strength, depthDiff));

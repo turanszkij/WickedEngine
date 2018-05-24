@@ -563,7 +563,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	//REFRACTION 
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + bumpColor.rg;
-	float refDepth = (texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord));
+	float refDepth = texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord) * g_xFrame_MainCamera_ZFarP;
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float mod = saturate(0.05*(refDepth - lineardepth));
 	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;

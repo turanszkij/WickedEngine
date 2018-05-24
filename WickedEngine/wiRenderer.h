@@ -85,7 +85,7 @@ public:
 	// NOTE: Light buffer precision seems OK when using FORMAT_R11G11B10_FLOAT format
 	// But the environmental light now also writes the AO to ALPHA so it has been changed to FORMAT_R16G16B16A16_FLOAT
 	static const wiGraphicsTypes::FORMAT RTFormat_deferred_lightbuffer = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_lineardepth = wiGraphicsTypes::FORMAT_R32_FLOAT;
+	static const wiGraphicsTypes::FORMAT RTFormat_lineardepth = wiGraphicsTypes::FORMAT_R16_UNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_ssao = wiGraphicsTypes::FORMAT_R8_UNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_waterripple = wiGraphicsTypes::FORMAT_R8G8B8A8_SNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_normalmaps = wiGraphicsTypes::FORMAT_R8G8B8A8_SNORM;
@@ -186,6 +186,10 @@ public:
 		float    mZNearP;
 		XMFLOAT3 mUp;
 		float    mZFarP;
+		float	 mZNearP_Recip;
+		float	 mZFarP_Recip;
+		float	 mZRange;
+		float	 mZRange_Recip;
 		XMFLOAT4 mFrustumPlanesWS[6];
 	};
 	CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)

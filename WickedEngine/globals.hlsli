@@ -115,6 +115,10 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_MainCamera_ZNearP;
 	float3		g_xFrame_MainCamera_Up;
 	float		g_xFrame_MainCamera_ZFarP;
+	float		g_xFrame_MainCamera_ZNearP_Recip;
+	float		g_xFrame_MainCamera_ZFarP_Recip;
+	float		g_xFrame_MainCamera_ZRange;
+	float		g_xFrame_MainCamera_ZRange_Recip;
 	float4		g_xFrame_FrustumPlanesWS[6];	// Frustum planes in world space in order: left,right,top,bottom,near,far
 };
 // The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)

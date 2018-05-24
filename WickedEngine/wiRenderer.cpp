@@ -6490,6 +6490,10 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mUp = camera->Up;
 	cb.mZNearP = camera->zNearP;
 	cb.mZFarP = camera->zFarP;
+	cb.mZNearP_Recip = 1.0f / max(0.0001f, cb.mZNearP);
+	cb.mZFarP_Recip = 1.0f / max(0.0001f, cb.mZFarP);
+	cb.mZRange = abs(cb.mZFarP - cb.mZNearP);
+	cb.mZRange_Recip = 1.0f / max(0.0001f, cb.mZRange);
 	cb.mFrustumPlanesWS[0] = camera->frustum.getLeftPlane();
 	cb.mFrustumPlanesWS[1] = camera->frustum.getRightPlane();
 	cb.mFrustumPlanesWS[2] = camera->frustum.getTopPlane();
