@@ -4801,21 +4801,25 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							break;
 						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-						for (int index = 0; index < 3; ++index)
+						for (int cascade = 0; cascade < 3; ++cascade)
 						{
-							const float siz = l->shadowCam_dirLight[index].size * 0.5f;
-							const float f = l->shadowCam_dirLight[index].farplane;
+							const float siz = l->shadowCam_dirLight[cascade].size * 0.5f;
+							const float f = l->shadowCam_dirLight[cascade].farplane * 0.5f;
 							AABB boundingbox;
-							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, f, siz));
+							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
 							if (spTree != nullptr)
 							{
 								CulledList culledObjects;
 								CulledCollection culledRenderer;
-								spTree->getVisible(boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[index].View))), culledObjects);
+								spTree->getVisible(boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[cascade].View))), culledObjects);
 								bool transparentShadowsRequested = false;
 								for (Cullable* x : culledObjects)
 								{
 									Object* object = (Object*)x;
+									if (cascade < object->cascadeMask)
+									{
+										continue;
+									}
 									if (object->IsCastingShadow())
 									{
 										culledRenderer[object->mesh].push_front(object);
@@ -4829,17 +4833,17 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 								if (!culledRenderer.empty())
 								{
 									CameraCB cb;
-									cb.mVP = l->shadowCam_dirLight[index].getVP();
+									cb.mVP = l->shadowCam_dirLight[cascade].getVP();
 									GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + index);
+									GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + cascade);
 
-									// unfortunately wi will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-									GetDevice()->ClearRenderTarget(Light::shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index + index);
+									// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+									GetDevice()->ClearRenderTarget(Light::shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index + cascade);
 
 									// render opaque shadowmap:
-									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
-									RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+									GetDevice()->BindRenderTargets(0, nullptr, Light::shadowMapArray_2D, threadID, l->shadowMap_index + cascade);
+									RenderMeshes(l->shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 									if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 									{
@@ -4847,8 +4851,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 										Texture2D* rts[] = {
 											Light::shadowMapArray_Transparent
 										};
-										GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + index);
-										RenderMeshes(l->shadowCam_dirLight[index].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+										GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, Light::shadowMapArray_2D, threadID, l->shadowMap_index + cascade);
+										RenderMeshes(l->shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 									}
 								}
 							}
@@ -4890,7 +4894,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 
 								GetDevice()->ClearDepthStencil(Light::shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
 
-								// unfortunately wi will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+								// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
 								GetDevice()->ClearRenderTarget(Light::shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index);
 
 								// render opaque shadowmap:

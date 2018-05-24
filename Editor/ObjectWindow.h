@@ -26,6 +26,7 @@ public:
 
 	wiCheckBox* renderableCheckBox;
 	wiSlider*	ditherSlider;
+	wiSlider*	cascadeMaskSlider;
 	wiColorPicker* colorPicker;
 
 	wiLabel*	physicsLabel;

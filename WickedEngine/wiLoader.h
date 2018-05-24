@@ -523,6 +523,7 @@ struct Object : public Cullable, public Transform
 	Mesh* mesh;
 
 	bool renderable;
+	int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 
 	//PARTICLE
 	std::vector< wiEmittedParticle* > eParticleSystems;

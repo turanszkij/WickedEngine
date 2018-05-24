@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+19: serialized object cascade mask
 18: serialized emitter properties: sph properties, fixed timestep
 17: serialized light scattering property
 16: environment probes are now serialized into Model

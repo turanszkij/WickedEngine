@@ -4390,6 +4390,10 @@ void Object::Serialize(wiArchive& archive)
 		{
 			archive >> renderable;
 		}
+		if (archive.GetVersion() >= 19)
+		{
+			archive >> cascadeMask;
+		}
 
 	}
 	else
@@ -4420,6 +4424,10 @@ void Object::Serialize(wiArchive& archive)
 		if (archive.GetVersion() >= 13)
 		{
 			archive << renderable;
+		}
+		if (archive.GetVersion() >= 19)
+		{
+			archive << cascadeMask;
 		}
 
 	}

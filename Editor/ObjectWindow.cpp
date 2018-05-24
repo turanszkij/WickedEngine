@@ -44,6 +44,18 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	});
 	objectWindow->AddWidget(ditherSlider);
 
+	cascadeMaskSlider = new wiSlider(0, 3, 0, 3, "Cascade Mask: ");
+	cascadeMaskSlider->SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
+	cascadeMaskSlider->SetSize(XMFLOAT2(100, 30));
+	cascadeMaskSlider->SetPos(XMFLOAT2(x, y += 30));
+	cascadeMaskSlider->OnSlide([&](wiEventArgs args) {
+		if (object != nullptr)
+		{
+			object->cascadeMask = args.iValue;
+		}
+	});
+	objectWindow->AddWidget(cascadeMaskSlider);
+
 
 	colorPicker = new wiColorPicker(GUI, "Object Color");
 	colorPicker->SetPos(XMFLOAT2(10, 30));
@@ -241,6 +253,7 @@ void ObjectWindow::SetObject(Object* obj)
 	if (object != nullptr)
 	{
 		renderableCheckBox->SetCheck(object->renderable);
+		cascadeMaskSlider->SetValue((float)object->cascadeMask);
 		ditherSlider->SetValue(object->transparency);
 
 		if (object->rigidBody)
