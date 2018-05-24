@@ -173,6 +173,26 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 
 
+	wiButton* eliminateCoarseCascadesButton = new wiButton("HELPERSCRIPT - EliminateCoarseCascades");
+	eliminateCoarseCascadesButton->SetTooltip("Eliminate the coarse cascade mask for every object in the scene.");
+	eliminateCoarseCascadesButton->SetSize(XMFLOAT2(240, 30));
+	eliminateCoarseCascadesButton->SetPos(XMFLOAT2(x - 100, y += step));
+	eliminateCoarseCascadesButton->OnClick([=](wiEventArgs args) {
+
+		const Scene& scene = wiRenderer::GetScene();
+		for (Model* x : scene.models)
+		{
+			for (auto& y : x->objects)
+			{
+				y->cascadeMask = 1;
+			}
+		}
+
+	});
+	worldWindow->AddWidget(eliminateCoarseCascadesButton);
+
+
+
 
 	ambientColorPicker = new wiColorPicker(GUI, "Ambient Color");
 	ambientColorPicker->SetPos(XMFLOAT2(360, 40));
