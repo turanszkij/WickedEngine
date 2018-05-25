@@ -6,6 +6,7 @@ class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
+class wiTextInputField;
 
 class CameraWindow
 {
@@ -32,6 +33,7 @@ public:
 	wiCheckBox* fpsCheckBox;
 
 	wiButton* proxyButton;
+	wiTextInputField* proxyNameField;
 	wiCheckBox* followCheckBox;
 	wiSlider* followSlider;
 };

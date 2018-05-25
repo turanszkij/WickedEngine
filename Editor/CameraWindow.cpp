@@ -17,7 +17,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	orbitalCamTarget = new Transform;
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
-	cameraWindow->SetSize(XMFLOAT2(400, 420));
+	cameraWindow->SetSize(XMFLOAT2(600, 420));
 	GUI->AddWidget(cameraWindow);
 
 	float x = 200;
@@ -85,12 +85,25 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
 	proxyButton->OnClick([&](wiEventArgs args) {
 		Camera* cam = new Camera(*wiRenderer::getCamera());
+		cam->name = "ProxyCam";
 
 		wiRenderer::Add(cam);
 
 		//SetProxy(cam);
 	});
 	cameraWindow->AddWidget(proxyButton);
+
+	proxyNameField = new wiTextInputField("Proxy Name: ");
+	proxyNameField->SetSize(XMFLOAT2(140, 30));
+	proxyNameField->SetPos(XMFLOAT2(x + 200, y));
+	proxyNameField->OnInputAccepted([&](wiEventArgs args) {
+		if (proxy != nullptr)
+		{
+			proxy->name = args.sValue;
+		}
+	});
+	cameraWindow->AddWidget(proxyNameField);
+
 
 	followCheckBox = new wiCheckBox("Follow Proxy: ");
 	followCheckBox->SetPos(XMFLOAT2(x, y += inc));
@@ -130,11 +143,13 @@ void CameraWindow::SetProxy(Camera* camera)
 	{
 		followCheckBox->SetEnabled(true);
 		followSlider->SetEnabled(true);
+		proxyNameField->SetValue(proxy->name);
 	}
 	else
 	{
 		followCheckBox->SetCheck(false);
 		followCheckBox->SetEnabled(false);
 		followSlider->SetEnabled(false);
+		proxyNameField->SetValue("Proxy Name: ");
 	}
 }

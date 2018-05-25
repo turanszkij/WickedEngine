@@ -4148,11 +4148,30 @@ void Camera::UpdateTransform()
 	UpdateProps();
 }
 
-void Camera::Lerp(const Camera* target, float t)
+void Camera::Lerp(const Camera* a, const Camera* b, float t)
 {
-	Transform::Lerp(target, t);
+	Transform::Lerp(a, b, t);
+
+	fov = wiMath::Lerp(a->fov, b->fov, t);
 
 	UpdateProps();
+	UpdateProjection();
+}
+void Camera::CatmullRom(const Camera* a, const Camera* b, const Camera* c, const Camera* d, float t)
+{
+	Transform::CatmullRom(a, b, c, d, t);
+
+	XMVECTOR FOV = XMVectorCatmullRom(
+		XMVectorSet(a->fov, 0, 0, 0),
+		XMVectorSet(b->fov, 0, 0, 0),
+		XMVectorSet(c->fov, 0, 0, 0),
+		XMVectorSet(d->fov, 0, 0, 0),
+		t
+	);
+	fov = XMVectorGetX(FOV);
+
+	UpdateProps();
+	UpdateProjection();
 }
 
 void Camera::Serialize(wiArchive& archive)

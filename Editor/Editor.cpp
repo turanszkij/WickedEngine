@@ -878,7 +878,7 @@ void EditorComponent::Update(float dt)
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
 	{
 		cam->detach();
-		cam->Lerp(cameraWnd->proxy, 1.0f - cameraWnd->followSlider->GetValue());
+		cam->Lerp(cam, cameraWnd->proxy, 1.0f - cameraWnd->followSlider->GetValue());
 	}
 
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())

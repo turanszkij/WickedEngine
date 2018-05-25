@@ -47,6 +47,8 @@ public:
 	int Scale(lua_State* L);
 	int Rotate(lua_State* L);
 	int Translate(lua_State* L);
+	int Lerp(lua_State* L);
+	int CatmullRom(lua_State* L);
 	int MatrixTransform(lua_State* L);
 	int GetMatrix(lua_State* L);
 	int ClearTransform(lua_State* L);
@@ -266,6 +268,10 @@ public:
 	int SetFarPlane(lua_State* L);
 	int GetNearPlane(lua_State* L);
 	int SetNearPlane(lua_State* L);
+	int GetFOV(lua_State* L);
+	int SetFOV(lua_State* L);
+	int Lerp(lua_State* L);
+	int CatmullRom(lua_State* L);
 
 	static void Bind();
 };

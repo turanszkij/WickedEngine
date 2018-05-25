@@ -2865,6 +2865,21 @@ Object* wiRenderer::getObjectByName(const std::string& name)
 
 	return nullptr;
 }
+Camera* wiRenderer::getCameraByName(const std::string& name)
+{
+	for (Model* model : GetScene().models)
+	{
+		for (auto& x : model->cameras)
+		{
+			if (!x->name.compare(name))
+			{
+				return x;
+			}
+		}
+	}
+
+	return nullptr;
+}
 Light* wiRenderer::getLightByName(const std::string& name)
 {
 	for (Model* model : GetScene().models)

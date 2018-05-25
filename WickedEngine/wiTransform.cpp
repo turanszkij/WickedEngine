@@ -271,11 +271,41 @@ void Transform::Scale(const XMFLOAT3& value)
 {
 	transform(XMFLOAT3(0, 0, 0), XMFLOAT4(0, 0, 0, 1), value);
 }
-void Transform::Lerp(const Transform* target, float t)
+void Transform::Lerp(const Transform* a, const Transform* b, float t)
 {
-	translation_rest = wiMath::Lerp(translation_rest, target->translation, t);
-	rotation_rest = wiMath::Slerp(rotation_rest, target->rotation, t);
-	scale_rest = wiMath::Lerp(scale_rest, target->scale, t);
+	translation_rest = wiMath::Lerp(a->translation, b->translation, t);
+	rotation_rest = wiMath::Slerp(a->rotation, b->rotation, t);
+	scale_rest = wiMath::Lerp(a->scale, b->scale, t);
+	UpdateTransform();
+}
+void Transform::CatmullRom(const Transform* a, const Transform* b, const Transform* c, const Transform* d, float t)
+{
+	XMVECTOR T = XMVectorCatmullRom(
+		XMLoadFloat3(&a->translation),
+		XMLoadFloat3(&b->translation),
+		XMLoadFloat3(&c->translation),
+		XMLoadFloat3(&d->translation),
+		t
+	);
+	XMVECTOR R = XMVectorCatmullRom( // not the best choice for quaternions, but it will do for now...
+		XMLoadFloat4(&a->rotation),
+		XMLoadFloat4(&b->rotation),
+		XMLoadFloat4(&c->rotation),
+		XMLoadFloat4(&d->rotation),
+		t
+	);
+	XMVECTOR S = XMVectorCatmullRom(
+		XMLoadFloat3(&a->scale),
+		XMLoadFloat3(&b->scale),
+		XMLoadFloat3(&c->scale),
+		XMLoadFloat3(&d->scale),
+		t
+	);
+
+	XMStoreFloat3(&translation_rest, T);
+	XMStoreFloat4(&rotation_rest, R);
+	XMStoreFloat3(&scale_rest, S);
+
 	UpdateTransform();
 }
 

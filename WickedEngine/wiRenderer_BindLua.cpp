@@ -246,7 +246,37 @@ namespace wiRenderer_BindLua
 	}
 	int GetCamera(lua_State* L)
 	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			string name = wiLua::SGetString(L, 1);
+			Camera* camera = wiRenderer::getCameraByName(name);
+			if (camera != nullptr)
+			{
+				Luna<Camera_BindLua>::push(L, new Camera_BindLua(camera));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "GetCamera(opt String name) name was provided but there was no corresponding camera found!");
+				return 0;
+			}
+		}
+
 		Luna<Camera_BindLua>::push(L, new Camera_BindLua(wiRenderer::getCamera()));
+		return 1;
+	}
+	int GetCameras(lua_State* L)
+	{
+		stringstream ss("");
+		for (auto& m : wiRenderer::GetScene().models)
+		{
+			for (auto& x : m->cameras)
+			{
+				ss << x->name << endl;
+			}
+		}
+		wiLua::SSetString(L, ss.str());
 		return 1;
 	}
 
@@ -704,6 +734,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
+			wiLua::GetGlobal()->RegisterFunc("GetCameras", GetCameras);
 
 			wiLua::GetGlobal()->RegisterFunc("SetResolutionScale", SetResolutionScale);
 			wiLua::GetGlobal()->RegisterFunc("SetGamma", SetGamma);

@@ -1077,7 +1077,8 @@ struct Camera:public Transform{
 		XMStoreFloat4x4(&this->InvProjection, InvP);
 	}
 
-	void Lerp(const Camera* target, float t);
+	void Lerp(const Camera* a, const Camera* b, float t);
+	void CatmullRom(const Camera* a, const Camera* b, const Camera* c, const Camera* d, float t);
 
 	XMVECTOR GetEye() const
 	{

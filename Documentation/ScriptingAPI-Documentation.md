@@ -112,7 +112,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetScreenHeight() : float result
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
-- GetCamera() : Camera? result
+- GetCameras() : string result
+- GetCamera(opt String name) : Camera result			// If string is provided, it will search a camera by name, otherwise, returns the main camera
 - LoadModel(string fileName, opt string identifier, opt Matrix transform) : Model? result
 - LoadWorldInfo(string fileName)
 - FinishLoading()
@@ -326,6 +327,8 @@ It inherits functions from Node.
 - Scale(Vector vector)
 - Rotate(Vector vectorRollPitchYaw)
 - Translate(Vector vector)
+- Lerp(Transform a,b, float t)
+- CatmullRom(Transform a,b,c,d, float t)
 - MatrixTransform(Matrix matrix)
 - GetMatrix() : Matrix result
 - ClearTransform()
@@ -422,8 +425,12 @@ Main camera looking at the scene. It is a Transform.
 - [constructor]Camera()
 - SetFarPlane(float val)
 - SetNearPlane(float val)
+- SetFOV(float val)
 - GetFarPlane() : float result
 - GetNearPlane() : float result
+- GetFOV() : float result
+- Lerp(Camera a,b, float t)
+- CatmullRom(Camera a,b,c,d, float t)
 
 #### Model
 Collection of Objects, Armatures, Lights, Decals. Also a transform by itself
