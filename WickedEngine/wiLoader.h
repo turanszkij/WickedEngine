@@ -1077,6 +1077,8 @@ struct Camera:public Transform{
 		XMStoreFloat4x4(&this->InvProjection, InvP);
 	}
 
+	void Lerp(const Camera* target, float t);
+
 	XMVECTOR GetEye() const
 	{
 		return XMLoadFloat3(&translation);
@@ -1124,6 +1126,8 @@ struct Camera:public Transform{
 		return XMLoadFloat4x4(&realProjection);
 	}
 	virtual void UpdateTransform();
+
+	void Serialize(wiArchive& archive);
 };
 struct EnvironmentProbe : public Transform, public Cullable
 {
@@ -1163,6 +1167,7 @@ struct Model : public Transform
 	std::unordered_set<Decal*> decals;
 	std::unordered_set<ForceField*> forces;
 	std::list<EnvironmentProbe*> environmentProbes;
+	std::list<Camera*> cameras;
 
 	Model();
 	virtual ~Model();
@@ -1176,6 +1181,7 @@ struct Model : public Transform
 	void Add(Decal* value);
 	void Add(ForceField* value);
 	void Add(EnvironmentProbe* value);
+	void Add(Camera* value);
 	// merge
 	void Add(Model* value);
 	void Serialize(wiArchive& archive);
@@ -1202,15 +1208,6 @@ struct Scene
 // Create rest positions for bone tree
 void RecursiveRest(Armature* armature, Bone* bone);
 
-void LoadWiArmatures(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Armature*>& armatures);
-void LoadWiMaterialLibrary(const std::string& directory, const std::string& filename, const std::string& identifier, const std::string& texturesDir, MaterialCollection& materials);
-void LoadWiObjects(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Object*>& objects
-				   , std::list<Armature*>& armatures, MeshCollection& meshes, const MaterialCollection& materials);
-void LoadWiMeshes(const std::string& directory, const std::string& filename, const std::string& identifier, MeshCollection& meshes, const std::list<Armature*>& armatures, const MaterialCollection& materials);
-void LoadWiActions(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Armature*>& armatures);
-void LoadWiLights(const std::string& directory, const std::string& filename, const std::string& identifier, std::list<Light*>& lights);
+// Load world info from file:
 void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind);
-void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
-				   ,const std::list<Armature*>& armatures);
-void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, std::list<Decal*>& decals);
 

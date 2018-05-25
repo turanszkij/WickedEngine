@@ -131,6 +131,15 @@ namespace wiMath
 	{
 		return XMFLOAT4(Lerp(a.x, b.x, i), Lerp(a.y, b.y, i), Lerp(a.z, b.z, i), Lerp(a.w, b.w, i));
 	}
+	XMFLOAT4 Slerp(const XMFLOAT4& a, const XMFLOAT4& b, float i)
+	{
+		XMVECTOR _a = XMLoadFloat4(&a);
+		XMVECTOR _b = XMLoadFloat4(&b);
+		XMVECTOR result = XMQuaternionSlerp(_a, _b, i);
+		XMFLOAT4 retVal;
+		XMStoreFloat4(&retVal, result);
+		return retVal;
+	}
 	XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b){
 		return XMFLOAT3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
 	}

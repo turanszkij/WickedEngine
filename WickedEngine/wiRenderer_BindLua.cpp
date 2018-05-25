@@ -744,6 +744,8 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RunText("PICK_DECAL = 16");
 			wiLua::GetGlobal()->RunText("PICK_ENVPROBE = 32");
 			wiLua::GetGlobal()->RunText("PICK_FORCEFIELD = 64");
+			wiLua::GetGlobal()->RunText("PICK_EMITTER = 128");
+			wiLua::GetGlobal()->RunText("PICK_CAMERA = 256");
 
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);

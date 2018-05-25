@@ -70,6 +70,7 @@ struct Transform : public Node
 	void RotateRollPitchYaw(const XMFLOAT3& value);
 	void Rotate(const XMFLOAT4& quaternion);
 	void Scale(const XMFLOAT3& value);
+	void Lerp(const Transform* target, float t);
 	// Update this transform and children recursively
 	virtual void UpdateTransform();
 	// Get the root of the tree

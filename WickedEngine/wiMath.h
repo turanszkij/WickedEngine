@@ -20,7 +20,8 @@ namespace wiMath
 	float Lerp(float value1, float value2, float amount);
 	XMFLOAT2 Lerp(const XMFLOAT2&,const XMFLOAT2&, float);
 	XMFLOAT3 Lerp(const XMFLOAT3&,const XMFLOAT3&, float);
-	XMFLOAT4 Lerp(const XMFLOAT4&,const XMFLOAT4&, float);
+	XMFLOAT4 Lerp(const XMFLOAT4&, const XMFLOAT4&, float);
+	XMFLOAT4 Slerp(const XMFLOAT4&,const XMFLOAT4&, float);
 	XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b);
 	XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b);
 	float Clamp(float val, float min, float max);

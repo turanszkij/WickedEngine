@@ -12,6 +12,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 
 	wiRenderer::SetToDrawDebugEnvProbes(true);
 	wiRenderer::SetToDrawGridHelper(true);
+	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
 	rendererWindow->SetSize(XMFLOAT2(640, 960));
@@ -229,6 +230,12 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	pickTypeEmitterCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
 
+	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
+	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
+	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeCameraCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeCameraCheckBox);
+
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
 	speedMultiplierSlider->SetSize(XMFLOAT2(100, 30));
@@ -422,7 +429,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	textureQualityComboBox->SetSelected(3);
 	textureQualityComboBox->SetEnabled(true);
-	textureQualityComboBox->SetTooltip("Choose a texture sampling method.");
+	textureQualityComboBox->SetTooltip("Choose a texture sampling method for material textures.");
 	rendererWindow->AddWidget(textureQualityComboBox);
 
 	mipLodBiasSlider = new wiSlider(-2, 2, 0, 100000, "MipLOD Bias: ");
@@ -492,6 +499,15 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	envProbesCheckBox->SetCheck(wiRenderer::GetToDrawDebugEnvProbes());
 	rendererWindow->AddWidget(envProbesCheckBox);
 
+	cameraVisCheckBox = new wiCheckBox("Camera Proxy visualizer: ");
+	cameraVisCheckBox->SetTooltip("Toggle visualization of camera proxies in the scene");
+	cameraVisCheckBox->SetPos(XMFLOAT2(x, y += step));
+	cameraVisCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetToDrawDebugCameras(args.bValue);
+	});
+	cameraVisCheckBox->SetCheck(wiRenderer::GetToDrawDebugCameras());
+	rendererWindow->AddWidget(cameraVisCheckBox);
+
 	gridHelperCheckBox = new wiCheckBox("Grid helper: ");
 	gridHelperCheckBox->SetTooltip("Toggle showing of unit visualizer grid in the world origin");
 	gridHelperCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -552,6 +568,10 @@ int RendererWindow::GetPickType()
 	if (pickTypeEmitterCheckBox->GetCheck())
 	{
 		pickType |= PICK_EMITTER;
+	}
+	if (pickTypeCameraCheckBox->GetCheck())
+	{
+		pickType |= PICK_CAMERA;
 	}
 
 	return pickType;

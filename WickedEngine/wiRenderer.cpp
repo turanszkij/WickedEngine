@@ -62,7 +62,7 @@ bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::TRANSPARENTSHADOWSENABLED = true;
 bool wiRenderer::ALPHACOMPOSITIONENABLED = false;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
+, wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::debugCameras = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
 bool wiRenderer::ldsSkinningEnabled = true;
 float wiRenderer::SPECULARAA = 0.0f;
@@ -4194,6 +4194,41 @@ void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 		GetDevice()->EventEnd(threadID);
 	}
 }
+void wiRenderer::DrawDebugCameras(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	if (debugCameras)
+	{
+		GetDevice()->EventBegin("DebugCameras", threadID);
+
+		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+
+		GPUBuffer* vbs[] = {
+			&Cube::vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+
+		MiscCB sb;
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+
+		for (auto& model : GetScene().models)
+		{
+			for (auto& x : model->cameras)
+			{
+				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->world)*camera->GetViewProjection());
+
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+				GetDevice()->DrawIndexed(24, 0, 0, threadID);
+			}
+		}
+
+		GetDevice()->EventEnd(threadID);
+	}
+}
 
 void wiRenderer::DrawSoftParticles(Camera* camera, bool distortion, GRAPHICSTHREAD threadID)
 {
@@ -6780,6 +6815,22 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 				}
 			}
 		}
+		if (pickType & PICK_CAMERA)
+		{
+			for (auto& camera : model->cameras)
+			{
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&camera->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(camera->translation, cam->translation) * 0.05f)
+				{
+					Picked pick = Picked();
+					pick.transform = camera;
+					pick.camera = camera;
+					pick.distance = wiMath::Distance(camera->translation, ray.origin) * 0.95f;
+					pickPoints.push_back(pick);
+				}
+			}
+		}
 	}
 
 	if (!pickPoints.empty()) {
@@ -7401,6 +7452,14 @@ void wiRenderer::Add(ForceField* value)
 		value->attachTo(GetScene().GetWorldNode());
 	}
 }
+void wiRenderer::Add(Camera* value)
+{
+	GetScene().GetWorldNode()->Add(value);
+	if (value->parent == nullptr)
+	{
+		value->attachTo(GetScene().GetWorldNode());
+	}
+}
 
 void wiRenderer::Remove(Object* value)
 {
@@ -7455,6 +7514,17 @@ void wiRenderer::Remove(ForceField* value)
 		for (auto& x : GetScene().models)
 		{
 			x->forces.erase(value);
+		}
+		value->detach();
+	}
+}
+void wiRenderer::Remove(Camera* value)
+{
+	if (value != nullptr)
+	{
+		for (auto& x : GetScene().models)
+		{
+			x->cameras.remove(value);
 		}
 		value->detach();
 	}

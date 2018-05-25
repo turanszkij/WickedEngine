@@ -14,13 +14,10 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	fpscamera = true;
 	orbitalCamTarget = new Transform;
-	movespeed = 10.0f;
-	rotationspeed = 1.0f;
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
-	cameraWindow->SetSize(XMFLOAT2(400, 300));
+	cameraWindow->SetSize(XMFLOAT2(400, 420));
 	GUI->AddWidget(cameraWindow);
 
 	float x = 200;
@@ -59,19 +56,11 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	movespeedSlider = new wiSlider(1, 100, 10, 10000, "Movement Speed: ");
 	movespeedSlider->SetSize(XMFLOAT2(100, 30));
 	movespeedSlider->SetPos(XMFLOAT2(x, y += inc));
-	movespeedSlider->OnSlide([&](wiEventArgs args) {
-		movespeed = args.fValue;
-	});
-	movespeedSlider->SetValue(rotationspeed);
 	cameraWindow->AddWidget(movespeedSlider);
 
 	rotationspeedSlider = new wiSlider(0.1f, 2, 1, 10000, "Rotation Speed: ");
 	rotationspeedSlider->SetSize(XMFLOAT2(100, 30));
 	rotationspeedSlider->SetPos(XMFLOAT2(x, y += inc));
-	rotationspeedSlider->OnSlide([&](wiEventArgs args) {
-		rotationspeed = args.fValue;
-	});
-	rotationspeedSlider->SetValue(rotationspeed);
 	cameraWindow->AddWidget(rotationspeedSlider);
 
 	resetButton = new wiButton("Reset Camera");
@@ -85,12 +74,36 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 	fpsCheckBox = new wiCheckBox("FPS Camera: ");
 	fpsCheckBox->SetPos(XMFLOAT2(x, y += inc));
-	fpsCheckBox->OnClick([&](wiEventArgs args) {
-		fpscamera = args.bValue;
-	});
-	fpsCheckBox->SetCheck(fpscamera);
+	fpsCheckBox->SetCheck(true);
 	cameraWindow->AddWidget(fpsCheckBox);
 
+
+
+	proxyButton = new wiButton("Place Proxy");
+	proxyButton->SetTooltip("Copy the current camera and place a proxy of it in the world.");
+	proxyButton->SetSize(XMFLOAT2(140, 30));
+	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
+	proxyButton->OnClick([&](wiEventArgs args) {
+		Camera* cam = new Camera(*wiRenderer::getCamera());
+
+		wiRenderer::Add(cam);
+
+		//SetProxy(cam);
+	});
+	cameraWindow->AddWidget(proxyButton);
+
+	followCheckBox = new wiCheckBox("Follow Proxy: ");
+	followCheckBox->SetPos(XMFLOAT2(x, y += inc));
+	followCheckBox->SetCheck(false);
+	cameraWindow->AddWidget(followCheckBox);
+
+	followSlider = new wiSlider(0.0f, 0.999f, 0.0f, 1000.0f, "Follow Proxy Delay: ");
+	followSlider->SetSize(XMFLOAT2(100, 30));
+	followSlider->SetPos(XMFLOAT2(x, y += inc));
+	cameraWindow->AddWidget(followSlider);
+
+
+	SetProxy(nullptr);
 
 
 	cameraWindow->Translate(XMFLOAT3(800, 500, 0));
@@ -106,4 +119,22 @@ CameraWindow::~CameraWindow()
 	cameraWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(cameraWindow);
 	SAFE_DELETE(cameraWindow);
+}
+
+void CameraWindow::SetProxy(Camera* camera)
+{
+	proxy = camera;
+
+
+	if (proxy != nullptr)
+	{
+		followCheckBox->SetEnabled(true);
+		followSlider->SetEnabled(true);
+	}
+	else
+	{
+		followCheckBox->SetCheck(false);
+		followCheckBox->SetEnabled(false);
+		followSlider->SetEnabled(false);
+	}
 }

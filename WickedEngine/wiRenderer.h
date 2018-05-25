@@ -253,7 +253,7 @@ protected:
 	
 
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, debugForceFields, gridHelper, voxelHelper, advancedLightCulling, advancedRefractions;
+	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, debugForceFields, debugCameras, gridHelper, voxelHelper, advancedLightCulling, advancedRefractions;
 	static bool ldsSkinningEnabled;
 	static bool requestReflectionRendering;
 
@@ -351,6 +351,8 @@ public:
 	static bool GetToDrawDebugEmitters() { return debugEmitters; }
 	static void SetToDrawDebugForceFields(bool param) { debugForceFields = param; }
 	static bool GetToDrawDebugForceFields() { return debugForceFields; }
+	static void SetToDrawDebugCameras(bool param) { debugCameras = param; }
+	static bool GetToDrawDebugCameras() { return debugCameras; }
 	static bool GetToDrawGridHelper() { return gridHelper; }
 	static void SetToDrawGridHelper(bool value) { gridHelper = value; }
 	static bool GetToDrawVoxelHelper() { return voxelHelper; }
@@ -472,6 +474,7 @@ public:
 	static void DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugCameras(Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawSoftParticles(Camera* camera, bool distortion, GRAPHICSTHREAD threadID);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesAdd(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
@@ -550,6 +553,7 @@ public:
 		Decal* decal;
 		EnvironmentProbe* envProbe;
 		ForceField* forceField;
+		Camera* camera;
 		XMFLOAT3 position,normal;
 		float distance;
 		int subsetIndex;
@@ -568,7 +572,8 @@ public:
 				light == other.light &&
 				decal == other.decal &&
 				envProbe == other.envProbe &&
-				forceField == other.forceField
+				forceField == other.forceField &&
+				camera == other.camera
 				;
 		}
 		void Clear()
@@ -581,11 +586,12 @@ public:
 			SAFE_INIT(decal);
 			SAFE_INIT(envProbe);
 			SAFE_INIT(forceField);
+			SAFE_INIT(camera);
 		}
 	};
 
 	// Pick closest object in the world
-	// pickType: PICKTYPE enum values ocncatenated with | operator
+	// pickType: PICKTYPE enum values concatenated with | operator
 	// layer : concatenated string of layers to check against, empty string : all layers will be checked
 	// layerDisable : concatenated string of layers to NOT check against
 	static Picked Pick(long cursorX, long cursorY, int pickType = PICK_OPAQUE, const std::string& layer = "", const std::string& layerDisable = "");
@@ -626,6 +632,8 @@ public:
 	static void Add(Light* value);
 	// Add Force Field Instance
 	static void Add(ForceField* value);
+	// Add Camera Instance
+	static void Add(Camera* value);
 
 	// Remove from the scene
 	static void Remove(Object* value);
@@ -633,5 +641,6 @@ public:
 	static void Remove(Decal* value);
 	static void Remove(EnvironmentProbe* value);
 	static void Remove(ForceField* value);
+	static void Remove(Camera* value);
 };
 

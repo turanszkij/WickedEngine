@@ -958,7 +958,7 @@ void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wi
 	}
 	file.close();
 }
-void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::vector<Camera>& cameras
+void LoadWiCameras(const std::string&directory, const std::string& name, const std::string& identifier, std::list<Camera*>& cameras
 				   ,const unordered_set<Armature*>& armatures)
 {
 	stringstream filename("");
@@ -985,7 +985,7 @@ void LoadWiCameras(const std::string&directory, const std::string& name, const s
 					stringstream identified_parentArmature("");
 					identified_parentArmature<<parentA<<identifier;
 			
-					cameras.push_back(Camera(
+					cameras.push_back(new Camera(
 						trans,rot
 						,name)
 						);
@@ -1003,7 +1003,7 @@ void LoadWiCameras(const std::string&directory, const std::string& name, const s
 						Bone* b = a->GetBone(parentB);
 						if (b != nullptr)
 						{
-							cameras.back().attachTo(b);
+							cameras.back()->attachTo(b);
 						}
 					}
 
@@ -1014,7 +1014,7 @@ void LoadWiCameras(const std::string&directory, const std::string& name, const s
 					XMFLOAT3 s,t;
 					XMFLOAT4 r;
 					file>>t.x>>t.y>>t.z>>r.x>>r.y>>r.z>>r.w>>s.x>>s.y>>s.z;
-					XMStoreFloat4x4(&cameras.back().parent_inv_rest
+					XMStoreFloat4x4(&cameras.back()->parent_inv_rest
 							, XMMatrixScalingFromVector(XMLoadFloat3(&s)) *
 								XMMatrixRotationQuaternion(XMLoadFloat4(&r)) *
 								XMMatrixTranslationFromVector(XMLoadFloat3(&t))
@@ -2967,7 +2967,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 		// Old Importer
 
 		stringstream armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
-			, actionsFilePath(""), lightsFilePath(""), decalsFilePath("");
+			, actionsFilePath(""), lightsFilePath(""), decalsFilePath(""), camerasFilePath("");
 
 		armatureFilePath << name << ".wia";
 		materialLibFilePath << name << ".wim";
@@ -2976,6 +2976,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 		actionsFilePath << name << ".wiact";
 		lightsFilePath << name << ".wil";
 		decalsFilePath << name << ".wid";
+		camerasFilePath << name << ".wic";
 
 		LoadWiArmatures(directory, armatureFilePath.str(), identifier, armatures);
 		LoadWiMaterialLibrary(directory, materialLibFilePath.str(), identifier, "textures/", materials);
@@ -2984,6 +2985,7 @@ void Model::LoadFromDisk(const std::string& fileName, const std::string& identif
 		LoadWiActions(directory, actionsFilePath.str(), identifier, armatures);
 		LoadWiLights(directory, lightsFilePath.str(), identifier, lights);
 		LoadWiDecals(directory, decalsFilePath.str(), "textures/", decals);
+		LoadWiCameras(directory, camerasFilePath.str(), identifier, cameras, armatures);
 
 		FinishLoading();
 	}
@@ -3172,6 +3174,13 @@ void Model::Add(EnvironmentProbe* value)
 		environmentProbes.push_back(value);
 	}
 }
+void Model::Add(Camera* value)
+{
+	if (value != nullptr)
+	{
+		cameras.push_back(value);
+	}
+}
 void Model::Add(Model* value)
 {
 	if (value != nullptr)
@@ -3184,6 +3193,7 @@ void Model::Add(Model* value)
 		materials.insert(value->materials.begin(), value->materials.end());
 		forces.insert(value->forces.begin(), value->forces.end());
 		environmentProbes.insert(environmentProbes.end(), value->environmentProbes.begin(), value->environmentProbes.end());
+		cameras.insert(cameras.end(), value->cameras.begin(), value->cameras.end());
 	}
 }
 void Model::Serialize(wiArchive& archive)
@@ -3192,7 +3202,7 @@ void Model::Serialize(wiArchive& archive)
 
 	if (archive.IsReadMode())
 	{
-		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount, forceCount, probeCount;
+		size_t objectsCount, meshCount, materialCount, armaturesCount, lightsCount, decalsCount, forceCount, probeCount, cameraCount;
 
 		archive >> objectsCount;
 		for (size_t i = 0; i < objectsCount; ++i)
@@ -3261,6 +3271,17 @@ void Model::Serialize(wiArchive& archive)
 				EnvironmentProbe* x = new EnvironmentProbe;
 				x->Serialize(archive);
 				environmentProbes.push_back(x);
+			}
+		}
+
+		if (archive.GetVersion() >= 20)
+		{
+			archive >> cameraCount;
+			for (size_t i = 0; i < cameraCount; ++i)
+			{
+				Camera* x = new Camera;
+				x->Serialize(archive);
+				cameras.push_back(x);
 			}
 		}
 
@@ -3380,6 +3401,15 @@ void Model::Serialize(wiArchive& archive)
 		{
 			archive << environmentProbes.size();
 			for (auto& x : environmentProbes)
+			{
+				x->Serialize(archive);
+			}
+		}
+
+		if (archive.GetVersion() >= 20)
+		{
+			archive << cameras.size();
+			for (auto& x : cameras)
 			{
 				x->Serialize(archive);
 			}
@@ -4115,8 +4145,40 @@ void Camera::UpdateTransform()
 {
 	Transform::UpdateTransform();
 
-	//getMatrix();
 	UpdateProps();
+}
+
+void Camera::Lerp(const Camera* target, float t)
+{
+	Transform::Lerp(target, t);
+
+	UpdateProps();
+}
+
+void Camera::Serialize(wiArchive& archive)
+{
+	Transform::Serialize(archive);
+
+	if (archive.IsReadMode())
+	{
+		archive >> At;
+		archive >> Up;
+		archive >> width;
+		archive >> height;
+		archive >> zNearP;
+		archive >> zFarP;
+		archive >> fov;
+	}
+	else
+	{
+		archive << At;
+		archive << Up;
+		archive << width;
+		archive << height;
+		archive << zNearP;
+		archive << zFarP;
+		archive << fov;
+	}
 }
 #pragma endregion
 

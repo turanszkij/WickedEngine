@@ -15,10 +15,10 @@ public:
 
 	void ResetCam();
 
-	bool fpscamera; 
+	Camera* proxy = nullptr;
+	void SetProxy(Camera* camera);
+
 	Transform* orbitalCamTarget;
-	float movespeed;
-	float rotationspeed;
 
 	wiGUI* GUI;
 
@@ -30,5 +30,9 @@ public:
 	wiSlider* rotationspeedSlider;
 	wiButton* resetButton;
 	wiCheckBox* fpsCheckBox;
+
+	wiButton* proxyButton;
+	wiCheckBox* followCheckBox;
+	wiSlider* followSlider;
 };
 

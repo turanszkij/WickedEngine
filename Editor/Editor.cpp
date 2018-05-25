@@ -158,7 +158,7 @@ void BeginTranslate()
 			count += 1.0f;
 		}
 	}
-	if (count > 0)
+	if (count > 0 && translator->enabled)
 	{
 		centerV /= count;
 		XMFLOAT3 center;
@@ -528,9 +528,9 @@ void EditorComponent::Load()
 	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
 	translatorCheckBox->OnClick([=](wiEventArgs args) {
-		if(!args.bValue)
-			EndTranslate();
+		EndTranslate();
 		translator->enabled = args.bValue;
+		BeginTranslate();
 	});
 	GetGUI().AddWidget(translatorCheckBox);
 
@@ -871,6 +871,16 @@ void EditorComponent::FixedUpdate()
 }
 void EditorComponent::Update(float dt)
 {
+	Camera* cam = wiRenderer::getCamera();
+
+	// Follow camera proxy:
+	//	Outside of the next if, because we want to animate while hovering on GUI... (just better user experience)
+	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
+	{
+		cam->detach();
+		cam->Lerp(cameraWnd->proxy, 1.0f - cameraWnd->followSlider->GetValue());
+	}
+
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
 
@@ -909,17 +919,16 @@ void EditorComponent::Update(float dt)
 			yDif += buttonrotSpeed;
 		}
 
-		xDif *= cameraWnd->rotationspeed;
-		yDif *= cameraWnd->rotationspeed;
+		xDif *= cameraWnd->rotationspeedSlider->GetValue();
+		yDif *= cameraWnd->rotationspeedSlider->GetValue();
 
-		Camera* cam = wiRenderer::getCamera();
 
-		if (cameraWnd->fpscamera)
+		if (cameraWnd->fpsCheckBox->GetCheck())
 		{
 			// FPS Camera
 			cam->detach();
 
-			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeed * dt;
+			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * dt;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
@@ -1122,6 +1131,8 @@ void EditorComponent::Update(float dt)
 			decalWnd->SetDecal(nullptr);
 			envProbeWnd->SetProbe(nullptr);
 			animWnd->SetArmature(nullptr);
+			forceFieldWnd->SetForceField(nullptr);
+			cameraWnd->SetProxy(nullptr);
 		}
 		else
 		{
@@ -1165,6 +1176,10 @@ void EditorComponent::Update(float dt)
 			}
 			envProbeWnd->SetProbe(picked->envProbe);
 			forceFieldWnd->SetForceField(picked->forceField);
+			if (picked->camera != nullptr)
+			{
+				cameraWnd->SetProxy(picked->camera);
+			}
 
 			objectWnd->SetObject(picked->object);
 			emitterWnd->SetObject(picked->object);
@@ -1242,6 +1257,20 @@ void EditorComponent::Update(float dt)
 					*archive << false;
 				}
 
+				if (x->camera != nullptr)
+				{
+					*archive << true;
+					x->camera->Serialize(*archive);
+
+					wiRenderer::Remove(x->camera);
+					SAFE_DELETE(x->camera);
+					x->camera = nullptr;
+				}
+				else
+				{
+					*archive << false;
+				}
+
 				EnvironmentProbe* envProbe = dynamic_cast<EnvironmentProbe*>(x->transform);
 				if (envProbe != nullptr)
 				{
@@ -1272,6 +1301,7 @@ void EditorComponent::Update(float dt)
 					model->Add(x->light);
 					model->Add(x->decal);
 					model->Add(x->forceField);
+					model->Add(x->camera);
 				}
 				model->Serialize(*clipboard);
 
@@ -1282,6 +1312,7 @@ void EditorComponent::Update(float dt)
 				model->materials.clear();
 				model->forces.clear();
 				model->armatures.clear();
+				model->cameras.clear();
 				SAFE_DELETE(model);
 			}
 			// Paste
@@ -1336,6 +1367,14 @@ void EditorComponent::Update(float dt)
 						wiRenderer::Add(l);
 						x->transform = l;
 						x->forceField = l;
+					}
+					if (x->camera != nullptr)
+					{
+						Camera* l = new Camera(*x->camera);
+						l->detach();
+						wiRenderer::Add(l);
+						x->transform = l;
+						x->camera = l;
 					}
 				}
 

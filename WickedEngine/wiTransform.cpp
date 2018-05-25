@@ -1,5 +1,6 @@
 #include "wiTransform.h"
 #include "wiArchive.h"
+#include "wiMath.h"
 
 #include <vector>
 
@@ -269,6 +270,13 @@ void Transform::Rotate(const XMFLOAT4& quaternion)
 void Transform::Scale(const XMFLOAT3& value)
 {
 	transform(XMFLOAT3(0, 0, 0), XMFLOAT4(0, 0, 0, 1), value);
+}
+void Transform::Lerp(const Transform* target, float t)
+{
+	translation_rest = wiMath::Lerp(translation_rest, target->translation, t);
+	rotation_rest = wiMath::Slerp(rotation_rest, target->rotation, t);
+	scale_rest = wiMath::Lerp(scale_rest, target->scale, t);
+	UpdateTransform();
 }
 
 Transform* Transform::GetRoot()

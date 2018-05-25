@@ -41,12 +41,14 @@ public:
 	wiCheckBox* alphaCompositionCheckBox;
 	wiCheckBox* envProbesCheckBox;
 	wiCheckBox* gridHelperCheckBox;
+	wiCheckBox* cameraVisCheckBox;
 	wiCheckBox* pickTypeObjectCheckBox;
 	wiCheckBox* pickTypeEnvProbeCheckBox;
 	wiCheckBox* pickTypeLightCheckBox;
 	wiCheckBox* pickTypeDecalCheckBox;
 	wiCheckBox* pickTypeForceFieldCheckBox;
 	wiCheckBox* pickTypeEmitterCheckBox;
+	wiCheckBox* pickTypeCameraCheckBox;
 	wiSlider*	speedMultiplierSlider;
 	wiCheckBox* transparentShadowsCheckBox;
 	wiComboBox* shadowProps2DComboBox;
