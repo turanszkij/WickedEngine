@@ -31,7 +31,7 @@ class Editor;
 class EditorComponent : public Renderable2DComponent
 {
 private:
-	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex;
+	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, cameraTex;
 public:
 	MaterialWindow*			materialWnd;
 	PostprocessWindow*		postprocessWnd;

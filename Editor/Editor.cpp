@@ -858,6 +858,7 @@ void EditorComponent::Load()
 	decalTex = *(Texture2D*)Content.add("images/decal.dds");
 	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
 	emitterTex = *(Texture2D*)Content.add("images/emitter.dds");
+	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
 }
 void EditorComponent::Start()
 {
@@ -1605,6 +1606,37 @@ void EditorComponent::Compose()
 
 
 				wiImage::Draw(&forceFieldTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			}
+		}
+
+		if (rendererWnd->GetPickType() & PICK_CAMERA)
+		{
+			for (auto& y : x->cameras)
+			{
+				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+
+				wiImageEffects fx;
+				fx.pos = y->translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.camera == y)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->camera == y)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
+
+
+				wiImage::Draw(&cameraTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 			}
 		}
 

@@ -71,7 +71,7 @@ runProcess(function()
 
 		if(input.Press(VK_F8)) then
 			tt = 0.0
-			play = true
+			play = not play
 		end
 		if(play) then
 			local prox = {}
