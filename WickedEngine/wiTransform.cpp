@@ -294,6 +294,7 @@ void Transform::CatmullRom(const Transform* a, const Transform* b, const Transfo
 		XMLoadFloat4(&d->rotation),
 		t
 	);
+	R = XMQuaternionNormalize(R);
 	XMVECTOR S = XMVectorCatmullRom(
 		XMLoadFloat3(&a->scale),
 		XMLoadFloat3(&b->scale),
