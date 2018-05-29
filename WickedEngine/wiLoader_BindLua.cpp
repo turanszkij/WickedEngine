@@ -34,6 +34,8 @@ const char Node_BindLua::className[] = "Node";
 Luna<Node_BindLua>::FunctionType Node_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 	{ NULL, NULL }
 };
 Luna<Node_BindLua>::PropertyType Node_BindLua::properties[] = {
@@ -80,6 +82,36 @@ int Node_BindLua::SetName(lua_State* L)
 	}
 	return 0;
 }
+int Node_BindLua::SetLayerMask(lua_State *L)
+{
+	if (node == nullptr)
+	{
+		wiLua::SError(L, "SetLayerMask(uint value) object is null!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		int mask = wiLua::SGetInt(L, 1);
+		node->SetLayerMask(*reinterpret_cast<uint32_t*>(&mask));
+	}
+	else
+	{
+		wiLua::SError(L, "SetLayerMask(uint value) not enough arguments!");
+	}
+	return 0;
+}
+int Node_BindLua::GetLayerMask(lua_State *L)
+{
+	if (node == nullptr)
+	{
+		wiLua::SError(L, "GetLayerMask() object is null!");
+		return 0;
+	}
+	uint32_t mask = node->GetLayerMask();
+	wiLua::SSetInt(L, *reinterpret_cast<int*>(&mask));
+	return 1;
+}
 
 void Node_BindLua::Bind()
 {
@@ -98,6 +130,8 @@ const char Transform_BindLua::className[] = "Transform";
 Luna<Transform_BindLua>::FunctionType Transform_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
@@ -561,6 +595,8 @@ const char Object_BindLua::className[] = "Object";
 Luna<Object_BindLua>::FunctionType Object_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 
 	lunamethod(Cullable_BindLua, Intersects),
 	lunamethod(Cullable_BindLua, GetAABB),
@@ -736,7 +772,7 @@ int Object_BindLua::SetColor(lua_State *L)
 		return 0;
 	}
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 2)
+	if (argc > 0)
 	{
 		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vec != nullptr)
@@ -808,6 +844,8 @@ const char Armature_BindLua::className[] = "Armature";
 Luna<Armature_BindLua>::FunctionType Armature_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
@@ -1174,6 +1212,8 @@ const char Decal_BindLua::className[] = "Decal";
 Luna<Decal_BindLua>::FunctionType Decal_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 
 	lunamethod(Cullable_BindLua, Intersects),
 	lunamethod(Cullable_BindLua, GetAABB),
@@ -1751,6 +1791,8 @@ const char Camera_BindLua::className[] = "Camera";
 Luna<Camera_BindLua>::FunctionType Camera_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),
@@ -1956,6 +1998,8 @@ const char Model_BindLua::className[] = "Model";
 Luna<Model_BindLua>::FunctionType Model_BindLua::methods[] = {
 	lunamethod(Node_BindLua, GetName),
 	lunamethod(Node_BindLua, SetName),
+	lunamethod(Node_BindLua, SetLayerMask),
+	lunamethod(Node_BindLua, GetLayerMask),
 
 	lunamethod(Transform_BindLua, AttachTo),
 	lunamethod(Transform_BindLua, Detach),

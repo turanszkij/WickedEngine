@@ -6605,10 +6605,6 @@ void wiRenderer::UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRA
 	GetDevice()->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 }
 
-void wiRenderer::FinishLoading()
-{
-	// Kept for backwards compatibility
-}
 
 Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
@@ -6696,8 +6692,7 @@ wiWaterPlane wiRenderer::GetWaterPlane()
 	return waterPlane;
 }
 
-wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& layer,
-	const std::string& layerDisable)
+wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, uint32_t layerMask)
 {
 	std::vector<Picked> pickPoints;
 
@@ -6709,7 +6704,7 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 	{
 		searchTree->getVisible(ray, culledObjects);
 
-		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, layer, layerDisable, true);
+		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, true, layerMask);
 	}
 
 	// pick other...
@@ -6860,12 +6855,11 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, const std::string& l
 
 	return Picked();
 }
-wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, const std::string& layer,
-	const std::string& layerDisable)
+wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, uint32_t layerMask)
 {
 	RAY ray = getPickRay(cursorX, cursorY);
 
-	return Pick(ray, pickType, layer, layerDisable);
+	return Pick(ray, pickType, layerMask);
 }
 
 RAY wiRenderer::getPickRay(long cursorX, long cursorY){
@@ -6880,22 +6874,11 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 }
 
 void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, std::vector<Picked>& points,
-	int pickType, bool dynamicObjects, const std::string& layer, const std::string& layerDisable, bool onlyVisible)
+	int pickType, bool dynamicObjects, bool onlyVisible, uint32_t layerMask)
 {
 	if (culledObjects.empty())
 	{
 		return;
-	}
-
-	bool checkLayers = false;
-	if (layer.length() > 0)
-	{
-		checkLayers = true;
-	}
-	bool dontcheckLayers = false;
-	if (layerDisable.length() > 0)
-	{
-		dontcheckLayers = true;
 	}
 
 	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
@@ -6909,91 +6892,82 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 	{
 		Object* object = (Object*)culled;
 
-		if (!(pickType & object->GetRenderTypes()))
+		uint32_t objectLayerMask = object->GetLayerMask();
+		if (objectLayerMask & layerMask)
 		{
-			continue;
-		}
-		if (!dynamicObjects && object->isDynamic())
-		{
-			continue;
-		}
-		if (onlyVisible && object->IsOccluded() && GetOcclusionCullingEnabled())
-		{
-			continue;
-		}
 
-		// layer support
-		if (checkLayers || dontcheckLayers)
-		{
-			string id = object->GetLayerID();
-
-			if (checkLayers && layer.find(id) == string::npos)
+			if (!(pickType & object->GetRenderTypes()))
 			{
 				continue;
 			}
-			if (dontcheckLayers && layerDisable.find(id) != string::npos)
+			if (!dynamicObjects && object->isDynamic())
 			{
 				continue;
 			}
-		}
-
-		Mesh* mesh = object->mesh;
-		if (mesh->vertices_POS.size() >= _arraySize)
-		{
-			// grow preallocated vector helper array
-			_mm_free(_vertices);
-			_arraySize = (mesh->vertices_POS.size() + 1) * 2;
-			_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
-		}
-
-		XMMATRIX objectMat = object->getMatrix();
-		XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
-
-		XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
-		XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
-
-		Mesh::Vertex_FULL _tmpvert;
-
-		if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
-		{
-			for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+			if (onlyVisible && object->IsOccluded() && GetOcclusionCullingEnabled())
 			{
-				_tmpvert = TransformVertex(mesh, (int)i);
-				_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
+				continue;
 			}
-		}
-		else if (mesh->hasDynamicVB())
-		{
-			for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
-			{
-				_vertices[i] = mesh->vertices_Transformed_POS[i].LoadPOS();
-			}
-		}
-		else
-		{
-			for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
-			{
-				_vertices[i] = mesh->vertices_POS[i].LoadPOS();
-			}
-		}
 
-		for (size_t i = 0; i < mesh->indices.size(); i += 3)
-		{
-			int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-			float distance;
-			if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+			Mesh* mesh = object->mesh;
+			if (mesh->vertices_POS.size() >= _arraySize)
 			{
-				XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
-				XMVECTOR& nor = XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat);
-				Picked picked = Picked();
-				picked.transform = object;
-				picked.object = object;
-				XMStoreFloat3(&picked.position, pos);
-				XMStoreFloat3(&picked.normal, nor);
-				picked.distance = wiMath::Distance(pos, rayOrigin);
-				picked.subsetIndex = (int)mesh->vertices_FULL[i0].tex.z;
-				points.push_back(picked);
+				// grow preallocated vector helper array
+				_mm_free(_vertices);
+				_arraySize = (mesh->vertices_POS.size() + 1) * 2;
+				_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 			}
+
+			XMMATRIX objectMat = object->getMatrix();
+			XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+
+			XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+			XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+
+			Mesh::Vertex_FULL _tmpvert;
+
+			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
+			{
+				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+				{
+					_tmpvert = TransformVertex(mesh, (int)i);
+					_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
+				}
+			}
+			else if (mesh->hasDynamicVB())
+			{
+				for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
+				{
+					_vertices[i] = mesh->vertices_Transformed_POS[i].LoadPOS();
+				}
+			}
+			else
+			{
+				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+				{
+					_vertices[i] = mesh->vertices_POS[i].LoadPOS();
+				}
+			}
+
+			for (size_t i = 0; i < mesh->indices.size(); i += 3)
+			{
+				int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
+				float distance;
+				if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+				{
+					XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+					XMVECTOR& nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
+					Picked picked = Picked();
+					picked.transform = object;
+					picked.object = object;
+					XMStoreFloat3(&picked.position, pos);
+					XMStoreFloat3(&picked.normal, nor);
+					picked.distance = wiMath::Distance(pos, rayOrigin);
+					picked.subsetIndex = (int)mesh->vertices_FULL[i0].tex.z;
+					points.push_back(picked);
+				}
+			}
+
 		}
 
 	}

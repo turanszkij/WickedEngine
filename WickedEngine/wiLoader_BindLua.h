@@ -23,6 +23,8 @@ public:
 
 	int GetName(lua_State* L);
 	int SetName(lua_State* L);
+	int SetLayerMask(lua_State *L);
+	int GetLayerMask(lua_State *L);
 
 	static void Bind();
 };

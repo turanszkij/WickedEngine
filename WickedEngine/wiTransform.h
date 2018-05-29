@@ -12,13 +12,15 @@ struct Node
 private:
 	static std::atomic<uint64_t> __Unique_ID_Counter;
 	uint64_t ID;
+	uint32_t layerMask = 0xFFFFFFFF; // all layers enabled by default
 public:
 	std::string name;
 
 	Node();
 
+	void SetLayerMask(uint32_t value) { layerMask = value; }
+	virtual uint32_t GetLayerMask() { return layerMask; }
 	
-	std::string GetLayerID();
 	uint64_t GetID() { return ID; }
 	void SetID(uint64_t newID) { ID = newID; }
 	static const uint64_t INVALID_ID = UINT64_MAX;
@@ -76,6 +78,8 @@ struct Transform : public Node
 	virtual void UpdateTransform();
 	// Get the root of the tree
 	Transform* GetRoot();
+	// Layer mask with parent hierarchy masking
+	virtual uint32_t GetLayerMask() override;
 	void Serialize(wiArchive& archive);
 };
 

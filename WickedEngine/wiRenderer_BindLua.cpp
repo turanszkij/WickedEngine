@@ -368,11 +368,6 @@ namespace wiRenderer_BindLua
 		}
 		return 0;
 	}
-	int FinishLoading(lua_State* L)
-	{
-		wiRenderer::FinishLoading();
-		return 0;
-	}
 	int SetEnvironmentMap(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -573,20 +568,17 @@ namespace wiRenderer_BindLua
 			if (ray != nullptr)
 			{
 				int pickType = PICKTYPE::PICK_OPAQUE;
-				string layer = "", layerDisable = "";
+				uint32_t layerMask = 0xFFFFFFFF;
 				if (argc > 1)
 				{
 					pickType = wiLua::SGetInt(L, 2);
 					if (argc > 2)
 					{
-						layer = wiLua::SGetString(L, 3);
-						if (argc > 3)
-						{
-							layerDisable = wiLua::SGetString(L, 4);
-						}
+						int mask = wiLua::SGetInt(L, 3);
+						layerMask = *reinterpret_cast<uint32_t*>(&mask);
 					}
 				}
-				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, pickType, layer, layerDisable);
+				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, pickType, layerMask);
 				Luna<Object_BindLua>::push(L, new Object_BindLua(pick.object));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -742,7 +734,6 @@ namespace wiRenderer_BindLua
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 			wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
-			wiLua::GetGlobal()->RegisterFunc("FinishLoading", FinishLoading);
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
 			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);

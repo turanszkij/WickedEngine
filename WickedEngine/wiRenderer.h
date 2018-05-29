@@ -595,11 +595,11 @@ public:
 	// pickType: PICKTYPE enum values concatenated with | operator
 	// layer : concatenated string of layers to check against, empty string : all layers will be checked
 	// layerDisable : concatenated string of layers to NOT check against
-	static Picked Pick(long cursorX, long cursorY, int pickType = PICK_OPAQUE, const std::string& layer = "", const std::string& layerDisable = "");
-	static Picked Pick(RAY& ray, int pickType = PICK_OPAQUE, const std::string& layer = "", const std::string& layerDisable = "");
+	static Picked Pick(long cursorX, long cursorY, int pickType = PICK_OPAQUE, uint32_t layerMask = 0xFFFFFFFF);
+	static Picked Pick(RAY& ray, int pickType = PICK_OPAQUE, uint32_t layerMask = 0xFFFFFFFF);
 	static RAY getPickRay(long cursorX, long cursorY);
 	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, std::vector<Picked>& points,
-		int pickType = PICK_OPAQUE, bool dynamicObjects = true, const std::string& layer = "", const std::string& layerDisable = "", bool onlyVisible = false);
+		int pickType = PICK_OPAQUE, bool dynamicObjects = true, bool onlyVisible = false, uint32_t layerMask = 0xFFFFFFFF);
 	static void CalculateVertexAO(Object* object);
 
 	static PHYSICS* physicsEngine;

@@ -131,7 +131,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
-- Pick(Ray ray, opt PICKTYPE pickType, opt string id="", opt string disableID="") : Object? object, Vector position,normal, float distance
+- Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : Object? object, Vector position,normal, float distance
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
@@ -317,6 +317,8 @@ The basic entity in the scene. It has a name.
 - [constructor]Node()
 - GetName() : string
 - SetName(string name)
+- SetLayerMask(uint value)
+- GetLayerMask() : uint result
 
 #### Transform
 Everything in the scene is a transform. It defines a point in the space by location, size, and rotation.

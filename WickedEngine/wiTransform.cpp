@@ -12,16 +12,6 @@ Node::Node() {
 }
 
 
-std::string Node::GetLayerID()
-{
-	auto x = name.find_last_of('_');
-	if (x != std::string::npos)
-	{
-		return name.substr(x + 1);
-	}
-	return "";
-}
-
 void Node::Serialize(wiArchive& archive)
 {
 	if (archive.IsReadMode())
@@ -317,6 +307,14 @@ Transform* Transform::GetRoot()
 		return parent->GetRoot();
 	}
 	return this;
+}
+uint32_t Transform::GetLayerMask()
+{
+	if (parent != nullptr)
+	{
+		return parent->GetLayerMask() & Node::GetLayerMask();
+	}
+	return Node::GetLayerMask();
 }
 void Transform::Serialize(wiArchive& archive)
 {
