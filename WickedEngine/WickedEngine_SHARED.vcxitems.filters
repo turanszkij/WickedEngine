@@ -1173,6 +1173,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1993,6 +1996,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp">
       <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

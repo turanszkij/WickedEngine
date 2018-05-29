@@ -245,6 +245,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Vulkan.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
@@ -531,6 +532,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.cpp" />

@@ -1,8 +1,8 @@
-#include "TiledForwardRenderableComponent_BindLua.h"
+#include "TiledDeferredRenderableComponent_BindLua.h"
 
-const char TiledForwardRenderableComponent_BindLua::className[] = "TiledForwardRenderableComponent";
+const char TiledDeferredRenderableComponent_BindLua::className[] = "TiledDeferredRenderableComponent";
 
-Luna<TiledForwardRenderableComponent_BindLua>::FunctionType TiledForwardRenderableComponent_BindLua::methods[] = {
+Luna<TiledDeferredRenderableComponent_BindLua>::FunctionType TiledDeferredRenderableComponent_BindLua::methods[] = {
 	lunamethod(Renderable2DComponent_BindLua, AddSprite),
 	lunamethod(Renderable2DComponent_BindLua, AddFont),
 	lunamethod(Renderable2DComponent_BindLua, RemoveSprite),
@@ -57,33 +57,33 @@ Luna<TiledForwardRenderableComponent_BindLua>::FunctionType TiledForwardRenderab
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
 
 	lunamethod(Renderable3DComponent_BindLua, SetPreferredThreadingCount),
-	{ NULL, NULL }
+{ NULL, NULL }
 };
-Luna<TiledForwardRenderableComponent_BindLua>::PropertyType TiledForwardRenderableComponent_BindLua::properties[] = {
+Luna<TiledDeferredRenderableComponent_BindLua>::PropertyType TiledDeferredRenderableComponent_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
-TiledForwardRenderableComponent_BindLua::TiledForwardRenderableComponent_BindLua(TiledForwardRenderableComponent* component)
+TiledDeferredRenderableComponent_BindLua::TiledDeferredRenderableComponent_BindLua(TiledDeferredRenderableComponent* component)
 {
 	this->component = component;
 }
 
-TiledForwardRenderableComponent_BindLua::TiledForwardRenderableComponent_BindLua(lua_State *L)
+TiledDeferredRenderableComponent_BindLua::TiledDeferredRenderableComponent_BindLua(lua_State *L)
 {
-	component = new TiledForwardRenderableComponent();
+	component = new TiledDeferredRenderableComponent();
 }
 
 
-TiledForwardRenderableComponent_BindLua::~TiledForwardRenderableComponent_BindLua()
+TiledDeferredRenderableComponent_BindLua::~TiledDeferredRenderableComponent_BindLua()
 {
 }
 
-void TiledForwardRenderableComponent_BindLua::Bind()
+void TiledDeferredRenderableComponent_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<TiledForwardRenderableComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		//Luna<TiledDeferredRenderableComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }

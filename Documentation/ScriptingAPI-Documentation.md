@@ -64,6 +64,7 @@ This section describes the common tools for scripting which are not necessarily 
 - signal(string name)
 - waitSignal(string name)
 - runProcess(function func)
+- killProcesses()
 - waitSeconds(float seconds)
 - getprops(table object)
 - len(table object)

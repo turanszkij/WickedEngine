@@ -5,6 +5,7 @@
 #include "DeferredRenderableComponent_BindLua.h"
 #include "ForwardRenderableComponent_BindLua.h"
 #include "TiledForwardRenderableComponent_BindLua.h"
+#include "TiledDeferredRenderableComponent_BindLua.h"
 #include "LoadingScreenComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
 #include "wiProfiler.h"
@@ -64,6 +65,14 @@ int MainComponent_BindLua::GetActiveComponent(lua_State *L)
 	if (compDef3D != nullptr)
 	{
 		Luna<DeferredRenderableComponent_BindLua>::push(L, new DeferredRenderableComponent_BindLua(compDef3D));
+		return 1;
+	}
+
+	//return tiled deferred 3d component if the active one is of that type
+	TiledDeferredRenderableComponent* compTDef3D = dynamic_cast<TiledDeferredRenderableComponent*>(component->getActiveComponent());
+	if (compTDef3D != nullptr)
+	{
+		Luna<TiledDeferredRenderableComponent_BindLua>::push(L, new TiledDeferredRenderableComponent_BindLua(compTDef3D));
 		return 1;
 	}
 
@@ -159,6 +168,20 @@ int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 		if (compDef3D != nullptr)
 		{
 			component->activateComponent(compDef3D->component, fadeFrames, fadeColor);
+			return 0;
+		}
+
+		TiledDeferredRenderableComponent_BindLua* compTDef3D = Luna<TiledDeferredRenderableComponent_BindLua>::lightcheck(L, 1);
+		if (compTDef3D != nullptr)
+		{
+			component->activateComponent(compTDef3D->component, fadeFrames, fadeColor);
+			return 0;
+		}
+
+		TiledForwardRenderableComponent_BindLua* compTFwd3D = Luna<TiledForwardRenderableComponent_BindLua>::lightcheck(L, 1);
+		if (compTFwd3D != nullptr)
+		{
+			component->activateComponent(compTFwd3D->component, fadeFrames, fadeColor);
 			return 0;
 		}
 

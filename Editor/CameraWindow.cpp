@@ -85,7 +85,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
 	proxyButton->OnClick([&](wiEventArgs args) {
 		Camera* cam = new Camera(*wiRenderer::getCamera());
-		cam->name = "ProxyCam";
+		cam->name = "cam";
 
 		wiRenderer::Add(cam);
 

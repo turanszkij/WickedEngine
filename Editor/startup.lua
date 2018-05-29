@@ -28,10 +28,6 @@
 -- 	end
 -- end)
 
-local tt = 0.0
-local play = false
-local rot = 0
-
 main.SetResolutionDisplay(true);
 runProcess(function()
 	while true do
@@ -67,27 +63,6 @@ runProcess(function()
 					end
 				end
 			end)
-		end
-
-		if(input.Press(VK_F8)) then
-			tt = 0.0
-			play = not play
-		end
-		if(play) then
-			local prox = {}
-			prox[0] = GetCamera("cam0")
-			prox[1] = GetCamera("cam1")
-			prox[2] = GetCamera("cam2")
-			prox[3] = GetCamera("cam3")
-			local cam = GetCamera()
-			
-			cam.CatmullRom(prox[(rot + 0) % 4], prox[(rot + 1) % 4], prox[(rot + 2) % 4], prox[(rot + 3) % 4], tt)
-
-			tt = tt + 0.4 * 0.016
-			if(tt >= 1.0) then
-				tt = 0.0
-				rot = rot + 1
-			end
 		end
 
 		
