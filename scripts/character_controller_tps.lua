@@ -1,4 +1,13 @@
 -- Lua Third person camera and character controller script
+--	To use this, first load a scene so our character can stand on something. Otherwise, it will be undefined behaviour
+--	For example, you can load the dungeon generator script first, then this and you will have a scene to try navigate.
+--
+-- 	CONTROLS:
+--		WASD: walk
+--		SHIFT: speed
+--		SPACE: Jump
+--		Right Mouse Button: Camera control
+--		Mouse: Rotate camera after pressing Right Mouse Button
 
 -- Very simple additive gravity for now
 local gravity = Vector(0,-0.076,0)
@@ -6,16 +15,14 @@ local gravity = Vector(0,-0.076,0)
 -- Character controller class:
 characterController = {
 	skeleton = Armature(),
-	head = Transform(),
-	meshname = "",
-	target = Transform(),
+	target = Transform(), -- Camera will look at this location
 	face = Vector(0,0,1),
 	velocity = Vector(),
 	ray = Ray(),
 	o,p,n = Vector(0,0,0), -- collision props with scene (object,position,normal)
 	savedPointerPos = Vector(),
 	moveSpeed = 0.28,
-	layerMask = 0x2,
+	layerMask = 0x2, -- The character will be tagged to use this layer, so scene Picking can filter out the character
 	
 	states = {
 		STAND = 0,
@@ -25,12 +32,11 @@ characterController = {
 	},
 	state = STAND,
 	
-	Load = function(self,fileName,id,objectname,armaturename,headname)
+	Load = function(self,fileName,id,objectname,armaturename)
 		self.id = id
 		local model = LoadModel(fileName,id)
 		model.SetLayerMask(self.layerMask)
 		self.skeleton = GetArmature(armaturename)
-		self.head = self.skeleton.GetBone(headname)
 	end,
 	
 	Reset = function(self)
@@ -50,7 +56,7 @@ characterController = {
 		self.velocity.SetY(velocityPrev.GetY())
 		self.ray = Ray(self.skeleton.GetPosition():Add(self.velocity):Add(Vector(0,4)),Vector(0,-1,0))
 		self.o,self.p,self.n = Pick(self.ray, PICK_OPAQUE, ~self.layerMask)
-		if(self.o:IsValid()) then
+		if(self.o.IsValid()) then
 			self.state = self.states.WALK
 		else
 			self.state = self.states.STAND
@@ -61,13 +67,15 @@ characterController = {
 		local ray2 = Ray(self.skeleton.GetPosition():Add(self.velocity:Normalize():Multiply(1.2)):Add(Vector(0,4)),self.velocity)
 		local o2,p2,n2 = Pick(ray2, PICK_OPAQUE, ~self.layerMask)
 		local dist = vector.Subtract(self.skeleton.GetPosition():Add(Vector(0,4)),p2):Length()
-		if(o2:IsValid() and dist < 2.8) then
+		if(o2.IsValid() and dist < 2.8) then
 			-- run along wall instead of going through it
-			local undesiredMotion = n2:Multiply(vector.Dot(self.velocity.Normalize(), n2.Normalize()))
-			local desiredMotion = vector.Subtract(self.velocity, undesiredMotion)
-			self.velocity = desiredMotion
-			
+			local velocityLen = self.velocity.Length()
+			local velocityNormalized = self.velocity.Normalize()
+			local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
+			local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
+			self.velocity = vector.Multiply(desiredMotion, velocityLen)
 		end
+		
 	end,
 	Turn = function(self,f)
 		self.skeleton.Rotate(Vector(0,f))
@@ -157,17 +165,17 @@ characterController = {
 		end
 		
 		local w,wp,wn = Pick(self.ray,PICK_WATER)
-		if(w:IsValid() and self.velocity.Length()>0) then
+		if(w.IsValid() and self.velocity.Length()>0) then
 			PutWaterRipple("../Editor/images/ripple.png",wp)
 		end
 		
 		
 		self.velocity = vector.Add(self.velocity, gravity)
-		self.skeleton.Translate(self.velocity)
+		self.skeleton.Translate(vector.Multiply(getDeltaTime() * 60, self.velocity))
 		self.ray = Ray(self.skeleton.GetPosition():Add(Vector(0,4)),Vector(0,-1,0))
 		local pPrev = self.p
 		self.o,self.p,self.n = Pick(self.ray, PICK_OPAQUE, ~self.layerMask)
-		if(not self.o:IsValid()) then
+		if(not self.o.IsValid()) then
 			self.p=pPrev
 		end
 		if(self.skeleton.GetPosition().GetY() < self.p.GetY() and self.velocity.GetY()<=0) then
@@ -201,23 +209,29 @@ tpCamera = {
 	end,
 	
 	Update = function(self)
-		--camera collision
 		if(self.targetPlayer ~= nil) then
 			local camRestDistance = 12.0
 			local camTargetDiff = vector.Subtract(self.targetPlayer.target.GetPosition(), self.camera.GetPosition())
-			local camTargetDistance = camTargetDiff:Length()
+			local camTargetDistance = camTargetDiff.Length()
+			
 			if(camTargetDistance < camRestDistance) then
-				self.camera.Translate( Vector(0,0,-0.14) )
+				-- Camera is closer to target than rest distance, push it back some amount...
+				self.camera.Translate(vector.Multiply(getDeltaTime() * 60, Vector(0,0,-0.14)))
 			end
-			local camRay = Ray(self.camera.GetPosition(),camTargetDiff:Normalize())
+			
+			-- Cast a ray from the camera eye and check if it hits something other than the player...
+			local camRay = Ray(self.camera.GetPosition(),camTargetDiff.Normalize())
 			local camCollObj,camCollPos,camCollNor = Pick(camRay, PICK_OPAQUE, ~self.targetPlayer.layerMask)
-			if(camCollObj:IsValid()) then
+			if(camCollObj.IsValid()) then
+				-- It hit something, see if it is between the player and camera:
 				local camCollDiff = vector.Subtract(camCollPos, self.camera.GetPosition())
-				local camCollDistance = camCollDiff:Length()
+				local camCollDistance = camCollDiff.Length()
 				if(camCollDistance < camTargetDistance) then
+					-- If there was something between player and camera, clamp camera position inside:
 					self.camera.Translate(Vector(0,0,camCollDistance))
 				end
 			end
+			
 		end
 	end,
 }
@@ -231,6 +245,8 @@ local camera = tpCamera
 -- Main loop:
 runProcess(function()
 
+	-- We will override the render component so we can invoke the script from Editor and controls won't collide with editor scripts
+	--	TODO: for example ESC key could bring us back to editor component and destroy this?
 	local component = TiledForwardRenderableComponent()
 	component.SetSSREnabled(false)
 	component.SetSSAOEnabled(false)
@@ -239,7 +255,7 @@ runProcess(function()
 	--ClearWorld()
 	--LoadModel("../models/Misc/scene.wimf")
 
-	player:Load("../models/girl/girl.wimf","player","omino_common","Armature_common","testa")
+	player:Load("../models/girl/girl.wimf","player","omino_common","Armature_common")
 	player:Reset()
 	--player:Reposition(Vector(0,4,-20))
 	camera:Reset()
@@ -249,11 +265,11 @@ runProcess(function()
 
 		player:Input()
 		
-		camera:Update()
-		
 		player:Update()
 		
-		-- Wait for Engine
+		camera:Update()
+		
+		-- Wait for Engine update tick
 		update()
 		
 	end

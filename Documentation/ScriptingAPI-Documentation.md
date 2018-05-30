@@ -71,7 +71,8 @@ This section describes the common tools for scripting which are not necessarily 
 - backlog_post_list(table list)
 - fixedupdate()
 - update()
-- render()
+- render() 
+- getDeltaTime()
 - math.lerp(float a,b,t)
 - math.clamp(float x,min,max)
 - math.saturate(float x)
@@ -284,6 +285,8 @@ A four component floating point vector. Provides efficient calculations with SIM
 - Add(Vector v1,v2) : Vector result
 - Subtract(Vector v1,v2) : Vector result
 - Multiply(Vector v1,v2) : Vector result
+- Multiply(Vector v1, float f) : Vector result
+- Multiply(float f, Vector v1) : Vector result
 - Dot(Vector v1,v2) : Vector result
 - Cross(Vector v1,v2) : Vector result
 - Lerp(Vector v1,v2, float t) : Vector result

@@ -33,6 +33,10 @@ To test the engine, this solution contains several projects which you can build 
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
 - You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
 - Be sure to build in "Release" mode for optimal performance. Debugging support will be reduced.
+- Be sure to set an appropriate startup project such as the "Editor" or "Tests" for example.
+- There are multiple sample models in the "models" folder. You can load any of them inside the Editor.
+- There are multiple sample LUA scripts in the "scripts" folder. You can load any of them inside the Editor, but please check how to use them first by reading the first few lines of the scripts.
+- Please open an Issue here on GitHub if you encounter any difficulties.
 
 The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
 You can specify command line arguments for each application to switch between render devices or other settings. Currently the list of options:
