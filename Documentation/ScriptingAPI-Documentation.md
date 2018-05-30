@@ -115,10 +115,10 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
 - GetCameras() : string result
-- GetCamera(opt String name) : Camera result			// If string is provided, it will search a camera by name, otherwise, returns the main camera
-- LoadModel(string fileName, opt string identifier, opt Matrix transform) : Model? result
-- LoadWorldInfo(string fileName)
-- FinishLoading()
+- GetCamera(opt String name) : Camera result		-- If string is provided, it will search a camera by name, otherwise, returns the main camera
+- LoadModel(string fileName, opt Matrix transform) : Model? result		-- Returns the model that was loaded
+- LoadWorldInfo(string fileName)		-- Loads world information from file
+- DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
 - SetEnvironmentMap(Texture cubemap)
 - SetColorGrading(Texture texture2D)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
@@ -132,7 +132,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
 - SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
-- Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : Object? object, Vector position,normal, float distance
+- Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : Object? object, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against
 - DrawLine(Vector origin,end, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
@@ -472,6 +472,8 @@ A RenderableComponent describes a scene wich can render itself.
 - Compose()
 - OnStart(string task)
 - OnStop(string task)
+- GetLayerMask() : uint result
+- SetLayerMask(uint mask)
 
 #### Renderable2DComponent
 It can hold Sprites and Fonts and can sort them by layers, update and render them.

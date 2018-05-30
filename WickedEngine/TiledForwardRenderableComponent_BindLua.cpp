@@ -30,6 +30,8 @@ Luna<TiledForwardRenderableComponent_BindLua>::FunctionType TiledForwardRenderab
 	lunamethod(RenderableComponent_BindLua, Compose),
 	lunamethod(RenderableComponent_BindLua, OnStart),
 	lunamethod(RenderableComponent_BindLua, OnStop),
+	lunamethod(RenderableComponent_BindLua, GetLayerMask),
+	lunamethod(RenderableComponent_BindLua, SetLayerMask),
 
 	lunamethod(Renderable3DComponent_BindLua, SetSSAOEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetSSREnabled),

@@ -19,9 +19,9 @@ public:
 	Node();
 
 	void SetLayerMask(uint32_t value) { layerMask = value; }
-	virtual uint32_t GetLayerMask() { return layerMask; }
+	virtual uint32_t GetLayerMask() const { return layerMask; }
 	
-	uint64_t GetID() { return ID; }
+	uint64_t GetID() const { return ID; }
 	void SetID(uint64_t newID) { ID = newID; }
 	static const uint64_t INVALID_ID = UINT64_MAX;
 
@@ -79,7 +79,7 @@ struct Transform : public Node
 	// Get the root of the tree
 	Transform* GetRoot();
 	// Layer mask with parent hierarchy masking
-	virtual uint32_t GetLayerMask() override;
+	virtual uint32_t GetLayerMask() const override;
 	void Serialize(wiArchive& archive);
 };
 

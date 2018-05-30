@@ -46,7 +46,6 @@ private:
 
 	UINT msaaSampleCount;
 
-
 protected:
 	static wiRenderTarget
 		rtReflection
@@ -153,6 +152,7 @@ public:
 	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
 
 	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; ResizeBuffers(); }
+
 
 	virtual void setPreferredThreadingCount(unsigned short value);
 

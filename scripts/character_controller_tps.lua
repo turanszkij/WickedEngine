@@ -32,9 +32,8 @@ characterController = {
 	},
 	state = STAND,
 	
-	Load = function(self,fileName,id,objectname,armaturename)
-		self.id = id
-		local model = LoadModel(fileName,id)
+	Load = function(self,fileName,objectname,armaturename)
+		local model = LoadModel(fileName)
 		model.SetLayerMask(self.layerMask)
 		self.skeleton = GetArmature(armaturename)
 	end,
@@ -255,7 +254,7 @@ runProcess(function()
 	--ClearWorld()
 	--LoadModel("../models/Misc/scene.wimf")
 
-	player:Load("../models/girl/girl.wimf","player","omino_common","Armature_common")
+	player:Load("../models/girl/girl.wimf","omino_common","Armature_common")
 	player:Reset()
 	--player:Reposition(Vector(0,4,-20))
 	camera:Reset()

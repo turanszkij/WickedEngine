@@ -39,7 +39,6 @@ runProcess(function()
 		if(input.Press(VK_F10)) then
 			s = SoundEffect("C:\\PROJECTS\\DXProject\\DXProject\\sound\\1.wav")
 			s.Play()
-			--PutEnvProbe(GetCamera().GetPosition(),256);
 		end
 		
 		if(input.Press(VK_F4)) then
@@ -53,13 +52,12 @@ runProcess(function()
 		end
 
 		if(input.Press(VK_F7)) then
-			-- LoadModel("C:\\PROJECTS\\WickedEngine\\WickedEngine\\Scene\\Sponza\\","sponza");
 			runProcess(function()
 				local row = 16
 				for i = 1, row do
 					for j = 1, row do
-						LoadModel("C:\\PROJECTS\\BLENDER\\Stormtrooper\\Stormtrooper.wimf", "_"..i..j,matrix.Translation(Vector(i*2-row,0,j*2-row)));
-						--waitSeconds(0.05)
+						LoadModel("../models/Stormtrooper/model.wimf",matrix.Translation(Vector(i*2-row,0,j*2-row)));
+						waitSeconds(0.05)
 					end
 				end
 			end)

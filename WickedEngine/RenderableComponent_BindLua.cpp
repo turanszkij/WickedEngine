@@ -18,6 +18,8 @@ Luna<RenderableComponent_BindLua>::FunctionType RenderableComponent_BindLua::met
 	lunamethod(RenderableComponent_BindLua, Compose),
 	lunamethod(RenderableComponent_BindLua, OnStart),
 	lunamethod(RenderableComponent_BindLua, OnStop),
+	lunamethod(RenderableComponent_BindLua, GetLayerMask),
+	lunamethod(RenderableComponent_BindLua, SetLayerMask),
 	{ NULL, NULL }
 };
 Luna<RenderableComponent_BindLua>::PropertyType RenderableComponent_BindLua::properties[] = {
@@ -176,6 +178,26 @@ int RenderableComponent_BindLua::OnStop(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "OnStop(string taskScript) not enough arguments!");
+	return 0;
+}
+
+
+int RenderableComponent_BindLua::GetLayerMask(lua_State* L)
+{
+	uint32_t mask = component->getLayerMask();
+	wiLua::SSetInt(L, *reinterpret_cast<int*>(&mask));
+	return 1;
+}
+int RenderableComponent_BindLua::SetLayerMask(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		int mask = wiLua::SGetInt(L, 1);
+		component->setlayerMask(*reinterpret_cast<uint32_t*>(&mask));
+	}
+	else
+		wiLua::SError(L, "SetLayerMask(uint mask) not enough arguments!");
 	return 0;
 }
 

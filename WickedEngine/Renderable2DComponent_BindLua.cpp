@@ -35,6 +35,8 @@ Luna<Renderable2DComponent_BindLua>::FunctionType Renderable2DComponent_BindLua:
 	lunamethod(Renderable2DComponent_BindLua, Compose),
 	lunamethod(RenderableComponent_BindLua, OnStart),
 	lunamethod(RenderableComponent_BindLua, OnStop),
+	lunamethod(RenderableComponent_BindLua, GetLayerMask),
+	lunamethod(RenderableComponent_BindLua, SetLayerMask),
 	{ NULL, NULL }
 };
 Luna<Renderable2DComponent_BindLua>::PropertyType Renderable2DComponent_BindLua::properties[] = {

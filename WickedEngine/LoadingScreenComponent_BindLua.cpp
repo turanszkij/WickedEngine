@@ -30,6 +30,8 @@ Luna<LoadingScreenComponent_BindLua>::FunctionType LoadingScreenComponent_BindLu
 	lunamethod(LoadingScreenComponent_BindLua, Compose),
 	lunamethod(RenderableComponent_BindLua, OnStart),
 	lunamethod(RenderableComponent_BindLua, OnStop),
+	lunamethod(RenderableComponent_BindLua, GetLayerMask),
+	lunamethod(RenderableComponent_BindLua, SetLayerMask),
 
 	lunamethod(LoadingScreenComponent_BindLua, AddLoadingTask),
 	lunamethod(LoadingScreenComponent_BindLua, OnFinished),

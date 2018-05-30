@@ -308,7 +308,7 @@ Transform* Transform::GetRoot()
 	}
 	return this;
 }
-uint32_t Transform::GetLayerMask()
+uint32_t Transform::GetLayerMask() const
 {
 	if (parent != nullptr)
 	{

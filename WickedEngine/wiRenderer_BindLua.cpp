@@ -326,31 +326,26 @@ namespace wiRenderer_BindLua
 		if (argc > 0)
 		{
 			string fileName = wiLua::SGetString(L, 1);
-			string identifier = "common";
 			XMMATRIX transform = XMMatrixIdentity();
 			if (argc > 1)
 			{
-				identifier = wiLua::SGetString(L, 2);
-				if (argc > 2)
+				Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
+				if (matrix != nullptr)
 				{
-					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 3);
-					if (matrix != nullptr)
-					{
-						transform = matrix->matrix;
-					}
-					else
-					{
-						wiLua::SError(L, "LoadModel(string fileName, opt string identifier, opt Matrix transform) argument is not a matrix!");
-					}
+					transform = matrix->matrix;
+				}
+				else
+				{
+					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
 				}
 			}
-			Model* model = wiRenderer::LoadModel(fileName, transform, identifier);
+			Model* model = wiRenderer::LoadModel(fileName, transform);
 			Luna<Model_BindLua>::push(L, new Model_BindLua(model));
 			return 1;
 		}
 		else
 		{
-			wiLua::SError(L, "LoadModel(string fileName, opt string identifier, opt Matrix transform) not enough arguments!");
+			wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) not enough arguments!");
 		}
 		return 0;
 	}
@@ -365,6 +360,30 @@ namespace wiRenderer_BindLua
 		else
 		{
 			wiLua::SError(L, "LoadWorldInfo(string fileName) not enough arguments!");
+		}
+		return 0;
+	}
+	int DuplicateInstance(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Object_BindLua* x = Luna<Object_BindLua>::lightcheck(L, 1);
+			if (x != nullptr)
+			{
+				Object* o = new Object(*x->object);
+				wiRenderer::Add(o);
+				Luna<Object_BindLua>::push(L, new Object_BindLua(o));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "DuplicateInstance(Object object) argument type mismatch!");
+			}
+		}
+		else
+		{
+			wiLua::SError(L, "DuplicateInstance(Object object) not enough arguments!");
 		}
 		return 0;
 	}
@@ -734,6 +753,7 @@ namespace wiRenderer_BindLua
 
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 			wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
+			wiLua::GetGlobal()->RegisterFunc("DuplicateInstance", DuplicateInstance);
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
 			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);

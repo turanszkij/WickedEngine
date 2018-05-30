@@ -7,6 +7,8 @@
 
 class RenderableComponent
 {
+private:
+	uint32_t layerMask = 0xFFFFFFFF;
 protected:
 	// create resolution dependant resources
 	virtual void ResizeBuffers() {}
@@ -40,5 +42,9 @@ public:
 	// Compose the rendered layers (for example blend the layers together as Images)
 	// This will be rendered to the backbuffer
 	virtual void Compose() {}
+
+
+	inline uint32_t getLayerMask() { return layerMask; }
+	inline void setlayerMask(uint32_t value) { layerMask = value; }
 };
 

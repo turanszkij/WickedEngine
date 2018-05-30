@@ -2827,7 +2827,7 @@ int wiRenderer::getActionByName(Armature* armature, const std::string& get)
 		return (-1);
 
 	stringstream ss("");
-	ss<<armature->unidentified_name<<get;
+	ss<<armature->name<<get;
 	for (unsigned int j = 0; j<armature->actions.size(); j++)
 		if(!armature->actions[j].name.compare(ss.str()))
 			return j;
@@ -4768,7 +4768,7 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 	GetDevice()->CreateTexture2D(&desc, nullptr, &Light::shadowMapArray_Cube);
 }
-void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
+void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 {
 	if (wireRender)
 		return;
@@ -4781,6 +4781,8 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->EventBegin("ShadowMap Render", threadID);
 		wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
+
+		const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
 
 		const FrameCulling& culling = frameCullings[getCamera()];
 		const CulledList& culledLights = culling.culledLights;
@@ -4870,13 +4872,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 									{
 										continue;
 									}
-									if (object->IsCastingShadow())
+									if (all_layers || (layerMask & object->GetLayerMask()))
 									{
-										culledRenderer[object->mesh].push_front(object);
-
-										if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+										if (object->IsCastingShadow())
 										{
-											transparentShadowsRequested = true;
+											culledRenderer[object->mesh].push_front(object);
+
+											if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+											{
+												transparentShadowsRequested = true;
+											}
 										}
 									}
 								}
@@ -4926,13 +4931,16 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							for (Cullable* x : culledObjects)
 							{
 								Object* object = (Object*)x;
-								if (object->IsCastingShadow())
+								if (all_layers || (layerMask & object->GetLayerMask()))
 								{
-									culledRenderer[object->mesh].push_front(object);
-
-									if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+									if (object->IsCastingShadow())
 									{
-										transparentShadowsRequested = true;
+										culledRenderer[object->mesh].push_front(object);
+
+										if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+										{
+											transparentShadowsRequested = true;
+										}
 									}
 								}
 							}
@@ -4982,9 +4990,13 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 							for (Cullable* x : culledObjects)
 							{
 								Object* object = (Object*)x;
-								if (object->IsCastingShadow())
+
+								if (all_layers || (layerMask & object->GetLayerMask()))
 								{
-									culledRenderer[object->mesh].push_front(object);
+									if (object->IsCastingShadow())
+									{
+										culledRenderer[object->mesh].push_front(object);
+									}
 								}
 							}
 							if (!culledRenderer.empty())
@@ -5029,7 +5041,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID)
 }
 
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation, bool occlusionCulling)
+	bool tessellation, bool occlusionCulling, uint32_t layerMask)
 {
 	// Intensive section, refactor and optimize!
 
@@ -5063,6 +5075,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			shaderType == SHADERTYPE_DEPTHONLY || 
 			shaderType == SHADERTYPE_VOXELIZE;
 
+		const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
+
 		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
 
 		// Render impostors:
@@ -5091,30 +5105,33 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (occlusionCulling && instance->IsOccluded())
 						continue;
 
-					const float impostorThreshold = instance->bounds.getRadius();
-					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-					float dither = instance->transparency;
-					dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
-					if (dither > 1.0f - FLT_EPSILON)
-						continue;
-
-					XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
-
-					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
-
-					if (advancedVBRequest)
+					if (all_layers || (layerMask & instance->GetLayerMask()))
 					{
-						((volatile InstBuf*)instances)[k].instance.Create(tempMat, dither, instance->color);
+						const float impostorThreshold = instance->bounds.getRadius();
+						float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+						float dither = instance->transparency;
+						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh->impostorDistance) / impostorThreshold, 0, 1));
+						if (dither > 1.0f - FLT_EPSILON)
+							continue;
 
-						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
-						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-					}
-					else
-					{
-						((volatile Instance*)instances)[k].Create(tempMat, dither, instance->color);
-					}
+						XMMATRIX boxMat = mesh->aabb.getAsBoxMatrix();
 
-					++k;
+						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->world));
+
+						if (advancedVBRequest)
+						{
+							((volatile InstBuf*)instances)[k].instance.Create(tempMat, dither, instance->color);
+
+							XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&instance->worldPrev));
+							((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+						}
+						else
+						{
+							((volatile Instance*)instances)[k].Create(tempMat, dither, instance->color);
+						}
+
+						++k;
+					}
 				}
 
 				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
@@ -5222,41 +5239,44 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				if (occlusionCulling && instance->IsOccluded())
 					continue;
 
-				float dither = instance->transparency;
-				if (impostorRequest != nullptr)
+				if (all_layers || (layerMask & instance->GetLayerMask()))
 				{
-					// fade out to impostor...
-					const float impostorThreshold = instance->bounds.getRadius();
-					float dist = wiMath::Distance(eye, instance->bounds.getCenter());
-					if (mesh->hasImpostor())
-						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh->impostorDistance) / impostorThreshold, 0, 1));
-				}
-				if (dither > 1.0f - FLT_EPSILON)
-					continue;
+					float dither = instance->transparency;
+					if (impostorRequest != nullptr)
+					{
+						// fade out to impostor...
+						const float impostorThreshold = instance->bounds.getRadius();
+						float dist = wiMath::Distance(eye, instance->bounds.getCenter());
+						if (mesh->hasImpostor())
+							dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh->impostorDistance) / impostorThreshold, 0, 1));
+					}
+					if (dither > 1.0f - FLT_EPSILON)
+						continue;
 
-				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
-
-				if (mesh->softBody)
-					tempMat = __identityMat;
-				else
-					tempMat = instance->world;
-
-				if (advancedVBRequest || tessellatorRequested)
-				{
-					((volatile InstBuf*)instances)[k].instance.Create(tempMat, dither, instance->color);
+					forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
 
 					if (mesh->softBody)
 						tempMat = __identityMat;
 					else
-						tempMat = instance->worldPrev;
-					((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+						tempMat = instance->world;
+
+					if (advancedVBRequest || tessellatorRequested)
+					{
+						((volatile InstBuf*)instances)[k].instance.Create(tempMat, dither, instance->color);
+
+						if (mesh->softBody)
+							tempMat = __identityMat;
+						else
+							tempMat = instance->worldPrev;
+						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+					}
+					else
+					{
+						((volatile Instance*)instances)[k].Create(tempMat, dither, instance->color);
+					}
+
+					++k;
 				}
-				else
-				{
-					((volatile Instance*)instances)[k].Create(tempMat, dither, instance->color);
-				}
-						
-				++k;
 			}
 
 			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
@@ -5449,7 +5469,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	}
 }
 
-void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling)
+void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -5477,14 +5497,14 @@ void wiRenderer::DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD thr
 
 	if (!culledRenderer.empty() || (grass && culling.culledHairParticleSystems.empty()))
 	{
-		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling);
+		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
 	}
 
 	GetDevice()->EventEnd(threadID);
 
 }
 
-void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling)
+void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
 
 	const FrameCulling& culling = frameCullings[camera];
@@ -5513,7 +5533,7 @@ void wiRenderer::DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRA
 
 	if (!culledRenderer.empty())
 	{
-		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
+		RenderMeshes(camera->translation, culledRenderer, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
 	}
 
 	GetDevice()->EventEnd(threadID);
@@ -6881,8 +6901,8 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 		return;
 	}
 
-	XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
-	XMVECTOR& rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
+	const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+	const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
 	// pre allocate helper vector array:
 	static size_t _arraySize = 10000;
@@ -6892,7 +6912,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 	{
 		Object* object = (Object*)culled;
 
-		uint32_t objectLayerMask = object->GetLayerMask();
+		const uint32_t objectLayerMask = object->GetLayerMask();
 		if (objectLayerMask & layerMask)
 		{
 
@@ -6918,11 +6938,11 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 				_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 			}
 
-			XMMATRIX objectMat = object->getMatrix();
-			XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+			const XMMATRIX objectMat = object->getMatrix();
+			const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
-			XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
-			XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+			const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+			const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
 			Mesh::Vertex_FULL _tmpvert;
 
@@ -7043,15 +7063,12 @@ void wiRenderer::CalculateVertexAO(Object* object)
 	//mesh->calculatedAO = true;
 }
 
-Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform, const std::string& ident)
+Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
 {
 	static int unique_identifier = 0;
 
-	stringstream idss("");
-	idss<<"_"<<ident;
-
 	Model* model = new Model;
-	model->LoadFromDisk(fileName, idss.str());
+	model->LoadFromDisk(fileName);
 
 	model->transform(transform);
 
@@ -7397,7 +7414,15 @@ void wiRenderer::AddModel(Model* model)
 
 void wiRenderer::Add(Object* value)
 {
-	GetScene().GetWorldNode()->Add(value);
+	if (value->parentModel == nullptr)
+	{
+		GetScene().GetWorldNode()->Add(value);
+	}
+	else
+	{
+		value->parentModel->Add(value);
+	}
+
 	if (value->parent == nullptr)
 	{
 		value->attachTo(GetScene().GetWorldNode());
@@ -7416,7 +7441,15 @@ void wiRenderer::Add(Object* value)
 }
 void wiRenderer::Add(Light* value)
 {
-	GetScene().GetWorldNode()->Add(value);
+	if (value->parentModel == nullptr)
+	{
+		GetScene().GetWorldNode()->Add(value);
+	}
+	else
+	{
+		value->parentModel->Add(value);
+	}
+
 	if (value->parent == nullptr)
 	{
 		value->attachTo(GetScene().GetWorldNode());
@@ -7435,7 +7468,15 @@ void wiRenderer::Add(Light* value)
 }
 void wiRenderer::Add(ForceField* value)
 {
-	GetScene().GetWorldNode()->Add(value);
+	if (value->parentModel == nullptr)
+	{
+		GetScene().GetWorldNode()->Add(value);
+	}
+	else
+	{
+		value->parentModel->Add(value);
+	}
+
 	if (value->parent == nullptr)
 	{
 		value->attachTo(GetScene().GetWorldNode());
@@ -7443,7 +7484,15 @@ void wiRenderer::Add(ForceField* value)
 }
 void wiRenderer::Add(Camera* value)
 {
-	GetScene().GetWorldNode()->Add(value);
+	if (value->parentModel == nullptr)
+	{
+		GetScene().GetWorldNode()->Add(value);
+	}
+	else
+	{
+		value->parentModel->Add(value);
+	}
+
 	if (value->parent == nullptr)
 	{
 		value->attachTo(GetScene().GetWorldNode());
@@ -7457,6 +7506,7 @@ void wiRenderer::Remove(Object* value)
 		for (auto& x : GetScene().models)
 		{
 			x->objects.erase(value);
+			value->parentModel = nullptr;
 		}
 		spTree->Remove(value);
 		value->detach();
@@ -7469,6 +7519,7 @@ void wiRenderer::Remove(Light* value)
 		for (auto& x : GetScene().models)
 		{
 			x->lights.erase(value);
+			value->parentModel = nullptr;
 		}
 		spTree_lights->Remove(value);
 		value->detach();
@@ -7481,6 +7532,7 @@ void wiRenderer::Remove(Decal* value)
 		for (auto& x : GetScene().models)
 		{
 			x->decals.erase(value);
+			value->parentModel = nullptr;
 		}
 		value->detach();
 	}
@@ -7492,6 +7544,7 @@ void wiRenderer::Remove(EnvironmentProbe* value)
 		for (auto& x : GetScene().models)
 		{
 			x->environmentProbes.remove(value);
+			value->parentModel = nullptr;
 		}
 		value->detach();
 	}
@@ -7503,6 +7556,7 @@ void wiRenderer::Remove(ForceField* value)
 		for (auto& x : GetScene().models)
 		{
 			x->forces.erase(value);
+			value->parentModel = nullptr;
 		}
 		value->detach();
 	}
@@ -7514,6 +7568,7 @@ void wiRenderer::Remove(Camera* value)
 		for (auto& x : GetScene().models)
 		{
 			x->cameras.remove(value);
+			value->parentModel = nullptr;
 		}
 		value->detach();
 	}

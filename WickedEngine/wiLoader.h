@@ -28,11 +28,17 @@ struct Bone;
 struct Mesh;
 struct Material;
 struct Object;
+struct Model;
 
 typedef std::map<std::string,Mesh*> MeshCollection;
 typedef std::map<std::string,Material*> MaterialCollection;
 
 class wiArchive;
+
+struct ModelChild
+{
+	Model* parentModel = nullptr;
+};
 
 GFX_STRUCT Instance
 {
@@ -492,8 +498,7 @@ public:
 
 	Mesh(const std::string& newName = "");
 	~Mesh();
-	void LoadFromFile(const std::string& newName, const std::string& fname
-		, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures, const std::string& identifier="");
+	void LoadFromFile(const std::string& newName, const std::string& fname, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures);
 	void Optimize();
 	void CreateRenderData();
 	static void CreateImpostorVB();
@@ -517,7 +522,7 @@ public:
 	AABB bounds;
 	void Serialize(wiArchive& archive);
 };
-struct Object : public Cullable, public Transform
+struct Object : public Cullable, public Transform, public ModelChild
 {
 	std::string meshName;
 	Mesh* mesh;
@@ -689,10 +694,9 @@ struct AnimationLayer
 
 	void Serialize(wiArchive& archive);
 };
-struct Armature : public Transform
+struct Armature : public Transform, public ModelChild
 {
 public:
-	std::string unidentified_name;
 	std::vector<Bone*> boneCollection;
 	std::vector<Bone*> rootbones;
 
@@ -720,11 +724,8 @@ public:
 	Armature() :Transform(){
 		init();
 	};
-	Armature(const std::string& newName, const std::string& identifier):Transform(){
-		unidentified_name=newName;
-		std::stringstream ss("");
-		ss<<newName<<identifier;
-		name=ss.str();
+	Armature(const std::string& newName):Transform(){
+		name=newName;
 		init();
 	}
 	virtual ~Armature();
@@ -751,6 +752,7 @@ public:
 	AnimationLayer* GetAnimLayer(const std::string& name);
 	void AddAnimLayer(const std::string& name);
 	void DeleteAnimLayer(const std::string& name);
+	void RecursiveRest(Bone* bone);
 	virtual void UpdateTransform();
 	void UpdateArmature();
 	void CreateFamily();
@@ -853,7 +855,7 @@ struct SHCAM{
 		return XMMatrixTranspose(XMLoadFloat4x4(&View)*XMLoadFloat4x4(&Projection));
 	}
 };
-struct Light : public Cullable , public Transform
+struct Light : public Cullable , public Transform, public ModelChild
 {
 	enum LightType {
 		DIRECTIONAL			= ENTITY_TYPE_DIRECTIONALLIGHT,
@@ -905,7 +907,7 @@ struct Light : public Cullable , public Transform
 private:
 	LightType type;
 };
-struct Decal : public Cullable, public Transform
+struct Decal : public Cullable, public Transform, public ModelChild
 {
 	std::string texName,norName;
 	wiGraphicsTypes::Texture2D* texture,*normal;
@@ -952,7 +954,8 @@ struct Wind{
 	float waveSize;
 	Wind():direction(XMFLOAT3(0,0,0)),randomness(5),waveSize(1){}
 };
-struct Camera:public Transform{
+struct Camera : public Transform, public ModelChild
+{
 	XMFLOAT4X4 View, Projection, VP;
 	XMFLOAT3 At, Up;
 	float width, height;
@@ -1130,7 +1133,7 @@ struct Camera:public Transform{
 
 	void Serialize(wiArchive& archive);
 };
-struct EnvironmentProbe : public Transform, public Cullable
+struct EnvironmentProbe : public Transform, public Cullable, public ModelChild
 {
 	int textureIndex;
 	bool realTime;
@@ -1142,7 +1145,7 @@ struct EnvironmentProbe : public Transform, public Cullable
 
 	void Serialize(wiArchive& archive);
 };
-struct ForceField : public Transform
+struct ForceField : public Transform, public ModelChild
 {
 	int type;
 	float gravity; // negative = deflector, positive = attractor
@@ -1173,7 +1176,7 @@ struct Model : public Transform
 	Model();
 	virtual ~Model();
 	void CleanUp();
-	void LoadFromDisk(const std::string& fileName, const std::string& identifier);
+	void LoadFromDisk(const std::string& fileName);
 	void FinishLoading();
 	void UpdateModel();
 	void Add(Object* value);
@@ -1203,11 +1206,6 @@ struct Scene
 	void AddModel(Model* model);
 	void Update();
 };
-
-
-
-// Create rest positions for bone tree
-void RecursiveRest(Armature* armature, Bone* bone);
 
 // Load world info from file:
 void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind);

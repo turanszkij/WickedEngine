@@ -1348,7 +1348,6 @@ void EditorComponent::Update(float dt)
 					if (x->object != nullptr)
 					{
 						Object* o = new Object(*x->object);
-						o->detach();
 						wiRenderer::Add(o);
 						x->transform = o;
 						x->object = o;
@@ -1356,7 +1355,6 @@ void EditorComponent::Update(float dt)
 					if (x->light != nullptr)
 					{
 						Light* l = new Light(*x->light);
-						l->detach();
 						wiRenderer::Add(l);
 						x->transform = l;
 						x->light = l;
@@ -1364,7 +1362,6 @@ void EditorComponent::Update(float dt)
 					if (x->forceField != nullptr)
 					{
 						ForceField* l = new ForceField(*x->forceField);
-						l->detach();
 						wiRenderer::Add(l);
 						x->transform = l;
 						x->forceField = l;
@@ -1372,7 +1369,6 @@ void EditorComponent::Update(float dt)
 					if (x->camera != nullptr)
 					{
 						Camera* l = new Camera(*x->camera);
-						l->detach();
 						wiRenderer::Add(l);
 						x->transform = l;
 						x->camera = l;
