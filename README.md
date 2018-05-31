@@ -21,7 +21,7 @@ Wicked Engine is an open-source game engine written in C++. The main focus is to
 The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code shall not contain
 any parts with other licensing.
 
-[Download Latest Build - Windows](https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master)<br/>
+[Download Latest Build - Editor (Windows)](https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master)<br/>
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
 [Features](features.txt)<br/>
