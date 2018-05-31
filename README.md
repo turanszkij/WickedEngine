@@ -15,12 +15,15 @@
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
 
+<br/>
+
 ### Overview:
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
 The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code shall not contain
 any parts with other licensing.
 
+[Download Latest Build - Windows](https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master)<br/>
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
 [Features](features.txt)<br/>
@@ -29,7 +32,7 @@ any parts with other licensing.
 
 ![Bistro](logo/bistro_out.png)
 
-To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. 
+To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. You can now also [download the latest build](https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master)
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
 - You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
 - Be sure to build in "Release" mode for optimal performance. Debugging support will be reduced.
