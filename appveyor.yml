@@ -1,7 +1,16 @@
-version: 1.0.{build}
+version: '{build}'
+branches:
+  only:
+  - master
 image: Visual Studio 2017
 configuration: Release
 platform: x64
 build:
   parallel: true
   verbosity: minimal
+after_build:
+- cmd: move %APPVEYOR_BUILD_FOLDER%\x64\Release\Editor.exe %APPVEYOR_BUILD_FOLDER%\Editor
+- cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ logo\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Editor\Editor.exe Editor\images\ Editor\*.ini Editor\*.ico Editor\*.lua
+artifacts:
+- path: WickedEngineEditor.zip
+  name: Editor
