@@ -1348,20 +1348,21 @@ namespace wiGraphicsTypes
 			return;
 		}
 
-		uint32_t requestRTHash = 0;
+		uint64_t requestRTHash = 0;
 
 		if (!overrideRenderPass && !overrideFramebuffer)
 		{
-			requestRTHash = (uint32_t)pDesc->DSFormat;
+			requestRTHash = (uint64_t)pDesc->DSFormat;
 			for (UINT i = 0; i < pDesc->numRTs; ++i)
 			{
-				requestRTHash = (requestRTHash ^ ((uint32_t)pDesc->RTFormats[i] << 1)) >> 1;
+				requestRTHash = (requestRTHash ^ ((uint64_t)pDesc->RTFormats[i] << 1)) >> 1; // primary hash based on PSO formats description
+				requestRTHash = (requestRTHash ^ ((uint64_t)attachments[i] << 1)) >> 1; // setrendertarget <-> PSO layout might mismatch so we HAVE to also include this in the hash :(
 			}
-			requestRTHash = requestRTHash ^ 73856093 * attachmentsExtents.width ^ 19349663 * attachmentsExtents.height;
+			requestRTHash = requestRTHash ^ 73856093 * attachmentsExtents.width ^ 19349663 * attachmentsExtents.height; // also hash based on render area extent. Maybe not necessary but keep it for safety now...
 		}
 		else
 		{
-			requestRTHash = 0xFFFFFFFF;
+			requestRTHash = 0xFFFFFFFF; // override setrendertarget hashing with custom renderpass (eg. presentation render pass because it has some custom setup)
 		}
 
 		if (dirty || activeRTHash == 0 || activeRTHash != requestRTHash)
@@ -1382,11 +1383,8 @@ namespace wiGraphicsTypes
 
 				if (states.renderPass == VK_NULL_HANDLE)
 				{
-					std::vector<VkAttachmentDescription> attachments;
-					std::vector<VkAttachmentReference> colorAttachmentRefs;
-
-					attachments.reserve(psoAttachmentCount);
-					colorAttachmentRefs.reserve(pDesc->numRTs);
+					VkAttachmentDescription attachmentDescriptions[9];
+					VkAttachmentReference colorAttachmentRefs[9];
 
 					for (UINT i = 0; i < pDesc->numRTs; ++i)
 					{
@@ -1399,19 +1397,19 @@ namespace wiGraphicsTypes
 						attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 						attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 						attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachments.push_back(attachment);
+						attachmentDescriptions[i] = attachment;
 
 						VkAttachmentReference ref = {};
 						ref.attachment = i;
 						ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-						colorAttachmentRefs.push_back(ref);
+						colorAttachmentRefs[i] = ref;
 					}
 
 
 					VkSubpassDescription subpass = {};
 					subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 					subpass.colorAttachmentCount = pDesc->numRTs;
-					subpass.pColorAttachments = colorAttachmentRefs.data();
+					subpass.pColorAttachments = colorAttachmentRefs;
 
 					VkAttachmentDescription depthAttachment = {};
 					VkAttachmentReference depthAttachmentRef = {};
@@ -1425,9 +1423,9 @@ namespace wiGraphicsTypes
 						depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 						depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 						depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachments.push_back(depthAttachment);
+						attachmentDescriptions[pDesc->numRTs] = depthAttachment;
 
-						depthAttachmentRef.attachment = static_cast<uint32_t>(attachments.size() - 1);
+						depthAttachmentRef.attachment = pDesc->numRTs;
 						depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 						subpass.pDepthStencilAttachment = &depthAttachmentRef;
@@ -1436,7 +1434,7 @@ namespace wiGraphicsTypes
 					VkRenderPassCreateInfo renderPassInfo = {};
 					renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 					renderPassInfo.attachmentCount = psoAttachmentCount;
-					renderPassInfo.pAttachments = attachments.data();
+					renderPassInfo.pAttachments = attachmentDescriptions;
 					renderPassInfo.subpassCount = 1;
 					renderPassInfo.pSubpasses = &subpass;
 
@@ -3419,61 +3417,67 @@ namespace wiGraphicsTypes
 
 		// This will be a dummy render pass used for PSO validation:
 		VkRenderPass renderPass = VK_NULL_HANDLE;
-
-		for (UINT i = 0; i < pDesc->numRTs; ++i)
 		{
-			VkAttachmentDescription attachment = {};
-			attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
-			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-			attachments.push_back(attachment);
+			uint32_t psoAttachmentCount = pDesc->numRTs + (pDesc->DSFormat == FORMAT_UNKNOWN ? 0 : 1);
 
-			VkAttachmentReference ref = {};
-			ref.attachment = i;
-			ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			colorAttachmentRefs.push_back(ref);
-		}
+			VkAttachmentDescription attachmentDescriptions[9];
+			VkAttachmentReference colorAttachmentRefs[9];
+
+			for (UINT i = 0; i < pDesc->numRTs; ++i)
+			{
+				VkAttachmentDescription attachment = {};
+				attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
+				attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+				attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+				attachmentDescriptions[i] = attachment;
+
+				VkAttachmentReference ref = {};
+				ref.attachment = i;
+				ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				colorAttachmentRefs[i] = ref;
+			}
 
 
-		VkSubpassDescription subpass = {};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = pDesc->numRTs;
-		subpass.pColorAttachments = colorAttachmentRefs.data();
+			VkSubpassDescription subpass = {};
+			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass.colorAttachmentCount = pDesc->numRTs;
+			subpass.pColorAttachments = colorAttachmentRefs;
 
-		VkAttachmentDescription depthAttachment = {};
-		VkAttachmentReference depthAttachmentRef = {};
-		if (pDesc->DSFormat != FORMAT_UNKNOWN)
-		{
-			depthAttachment.format = _ConvertFormat(pDesc->DSFormat);
-			depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-			attachments.push_back(depthAttachment);
+			VkAttachmentDescription depthAttachment = {};
+			VkAttachmentReference depthAttachmentRef = {};
+			if (pDesc->DSFormat != FORMAT_UNKNOWN)
+			{
+				depthAttachment.format = _ConvertFormat(pDesc->DSFormat);
+				depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+				attachmentDescriptions[pDesc->numRTs] = depthAttachment;
 
-			depthAttachmentRef.attachment = static_cast<uint32_t>(attachments.size() - 1);
-			depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				depthAttachmentRef.attachment = pDesc->numRTs;
+				depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-			subpass.pDepthStencilAttachment = &depthAttachmentRef;
-		}
+				subpass.pDepthStencilAttachment = &depthAttachmentRef;
+			}
 
-		VkRenderPassCreateInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		renderPassInfo.pAttachments = attachments.data();
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
+			VkRenderPassCreateInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			renderPassInfo.attachmentCount = psoAttachmentCount;
+			renderPassInfo.pAttachments = attachmentDescriptions;
+			renderPassInfo.subpassCount = 1;
+			renderPassInfo.pSubpasses = &subpass;
 
-		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create render pass!");
+			if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create render pass!");
+			}
 		}
 
 
@@ -3798,7 +3802,7 @@ namespace wiGraphicsTypes
 
 
 		// Blending:
-		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(subpass.colorAttachmentCount);
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(pDesc->numRTs);
 		for (size_t i = 0; i < colorBlendAttachments.size(); ++i)
 		{
 			RenderTargetBlendStateDesc desc = pDesc->bs != nullptr ? pDesc->bs->desc.RenderTarget[i] : RenderTargetBlendStateDesc();

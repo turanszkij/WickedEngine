@@ -86,8 +86,8 @@ namespace wiGraphicsTypes
 				VkFramebuffer frameBuffer = VK_NULL_HANDLE;
 			};
 			// RTFormats hash <-> renderpass+framebuffer
-			std::unordered_map<uint32_t, RenderPassAndFramebuffer> renderPassCollection;
-			uint32_t activeRTHash = 0;
+			std::unordered_map<uint64_t, RenderPassAndFramebuffer> renderPassCollection;
+			uint64_t activeRTHash = 0;
 			GraphicsPSODesc* pDesc = nullptr;
 
 			VkRenderPass overrideRenderPass = nullptr;
