@@ -273,7 +273,6 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(resource_DX12);
 		pipeline_Vulkan = WI_NULL_HANDLE;
-		renderPass_Vulkan = WI_NULL_HANDLE;
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{

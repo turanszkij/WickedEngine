@@ -21,6 +21,466 @@
 namespace wiGraphicsTypes
 {
 
+
+
+	// Converters:
+	inline VkFormat _ConvertFormat(FORMAT value)
+	{
+		// _TYPELESS is converted to _UINT or _FLOAT or _UNORM in that order depending on availability!
+		// X channel is converted to regular missing channel (eg. FORMAT_B8G8R8X8_UNORM -> VK_FORMAT_B8G8R8A8_UNORM)
+		switch (value)
+		{
+		case FORMAT_UNKNOWN:
+			return VK_FORMAT_UNDEFINED;
+			break;
+		case FORMAT_R32G32B32A32_TYPELESS:
+			return VK_FORMAT_R32G32B32A32_UINT;
+			break;
+		case FORMAT_R32G32B32A32_FLOAT:
+			return VK_FORMAT_R32G32B32A32_SFLOAT;
+			break;
+		case FORMAT_R32G32B32A32_UINT:
+			return VK_FORMAT_R32G32B32A32_UINT;
+			break;
+		case FORMAT_R32G32B32A32_SINT:
+			return VK_FORMAT_R32G32B32A32_SINT;
+			break;
+		case FORMAT_R32G32B32_TYPELESS:
+			return VK_FORMAT_R32G32B32_UINT;
+			break;
+		case FORMAT_R32G32B32_FLOAT:
+			return VK_FORMAT_R32G32B32_SFLOAT;
+			break;
+		case FORMAT_R32G32B32_UINT:
+			return VK_FORMAT_R32G32B32_UINT;
+			break;
+		case FORMAT_R32G32B32_SINT:
+			return VK_FORMAT_R32G32B32_SINT;
+			break;
+		case FORMAT_R16G16B16A16_TYPELESS:
+			return VK_FORMAT_R16G16B16A16_UINT;
+			break;
+		case FORMAT_R16G16B16A16_FLOAT:
+			return VK_FORMAT_R16G16B16A16_SFLOAT;
+			break;
+		case FORMAT_R16G16B16A16_UNORM:
+			return VK_FORMAT_R16G16B16A16_UNORM;
+			break;
+		case FORMAT_R16G16B16A16_UINT:
+			return VK_FORMAT_R16G16B16A16_UINT;
+			break;
+		case FORMAT_R16G16B16A16_SNORM:
+			return VK_FORMAT_R16G16B16A16_SNORM;
+			break;
+		case FORMAT_R16G16B16A16_SINT:
+			return VK_FORMAT_R16G16B16A16_SINT;
+			break;
+		case FORMAT_R32G32_TYPELESS:
+			return VK_FORMAT_R32G32_UINT;
+			break;
+		case FORMAT_R32G32_FLOAT:
+			return VK_FORMAT_R32G32_SFLOAT;
+			break;
+		case FORMAT_R32G32_UINT:
+			return VK_FORMAT_R32G32_UINT;
+			break;
+		case FORMAT_R32G32_SINT:
+			return VK_FORMAT_R32G32_SINT;
+			break;
+		case FORMAT_R32G8X24_TYPELESS:
+			return VK_FORMAT_D32_SFLOAT_S8_UINT; // possible mismatch!
+			break;
+		case FORMAT_D32_FLOAT_S8X24_UINT:
+			return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			break;
+		case FORMAT_R32_FLOAT_X8X24_TYPELESS:
+			return VK_FORMAT_R32G32_SFLOAT; // possible mismatch!
+			break;
+		case FORMAT_X32_TYPELESS_G8X24_UINT:
+			return VK_FORMAT_R32G32_UINT; // possible mismatch!
+			break;
+		case FORMAT_R10G10B10A2_TYPELESS:
+			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
+			break;
+		case FORMAT_R10G10B10A2_UNORM:
+			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+			break;
+		case FORMAT_R10G10B10A2_UINT:
+			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
+			break;
+		case FORMAT_R11G11B10_FLOAT:
+			return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+			break;
+		case FORMAT_R8G8B8A8_TYPELESS:
+			return VK_FORMAT_R8G8B8A8_UINT;
+			break;
+		case FORMAT_R8G8B8A8_UNORM:
+			return VK_FORMAT_R8G8B8A8_UNORM;
+			break;
+		case FORMAT_R8G8B8A8_UNORM_SRGB:
+			return VK_FORMAT_R8G8B8A8_SRGB;
+			break;
+		case FORMAT_R8G8B8A8_UINT:
+			return VK_FORMAT_R8G8B8A8_UINT;
+			break;
+		case FORMAT_R8G8B8A8_SNORM:
+			return VK_FORMAT_R8G8B8A8_SNORM;
+			break;
+		case FORMAT_R8G8B8A8_SINT:
+			return VK_FORMAT_R8G8B8A8_SINT;
+			break;
+		case FORMAT_R16G16_TYPELESS:
+			return VK_FORMAT_R16G16_UINT;
+			break;
+		case FORMAT_R16G16_FLOAT:
+			return VK_FORMAT_R16G16_SFLOAT;
+			break;
+		case FORMAT_R16G16_UNORM:
+			return VK_FORMAT_R16G16_UNORM;
+			break;
+		case FORMAT_R16G16_UINT:
+			return VK_FORMAT_R16G16_UINT;
+			break;
+		case FORMAT_R16G16_SNORM:
+			return VK_FORMAT_R16G16_SNORM;
+			break;
+		case FORMAT_R16G16_SINT:
+			return VK_FORMAT_R16G16_SINT;
+			break;
+		case FORMAT_R32_TYPELESS:
+			return VK_FORMAT_D32_SFLOAT;
+			break;
+		case FORMAT_D32_FLOAT:
+			return VK_FORMAT_D32_SFLOAT;
+			break;
+		case FORMAT_R32_FLOAT:
+			return VK_FORMAT_R32_SFLOAT;
+			break;
+		case FORMAT_R32_UINT:
+			return VK_FORMAT_R32_UINT;
+			break;
+		case FORMAT_R32_SINT:
+			return VK_FORMAT_R32_SINT;
+			break;
+		case FORMAT_R24G8_TYPELESS:
+			return VK_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		case FORMAT_D24_UNORM_S8_UINT:
+			return VK_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		case FORMAT_R24_UNORM_X8_TYPELESS:
+			return VK_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		case FORMAT_X24_TYPELESS_G8_UINT:
+			return VK_FORMAT_D24_UNORM_S8_UINT;
+			break;
+		case FORMAT_R8G8_TYPELESS:
+			return VK_FORMAT_R8G8_UINT;
+			break;
+		case FORMAT_R8G8_UNORM:
+			return VK_FORMAT_R8G8_UNORM;
+			break;
+		case FORMAT_R8G8_UINT:
+			return VK_FORMAT_R8G8_UINT;
+			break;
+		case FORMAT_R8G8_SNORM:
+			return VK_FORMAT_R8G8_SNORM;
+			break;
+		case FORMAT_R8G8_SINT:
+			return VK_FORMAT_R8G8_SINT;
+			break;
+		case FORMAT_R16_TYPELESS:
+			return VK_FORMAT_D16_UNORM;
+			break;
+		case FORMAT_R16_FLOAT:
+			return VK_FORMAT_R16_SFLOAT;
+			break;
+		case FORMAT_D16_UNORM:
+			return VK_FORMAT_D16_UNORM;
+			break;
+		case FORMAT_R16_UNORM:
+			return VK_FORMAT_R16_UNORM;
+			break;
+		case FORMAT_R16_UINT:
+			return VK_FORMAT_R16_UINT;
+			break;
+		case FORMAT_R16_SNORM:
+			return VK_FORMAT_R16_SNORM;
+			break;
+		case FORMAT_R16_SINT:
+			return VK_FORMAT_R16_SINT;
+			break;
+		case FORMAT_R8_TYPELESS:
+			return VK_FORMAT_R8_UINT;
+			break;
+		case FORMAT_R8_UNORM:
+			return VK_FORMAT_R8_UNORM;
+			break;
+		case FORMAT_R8_UINT:
+			return VK_FORMAT_R8_UINT;
+			break;
+		case FORMAT_R8_SNORM:
+			return VK_FORMAT_R8_SNORM;
+			break;
+		case FORMAT_R8_SINT:
+			return VK_FORMAT_R8_SINT;
+			break;
+		case FORMAT_A8_UNORM:
+			return VK_FORMAT_R8_UNORM; // mismatch!
+			break;
+		case FORMAT_R1_UNORM:
+			return VK_FORMAT_R8_UNORM; // mismatch!
+			break;
+		case FORMAT_R9G9B9E5_SHAREDEXP:
+			return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32; // maybe ok
+			break;
+		case FORMAT_R8G8_B8G8_UNORM:
+			return VK_FORMAT_R8G8B8A8_UNORM; // mismatch
+			break;
+		case FORMAT_G8R8_G8B8_UNORM:
+			return VK_FORMAT_R8G8B8A8_UNORM; // mismatch
+			break;
+		case FORMAT_BC1_TYPELESS:
+			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+			break;
+		case FORMAT_BC1_UNORM:
+			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+			break;
+		case FORMAT_BC1_UNORM_SRGB:
+			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
+			break;
+		case FORMAT_BC2_TYPELESS:
+			return VK_FORMAT_BC2_UNORM_BLOCK;
+			break;
+		case FORMAT_BC2_UNORM:
+			return VK_FORMAT_BC2_UNORM_BLOCK;
+			break;
+		case FORMAT_BC2_UNORM_SRGB:
+			return VK_FORMAT_BC2_SRGB_BLOCK;
+			break;
+		case FORMAT_BC3_TYPELESS:
+			return VK_FORMAT_BC3_UNORM_BLOCK;
+			break;
+		case FORMAT_BC3_UNORM:
+			return VK_FORMAT_BC3_UNORM_BLOCK;
+			break;
+		case FORMAT_BC3_UNORM_SRGB:
+			return VK_FORMAT_BC3_SRGB_BLOCK;
+			break;
+		case FORMAT_BC4_TYPELESS:
+			return VK_FORMAT_BC4_UNORM_BLOCK;
+			break;
+		case FORMAT_BC4_UNORM:
+			return VK_FORMAT_BC4_UNORM_BLOCK;
+			break;
+		case FORMAT_BC4_SNORM:
+			return VK_FORMAT_BC4_SNORM_BLOCK;
+			break;
+		case FORMAT_BC5_TYPELESS:
+			return VK_FORMAT_BC5_UNORM_BLOCK;
+			break;
+		case FORMAT_BC5_UNORM:
+			return VK_FORMAT_BC5_UNORM_BLOCK;
+			break;
+		case FORMAT_BC5_SNORM:
+			return VK_FORMAT_BC5_SNORM_BLOCK;
+			break;
+		case FORMAT_B5G6R5_UNORM:
+			return VK_FORMAT_B5G6R5_UNORM_PACK16;
+			break;
+		case FORMAT_B5G5R5A1_UNORM:
+			return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
+			break;
+		case FORMAT_B8G8R8A8_UNORM:
+			return VK_FORMAT_B8G8R8A8_UNORM;
+			break;
+		case FORMAT_B8G8R8X8_UNORM:
+			return VK_FORMAT_B8G8R8A8_UNORM;
+			break;
+		case FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
+			return VK_FORMAT_B10G11R11_UFLOAT_PACK32; // mismatch
+			break;
+		case FORMAT_B8G8R8A8_TYPELESS:
+			return VK_FORMAT_B8G8R8A8_UINT;
+			break;
+		case FORMAT_B8G8R8A8_UNORM_SRGB:
+			return VK_FORMAT_B8G8R8A8_SRGB;
+			break;
+		case FORMAT_B8G8R8X8_TYPELESS:
+			return VK_FORMAT_B8G8R8A8_UINT;
+			break;
+		case FORMAT_B8G8R8X8_UNORM_SRGB:
+			return VK_FORMAT_B8G8R8A8_SRGB;
+			break;
+		case FORMAT_BC6H_TYPELESS:
+			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+			break;
+		case FORMAT_BC6H_UF16:
+			return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+			break;
+		case FORMAT_BC6H_SF16:
+			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+			break;
+		case FORMAT_BC7_TYPELESS:
+			return VK_FORMAT_BC7_UNORM_BLOCK; // maybe mismatch
+			break;
+		case FORMAT_BC7_UNORM:
+			return VK_FORMAT_BC7_UNORM_BLOCK;
+			break;
+		case FORMAT_BC7_UNORM_SRGB:
+			return VK_FORMAT_BC7_SRGB_BLOCK;
+			break;
+		case FORMAT_B4G4R4A4_UNORM:
+			return VK_FORMAT_B4G4R4A4_UNORM_PACK16;
+			break;
+		default:
+			break;
+		}
+		return VK_FORMAT_UNDEFINED;
+	}
+	inline VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
+	{
+		switch (value)
+		{
+		case COMPARISON_NEVER:
+			return VK_COMPARE_OP_NEVER;
+			break;
+		case COMPARISON_LESS:
+			return VK_COMPARE_OP_LESS;
+			break;
+		case COMPARISON_EQUAL:
+			return VK_COMPARE_OP_EQUAL;
+			break;
+		case COMPARISON_LESS_EQUAL:
+			return VK_COMPARE_OP_LESS_OR_EQUAL;
+			break;
+		case COMPARISON_GREATER:
+			return VK_COMPARE_OP_GREATER;
+			break;
+		case COMPARISON_NOT_EQUAL:
+			return VK_COMPARE_OP_NOT_EQUAL;
+			break;
+		case COMPARISON_GREATER_EQUAL:
+			return VK_COMPARE_OP_GREATER_OR_EQUAL;
+			break;
+		case COMPARISON_ALWAYS:
+			return VK_COMPARE_OP_ALWAYS;
+			break;
+		default:
+			break;
+		}
+		return VK_COMPARE_OP_NEVER;
+	}
+	inline VkBlendFactor _ConvertBlend(BLEND value)
+	{
+		switch (value)
+		{
+		case BLEND_ZERO:
+			return VK_BLEND_FACTOR_ZERO;
+			break;
+		case BLEND_ONE:
+			return VK_BLEND_FACTOR_ONE;
+			break;
+		case BLEND_SRC_COLOR:
+			return VK_BLEND_FACTOR_SRC_COLOR;
+			break;
+		case BLEND_INV_SRC_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+			break;
+		case BLEND_SRC_ALPHA:
+			return VK_BLEND_FACTOR_SRC_ALPHA;
+			break;
+		case BLEND_INV_SRC_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+			break;
+		case BLEND_DEST_ALPHA:
+			return VK_BLEND_FACTOR_DST_ALPHA;
+			break;
+		case BLEND_INV_DEST_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+			break;
+		case BLEND_DEST_COLOR:
+			return VK_BLEND_FACTOR_DST_COLOR;
+			break;
+		case BLEND_INV_DEST_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+			break;
+		case BLEND_SRC_ALPHA_SAT:
+			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+			break;
+		case BLEND_BLEND_FACTOR:
+			return VK_BLEND_FACTOR_CONSTANT_COLOR;
+			break;
+		case BLEND_INV_BLEND_FACTOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+			break;
+		case BLEND_SRC1_COLOR:
+			return VK_BLEND_FACTOR_SRC1_COLOR;
+			break;
+		case BLEND_INV_SRC1_COLOR:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+			break;
+		case BLEND_SRC1_ALPHA:
+			return VK_BLEND_FACTOR_SRC1_ALPHA;
+			break;
+		case BLEND_INV_SRC1_ALPHA:
+			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+			break;
+		default:
+			break;
+		}
+		return VK_BLEND_FACTOR_ZERO;
+	}
+	inline VkBlendOp _ConvertBlendOp(BLEND_OP value)
+	{
+		switch (value)
+		{
+		case BLEND_OP_ADD:
+			return VK_BLEND_OP_ADD;
+			break;
+		case BLEND_OP_SUBTRACT:
+			return VK_BLEND_OP_SUBTRACT;
+			break;
+		case BLEND_OP_REV_SUBTRACT:
+			return VK_BLEND_OP_REVERSE_SUBTRACT;
+			break;
+		case BLEND_OP_MIN:
+			return VK_BLEND_OP_MIN;
+			break;
+		case BLEND_OP_MAX:
+			return VK_BLEND_OP_MAX;
+			break;
+		default:
+			break;
+		}
+		return VK_BLEND_OP_ADD;
+	}
+	inline VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+	{
+		switch (value)
+		{
+		case TEXTURE_ADDRESS_WRAP:
+			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			break;
+		case TEXTURE_ADDRESS_MIRROR:
+			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			break;
+		case TEXTURE_ADDRESS_CLAMP:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			break;
+		case TEXTURE_ADDRESS_BORDER:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+			break;
+		case TEXTURE_ADDRESS_MIRROR_ONCE:
+			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+			break;
+		default:
+			break;
+		}
+		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	}
+
+
 	// Validation layer helpers:
 	const std::vector<const char*> validationLayers = {
 		"VK_LAYER_LUNARG_standard_validation"
@@ -857,7 +1317,6 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::RenderPassManager::reset()
 	{
-		active = false;
 		dirty = true;
 
 		memset(attachments, 0, sizeof(attachments));
@@ -866,18 +1325,21 @@ namespace wiGraphicsTypes
 
 		memset(clearColor, 0, sizeof(clearColor));
 
-		renderPass = VK_NULL_HANDLE;
-		fbo = VK_NULL_HANDLE;
+		activeRTHash = 0;
+		pDesc = nullptr;
+
+		overrideRenderPass = VK_NULL_HANDLE;
+		overrideFramebuffer = VK_NULL_HANDLE;
 
 		clearRequests.clear();
 	}
 	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
 	{
-		if (active)
+		if (activeRTHash)
 		{
 			vkCmdEndRenderPass(commandBuffer);
 		}
-		active = false;
+		activeRTHash = 0;
 	}
 	void GraphicsDevice_Vulkan::RenderPassManager::validate(VkDevice device, VkCommandBuffer commandBuffer)
 	{
@@ -886,34 +1348,123 @@ namespace wiGraphicsTypes
 			return;
 		}
 
-		if (dirty || !active)
-		{
-			VkFramebuffer frameBuffer = fbo;
+		uint64_t requestRTHash = 0;
 
-			if (frameBuffer == VK_NULL_HANDLE)
+		if (!overrideRenderPass && !overrideFramebuffer)
+		{
+			requestRTHash = (uint64_t)pDesc->DSFormat;
+			for (UINT i = 0; i < pDesc->numRTs; ++i)
 			{
-				auto& it = renderPassFrameBuffers.find(pso);
-				if (it == renderPassFrameBuffers.end())
+				requestRTHash = (requestRTHash ^ ((uint64_t)pDesc->RTFormats[i] << 1)) >> 1; // primary hash based on PSO formats description
+				requestRTHash = (requestRTHash ^ ((uint64_t)attachments[i] << 1)) >> 1; // setrendertarget <-> PSO layout might mismatch so we HAVE to also include this in the hash :(
+			}
+			requestRTHash = requestRTHash ^ 73856093 * attachmentsExtents.width ^ 19349663 * attachmentsExtents.height; // also hash based on render area extent. Maybe not necessary but keep it for safety now...
+		}
+		else
+		{
+			requestRTHash = 0xFFFFFFFF; // override setrendertarget hashing with custom renderpass (eg. presentation render pass because it has some custom setup)
+		}
+
+		if (dirty || activeRTHash == 0 || activeRTHash != requestRTHash)
+		{
+			VkRenderPass renderPass = overrideRenderPass;
+			VkFramebuffer frameBuffer = overrideFramebuffer;
+
+			if (renderPass == VK_NULL_HANDLE || frameBuffer == VK_NULL_HANDLE)
+			{
+				assert(pDesc != nullptr);
+
+				uint32_t psoAttachmentCount = pDesc->numRTs + (pDesc->DSFormat == FORMAT_UNKNOWN ? 0 : 1);
+
+				assert(psoAttachmentCount <= attachmentCount);
+
+
+				RenderPassAndFramebuffer& states = renderPassCollection[requestRTHash];
+
+				if (states.renderPass == VK_NULL_HANDLE)
+				{
+					VkAttachmentDescription attachmentDescriptions[9];
+					VkAttachmentReference colorAttachmentRefs[9];
+
+					for (UINT i = 0; i < pDesc->numRTs; ++i)
+					{
+						VkAttachmentDescription attachment = {};
+						attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
+						attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+						attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+						attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+						attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+						attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+						attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+						attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+						attachmentDescriptions[i] = attachment;
+
+						VkAttachmentReference ref = {};
+						ref.attachment = i;
+						ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+						colorAttachmentRefs[i] = ref;
+					}
+
+
+					VkSubpassDescription subpass = {};
+					subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+					subpass.colorAttachmentCount = pDesc->numRTs;
+					subpass.pColorAttachments = colorAttachmentRefs;
+
+					VkAttachmentDescription depthAttachment = {};
+					VkAttachmentReference depthAttachmentRef = {};
+					if (pDesc->DSFormat != FORMAT_UNKNOWN)
+					{
+						depthAttachment.format = _ConvertFormat(pDesc->DSFormat);
+						depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+						depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+						depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+						depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+						depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+						depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+						depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+						attachmentDescriptions[pDesc->numRTs] = depthAttachment;
+
+						depthAttachmentRef.attachment = pDesc->numRTs;
+						depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+						subpass.pDepthStencilAttachment = &depthAttachmentRef;
+					}
+
+					VkRenderPassCreateInfo renderPassInfo = {};
+					renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+					renderPassInfo.attachmentCount = psoAttachmentCount;
+					renderPassInfo.pAttachments = attachmentDescriptions;
+					renderPassInfo.subpassCount = 1;
+					renderPassInfo.pSubpasses = &subpass;
+
+					if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &states.renderPass) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create render pass!");
+					}
+				}
+				if (states.frameBuffer == VK_NULL_HANDLE)
 				{
 					VkFramebufferCreateInfo framebufferInfo = {};
 					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-					framebufferInfo.renderPass = renderPass;
-					framebufferInfo.attachmentCount = attachmentCount;
+					framebufferInfo.renderPass = states.renderPass;
+					framebufferInfo.attachmentCount = psoAttachmentCount;
 					framebufferInfo.pAttachments = attachments;
 					framebufferInfo.width = attachmentsExtents.width;
 					framebufferInfo.height = attachmentsExtents.height;
 					framebufferInfo.layers = attachmentLayers;
 
-					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frameBuffer) != VK_SUCCESS) {
+					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &states.frameBuffer) != VK_SUCCESS) {
 						throw std::runtime_error("failed to create framebuffer!");
 					}
+				}
 
-					renderPassFrameBuffers[pso] = frameBuffer;
-				}
-				else
-				{
-					frameBuffer = it->second;
-				}
+				renderPass = states.renderPass;
+				frameBuffer = states.frameBuffer;
+			}
+
+			if (activeRTHash)
+			{
+				vkCmdEndRenderPass(commandBuffer);
 			}
 
 			VkRenderPassBeginInfo renderPassInfo = {};
@@ -924,18 +1475,10 @@ namespace wiGraphicsTypes
 			renderPassInfo.renderArea.extent = attachmentsExtents;
 			renderPassInfo.clearValueCount = attachmentCount;
 			renderPassInfo.pClearValues = clearColor;
-
-			if (active)
-			{
-				vkCmdEndRenderPass(commandBuffer);
-			}
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-			if (pso != VK_NULL_HANDLE)
-			{
-				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pso);
-			}
+
+			activeRTHash = requestRTHash;
 			dirty = false;
-			active = true;
 
 
 			// Performing texture clear requests if needed:
@@ -1010,464 +1553,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-
-
-	// Converters:
-	inline VkFormat _ConvertFormat(FORMAT value)
-	{
-		// _TYPELESS is converted to _UINT or _FLOAT or _UNORM in that order depending on availability!
-		// X channel is converted to regular missing channel (eg. FORMAT_B8G8R8X8_UNORM -> VK_FORMAT_B8G8R8A8_UNORM)
-		switch (value)
-		{
-		case FORMAT_UNKNOWN:
-			return VK_FORMAT_UNDEFINED;
-			break;
-		case FORMAT_R32G32B32A32_TYPELESS:
-			return VK_FORMAT_R32G32B32A32_UINT;
-			break;
-		case FORMAT_R32G32B32A32_FLOAT:
-			return VK_FORMAT_R32G32B32A32_SFLOAT;
-			break;
-		case FORMAT_R32G32B32A32_UINT:
-			return VK_FORMAT_R32G32B32A32_UINT;
-			break;
-		case FORMAT_R32G32B32A32_SINT:
-			return VK_FORMAT_R32G32B32A32_SINT;
-			break;
-		case FORMAT_R32G32B32_TYPELESS:
-			return VK_FORMAT_R32G32B32_UINT;
-			break;
-		case FORMAT_R32G32B32_FLOAT:
-			return VK_FORMAT_R32G32B32_SFLOAT;
-			break;
-		case FORMAT_R32G32B32_UINT:
-			return VK_FORMAT_R32G32B32_UINT;
-			break;
-		case FORMAT_R32G32B32_SINT:
-			return VK_FORMAT_R32G32B32_SINT;
-			break;
-		case FORMAT_R16G16B16A16_TYPELESS:
-			return VK_FORMAT_R16G16B16A16_UINT;
-			break;
-		case FORMAT_R16G16B16A16_FLOAT:
-			return VK_FORMAT_R16G16B16A16_SFLOAT;
-			break;
-		case FORMAT_R16G16B16A16_UNORM:
-			return VK_FORMAT_R16G16B16A16_UNORM;
-			break;
-		case FORMAT_R16G16B16A16_UINT:
-			return VK_FORMAT_R16G16B16A16_UINT;
-			break;
-		case FORMAT_R16G16B16A16_SNORM:
-			return VK_FORMAT_R16G16B16A16_SNORM;
-			break;
-		case FORMAT_R16G16B16A16_SINT:
-			return VK_FORMAT_R16G16B16A16_SINT;
-			break;
-		case FORMAT_R32G32_TYPELESS:
-			return VK_FORMAT_R32G32_UINT;
-			break;
-		case FORMAT_R32G32_FLOAT:
-			return VK_FORMAT_R32G32_SFLOAT;
-			break;
-		case FORMAT_R32G32_UINT:
-			return VK_FORMAT_R32G32_UINT;
-			break;
-		case FORMAT_R32G32_SINT:
-			return VK_FORMAT_R32G32_SINT;
-			break;
-		case FORMAT_R32G8X24_TYPELESS:
-			return VK_FORMAT_D32_SFLOAT_S8_UINT; // possible mismatch!
-			break;
-		case FORMAT_D32_FLOAT_S8X24_UINT:
-			return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			break;
-		case FORMAT_R32_FLOAT_X8X24_TYPELESS:
-			return VK_FORMAT_R32G32_SFLOAT; // possible mismatch!
-			break;
-		case FORMAT_X32_TYPELESS_G8X24_UINT:
-			return VK_FORMAT_R32G32_UINT; // possible mismatch!
-			break;
-		case FORMAT_R10G10B10A2_TYPELESS:
-			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
-			break;
-		case FORMAT_R10G10B10A2_UNORM:
-			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-			break;
-		case FORMAT_R10G10B10A2_UINT:
-			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
-			break;
-		case FORMAT_R11G11B10_FLOAT:
-			return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-			break;
-		case FORMAT_R8G8B8A8_TYPELESS:
-			return VK_FORMAT_R8G8B8A8_UINT;
-			break;
-		case FORMAT_R8G8B8A8_UNORM:
-			return VK_FORMAT_R8G8B8A8_UNORM;
-			break;
-		case FORMAT_R8G8B8A8_UNORM_SRGB:
-			return VK_FORMAT_R8G8B8A8_SRGB;
-			break;
-		case FORMAT_R8G8B8A8_UINT:
-			return VK_FORMAT_R8G8B8A8_UINT;
-			break;
-		case FORMAT_R8G8B8A8_SNORM:
-			return VK_FORMAT_R8G8B8A8_SNORM;
-			break;
-		case FORMAT_R8G8B8A8_SINT:
-			return VK_FORMAT_R8G8B8A8_SINT;
-			break;
-		case FORMAT_R16G16_TYPELESS:
-			return VK_FORMAT_R16G16_UINT;
-			break;
-		case FORMAT_R16G16_FLOAT:
-			return VK_FORMAT_R16G16_SFLOAT;
-			break;
-		case FORMAT_R16G16_UNORM:
-			return VK_FORMAT_R16G16_UNORM;
-			break;
-		case FORMAT_R16G16_UINT:
-			return VK_FORMAT_R16G16_UINT;
-			break;
-		case FORMAT_R16G16_SNORM:
-			return VK_FORMAT_R16G16_SNORM;
-			break;
-		case FORMAT_R16G16_SINT:
-			return VK_FORMAT_R16G16_SINT;
-			break;
-		case FORMAT_R32_TYPELESS:
-			return VK_FORMAT_D32_SFLOAT;
-			break;
-		case FORMAT_D32_FLOAT:
-			return VK_FORMAT_D32_SFLOAT;
-			break;
-		case FORMAT_R32_FLOAT:
-			return VK_FORMAT_R32_SFLOAT;
-			break;
-		case FORMAT_R32_UINT:
-			return VK_FORMAT_R32_UINT;
-			break;
-		case FORMAT_R32_SINT:
-			return VK_FORMAT_R32_SINT;
-			break;
-		case FORMAT_R24G8_TYPELESS:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_D24_UNORM_S8_UINT:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_R24_UNORM_X8_TYPELESS:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_X24_TYPELESS_G8_UINT:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_R8G8_TYPELESS:
-			return VK_FORMAT_R8G8_UINT;
-			break;
-		case FORMAT_R8G8_UNORM:
-			return VK_FORMAT_R8G8_UNORM;
-			break;
-		case FORMAT_R8G8_UINT:
-			return VK_FORMAT_R8G8_UINT;
-			break;
-		case FORMAT_R8G8_SNORM:
-			return VK_FORMAT_R8G8_SNORM;
-			break;
-		case FORMAT_R8G8_SINT:
-			return VK_FORMAT_R8G8_SINT;
-			break;
-		case FORMAT_R16_TYPELESS:
-			return VK_FORMAT_D16_UNORM;
-			break;
-		case FORMAT_R16_FLOAT:
-			return VK_FORMAT_R16_SFLOAT;
-			break;
-		case FORMAT_D16_UNORM:
-			return VK_FORMAT_D16_UNORM;
-			break;
-		case FORMAT_R16_UNORM:
-			return VK_FORMAT_R16_UNORM;
-			break;
-		case FORMAT_R16_UINT:
-			return VK_FORMAT_R16_UINT;
-			break;
-		case FORMAT_R16_SNORM:
-			return VK_FORMAT_R16_SNORM;
-			break;
-		case FORMAT_R16_SINT:
-			return VK_FORMAT_R16_SINT;
-			break;
-		case FORMAT_R8_TYPELESS:
-			return VK_FORMAT_R8_UINT;
-			break;
-		case FORMAT_R8_UNORM:
-			return VK_FORMAT_R8_UNORM;
-			break;
-		case FORMAT_R8_UINT:
-			return VK_FORMAT_R8_UINT;
-			break;
-		case FORMAT_R8_SNORM:
-			return VK_FORMAT_R8_SNORM;
-			break;
-		case FORMAT_R8_SINT:
-			return VK_FORMAT_R8_SINT;
-			break;
-		case FORMAT_A8_UNORM:
-			return VK_FORMAT_R8_UNORM; // mismatch!
-			break;
-		case FORMAT_R1_UNORM:
-			return VK_FORMAT_R8_UNORM; // mismatch!
-			break;
-		case FORMAT_R9G9B9E5_SHAREDEXP:
-			return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32; // maybe ok
-			break;
-		case FORMAT_R8G8_B8G8_UNORM:
-			return VK_FORMAT_R8G8B8A8_UNORM; // mismatch
-			break;
-		case FORMAT_G8R8_G8B8_UNORM:
-			return VK_FORMAT_R8G8B8A8_UNORM; // mismatch
-			break;
-		case FORMAT_BC1_TYPELESS:
-			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-			break;
-		case FORMAT_BC1_UNORM:
-			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-			break;
-		case FORMAT_BC1_UNORM_SRGB:
-			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-			break;
-		case FORMAT_BC2_TYPELESS:
-			return VK_FORMAT_BC2_UNORM_BLOCK;
-			break;
-		case FORMAT_BC2_UNORM:
-			return VK_FORMAT_BC2_UNORM_BLOCK;
-			break;
-		case FORMAT_BC2_UNORM_SRGB:
-			return VK_FORMAT_BC2_SRGB_BLOCK;
-			break;
-		case FORMAT_BC3_TYPELESS:
-			return VK_FORMAT_BC3_UNORM_BLOCK;
-			break;
-		case FORMAT_BC3_UNORM:
-			return VK_FORMAT_BC3_UNORM_BLOCK;
-			break;
-		case FORMAT_BC3_UNORM_SRGB:
-			return VK_FORMAT_BC3_SRGB_BLOCK;
-			break;
-		case FORMAT_BC4_TYPELESS:
-			return VK_FORMAT_BC4_UNORM_BLOCK;
-			break;
-		case FORMAT_BC4_UNORM:
-			return VK_FORMAT_BC4_UNORM_BLOCK;
-			break;
-		case FORMAT_BC4_SNORM:
-			return VK_FORMAT_BC4_SNORM_BLOCK;
-			break;
-		case FORMAT_BC5_TYPELESS:
-			return VK_FORMAT_BC5_UNORM_BLOCK;
-			break;
-		case FORMAT_BC5_UNORM:
-			return VK_FORMAT_BC5_UNORM_BLOCK;
-			break;
-		case FORMAT_BC5_SNORM:
-			return VK_FORMAT_BC5_SNORM_BLOCK;
-			break;
-		case FORMAT_B5G6R5_UNORM:
-			return VK_FORMAT_B5G6R5_UNORM_PACK16;
-			break;
-		case FORMAT_B5G5R5A1_UNORM:
-			return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
-			break;
-		case FORMAT_B8G8R8A8_UNORM:
-			return VK_FORMAT_B8G8R8A8_UNORM;
-			break;
-		case FORMAT_B8G8R8X8_UNORM:
-			return VK_FORMAT_B8G8R8A8_UNORM;
-			break;
-		case FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
-			return VK_FORMAT_B10G11R11_UFLOAT_PACK32; // mismatch
-			break;
-		case FORMAT_B8G8R8A8_TYPELESS:
-			return VK_FORMAT_B8G8R8A8_UINT;
-			break;
-		case FORMAT_B8G8R8A8_UNORM_SRGB:
-			return VK_FORMAT_B8G8R8A8_SRGB;
-			break;
-		case FORMAT_B8G8R8X8_TYPELESS:
-			return VK_FORMAT_B8G8R8A8_UINT;
-			break;
-		case FORMAT_B8G8R8X8_UNORM_SRGB:
-			return VK_FORMAT_B8G8R8A8_SRGB;
-			break;
-		case FORMAT_BC6H_TYPELESS:
-			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-			break;
-		case FORMAT_BC6H_UF16:
-			return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-			break;
-		case FORMAT_BC6H_SF16:
-			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-			break;
-		case FORMAT_BC7_TYPELESS:
-			return VK_FORMAT_BC7_UNORM_BLOCK; // maybe mismatch
-			break;
-		case FORMAT_BC7_UNORM:
-			return VK_FORMAT_BC7_UNORM_BLOCK;
-			break;
-		case FORMAT_BC7_UNORM_SRGB:
-			return VK_FORMAT_BC7_SRGB_BLOCK;
-			break;
-		case FORMAT_B4G4R4A4_UNORM:
-			return VK_FORMAT_B4G4R4A4_UNORM_PACK16;
-			break;
-		default:
-			break;
-		}
-		return VK_FORMAT_UNDEFINED;
-	}
-	inline VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
-	{
-		switch (value)
-		{
-		case COMPARISON_NEVER:
-			return VK_COMPARE_OP_NEVER;
-			break;
-		case COMPARISON_LESS:
-			return VK_COMPARE_OP_LESS;
-			break;
-		case COMPARISON_EQUAL:
-			return VK_COMPARE_OP_EQUAL;
-			break;
-		case COMPARISON_LESS_EQUAL:
-			return VK_COMPARE_OP_LESS_OR_EQUAL;
-			break;
-		case COMPARISON_GREATER:
-			return VK_COMPARE_OP_GREATER;
-			break;
-		case COMPARISON_NOT_EQUAL:
-			return VK_COMPARE_OP_NOT_EQUAL;
-			break;
-		case COMPARISON_GREATER_EQUAL:
-			return VK_COMPARE_OP_GREATER_OR_EQUAL;
-			break;
-		case COMPARISON_ALWAYS:
-			return VK_COMPARE_OP_ALWAYS;
-			break;
-		default:
-			break;
-		}
-		return VK_COMPARE_OP_NEVER;
-	}
-	inline VkBlendFactor _ConvertBlend(BLEND value)
-	{
-		switch (value)
-		{
-		case BLEND_ZERO:
-			return VK_BLEND_FACTOR_ZERO;
-			break;
-		case BLEND_ONE:
-			return VK_BLEND_FACTOR_ONE;
-			break;
-		case BLEND_SRC_COLOR:
-			return VK_BLEND_FACTOR_SRC_COLOR;
-			break;
-		case BLEND_INV_SRC_COLOR:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-			break;
-		case BLEND_SRC_ALPHA:
-			return VK_BLEND_FACTOR_SRC_ALPHA;
-			break;
-		case BLEND_INV_SRC_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			break;
-		case BLEND_DEST_ALPHA:
-			return VK_BLEND_FACTOR_DST_ALPHA;
-			break;
-		case BLEND_INV_DEST_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-			break;
-		case BLEND_DEST_COLOR:
-			return VK_BLEND_FACTOR_DST_COLOR;
-			break;
-		case BLEND_INV_DEST_COLOR:
-			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-			break;
-		case BLEND_SRC_ALPHA_SAT:
-			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-			break;
-		case BLEND_BLEND_FACTOR:
-			return VK_BLEND_FACTOR_CONSTANT_COLOR;
-			break;
-		case BLEND_INV_BLEND_FACTOR:
-			return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
-			break;
-		case BLEND_SRC1_COLOR:
-			return VK_BLEND_FACTOR_SRC1_COLOR;
-			break;
-		case BLEND_INV_SRC1_COLOR:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-			break;
-		case BLEND_SRC1_ALPHA:
-			return VK_BLEND_FACTOR_SRC1_ALPHA;
-			break;
-		case BLEND_INV_SRC1_ALPHA:
-			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
-			break;
-		default:
-			break;
-		}
-		return VK_BLEND_FACTOR_ZERO;
-	}
-	inline VkBlendOp _ConvertBlendOp(BLEND_OP value)
-	{
-		switch (value)
-		{
-		case BLEND_OP_ADD:
-			return VK_BLEND_OP_ADD;
-			break;
-		case BLEND_OP_SUBTRACT:
-			return VK_BLEND_OP_SUBTRACT;
-			break;
-		case BLEND_OP_REV_SUBTRACT:
-			return VK_BLEND_OP_REVERSE_SUBTRACT;
-			break;
-		case BLEND_OP_MIN:
-			return VK_BLEND_OP_MIN;
-			break;
-		case BLEND_OP_MAX:
-			return VK_BLEND_OP_MAX;
-			break;
-		default:
-			break;
-		}
-		return VK_BLEND_OP_ADD;
-	}
-	inline VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
-	{
-		switch (value)
-		{
-		case TEXTURE_ADDRESS_WRAP:
-			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			break;
-		case TEXTURE_ADDRESS_MIRROR:
-			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-			break;
-		case TEXTURE_ADDRESS_CLAMP:
-			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			break;
-		case TEXTURE_ADDRESS_BORDER:
-			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-			break;
-		case TEXTURE_ADDRESS_MIRROR_ONCE:
-			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
-			break;
-		default:
-			break;
-		}
-		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	}
 
 
 	// Engine functions
@@ -3330,70 +3415,69 @@ namespace wiGraphicsTypes
 		attachments.reserve(pDesc->numRTs);
 		colorAttachmentRefs.reserve(pDesc->numRTs);
 
-		for (UINT i = 0; i < pDesc->numRTs; ++i)
+		// This will be a dummy render pass used for PSO validation:
+		VkRenderPass renderPass = VK_NULL_HANDLE;
 		{
-			VkAttachmentDescription attachment = {};
-			attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
-			attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-			attachments.push_back(attachment);
+			uint32_t psoAttachmentCount = pDesc->numRTs + (pDesc->DSFormat == FORMAT_UNKNOWN ? 0 : 1);
 
-			VkAttachmentReference ref = {};
-			ref.attachment = i;
-			ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			colorAttachmentRefs.push_back(ref);
-		}
+			VkAttachmentDescription attachmentDescriptions[9];
+			VkAttachmentReference colorAttachmentRefs[9];
+
+			for (UINT i = 0; i < pDesc->numRTs; ++i)
+			{
+				VkAttachmentDescription attachment = {};
+				attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
+				attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+				attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+				attachmentDescriptions[i] = attachment;
+
+				VkAttachmentReference ref = {};
+				ref.attachment = i;
+				ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				colorAttachmentRefs[i] = ref;
+			}
 
 
-		VkSubpassDescription subpass = {};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = pDesc->numRTs;
-		subpass.pColorAttachments = colorAttachmentRefs.data();
+			VkSubpassDescription subpass = {};
+			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+			subpass.colorAttachmentCount = pDesc->numRTs;
+			subpass.pColorAttachments = colorAttachmentRefs;
 
-		//VkSubpassDependency dependency = {};
-		//dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		//dependency.dstSubpass = 0;
-		//dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		//dependency.srcAccessMask = 0;
-		//dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		//dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			VkAttachmentDescription depthAttachment = {};
+			VkAttachmentReference depthAttachmentRef = {};
+			if (pDesc->DSFormat != FORMAT_UNKNOWN)
+			{
+				depthAttachment.format = _ConvertFormat(pDesc->DSFormat);
+				depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+				attachmentDescriptions[pDesc->numRTs] = depthAttachment;
 
-		VkAttachmentDescription depthAttachment = {};
-		VkAttachmentReference depthAttachmentRef = {};
-		if (pDesc->DSFormat != FORMAT_UNKNOWN)
-		{
-			depthAttachment.format = _ConvertFormat(pDesc->DSFormat);
-			depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-			attachments.push_back(depthAttachment);
+				depthAttachmentRef.attachment = pDesc->numRTs;
+				depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-			depthAttachmentRef.attachment = static_cast<uint32_t>(attachments.size() - 1);
-			depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				subpass.pDepthStencilAttachment = &depthAttachmentRef;
+			}
 
-			subpass.pDepthStencilAttachment = &depthAttachmentRef;
-		}
+			VkRenderPassCreateInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+			renderPassInfo.attachmentCount = psoAttachmentCount;
+			renderPassInfo.pAttachments = attachmentDescriptions;
+			renderPassInfo.subpassCount = 1;
+			renderPassInfo.pSubpasses = &subpass;
 
-		VkRenderPassCreateInfo renderPassInfo = {};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		renderPassInfo.pAttachments = attachments.data();
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-		//renderPassInfo.dependencyCount = 1;
-		//renderPassInfo.pDependencies = &dependency;
-
-		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, reinterpret_cast<VkRenderPass*>(&pso->renderPass_Vulkan)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create render pass!");
+			if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create render pass!");
+			}
 		}
 
 
@@ -3401,7 +3485,7 @@ namespace wiGraphicsTypes
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.layout = defaultPipelineLayout_Graphics;
-		pipelineInfo.renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
+		pipelineInfo.renderPass = renderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -3718,7 +3802,7 @@ namespace wiGraphicsTypes
 
 
 		// Blending:
-		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(subpass.colorAttachmentCount);
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(pDesc->numRTs);
 		for (size_t i = 0; i < colorBlendAttachments.size(); ++i)
 		{
 			RenderTargetBlendStateDesc desc = pDesc->bs != nullptr ? pDesc->bs->desc.RenderTarget[i] : RenderTargetBlendStateDesc();
@@ -3794,6 +3878,10 @@ namespace wiGraphicsTypes
 		VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline_Vulkan));
 		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
 		assert(SUCCEEDED(hr));
+
+
+		// Dummy render pass no longer needed:
+		vkDestroyRenderPass(device, renderPass, nullptr);
 
 		return hr;
 	}
@@ -3904,15 +3992,13 @@ namespace wiGraphicsTypes
 		// Begin presentation render pass...
 		//vkCmdBeginRenderPass(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		
-		renderPass[GRAPHICSTHREAD_IMMEDIATE].active = false;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].dirty = true;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentCount = 1;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachments[0] = GetFrameResources().swapChainImageView;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].attachmentsExtents = swapChainExtent;
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].clearColor[0] = clearColor;
-		renderPass[GRAPHICSTHREAD_IMMEDIATE].renderPass = defaultRenderPass;
-		renderPass[GRAPHICSTHREAD_IMMEDIATE].pso = VK_NULL_HANDLE;
-		renderPass[GRAPHICSTHREAD_IMMEDIATE].fbo = GetFrameResources().swapChainFramebuffer;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].overrideRenderPass = defaultRenderPass;
+		renderPass[GRAPHICSTHREAD_IMMEDIATE].overrideFramebuffer = GetFrameResources().swapChainFramebuffer;
 
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].validate(device, GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
 
@@ -4564,29 +4650,8 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		uint32_t desiredAttachmentCount = pso->desc.numRTs;
-		if (pso->desc.DSFormat != FORMAT_UNKNOWN)
-		{
-			desiredAttachmentCount++;
-		}
-
-		if (desiredAttachmentCount != renderPass[threadID].attachmentCount)
-		{
-			renderPass[threadID].dirty = true;
-			renderPass[threadID].attachmentCount = desiredAttachmentCount;
-		}
-
-		if (renderPass[threadID].pso != pso->pipeline_Vulkan || renderPass[threadID].renderPass != pso->renderPass_Vulkan)
-		{
-			renderPass[threadID].dirty = true;
-			renderPass[threadID].pso = static_cast<VkPipeline>(pso->pipeline_Vulkan);
-			if (renderPass[threadID].renderPass != defaultRenderPass)
-			{
-				renderPass[threadID].renderPass = static_cast<VkRenderPass>(pso->renderPass_Vulkan);
-			}
-
-			vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, renderPass[threadID].pso);
-		}
+		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, static_cast<VkPipeline>(pso->pipeline_Vulkan));
+		renderPass[threadID].pDesc = &pso->desc;
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
@@ -5138,12 +5203,44 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 	{
+		//PFN_vkCmdDebugMarkerBeginEXT pfnCmdDebugMarkerBeginEXT = (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerBeginEXT");
+
+		//VkDebugMarkerMarkerInfoEXT info = {};
+		//info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+		//info.pNext = nullptr;
+		//info.color[0] = 1;
+		//info.color[1] = 0;
+		//info.color[2] = 1;
+		//info.color[3] = 1;
+		//info.pMarkerName = name.c_str();
+
+		//pfnCmdDebugMarkerBeginEXT(GetDirectCommandList(threadID), &info);
+
+		////vkCmdDebugMarkerBeginEXT(GetDirectCommandList(threadID), &info);
 	}
 	void GraphicsDevice_Vulkan::EventEnd(GRAPHICSTHREAD threadID)
 	{
+		//PFN_vkCmdDebugMarkerEndEXT pfnCmdDebugMarkerEndEXT = (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerEndEXT");
+		//pfnCmdDebugMarkerEndEXT(GetDirectCommandList(threadID));
+
+		////vkCmdDebugMarkerEndEXT(GetDirectCommandList(threadID));
 	}
 	void GraphicsDevice_Vulkan::SetMarker(const std::string& name, GRAPHICSTHREAD threadID)
 	{
+		//PFN_vkCmdDebugMarkerInsertEXT pfnCmdDebugMarkerInsertEXT = (PFN_vkCmdDebugMarkerInsertEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerInsertEXT");
+
+		//VkDebugMarkerMarkerInfoEXT info = {};
+		//info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+		//info.pNext = nullptr;
+		//info.color[0] = 1;
+		//info.color[1] = 1;
+		//info.color[2] = 0;
+		//info.color[3] = 1;
+		//info.pMarkerName = name.c_str();
+
+		//pfnCmdDebugMarkerInsertEXT(GetDirectCommandList(threadID), &info);
+
+		////vkCmdDebugMarkerInsertEXT(GetDirectCommandList(threadID), &info);
 	}
 
 }

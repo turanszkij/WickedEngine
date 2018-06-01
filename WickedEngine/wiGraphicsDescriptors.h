@@ -642,14 +642,6 @@ namespace wiGraphicsTypes
 			SAFE_INIT(cs);
 		}
 	};
-	struct RenderPassDesc
-	{
-		Texture* RTs[8] = {};
-		Texture* DS = nullptr;
-		UINT NumRTs = 0;
-
-		RenderPassDesc() {}
-	};
 	struct IndirectDrawArgsInstanced
 	{
 		UINT VertexCountPerInstance;

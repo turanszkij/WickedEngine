@@ -72,7 +72,6 @@ namespace wiGraphicsTypes
 
 		struct RenderPassManager
 		{
-			bool active = false;
 			bool dirty = true;
 
 			VkImageView attachments[9] = {};
@@ -81,11 +80,18 @@ namespace wiGraphicsTypes
 			uint32_t attachmentLayers = 0;
 			VkClearValue clearColor[9] = {};
 
-			VkPipeline pso = VK_NULL_HANDLE;
-			VkRenderPass renderPass = VK_NULL_HANDLE;
-			VkFramebuffer fbo = VK_NULL_HANDLE;
+			struct RenderPassAndFramebuffer
+			{
+				VkRenderPass renderPass = VK_NULL_HANDLE;
+				VkFramebuffer frameBuffer = VK_NULL_HANDLE;
+			};
+			// RTFormats hash <-> renderpass+framebuffer
+			std::unordered_map<uint64_t, RenderPassAndFramebuffer> renderPassCollection;
+			uint64_t activeRTHash = 0;
+			GraphicsPSODesc* pDesc = nullptr;
 
-			std::unordered_map<VkPipeline, VkFramebuffer> renderPassFrameBuffers;
+			VkRenderPass overrideRenderPass = VK_NULL_HANDLE;
+			VkFramebuffer overrideFramebuffer = VK_NULL_HANDLE;
 
 			struct ClearRequest
 			{

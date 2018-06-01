@@ -391,7 +391,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
-		wiHandle						renderPass_Vulkan;
 		wiHandle						pipeline_Vulkan;
 		GraphicsPSODesc desc;
 
@@ -416,22 +415,6 @@ namespace wiGraphicsTypes
 
 		ComputePSO();
 		~ComputePSO();
-	};
-
-	class RenderPass
-	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		RenderPassDesc desc;
-
-	public:
-		const RenderPassDesc& GetDesc() const { return desc; }
-
-		RenderPass();
-		~RenderPass();
-
 	};
 
 }
