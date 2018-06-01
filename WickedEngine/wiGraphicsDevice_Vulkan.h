@@ -90,8 +90,8 @@ namespace wiGraphicsTypes
 			uint64_t activeRTHash = 0;
 			GraphicsPSODesc* pDesc = nullptr;
 
-			VkRenderPass overrideRenderPass = nullptr;
-			VkFramebuffer overrideFramebuffer = nullptr;
+			VkRenderPass overrideRenderPass = VK_NULL_HANDLE;
+			VkFramebuffer overrideFramebuffer = VK_NULL_HANDLE;
 
 			struct ClearRequest
 			{

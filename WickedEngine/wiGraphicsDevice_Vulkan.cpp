@@ -1328,8 +1328,8 @@ namespace wiGraphicsTypes
 		activeRTHash = 0;
 		pDesc = nullptr;
 
-		overrideRenderPass = nullptr;
-		overrideFramebuffer = nullptr;
+		overrideRenderPass = VK_NULL_HANDLE;
+		overrideFramebuffer = VK_NULL_HANDLE;
 
 		clearRequests.clear();
 	}
@@ -1370,7 +1370,7 @@ namespace wiGraphicsTypes
 			VkRenderPass renderPass = overrideRenderPass;
 			VkFramebuffer frameBuffer = overrideFramebuffer;
 
-			if (renderPass == nullptr || frameBuffer == nullptr)
+			if (renderPass == VK_NULL_HANDLE || frameBuffer == VK_NULL_HANDLE)
 			{
 				assert(pDesc != nullptr);
 
