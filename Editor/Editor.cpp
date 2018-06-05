@@ -262,6 +262,9 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	case EditorComponent::RENDERPATH_TILEDDEFERRED:
 		renderPath = new TiledDeferredRenderableComponent;
 		break;
+	case EditorComponent::RENDERPATH_TRACED:
+		renderPath = new TracedRenderableComponent;
+		break;
 	default:
 		assert(0);
 		break;
@@ -367,6 +370,7 @@ void EditorComponent::Load()
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
 	renderPathComboBox->AddItem("Tiled Deferred");
+	renderPathComboBox->AddItem("Traced");
 	renderPathComboBox->OnSelect([&](wiEventArgs args) {
 		switch (args.iValue)
 		{
@@ -381,6 +385,9 @@ void EditorComponent::Load()
 			break;
 		case 3:
 			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
+			break;
+		case 4:
+			ChangeRenderPath(RENDERPATH_TRACED);
 			break;
 		default:
 			break;

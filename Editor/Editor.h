@@ -58,6 +58,7 @@ public:
 		RENDERPATH_DEFERRED,
 		RENDERPATH_TILEDFORWARD,
 		RENDERPATH_TILEDDEFERRED,
+		RENDERPATH_TRACED,
 	};
 	void ChangeRenderPath(RENDERPATH path);
 	void DeleteWindows();

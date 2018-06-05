@@ -720,6 +720,9 @@
     <FxCompile Include="emittedparticle_sphpartitionoffsetsresetCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="tracedRendering_primaryCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

@@ -244,7 +244,7 @@ void wiRenderTarget::Set(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool 
 
 
 Texture2D* wiRenderTarget::GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int viewID)
-{ 
+{
 	if (GetDesc(viewID).SampleDesc.Count > 1)
 	{
 		if (resolvedMSAAUptodate[viewID] == false)

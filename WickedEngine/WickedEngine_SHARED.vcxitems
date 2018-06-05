@@ -236,6 +236,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_Vulkan.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)TracedRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h" />
@@ -531,6 +533,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)TracedRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />

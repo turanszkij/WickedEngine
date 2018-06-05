@@ -494,6 +494,8 @@ public:
 	static void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID);
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 
+	static void DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+
 	enum MIPGENFILTER
 	{
 		MIPGENFILTER_POINT,

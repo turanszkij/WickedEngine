@@ -26,6 +26,7 @@
 #include "wiOcean.h"
 #include "ShaderInterop_CloudGenerator.h"
 #include "ShaderInterop_Skinning.h"
+#include "ShaderInterop_TracedRendering.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
 
@@ -1467,6 +1468,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TRACEDRENDERING_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tracedRendering_primaryCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -6309,6 +6311,33 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
 
 	GetDevice()->EventEnd(threadID);
+}
+
+void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	int _width = GetInternalResolution().x;
+	int _height = GetInternalResolution().y;
+
+
+	wiProfiler::GetInstance().BeginRange("Primary Rays", wiProfiler::DOMAIN_GPU, threadID);
+	device->EventBegin("Primary Rays", threadID);
+
+	device->BindComputePSO(CPSO[CSTYPE_TRACEDRENDERING_PRIMARY], threadID);
+
+	GPUResource* uavs[] = {
+		result,
+	};
+	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+	device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_PRIMARY_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_PRIMARY_BLOCKSIZE), 1, threadID);
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+
+	device->EventEnd(threadID);
+	wiProfiler::GetInstance().EndRange(threadID);
 }
 
 void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
