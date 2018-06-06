@@ -1173,13 +1173,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\TracedRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)TracedRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2003,10 +2003,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\TracedRenderableComponent.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)TracedRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
     </ClCompile>
   </ItemGroup>
