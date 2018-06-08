@@ -50,7 +50,7 @@ void TracedRenderableComponent::ResizeBuffers()
 	TextureDesc desc;
 	desc.Width = lastBufferResWidth;
 	desc.Height = lastBufferResHeight;
-	desc.Format = wiRenderer::RTFormat_hdr;
+	desc.Format = FORMAT_R32G32B32A32_FLOAT;
 	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 	desc.Usage = USAGE_DEFAULT;
 	desc.CPUAccessFlags = 0;
@@ -98,29 +98,48 @@ void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 
-	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-	fx.hdr = true;
+	//wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	//fx.hdr = true;
 
-	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
-	{
-		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
-		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
-		int history = 1 - current;
-		rtTemporalAA[current].Set(threadID); {
-			wiRenderer::UpdateGBuffer(nullptr, nullptr, nullptr, nullptr, nullptr, threadID);
-			fx.presentFullScreen = false;
-			fx.process.setTemporalAAResolve(true);
-			fx.setMaskMap(rtTemporalAA[history].GetTexture());
-			wiImage::Draw(traceResult, fx, threadID);
-			fx.process.clear();
-		}
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-		wiProfiler::GetInstance().EndRange(threadID);
-		wiRenderer::GetDevice()->EventEnd(threadID);
-	}
+
+
+	//static float sam = 0;
+
+	//if (GetAsyncKeyState('K') < 0)
+	//{
+	//	sam = 0;
+	//}
+
+	//fx.opacity = 1.0f / (sam + 1.0f);
+	//fx.blendFlag = BLENDMODE_ACCUMULATE;
+
+	//rtTemporalAA[0].Set(threadID);
+	//wiImage::Draw(traceResult, fx, threadID);
+
+	//sam++;
+
+
+
+	//if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
+	//{
+	//	wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
+	//	wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+	//	fx.blendFlag = BLENDMODE_OPAQUE;
+	//	int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
+	//	int history = 1 - current;
+	//	rtTemporalAA[current].Set(threadID); {
+	//		wiRenderer::UpdateGBuffer(nullptr, nullptr, nullptr, nullptr, nullptr, threadID);
+	//		fx.presentFullScreen = false;
+	//		fx.process.setTemporalAAResolve(true);
+	//		fx.setMaskMap(rtTemporalAA[history].GetTexture());
+	//		wiImage::Draw(traceResult, fx, threadID);
+	//		fx.process.clear();
+	//	}
+	//	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
+	//	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	//	wiProfiler::GetInstance().EndRange(threadID);
+	//	wiRenderer::GetDevice()->EventEnd(threadID);
+	//}
 
 
 
@@ -137,15 +156,27 @@ void TracedRenderableComponent::Compose()
 	fx.presentFullScreen = true;
 
 
-	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
-	{
-		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
-		wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	}
-	else
-	{
-		wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
-	}
+
+	wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
+	
+	
+	
+	
+	
+	
+	//wiImage::Draw(rtTemporalAA[0].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+
+
+
+	//if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
+	//{
+	//	int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
+	//	wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	//}
+	//else
+	//{
+	//	wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
+	//}
 
 
 	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);

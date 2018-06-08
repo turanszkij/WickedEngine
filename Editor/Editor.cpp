@@ -370,7 +370,7 @@ void EditorComponent::Load()
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
 	renderPathComboBox->AddItem("Tiled Deferred");
-	renderPathComboBox->AddItem("Traced");
+	renderPathComboBox->AddItem("Path Tracing");
 	renderPathComboBox->OnSelect([&](wiEventArgs args) {
 		switch (args.iValue)
 		{

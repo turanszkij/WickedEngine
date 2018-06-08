@@ -3,6 +3,9 @@
 #include "skyHF.hlsli"
 #include "ShaderInterop_TracedRendering.h"
 
+
+RWTEXTURE2D(Result, float4, 0);
+
 struct Sphere
 {
 	float3 position;
@@ -19,7 +22,7 @@ struct Ray
 	float3 energy;
 };
 
-Ray CreateRay(float3 origin, float3 direction)
+inline Ray CreateRay(float3 origin, float3 direction)
 {
 	Ray ray;
 	ray.origin = origin;
@@ -28,18 +31,15 @@ Ray CreateRay(float3 origin, float3 direction)
 	return ray;
 }
 
-Ray CreateCameraRay(float2 uv)
+inline Ray CreateCameraRay(float2 uv)
 {
-	// Transform the camera origin to world space
-	float3 origin = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), g_xFrame_MainCamera_InvV).xyz;
-
 	// Invert the perspective projection of the view-space position
 	float3 direction = mul(float4(uv, 0.0f, 1.0f), g_xFrame_MainCamera_InvP).xyz;
 	// Transform the direction from camera to world space and normalize
 	direction = mul(float4(direction, 0.0f), g_xFrame_MainCamera_InvV).xyz;
 	direction = normalize(direction);
 
-	return CreateRay(origin, direction);
+	return CreateRay(g_xFrame_MainCamera_CamPos, direction);
 }
 
 struct RayHit
@@ -52,17 +52,18 @@ struct RayHit
 	float emission;
 };
 
-RayHit CreateRayHit()
+static const float INFINITE_RAYHIT = 1000000;
+inline RayHit CreateRayHit()
 {
 	RayHit hit;
 	hit.position = float3(0.0f, 0.0f, 0.0f);
-	hit.distance = 1.#INF;
+	hit.distance = INFINITE_RAYHIT;
 	hit.normal = float3(0.0f, 0.0f, 0.0f);
 	hit.emission = 0;
 	return hit;
 }
 
-void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
+inline void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
 {
 	// Calculate distance along the ray where the ground plane is intersected
 	float t = -ray.origin.y / ray.direction.y;
@@ -71,13 +72,13 @@ void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
 		bestHit.distance = t;
 		bestHit.position = ray.origin + t * ray.direction;
 		bestHit.normal = float3(0.0f, 1.0f, 0.0f);
-		bestHit.specular = float3(0.6, 0.6, 0.64);
+		bestHit.specular = float3(0.2, 0.2, 0.2);
 		bestHit.albedo = float3(0.8f, 0.8f, 0.8f);
 		bestHit.emission = 0;
 	}
 }
 
-void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
+inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
 {
 	// Calculate distance along the ray where the sphere is intersected
 	float3 d = ray.origin - sphere.position;
@@ -98,7 +99,7 @@ void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
 	}
 }
 
-RayHit Trace(Ray ray)
+inline RayHit TraceScene(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
 	IntersectGroundPlane(ray, bestHit);
@@ -120,6 +121,21 @@ RayHit Trace(Ray ray)
 			{
 				sphere.emission = 2;
 				sphere.position.y = 3;
+
+				if (j == 0)
+				{
+					sphere.position = float3(100, 200, 100);
+					sphere.radius = 100;
+					sphere.emission = 4;
+					sphere.albedo = float3(0.9, 0.9, 0.2);
+				}
+			}
+
+			if (i + j == dim)
+			{
+				sphere.albedo = float3(0.7, 0.9, 0.2);
+				sphere.specular = 0;
+				sphere.emission = 1;
 			}
 
 			IntersectSphere(ray, bestHit, sphere);
@@ -129,43 +145,21 @@ RayHit Trace(Ray ray)
 	return bestHit;
 }
 
-float sdot(float3 x, float3 y, float f = 1.0f)
-{
-	return saturate(dot(x, y) * f);
-}
-
-float rand(inout float seed, in float2 pixel)
+inline float rand(inout float seed, in float2 pixel)
 {
 	float result = frac(sin(seed * dot(pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
 	seed += 1.0f;
 	return result;
 }
 
-float3x3 GetTangentSpace(float3 normal)
+inline float3x3 GetTangentSpace(float3 normal)
 {
-	// Choose a helper vector for the cross product
-	float3 helper = float3(1, 0, 0);
-	if (abs(normal.x) > 0.99f)
-		helper = float3(0, 0, 1);
-
-	// Generate vectors
-	float3 tangent = normalize(cross(normal, helper));
+	float3 tangent = normalize(cross(normal, g_xFrame_MainCamera_At));
 	float3 binormal = normalize(cross(normal, tangent));
 	return float3x3(tangent, binormal, normal);
 }
 
-//float3 SampleHemisphere(float3 normal, inout float seed, in float2 pixel)
-//{
-//	// Uniformly sample hemisphere direction
-//	float cosTheta = rand(seed, pixel);
-//	float sinTheta = sqrt(max(0.0f, 1.0f - cosTheta * cosTheta));
-//	float phi = 2 * PI * rand(seed, pixel);
-//	float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-//
-//	// Transform direction to world space
-//	return mul(tangentSpaceDir, GetTangentSpace(normal));
-//}
-float3 SampleHemisphere(float3 normal, float alpha, inout float seed, in float2 pixel)
+inline float3 SampleHemisphere(float3 normal, float alpha, inout float seed, in float2 pixel)
 {
 	// Sample the hemisphere, where alpha determines the kind of the sampling
 	float cosTheta = pow(rand(seed, pixel), 1.0f / (alpha + 1.0f));
@@ -177,22 +171,17 @@ float3 SampleHemisphere(float3 normal, float alpha, inout float seed, in float2 
 	return mul(tangentSpaceDir, GetTangentSpace(normal));
 }
 
-float energy(float3 color)
+inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel)
 {
-	return dot(color, 1.0f / 3.0f);
-}
-
-float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel)
-{
-	if (hit.distance < 1.#INF)
+	if (hit.distance < INFINITE_RAYHIT)
 	{
 		// Calculate chances of diffuse and specular reflection
 		hit.albedo = min(1.0f - hit.specular, hit.albedo);
-		float specChance = energy(hit.specular);
-		float diffChance = energy(hit.albedo);
-		float sum = specChance + diffChance;
-		specChance /= sum;
-		diffChance /= sum;
+		float specChance = dot(hit.specular, 0.33);
+		float diffChance = dot(hit.albedo, 0.33);
+		float inv = 1.0f / (specChance + diffChance);
+		specChance *= inv;
+		diffChance *= inv;
 
 		// Roulette-select the ray's path
 		float roulette = rand(seed, pixel);
@@ -203,13 +192,7 @@ float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel)
 			ray.origin = hit.position + hit.normal * 0.001f;
 			ray.direction = SampleHemisphere(reflect(ray.direction, hit.normal), alpha, seed, pixel);
 			float f = (alpha + 2) / (alpha + 1);
-			ray.energy *= (1.0f / specChance) * hit.specular * sdot(hit.normal, ray.direction, f);
-
-
-			//// Specular reflection
-			//ray.origin = hit.position + hit.normal * 0.001f;
-			//ray.direction = reflect(ray.direction, hit.normal);
-			//ray.energy *= (1.0f / specChance) * hit.specular * sdot(hit.normal, ray.direction);
+			ray.energy *= (1.0f / specChance) * hit.specular * saturate(dot(hit.normal, ray.direction) * f);
 		}
 		else
 		{
@@ -217,116 +200,52 @@ float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel)
 			ray.origin = hit.position + hit.normal * 0.001f;
 			ray.direction = SampleHemisphere(hit.normal, 1.0f, seed, pixel);
 			ray.energy *= (1.0f / diffChance) * hit.albedo;
-
-
-			//// Diffuse reflection
-			//ray.origin = hit.position + hit.normal * 0.001f;
-			//ray.direction = SampleHemisphere(hit.normal, seed, pixel);
-			//ray.energy *= (1.0f / diffChance) * 2 * hit.albedo * sdot(hit.normal, ray.direction);
 		}
 
 		return hit.emission;
-
-
-
-		//// Phong shading
-		//ray.origin = hit.position + hit.normal * 0.001f;
-		//float3 reflected = reflect(ray.direction, hit.normal);
-		//ray.direction = SampleHemisphere(hit.normal, seed, pixel);
-		//float3 diffuse = 2 * min(1.0f - hit.specular, hit.albedo);
-		//float alpha = 15.0f;
-		//float3 specular = hit.specular * (alpha + 2) * pow(sdot(ray.direction, reflected), alpha);
-		//ray.energy *= (diffuse + specular) * sdot(hit.normal, ray.direction);
-		//return 0.0f;
-
-
-
-		//ray.origin = hit.position + hit.normal * 0.001f;
-		//ray.direction = SampleHemisphere(hit.normal, seed, pixel);
-		//ray.energy *= 2 * hit.albedo * sdot(hit.normal, ray.direction);
-		//return 0.0f;
-
-
-
-
-		//float3 specular = float3(0.04, 0.04, 0.04);
-		//float3 albedo = float3(0.8f, 0.8f, 0.8f);
-
-		//// Reflect the ray and multiply energy with specular reflection
-		//ray.origin = hit.position + hit.normal * 0.001f;
-		//ray.direction = reflect(ray.direction, hit.normal);
-		//ray.energy *= specular;
-
-		//// Shadow test ray
-		//bool shadow = false;
-		//Ray shadowRay = CreateRay(hit.position + hit.normal * 0.001f, GetSunDirection());
-		//RayHit shadowHit = Trace(shadowRay);
-		//if (shadowHit.distance != 1.#INF)
-		//{
-		//	return float3(0.0f, 0.0f, 0.0f);
-		//}
-
-		//// Return a diffuse-shaded color
-		//return saturate(dot(hit.normal, GetSunDirection())) * GetSunColor() * albedo;
 	}
 	else
 	{
 		// Erase the ray's energy - the sky doesn't reflect anything
 		ray.energy = 0.0f;
 
-		// Sample the skybox and write it
-		float theta = acos(ray.direction.y) / -PI;
-		float phi = atan2(ray.direction.x, -ray.direction.z) / -PI * 0.5f;
-		//return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, float2(phi, theta), 0).xyz;
 		return GetDynamicSkyColor(ray.direction);
 	}
 }
-
-
-RWTEXTURE2D(Result, float4, 0);
 
 [numthreads(TRACEDRENDERING_PRIMARY_BLOCKSIZE, TRACEDRENDERING_PRIMARY_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	float seed = g_xFrame_Time;
 
-	// Get the dimensions of the RenderTexture
-	uint width, height;
-	Result.GetDimensions(width, height);
+	// Compute screen coordinates:
+	float2 uv = float2((DTid.xy + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
 
-	// Transform pixel to [-1,1] range
-	float2 uv = float2((DTid.xy + float2(0.5f, 0.5f)) / float2(width, height) * 2.0f - 1.0f) * float2(1, -1);
+	// Create starting ray:
+	Ray ray = CreateCameraRay(uv);
 
-	float3 finalResult = 0;
-	uint rate = 0;
 
-	[loop]
-	for (; rate < 4; ++rate)
+	// Trace the scene with a limited ray bounces:
+	const int maxBounces = 4;
+	float3 result = float3(0, 0, 0);
+	for (int i = 0; i < maxBounces; i++)
 	{
-		// Get a ray for the UVs
-		Ray ray = CreateCameraRay(uv);
+		RayHit hit = TraceScene(ray);
+		result += ray.energy * Shade(ray, hit, seed, uv);
 
-		// Trace and shade
-		RayHit hit = Trace(ray);
-		//float3 result = Shade(ray, hit);
-		float3 result = float3(0, 0, 0);
-
-		[loop]
-		for (int i = 0; i < 4; i++)
-		{
-			RayHit hit = Trace(ray);
-			result += ray.energy * Shade(ray, hit, seed, uv);
-
-			if (!any(ray.energy))
-				break;
-		}
-
-		finalResult += result;
+		if (!any(ray.energy))
+			break;
 	}
-	finalResult /= rate;
 
-	Result[DTid.xy] = float4(finalResult, 1);
 
-	//Result[DTid.xy] = float4(ray.direction * 0.5f + 0.5f, 1.0f);
-	//Result[DTid.xy] = float4(GetDynamicSkyColor(ray.direction), 1);
+	// Write the result:
+
+	//Result[DTid.xy] = float4(result, 1);
+
+	// Accumulate history:
+	float sam = padding_TraceCB.x;
+	float alpha = 1.0f / (sam + 1.0f);
+	float3 old = Result[DTid.xy].rgb;
+	Result[DTid.xy] = float4(old * (1-alpha) + result * alpha, 1);
+	//Result[DTid.xy] = 0;
 }

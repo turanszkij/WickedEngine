@@ -596,6 +596,9 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(CloudGeneratorCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
 
+	bd.ByteWidth = sizeof(TracedRenderingCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TRACEDRENDERING]);
+
 
 
 
@@ -6325,6 +6328,23 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	device->EventBegin("Primary Rays", threadID);
 
 	device->BindComputePSO(CPSO[CSTYPE_TRACEDRENDERING_PRIMARY], threadID);
+
+
+	static float sam = 0;
+
+	if (GetAsyncKeyState('K') < 0)
+	{
+		sam = 0;
+	}
+
+	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
+	TracedRenderingCB cb;
+	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
+	cb.padding_TraceCB.x = (float)sam;
+	device->UpdateBuffer(constantBuffers[CBTYPE_TRACEDRENDERING], &cb, threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_TRACEDRENDERING], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+	sam++;
 
 	GPUResource* uavs[] = {
 		result,

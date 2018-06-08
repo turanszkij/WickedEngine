@@ -4,4 +4,10 @@
 
 #define TRACEDRENDERING_PRIMARY_BLOCKSIZE 8
 
+CBUFFER(TracedRenderingCB, CBSLOT_RENDERER_TRACED)
+{
+	float2	xTracePixelOffset;
+	float2	padding_TraceCB;
+};
+
 #endif // _SHADERINTEROP_TRACEDRENDERING_H_
