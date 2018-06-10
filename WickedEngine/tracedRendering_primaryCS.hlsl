@@ -6,6 +6,9 @@
 
 RWTEXTURE2D(Result, float4, 0);
 
+TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
+RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+
 struct Sphere
 {
 	float3 position;
@@ -53,6 +56,7 @@ struct RayHit
 };
 
 static const float INFINITE_RAYHIT = 1000000;
+static const float EPSILON = 0.0001f;
 inline RayHit CreateRayHit()
 {
 	RayHit hit;
@@ -99,48 +103,160 @@ inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
 	}
 }
 
+//#define CULLING
+inline void IntersectTriangle(Ray ray, inout RayHit bestHit, float3 v0, float3 v1, float3 v2)
+{
+	//float3 planeNormal = normalize(cross(B - A, C - B));
+	////float t = Trace_plane(o, d, A, planeNormal);
+	//float t = dot(planeNormal, (A - ray.origin) / dot(planeNormal, ray.direction));
+	//float3 p = ray.origin + ray.direction * t;
+
+	//float3 N1 = normalize(cross(B - A, p - B));
+	//float3 N2 = normalize(cross(C - B, p - C));
+	//float3 N3 = normalize(cross(A - C, p - A));
+
+	//float d0 = dot(N1, N2);
+	//float d1 = dot(N2, N3);
+
+	//float threshold = 1.0f - 0.001f;
+	//return (d0 > threshold && d1 > threshold) ? 1.0f : 0.0f;
+
+
+
+	float3 v0v1 = v1 - v0;
+	float3 v0v2 = v2 - v0;
+	float3 pvec = cross(ray.direction, v0v2);
+	float det = dot(v0v1, pvec);
+#ifdef CULLING 
+	// if the determinant is negative the triangle is backfacing
+	// if the determinant is close to 0, the ray misses the triangle
+	if (det > EPSILON)
+		return;
+#else 
+	// ray and triangle are parallel if det is close to 0
+	if (abs(det) < EPSILON)
+		return;
+#endif 
+	float invDet = 1 / det;
+
+	float3 tvec = ray.origin - v0;
+	float u = dot(tvec, pvec) * invDet;
+	if (u < 0 || u > 1) 
+		return;
+
+	float3 qvec = cross(tvec, v0v1);
+	float v = dot(ray.direction, qvec) * invDet;
+	if (v < 0 || u + v > 1) 
+		return;
+
+	float t = dot(v0v2, qvec) * invDet;
+
+
+	if (t > 0 && t < bestHit.distance)
+	{
+		bestHit.distance = t;
+		bestHit.position = ray.origin + t * ray.direction;
+		bestHit.normal = normalize(-cross(v1 - v0, v2 - v1));
+		bestHit.albedo = 0.8;
+		bestHit.specular = 0.2;
+		bestHit.emission = 0;
+
+		float2 uv = float2(u, v);
+	}
+}
+
 inline RayHit TraceScene(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
 	IntersectGroundPlane(ray, bestHit);
 	
-	const int dim = 2;
-	const float dist = 2.5;
-	for (int i = -dim; i <= dim; ++i)
+	//const int dim = 2;
+	//const float dist = 2.5;
+	//for (int i = -dim; i <= dim; ++i)
+	//{
+	//	for (int j = -dim; j <= dim; ++j)
+	//	{
+	//		Sphere sphere;
+	//		sphere.position = float3(i * dist, 1, j * dist);
+	//		sphere.radius = 1;
+	//		sphere.specular = float3(0.04, 0.04, 0.04);
+	//		sphere.albedo = float3(0.8f, 0.8f, 0.8f);
+	//		sphere.emission = 0;
+
+	//		if (i == 0)
+	//		{
+	//			sphere.emission = 2;
+	//			sphere.position.y = 3;
+
+	//			if (j == 0)
+	//			{
+	//				sphere.position = float3(100, 200, 100);
+	//				sphere.radius = 100;
+	//				sphere.emission = 4;
+	//				sphere.albedo = float3(0.9, 0.9, 0.2);
+	//			}
+	//		}
+
+	//		if (i + j == dim)
+	//		{
+	//			sphere.albedo = float3(0.7, 0.9, 0.2);
+	//			sphere.specular = 0;
+	//			sphere.emission = 1;
+	//		}
+
+	//		IntersectSphere(ray, bestHit, sphere);
+	//	}
+	//}
+
+
+	Sphere sphere;
+	sphere.position = float3(8, 20, 30);
+	sphere.radius = 3;
+	sphere.specular = 0;
+	sphere.albedo = float3(0.9, 0.7, 0.2);
+	sphere.emission = 4;
+	IntersectSphere(ray, bestHit, sphere);
+
+	for (uint tri = 0; tri < xTraceMeshTriangleCount; ++tri)
 	{
-		for (int j = -dim; j <= dim; ++j)
-		{
-			Sphere sphere;
-			sphere.position = float3(i * dist, 1, j * dist);
-			sphere.radius = 1;
-			sphere.specular = float3(0.04, 0.04, 0.04);
-			sphere.albedo = float3(0.8f, 0.8f, 0.8f);
-			sphere.emission = 0;
+		// load indices of triangle from index buffer
+		uint i0 = meshIndexBuffer[tri * 3 + 0];
+		uint i1 = meshIndexBuffer[tri * 3 + 1];
+		uint i2 = meshIndexBuffer[tri * 3 + 2];
 
-			if (i == 0)
-			{
-				sphere.emission = 2;
-				sphere.position.y = 3;
+		// load vertices of triangle from vertex buffer:
+		float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * 16));
+		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * 16));
+		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * 16));
 
-				if (j == 0)
-				{
-					sphere.position = float3(100, 200, 100);
-					sphere.radius = 100;
-					sphere.emission = 4;
-					sphere.albedo = float3(0.9, 0.9, 0.2);
-				}
-			}
+		//uint nor_u = asuint(pos_nor0.w);
+		//float3 nor0;
+		//{
+		//	nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//	nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//	nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//}
+		//nor_u = asuint(pos_nor1.w);
+		//float3 nor1;
+		//{
+		//	nor1.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//	nor1.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//	nor1.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//}
+		//nor_u = asuint(pos_nor2.w);
+		//float3 nor2;
+		//{
+		//	nor2.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//	nor2.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//	nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		//}
 
-			if (i + j == dim)
-			{
-				sphere.albedo = float3(0.7, 0.9, 0.2);
-				sphere.specular = 0;
-				sphere.emission = 1;
-			}
 
-			IntersectSphere(ray, bestHit, sphere);
-		}
+		IntersectTriangle(ray, bestHit, pos_nor0.xyz, pos_nor1.xyz, pos_nor2.xyz);
 	}
+
+	//IntersectTriangle(ray, bestHit, float3(0,0,0), float3(10,0,0), float3(10,10,0));
+
 
 	return bestHit;
 }
@@ -189,7 +305,7 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 		{
 			// Specular reflection
 			float alpha = 150.0f;
-			ray.origin = hit.position + hit.normal * 0.001f;
+			ray.origin = hit.position + hit.normal * EPSILON;
 			ray.direction = SampleHemisphere(reflect(ray.direction, hit.normal), alpha, seed, pixel);
 			float f = (alpha + 2) / (alpha + 1);
 			ray.energy *= (1.0f / specChance) * hit.specular * saturate(dot(hit.normal, ray.direction) * f);
@@ -197,7 +313,7 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 		else
 		{
 			// Diffuse reflection
-			ray.origin = hit.position + hit.normal * 0.001f;
+			ray.origin = hit.position + hit.normal * EPSILON;
 			ray.direction = SampleHemisphere(hit.normal, 1.0f, seed, pixel);
 			ray.energy *= (1.0f / diffChance) * hit.albedo;
 		}
@@ -226,7 +342,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 
 	// Trace the scene with a limited ray bounces:
-	const int maxBounces = 4;
+	const int maxBounces = 8;
 	float3 result = float3(0, 0, 0);
 	for (int i = 0; i < maxBounces; i++)
 	{
@@ -243,7 +359,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	//Result[DTid.xy] = float4(result, 1);
 
 	// Accumulate history:
-	float sam = padding_TraceCB.x;
+	uint sam = xTraceSample;
 	float alpha = 1.0f / (sam + 1.0f);
 	float3 old = Result[DTid.xy].rgb;
 	Result[DTid.xy] = float4(old * (1-alpha) + result * alpha, 1);

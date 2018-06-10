@@ -6329,10 +6329,14 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->BindComputePSO(CPSO[CSTYPE_TRACEDRENDERING_PRIMARY], threadID);
 
-
-	static float sam = 0;
+	static uint sam = 0;
 
 	if (GetAsyncKeyState('K') < 0)
+	{
+		sam = 0;
+	}
+
+	if (camera->hasChanged)
 	{
 		sam = 0;
 	}
@@ -6340,7 +6344,24 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
 	TracedRenderingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-	cb.padding_TraceCB.x = (float)sam;
+	cb.xTraceSample = sam;
+	cb.xTraceMeshTriangleCount = 0;
+
+	for (auto& model : GetScene().models)
+	{
+		for (auto& iter : model->meshes)
+		{
+			Mesh* mesh = iter.second;
+			cb.xTraceMeshTriangleCount = (uint)mesh->indices.size() / 3;
+
+			GPUResource* res[] = {
+				mesh->indexBuffer,
+				mesh->vertexBuffer_POS,
+			};
+			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+		}
+	}
+
 	device->UpdateBuffer(constantBuffers[CBTYPE_TRACEDRENDERING], &cb, threadID);
 	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_TRACEDRENDERING], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 

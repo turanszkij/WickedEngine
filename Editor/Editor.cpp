@@ -880,6 +880,7 @@ void EditorComponent::FixedUpdate()
 void EditorComponent::Update(float dt)
 {
 	Camera* cam = wiRenderer::getCamera();
+	cam->hasChanged = false;
 
 	// Follow camera proxy:
 	//	Outside of the next if, because we want to animate while hovering on GUI... (just better user experience)
@@ -943,18 +944,22 @@ void EditorComponent::Update(float dt)
 			if (!wiInputManager::GetInstance()->down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wiInputManager::GetInstance()->down('A')) moveNew += XMVectorSet(-1, 0, 0, 0);
-				if (wiInputManager::GetInstance()->down('D')) moveNew += XMVectorSet(1, 0, 0, 0);
-				if (wiInputManager::GetInstance()->down('W')) moveNew += XMVectorSet(0, 0, 1, 0);
-				if (wiInputManager::GetInstance()->down('S')) moveNew += XMVectorSet(0, 0, -1, 0);
-				if (wiInputManager::GetInstance()->down('E')) moveNew += XMVectorSet(0, 1, 0, 0);
-				if (wiInputManager::GetInstance()->down('Q')) moveNew += XMVectorSet(0, -1, 0, 0);
+				if (wiInputManager::GetInstance()->down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wiInputManager::GetInstance()->down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (wiInputManager::GetInstance()->down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (wiInputManager::GetInstance()->down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wiInputManager::GetInstance()->down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (wiInputManager::GetInstance()->down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 
 			move = XMVectorLerp(move, moveNew, 0.18f * dt / 0.0166f); // smooth the movement a bit
-			cam->Move(move);
-			cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+
+			if (abs(xDif) + abs(yDif) > 0 || XMVectorGetX(XMVector3Length(move)) > 0.01f)
+			{
+				cam->Move(move);
+				cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+			}
 		}
 		else
 		{
@@ -974,7 +979,7 @@ void EditorComponent::Update(float dt)
 			{
 				cam->Translate(XMFLOAT3(0, 0, yDif * 4));
 			}
-			else
+			else if(abs(xDif) + abs(yDif) > 0)
 			{
 				cameraWnd->orbitalCamTarget->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
 			}

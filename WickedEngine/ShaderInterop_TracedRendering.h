@@ -7,7 +7,8 @@
 CBUFFER(TracedRenderingCB, CBSLOT_RENDERER_TRACED)
 {
 	float2	xTracePixelOffset;
-	float2	padding_TraceCB;
+	uint xTraceSample;
+	uint xTraceMeshTriangleCount;
 };
 
 #endif // _SHADERINTEROP_TRACEDRENDERING_H_

@@ -978,6 +978,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void SetUp(float newWidth, float newHeight, float newNear, float newFar, float fov = XM_PI / 3.0f)
 	{
+		hasChanged = true;
+
 		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
 
@@ -999,6 +1001,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void UpdateProps()
 	{
+		hasChanged = true;
+
 		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye = this->GetEye();
 
@@ -1021,6 +1025,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void Move(const XMVECTOR& movevector)
 	{
+		hasChanged = true;
+
 		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
 		XMVECTOR rotVect = XMVector3Transform(movevector, camRot);
 		XMVECTOR Eye = XMLoadFloat3(&translation_rest);
@@ -1031,6 +1037,9 @@ struct Camera : public Transform, public ModelChild
 	void Reflect(Camera* toReflect, const XMFLOAT4& plane = XMFLOAT4(0,1,0,0))
 	{
 		*this = *toReflect;
+
+		hasChanged = true;
+
 
 		XMMATRIX reflectMatrix = XMMatrixReflect(XMLoadFloat4(&plane));
 
@@ -1061,6 +1070,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void UpdateProjection()
 	{
+		hasChanged = true;
+
 		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
 		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP));
 		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
@@ -1069,6 +1080,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void BakeMatrices()
 	{
+		hasChanged = true;
+
 		XMMATRIX V = XMLoadFloat4x4(&this->View);
 		XMMATRIX P = XMLoadFloat4x4(&this->Projection);
 		XMMATRIX VP = XMMatrixMultiply(V, P);

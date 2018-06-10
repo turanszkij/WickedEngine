@@ -44,6 +44,8 @@ struct Transform : public Node
 	XMFLOAT4X4 parent_inv_rest;
 	int copyParentT, copyParentR, copyParentS;
 
+	bool hasChanged = true;
+
 	Transform();
 	virtual ~Transform();
 	void Clear()

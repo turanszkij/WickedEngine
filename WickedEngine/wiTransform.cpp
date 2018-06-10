@@ -169,7 +169,10 @@ void Transform::applyTransform(int t, int r, int s) {
 	if (s)
 		scale_rest = scale;
 }
-void Transform::transform(const XMFLOAT3& t, const XMFLOAT4& r, const XMFLOAT3& s) {
+void Transform::transform(const XMFLOAT3& t, const XMFLOAT4& r, const XMFLOAT3& s) 
+{
+	hasChanged = true;
+
 	translation_rest.x += t.x;
 	translation_rest.y += t.y;
 	translation_rest.z += t.z;
@@ -182,7 +185,8 @@ void Transform::transform(const XMFLOAT3& t, const XMFLOAT4& r, const XMFLOAT3& 
 
 	UpdateTransform();
 }
-void Transform::transform(const XMMATRIX& m) {
+void Transform::transform(const XMMATRIX& m) 
+{
 	XMVECTOR v[3];
 	if (XMMatrixDecompose(&v[0], &v[1], &v[2], m)) {
 		XMFLOAT3 t, s;
@@ -219,6 +223,8 @@ void Transform::UpdateTransform()
 		XMStoreFloat4(&rotation, v[1]);
 		XMStoreFloat3(&translation, v[2]);
 		XMStoreFloat4x4(&world, w);
+
+		hasChanged = hasChanged || parent->hasChanged;
 	}
 	else
 	{
@@ -239,6 +245,8 @@ void Transform::Translate(const XMFLOAT3& value)
 }
 void Transform::RotateRollPitchYaw(const XMFLOAT3& value)
 {
+	hasChanged = true;
+
 	// This needs to be handled a bit differently
 	XMVECTOR quat = XMLoadFloat4(&rotation_rest);
 	XMVECTOR x = XMQuaternionRotationRollPitchYaw(value.x, 0, 0);
@@ -263,6 +271,8 @@ void Transform::Scale(const XMFLOAT3& value)
 }
 void Transform::Lerp(const Transform* a, const Transform* b, float t)
 {
+	hasChanged = true;
+
 	translation_rest = wiMath::Lerp(a->translation, b->translation, t);
 	rotation_rest = wiMath::Slerp(a->rotation, b->rotation, t);
 	scale_rest = wiMath::Lerp(a->scale, b->scale, t);
@@ -270,6 +280,8 @@ void Transform::Lerp(const Transform* a, const Transform* b, float t)
 }
 void Transform::CatmullRom(const Transform* a, const Transform* b, const Transform* c, const Transform* d, float t)
 {
+	hasChanged = true;
+
 	XMVECTOR T = XMVectorCatmullRom(
 		XMLoadFloat3(&a->translation),
 		XMLoadFloat3(&b->translation),
