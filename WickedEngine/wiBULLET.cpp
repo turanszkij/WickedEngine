@@ -591,11 +591,14 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		{
 			int indexP = mesh->physicalmapGP[i];
 			float weight = mesh->vertexGroups[gvg].vertices[indexP];
-			mesh->vertices_Transformed_PRE[i].pos = mesh->vertices_Transformed_POS[i].pos;
-			mesh->vertices_Transformed_POS[i].pos.x = nodes[indexP].m_x.getX();
-			mesh->vertices_Transformed_POS[i].pos.y = nodes[indexP].m_x.getY();
-			mesh->vertices_Transformed_POS[i].pos.z = nodes[indexP].m_x.getZ();
-			mesh->vertices_Transformed_POS[i].NORWINDFromFloat(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ()), 0);
+
+			Mesh::Vertex_POS& vert = mesh->vertices_Transformed_POS[i];
+
+			mesh->vertices_Transformed_PRE[i] = vert;
+			vert.pos.x = nodes[indexP].m_x.getX();
+			vert.pos.y = nodes[indexP].m_x.getY();
+			vert.pos.z = nodes[indexP].m_x.getZ();
+			mesh->vertices_Transformed_POS[i].MakeFromParams(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ())/*, vert.GetWind(), vert.GetMaterialIndex()*/);
 		}
 	}
 }

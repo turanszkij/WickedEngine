@@ -8,6 +8,7 @@ RWTEXTURE2D(Result, float4, 0);
 
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND2);
 
 struct Sphere
 {
@@ -103,28 +104,20 @@ inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
 	}
 }
 
-//#define CULLING
-inline void IntersectTriangle(Ray ray, inout RayHit bestHit, float3 v0, float3 v1, float3 v2)
+
+struct Triangle
 {
-	//float3 planeNormal = normalize(cross(B - A, C - B));
-	////float t = Trace_plane(o, d, A, planeNormal);
-	//float t = dot(planeNormal, (A - ray.origin) / dot(planeNormal, ray.direction));
-	//float3 p = ray.origin + ray.direction * t;
+	float3 v0, v1, v2;
+	float3 n0, n1, n2;
+	float2 t0, t1, t2;
+	uint materialIndex;
+};
 
-	//float3 N1 = normalize(cross(B - A, p - B));
-	//float3 N2 = normalize(cross(C - B, p - C));
-	//float3 N3 = normalize(cross(A - C, p - A));
-
-	//float d0 = dot(N1, N2);
-	//float d1 = dot(N2, N3);
-
-	//float threshold = 1.0f - 0.001f;
-	//return (d0 > threshold && d1 > threshold) ? 1.0f : 0.0f;
-
-
-
-	float3 v0v1 = v1 - v0;
-	float3 v0v2 = v2 - v0;
+#define CULLING
+inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle tri)
+{
+	float3 v0v1 = tri.v1 - tri.v0;
+	float3 v0v2 = tri.v2 - tri.v0;
 	float3 pvec = cross(ray.direction, v0v2);
 	float det = dot(v0v1, pvec);
 #ifdef CULLING 
@@ -139,7 +132,7 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, float3 v0, float3 v
 #endif 
 	float invDet = 1 / det;
 
-	float3 tvec = ray.origin - v0;
+	float3 tvec = ray.origin - tri.v0;
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0 || u > 1) 
 		return;
@@ -156,10 +149,13 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, float3 v0, float3 v
 	{
 		bestHit.distance = t;
 		bestHit.position = ray.origin + t * ray.direction;
-		bestHit.normal = normalize(-cross(v1 - v0, v2 - v1));
-		bestHit.albedo = 0.8;
-		bestHit.specular = 0.2;
+		bestHit.normal = normalize(cross(tri.v2 - tri.v1, tri.v1 - tri.v0));
+		bestHit.albedo = 0.9;
+		bestHit.specular = 0.1;
 		bestHit.emission = 0;
+
+		if (tri.materialIndex == 1) bestHit.albedo = float3(0, 0.9, 0);
+		if (tri.materialIndex == 2) bestHit.albedo = float3(0.9, 0, 0);
 
 		float2 uv = float2(u, v);
 	}
@@ -168,7 +164,9 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, float3 v0, float3 v
 inline RayHit TraceScene(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
-	IntersectGroundPlane(ray, bestHit);
+
+
+	//IntersectGroundPlane(ray, bestHit);
 	
 	//const int dim = 2;
 	//const float dist = 2.5;
@@ -210,10 +208,10 @@ inline RayHit TraceScene(Ray ray)
 
 
 	Sphere sphere;
-	sphere.position = float3(8, 20, 30);
-	sphere.radius = 3;
+	sphere.position = float3(8, 20, 25);
+	sphere.radius = 4;
 	sphere.specular = 0;
-	sphere.albedo = float3(0.9, 0.7, 0.2);
+	sphere.albedo = float3(1, 0.5, 0.1);
 	sphere.emission = 4;
 	IntersectSphere(ray, bestHit, sphere);
 
@@ -229,30 +227,43 @@ inline RayHit TraceScene(Ray ray)
 		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * 16));
 		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * 16));
 
-		//uint nor_u = asuint(pos_nor0.w);
-		//float3 nor0;
-		//{
-		//	nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//	nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//	nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//}
-		//nor_u = asuint(pos_nor1.w);
-		//float3 nor1;
-		//{
-		//	nor1.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//	nor1.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//	nor1.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//}
-		//nor_u = asuint(pos_nor2.w);
-		//float3 nor2;
-		//{
-		//	nor2.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//	nor2.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//	nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		//}
+		uint nor_u = asuint(pos_nor0.w);
+		uint materialIndex;
+		float3 nor0;
+		{
+			nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			materialIndex = (nor_u >> 28) & 0x0000000F;
+		}
+		nor_u = asuint(pos_nor1.w);
+		float3 nor1;
+		{
+			nor1.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor1.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor1.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		}
+		nor_u = asuint(pos_nor2.w);
+		float3 nor2;
+		{
+			nor2.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor2.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+		}
 
+		Triangle tri;
+		tri.v0 = pos_nor0.xyz;
+		tri.v1 = pos_nor1.xyz;
+		tri.v2 = pos_nor2.xyz;
+		tri.n0 = nor0;
+		tri.n1 = nor1;
+		tri.n2 = nor2;
+		tri.t0 = meshVertexBuffer_TEX[i0];
+		tri.t1 = meshVertexBuffer_TEX[i1];
+		tri.t2 = meshVertexBuffer_TEX[i2];
+		tri.materialIndex = materialIndex;
 
-		IntersectTriangle(ray, bestHit, pos_nor0.xyz, pos_nor1.xyz, pos_nor2.xyz);
+		IntersectTriangle(ray, bestHit, tri);
 	}
 
 	//IntersectTriangle(ray, bestHit, float3(0,0,0), float3(10,0,0), float3(10,10,0));

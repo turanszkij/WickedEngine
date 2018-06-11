@@ -1929,6 +1929,7 @@ void Mesh::CreateRenderData()
 		bd.MiscFlags = 0;
 		InitData.pSysMem = vertices_TEX.data();
 		bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
+		bd.Format = Vertex_TEX::FORMAT;
 		vertexBuffer_TEX = new GPUBuffer;
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX);
 
