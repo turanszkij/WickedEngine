@@ -1925,11 +1925,12 @@ void Mesh::CreateRenderData()
 		ZeroMemory(&bd, sizeof(bd));
 		bd.Usage = USAGE_IMMUTABLE;
 		bd.CPUAccessFlags = 0;
-		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 		bd.MiscFlags = 0;
-		InitData.pSysMem = vertices_TEX.data();
-		bd.ByteWidth = (UINT)(sizeof(Vertex_TEX) * vertices_TEX.size());
+		bd.StructureByteStride = sizeof(Vertex_TEX);
+		bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices_TEX.size());
 		bd.Format = Vertex_TEX::FORMAT;
+		InitData.pSysMem = vertices_TEX.data();
 		vertexBuffer_TEX = new GPUBuffer;
 		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX);
 

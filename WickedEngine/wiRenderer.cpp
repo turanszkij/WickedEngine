@@ -6330,6 +6330,26 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	device->BindComputePSO(CPSO[CSTYPE_TRACEDRENDERING_PRIMARY], threadID);
 
 	static uint sam = 0;
+	static GPUBuffer* materialBuffer = nullptr;
+	static MaterialCB materialArray[10] = {};
+
+	if (materialBuffer == nullptr)
+	{
+		SAFE_DELETE(materialBuffer);
+		materialBuffer = new GPUBuffer;
+
+		GPUBufferDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.StructureByteStride = sizeof(MaterialCB);
+		desc.ByteWidth = desc.StructureByteStride * 10;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		HRESULT hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+
+		assert(SUCCEEDED(hr));
+	}
 
 	if (GetAsyncKeyState('K') < 0)
 	{
@@ -6346,7 +6366,9 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceSample = sam;
 	cb.xTraceMeshTriangleCount = 0;
+	cb.xTraceMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
 
+	int materialCount = 0;
 	for (auto& model : GetScene().models)
 	{
 		for (auto& iter : model->meshes)
@@ -6359,12 +6381,43 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				mesh->vertexBuffer_POS,
 				mesh->vertexBuffer_TEX,
 			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+
+			GPUResource* tex[3] = {
+				wiTextureHelper::getInstance()->getWhite(),
+				wiTextureHelper::getInstance()->getNormalMapDefault(),
+				wiTextureHelper::getInstance()->getWhite(),
+			};
+			for (auto& subset : mesh->subsets)
+			{
+				if (subset.material->texture != nullptr)
+				{
+					tex[0] = subset.material->texture;
+				}
+				if (subset.material->normalMap != nullptr)
+				{
+					tex[1] = subset.material->normalMap;
+				}
+				if (subset.material->surfaceMap != nullptr)
+				{
+					tex[2] = subset.material->surfaceMap;
+				}
+
+				materialArray[materialCount].Create(*subset.material);
+				materialCount++;
+			}
+			device->BindResources(CS, tex, TEXSLOT_ONDEMAND4, ARRAYSIZE(tex), threadID);
+
+			break;
 		}
 	}
 
 	device->UpdateBuffer(constantBuffers[CBTYPE_TRACEDRENDERING], &cb, threadID);
+	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * materialCount);
+
+
 	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_TRACEDRENDERING], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+	device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
 
 	sam++;
 
@@ -7054,7 +7107,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 					XMStoreFloat3(&picked.position, pos);
 					XMStoreFloat3(&picked.normal, nor);
 					picked.distance = wiMath::Distance(pos, rayOrigin);
-					picked.subsetIndex = (int)mesh->vertices_FULL[i0].tex.z;
+					picked.subsetIndex = (int)mesh->vertices_POS[i0].GetMaterialIndex();
 					points.push_back(picked);
 				}
 			}

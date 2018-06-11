@@ -6,18 +6,36 @@
 
 RWTEXTURE2D(Result, float4, 0);
 
-TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
-RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
-TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND2);
-
-struct Sphere
+struct Material
 {
-	float3 position;
-	float radius;
-	float3 albedo;
-	float3 specular;
-	float emission;
+	float4		baseColor;
+	float4		texMulAdd;
+	float		roughness;
+	float		reflectance;
+	float		metalness;
+	float		emissive;
+	float		refractionIndex;
+	float		subsurfaceScattering;
+	float		normalMapStrength;
+	float		parallaxOcclusionMapping;
 };
+STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
+TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
+RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
+TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
+
+TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
+TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
+TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
+
+//struct Sphere
+//{
+//	float3 position;
+//	float radius;
+//	float3 albedo;
+//	float3 specular;
+//	float emission;
+//};
 
 struct Ray
 {
@@ -48,12 +66,15 @@ inline Ray CreateCameraRay(float2 uv)
 
 struct RayHit
 {
-	float3 position;
 	float distance;
+	float3 position;
 	float3 normal;
-	float3 albedo;
-	float3 specular;
-	float emission;
+	uint materialIndex;
+	float2 texCoords;
+
+	//float3 albedo;
+	//float3 specular;
+	//float emission;
 };
 
 static const float INFINITE_RAYHIT = 1000000;
@@ -61,48 +82,50 @@ static const float EPSILON = 0.0001f;
 inline RayHit CreateRayHit()
 {
 	RayHit hit;
-	hit.position = float3(0.0f, 0.0f, 0.0f);
 	hit.distance = INFINITE_RAYHIT;
+	hit.position = float3(0.0f, 0.0f, 0.0f);
 	hit.normal = float3(0.0f, 0.0f, 0.0f);
-	hit.emission = 0;
+	hit.materialIndex = 0;
+	hit.texCoords = 0;
+
 	return hit;
 }
 
-inline void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
-{
-	// Calculate distance along the ray where the ground plane is intersected
-	float t = -ray.origin.y / ray.direction.y;
-	if (t > 0 && t < bestHit.distance)
-	{
-		bestHit.distance = t;
-		bestHit.position = ray.origin + t * ray.direction;
-		bestHit.normal = float3(0.0f, 1.0f, 0.0f);
-		bestHit.specular = float3(0.2, 0.2, 0.2);
-		bestHit.albedo = float3(0.8f, 0.8f, 0.8f);
-		bestHit.emission = 0;
-	}
-}
-
-inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
-{
-	// Calculate distance along the ray where the sphere is intersected
-	float3 d = ray.origin - sphere.position;
-	float p1 = -dot(ray.direction, d);
-	float p2sqr = p1 * p1 - dot(d, d) + sphere.radius * sphere.radius;
-	if (p2sqr < 0)
-		return;
-	float p2 = sqrt(p2sqr);
-	float t = p1 - p2 > 0 ? p1 - p2 : p1 + p2;
-	if (t > 0 && t < bestHit.distance)
-	{
-		bestHit.distance = t;
-		bestHit.position = ray.origin + t * ray.direction;
-		bestHit.normal = normalize(bestHit.position - sphere.position);
-		bestHit.albedo = sphere.albedo;
-		bestHit.specular = sphere.specular;
-		bestHit.emission = sphere.emission;
-	}
-}
+//inline void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
+//{
+//	// Calculate distance along the ray where the ground plane is intersected
+//	float t = -ray.origin.y / ray.direction.y;
+//	if (t > 0 && t < bestHit.distance)
+//	{
+//		bestHit.distance = t;
+//		bestHit.position = ray.origin + t * ray.direction;
+//		bestHit.normal = float3(0.0f, 1.0f, 0.0f);
+//		bestHit.specular = float3(0.2, 0.2, 0.2);
+//		bestHit.albedo = float3(0.8f, 0.8f, 0.8f);
+//		bestHit.emission = 0;
+//	}
+//}
+//
+//inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
+//{
+//	// Calculate distance along the ray where the sphere is intersected
+//	float3 d = ray.origin - sphere.position;
+//	float p1 = -dot(ray.direction, d);
+//	float p2sqr = p1 * p1 - dot(d, d) + sphere.radius * sphere.radius;
+//	if (p2sqr < 0)
+//		return;
+//	float p2 = sqrt(p2sqr);
+//	float t = p1 - p2 > 0 ? p1 - p2 : p1 + p2;
+//	if (t > 0 && t < bestHit.distance)
+//	{
+//		bestHit.distance = t;
+//		bestHit.position = ray.origin + t * ray.direction;
+//		bestHit.normal = normalize(bestHit.position - sphere.position);
+//		bestHit.albedo = sphere.albedo;
+//		bestHit.specular = sphere.specular;
+//		bestHit.emission = sphere.emission;
+//	}
+//}
 
 
 struct Triangle
@@ -114,16 +137,16 @@ struct Triangle
 };
 
 #define CULLING
-inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle tri)
+inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle primitive)
 {
-	float3 v0v1 = tri.v1 - tri.v0;
-	float3 v0v2 = tri.v2 - tri.v0;
+	float3 v0v1 = primitive.v1 - primitive.v0;
+	float3 v0v2 = primitive.v2 - primitive.v0;
 	float3 pvec = cross(ray.direction, v0v2);
 	float det = dot(v0v1, pvec);
 #ifdef CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
-	if (det > EPSILON)
+	if (det < EPSILON)
 		return;
 #else 
 	// ray and triangle are parallel if det is close to 0
@@ -132,7 +155,7 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle tri)
 #endif 
 	float invDet = 1 / det;
 
-	float3 tvec = ray.origin - tri.v0;
+	float3 tvec = ray.origin - primitive.v0;
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0 || u > 1) 
 		return;
@@ -144,20 +167,16 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle tri)
 
 	float t = dot(v0v2, qvec) * invDet;
 
-
 	if (t > 0 && t < bestHit.distance)
 	{
 		bestHit.distance = t;
 		bestHit.position = ray.origin + t * ray.direction;
-		bestHit.normal = normalize(cross(tri.v2 - tri.v1, tri.v1 - tri.v0));
-		bestHit.albedo = 0.9;
-		bestHit.specular = 0.1;
-		bestHit.emission = 0;
 
-		if (tri.materialIndex == 1) bestHit.albedo = float3(0, 0.9, 0);
-		if (tri.materialIndex == 2) bestHit.albedo = float3(0.9, 0, 0);
+		float w = 1 - u - v;
+		bestHit.normal = primitive.n0 * w + primitive.n1 * u + primitive.n2 * v;
+		bestHit.texCoords = primitive.t0 * w + primitive.t1 * u + primitive.t2 * v;
 
-		float2 uv = float2(u, v);
+		bestHit.materialIndex = primitive.materialIndex;
 	}
 }
 
@@ -165,67 +184,17 @@ inline RayHit TraceScene(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
 
-
-	//IntersectGroundPlane(ray, bestHit);
-	
-	//const int dim = 2;
-	//const float dist = 2.5;
-	//for (int i = -dim; i <= dim; ++i)
-	//{
-	//	for (int j = -dim; j <= dim; ++j)
-	//	{
-	//		Sphere sphere;
-	//		sphere.position = float3(i * dist, 1, j * dist);
-	//		sphere.radius = 1;
-	//		sphere.specular = float3(0.04, 0.04, 0.04);
-	//		sphere.albedo = float3(0.8f, 0.8f, 0.8f);
-	//		sphere.emission = 0;
-
-	//		if (i == 0)
-	//		{
-	//			sphere.emission = 2;
-	//			sphere.position.y = 3;
-
-	//			if (j == 0)
-	//			{
-	//				sphere.position = float3(100, 200, 100);
-	//				sphere.radius = 100;
-	//				sphere.emission = 4;
-	//				sphere.albedo = float3(0.9, 0.9, 0.2);
-	//			}
-	//		}
-
-	//		if (i + j == dim)
-	//		{
-	//			sphere.albedo = float3(0.7, 0.9, 0.2);
-	//			sphere.specular = 0;
-	//			sphere.emission = 1;
-	//		}
-
-	//		IntersectSphere(ray, bestHit, sphere);
-	//	}
-	//}
-
-
-	Sphere sphere;
-	sphere.position = float3(8, 20, 25);
-	sphere.radius = 4;
-	sphere.specular = 0;
-	sphere.albedo = float3(1, 0.5, 0.1);
-	sphere.emission = 4;
-	IntersectSphere(ray, bestHit, sphere);
-
 	for (uint tri = 0; tri < xTraceMeshTriangleCount; ++tri)
 	{
 		// load indices of triangle from index buffer
 		uint i0 = meshIndexBuffer[tri * 3 + 0];
-		uint i1 = meshIndexBuffer[tri * 3 + 1];
-		uint i2 = meshIndexBuffer[tri * 3 + 2];
+		uint i1 = meshIndexBuffer[tri * 3 + 2];
+		uint i2 = meshIndexBuffer[tri * 3 + 1];
 
 		// load vertices of triangle from vertex buffer:
-		float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * 16));
-		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * 16));
-		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * 16));
+		float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xTraceMeshVertexPOSStride));
+		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xTraceMeshVertexPOSStride));
+		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xTraceMeshVertexPOSStride));
 
 		uint nor_u = asuint(pos_nor0.w);
 		uint materialIndex;
@@ -251,22 +220,20 @@ inline RayHit TraceScene(Ray ray)
 			nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		}
 
-		Triangle tri;
-		tri.v0 = pos_nor0.xyz;
-		tri.v1 = pos_nor1.xyz;
-		tri.v2 = pos_nor2.xyz;
-		tri.n0 = nor0;
-		tri.n1 = nor1;
-		tri.n2 = nor2;
-		tri.t0 = meshVertexBuffer_TEX[i0];
-		tri.t1 = meshVertexBuffer_TEX[i1];
-		tri.t2 = meshVertexBuffer_TEX[i2];
-		tri.materialIndex = materialIndex;
+		Triangle primitive;
+		primitive.v0 = pos_nor0.xyz;
+		primitive.v1 = pos_nor1.xyz;
+		primitive.v2 = pos_nor2.xyz;
+		primitive.n0 = nor0;
+		primitive.n1 = nor1;
+		primitive.n2 = nor2;
+		primitive.t0 = meshVertexBuffer_TEX[i0];
+		primitive.t1 = meshVertexBuffer_TEX[i1];
+		primitive.t2 = meshVertexBuffer_TEX[i2];
+		primitive.materialIndex = materialIndex;
 
-		IntersectTriangle(ray, bestHit, tri);
+		IntersectTriangle(ray, bestHit, primitive);
 	}
-
-	//IntersectTriangle(ray, bestHit, float3(0,0,0), float3(10,0,0), float3(10,10,0));
 
 
 	return bestHit;
@@ -281,9 +248,17 @@ inline float rand(inout float seed, in float2 pixel)
 
 inline float3x3 GetTangentSpace(float3 normal)
 {
-	float3 tangent = normalize(cross(normal, g_xFrame_MainCamera_At));
+	// Choose a helper vector for the cross product
+	float3 helper = abs(normal.x) > 0.99f ? float3(0, 0, 1) : float3(1, 0, 0);
+
+	// Generate vectors
+	float3 tangent = normalize(cross(normal, helper));
 	float3 binormal = normalize(cross(normal, tangent));
 	return float3x3(tangent, binormal, normal);
+
+	//float3 tangent = normalize(cross(normal, g_xFrame_MainCamera_At));
+	//float3 binormal = normalize(cross(normal, tangent));
+	//return float3x3(tangent, binormal, normal);
 }
 
 inline float3 SampleHemisphere(float3 normal, float alpha, inout float seed, in float2 pixel)
@@ -302,10 +277,26 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
+		float4 baseColorMap = texture_baseColor.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+		float4 normalMap = texture_normalMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+		float4 surfaceMap = texture_surfaceMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+
+		Material mat = materialBuffer[hit.materialIndex];
+		
+		float4 baseColor = mat.baseColor * baseColorMap;
+		float reflectance = mat.reflectance/* * surfaceMap.r*/;
+		float metalness = mat.metalness/* * surfaceMap.g*/;
+		float3 emissive = baseColor.rgb * mat.emissive * surfaceMap.b;
+		float roughness = mat.roughness/* * normalMap.a*/;
+
+		float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
+		float3 specular = ComputeF0(baseColor, reflectance, metalness);
+
+
 		// Calculate chances of diffuse and specular reflection
-		hit.albedo = min(1.0f - hit.specular, hit.albedo);
-		float specChance = dot(hit.specular, 0.33);
-		float diffChance = dot(hit.albedo, 0.33);
+		albedo = min(1.0f - specular, albedo);
+		float specChance = dot(specular, 0.33);
+		float diffChance = dot(albedo, 0.33);
 		float inv = 1.0f / (specChance + diffChance);
 		specChance *= inv;
 		diffChance *= inv;
@@ -315,21 +306,22 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 		if (roulette < specChance)
 		{
 			// Specular reflection
-			float alpha = 150.0f;
+			//float alpha = 150.0f;
+			float alpha = sqr(1 - roughness) * 1000;
 			ray.origin = hit.position + hit.normal * EPSILON;
 			ray.direction = SampleHemisphere(reflect(ray.direction, hit.normal), alpha, seed, pixel);
 			float f = (alpha + 2) / (alpha + 1);
-			ray.energy *= (1.0f / specChance) * hit.specular * saturate(dot(hit.normal, ray.direction) * f);
+			ray.energy *= (1.0f / specChance) * specular * saturate(dot(hit.normal, ray.direction) * f);
 		}
 		else
 		{
 			// Diffuse reflection
 			ray.origin = hit.position + hit.normal * EPSILON;
 			ray.direction = SampleHemisphere(hit.normal, 1.0f, seed, pixel);
-			ray.energy *= (1.0f / diffChance) * hit.albedo;
+			ray.energy *= (1.0f / diffChance) * albedo;
 		}
 
-		return hit.emission;
+		return emissive;
 	}
 	else
 	{
