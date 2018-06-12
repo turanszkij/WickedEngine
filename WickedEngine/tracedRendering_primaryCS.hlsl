@@ -1,7 +1,6 @@
 #include "globals.hlsli"
-#include "lightingHF.hlsli"
-#include "skyHF.hlsli"
 #include "ShaderInterop_TracedRendering.h"
+#include "tracedRenderingHF.hlsli"
 
 
 RWTEXTURE2D(Result, float4, 0);
@@ -27,158 +26,6 @@ TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
 TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
 TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
 TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
-
-//struct Sphere
-//{
-//	float3 position;
-//	float radius;
-//	float3 albedo;
-//	float3 specular;
-//	float emission;
-//};
-
-struct Ray
-{
-	float3 origin;
-	float3 direction;
-	float3 energy;
-};
-
-inline Ray CreateRay(float3 origin, float3 direction)
-{
-	Ray ray;
-	ray.origin = origin;
-	ray.direction = direction;
-	ray.energy = float3(1, 1, 1);
-	return ray;
-}
-
-inline Ray CreateCameraRay(float2 uv)
-{
-	// Invert the perspective projection of the view-space position
-	float3 direction = mul(float4(uv, 0.0f, 1.0f), g_xFrame_MainCamera_InvP).xyz;
-	// Transform the direction from camera to world space and normalize
-	direction = mul(float4(direction, 0.0f), g_xFrame_MainCamera_InvV).xyz;
-	direction = normalize(direction);
-
-	return CreateRay(g_xFrame_MainCamera_CamPos, direction);
-}
-
-struct RayHit
-{
-	float distance;
-	float3 position;
-	float3 normal;
-	uint materialIndex;
-	float2 texCoords;
-
-	//float3 albedo;
-	//float3 specular;
-	//float emission;
-};
-
-static const float INFINITE_RAYHIT = 1000000;
-static const float EPSILON = 0.0001f;
-inline RayHit CreateRayHit()
-{
-	RayHit hit;
-	hit.distance = INFINITE_RAYHIT;
-	hit.position = float3(0.0f, 0.0f, 0.0f);
-	hit.normal = float3(0.0f, 0.0f, 0.0f);
-	hit.materialIndex = 0;
-	hit.texCoords = 0;
-
-	return hit;
-}
-
-//inline void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
-//{
-//	// Calculate distance along the ray where the ground plane is intersected
-//	float t = -ray.origin.y / ray.direction.y;
-//	if (t > 0 && t < bestHit.distance)
-//	{
-//		bestHit.distance = t;
-//		bestHit.position = ray.origin + t * ray.direction;
-//		bestHit.normal = float3(0.0f, 1.0f, 0.0f);
-//		bestHit.specular = float3(0.2, 0.2, 0.2);
-//		bestHit.albedo = float3(0.8f, 0.8f, 0.8f);
-//		bestHit.emission = 0;
-//	}
-//}
-//
-//inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
-//{
-//	// Calculate distance along the ray where the sphere is intersected
-//	float3 d = ray.origin - sphere.position;
-//	float p1 = -dot(ray.direction, d);
-//	float p2sqr = p1 * p1 - dot(d, d) + sphere.radius * sphere.radius;
-//	if (p2sqr < 0)
-//		return;
-//	float p2 = sqrt(p2sqr);
-//	float t = p1 - p2 > 0 ? p1 - p2 : p1 + p2;
-//	if (t > 0 && t < bestHit.distance)
-//	{
-//		bestHit.distance = t;
-//		bestHit.position = ray.origin + t * ray.direction;
-//		bestHit.normal = normalize(bestHit.position - sphere.position);
-//		bestHit.albedo = sphere.albedo;
-//		bestHit.specular = sphere.specular;
-//		bestHit.emission = sphere.emission;
-//	}
-//}
-
-
-struct Triangle
-{
-	float3 v0, v1, v2;
-	float3 n0, n1, n2;
-	float2 t0, t1, t2;
-	uint materialIndex;
-};
-
-#define CULLING
-inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle primitive)
-{
-	float3 v0v1 = primitive.v1 - primitive.v0;
-	float3 v0v2 = primitive.v2 - primitive.v0;
-	float3 pvec = cross(ray.direction, v0v2);
-	float det = dot(v0v1, pvec);
-#ifdef CULLING 
-	// if the determinant is negative the triangle is backfacing
-	// if the determinant is close to 0, the ray misses the triangle
-	if (det < EPSILON)
-		return;
-#else 
-	// ray and triangle are parallel if det is close to 0
-	if (abs(det) < EPSILON)
-		return;
-#endif 
-	float invDet = 1 / det;
-
-	float3 tvec = ray.origin - primitive.v0;
-	float u = dot(tvec, pvec) * invDet;
-	if (u < 0 || u > 1) 
-		return;
-
-	float3 qvec = cross(tvec, v0v1);
-	float v = dot(ray.direction, qvec) * invDet;
-	if (v < 0 || u + v > 1) 
-		return;
-
-	float t = dot(v0v2, qvec) * invDet;
-
-	if (t > 0 && t < bestHit.distance)
-	{
-		bestHit.distance = t;
-		bestHit.position = ray.origin + t * ray.direction;
-
-		float w = 1 - u - v;
-		bestHit.normal = primitive.n0 * w + primitive.n1 * u + primitive.n2 * v;
-		bestHit.texCoords = primitive.t0 * w + primitive.t1 * u + primitive.t2 * v;
-
-		bestHit.materialIndex = primitive.materialIndex;
-	}
-}
 
 inline RayHit TraceScene(Ray ray)
 {
@@ -220,57 +67,23 @@ inline RayHit TraceScene(Ray ray)
 			nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		}
 
-		Triangle primitive;
-		primitive.v0 = pos_nor0.xyz;
-		primitive.v1 = pos_nor1.xyz;
-		primitive.v2 = pos_nor2.xyz;
-		primitive.n0 = nor0;
-		primitive.n1 = nor1;
-		primitive.n2 = nor2;
-		primitive.t0 = meshVertexBuffer_TEX[i0];
-		primitive.t1 = meshVertexBuffer_TEX[i1];
-		primitive.t2 = meshVertexBuffer_TEX[i2];
-		primitive.materialIndex = materialIndex;
+		Triangle prim;
+		prim.v0 = pos_nor0.xyz;
+		prim.v1 = pos_nor1.xyz;
+		prim.v2 = pos_nor2.xyz;
+		prim.n0 = nor0;
+		prim.n1 = nor1;
+		prim.n2 = nor2;
+		prim.t0 = meshVertexBuffer_TEX[i0];
+		prim.t1 = meshVertexBuffer_TEX[i1];
+		prim.t2 = meshVertexBuffer_TEX[i2];
+		prim.materialIndex = materialIndex;
 
-		IntersectTriangle(ray, bestHit, primitive);
+		IntersectTriangle(ray, bestHit, prim);
 	}
 
 
 	return bestHit;
-}
-
-inline float rand(inout float seed, in float2 pixel)
-{
-	float result = frac(sin(seed * dot(pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
-	seed += 1.0f;
-	return result;
-}
-
-inline float3x3 GetTangentSpace(float3 normal)
-{
-	// Choose a helper vector for the cross product
-	float3 helper = abs(normal.x) > 0.99f ? float3(0, 0, 1) : float3(1, 0, 0);
-
-	// Generate vectors
-	float3 tangent = normalize(cross(normal, helper));
-	float3 binormal = normalize(cross(normal, tangent));
-	return float3x3(tangent, binormal, normal);
-
-	//float3 tangent = normalize(cross(normal, g_xFrame_MainCamera_At));
-	//float3 binormal = normalize(cross(normal, tangent));
-	//return float3x3(tangent, binormal, normal);
-}
-
-inline float3 SampleHemisphere(float3 normal, float alpha, inout float seed, in float2 pixel)
-{
-	// Sample the hemisphere, where alpha determines the kind of the sampling
-	float cosTheta = pow(rand(seed, pixel), 1.0f / (alpha + 1.0f));
-	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
-	float phi = 2 * PI * rand(seed, pixel);
-	float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-
-	// Transform direction to world space
-	return mul(tangentSpaceDir, GetTangentSpace(normal));
 }
 
 inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel)

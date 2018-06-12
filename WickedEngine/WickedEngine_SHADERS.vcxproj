@@ -40,6 +40,7 @@
     <None Include="sOHF.hlsli" />
     <None Include="tangentComputeHF.hlsli" />
     <None Include="tonemapHF.hlsli" />
+    <None Include="tracedRenderingHF.hlsli" />
     <None Include="uvsphere.hlsli" />
     <None Include="volumeLightHF.hlsli" />
     <None Include="voxelConeTracingHF.hlsli" />

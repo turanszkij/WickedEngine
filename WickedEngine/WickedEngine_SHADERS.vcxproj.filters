@@ -115,6 +115,9 @@
     <None Include="oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="tracedRenderingHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
