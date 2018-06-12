@@ -3,8 +3,9 @@
 #include "tracedRenderingHF.hlsli"
 
 
-RWSTRUCTUREDBUFFER(rayBuffer, StoredRay, 0);
-RWTEXTURE2D(resultTexture, float4, 1);
+RWRAWBUFFER(counterBuffer_WRITE, 0);
+RWSTRUCTUREDBUFFER(rayBuffer_WRITE, StoredRay, 1);
+RWTEXTURE2D(resultTexture, float4, 2);
 
 struct Material
 {
@@ -27,6 +28,9 @@ TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
 TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
 TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
 TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
+
+RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
+STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
 
 inline RayHit TraceScene(Ray ray)
 {
@@ -149,26 +153,33 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 [numthreads(TRACEDRENDERING_PRIMARY_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
+	if (DTid.x >= counterBuffer_READ.Load(0))
+	{
+		return;
+	}
+
 	// Load the current ray:
 	Ray ray;
 	uint pixelID;
-	LoadRay(rayBuffer[DTid.x], ray, pixelID);
+	LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
 
+	// Compute real pixel coords from flattened:
+	uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
+
+	// Compute screen coordinates:
+	float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+
+	float seed = g_xFrame_Time;
+
+	RayHit hit = TraceScene(ray);
+	float3 result = ray.energy * Shade(ray, hit, seed, uv);
+
+	// Write the result:
+	resultTexture[coords2D] += float4(result, 0);
 	if (any(ray.energy))
 	{
-		// Compute real pixel coords from flattened:
-		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
-
-		// Compute screen coordinates:
-		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
-
-		float seed = g_xFrame_Time;
-
-		RayHit hit = TraceScene(ray);
-		float3 result = ray.energy * Shade(ray, hit, seed, uv);
-
-		// Write the result:
-		rayBuffer[pixelID] = CreateStoredRay(ray, pixelID);
-		resultTexture[coords2D] += float4(result, 0);
+		uint prev;
+		counterBuffer_WRITE.InterlockedAdd(0, 1, prev);
+		rayBuffer_WRITE[prev] = CreateStoredRay(ray, pixelID);
 	}
 }

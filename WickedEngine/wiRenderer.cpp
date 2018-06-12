@@ -1473,6 +1473,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_PREPARESTEP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_preparestepCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -6327,9 +6328,11 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	static GPUBuffer* materialBuffer = nullptr;
 	static MaterialCB materialArray[10] = {};
-	static GPUBuffer* rayBuffer = nullptr;
+	static GPUBuffer* rayBuffer[2] = {};
+	static GPUBuffer* indirectBuffer = nullptr;
+	static GPUBuffer* counterBuffer[2] = {};
 
-	if (materialBuffer == nullptr || rayBuffer == nullptr)
+	if (materialBuffer == nullptr || rayBuffer == nullptr || indirectBuffer == nullptr || counterBuffer == nullptr)
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
@@ -6348,8 +6351,10 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		assert(SUCCEEDED(hr));
 
 
-		SAFE_DELETE(rayBuffer);
-		rayBuffer = new GPUBuffer;
+		SAFE_DELETE(rayBuffer[0]);
+		SAFE_DELETE(rayBuffer[1]);
+		rayBuffer[0] = new GPUBuffer;
+		rayBuffer[1] = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint) + sizeof(XMFLOAT3) + sizeof(XMFLOAT3);
@@ -6358,7 +6363,39 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, rayBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
+		assert(SUCCEEDED(hr));
+
+
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+
+
+		SAFE_DELETE(counterBuffer[0]);
+		SAFE_DELETE(counterBuffer[1]);
+		counterBuffer[0] = new GPUBuffer;
+		counterBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -6425,7 +6462,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 		GPUResource* uavs[] = {
-			rayBuffer,
+			rayBuffer[0],
 		};
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -6434,30 +6471,66 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 
+		// just write initial ray count:
+		device->UpdateBuffer(counterBuffer[0], &_raycount, threadID);
 	}
 	device->EventEnd(threadID);
 
 	wiProfiler::GetInstance().BeginRange("Primary Rays", wiProfiler::DOMAIN_GPU, threadID);
 	device->EventBegin("Primary Rays", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
-
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-		device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
-
-		GPUResource* uavs[] = {
-			rayBuffer,
-			result,
-		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
 		for (int bounce = 0; bounce < 8; ++bounce)
 		{
-			device->Dispatch((UINT)ceilf((float)_raycount / (float)TRACEDRENDERING_PRIMARY_GROUPSIZE), 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			int __readBufferID = bounce % 2;
+			int __writeBufferID = (bounce + 1) % 2;
+
+			// 1.) Prepare Step
+			{
+				// Prepare indirect dispatch based on counter buffer value:
+				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PREPARESTEP], threadID);
+
+				GPUResource* res[] = {
+					counterBuffer[__readBufferID],
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND8, ARRAYSIZE(res), threadID);
+				GPUResource* uavs[] = {
+					counterBuffer[__writeBufferID],
+					indirectBuffer,
+				};
+				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+				device->Dispatch(1, 1, 1, threadID);
+				device->UAVBarrier(uavs, 1, threadID);
+				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+			}
+
+			// 2.) Compute bounce
+			{
+				// Indirect dispatch on active rays:
+				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
+
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+				device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
+
+				GPUResource* res[] = {
+					counterBuffer[__readBufferID],
+					rayBuffer[__readBufferID],
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND8, ARRAYSIZE(res), threadID);
+				GPUResource* uavs[] = {
+					counterBuffer[__writeBufferID],
+					rayBuffer[__writeBufferID],
+					result,
+				};
+				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+				device->DispatchIndirect(indirectBuffer, 0, threadID);
+				//device->Dispatch((UINT)ceilf((float)_raycount / (float)TRACEDRENDERING_PRIMARY_GROUPSIZE), 1, 1, threadID);
+				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+			}
 		}
 
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID);
