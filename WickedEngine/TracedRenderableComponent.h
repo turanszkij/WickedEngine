@@ -7,6 +7,7 @@ class TracedRenderableComponent :
 {
 protected:
 	wiGraphicsTypes::Texture2D* traceResult = nullptr;
+	wiRenderTarget rtAccumulation;
 
 	virtual void ResizeBuffers();
 

@@ -2,15 +2,14 @@
 #define _SHADERINTEROP_TRACEDRENDERING_H_
 #include "ShaderInterop.h"
 
-#define TRACEDRENDERING_PRIMARY_BLOCKSIZE 8
+#define TRACEDRENDERING_LAUNCH_BLOCKSIZE 8
+#define TRACEDRENDERING_PRIMARY_GROUPSIZE 64
 
 CBUFFER(TracedRenderingCB, CBSLOT_RENDERER_TRACED)
 {
-	float2	xTracePixelOffset;
-	uint xTraceSample;
+	float2 xTracePixelOffset;
 	uint xTraceMeshTriangleCount;
 	uint xTraceMeshVertexPOSStride;
-	float3 padding_xTraceCB;
 };
 
 #endif // _SHADERINTEROP_TRACEDRENDERING_H_

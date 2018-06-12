@@ -3,7 +3,8 @@
 #include "tracedRenderingHF.hlsli"
 
 
-RWTEXTURE2D(Result, float4, 0);
+RWSTRUCTUREDBUFFER(rayBuffer, StoredRay, 0);
+RWTEXTURE2D(resultTexture, float4, 1);
 
 struct Material
 {
@@ -145,39 +146,29 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 	}
 }
 
-[numthreads(TRACEDRENDERING_PRIMARY_BLOCKSIZE, TRACEDRENDERING_PRIMARY_BLOCKSIZE, 1)]
+[numthreads(TRACEDRENDERING_PRIMARY_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	float seed = g_xFrame_Time;
+	// Load the current ray:
+	Ray ray;
+	uint pixelID;
+	LoadRay(rayBuffer[DTid.x], ray, pixelID);
 
-	// Compute screen coordinates:
-	float2 uv = float2((DTid.xy + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
-
-	// Create starting ray:
-	Ray ray = CreateCameraRay(uv);
-
-
-	// Trace the scene with a limited ray bounces:
-	const int maxBounces = 8;
-	float3 result = float3(0, 0, 0);
-	for (int i = 0; i < maxBounces; i++)
+	if (any(ray.energy))
 	{
+		// Compute real pixel coords from flattened:
+		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
+
+		// Compute screen coordinates:
+		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+
+		float seed = g_xFrame_Time;
+
 		RayHit hit = TraceScene(ray);
-		result += ray.energy * Shade(ray, hit, seed, uv);
+		float3 result = ray.energy * Shade(ray, hit, seed, uv);
 
-		if (!any(ray.energy))
-			break;
+		// Write the result:
+		rayBuffer[pixelID] = CreateStoredRay(ray, pixelID);
+		resultTexture[coords2D] += float4(result, 0);
 	}
-
-
-	// Write the result:
-
-	//Result[DTid.xy] = float4(result, 1);
-
-	// Accumulate history:
-	uint sam = xTraceSample;
-	float alpha = 1.0f / (sam + 1.0f);
-	float3 old = Result[DTid.xy].rgb;
-	Result[DTid.xy] = float4(old * (1-alpha) + result * alpha, 1);
-	//Result[DTid.xy] = 0;
 }

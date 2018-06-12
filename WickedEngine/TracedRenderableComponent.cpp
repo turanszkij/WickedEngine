@@ -51,7 +51,7 @@ void TracedRenderableComponent::ResizeBuffers()
 	desc.Width = lastBufferResWidth;
 	desc.Height = lastBufferResHeight;
 	desc.Format = FORMAT_R32G32B32A32_FLOAT;
-	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 	desc.Usage = USAGE_DEFAULT;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
@@ -60,6 +60,11 @@ void TracedRenderableComponent::ResizeBuffers()
 	desc.Depth = 1;
 
 	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &traceResult);
+
+
+	rtAccumulation.Initialize(
+		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
+		, false, FORMAT_R32G32B32A32_FLOAT); // needs full float for correct accumulation over long time period!
 
 }
 
@@ -98,25 +103,30 @@ void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 
-	//wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	//fx.hdr = true;
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	fx.hdr = true;
 
 
 
-	//static float sam = 0;
+	static float sam = 0;
 
-	//if (GetAsyncKeyState('K') < 0)
-	//{
-	//	sam = 0;
-	//}
+	if (wiRenderer::getCamera()->hasChanged)
+	{
+		sam = 0;
+	}
 
-	//fx.opacity = 1.0f / (sam + 1.0f);
-	//fx.blendFlag = BLENDMODE_ACCUMULATE;
+	if (GetAsyncKeyState('K') < 0)
+	{
+		sam = 0;
+	}
 
-	//rtTemporalAA[0].Set(threadID);
-	//wiImage::Draw(traceResult, fx, threadID);
+	fx.opacity = 1.0f / (sam + 1.0f);
+	fx.blendFlag = BLENDMODE_ALPHA;
 
-	//sam++;
+	rtAccumulation.Set(threadID);
+	wiImage::Draw(traceResult, fx, threadID);
+
+	sam++;
 
 
 
@@ -157,14 +167,14 @@ void TracedRenderableComponent::Compose()
 
 
 
-	wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
+	//wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
 	
 	
 	
 	
 	
 	
-	//wiImage::Draw(rtTemporalAA[0].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 
 
 

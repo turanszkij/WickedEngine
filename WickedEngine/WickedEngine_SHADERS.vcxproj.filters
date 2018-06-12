@@ -723,7 +723,10 @@
     <FxCompile Include="emittedparticle_sphpartitionoffsetsresetCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="tracedRendering_primaryCS.hlsl">
+    <FxCompile Include="raytrace_launchCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_primaryCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

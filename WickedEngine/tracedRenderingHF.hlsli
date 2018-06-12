@@ -22,6 +22,31 @@ struct Ray
 	float3 energy;
 };
 
+struct StoredRay
+{
+	uint pixelID;
+	float3 origin;
+	uint3 direction_energy;
+};
+inline StoredRay CreateStoredRay(in Ray ray, in uint pixelID)
+{
+	StoredRay storedray;
+
+	storedray.pixelID = pixelID;
+	storedray.origin = ray.origin;
+	storedray.direction_energy = f32tof16(ray.direction) | (f32tof16(ray.energy) << 16);
+
+	return storedray;
+}
+inline void LoadRay(in StoredRay storedray, out Ray ray, out uint pixelID)
+{
+	pixelID = storedray.pixelID;
+
+	ray.origin = storedray.origin;
+	ray.direction = asfloat(f16tof32(storedray.direction_energy));
+	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
+}
+
 inline Ray CreateRay(float3 origin, float3 direction)
 {
 	Ray ray;
