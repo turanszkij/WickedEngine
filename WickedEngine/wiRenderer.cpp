@@ -1471,6 +1471,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PREPARESTEP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_preparestepCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6322,6 +6323,8 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	device->EventBegin("DrawTracedScene", threadID);
+
 	uint _width = GetInternalResolution().x;
 	uint _height = GetInternalResolution().y;
 	uint _raycount = _width * _height;
@@ -6452,8 +6455,23 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * materialCount);
 
-	float clear[] = { 0,0,0,1 };
-	device->ClearRenderTarget(result, clear, threadID);
+	device->EventBegin("Clear", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
+
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+		GPUResource* uavs[] = {
+			result,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
 
 	device->EventBegin("Launch Rays", threadID);
 	{
@@ -6535,6 +6553,10 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	device->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID);
 
+
+
+
+	device->EventEnd(threadID); // DrawTracedScene
 }
 
 void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)

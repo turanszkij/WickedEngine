@@ -119,7 +119,7 @@ inline RayHit CreateRayHit()
 //}
 
 
-struct Triangle
+struct MeshTriangle
 {
 	float3 v0, v1, v2;
 	float3 n0, n1, n2;
@@ -128,7 +128,7 @@ struct Triangle
 };
 
 #define BACKFACE_CULLING
-inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in Triangle tri)
+inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in MeshTriangle tri)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;

@@ -51,7 +51,7 @@ void TracedRenderableComponent::ResizeBuffers()
 	desc.Width = lastBufferResWidth;
 	desc.Height = lastBufferResHeight;
 	desc.Format = FORMAT_R32G32B32A32_FLOAT;
-	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
+	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 	desc.Usage = USAGE_DEFAULT;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;

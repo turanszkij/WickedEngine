@@ -7,6 +7,15 @@ RWRAWBUFFER(counterBuffer_WRITE, 0);
 RWSTRUCTUREDBUFFER(rayBuffer_WRITE, StoredRay, 1);
 RWTEXTURE2D(resultTexture, float4, 2);
 
+// This enables reduced atomics into global memory
+//#define ADVANCED_ALLOCATION
+
+#ifdef ADVANCED_ALLOCATION
+static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_PRIMARY_GROUPSIZE / 32;
+groupshared uint GroupActiveRayMask[GroupActiveRayMaskBucketCount];
+groupshared uint GroupRayWriteOffset;
+#endif // ADVANCED_ALLOCATION
+
 struct Material
 {
 	float4		baseColor;
@@ -72,7 +81,7 @@ inline RayHit TraceScene(Ray ray)
 			nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 		}
 
-		Triangle prim;
+		MeshTriangle prim;
 		prim.v0 = pos_nor0.xyz;
 		prim.v1 = pos_nor1.xyz;
 		prim.v2 = pos_nor2.xyz;
@@ -151,35 +160,119 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 }
 
 [numthreads(TRACEDRENDERING_PRIMARY_GROUPSIZE, 1, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 {
-	if (DTid.x >= counterBuffer_READ.Load(0))
+#ifdef ADVANCED_ALLOCATION
+	// Preinitialize group shared memory:
+	if (groupIndex == 0)
 	{
-		return;
+		[unroll]
+		for (uint i = 0; i < GroupActiveRayMaskBucketCount; ++i)
+		{
+			GroupActiveRayMask[i] = 0;
+		}
+	}
+	GroupMemoryBarrierWithGroupSync();
+#endif // ADVANCED_ALLOCATION
+
+
+	// Initialize ray and pixel ID as non-contributing:
+	Ray ray = (Ray)0;
+	uint pixelID = 0xFFFFFFFF;
+
+	if (DTid.x < counterBuffer_READ.Load(0))
+	{
+		// Load the current ray:
+		LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
+
+		// Compute real pixel coords from flattened:
+		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
+
+		// Compute screen coordinates:
+		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+
+		float seed = g_xFrame_Time;
+
+		RayHit hit = TraceScene(ray);
+		float3 result = ray.energy * Shade(ray, hit, seed, uv);
+
+
+		// Write pixel color:
+		resultTexture[coords2D] += float4(result, 0);
+
+#ifndef ADVANCED_ALLOCATION
+		if (any(ray.energy))
+		{
+			// Naive strategy to allocate active rays. Global memory atomics will be performed for every thread:
+			uint prev;
+			counterBuffer_WRITE.InterlockedAdd(0, 1, prev);
+			rayBuffer_WRITE[prev] = CreateStoredRay(ray, pixelID);
+		}
+#endif // ADVANCED_ALLOCATION
+
 	}
 
-	// Load the current ray:
-	Ray ray;
-	uint pixelID;
-	LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
 
-	// Compute real pixel coords from flattened:
-	uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
+#ifdef ADVANCED_ALLOCATION
 
-	// Compute screen coordinates:
-	float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+	const bool active = any(ray.energy);				// does this thread append?
+	const uint bucket = groupIndex / 32;				// which bitfield bucket does this thread belong to?
+	const uint threadIndexInBucket = groupIndex % 32;	// thread bit offset from bucket start
+	const uint threadMask = 1 << threadIndexInBucket;	// thread bit mask in current bucket
 
-	float seed = g_xFrame_Time;
-
-	RayHit hit = TraceScene(ray);
-	float3 result = ray.energy * Shade(ray, hit, seed, uv);
-
-	// Write the result:
-	resultTexture[coords2D] += float4(result, 0);
-	if (any(ray.energy))
+	// Count rays that are still active with a bitmask insertion:
+	if (active)
 	{
-		uint prev;
-		counterBuffer_WRITE.InterlockedAdd(0, 1, prev);
-		rayBuffer_WRITE[prev] = CreateStoredRay(ray, pixelID);
+		InterlockedOr(GroupActiveRayMask[bucket], threadMask);
 	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// Allocate into global memory:
+	if (groupIndex == 0)
+	{
+		uint groupRayCount = 0;
+
+		// Count all bucket set bits:
+		[unroll]
+		for (uint i = 0; i < GroupActiveRayMaskBucketCount; ++i)
+		{
+			groupRayCount += countbits(GroupActiveRayMask[i]);
+		}
+
+		// Allocation:
+		counterBuffer_WRITE.InterlockedAdd(0, groupRayCount, GroupRayWriteOffset);
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// Finally, write all active rays into global memory:
+	if (active)
+	{
+		// Need to compute prefix-sum of just the active ray count before this thread
+		uint activePrefixSum = 0;
+		for (uint i = 0; i <= bucket; ++i) // only up until its own bucket
+		{
+			// If we are in a bucket before the current bucket, the prefix read mask is 0xFFFFFFFF aka 11111111111....
+			uint prefixMask = 0xFFFFFFFF;
+
+			// If we are in the current bucket, then we need to only consider the bits before the current thread eg. 00000001111111.....
+			[flatten]
+			if (i == bucket)
+			{
+				// It is unfortunate, that we cannot shift with 32 in a 32-bit field (in the case of the first bucket element)
+				const uint shifts = 32 - threadIndexInBucket;
+
+				//// We can either shift in two half shifts:
+				//prefixMask >>= shifts / 2;
+				//prefixMask >>= shifts - (shifts / 2);
+
+				// Or check if we are the first element in the bucket and just set the mask to 0:
+				prefixMask = threadIndexInBucket == 0 ? 0 : (prefixMask >> shifts);
+			}
+
+			activePrefixSum += countbits(GroupActiveRayMask[i] & prefixMask);
+		}
+
+		rayBuffer_WRITE[GroupRayWriteOffset + activePrefixSum] = CreateStoredRay(ray, pixelID);
+	}
+#endif // ADVANCED_ALLOCATION
 }
