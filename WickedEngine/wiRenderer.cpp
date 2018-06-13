@@ -599,6 +599,9 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(TracedRenderingCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
 
+	bd.ByteWidth = sizeof(TracedBVHCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE_BVH]);
+
 
 
 
@@ -1471,6 +1474,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_BVH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvhCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6331,11 +6335,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	static GPUBuffer* materialBuffer = nullptr;
 	static MaterialCB materialArray[10] = {};
+	static GPUBuffer* triangleBuffer = nullptr;
 	static GPUBuffer* rayBuffer[2] = {};
 	static GPUBuffer* indirectBuffer = nullptr;
 	static GPUBuffer* counterBuffer[2] = {};
 
-	if (materialBuffer == nullptr || rayBuffer == nullptr || indirectBuffer == nullptr || counterBuffer == nullptr)
+	if (materialBuffer == nullptr || triangleBuffer == nullptr || rayBuffer == nullptr || indirectBuffer == nullptr || counterBuffer == nullptr)
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
@@ -6351,6 +6356,19 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+		assert(SUCCEEDED(hr));
+
+		SAFE_DELETE(triangleBuffer);
+		triangleBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(TracedRenderingMeshTriangle);
+		desc.ByteWidth = desc.StructureByteStride * 10000;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
 		assert(SUCCEEDED(hr));
 
 
@@ -6402,19 +6420,30 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		assert(SUCCEEDED(hr));
 	}
 
-	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
-	TracedRenderingCB cb;
-	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-	cb.xTraceMeshTriangleCount = 0;
-	cb.xTraceMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
+	uint32_t totalTriangles = 0;
+	uint32_t totalMaterials = 0;
 
-	int materialCount = 0;
 	for (auto& model : GetScene().models)
 	{
-		for (auto& iter : model->meshes)
+		for (auto& iter : model->objects)
 		{
-			Mesh* mesh = iter.second;
-			cb.xTraceMeshTriangleCount = (uint)mesh->indices.size() / 3;
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			TracedBVHCB cb;
+			cb.xTraceBVHWorld = object->world;
+			cb.xTraceBVHMaterialOffset = totalMaterials;
+			cb.xTraceBVHMeshTriangleOffset = totalTriangles;
+			cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
+			cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
+
+			device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
+
+			totalTriangles += cb.xTraceBVHMeshTriangleCount;
+
+			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH], threadID);
+
+			device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
 
 			GPUResource* res[] = {
 				mesh->indexBuffer,
@@ -6422,7 +6451,15 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				mesh->vertexBuffer_TEX,
 			};
 			device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+			GPUResource* uavs[] = {
+				triangleBuffer,
+			};
+			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
+			device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)TRACEDRENDERING_BVH_GROUPSIZE), 1, 1, threadID);
+
+
+			///// TEMP:
 			GPUResource* tex[3] = {
 				wiTextureHelper::getInstance()->getWhite(),
 				wiTextureHelper::getInstance()->getNormalMapDefault(),
@@ -6443,17 +6480,21 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 					tex[2] = subset.material->surfaceMap;
 				}
 
-				materialArray[materialCount].Create(*subset.material);
-				materialCount++;
+				materialArray[totalMaterials].Create(*subset.material);
+				totalMaterials++;
 			}
 			device->BindResources(CS, tex, TEXSLOT_ONDEMAND4, ARRAYSIZE(tex), threadID);
-
-			break;
 		}
 	}
 
+
+	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
+	TracedRenderingCB cb;
+	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
+	cb.xTraceMeshTriangleCount = totalTriangles;
+
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * materialCount);
+	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * totalMaterials);
 
 	device->EventBegin("Clear", threadID);
 	{
@@ -6528,7 +6569,6 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
 
 				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-				device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
 
 				GPUResource* res[] = {
 					counterBuffer[__readBufferID],
@@ -6541,6 +6581,9 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 					result,
 				};
 				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+				device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(CS, triangleBuffer, TEXSLOT_ONDEMAND1, threadID);
 
 				device->DispatchIndirect(indirectBuffer, 0, threadID);
 				//device->Dispatch((UINT)ceilf((float)_raycount / (float)TRACEDRENDERING_PRIMARY_GROUPSIZE), 1, 1, threadID);
