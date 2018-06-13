@@ -41,9 +41,85 @@ TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
 
-inline RayHit TraceScene(Ray ray)
+#define LDS_MESH
+
+#ifdef LDS_MESH
+groupshared MeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GROUPSIZE];
+#endif
+
+inline RayHit TraceScene(Ray ray, uint groupIndex)
 {
 	RayHit bestHit = CreateRayHit();
+	
+#ifdef LDS_MESH
+
+	uint numTiles = 1 + xTraceMeshTriangleCount / TRACEDRENDERING_PRIMARY_GROUPSIZE;
+
+	for (uint tile = 0; tile < numTiles; ++tile)
+	{
+		uint offset = tile * TRACEDRENDERING_PRIMARY_GROUPSIZE;
+		uint tri = offset + groupIndex;
+		uint tileTriangleCount = min(TRACEDRENDERING_PRIMARY_GROUPSIZE, xTraceMeshTriangleCount - offset);
+
+		if (tri < xTraceMeshTriangleCount)
+		{
+			// load indices of triangle from index buffer
+			uint i0 = meshIndexBuffer[tri * 3 + 0];
+			uint i1 = meshIndexBuffer[tri * 3 + 2];
+			uint i2 = meshIndexBuffer[tri * 3 + 1];
+
+			// load vertices of triangle from vertex buffer:
+			float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xTraceMeshVertexPOSStride));
+			float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xTraceMeshVertexPOSStride));
+			float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xTraceMeshVertexPOSStride));
+
+			uint nor_u = asuint(pos_nor0.w);
+			uint materialIndex;
+			float3 nor0;
+			{
+				nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				materialIndex = (nor_u >> 28) & 0x0000000F;
+			}
+			nor_u = asuint(pos_nor1.w);
+			float3 nor1;
+			{
+				nor1.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor1.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor1.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			}
+			nor_u = asuint(pos_nor2.w);
+			float3 nor2;
+			{
+				nor2.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor2.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			}
+
+			MeshTriangle prim;
+			prim.v0 = pos_nor0.xyz;
+			prim.v1 = pos_nor1.xyz;
+			prim.v2 = pos_nor2.xyz;
+			prim.n0 = nor0;
+			prim.n1 = nor1;
+			prim.n2 = nor2;
+			prim.t0 = meshVertexBuffer_TEX[i0];
+			prim.t1 = meshVertexBuffer_TEX[i1];
+			prim.t2 = meshVertexBuffer_TEX[i2];
+			prim.materialIndex = materialIndex;
+
+			meshTriangles[groupIndex] = prim;
+		}
+		GroupMemoryBarrierWithGroupSync();
+
+		for (tri = 0; tri < tileTriangleCount; ++tri)
+		{
+			IntersectTriangle(ray, bestHit, meshTriangles[tri]);
+		}
+	}
+
+#else
 
 	for (uint tri = 0; tri < xTraceMeshTriangleCount; ++tri)
 	{
@@ -96,6 +172,7 @@ inline RayHit TraceScene(Ray ray)
 		IntersectTriangle(ray, bestHit, prim);
 	}
 
+#endif // LDS_MESH
 
 	return bestHit;
 }
@@ -185,6 +262,11 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		// Load the current ray:
 		LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
 
+#ifdef LDS_MESH // because that path has groupsync, every thread must go in following block
+	}
+	{
+#endif // LDS_MESH
+
 		// Compute real pixel coords from flattened:
 		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
 
@@ -193,7 +275,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 
 		float seed = g_xFrame_Time;
 
-		RayHit hit = TraceScene(ray);
+		RayHit hit = TraceScene(ray, groupIndex);
 		float3 result = ray.energy * Shade(ray, hit, seed, uv);
 
 
