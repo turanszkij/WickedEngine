@@ -191,6 +191,10 @@ public:
 		float	 mZRange;
 		float	 mZRange_Recip;
 		XMFLOAT4 mFrustumPlanesWS[6];
+		XMFLOAT3 mWorldBoundsMin; float pad0;
+		XMFLOAT3 mWorldBoundsMax; float pad1;
+		XMFLOAT3 mWorldBoundsExtents; float pad2;
+		XMFLOAT3 mWorldBoundsExtents_Inverse; float pad3;
 	};
 	CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	{

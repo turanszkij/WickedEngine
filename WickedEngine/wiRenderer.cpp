@@ -1474,7 +1474,8 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvhCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6335,12 +6336,20 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	static GPUBuffer* materialBuffer = nullptr;
 	static MaterialCB materialArray[10] = {};
-	static GPUBuffer* triangleBuffer = nullptr;
 	static GPUBuffer* rayBuffer[2] = {};
 	static GPUBuffer* indirectBuffer = nullptr;
 	static GPUBuffer* counterBuffer[2] = {};
 
-	if (materialBuffer == nullptr || triangleBuffer == nullptr || rayBuffer == nullptr || indirectBuffer == nullptr || counterBuffer == nullptr)
+	static bool allocateBVH = true;
+	static GPUBuffer* triangleBuffer = nullptr;
+	static GPUBuffer* clusterCounterBuffer = nullptr;
+	static GPUBuffer* clusterIndexBuffer = nullptr;
+	static GPUBuffer* clusterMortonBuffer = nullptr;
+	static GPUBuffer* clusterOffsetBuffer = nullptr;
+	static GPUBuffer* clusterAABBBuffer = nullptr;
+	const uint maxClusterCount = 1000;
+
+	if (materialBuffer == nullptr || rayBuffer == nullptr || indirectBuffer == nullptr || counterBuffer == nullptr)
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
@@ -6356,19 +6365,6 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
-		assert(SUCCEEDED(hr));
-
-		SAFE_DELETE(triangleBuffer);
-		triangleBuffer = new GPUBuffer;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(TracedRenderingMeshTriangle);
-		desc.ByteWidth = desc.StructureByteStride * 10000;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
 		assert(SUCCEEDED(hr));
 
 
@@ -6420,72 +6416,184 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		assert(SUCCEEDED(hr));
 	}
 
+	if (allocateBVH)
+	{
+		allocateBVH = false;
+
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(triangleBuffer);
+		SAFE_DELETE(clusterCounterBuffer);
+		SAFE_DELETE(clusterIndexBuffer);
+		SAFE_DELETE(clusterMortonBuffer);
+		SAFE_DELETE(clusterOffsetBuffer);
+		SAFE_DELETE(clusterAABBBuffer);
+		triangleBuffer = new GPUBuffer;
+		clusterCounterBuffer = new GPUBuffer;
+		clusterIndexBuffer = new GPUBuffer;
+		clusterMortonBuffer = new GPUBuffer;
+		clusterOffsetBuffer = new GPUBuffer;
+		clusterAABBBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(TracedRenderingMeshTriangle);
+		desc.ByteWidth = desc.StructureByteStride * 10000;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint2);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(TracedRenderingClusterAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	device->EventBegin("BVH - Reset", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_RESET], threadID);
+
+		GPUResource* uavs[] = {
+			clusterCounterBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch(1, 1, 1, threadID);
+	}
+	device->EventEnd(threadID);
+
+
 	uint32_t totalTriangles = 0;
 	uint32_t totalMaterials = 0;
 
-	for (auto& model : GetScene().models)
+	device->EventBegin("BVH - Classification", threadID);
 	{
-		for (auto& iter : model->objects)
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_CLASSIFICATION], threadID);
+		GPUResource* uavs[] = {
+			triangleBuffer,
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		for (auto& model : GetScene().models)
 		{
-			Object* object = iter;
-			Mesh* mesh = object->mesh;
-
-			TracedBVHCB cb;
-			cb.xTraceBVHWorld = object->world;
-			cb.xTraceBVHMaterialOffset = totalMaterials;
-			cb.xTraceBVHMeshTriangleOffset = totalTriangles;
-			cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
-			cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
-
-			device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
-
-			totalTriangles += cb.xTraceBVHMeshTriangleCount;
-
-			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH], threadID);
-
-			device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
-
-			GPUResource* res[] = {
-				mesh->indexBuffer,
-				mesh->vertexBuffer_POS,
-				mesh->vertexBuffer_TEX,
-			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
-			GPUResource* uavs[] = {
-				triangleBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)TRACEDRENDERING_BVH_GROUPSIZE), 1, 1, threadID);
-
-
-			///// TEMP:
-			GPUResource* tex[3] = {
-				wiTextureHelper::getInstance()->getWhite(),
-				wiTextureHelper::getInstance()->getNormalMapDefault(),
-				wiTextureHelper::getInstance()->getWhite(),
-			};
-			for (auto& subset : mesh->subsets)
+			for (auto& iter : model->objects)
 			{
-				if (subset.material->texture != nullptr)
-				{
-					tex[0] = subset.material->texture;
-				}
-				if (subset.material->normalMap != nullptr)
-				{
-					tex[1] = subset.material->normalMap;
-				}
-				if (subset.material->surfaceMap != nullptr)
-				{
-					tex[2] = subset.material->surfaceMap;
-				}
+				Object* object = iter;
+				Mesh* mesh = object->mesh;
 
-				materialArray[totalMaterials].Create(*subset.material);
-				totalMaterials++;
+				TracedBVHCB cb;
+				cb.xTraceBVHWorld = object->world;
+				cb.xTraceBVHMaterialOffset = totalMaterials;
+				cb.xTraceBVHMeshTriangleOffset = totalTriangles;
+				cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
+				cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
+
+				device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
+
+				totalTriangles += cb.xTraceBVHMeshTriangleCount;
+
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
+
+				GPUResource* res[] = {
+					mesh->indexBuffer,
+					mesh->vertexBuffer_POS,
+					mesh->vertexBuffer_TEX,
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+
+				device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)TRACEDRENDERING_BVH_GROUPSIZE), 1, 1, threadID);
+
+
+				///// TEMP:
+				GPUResource* tex[3] = {
+					wiTextureHelper::getInstance()->getWhite(),
+					wiTextureHelper::getInstance()->getNormalMapDefault(),
+					wiTextureHelper::getInstance()->getWhite(),
+				};
+				for (auto& subset : mesh->subsets)
+				{
+					if (subset.material->texture != nullptr)
+					{
+						tex[0] = subset.material->texture;
+					}
+					if (subset.material->normalMap != nullptr)
+					{
+						tex[1] = subset.material->normalMap;
+					}
+					if (subset.material->surfaceMap != nullptr)
+					{
+						tex[2] = subset.material->surfaceMap;
+					}
+
+					materialArray[totalMaterials].Create(*subset.material);
+					totalMaterials++;
+				}
+				device->BindResources(CS, tex, TEXSLOT_ONDEMAND4, ARRAYSIZE(tex), threadID);
 			}
-			device->BindResources(CS, tex, TEXSLOT_ONDEMAND4, ARRAYSIZE(tex), threadID);
 		}
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 	}
+	device->EventEnd(threadID);
+
+
+	device->EventBegin("BVH - Sort Clusters", threadID);
+	wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
+	device->EventEnd(threadID);
 
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
@@ -6535,8 +6643,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	}
 	device->EventEnd(threadID);
 
-	wiProfiler::GetInstance().BeginRange("Primary Rays", wiProfiler::DOMAIN_GPU, threadID);
-	device->EventBegin("Primary Rays", threadID);
+	wiProfiler::GetInstance().BeginRange("Ray Trace", wiProfiler::DOMAIN_GPU, threadID);
 	{
 		for (int bounce = 0; bounce < 8; ++bounce)
 		{
@@ -6544,6 +6651,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 			int __writeBufferID = (bounce + 1) % 2;
 
 			// 1.) Prepare Step
+			device->EventBegin("Kickoff Bounce", threadID);
 			{
 				// Prepare indirect dispatch based on counter buffer value:
 				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PREPARESTEP], threadID);
@@ -6562,8 +6670,10 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				device->UAVBarrier(uavs, 1, threadID);
 				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 			}
+			device->EventEnd(threadID);
 
 			// 2.) Compute bounce
+			device->EventBegin("Primary Rays Bounce", threadID);
 			{
 				// Indirect dispatch on active rays:
 				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
@@ -6590,10 +6700,10 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 			}
+			device->EventEnd(threadID);
 		}
 
 	}
-	device->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID);
 
 
@@ -6861,6 +6971,24 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mFrustumPlanesWS[3] = camera->frustum.getBottomPlane();
 	cb.mFrustumPlanesWS[4] = camera->frustum.getNearPlane();
 	cb.mFrustumPlanesWS[5] = camera->frustum.getFarPlane();
+
+	if (spTree != nullptr && spTree->root != nullptr)
+	{
+		cb.mWorldBoundsMin = spTree->root->box.getMin();
+		cb.mWorldBoundsMax = spTree->root->box.getMax();
+		cb.mWorldBoundsExtents.x = abs(cb.mWorldBoundsMax.x - cb.mWorldBoundsMin.x);
+		cb.mWorldBoundsExtents.y = abs(cb.mWorldBoundsMax.y - cb.mWorldBoundsMin.y);
+		cb.mWorldBoundsExtents.z = abs(cb.mWorldBoundsMax.z - cb.mWorldBoundsMin.z);
+		cb.mWorldBoundsExtents_Inverse.x = 1.0f / cb.mWorldBoundsExtents.x;
+		cb.mWorldBoundsExtents_Inverse.y = 1.0f / cb.mWorldBoundsExtents.y;
+		cb.mWorldBoundsExtents_Inverse.z = 1.0f / cb.mWorldBoundsExtents.z;
+	}
+	else
+	{
+		cb.mWorldBoundsMin = XMFLOAT3(0, 0, 0);
+		cb.mWorldBoundsMax = XMFLOAT3(0, 0, 0);
+		cb.mWorldBoundsExtents = XMFLOAT3(0, 0, 0);
+	}
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }

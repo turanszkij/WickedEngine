@@ -2,7 +2,7 @@
 #define _SHADERINTEROP_TRACEDRENDERING_H_
 #include "ShaderInterop.h"
 
-#define TRACEDRENDERING_BVH_GROUPSIZE 256
+#define TRACEDRENDERING_BVH_GROUPSIZE 64
 
 #define TRACEDRENDERING_CLEAR_BLOCKSIZE 8
 #define TRACEDRENDERING_LAUNCH_BLOCKSIZE 8
@@ -30,6 +30,11 @@ struct TracedRenderingMeshTriangle
 	float3 n0, n1, n2;
 	float2 t0, t1, t2;
 	uint materialIndex;
+};
+struct TracedRenderingClusterAABB
+{
+	float3 min;
+	float3 max;
 };
 
 #endif // _SHADERINTEROP_TRACEDRENDERING_H_

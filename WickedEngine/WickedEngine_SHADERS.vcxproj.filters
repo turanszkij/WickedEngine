@@ -735,7 +735,10 @@
     <FxCompile Include="raytrace_clearCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvhCS.hlsl">
+    <FxCompile Include="raytrace_bvh_classificationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_bvh_resetCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

@@ -120,6 +120,10 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_MainCamera_ZRange;
 	float		g_xFrame_MainCamera_ZRange_Recip;
 	float4		g_xFrame_FrustumPlanesWS[6];	// Frustum planes in world space in order: left,right,top,bottom,near,far
+	float3		g_xFrame_WorldBoundsMin;				float pad0_frameCB;		// world enclosing AABB min
+	float3		g_xFrame_WorldBoundsMax;				float pad1_frameCB;		// world enclosing AABB max
+	float3		g_xFrame_WorldBoundsExtents;			float pad2_frameCB;		// world enclosing AABB abs(max - min)
+	float3		g_xFrame_WorldBoundsExtents_Inverse;	float pad3_frameCB;		// world enclosing AABB 1.0f / abs(max - min)
 };
 // The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)
 CBUFFER(Camera_CommonCB, CBSLOT_RENDERER_CAMERA)
