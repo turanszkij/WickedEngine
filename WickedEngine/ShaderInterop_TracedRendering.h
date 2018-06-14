@@ -2,7 +2,8 @@
 #define _SHADERINTEROP_TRACEDRENDERING_H_
 #include "ShaderInterop.h"
 
-#define TRACEDRENDERING_BVH_GROUPSIZE 64
+#define TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE 64
+#define TRACEDRENDERING_BVH_HIERARCHY_GROUPSIZE 64
 
 #define TRACEDRENDERING_CLEAR_BLOCKSIZE 8
 #define TRACEDRENDERING_LAUNCH_BLOCKSIZE 8
@@ -36,5 +37,15 @@ struct TracedRenderingClusterAABB
 	float3 min;
 	float3 max;
 };
+
+
+struct BVHNode
+{
+	uint parent;
+	uint childA;
+	uint childB;
+};
+inline uint BVH_MakeLeafNode(uint nodeID) { return nodeID | (1 << 31); }
+inline bool BVH_IsLeafNode(uint nodeID) { return nodeID & (1 << 31); }
 
 #endif // _SHADERINTEROP_TRACEDRENDERING_H_

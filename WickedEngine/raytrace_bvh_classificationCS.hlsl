@@ -42,10 +42,9 @@ inline uint expandBits(uint v)
 // given 3D point located within the unit cube [0,1].
 inline uint morton3D(in float3 pos)
 {
-	//pos.x = min(max(pos.x * 1024.0f, 0.0f), 1023.0f);
-	//pos.y = min(max(pos.y * 1024.0f, 0.0f), 1023.0f);
-	//pos.z = min(max(pos.z * 1024.0f, 0.0f), 1023.0f);
-	pos = saturate(pos) * 1024.0f;
+	pos.x = min(max(pos.x * 1024.0f, 0.0f), 1023.0f);
+	pos.y = min(max(pos.y * 1024.0f, 0.0f), 1023.0f);
+	pos.z = min(max(pos.z * 1024.0f, 0.0f), 1023.0f);
 	uint xx = expandBits((uint)pos.x);
 	uint yy = expandBits((uint)pos.y);
 	uint zz = expandBits((uint)pos.z);
@@ -53,7 +52,7 @@ inline uint morton3D(in float3 pos)
 }
 
 
-[numthreads(TRACEDRENDERING_BVH_GROUPSIZE, 1, 1)]
+[numthreads(TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 {
 	if (groupIndex == 0)

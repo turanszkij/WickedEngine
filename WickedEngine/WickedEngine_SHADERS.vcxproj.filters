@@ -741,6 +741,12 @@
     <FxCompile Include="raytrace_bvh_resetCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="raytrace_bvh_hierarchyCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_bvh_kickhierarchyCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">
