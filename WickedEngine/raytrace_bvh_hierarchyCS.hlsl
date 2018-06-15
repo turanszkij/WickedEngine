@@ -3,7 +3,7 @@
 #include "tracedRenderingHF.hlsli"
 
 // This shader will construct the BVH from sorted cluster morton codes.
-//	Output is a list of continuous BVH tree nodes in memory: [parentIndex, leftChildNodeIndex, rightChildNodeIndex]
+//	Output is a list of continuous BVH tree nodes in memory: [parentIndex, leftChildNodeIndex, rightChildNodeIndex]. Additionally, we will reset the BVH Flag Buffer (used for AABB propagation step)
 //	The output node is a leaf node if: leftChildNodeIndex == rightChildNodeIndex == 0
 //	Else the output node is an intermediate node
 //	Also, we know that intermediate nodes start at arrayIndex == 0 (starting with root node)
@@ -17,6 +17,7 @@ RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(clusterMortonBuffer, uint, TEXSLOT_ONDEMAND1);
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
+RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
 
 int CountLeadingZeroes(uint num)
 {
@@ -137,5 +138,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		WriteParent(idx, childAIndex, childBIndex);
 		WriteChild(childAIndex, idx);
 		WriteChild(childBIndex, idx);
+
+		// Reset bvh node flag (only internal nodes):
+		bvhFlagBuffer[idx] = 0;
 	}
 }

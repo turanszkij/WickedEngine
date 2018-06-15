@@ -19,7 +19,7 @@ RWRAWBUFFER(clusterCounterBuffer, 1);
 RWSTRUCTUREDBUFFER(clusterIndexBuffer, uint, 2);
 RWSTRUCTUREDBUFFER(clusterMortonBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(clusterOffsetBuffer, uint2, 4); // offset, count
-RWSTRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingClusterAABB, 5);
+RWSTRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, 5);
 
 groupshared int3 GroupMin;
 groupshared int3 GroupMax;

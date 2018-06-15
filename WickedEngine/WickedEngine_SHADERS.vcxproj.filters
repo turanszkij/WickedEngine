@@ -750,6 +750,9 @@
     <FxCompile Include="raytrace_bvh_sortedmortonCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="raytrace_bvh_propagateaabbCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

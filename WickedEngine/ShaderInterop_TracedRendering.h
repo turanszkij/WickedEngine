@@ -5,6 +5,7 @@
 #define TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE 64
 #define TRACEDRENDERING_BVH_SORTEDMORTON_GROUPSIZE 64
 #define TRACEDRENDERING_BVH_HIERARCHY_GROUPSIZE 64
+#define TRACEDRENDERING_BVH_PROPAGATEAABB_GROUPSIZE 64
 
 #define TRACEDRENDERING_CLEAR_BLOCKSIZE 8
 #define TRACEDRENDERING_LAUNCH_BLOCKSIZE 8
@@ -33,7 +34,7 @@ struct TracedRenderingMeshTriangle
 	float2 t0, t1, t2;
 	uint materialIndex;
 };
-struct TracedRenderingClusterAABB
+struct TracedRenderingAABB
 {
 	float3 min;
 	float3 max;
