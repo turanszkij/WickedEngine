@@ -1477,6 +1477,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_RAYTRACE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_KICKHIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_kickhierarchyCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_BVH_SORTEDMORTON] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_sortedmortonCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6416,6 +6417,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	static GPUBuffer* clusterCounterBuffer = nullptr;
 	static GPUBuffer* clusterIndexBuffer = nullptr;
 	static GPUBuffer* clusterMortonBuffer = nullptr;
+	static GPUBuffer* clusterSortedMortonBuffer = nullptr;
 	static GPUBuffer* clusterOffsetBuffer = nullptr;
 	static GPUBuffer* clusterAABBBuffer = nullptr;
 	const uint maxClusterCount = 1000;
@@ -6432,6 +6434,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		SAFE_DELETE(clusterCounterBuffer);
 		SAFE_DELETE(clusterIndexBuffer);
 		SAFE_DELETE(clusterMortonBuffer);
+		SAFE_DELETE(clusterSortedMortonBuffer);
 		SAFE_DELETE(clusterOffsetBuffer);
 		SAFE_DELETE(clusterAABBBuffer);
 		bvhNodeBuffer = new GPUBuffer;
@@ -6439,6 +6442,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		clusterCounterBuffer = new GPUBuffer;
 		clusterIndexBuffer = new GPUBuffer;
 		clusterMortonBuffer = new GPUBuffer;
+		clusterSortedMortonBuffer = new GPUBuffer;
 		clusterOffsetBuffer = new GPUBuffer;
 		clusterAABBBuffer = new GPUBuffer;
 
@@ -6490,6 +6494,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
 		assert(SUCCEEDED(hr));
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -6607,7 +6612,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	device->EventEnd(threadID);
 
 
-	device->EventBegin("BVH - Sort Clusters", threadID);
+	device->EventBegin("BVH - Sort Cluster Mortons", threadID);
 	wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
 	device->EventEnd(threadID);
 
@@ -6631,6 +6636,29 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	}
 	device->EventEnd(threadID);
 
+	device->EventBegin("BVH - Assemble Sorted Mortons", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_SORTEDMORTON], threadID);
+		GPUResource* uavs[] = {
+			clusterSortedMortonBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, 0, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
 	device->EventBegin("BVH - Build Hierarchy", threadID);
 	{
 		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_HIERARCHY], threadID);
@@ -6641,8 +6669,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
-			clusterIndexBuffer,
-			clusterMortonBuffer,
+			clusterSortedMortonBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 

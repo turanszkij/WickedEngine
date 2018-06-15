@@ -2,53 +2,102 @@
 #include "ShaderInterop_TracedRendering.h"
 #include "tracedRenderingHF.hlsli"
 
+// This shader will construct the BVH from sorted cluster morton codes.
+//	Output is a list of continuous BVH tree nodes in memory: [parentIndex, leftChildNodeIndex, rightChildNodeIndex]
+//	The output node is a leaf node if: leftChildNodeIndex == rightChildNodeIndex == 0
+//	Else the output node is an intermediate node
+//	Also, we know that intermediate nodes start at arrayIndex == 0 (starting with root node)
+//	Also, we know that leaf nodes will start at arrayIndex == clusterCount -1 (and they will correspond to a single cluster, which is indexable by clusterIndexBuffer later)
+
+// Using the Karras's 2012 parallel BVH construction algorithm outlined 
+// in "Maximizing Parallelism in the Construction of BVHs, Octrees,
+// and k-d Trees"
+
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(clusterMortonBuffer, uint, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(clusterMortonBuffer, uint, TEXSLOT_ONDEMAND1);
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
 
-#define __clz firstbithigh
-
-inline int2 determineRange(uint count, uint idx)
+int CountLeadingZeroes(uint num)
 {
-	//todo
-	return int2(count, idx);
+	return 31 - firstbithigh(num);
 }
 
-inline int findSplit(int first, int last)
+void WriteChild(uint childIndex, uint parentIndex)
 {
-	// Identical Morton codes => split the range in the middle.
+	bvhNodeBuffer[childIndex].ParentIndex = parentIndex;
+}
 
-	uint firstCode = clusterMortonBuffer[first];
-	uint lastCode = clusterMortonBuffer[last];
+void WriteParent(uint parentIndex, int leftBoxIndex, int rightBoxIndex)
+{
+	bvhNodeBuffer[parentIndex].LeftChildIndex = leftBoxIndex;
+	bvhNodeBuffer[parentIndex].RightChildIndex = rightBoxIndex;
+}
 
-	if (firstCode == lastCode)
-		return (first + last) >> 1;
+int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
+{
+	if (indexA >= elementCount || indexB >= elementCount)
+	{
+		return -1;
+	}
+	else
+	{
+		uint mortonCodeA = clusterMortonBuffer[indexA];
+		uint mortonCodeB = clusterMortonBuffer[indexB];
+		if (mortonCodeA != mortonCodeB)
+		{
+			return CountLeadingZeroes(clusterMortonBuffer[indexA] ^ clusterMortonBuffer[indexB]);
+		}
+		else
+		{
+			// TODO: Technically this should be primitive ID
+			return CountLeadingZeroes(indexA ^ indexB) + 31;
+		}
+	}
+}
 
-	// Calculate the number of highest bits that are the same
-	// for all objects, using the count-leading-zeros intrinsic.
+uint2 DetermineRange(uint idx, uint elementCount)
+{
+	int d = GetLongestCommonPrefix(idx, idx + 1, elementCount) - GetLongestCommonPrefix(idx, idx - 1, elementCount);
+	d = clamp(d, -1, 1);
+	int minPrefix = GetLongestCommonPrefix(idx, idx - d, elementCount);
 
-	int commonPrefix = __clz(firstCode ^ lastCode);
+	// TODO: Consider starting this at a higher number
+	int maxLength = 2;
+	while (GetLongestCommonPrefix(idx, idx + maxLength * d, elementCount) > minPrefix)
+	{
+		maxLength *= 4;
+	}
 
-	// Use binary search to find where the next bit differs.
-	// Specifically, we are looking for the highest object that
-	// shares more than commonPrefix bits with the first one.
+	int length = 0;
+	for (int t = maxLength / 2; t > 0; t /= 2)
+	{
+		if (GetLongestCommonPrefix(idx, idx + (length + t) * d, elementCount) > minPrefix)
+		{
+			length = length + t;
+		}
+	}
 
-	int split = first; // initial guess
+	int j = idx + length * d;
+	return uint2(min(idx, j), max(idx, j));
+}
+
+int FindSplit(int first, uint last, uint elementCount)
+{
+	int commonPrefix = GetLongestCommonPrefix(first, last, elementCount);
+	int split = first;
 	int step = last - first;
 
 	do
 	{
-		step = (step + 1) >> 1; // exponential decrease
-		int newSplit = split + step; // proposed new position
+		step = (step + 1) >> 1;
+		int newSplit = split + step;
 
 		if (newSplit < last)
 		{
-			uint splitCode = clusterMortonBuffer[newSplit];
-			int splitPrefix = __clz(firstCode ^ splitCode);
+			int splitPrefix = GetLongestCommonPrefix(first, newSplit, elementCount);
 			if (splitPrefix > commonPrefix)
-				split = newSplit; // accept proposal
+				split = newSplit;
 		}
 	} while (step > 1);
 
@@ -65,56 +114,28 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	if (idx < clusterCount - 1)
 	{
-		// Find out which range of objects the node corresponds to.
-		// (This is where the magic happens!)
+		uint2 range = DetermineRange(idx, clusterCount);
+		uint first = range.x;
+		uint last = range.y;
 
-		int2 range = determineRange(clusterCount, idx);
-		int first = range.x;
-		int last = range.y;
+		uint split = FindSplit(first, last, clusterCount);
 
-		// Determine where to split the range.
-
-		int split = findSplit(first, last);
-
-		// Select childA.
-
-		uint childA = split;
+		uint internalNodeOffset = 0;
+		uint leafNodeOffset = clusterCount - 1;
+		uint childAIndex;
 		if (split == first)
-		{
-			//childA = &leafNodes[split];
-			childA = BVH_MakeLeafNode(childA);
-		}
+			childAIndex = leafNodeOffset + split;
 		else
-		{
-			//childA = &internalNodes[split];
-		}
+			childAIndex = internalNodeOffset + split;
 
-		// Select childB.
-
-		uint childB = split + 1;
+		uint childBIndex;
 		if (split + 1 == last)
-		{
-			//childB = &leafNodes[split + 1];
-			childB = BVH_MakeLeafNode(childB);
-		}
+			childBIndex = leafNodeOffset + split + 1;
 		else
-		{
-			//childB = &internalNodes[split + 1];
-		}
+			childBIndex = internalNodeOffset + split + 1;
 
-		// Record parent-child relationships.
-
-		bvhNodeBuffer[idx].childA = childA;
-		bvhNodeBuffer[idx].childB = childB;
-		//childA->parent = &internalNodes[idx];
-		//childB->parent = &internalNodes[idx];
-		if (!BVH_IsLeafNode(childA))
-		{
-			bvhNodeBuffer[childA].parent = idx;
-		}
-		if (!BVH_IsLeafNode(childB))
-		{
-			bvhNodeBuffer[childB].parent = idx;
-		}
+		WriteParent(idx, childAIndex, childBIndex);
+		WriteChild(childAIndex, idx);
+		WriteChild(childBIndex, idx);
 	}
 }
