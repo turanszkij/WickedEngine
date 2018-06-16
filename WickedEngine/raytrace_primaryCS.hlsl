@@ -10,6 +10,18 @@ RWTEXTURE2D(resultTexture, float4, 2);
 // This enables reduced atomics into global memory
 //#define ADVANCED_ALLOCATION
 
+// If this is defined, we will use the BVH acceleration structure to filter triangles
+#define BVH_TRAVERSAL
+
+#ifndef BVH_TRAVERSAL
+// If this is defined, then we will use LDS to accelerate triangle memory access (doesn't work with BVH)
+#define LDS_MESH
+#endif // BVH_TRAVERSAL
+
+#ifdef LDS_MESH
+groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GROUPSIZE];
+#endif
+
 #ifdef ADVANCED_ALLOCATION
 static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_PRIMARY_GROUPSIZE / 32;
 groupshared uint GroupActiveRayMask[GroupActiveRayMaskBucketCount];
@@ -43,18 +55,6 @@ TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
-
-// If this is defined, we will use the BVH acceleration structure to filter triangles
-#define BVH_TRAVERSAL
-
-#ifndef BVH_TRAVERSAL
-// If this is defined, then we will use LDS to accelerate triangle memory access
-#define LDS_MESH
-#endif // BVH_TRAVERSAL
-
-#ifdef LDS_MESH
-groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GROUPSIZE];
-#endif
 
 inline RayHit TraceScene(Ray ray, uint groupIndex)
 {
@@ -114,7 +114,8 @@ inline RayHit TraceScene(Ray ray, uint groupIndex)
 				}
 				else
 				{
-					// out of stack space, this should never happen!
+					// stack overflow, terminate
+					break;
 				}
 			}
 

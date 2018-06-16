@@ -22,7 +22,7 @@ RWSTRUCTUREDBUFFER(clusterOffsetBuffer, uint2, 4); // offset, count
 RWSTRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, 5);
 
 // if defined, triangles will be grouped into clusters, else every triangle will be its own cluster:
-#define CLUSTER_GROUP
+//#define CLUSTER_GROUP
 
 #ifdef CLUSTER_GROUP
 static const float MapFloatToUint = 1000000.0f;

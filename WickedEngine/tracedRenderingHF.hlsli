@@ -184,28 +184,25 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in TracedRenderingM
 //	return t[9];
 //}
 
-inline bool IntersectBox(in Ray ray, in TracedRenderingAABB box/*, out float dist*/)
+
+inline bool IntersectBox(in Ray ray, in TracedRenderingAABB box)
 {
-	float3 vmin = box.min;
-	float3 vmax = box.max;
-	float3 rpos = ray.origin;
-	float3 rdir = ray.direction_inverse;
+	if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
+		ray.origin.y >= box.min.y && ray.origin.y <= box.max.y &&
+		ray.origin.z >= box.min.z && ray.origin.z <= box.max.z)
+		return true;
 
 	float t[9];
-	t[1] = (vmin.x - rpos.x) * rdir.x;
-	t[2] = (vmax.x - rpos.x) * rdir.x;
-	t[3] = (vmin.y - rpos.y) * rdir.y;
-	t[4] = (vmax.y - rpos.y) * rdir.y;
-	t[5] = (vmin.z - rpos.z) * rdir.z;
-	t[6] = (vmax.z - rpos.z) * rdir.z;
+	t[1] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;
+	t[2] = (box.max.x - ray.origin.x) * ray.direction_inverse.x;
+	t[3] = (box.min.y - ray.origin.y) * ray.direction_inverse.y;
+	t[4] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
+	t[5] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
+	t[6] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
 	t[7] = max(max(min(t[1], t[2]), min(t[3], t[4])), min(t[5], t[6]));
 	t[8] = min(min(max(t[1], t[2]), max(t[3], t[4])), max(t[5], t[6]));
 
-	bool hit = (t[8] < 0 || t[7] > t[8]) ? false : true;
-
-	//dist = hit ? t[7] : -100000;
-
-	return hit;
+	return (t[8] < 0 || t[7] > t[8]) ? false : true;
 }
 
 

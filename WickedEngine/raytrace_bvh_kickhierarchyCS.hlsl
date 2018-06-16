@@ -17,20 +17,17 @@ RWSTRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, 2);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint clusterCount = clusterCounterBuffer.Load(0);
+	const uint threadGroupCount = (clusterCount < 2) ? 0 : ceil((float)(clusterCount - 1) / (float)TRACEDRENDERING_BVH_HIERARCHY_GROUPSIZE);
 
-	indirectDispatchBuffer.Store3(0, uint3(ceil((float)(clusterCount - 1) / (float)TRACEDRENDERING_BVH_HIERARCHY_GROUPSIZE), 1, 1));
+	indirectDispatchBuffer.Store3(0, uint3(threadGroupCount, 1, 1));
 
-	if (clusterCount == 1)
-	{
-		// Initialize root as leaf node:
-		bvhNodeBuffer[0].ParentIndex = 0;
-		bvhNodeBuffer[0].LeftChildIndex = 0;
-		bvhNodeBuffer[0].RightChildIndex = 0;
+	// Initialize root as leaf node (safety):
+	bvhNodeBuffer[0].ParentIndex = 0;
+	bvhNodeBuffer[0].LeftChildIndex = 0;
+	bvhNodeBuffer[0].RightChildIndex = 0;
 
-		// Write root level AABB:
-		bvhAABBBuffer[0] = clusterAABBBuffer[0];
-
-		//bvhAABBBuffer[0].min = g_xFrame_WorldBoundsMin;
-		//bvhAABBBuffer[0].max = g_xFrame_WorldBoundsMax;
-	}
+	// Write root level AABB:
+	//bvhAABBBuffer[0] = clusterAABBBuffer[0];
+	bvhAABBBuffer[0].min = g_xFrame_WorldBoundsMin;
+	bvhAABBBuffer[0].max = g_xFrame_WorldBoundsMax;
 }
