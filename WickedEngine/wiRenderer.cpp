@@ -6339,7 +6339,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	uint _raycount = _width * _height;
 
 	static GPUBuffer* materialBuffer = nullptr;
-	static MaterialCB materialArray[10] = {};
+	static MaterialCB materialArray[1000] = {};
 	static GPUBuffer* rayBuffer[2] = {};
 	static GPUBuffer* indirectBuffer = nullptr;
 	static GPUBuffer* counterBuffer[2] = {};
@@ -6354,7 +6354,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.StructureByteStride = sizeof(MaterialCB);
-		desc.ByteWidth = desc.StructureByteStride * 10;
+		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -6423,8 +6423,8 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	static GPUBuffer* clusterSortedMortonBuffer = nullptr;
 	static GPUBuffer* clusterOffsetBuffer = nullptr;
 	static GPUBuffer* clusterAABBBuffer = nullptr;
-	const uint maxClusterCount = 100000;
-	const uint maxTriangleCount = 100000;
+	const uint maxClusterCount = 800000;
+	const uint maxTriangleCount = 800000;
 
 	if (allocateBVH)
 	{

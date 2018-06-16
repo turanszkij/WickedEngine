@@ -25,10 +25,12 @@ RWSTRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, 5);
 //#define CLUSTER_GROUP
 
 #ifdef CLUSTER_GROUP
-static const float MapFloatToUint = 1000000.0f;
-groupshared uint3 GroupMin;
-groupshared uint3 GroupMax;
-groupshared uint ClusterTriangleCount;
+static const uint clusterTriangleCapacity = 8;
+static const uint bucketCount = TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE / clusterTriangleCapacity;
+static const float MapFloatToUint = 100000.0f;
+groupshared uint3 GroupMin[bucketCount];
+groupshared uint3 GroupMax[bucketCount];
+groupshared uint ClusterTriangleCount[bucketCount];
 #endif // CLUSTER_GROUP
 
 
@@ -60,20 +62,24 @@ inline uint morton3D(in float3 pos)
 [numthreads(TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
+	const uint tri = DTid.x;
+	const uint globalTriangleID = xTraceBVHMeshTriangleOffset + tri;
+	const bool activeThread = tri < xTraceBVHMeshTriangleCount;
+
 #ifdef CLUSTER_GROUP
-	if (groupIndex == 0)
+	const bool isClusterUpdateThread = activeThread && (groupIndex % clusterTriangleCapacity == 0);
+	const uint bucket = groupIndex / clusterTriangleCapacity;
+
+	if (isClusterUpdateThread)
 	{
-		GroupMin = 0xFFFFFFFF;
-		GroupMax = 0;
-		ClusterTriangleCount = 0;
+		GroupMin[bucket] = 0xFFFFFFFF;
+		GroupMax[bucket] = 0;
+		ClusterTriangleCount[bucket] = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 #endif // CLUSTER_GROUP
 
-	uint tri = DTid.x;
-	uint globalTriangleID = xTraceBVHMeshTriangleOffset + tri;
-
-	if (tri < xTraceBVHMeshTriangleCount)
+	if (activeThread)
 	{
 		// load indices of triangle from index buffer
 		uint i0 = meshIndexBuffer[tri * 3 + 0];
@@ -134,23 +140,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 #ifdef CLUSTER_GROUP
 		// Count triangles in the cluster (ideally it would be max cluster size, but might be the end of the mesh...)
-		InterlockedAdd(ClusterTriangleCount, 1);
+		InterlockedAdd(ClusterTriangleCount[bucket], 1);
 
 		// Remap triangle AABB to [0-1]:
 		minAABB = (minAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
 		maxAABB = (maxAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
 
 		// Atomics can be only performed on integers, so convert:
-		uint3 uMin = (uint)(minAABB * MapFloatToUint);
-		uint3 uMax = (uint)(maxAABB * MapFloatToUint);
+		uint3 uMin = (uint3)(minAABB * MapFloatToUint);
+		uint3 uMax = (uint3)(maxAABB * MapFloatToUint);
 
 		// Merge cluster AABB:
-		InterlockedMin(GroupMin.x, uMin.x);
-		InterlockedMin(GroupMin.y, uMin.y);
-		InterlockedMin(GroupMin.z, uMin.z);
-		InterlockedMax(GroupMax.x, uMax.x);
-		InterlockedMax(GroupMax.y, uMax.y);
-		InterlockedMax(GroupMax.z, uMax.z);
+		InterlockedMin(GroupMin[bucket].x, uMin.x);
+		InterlockedMin(GroupMin[bucket].y, uMin.y);
+		InterlockedMin(GroupMin[bucket].z, uMin.z);
+		InterlockedMax(GroupMax[bucket].x, uMax.x);
+		InterlockedMax(GroupMax[bucket].y, uMax.y);
+		InterlockedMax(GroupMax[bucket].z, uMax.z);
 
 #else
 		// Each triangle is its own cluster:
@@ -177,7 +183,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #ifdef CLUSTER_GROUP
 	GroupMemoryBarrierWithGroupSync();
 
-	if (groupIndex == 0)
+	if (isClusterUpdateThread)
 	{
 		// Store cluster data:
 		uint clusterID;
@@ -185,14 +191,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		clusterIndexBuffer[clusterID] = clusterID;
 
-		float3 minAABB = ((float)GroupMin / MapFloatToUint) * g_xFrame_WorldBoundsExtents + g_xFrame_WorldBoundsMin;
-		float3 maxAABB = ((float)GroupMax / MapFloatToUint) * g_xFrame_WorldBoundsExtents + g_xFrame_WorldBoundsMin;
+		float3 minAABB = ((float3)GroupMin[bucket] / MapFloatToUint) * g_xFrame_WorldBoundsExtents + g_xFrame_WorldBoundsMin;
+		float3 maxAABB = ((float3)GroupMax[bucket] / MapFloatToUint) * g_xFrame_WorldBoundsExtents + g_xFrame_WorldBoundsMin;
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
 		float3 remappedCenter = (centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
 
 		clusterMortonBuffer[clusterID] = morton3D(remappedCenter);
 
-		clusterOffsetBuffer[clusterID] = uint2(globalTriangleID, ClusterTriangleCount);
+		clusterOffsetBuffer[clusterID] = uint2(globalTriangleID, ClusterTriangleCount[bucket]);
 
 		clusterAABBBuffer[clusterID].min = minAABB;
 		clusterAABBBuffer[clusterID].max = maxAABB;

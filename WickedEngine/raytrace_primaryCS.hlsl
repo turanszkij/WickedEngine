@@ -105,10 +105,10 @@ inline RayHit TraceScene(Ray ray, uint groupIndex)
 				// Internal node
 				if (stackpos < stacksize - 1)
 				{
-					//push left node
+					// push left child
 					stack[stackpos] = node.LeftChildIndex;
 					stackpos++;
-					// push right node
+					// push right child
 					stack[stackpos] = node.RightChildIndex;
 					stackpos++;
 				}
