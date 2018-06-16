@@ -6648,11 +6648,14 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_KICKHIERARCHY], threadID);
 		GPUResource* uavs[] = {
 			indirectBuffer,
+			bvhNodeBuffer,
+			bvhAABBBuffer,
 		};
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
+			clusterAABBBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
@@ -6833,6 +6836,11 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 				device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
 				device->BindResource(CS, triangleBuffer, TEXSLOT_ONDEMAND1, threadID);
+				device->BindResource(CS, clusterCounterBuffer, 0, threadID); // !!!
+				device->BindResource(CS, clusterIndexBuffer, TEXSLOT_ONDEMAND2, threadID);
+				device->BindResource(CS, clusterOffsetBuffer, TEXSLOT_ONDEMAND3, threadID);
+				device->BindResource(CS, bvhNodeBuffer, TEXSLOT_UNIQUE0, threadID);
+				device->BindResource(CS, bvhAABBBuffer, TEXSLOT_UNIQUE1, threadID);
 
 				device->DispatchIndirect(indirectBuffer, 0, threadID);
 				//device->Dispatch((UINT)ceilf((float)_raycount / (float)TRACEDRENDERING_PRIMARY_GROUPSIZE), 1, 1, threadID);

@@ -19,6 +19,7 @@ struct Ray
 {
 	float3 origin;
 	float3 direction;
+	float3 direction_inverse;
 	float3 energy;
 };
 
@@ -44,6 +45,7 @@ inline void LoadRay(in StoredRay storedray, out Ray ray, out uint pixelID)
 
 	ray.origin = storedray.origin;
 	ray.direction = asfloat(f16tof32(storedray.direction_energy));
+	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
 }
 
@@ -52,6 +54,7 @@ inline Ray CreateRay(float3 origin, float3 direction)
 	Ray ray;
 	ray.origin = origin;
 	ray.direction = direction;
+	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = float3(1, 1, 1);
 	return ray;
 }
@@ -162,6 +165,47 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in TracedRenderingM
 
 		bestHit.materialIndex = tri.materialIndex;
 	}
+}
+
+
+
+//inline float rayBoxIntersect(float3 rpos, float3 rdir, float3 vmin, float3 vmax)
+//{
+//	float t[10];
+//	t[1] = (vmin.x - rpos.x) / rdir.x;
+//	t[2] = (vmax.x - rpos.x) / rdir.x;
+//	t[3] = (vmin.y - rpos.y) / rdir.y;
+//	t[4] = (vmax.y - rpos.y) / rdir.y;
+//	t[5] = (vmin.z - rpos.z) / rdir.z;
+//	t[6] = (vmax.z - rpos.z) / rdir.z;
+//	t[7] = fmax(fmax(fmin(t[1], t[2]), fmin(t[3], t[4])), fmin(t[5], t[6]));
+//	t[8] = fmin(fmin(fmax(t[1], t[2]), fmax(t[3], t[4])), fmax(t[5], t[6]));
+//	t[9] = (t[8] < 0 || t[7] > t[8]) ? NOHIT : t[7];
+//	return t[9];
+//}
+
+inline bool IntersectBox(in Ray ray, in TracedRenderingAABB box/*, out float dist*/)
+{
+	float3 vmin = box.min;
+	float3 vmax = box.max;
+	float3 rpos = ray.origin;
+	float3 rdir = ray.direction_inverse;
+
+	float t[9];
+	t[1] = (vmin.x - rpos.x) * rdir.x;
+	t[2] = (vmax.x - rpos.x) * rdir.x;
+	t[3] = (vmin.y - rpos.y) * rdir.y;
+	t[4] = (vmax.y - rpos.y) * rdir.y;
+	t[5] = (vmin.z - rpos.z) * rdir.z;
+	t[6] = (vmax.z - rpos.z) * rdir.z;
+	t[7] = max(max(min(t[1], t[2]), min(t[3], t[4])), min(t[5], t[6]));
+	t[8] = min(min(max(t[1], t[2]), max(t[3], t[4])), max(t[5], t[6]));
+
+	bool hit = (t[8] < 0 || t[7] > t[8]) ? false : true;
+
+	//dist = hit ? t[7] : -100000;
+
+	return hit;
 }
 
 

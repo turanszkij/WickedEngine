@@ -31,6 +31,11 @@ struct Material
 };
 STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND1);
+RAWBUFFER(clusterCounterBuffer, 0);
+STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_UNIQUE0);
+STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_UNIQUE1);
 
 TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
 TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
@@ -39,7 +44,13 @@ TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
 
+// If this is defined, we will use the BVH acceleration structure to filter triangles
+#define BVH_TRAVERSAL
+
+#ifndef BVH_TRAVERSAL
+// If this is defined, then we will use LDS to accelerate triangle memory access
 #define LDS_MESH
+#endif // BVH_TRAVERSAL
 
 #ifdef LDS_MESH
 groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GROUPSIZE];
@@ -48,8 +59,74 @@ groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GR
 inline RayHit TraceScene(Ray ray, uint groupIndex)
 {
 	RayHit bestHit = CreateRayHit();
+
+#ifdef BVH_TRAVERSAL
+
+	// Using BVH acceleration structure:
+
+	// Emulated stack for tree traversal:
+	const uint stacksize = 32;
+	uint stack[stacksize];
+	uint stackpos = 0;
+
+	const uint clusterCount = clusterCounterBuffer.Load(0);
+	const uint leafNodeOffset = clusterCount - 1;
+
+	// push root node
+	stack[stackpos] = 0;
+	stackpos++;
+
+	do {
+		// pop untraversed node
+		stackpos--;
+		const uint nodeIndex = stack[stackpos];
+
+		BVHNode node = bvhNodeBuffer[nodeIndex];
+		TracedRenderingAABB box = bvhAABBBuffer[nodeIndex];
+
+		if (IntersectBox(ray, box))
+		{
+			if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
+			{
+				// Leaf node
+				const uint nodeToClusterID = nodeIndex - leafNodeOffset;
+				const uint clusterIndex = clusterIndexBuffer[nodeToClusterID];
+				const uint2 cluster = clusterOffsetBuffer[clusterIndex];
+				const uint triangleOffset = cluster.x;
+				const uint triangleCount = cluster.y;
+
+				for (uint tri = 0; tri < triangleCount; ++tri)
+				{
+					IntersectTriangle(ray, bestHit, triangleBuffer[triangleOffset + tri]);
+				}
+			}
+			else
+			{
+				// Internal node
+				if (stackpos < stacksize - 1)
+				{
+					//push left node
+					stack[stackpos] = node.LeftChildIndex;
+					stackpos++;
+					// push right node
+					stack[stackpos] = node.RightChildIndex;
+					stackpos++;
+				}
+				else
+				{
+					// out of stack space, this should never happen!
+				}
+			}
+
+		}
+
+	} while (stackpos > 0);
+
+#else
 	
 #ifdef LDS_MESH
+
+	// Using linear LDS acceleration:
 
 	uint numTiles = 1 + xTraceMeshTriangleCount / TRACEDRENDERING_PRIMARY_GROUPSIZE;
 
@@ -73,12 +150,16 @@ inline RayHit TraceScene(Ray ray, uint groupIndex)
 
 #else
 
+	// Not using any acceleration structure:
+
 	for (uint tri = 0; tri < xTraceMeshTriangleCount; ++tri)
 	{
 		IntersectTriangle(ray, bestHit, triangleBuffer[tri]);
 	}
 
 #endif // LDS_MESH
+
+#endif // BVH_TRAVERSAL
 
 	return bestHit;
 }
