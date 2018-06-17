@@ -941,6 +941,7 @@ void EditorComponent::Update(float dt)
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
+
 			if (!wiInputManager::GetInstance()->down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
@@ -954,8 +955,14 @@ void EditorComponent::Update(float dt)
 			}
 
 			move = XMVectorLerp(move, moveNew, 0.18f * dt / 0.0166f); // smooth the movement a bit
+			float moveLength = XMVectorGetX(XMVector3Length(move));
 
-			if (abs(xDif) + abs(yDif) > 0 || XMVectorGetX(XMVector3Length(move)) > 0.01f)
+			if (moveLength < 0.01f)
+			{
+				move = XMVectorSet(0, 0, 0, 0);
+			}
+			
+			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.01f)
 			{
 				cam->Move(move);
 				cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));

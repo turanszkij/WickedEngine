@@ -22,10 +22,10 @@ RWSTRUCTUREDBUFFER(clusterOffsetBuffer, uint2, 4); // offset, count
 RWSTRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, 5);
 
 // if defined, triangles will be grouped into clusters, else every triangle will be its own cluster:
-//#define CLUSTER_GROUP
+#define CLUSTER_GROUP
 
 #ifdef CLUSTER_GROUP
-static const uint clusterTriangleCapacity = 8;
+static const uint clusterTriangleCapacity = 4;
 static const uint bucketCount = TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE / clusterTriangleCapacity;
 static const float MapFloatToUint = 100000.0f;
 groupshared uint3 GroupMin[bucketCount];

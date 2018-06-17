@@ -8,7 +8,7 @@ RWSTRUCTUREDBUFFER(rayBuffer_WRITE, StoredRay, 1);
 RWTEXTURE2D(resultTexture, float4, 2);
 
 // This enables reduced atomics into global memory
-//#define ADVANCED_ALLOCATION
+#define ADVANCED_ALLOCATION
 
 // If this is defined, we will use the BVH acceleration structure to filter triangles
 #define BVH_TRAVERSAL
@@ -175,10 +175,10 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 
 		Material mat = materialBuffer[hit.materialIndex];
 		
-		float4 baseColor = mat.baseColor * baseColorMap;
+		float4 baseColor = mat.baseColor /** baseColorMap*/;
 		float reflectance = mat.reflectance/* * surfaceMap.r*/;
 		float metalness = mat.metalness/* * surfaceMap.g*/;
-		float3 emissive = baseColor.rgb * mat.emissive * surfaceMap.b;
+		float3 emissive = baseColor.rgb * mat.emissive /** surfaceMap.b*/;
 		float roughness = mat.roughness/* * normalMap.a*/;
 
 		float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
@@ -265,7 +265,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 
 		RayHit hit = TraceScene(ray, groupIndex);
 		float3 result = ray.energy * Shade(ray, hit, seed, uv);
-
+		result = max(0, result);
 
 		// Write pixel color:
 		resultTexture[coords2D] += float4(result, 0);

@@ -6423,8 +6423,8 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	static GPUBuffer* clusterSortedMortonBuffer = nullptr;
 	static GPUBuffer* clusterOffsetBuffer = nullptr;
 	static GPUBuffer* clusterAABBBuffer = nullptr;
-	const uint maxClusterCount = 800000;
-	const uint maxTriangleCount = 800000;
+	const uint maxClusterCount = 1000000;
+	const uint maxTriangleCount = 1000000;
 
 	if (allocateBVH)
 	{
