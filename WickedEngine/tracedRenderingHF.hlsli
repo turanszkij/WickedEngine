@@ -21,6 +21,7 @@ struct Ray
 	float3 direction;
 	float3 direction_inverse;
 	float3 energy;
+	float3 normal;
 };
 
 struct StoredRay
@@ -28,6 +29,7 @@ struct StoredRay
 	uint pixelID;
 	float3 origin;
 	uint3 direction_energy;
+	uint normal;
 };
 inline StoredRay CreateStoredRay(in Ray ray, in uint pixelID)
 {
@@ -36,6 +38,11 @@ inline StoredRay CreateStoredRay(in Ray ray, in uint pixelID)
 	storedray.pixelID = pixelID;
 	storedray.origin = ray.origin;
 	storedray.direction_energy = f32tof16(ray.direction) | (f32tof16(ray.energy) << 16);
+
+	storedray.normal = 0;
+	storedray.normal |= (uint)((ray.normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+	storedray.normal |= (uint)((ray.normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+	storedray.normal |= (uint)((ray.normal.z * 0.5f + 0.5f) * 255.0f) << 16;
 
 	return storedray;
 }
@@ -47,6 +54,10 @@ inline void LoadRay(in StoredRay storedray, out Ray ray, out uint pixelID)
 	ray.direction = asfloat(f16tof32(storedray.direction_energy));
 	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
+
+	ray.normal.x = (float)((storedray.normal >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	ray.normal.y = (float)((storedray.normal >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	ray.normal.z = (float)((storedray.normal >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 }
 
 inline Ray CreateRay(float3 origin, float3 direction)
@@ -56,6 +67,7 @@ inline Ray CreateRay(float3 origin, float3 direction)
 	ray.direction = direction;
 	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = float3(1, 1, 1);
+	ray.normal = float3(0, 0, 0);
 	return ray;
 }
 
@@ -165,6 +177,44 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in TracedRenderingM
 
 		bestHit.materialIndex = tri.materialIndex;
 	}
+}
+
+inline bool IntersectTriangleANY(Ray ray, in TracedRenderingMeshTriangle tri)
+{
+	float3 v0v1 = tri.v1 - tri.v0;
+	float3 v0v2 = tri.v2 - tri.v0;
+	float3 pvec = cross(ray.direction, v0v2);
+	float det = dot(v0v1, pvec);
+#ifdef BACKFACE_CULLING 
+	// if the determinant is negative the triangle is backfacing
+	// if the determinant is close to 0, the ray misses the triangle
+	if (det < EPSILON)
+		return false;
+#else 
+	// ray and triangle are parallel if det is close to 0
+	if (abs(det) < EPSILON)
+		return false;
+#endif 
+	float invDet = 1 / det;
+
+	float3 tvec = ray.origin - tri.v0;
+	float u = dot(tvec, pvec) * invDet;
+	if (u < 0 || u > 1)
+		return false;
+
+	float3 qvec = cross(tvec, v0v1);
+	float v = dot(ray.direction, qvec) * invDet;
+	if (v < 0 || u + v > 1)
+		return false;
+
+	float t = dot(v0v2, qvec) * invDet;
+
+	if (t > 0 && t < INFINITE_RAYHIT)
+	{
+		return true;
+	}
+
+	return false;
 }
 
 

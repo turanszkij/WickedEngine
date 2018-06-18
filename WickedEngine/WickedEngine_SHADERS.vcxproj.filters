@@ -729,9 +729,6 @@
     <FxCompile Include="raytrace_primaryCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_preparestepCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="raytrace_clearCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -751,6 +748,12 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="bvh_resetCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_lightsamplingCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_kickjobsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

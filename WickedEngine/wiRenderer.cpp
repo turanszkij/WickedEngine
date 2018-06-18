@@ -1482,8 +1482,9 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_PREPARESTEP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_preparestepCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -6369,7 +6370,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		rayBuffer[1] = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint) + sizeof(XMFLOAT3) + sizeof(XMFLOAT3);
+		desc.StructureByteStride = sizeof(uint) + sizeof(float3) + sizeof(uint3) + sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * _raycount;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -6807,14 +6808,27 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	{
 		for (int bounce = 0; bounce < 8; ++bounce)
 		{
-			int __readBufferID = bounce % 2;
-			int __writeBufferID = (bounce + 1) % 2;
+			const int __readBufferID = bounce % 2;
+			const int __writeBufferID = (bounce + 1) % 2;
 
-			// 1.) Prepare Step
-			device->EventBegin("Kickoff Bounce", threadID);
+			// Set up tracing resources:
+			device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+			device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
+			device->BindResource(CS, triangleBuffer, TEXSLOT_ONDEMAND1, threadID);
+			device->BindResource(CS, clusterCounterBuffer, 0, threadID); // !!!
+			device->BindResource(CS, clusterIndexBuffer, TEXSLOT_ONDEMAND2, threadID);
+			device->BindResource(CS, clusterOffsetBuffer, TEXSLOT_ONDEMAND3, threadID);
+			device->BindResource(CS, clusterConeBuffer, TEXSLOT_ONDEMAND4, threadID);
+			device->BindResource(CS, bvhNodeBuffer, TEXSLOT_UNIQUE0, threadID);
+			device->BindResource(CS, bvhAABBBuffer, TEXSLOT_UNIQUE1, threadID);
+
+
+			// 1.) Prepare Tracing Step
+			device->EventBegin("Prepare Trace Step", threadID);
 			{
 				// Prepare indirect dispatch based on counter buffer value:
-				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PREPARESTEP], threadID);
+				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
 
 				GPUResource* res[] = {
 					counterBuffer[__readBufferID],
@@ -6827,18 +6841,46 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
 				device->Dispatch(1, 1, 1, threadID);
-				device->UAVBarrier(uavs, 1, threadID);
+
+				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 			}
 			device->EventEnd(threadID);
 
-			// 2.) Compute bounce
+			if (bounce > 0)
+			{
+				// 2.) Light sampling (any hit) <- only after first bounce has occured
+				device->EventBegin("Light Sampling Rays", threadID);
+				{
+
+					// Indirect dispatch on active rays:
+					device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
+
+					GPUResource* res[] = {
+						counterBuffer[__readBufferID],
+						rayBuffer[__readBufferID],
+					};
+					device->BindResources(CS, res, TEXSLOT_ONDEMAND8, ARRAYSIZE(res), threadID);
+					GPUResource* uavs[] = {
+						counterBuffer[__writeBufferID],
+						rayBuffer[__writeBufferID],
+						result,
+					};
+					device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+					device->DispatchIndirect(indirectBuffer, 0, threadID);
+
+					device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+					device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+				}
+				device->EventEnd(threadID);
+			}
+
+			// 3.) Compute Primary Trace (closest hit)
 			device->EventBegin("Primary Rays Bounce", threadID);
 			{
 				// Indirect dispatch on active rays:
 				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
-
-				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 				GPUResource* res[] = {
 					counterBuffer[__readBufferID],
@@ -6852,21 +6894,13 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				};
 				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
-				device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
-				device->BindResource(CS, triangleBuffer, TEXSLOT_ONDEMAND1, threadID);
-				device->BindResource(CS, clusterCounterBuffer, 0, threadID); // !!!
-				device->BindResource(CS, clusterIndexBuffer, TEXSLOT_ONDEMAND2, threadID);
-				device->BindResource(CS, clusterOffsetBuffer, TEXSLOT_ONDEMAND3, threadID);
-				device->BindResource(CS, clusterConeBuffer, TEXSLOT_ONDEMAND4, threadID);
-				device->BindResource(CS, bvhNodeBuffer, TEXSLOT_UNIQUE0, threadID);
-				device->BindResource(CS, bvhAABBBuffer, TEXSLOT_UNIQUE1, threadID);
-
 				device->DispatchIndirect(indirectBuffer, 0, threadID);
-				//device->Dispatch((UINT)ceilf((float)_raycount / (float)TRACEDRENDERING_PRIMARY_GROUPSIZE), 1, 1, threadID);
+
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
 			}
 			device->EventEnd(threadID);
+
 		}
 
 	}

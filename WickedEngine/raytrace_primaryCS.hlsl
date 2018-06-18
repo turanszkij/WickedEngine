@@ -19,11 +19,11 @@ RWTEXTURE2D(resultTexture, float4, 2);
 #endif // BVH_TRAVERSAL
 
 #ifdef LDS_MESH
-groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GROUPSIZE];
+groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_TRACE_GROUPSIZE];
 #endif
 
 #ifdef ADVANCED_ALLOCATION
-static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_PRIMARY_GROUPSIZE / 32;
+static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_TRACE_GROUPSIZE / 32;
 groupshared uint GroupActiveRayMask[GroupActiveRayMaskBucketCount];
 groupshared uint GroupRayCount;
 groupshared uint GroupRayWriteOffset;
@@ -231,6 +231,8 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 			ray.energy *= (1.0f / diffChance) * albedo;
 		}
 
+		ray.normal = hit.normal;
+
 		return emissive;
 	}
 	else
@@ -242,7 +244,7 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 	}
 }
 
-[numthreads(TRACEDRENDERING_PRIMARY_GROUPSIZE, 1, 1)]
+[numthreads(TRACEDRENDERING_TRACE_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 {
 #ifdef ADVANCED_ALLOCATION
