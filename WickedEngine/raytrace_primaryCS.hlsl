@@ -25,6 +25,7 @@ groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_PRIMARY_GR
 #ifdef ADVANCED_ALLOCATION
 static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_PRIMARY_GROUPSIZE / 32;
 groupshared uint GroupActiveRayMask[GroupActiveRayMaskBucketCount];
+groupshared uint GroupRayCount;
 groupshared uint GroupRayWriteOffset;
 #endif // ADVANCED_ALLOCATION
 
@@ -228,13 +229,17 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 {
 #ifdef ADVANCED_ALLOCATION
+	const bool isGlobalUpdateThread = groupIndex == 0;
+	const bool isBucketUpdateThread = groupIndex < GroupActiveRayMaskBucketCount;
+
 	// Preinitialize group shared memory:
-	if (groupIndex == 0)
+	if (isBucketUpdateThread)
 	{
-		[unroll]
-		for (uint i = 0; i < GroupActiveRayMaskBucketCount; ++i)
+		GroupActiveRayMask[groupIndex] = 0;
+
+		if (isGlobalUpdateThread)
 		{
-			GroupActiveRayMask[i] = 0;
+			GroupRayCount = 0;
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -297,20 +302,17 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	// Allocate into global memory:
-	if (groupIndex == 0)
+	// Count all bucket set bits:
+	if (isBucketUpdateThread)
 	{
-		uint groupRayCount = 0;
+		InterlockedAdd(GroupRayCount, countbits(GroupActiveRayMask[groupIndex]));
+	}
+	GroupMemoryBarrierWithGroupSync();
 
-		// Count all bucket set bits:
-		[unroll]
-		for (uint i = 0; i < GroupActiveRayMaskBucketCount; ++i)
-		{
-			groupRayCount += countbits(GroupActiveRayMask[i]);
-		}
-
-		// Allocation:
-		counterBuffer_WRITE.InterlockedAdd(0, groupRayCount, GroupRayWriteOffset);
+	// Allocation:
+	if (isGlobalUpdateThread)
+	{
+		counterBuffer_WRITE.InterlockedAdd(0, GroupRayCount, GroupRayWriteOffset);
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -328,15 +330,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 			[flatten]
 			if (i == bucket)
 			{
-				// It is unfortunate, that we cannot shift with 32 in a 32-bit field (in the case of the first bucket element)
-				const uint shifts = 32 - threadIndexInBucket;
-
-				//// We can either shift in two half shifts:
-				//prefixMask >>= shifts / 2;
-				//prefixMask >>= shifts - (shifts / 2);
-
-				// Or check if we are the first element in the bucket and just set the mask to 0:
-				prefixMask = threadIndexInBucket == 0 ? 0 : (prefixMask >> shifts);
+				// We cannot shift with 32 in a 32-bit field (in the case of the first bucket element)
+				prefixMask = threadIndexInBucket == 0 ? 0 : (prefixMask >> (32 - threadIndexInBucket));
 			}
 
 			activePrefixSum += countbits(GroupActiveRayMask[i] & prefixMask);

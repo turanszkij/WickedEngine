@@ -160,7 +160,7 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in TracedRenderingM
 		bestHit.position = ray.origin + t * ray.direction;
 
 		float w = 1 - u - v;
-		bestHit.normal = tri.n0 * w + tri.n1 * u + tri.n2 * v;
+		bestHit.normal = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
 		bestHit.texCoords = tri.t0 * w + tri.t1 * u + tri.t2 * v;
 
 		bestHit.materialIndex = tri.materialIndex;
