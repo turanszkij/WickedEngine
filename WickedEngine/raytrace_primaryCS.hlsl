@@ -47,12 +47,13 @@ STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND1)
 RAWBUFFER(clusterCounterBuffer, 0);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_UNIQUE0);
 STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_UNIQUE1);
 
-TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
-TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
-TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
+//TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
+//TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
+//TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
@@ -92,13 +93,29 @@ inline RayHit TraceScene(Ray ray, uint groupIndex)
 				// Leaf node
 				const uint nodeToClusterID = nodeIndex - leafNodeOffset;
 				const uint clusterIndex = clusterIndexBuffer[nodeToClusterID];
-				const uint2 cluster = clusterOffsetBuffer[clusterIndex];
-				const uint triangleOffset = cluster.x;
-				const uint triangleCount = cluster.y;
+				bool cullCluster = false;
 
-				for (uint tri = 0; tri < triangleCount; ++tri)
+				// Compute per cluster visibility:
+				const ClusterCone cone = clusterConeBuffer[clusterIndex];
+				if (cone.valid)
 				{
-					IntersectTriangle(ray, bestHit, triangleBuffer[triangleOffset + tri]);
+					const float3 testVec = normalize(ray.origin - cone.position);
+					if (dot(testVec, cone.direction) > cone.angleCos)
+					{
+						cullCluster = true;
+					}
+				}
+
+				if (!cullCluster)
+				{
+					const uint2 cluster = clusterOffsetBuffer[clusterIndex];
+					const uint triangleOffset = cluster.x;
+					const uint triangleCount = cluster.y;
+
+					for (uint tri = 0; tri < triangleCount; ++tri)
+					{
+						IntersectTriangle(ray, bestHit, triangleBuffer[triangleOffset + tri]);
+					}
 				}
 			}
 			else
@@ -170,9 +187,9 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		float4 baseColorMap = texture_baseColor.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
-		float4 normalMap = texture_normalMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
-		float4 surfaceMap = texture_surfaceMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+		//float4 baseColorMap = texture_baseColor.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+		//float4 normalMap = texture_normalMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+		//float4 surfaceMap = texture_surfaceMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
 
 		Material mat = materialBuffer[hit.materialIndex];
 		

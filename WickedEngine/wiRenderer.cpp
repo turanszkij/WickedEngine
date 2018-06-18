@@ -1476,8 +1476,8 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_KICKHIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_kickhierarchyCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_SORTEDMORTON] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_sortedmortonCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_BVH_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_BVH_CLUSTERPROCESSOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_clusterprocessorCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6384,7 +6384,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		indirectBuffer = new GPUBuffer;
 
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
 		desc.ByteWidth = desc.StructureByteStride;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -6423,6 +6423,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	static GPUBuffer* clusterSortedMortonBuffer = nullptr;
 	static GPUBuffer* clusterOffsetBuffer = nullptr;
 	static GPUBuffer* clusterAABBBuffer = nullptr;
+	static GPUBuffer* clusterConeBuffer = nullptr;
 	const uint maxClusterCount = 1000000;
 	const uint maxTriangleCount = 1000000;
 
@@ -6443,6 +6444,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		SAFE_DELETE(clusterSortedMortonBuffer);
 		SAFE_DELETE(clusterOffsetBuffer);
 		SAFE_DELETE(clusterAABBBuffer);
+		SAFE_DELETE(clusterConeBuffer);
 		bvhNodeBuffer = new GPUBuffer;
 		bvhAABBBuffer = new GPUBuffer;
 		bvhFlagBuffer = new GPUBuffer;
@@ -6453,6 +6455,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		clusterSortedMortonBuffer = new GPUBuffer;
 		clusterOffsetBuffer = new GPUBuffer;
 		clusterAABBBuffer = new GPUBuffer;
+		clusterConeBuffer = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHNode);
@@ -6543,6 +6546,16 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(ClusterCone);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -6644,9 +6657,9 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
 	device->EventEnd(threadID);
 
-	device->EventBegin("BVH - Kick Hierarchy", threadID);
+	device->EventBegin("BVH - Kick Jobs", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_KICKHIERARCHY], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_KICKJOBS], threadID);
 		GPUResource* uavs[] = {
 			indirectBuffer,
 			bvhNodeBuffer,
@@ -6667,11 +6680,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	}
 	device->EventEnd(threadID);
 
-	device->EventBegin("BVH - Assemble Sorted Mortons", threadID);
+	device->EventBegin("BVH - Cluster Processor", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_SORTEDMORTON], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_CLUSTERPROCESSOR], threadID);
 		GPUResource* uavs[] = {
 			clusterSortedMortonBuffer,
+			clusterConeBuffer,
 		};
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -6679,10 +6693,13 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 			clusterCounterBuffer,
 			clusterIndexBuffer,
 			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+			triangleBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, 0, threadID);
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -6705,7 +6722,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, 0, threadID);
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -6730,7 +6747,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, 0, threadID);
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -6840,6 +6857,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				device->BindResource(CS, clusterCounterBuffer, 0, threadID); // !!!
 				device->BindResource(CS, clusterIndexBuffer, TEXSLOT_ONDEMAND2, threadID);
 				device->BindResource(CS, clusterOffsetBuffer, TEXSLOT_ONDEMAND3, threadID);
+				device->BindResource(CS, clusterConeBuffer, TEXSLOT_ONDEMAND4, threadID);
 				device->BindResource(CS, bvhNodeBuffer, TEXSLOT_UNIQUE0, threadID);
 				device->BindResource(CS, bvhAABBBuffer, TEXSLOT_UNIQUE1, threadID);
 

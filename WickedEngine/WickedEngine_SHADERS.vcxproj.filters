@@ -744,13 +744,13 @@
     <FxCompile Include="raytrace_bvh_hierarchyCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_kickhierarchyCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="raytrace_bvh_sortedmortonCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="raytrace_bvh_propagateaabbCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_bvh_kickjobsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_bvh_clusterprocessorCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
