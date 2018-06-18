@@ -1474,12 +1474,12 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_CLUSTERPROCESSOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_clusterprocessorCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_CLUSTERPROCESSOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_clusterprocessorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6561,10 +6561,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->EventBegin("BVH - Reset", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_RESET], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_BVH_RESET], threadID);
 
 		GPUResource* uavs[] = {
 			clusterCounterBuffer,
+			bvhNodeBuffer,
+			bvhAABBBuffer,
 		};
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -6578,7 +6580,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->EventBegin("BVH - Classification", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_CLASSIFICATION], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLASSIFICATION], threadID);
 		GPUResource* uavs[] = {
 			triangleBuffer,
 			clusterCounterBuffer,
@@ -6659,11 +6661,9 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->EventBegin("BVH - Kick Jobs", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_KICKJOBS], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_BVH_KICKJOBS], threadID);
 		GPUResource* uavs[] = {
 			indirectBuffer,
-			bvhNodeBuffer,
-			bvhAABBBuffer,
 		};
 		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -6682,7 +6682,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->EventBegin("BVH - Cluster Processor", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_CLUSTERPROCESSOR], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLUSTERPROCESSOR], threadID);
 		GPUResource* uavs[] = {
 			clusterSortedMortonBuffer,
 			clusterConeBuffer,
@@ -6709,7 +6709,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->EventBegin("BVH - Build Hierarchy", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_HIERARCHY], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_BVH_HIERARCHY], threadID);
 		GPUResource* uavs[] = {
 			bvhNodeBuffer,
 			bvhFlagBuffer,
@@ -6732,7 +6732,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	device->EventBegin("BVH - Propagate AABB", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_BVH_PROPAGATEAABB], threadID);
+		device->BindComputePSO(CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
 		GPUResource* uavs[] = {
 			bvhAABBBuffer,
 			bvhFlagBuffer,

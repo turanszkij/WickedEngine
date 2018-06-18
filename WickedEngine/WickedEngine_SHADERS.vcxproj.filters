@@ -735,22 +735,22 @@
     <FxCompile Include="raytrace_clearCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_classificationCS.hlsl">
+    <FxCompile Include="bvh_classificationCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_resetCS.hlsl">
+    <FxCompile Include="bvh_clusterprocessorCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_hierarchyCS.hlsl">
+    <FxCompile Include="bvh_hierarchyCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_propagateaabbCS.hlsl">
+    <FxCompile Include="bvh_kickjobsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_kickjobsCS.hlsl">
+    <FxCompile Include="bvh_propagateaabbCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_bvh_clusterprocessorCS.hlsl">
+    <FxCompile Include="bvh_resetCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
