@@ -6852,7 +6852,6 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				// 2.) Light sampling (any hit) <- only after first bounce has occured
 				device->EventBegin("Light Sampling Rays", threadID);
 				{
-
 					// Indirect dispatch on active rays:
 					device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
 

@@ -85,6 +85,20 @@ void main( uint3 DTid : SV_DispatchThreadID )
 			cone.position = center + cone.direction * t;
 		}
 
+		// Cluster center safety check:
+		//	If distance of coneCenter to the bounding box center is more
+		//	than 16x the bounding box extent, the cluster is also invalid
+		//	This is mostly a safety measure - if triangles are nearly
+		//	parallel to coneAxis, t may become very large and unstable
+		{
+			const float aabbSize = length(aabb.max - aabb.min);
+			const float coneCenterToCenterDistance = length(cone.position - center);
+			if (coneCenterToCenterDistance > (16 * aabbSize))
+			{
+				cone.valid = 0;
+			}
+		}
+
 
 		// Store cluster cone:
 		clusterConeBuffer[clusterIndex] = cone;

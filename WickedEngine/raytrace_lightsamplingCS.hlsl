@@ -126,14 +126,21 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// Compute screen coordinates:
 		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
 
-		//float seed = g_xFrame_Time;
 
-		//ray.direction = GetSunDirection();
-		//bool hit = TraceScene(ray);
-		//float3 result = hit ? 0 : saturate(dot(ray.normal, GetSunDirection())) * GetSunColor();
-		//
-		//// Write pixel color:
-		//resultTexture[coords2D] += float4(result, 0);
+		// Try dirlight:
+		float3 N = ray.normal;
+		float3 L = GetSunDirection();
+		float NdotL = saturate(dot(L, N));
+
+		if (NdotL > 0)
+		{
+			ray.direction = L;
+			bool hit = TraceScene(ray);
+			float3 result = (hit ? 0 : NdotL) * GetSunColor() * ray.energy;
+
+			// Write pixel color:
+			resultTexture[coords2D] += float4(result, 0);
+		}
 	}
 
 	// This shader doesn't export any rays!

@@ -1,6 +1,8 @@
 #ifndef _TRACEDRENDERING_HF_
 #define _TRACEDRENDERING_HF_
 #include "lightingHF.hlsli"
+
+#define NOSUN
 #include "skyHF.hlsli"
 
 static const float INFINITE_RAYHIT = 1000000;
