@@ -30,6 +30,15 @@ CBUFFER(TracedBVHCB, CBSLOT_RENDERER_TRACED)
 	uint xTraceBVHMeshVertexPOSStride;
 };
 
+struct xTracedRenderingStoredRay
+{
+	uint pixelID;
+	float3 origin;
+	uint3 direction_energy;
+	uint primitiveID;
+	float2 bary;
+};
+
 struct TracedRenderingMeshTriangle
 {
 	float3 v0, v1, v2;

@@ -4,7 +4,7 @@
 
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
-RWSTRUCTUREDBUFFER(rayBuffer_WRITE, StoredRay, 1);
+RWSTRUCTUREDBUFFER(rayBuffer_WRITE, xTracedRenderingStoredRay, 1);
 RWTEXTURE2D(resultTexture, float4, 2);
 
 // This enables reduced atomics into global memory
@@ -17,19 +17,6 @@ groupshared uint GroupRayCount;
 groupshared uint GroupRayWriteOffset;
 #endif // ADVANCED_ALLOCATION
 
-struct Material
-{
-	float4		baseColor;
-	float4		texMulAdd;
-	float		roughness;
-	float		reflectance;
-	float		metalness;
-	float		emissive;
-	float		refractionIndex;
-	float		subsurfaceScattering;
-	float		normalMapStrength;
-	float		parallaxOcclusionMapping;
-};
 STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND1);
 RAWBUFFER(clusterCounterBuffer, 0);
@@ -44,7 +31,7 @@ STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_UNIQUE1);
 //TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
+STRUCTUREDBUFFER(rayBuffer_READ, xTracedRenderingStoredRay, TEXSLOT_ONDEMAND9);
 
 inline RayHit TraceScene(Ray ray)
 {
@@ -100,7 +87,8 @@ inline RayHit TraceScene(Ray ray)
 
 					for (uint tri = 0; tri < triangleCount; ++tri)
 					{
-						IntersectTriangle(ray, bestHit, triangleBuffer[triangleOffset + tri]);
+						const uint primitiveID = triangleOffset + tri;
+						IntersectTriangle(ray, bestHit, triangleBuffer[primitiveID], primitiveID);
 					}
 				}
 			}
@@ -135,11 +123,22 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		//float4 baseColorMap = texture_baseColor.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
-		//float4 normalMap = texture_normalMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
-		//float4 surfaceMap = texture_surfaceMap.SampleLevel(sampler_linear_wrap, hit.texCoords, 0);
+		TracedRenderingMeshTriangle tri = triangleBuffer[hit.primitiveID];
 
-		Material mat = materialBuffer[hit.materialIndex];
+		float u = hit.bary.x;
+		float v = hit.bary.y;
+		float w = 1 - u - v;
+
+		float3 N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
+		float2 UV = tri.t0 * w + tri.t1 * u + tri.t2 * v;
+
+		//float4 baseColorMap = texture_baseColor.SampleLevel(sampler_linear_wrap, UV, 0);
+		//float4 normalMap = texture_normalMap.SampleLevel(sampler_linear_wrap, UV, 0);
+		//float4 surfaceMap = texture_surfaceMap.SampleLevel(sampler_linear_wrap, UV, 0);
+
+		uint materialIndex = tri.materialIndex;
+
+		Material mat = materialBuffer[materialIndex];
 		
 		float4 baseColor = mat.baseColor /** baseColorMap*/;
 		float reflectance = mat.reflectance/* * surfaceMap.r*/;
@@ -166,19 +165,20 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 			// Specular reflection
 			//float alpha = 150.0f;
 			float alpha = sqr(1 - roughness) * 1000;
-			ray.direction = SampleHemisphere(reflect(ray.direction, hit.normal), alpha, seed, pixel);
+			ray.direction = SampleHemisphere(reflect(ray.direction, N), alpha, seed, pixel);
 			float f = (alpha + 2) / (alpha + 1);
-			ray.energy *= (1.0f / specChance) * specular * saturate(dot(hit.normal, ray.direction) * f);
+			ray.energy *= (1.0f / specChance) * specular * saturate(dot(N, ray.direction) * f);
 		}
 		else
 		{
 			// Diffuse reflection
-			ray.direction = SampleHemisphere(hit.normal, 1.0f, seed, pixel);
+			ray.direction = SampleHemisphere(N, 1.0f, seed, pixel);
 			ray.energy *= (1.0f / diffChance) * albedo;
 		}
 
-		ray.origin = hit.position;
-		ray.normal = hit.normal;
+		ray.origin = hit.position + N * EPSILON;
+		ray.primitiveID = hit.primitiveID;
+		ray.bary = hit.bary;
 
 		return emissive;
 	}
@@ -220,7 +220,6 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 	{
 		// Load the current ray:
 		LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
-		ray.origin += ray.normal*EPSILON;
 
 		// Compute real pixel coords from flattened:
 		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());

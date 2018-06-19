@@ -8,6 +8,21 @@
 static const float INFINITE_RAYHIT = 1000000;
 static const float EPSILON = 0.0001f;
 
+
+struct Material
+{
+	float4		baseColor;
+	float4		texMulAdd;
+	float		roughness;
+	float		reflectance;
+	float		metalness;
+	float		emissive;
+	float		refractionIndex;
+	float		subsurfaceScattering;
+	float		normalMapStrength;
+	float		parallaxOcclusionMapping;
+};
+
 //struct Sphere
 //{
 //	float3 position;
@@ -23,32 +38,23 @@ struct Ray
 	float3 direction;
 	float3 direction_inverse;
 	float3 energy;
-	float3 normal;
+	uint primitiveID;
+	float2 bary;
 };
 
-struct StoredRay
+inline xTracedRenderingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
 {
-	uint pixelID;
-	float3 origin;
-	uint3 direction_energy;
-	uint normal;
-};
-inline StoredRay CreateStoredRay(in Ray ray, in uint pixelID)
-{
-	StoredRay storedray;
+	xTracedRenderingStoredRay storedray;
 
 	storedray.pixelID = pixelID;
 	storedray.origin = ray.origin;
 	storedray.direction_energy = f32tof16(ray.direction) | (f32tof16(ray.energy) << 16);
-
-	storedray.normal = 0;
-	storedray.normal |= (uint)((ray.normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-	storedray.normal |= (uint)((ray.normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-	storedray.normal |= (uint)((ray.normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+	storedray.primitiveID = ray.primitiveID;
+	storedray.bary = ray.bary;
 
 	return storedray;
 }
-inline void LoadRay(in StoredRay storedray, out Ray ray, out uint pixelID)
+inline void LoadRay(in xTracedRenderingStoredRay storedray, out Ray ray, out uint pixelID)
 {
 	pixelID = storedray.pixelID;
 
@@ -56,10 +62,8 @@ inline void LoadRay(in StoredRay storedray, out Ray ray, out uint pixelID)
 	ray.direction = asfloat(f16tof32(storedray.direction_energy));
 	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
-
-	ray.normal.x = (float)((storedray.normal >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	ray.normal.y = (float)((storedray.normal >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	ray.normal.z = (float)((storedray.normal >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	ray.primitiveID = storedray.primitiveID;
+	ray.bary = storedray.bary;
 }
 
 inline Ray CreateRay(float3 origin, float3 direction)
@@ -69,7 +73,8 @@ inline Ray CreateRay(float3 origin, float3 direction)
 	ray.direction = direction;
 	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = float3(1, 1, 1);
-	ray.normal = float3(0, 0, 0);
+	ray.primitiveID = 0xFFFFFFFF;
+	ray.bary = 0;
 	return ray;
 }
 
@@ -88,9 +93,8 @@ struct RayHit
 {
 	float distance;
 	float3 position;
-	float3 normal;
-	uint materialIndex;
-	float2 texCoords;
+	uint primitiveID;
+	float2 bary;
 };
 
 inline RayHit CreateRayHit()
@@ -98,9 +102,11 @@ inline RayHit CreateRayHit()
 	RayHit hit;
 	hit.distance = INFINITE_RAYHIT;
 	hit.position = float3(0.0f, 0.0f, 0.0f);
-	hit.normal = float3(0.0f, 0.0f, 0.0f);
-	hit.materialIndex = 0;
-	hit.texCoords = 0;
+	hit.primitiveID = 0xFFFFFFFF;
+	hit.bary = 0;
+	//hit.normal = float3(0.0f, 0.0f, 0.0f);
+	//hit.materialIndex = 0;
+	//hit.texCoords = 0;
 
 	return hit;
 }
@@ -138,7 +144,7 @@ inline RayHit CreateRayHit()
 
 
 #define BACKFACE_CULLING
-inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in TracedRenderingMeshTriangle tri)
+inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in TracedRenderingMeshTriangle tri, uint primitiveID)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -172,12 +178,14 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in TracedRenderi
 	{
 		bestHit.distance = t;
 		bestHit.position = ray.origin + t * ray.direction;
+		bestHit.primitiveID = primitiveID;
+		bestHit.bary = float2(u, v);
 
-		float w = 1 - u - v;
-		bestHit.normal = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
-		bestHit.texCoords = tri.t0 * w + tri.t1 * u + tri.t2 * v;
-
-		bestHit.materialIndex = tri.materialIndex;
+		//float w = 1 - u - v;
+		//bestHit.normal = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
+		//bestHit.texCoords = tri.t0 * w + tri.t1 * u + tri.t2 * v;
+		//
+		//bestHit.materialIndex = tri.materialIndex;
 	}
 }
 

@@ -6370,7 +6370,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		rayBuffer[1] = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint) + sizeof(float3) + sizeof(uint3) + sizeof(uint);
+		desc.StructureByteStride = sizeof(xTracedRenderingStoredRay);
 		desc.ByteWidth = desc.StructureByteStride * _raycount;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;

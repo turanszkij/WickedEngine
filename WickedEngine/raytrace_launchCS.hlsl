@@ -2,7 +2,7 @@
 #include "ShaderInterop_TracedRendering.h"
 #include "tracedRenderingHF.hlsli"
 
-RWSTRUCTUREDBUFFER(rayBuffer, StoredRay, 0);
+RWSTRUCTUREDBUFFER(rayBuffer, xTracedRenderingStoredRay, 0);
 
 [numthreads(TRACEDRENDERING_LAUNCH_BLOCKSIZE, TRACEDRENDERING_LAUNCH_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
