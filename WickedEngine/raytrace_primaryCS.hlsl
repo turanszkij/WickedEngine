@@ -10,18 +10,6 @@ RWTEXTURE2D(resultTexture, float4, 2);
 // This enables reduced atomics into global memory
 #define ADVANCED_ALLOCATION
 
-// If this is defined, we will use the BVH acceleration structure to filter triangles
-#define BVH_TRAVERSAL
-
-#ifndef BVH_TRAVERSAL
-// If this is defined, then we will use LDS to accelerate triangle memory access (doesn't work with BVH)
-#define LDS_MESH
-#endif // BVH_TRAVERSAL
-
-#ifdef LDS_MESH
-groupshared TracedRenderingMeshTriangle meshTriangles[TRACEDRENDERING_TRACE_GROUPSIZE];
-#endif
-
 #ifdef ADVANCED_ALLOCATION
 static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_TRACE_GROUPSIZE / 32;
 groupshared uint GroupActiveRayMask[GroupActiveRayMaskBucketCount];
@@ -58,11 +46,9 @@ STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_UNIQUE1);
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(rayBuffer_READ, StoredRay, TEXSLOT_ONDEMAND9);
 
-inline RayHit TraceScene(Ray ray, uint groupIndex)
+inline RayHit TraceScene(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
-
-#ifdef BVH_TRAVERSAL
 
 	// Using BVH acceleration structure:
 
@@ -95,16 +81,16 @@ inline RayHit TraceScene(Ray ray, uint groupIndex)
 				const uint clusterIndex = clusterIndexBuffer[nodeToClusterID];
 				bool cullCluster = false;
 
-				// Compute per cluster visibility:
-				const ClusterCone cone = clusterConeBuffer[clusterIndex];
-				if (cone.valid)
-				{
-					const float3 testVec = normalize(ray.origin - cone.position);
-					if (dot(testVec, cone.direction) > cone.angleCos)
-					{
-						cullCluster = true;
-					}
-				}
+				//// Compute per cluster visibility:
+				//const ClusterCone cone = clusterConeBuffer[clusterIndex];
+				//if (cone.valid)
+				//{
+				//	const float3 testVec = normalize(ray.origin - cone.position);
+				//	if (dot(testVec, cone.direction) > cone.angleCos)
+				//	{
+				//		cullCluster = true;
+				//	}
+				//}
 
 				if (!cullCluster)
 				{
@@ -141,44 +127,6 @@ inline RayHit TraceScene(Ray ray, uint groupIndex)
 
 	} while (stackpos > 0);
 
-#else
-	
-#ifdef LDS_MESH
-
-	// Using linear LDS acceleration:
-
-	uint numTiles = 1 + xTraceMeshTriangleCount / TRACEDRENDERING_PRIMARY_GROUPSIZE;
-
-	for (uint tile = 0; tile < numTiles; ++tile)
-	{
-		uint offset = tile * TRACEDRENDERING_PRIMARY_GROUPSIZE;
-		uint tri = offset + groupIndex;
-		uint tileTriangleCount = min(TRACEDRENDERING_PRIMARY_GROUPSIZE, xTraceMeshTriangleCount - offset);
-
-		if (tri < xTraceMeshTriangleCount)
-		{
-			meshTriangles[groupIndex] = triangleBuffer[tri];
-		}
-		GroupMemoryBarrierWithGroupSync();
-
-		for (tri = 0; tri < tileTriangleCount; ++tri)
-		{
-			IntersectTriangle(ray, bestHit, meshTriangles[tri]);
-		}
-	}
-
-#else
-
-	// Not using any acceleration structure:
-
-	for (uint tri = 0; tri < xTraceMeshTriangleCount; ++tri)
-	{
-		IntersectTriangle(ray, bestHit, triangleBuffer[tri]);
-	}
-
-#endif // LDS_MESH
-
-#endif // BVH_TRAVERSAL
 
 	return bestHit;
 }
@@ -218,7 +166,6 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 			// Specular reflection
 			//float alpha = 150.0f;
 			float alpha = sqr(1 - roughness) * 1000;
-			ray.origin = hit.position + hit.normal * EPSILON;
 			ray.direction = SampleHemisphere(reflect(ray.direction, hit.normal), alpha, seed, pixel);
 			float f = (alpha + 2) / (alpha + 1);
 			ray.energy *= (1.0f / specChance) * specular * saturate(dot(hit.normal, ray.direction) * f);
@@ -226,11 +173,11 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 		else
 		{
 			// Diffuse reflection
-			ray.origin = hit.position + hit.normal * EPSILON;
 			ray.direction = SampleHemisphere(hit.normal, 1.0f, seed, pixel);
 			ray.energy *= (1.0f / diffChance) * albedo;
 		}
 
+		ray.origin = hit.position;
 		ray.normal = hit.normal;
 
 		return emissive;
@@ -273,11 +220,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 	{
 		// Load the current ray:
 		LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
-
-#ifdef LDS_MESH // because that path has groupsync, every thread must go in following block
-	}
-	{
-#endif // LDS_MESH
+		ray.origin += ray.normal*EPSILON;
 
 		// Compute real pixel coords from flattened:
 		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
@@ -285,14 +228,13 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		// Compute screen coordinates:
 		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
 
-		float seed = g_xFrame_Time;
+		float seed = g_xFrame_Time + xTraceBounce;
 
-		RayHit hit = TraceScene(ray, groupIndex);
+		RayHit hit = TraceScene(ray);
 		float3 result = ray.energy * Shade(ray, hit, seed, uv);
-		result = max(0, result);
 
 		// Write pixel color:
-		resultTexture[coords2D] += float4(result, 0);
+		resultTexture[coords2D] += float4(max(0, result), 0);
 
 #ifndef ADVANCED_ALLOCATION
 		if (any(ray.energy))

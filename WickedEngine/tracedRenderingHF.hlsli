@@ -138,7 +138,7 @@ inline RayHit CreateRayHit()
 
 
 #define BACKFACE_CULLING
-inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in TracedRenderingMeshTriangle tri)
+inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in TracedRenderingMeshTriangle tri)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -181,7 +181,7 @@ inline void IntersectTriangle(Ray ray, inout RayHit bestHit, in TracedRenderingM
 	}
 }
 
-inline bool IntersectTriangleANY(Ray ray, in TracedRenderingMeshTriangle tri)
+inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in TracedRenderingMeshTriangle tri)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -211,7 +211,7 @@ inline bool IntersectTriangleANY(Ray ray, in TracedRenderingMeshTriangle tri)
 
 	float t = dot(v0v2, qvec) * invDet;
 
-	if (t > 0 && t < INFINITE_RAYHIT)
+	if (t > 0 && t < maxDistance)
 	{
 		return true;
 	}
