@@ -5,6 +5,9 @@
 class TracedRenderableComponent :
 	public Renderable3DComponent
 {
+private:
+	float sam = 0;
+
 protected:
 	wiGraphicsTypes::Texture2D* traceResult = nullptr;
 	wiRenderTarget rtAccumulation;
@@ -22,6 +25,7 @@ public:
 	virtual void Initialize() override;
 	virtual void Load() override;
 	virtual void Start() override;
+	virtual void Update(float dt) override;
 	virtual void Render() override;
 	virtual void Compose() override;
 };

@@ -91,6 +91,14 @@ void TracedRenderableComponent::Render()
 }
 
 
+void TracedRenderableComponent::Update(float dt)
+{
+
+	if (wiRenderer::getCamera()->hasChanged)
+	{
+		sam = 0;
+	}
+}
 
 void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
@@ -98,7 +106,7 @@ void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
-	wiRenderer::DrawTracedScene(wiRenderer::getCamera(), traceResult, threadID);
+	wiRenderer::DrawTracedScene(wiRenderer::getCamera(), traceResult, sam == 0, threadID);
 
 
 
@@ -108,27 +116,15 @@ void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 
-	static float sam = 0;
-
-	if (wiRenderer::getCamera()->hasChanged)
-	{
-		sam = 0;
-	}
-
-	if (GetAsyncKeyState('K') < 0)
-	{
-		sam = 0;
-	}
-
 	fx.opacity = 1.0f / (sam + 1.0f);
 	fx.blendFlag = BLENDMODE_ALPHA;
 
 	rtAccumulation.Set(threadID);
 	wiImage::Draw(traceResult, fx, threadID);
 
+
+
 	sam++;
-
-
 
 	//if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	//{
