@@ -125,42 +125,99 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 
-		float3 result = 0;
+		float3 finalResult = 0;
 
 		float3 P = ray.origin;
 		float3 N = ray.normal;
+		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
+
+		float4 baseColor = 1;
+		float roughness = 0.2f;
+		float reflectance = 0.3f;
+		float metalness = 0;
+		float emissive = 0;
+		float sss = 0;
+		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness, emissive, sss);
 
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 		{
 			ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+
+			LightingResult result = (LightingResult)0;
 		
 			float3 L = 0;
 			float dist = 0;
-			float energy = 0;
 		
 			switch (light.type)
 			{
 			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{
-				L = light.directionWS;
 				dist = INFINITE_RAYHIT;
-				energy = light.energy;
+
+				float3 lightColor = light.GetColor().rgb*light.energy;
+
+				L = light.directionWS.xyz;
+				SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+				result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+				result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
 				L = light.positionWS - P;
 				dist = length(L);
-				L /= dist;
 
-				float att = (light.energy * (light.range / (light.range + 1 + dist)));
-				float attenuation = (att * (light.range - dist) / light.range);
-				energy = attenuation;
+				[branch]
+				if (dist < light.range)
+				{
+					L /= dist;
+
+					float3 lightColor = light.GetColor().rgb*light.energy;
+
+					SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+					result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+					result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+
+					float att = (light.energy * (light.range / (light.range + 1 + dist)));
+					float attenuation = (att * (light.range - dist) / light.range);
+					result.diffuse *= attenuation;
+					result.specular *= attenuation;
+				}
 			}
 			break;
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
+				L = light.positionWS - surface.P;
+				dist = length(L);
+
+				[branch]
+				if (dist < light.range)
+				{
+					L /= dist;
+
+					float3 lightColor = light.GetColor().rgb*light.energy;
+
+					float SpotFactor = dot(L, light.directionWS);
+					float spotCutOff = light.coneAngleCos;
+
+					[branch]
+					if (SpotFactor > spotCutOff)
+					{
+						SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
+
+						result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+						result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+
+						float att = (light.energy * (light.range / (light.range + 1 + dist)));
+						float attenuation = (att * (light.range - dist) / light.range);
+						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+						result.diffuse *= attenuation;
+						result.specular *= attenuation;
+					}
+				}
 			}
 			break;
 			case ENTITY_TYPE_SPHERELIGHT:
@@ -181,24 +238,26 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 			}
 		
-		
 			float NdotL = saturate(dot(L, N));
 		
-			if (NdotL > 0)
+			if (NdotL > 0 && dist > 0)
 			{
+				result.diffuse = max(0.0f, result.diffuse);
+				result.specular = max(0.0f, result.specular);
+
 				Ray newRay;
 				newRay.origin = P + N * EPSILON;
 				newRay.direction = L + sampling_offset * 0.025f;
 				newRay.direction_inverse = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
-				result += (hit ? 0 : NdotL) * light.GetColor().rgb * energy;
+				finalResult += (hit ? 0 : NdotL) * (result.diffuse + result.specular);
 			}
 		}
 		
-		result *= ray.energy;
+		finalResult *= ray.energy;
 
-		resultTexture[coords2D] += float4(max(0, result), 0);
+		resultTexture[coords2D] += float4(max(0, finalResult), 0);
 
 	}
 
