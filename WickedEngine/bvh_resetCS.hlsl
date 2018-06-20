@@ -1,12 +1,11 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_BVH.h"
 
 // This shader resets the BVH structure
 
 RWRAWBUFFER(clusterCounterBuffer, 0);
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 1);
-RWSTRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, 2);
+RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 2);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

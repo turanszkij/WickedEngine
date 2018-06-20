@@ -236,6 +236,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_Vulkan.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />

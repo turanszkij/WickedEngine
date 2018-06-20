@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
 
 RWTEXTURE2D(resultTexture, float4, 0);
 

@@ -1,6 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_BVH.h"
 
 // This shader will traverse the BVH from bottom to up, and propagate AABBs from leaves to internal nodes
 //	Cluster nodes are already computed, which correspond directly to BVH leaf node AABBs
@@ -11,13 +10,13 @@
 
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND3);
 
-RWSTRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, 0);
+RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
 
-[numthreads(TRACEDRENDERING_BVH_PROPAGATEAABB_GROUPSIZE, 1, 1)]
+[numthreads(BVH_PROPAGATEAABB_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const uint clusterCount = clusterCounterBuffer.Load(0);
@@ -32,7 +31,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
 		// Leaf node will receive the corresponding cluster AABB:
-		TracedRenderingAABB clusterAABB = clusterAABBBuffer[clusterIndex];
+		BVHAABB clusterAABB = clusterAABBBuffer[clusterIndex];
 		bvhAABBBuffer[nodeIndex] = clusterAABB;
 
 		// Propagate until we reach root node:
@@ -55,11 +54,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			node = bvhNodeBuffer[nodeIndex];
 
 			// Load up its two children's AABBs
-			TracedRenderingAABB leftAABB = bvhAABBBuffer[node.LeftChildIndex];
-			TracedRenderingAABB rightAABB = bvhAABBBuffer[node.RightChildIndex];
+			BVHAABB leftAABB = bvhAABBBuffer[node.LeftChildIndex];
+			BVHAABB rightAABB = bvhAABBBuffer[node.RightChildIndex];
 
 			// Merge the child AABBs:
-			TracedRenderingAABB mergedAABB;
+			BVHAABB mergedAABB;
 			mergedAABB.min = min(leftAABB.min, rightAABB.min);
 			mergedAABB.max = max(leftAABB.max, rightAABB.max);
 

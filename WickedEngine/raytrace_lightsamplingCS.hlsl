@@ -1,20 +1,21 @@
 #include "globals.hlsli"
 #include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_BVH.h"
 #include "tracedRenderingHF.hlsli"
 
 RWTEXTURE2D(resultTexture, float4, 0);
 
 STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND1);
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND3);
 STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND5);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
-STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_ONDEMAND7);
+STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND7);
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
-STRUCTUREDBUFFER(rayBuffer_READ, xTracedRenderingStoredRay, TEXSLOT_UNIQUE1);
+STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_UNIQUE1);
 
 inline bool TraceSceneANY(Ray ray, float maxDistance)
 {
@@ -40,7 +41,7 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 		const uint nodeIndex = stack[stackpos];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
-		TracedRenderingAABB box = bvhAABBBuffer[nodeIndex];
+		BVHAABB box = bvhAABBBuffer[nodeIndex];
 
 		if (IntersectBox(ray, box))
 		{
@@ -129,7 +130,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		float3 finalResult = 0;
 
-		TracedRenderingMeshTriangle tri = triangleBuffer[ray.primitiveID];
+		BVHMeshTriangle tri = triangleBuffer[ray.primitiveID];
 
 		float u = ray.bary.x;
 		float v = ray.bary.y;

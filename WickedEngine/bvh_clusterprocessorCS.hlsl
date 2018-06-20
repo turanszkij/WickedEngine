@@ -1,6 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_BVH.h"
 
 // This shader iterates through all clusters and performs the following:
 //	- Copies the morton codes to the sorted index buffer order. Morton codes can be used after this to assemble the BVH.
@@ -11,13 +10,13 @@ RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(clusterMortonBuffer, uint, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND5);
+STRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND5);
 
 RWSTRUCTUREDBUFFER(clusterSortedMortonBuffer, uint, 0);
 RWSTRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, 1);
 
-[numthreads(TRACEDRENDERING_BVH_CLUSTERPROCESSOR_GROUPSIZE, 1, 1)]
+[numthreads(BVH_CLUSTERPROCESSOR_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	if (DTid.x < clusterCounterBuffer.Load(0))
@@ -33,7 +32,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		const uint triangleCount = cluster.y;
 
 		// Center point of cluster AABB:
-		const TracedRenderingAABB aabb = clusterAABBBuffer[clusterIndex];
+		const BVHAABB aabb = clusterAABBBuffer[clusterIndex];
 		const float3 center = (aabb.min + aabb.max) * 0.5f;
 
 		ClusterCone cone;
@@ -46,7 +45,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		{
 			for (uint tri = 0; tri < triangleCount; ++tri)
 			{
-				TracedRenderingMeshTriangle prim = triangleBuffer[triangleOffset + tri];
+				BVHMeshTriangle prim = triangleBuffer[triangleOffset + tri];
 				float3 facenormal = cross(prim.v1 - prim.v0, prim.v2 - prim.v0);
 
 				// direction will be sum of negative face normals:
@@ -63,7 +62,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 			float coneOpening = 1;
 			for (uint tri = 0; tri < triangleCount; ++tri)
 			{
-				TracedRenderingMeshTriangle prim = triangleBuffer[triangleOffset + tri];
+				BVHMeshTriangle prim = triangleBuffer[triangleOffset + tri];
 				float3 facenormal = cross(prim.v1 - prim.v0, prim.v2 - prim.v0);
 
 				const float directionalPart = dot(cone.direction, -facenormal);

@@ -1182,6 +1182,9 @@
     <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\PathTracingRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

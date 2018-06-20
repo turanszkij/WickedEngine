@@ -1,6 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_BVH.h"
 
 // This shader will construct the BVH from sorted cluster morton codes.
 //	Output is a list of continuous BVH tree nodes in memory: [parentIndex, leftChildNodeIndex, rightChildNodeIndex]. Additionally, we will reset the BVH Flag Buffer (used for AABB propagation step)
@@ -107,7 +106,7 @@ int FindSplit(int first, uint last, uint elementCount)
 
 
 
-[numthreads(TRACEDRENDERING_BVH_HIERARCHY_GROUPSIZE, 1, 1)]
+[numthreads(BVH_HIERARCHY_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint idx = DTid.x;

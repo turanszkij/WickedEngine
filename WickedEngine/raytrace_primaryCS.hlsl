@@ -1,10 +1,11 @@
 #include "globals.hlsli"
 #include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_BVH.h"
 #include "tracedRenderingHF.hlsli"
 
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
-RWSTRUCTUREDBUFFER(rayBuffer_WRITE, xTracedRenderingStoredRay, 1);
+RWSTRUCTUREDBUFFER(rayBuffer_WRITE, TracedRenderingStoredRay, 1);
 RWTEXTURE2D(resultTexture, float4, 2);
 
 // This enables reduced atomics into global memory
@@ -18,20 +19,20 @@ groupshared uint GroupRayWriteOffset;
 #endif // ADVANCED_ALLOCATION
 
 STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND1);
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND3);
 STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND5);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
-STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_ONDEMAND7);
+STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND7);
 
 //TEXTURE2D(texture_baseColor, float4, TEXSLOT_ONDEMAND4);
 //TEXTURE2D(texture_normalMap, float4, TEXSLOT_ONDEMAND5);
 //TEXTURE2D(texture_surfaceMap, float4, TEXSLOT_ONDEMAND6);
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
-STRUCTUREDBUFFER(rayBuffer_READ, xTracedRenderingStoredRay, TEXSLOT_UNIQUE1);
+STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_UNIQUE1);
 
 inline RayHit TraceScene(Ray ray)
 {
@@ -57,7 +58,7 @@ inline RayHit TraceScene(Ray ray)
 		const uint nodeIndex = stack[stackpos];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
-		TracedRenderingAABB box = bvhAABBBuffer[nodeIndex];
+		BVHAABB box = bvhAABBBuffer[nodeIndex];
 
 		if (IntersectBox(ray, box))
 		{
@@ -123,7 +124,7 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		TracedRenderingMeshTriangle tri = triangleBuffer[hit.primitiveID];
+		BVHMeshTriangle tri = triangleBuffer[hit.primitiveID];
 
 		float u = hit.bary.x;
 		float v = hit.bary.y;

@@ -27,6 +27,7 @@
 #include "ShaderInterop_CloudGenerator.h"
 #include "ShaderInterop_Skinning.h"
 #include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_BVH.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
 
@@ -6329,7 +6330,379 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, bool rebuildBVH, GRAPHICSTHREAD threadID)
+// Should I care that usually buffers are not declared here?
+static GPUBuffer* bvhNodeBuffer = nullptr;
+static GPUBuffer* bvhAABBBuffer = nullptr;
+static GPUBuffer* bvhFlagBuffer = nullptr;
+static GPUBuffer* triangleBuffer = nullptr;
+static GPUBuffer* clusterCounterBuffer = nullptr;
+static GPUBuffer* clusterIndexBuffer = nullptr;
+static GPUBuffer* clusterMortonBuffer = nullptr;
+static GPUBuffer* clusterSortedMortonBuffer = nullptr;
+static GPUBuffer* clusterOffsetBuffer = nullptr;
+static GPUBuffer* clusterAABBBuffer = nullptr;
+static GPUBuffer* clusterConeBuffer = nullptr;
+void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	// Pre-gather scene properties:
+	uint32_t totalTriangles = 0;
+	for (auto& model : GetScene().models)
+	{
+		for (auto& iter : model->objects)
+		{
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			totalTriangles += (uint)mesh->indices.size() / 3;
+		}
+	}
+
+	static uint maxTriangleCount = totalTriangles;
+	static bool allocateBVH = maxTriangleCount > 0;
+
+	if (totalTriangles > maxTriangleCount)
+	{
+		maxTriangleCount = totalTriangles;
+		allocateBVH = true; // triggers realloc!
+	}
+
+	const uint maxClusterCount = maxTriangleCount; // triangle / cluster capacity
+
+	if (allocateBVH)
+	{
+		allocateBVH = false;
+
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(bvhNodeBuffer);
+		SAFE_DELETE(bvhAABBBuffer);
+		SAFE_DELETE(bvhFlagBuffer);
+		SAFE_DELETE(triangleBuffer);
+		SAFE_DELETE(clusterCounterBuffer);
+		SAFE_DELETE(clusterIndexBuffer);
+		SAFE_DELETE(clusterMortonBuffer);
+		SAFE_DELETE(clusterSortedMortonBuffer);
+		SAFE_DELETE(clusterOffsetBuffer);
+		SAFE_DELETE(clusterAABBBuffer);
+		SAFE_DELETE(clusterConeBuffer);
+		bvhNodeBuffer = new GPUBuffer;
+		bvhAABBBuffer = new GPUBuffer;
+		bvhFlagBuffer = new GPUBuffer;
+		triangleBuffer = new GPUBuffer;
+		clusterCounterBuffer = new GPUBuffer;
+		clusterIndexBuffer = new GPUBuffer;
+		clusterMortonBuffer = new GPUBuffer;
+		clusterSortedMortonBuffer = new GPUBuffer;
+		clusterOffsetBuffer = new GPUBuffer;
+		clusterAABBBuffer = new GPUBuffer;
+		clusterConeBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHNode);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhNodeBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhAABBBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * (maxClusterCount - 1); // only for internal nodes
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhFlagBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHMeshTriangle);
+		desc.ByteWidth = desc.StructureByteStride * maxTriangleCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint2);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(ClusterCone);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	if (indirectBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+
+	wiProfiler::GetInstance().BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
+
+	device->EventBegin("BVH - Reset", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_RESET], threadID);
+
+		GPUResource* uavs[] = {
+			clusterCounterBuffer,
+			bvhNodeBuffer,
+			bvhAABBBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch(1, 1, 1, threadID);
+	}
+	device->EventEnd(threadID);
+
+
+	uint32_t triangleCount = 0;
+	uint32_t materialCount = 0;
+
+	device->EventBegin("BVH - Classification", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLASSIFICATION], threadID);
+		GPUResource* uavs[] = {
+			triangleBuffer,
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		for (auto& model : GetScene().models)
+		{
+			for (auto& iter : model->objects)
+			{
+				Object* object = iter;
+				Mesh* mesh = object->mesh;
+
+				TracedBVHCB cb;
+				cb.xTraceBVHWorld = object->world;
+				cb.xTraceBVHMaterialOffset = materialCount;
+				cb.xTraceBVHMeshTriangleOffset = triangleCount;
+				cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
+				cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
+
+				device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
+
+				triangleCount += cb.xTraceBVHMeshTriangleCount;
+
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
+
+				GPUResource* res[] = {
+					mesh->indexBuffer,
+					mesh->vertexBuffer_POS,
+					mesh->vertexBuffer_TEX,
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+
+				device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
+
+				for (auto& subset : mesh->subsets)
+				{
+					materialCount++;
+				}
+			}
+		}
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+
+	device->EventBegin("BVH - Sort Cluster Mortons", threadID);
+	wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Kick Jobs", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_KICKJOBS], threadID);
+		GPUResource* uavs[] = {
+			indirectBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterAABBBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->Dispatch(1, 1, 1, threadID);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Cluster Processor", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLUSTERPROCESSOR], threadID);
+		GPUResource* uavs[] = {
+			clusterSortedMortonBuffer,
+			clusterConeBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+			triangleBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Build Hierarchy", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_HIERARCHY], threadID);
+		GPUResource* uavs[] = {
+			bvhNodeBuffer,
+			bvhFlagBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterSortedMortonBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Propagate AABB", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
+		GPUResource* uavs[] = {
+			bvhAABBBuffer,
+			bvhFlagBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterAABBBuffer,
+			bvhNodeBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
+}
+
+void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -6354,7 +6727,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		rayBuffer[1] = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(xTracedRenderingStoredRay);
+		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
 		desc.ByteWidth = desc.StructureByteStride * _raycount;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -6380,7 +6753,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		indirectBuffer = new GPUBuffer;
 
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
 		desc.ByteWidth = desc.StructureByteStride;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -6449,348 +6822,6 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		}
 	}
 	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * totalMaterials);
-
-	static GPUBuffer* bvhNodeBuffer = nullptr;
-	static GPUBuffer* bvhAABBBuffer = nullptr;
-	static GPUBuffer* bvhFlagBuffer = nullptr;
-	static GPUBuffer* triangleBuffer = nullptr;
-	static GPUBuffer* clusterCounterBuffer = nullptr;
-	static GPUBuffer* clusterIndexBuffer = nullptr;
-	static GPUBuffer* clusterMortonBuffer = nullptr;
-	static GPUBuffer* clusterSortedMortonBuffer = nullptr;
-	static GPUBuffer* clusterOffsetBuffer = nullptr;
-	static GPUBuffer* clusterAABBBuffer = nullptr;
-	static GPUBuffer* clusterConeBuffer = nullptr;
-
-	static uint maxTriangleCount = totalTriangles;
-	static bool allocateBVH = maxTriangleCount > 0;
-
-	if (totalTriangles > maxTriangleCount)
-	{
-		maxTriangleCount = totalTriangles;
-		allocateBVH = true; // triggers realloc!
-	}
-
-	const uint maxClusterCount = maxTriangleCount; // triangle / cluster capacity
-
-	if (allocateBVH)
-	{
-		// realloc also triggers rebuild!
-		rebuildBVH = true;
-	}
-
-	if (allocateBVH)
-	{
-		allocateBVH = false;
-
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		SAFE_DELETE(bvhNodeBuffer);
-		SAFE_DELETE(bvhAABBBuffer);
-		SAFE_DELETE(bvhFlagBuffer);
-		SAFE_DELETE(triangleBuffer);
-		SAFE_DELETE(clusterCounterBuffer);
-		SAFE_DELETE(clusterIndexBuffer);
-		SAFE_DELETE(clusterMortonBuffer);
-		SAFE_DELETE(clusterSortedMortonBuffer);
-		SAFE_DELETE(clusterOffsetBuffer);
-		SAFE_DELETE(clusterAABBBuffer);
-		SAFE_DELETE(clusterConeBuffer);
-		bvhNodeBuffer = new GPUBuffer;
-		bvhAABBBuffer = new GPUBuffer;
-		bvhFlagBuffer = new GPUBuffer;
-		triangleBuffer = new GPUBuffer;
-		clusterCounterBuffer = new GPUBuffer;
-		clusterIndexBuffer = new GPUBuffer;
-		clusterMortonBuffer = new GPUBuffer;
-		clusterSortedMortonBuffer = new GPUBuffer;
-		clusterOffsetBuffer = new GPUBuffer;
-		clusterAABBBuffer = new GPUBuffer;
-		clusterConeBuffer = new GPUBuffer;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(BVHNode);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, bvhNodeBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(TracedRenderingAABB);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, bvhAABBBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * (maxClusterCount - 1); // only for internal nodes
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, bvhFlagBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(TracedRenderingMeshTriangle);
-		desc.ByteWidth = desc.StructureByteStride * maxTriangleCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
-		hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint2);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(TracedRenderingAABB);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
-		assert(SUCCEEDED(hr));
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(ClusterCone);
-		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
-		assert(SUCCEEDED(hr));
-	}
-
-	if (rebuildBVH)
-	{
-		wiProfiler::GetInstance().BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
-
-		device->EventBegin("BVH - Reset", threadID);
-		{
-			device->BindComputePSO(CPSO[CSTYPE_BVH_RESET], threadID);
-
-			GPUResource* uavs[] = {
-				clusterCounterBuffer,
-				bvhNodeBuffer,
-				bvhAABBBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			device->Dispatch(1, 1, 1, threadID);
-		}
-		device->EventEnd(threadID);
-
-
-		uint32_t triangleCount = 0;
-		uint32_t materialCount = 0;
-
-		device->EventBegin("BVH - Classification", threadID);
-		{
-			device->BindComputePSO(CPSO[CSTYPE_BVH_CLASSIFICATION], threadID);
-			GPUResource* uavs[] = {
-				triangleBuffer,
-				clusterCounterBuffer,
-				clusterIndexBuffer,
-				clusterMortonBuffer,
-				clusterOffsetBuffer,
-				clusterAABBBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			for (auto& model : GetScene().models)
-			{
-				for (auto& iter : model->objects)
-				{
-					Object* object = iter;
-					Mesh* mesh = object->mesh;
-
-					TracedBVHCB cb;
-					cb.xTraceBVHWorld = object->world;
-					cb.xTraceBVHMaterialOffset = materialCount;
-					cb.xTraceBVHMeshTriangleOffset = triangleCount;
-					cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
-					cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
-
-					device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
-
-					triangleCount += cb.xTraceBVHMeshTriangleCount;
-
-					device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
-
-					GPUResource* res[] = {
-						mesh->indexBuffer,
-						mesh->vertexBuffer_POS,
-						mesh->vertexBuffer_TEX,
-					};
-					device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
-
-					device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
-
-					for (auto& subset : mesh->subsets)
-					{
-						materialCount++;
-					}
-				}
-			}
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		}
-		device->EventEnd(threadID);
-
-
-		device->EventBegin("BVH - Sort Cluster Mortons", threadID);
-		wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
-		device->EventEnd(threadID);
-
-		device->EventBegin("BVH - Kick Jobs", threadID);
-		{
-			device->BindComputePSO(CPSO[CSTYPE_BVH_KICKJOBS], threadID);
-			GPUResource* uavs[] = {
-				indirectBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			GPUResource* res[] = {
-				clusterCounterBuffer,
-				clusterAABBBuffer,
-			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-			device->Dispatch(1, 1, 1, threadID);
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		}
-		device->EventEnd(threadID);
-
-		device->EventBegin("BVH - Cluster Processor", threadID);
-		{
-			device->BindComputePSO(CPSO[CSTYPE_BVH_CLUSTERPROCESSOR], threadID);
-			GPUResource* uavs[] = {
-				clusterSortedMortonBuffer,
-				clusterConeBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			GPUResource* res[] = {
-				clusterCounterBuffer,
-				clusterIndexBuffer,
-				clusterMortonBuffer,
-				clusterOffsetBuffer,
-				clusterAABBBuffer,
-				triangleBuffer,
-			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-			device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
-
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		}
-		device->EventEnd(threadID);
-
-		device->EventBegin("BVH - Build Hierarchy", threadID);
-		{
-			device->BindComputePSO(CPSO[CSTYPE_BVH_HIERARCHY], threadID);
-			GPUResource* uavs[] = {
-				bvhNodeBuffer,
-				bvhFlagBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			GPUResource* res[] = {
-				clusterCounterBuffer,
-				clusterSortedMortonBuffer,
-			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-			device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
-
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		}
-		device->EventEnd(threadID);
-
-		device->EventBegin("BVH - Propagate AABB", threadID);
-		{
-			device->BindComputePSO(CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
-			GPUResource* uavs[] = {
-				bvhAABBBuffer,
-				bvhFlagBuffer,
-			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
-
-			GPUResource* res[] = {
-				clusterCounterBuffer,
-				clusterIndexBuffer,
-				clusterAABBBuffer,
-				bvhNodeBuffer,
-			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-			device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
-
-
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-		}
-		device->EventEnd(threadID);
-
-		wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
-	}
 
 
 	// Begin raytrace

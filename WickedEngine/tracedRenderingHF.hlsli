@@ -1,6 +1,8 @@
 #ifndef _TRACEDRENDERING_HF_
 #define _TRACEDRENDERING_HF_
 #include "lightingHF.hlsli"
+#include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_BVH.h"
 
 #define NOSUN
 #include "skyHF.hlsli"
@@ -42,9 +44,9 @@ struct Ray
 	float2 bary;
 };
 
-inline xTracedRenderingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
+inline TracedRenderingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
 {
-	xTracedRenderingStoredRay storedray;
+	TracedRenderingStoredRay storedray;
 
 	storedray.pixelID = pixelID;
 	storedray.origin = ray.origin;
@@ -54,7 +56,7 @@ inline xTracedRenderingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
 
 	return storedray;
 }
-inline void LoadRay(in xTracedRenderingStoredRay storedray, out Ray ray, out uint pixelID)
+inline void LoadRay(in TracedRenderingStoredRay storedray, out Ray ray, out uint pixelID)
 {
 	pixelID = storedray.pixelID;
 
@@ -144,7 +146,7 @@ inline RayHit CreateRayHit()
 
 
 #define BACKFACE_CULLING
-inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in TracedRenderingMeshTriangle tri, uint primitiveID)
+inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHMeshTriangle tri, uint primitiveID)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -189,7 +191,7 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in TracedRenderi
 	}
 }
 
-inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in TracedRenderingMeshTriangle tri)
+inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHMeshTriangle tri)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -245,7 +247,7 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in TracedRend
 //}
 
 
-inline bool IntersectBox(in Ray ray, in TracedRenderingAABB box)
+inline bool IntersectBox(in Ray ray, in BVHAABB box)
 {
 	if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
 		ray.origin.y >= box.min.y && ray.origin.y <= box.max.y &&

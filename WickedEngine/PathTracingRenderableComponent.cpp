@@ -111,6 +111,11 @@ void PathTracingRenderableComponent::Update(float dt)
 void PathTracingRenderableComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 {
 	wiRenderer::UpdateRenderData(threadID);
+
+	if (sam == 0)
+	{
+		wiRenderer::BuildSceneBVH(threadID);
+	}
 }
 
 void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
@@ -119,7 +124,7 @@ void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
 
-	wiRenderer::DrawTracedScene(wiRenderer::getCamera(), traceResult, sam == 0, threadID);
+	wiRenderer::DrawTracedScene(wiRenderer::getCamera(), traceResult, threadID);
 
 
 

@@ -1,6 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_BVH.h"
 
 // This shader builds scene triangle data and performs BVH classification:
 //	- This shader is run per object.
@@ -14,19 +13,19 @@ TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
 TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
 
-RWSTRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, 0);
+RWSTRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, 0);
 RWRAWBUFFER(clusterCounterBuffer, 1);
 RWSTRUCTUREDBUFFER(clusterIndexBuffer, uint, 2);
 RWSTRUCTUREDBUFFER(clusterMortonBuffer, uint, 3);
 RWSTRUCTUREDBUFFER(clusterOffsetBuffer, uint2, 4); // offset, count
-RWSTRUCTUREDBUFFER(clusterAABBBuffer, TracedRenderingAABB, 5);
+RWSTRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, 5);
 
 // if defined, triangles will be grouped into clusters, else every triangle will be its own cluster:
 #define CLUSTER_GROUP
 
 #ifdef CLUSTER_GROUP
 static const uint clusterTriangleCapacity = 4;
-static const uint bucketCount = TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE / clusterTriangleCapacity;
+static const uint bucketCount = BVH_CLASSIFICATION_GROUPSIZE / clusterTriangleCapacity;
 static const float MapFloatToUint = 100000.0f;
 groupshared uint3 GroupMin[bucketCount];
 groupshared uint3 GroupMax[bucketCount];
@@ -59,7 +58,7 @@ inline uint morton3D(in float3 pos)
 }
 
 
-[numthreads(TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE, 1, 1)]
+[numthreads(BVH_CLASSIFICATION_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tri = DTid.x;
@@ -120,7 +119,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		float4x4 WORLD = xTraceBVHWorld;
 
-		TracedRenderingMeshTriangle prim;
+		BVHMeshTriangle prim;
 		prim.v0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
 		prim.v1 = mul(WORLD, float4(pos_nor1.xyz, 1)).xyz;
 		prim.v2 = mul(WORLD, float4(pos_nor2.xyz, 1)).xyz;
