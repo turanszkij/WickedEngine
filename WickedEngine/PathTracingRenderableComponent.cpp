@@ -149,9 +149,12 @@ void PathTracingRenderableComponent::Compose()
 	wiRenderer::GetDevice()->EventBegin("PathTracingRenderableComponent::Compose", GRAPHICSTHREAD_IMMEDIATE);
 
 
-	wiImageEffects fx;
+	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	fx.presentFullScreen = true;
+	fx.quality = QUALITY_BILINEAR;
+	fx.process.setToneMap(true);
+	fx.setDistortionMap(wiTextureHelper::getInstance()->getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
+	fx.setMaskMap(wiTextureHelper::getInstance()->getColor(wiColor::Gray));
 	
 	wiImage::Draw(rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 

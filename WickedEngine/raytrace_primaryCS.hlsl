@@ -141,7 +141,7 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 
 		Material mat = materialBuffer[materialIndex];
 		
-		float4 baseColor = mat.baseColor /** baseColorMap*/;
+		float4 baseColor = DEGAMMA(mat.baseColor /** baseColorMap*/);
 		float reflectance = mat.reflectance/* * surfaceMap.r*/;
 		float metalness = mat.metalness/* * surfaceMap.g*/;
 		float3 emissive = baseColor.rgb * mat.emissive /** surfaceMap.b*/;

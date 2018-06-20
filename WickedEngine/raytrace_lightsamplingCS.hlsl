@@ -145,19 +145,13 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		Material mat = materialBuffer[materialIndex];
 
-		float4 baseColor = mat.baseColor /** baseColorMap*/;
+		float4 baseColor = DEGAMMA(mat.baseColor /** baseColorMap*/);
 		float reflectance = mat.reflectance/* * surfaceMap.r*/;
 		float metalness = mat.metalness/* * surfaceMap.g*/;
 		float emissive = mat.emissive /** surfaceMap.b*/;
 		float roughness = mat.roughness/* * normalMap.a*/;
 		float sss = mat.subsurfaceScattering;
 
-		//float4 baseColor = 1;
-		//float roughness = 0.2f;
-		//float reflectance = 0.3f;
-		//float metalness = 0;
-		//float emissive = 0;
-		//float sss = 0;
 		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness, emissive, sss);
 
 		[loop]
