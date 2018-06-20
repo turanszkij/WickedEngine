@@ -24,5 +24,23 @@ struct TracedRenderingStoredRay
 	float2 bary;
 };
 
+struct TracedRenderingMaterial
+{
+	float4		baseColor;
+	float4		texMulAdd;
+	float		roughness;
+	float		reflectance;
+	float		metalness;
+	float		emissive;
+	float		refractionIndex;
+	float		subsurfaceScattering;
+	float		normalMapStrength;
+	float		parallaxOcclusionMapping;
+
+	float4		baseColorAtlasMulAdd;
+	float4		surfaceMapAtlasMulAdd;
+	float4		normalMapAtlasMulAdd;
+};
+
 
 #endif // _SHADERINTEROP_TRACEDRENDERING_H_

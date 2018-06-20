@@ -5,7 +5,7 @@
 
 RWTEXTURE2D(resultTexture, float4, 0);
 
-STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
+STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND1);
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND3);
@@ -13,6 +13,8 @@ STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND5);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
 STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND7);
+
+TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND8);
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
 STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_UNIQUE1);
@@ -138,18 +140,23 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		float3 P = ray.origin;
 		float3 N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
+		float2 UV = tri.t0 * w + tri.t1 * u + tri.t2 * v;
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 
 
 		uint materialIndex = tri.materialIndex;
 
-		Material mat = materialBuffer[materialIndex];
+		TracedRenderingMaterial mat = materialBuffer[materialIndex];
 
-		float4 baseColor = DEGAMMA(mat.baseColor /** baseColorMap*/);
-		float reflectance = mat.reflectance/* * surfaceMap.r*/;
-		float metalness = mat.metalness/* * surfaceMap.g*/;
-		float emissive = mat.emissive /** surfaceMap.b*/;
-		float roughness = mat.roughness/* * normalMap.a*/;
+		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
+		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
+		float4 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.normalMapAtlasMulAdd.xy + mat.normalMapAtlasMulAdd.zw, 0);
+
+		float4 baseColor = DEGAMMA(mat.baseColor * baseColorMap);
+		float reflectance = mat.reflectance * surfaceMap.r;
+		float metalness = mat.metalness * surfaceMap.g;
+		float emissive = mat.emissive * surfaceMap.b;
+		float roughness = mat.roughness /** normalMap.a*/;
 		float sss = mat.subsurfaceScattering;
 
 		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness, emissive, sss);

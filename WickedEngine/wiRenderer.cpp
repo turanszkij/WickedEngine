@@ -6780,7 +6780,107 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		assert(SUCCEEDED(hr));
 	}
 
-	static MaterialCB materialArray[1000] = {}; // todo realloc!
+	// Traced Scene Texture Atlas:
+	static Texture2D* atlasTexture = nullptr;
+	using namespace wiRectPacker;
+	static std::set<Texture2D*> sceneTextures;
+	static std::map<Texture2D*, rect_xywhf> storedTextures;
+
+	for (Model* model : GetScene().models)
+	{
+		for (auto& iter : model->objects)
+		{
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			for (auto& subset : mesh->subsets)
+			{
+				Material* mat = subset.material;
+
+				if (mat != nullptr)
+				{
+					sceneTextures.insert(mat->GetBaseColorMap());
+					sceneTextures.insert(mat->GetSurfaceMap());
+					sceneTextures.insert(mat->GetNormalMap());
+				}
+			}
+
+		}
+
+	}
+
+	bool repackAtlas = false;
+	for (Texture2D* tex : sceneTextures)
+	{
+		if (tex == nullptr)
+		{
+			continue;
+		}
+
+		if (storedTextures.find(tex) == storedTextures.end())
+		{
+			// we need to pack this decal texture into the atlas
+			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width, tex->GetDesc().Height);
+			storedTextures[tex] = newRect;
+
+			repackAtlas = true;
+		}
+
+	}
+
+	if (repackAtlas)
+	{
+		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		int i = 0;
+		for (auto& it : storedTextures)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "Tracing atlas packing into single texture failed!");
+
+			SAFE_DELETE(atlasTexture);
+
+			TextureDesc desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_B8G8R8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+			for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
+			{
+				for (auto& it : storedTextures)
+				{
+					if (mip < it.first->GetDesc().MipLevels)
+					{
+						device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+					}
+				}
+			}
+		}
+		else
+		{
+			wiBackLog::post("Tracing atlas packing failed!");
+		}
+
+		SAFE_DELETE_ARRAY(out_rects);
+	}
+
+	static TracedRenderingMaterial materialArray[1000] = {}; // todo realloc!
 	static GPUBuffer* materialBuffer = nullptr;
 
 	if (materialBuffer == nullptr)
@@ -6792,7 +6892,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		materialBuffer = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.StructureByteStride = sizeof(MaterialCB);
+		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
 		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -6816,12 +6916,40 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 			for (auto& subset : mesh->subsets)
 			{
-				materialArray[totalMaterials].Create(*subset.material);
+				MaterialCB mat;
+				mat.Create(*subset.material);
+
+				// Copy base params:
+				materialArray[totalMaterials].baseColor = mat.baseColor;
+				materialArray[totalMaterials].texMulAdd = mat.texMulAdd;
+				materialArray[totalMaterials].roughness = mat.roughness;
+				materialArray[totalMaterials].reflectance = mat.reflectance;
+				materialArray[totalMaterials].metalness = mat.metalness;
+				materialArray[totalMaterials].emissive = mat.emissive;
+				materialArray[totalMaterials].refractionIndex = mat.refractionIndex;
+				materialArray[totalMaterials].subsurfaceScattering = mat.subsurfaceScattering;
+				materialArray[totalMaterials].normalMapStrength = mat.normalMapStrength;
+				materialArray[totalMaterials].parallaxOcclusionMapping = mat.normalMapStrength;
+
+				// Add extended properties:
+				TextureDesc desc = atlasTexture->GetDesc();
+				rect_xywhf rect;
+
+				rect = storedTextures[subset.material->GetBaseColorMap()];
+				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (rect.x + 0.5f) / (float)desc.Width, (rect.y + 0.5f) / (float)desc.Height);
+
+				rect = storedTextures[subset.material->GetSurfaceMap()];
+				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (rect.x + 0.5f) / (float)desc.Width, (rect.y + 0.5f) / (float)desc.Height);
+
+				rect = storedTextures[subset.material->GetNormalMap()];
+				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (rect.x + 0.5f) / (float)desc.Width, (rect.y + 0.5f) / (float)desc.Height);
+
+
 				totalMaterials++;
 			}
 		}
 	}
-	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * totalMaterials);
+	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(TracedRenderingMaterial) * totalMaterials);
 
 
 	// Begin raytrace
@@ -6889,6 +7017,15 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		bvhAABBBuffer,
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+	if (atlasTexture != nullptr)
+	{
+		device->BindResource(CS, atlasTexture, TEXSLOT_ONDEMAND8, threadID);
+	}
+	else
+	{
+		device->BindResource(CS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
+	}
 
 	for (int bounce = 0; bounce < 8; ++bounce)
 	{
@@ -7113,6 +7250,8 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 				{
 					wiBackLog::post("Decal atlas packing failed!");
 				}
+
+				SAFE_DELETE_ARRAY(out_rects);
 			}
 			
 			rect_xywhf rect = storedTextures[decal->texture];

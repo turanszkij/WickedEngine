@@ -11,20 +11,6 @@ static const float INFINITE_RAYHIT = 1000000;
 static const float EPSILON = 0.0001f;
 
 
-struct Material
-{
-	float4		baseColor;
-	float4		texMulAdd;
-	float		roughness;
-	float		reflectance;
-	float		metalness;
-	float		emissive;
-	float		refractionIndex;
-	float		subsurfaceScattering;
-	float		normalMapStrength;
-	float		parallaxOcclusionMapping;
-};
-
 //struct Sphere
 //{
 //	float3 position;
