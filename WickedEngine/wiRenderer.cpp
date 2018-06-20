@@ -600,8 +600,8 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(TracedRenderingCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
 
-	bd.ByteWidth = sizeof(TracedBVHCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE_BVH]);
+	bd.ByteWidth = sizeof(BVHCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
 
 
 
@@ -6564,18 +6564,18 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 				Object* object = iter;
 				Mesh* mesh = object->mesh;
 
-				TracedBVHCB cb;
+				BVHCB cb;
 				cb.xTraceBVHWorld = object->world;
 				cb.xTraceBVHMaterialOffset = materialCount;
 				cb.xTraceBVHMeshTriangleOffset = triangleCount;
 				cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
 				cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
 
-				device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_BVH], &cb, threadID);
 
 				triangleCount += cb.xTraceBVHMeshTriangleCount;
 
-				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_BVH], CB_GETBINDSLOT(BVHCB), threadID);
 
 				GPUResource* res[] = {
 					mesh->indexBuffer,
