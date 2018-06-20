@@ -182,7 +182,7 @@ Texture2D* wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& col
 		return colorTextures[color.rgba];
 	}
 
-	static const int dataLength = 1 * 1 * 4;
+	static const int dataLength = 8 * 8 * 4;
 	unsigned char* data = new unsigned char[dataLength];
 	for (int i = 0; i < dataLength; i += 4)
 	{
@@ -193,7 +193,7 @@ Texture2D* wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& col
 	}
 
 	Texture2D* texture = nullptr;
-	if (FAILED(CreateTexture(texture, data, 1, 1, 4)))
+	if (FAILED(CreateTexture(texture, data, 8, 8, 4)))
 	{
 		delete[] data;
 		return nullptr;
