@@ -186,14 +186,14 @@ Texture2D* wiTextureHelper::wiTextureHelperInstance::getColor(const wiColor& col
 	unsigned char* data = new unsigned char[dataLength];
 	for (int i = 0; i < dataLength; i += 4)
 	{
-		data[i] = color.b;
+		data[i] = color.r;
 		data[i + 1] = color.g;
-		data[i + 2] = color.r;
+		data[i + 2] = color.b;
 		data[i + 3] = color.a;
 	}
 
 	Texture2D* texture = nullptr;
-	if (FAILED(CreateTexture(texture, data, 1, 1, 4, FORMAT_B8G8R8A8_UNORM)))
+	if (FAILED(CreateTexture(texture, data, 1, 1, 4)))
 	{
 		delete[] data;
 		return nullptr;

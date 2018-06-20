@@ -756,6 +756,9 @@
     <FxCompile Include="raytrace_kickjobsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="copytexture2Dregion_unorm4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

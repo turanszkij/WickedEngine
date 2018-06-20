@@ -28,6 +28,7 @@
 #include "ShaderInterop_Skinning.h"
 #include "ShaderInterop_TracedRendering.h"
 #include "ShaderInterop_BVH.h"
+#include "ShaderInterop_Utility.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
 
@@ -602,6 +603,9 @@ void wiRenderer::LoadBuffers()
 
 	bd.ByteWidth = sizeof(BVHCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
+
+	bd.ByteWidth = sizeof(CopyTextureCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
 
 
 
@@ -1472,6 +1476,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2DREGION_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2Dregion_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
@@ -1761,6 +1766,7 @@ void wiRenderer::LoadShaders()
 			desc.rs = rasterizers[RSTYPE_FRONT];
 			desc.bs = blendStates[BSTYPE_DECAL];
 			desc.dss = depthStencils[DSSTYPE_DECAL];
+			desc.pt = TRIANGLESTRIP;
 
 			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_gbuffer_0;
@@ -6330,6 +6336,56 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->EventEnd(threadID);
 }
 
+void wiRenderer::CopyTexture2D_Region(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	const TextureDesc& desc_dst = dst->GetDesc();
+	const TextureDesc& desc_src = src->GetDesc();
+
+	assert(desc_dst.BindFlags & BIND_UNORDERED_ACCESS);
+	assert(desc_src.BindFlags & BIND_SHADER_RESOURCE);
+
+	device->EventBegin("CopyTexture2D_Region_UNORM4", threadID);
+
+	device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2DREGION_UNORM4], threadID);
+
+	CopyTextureCB cb;
+	cb.xCopyDest.x = DstX;
+	cb.xCopyDest.y = DstY;
+	device->UpdateBuffer(constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
+
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
+
+	//if (SrcMIP > 0)
+	//{
+	//	assert(desc_src.MipLevels > SrcMIP);
+	//	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID, SrcMIP);
+	//}
+	//else
+	{
+		device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
+	}
+
+	if (DstMIP > 0)
+	{
+		assert(desc_dst.MipLevels > DstMIP);
+		device->BindUnorderedAccessResourceCS(dst, 0, threadID, DstMIP);
+	}
+	else
+	{
+		device->BindUnorderedAccessResourceCS(dst, 0, threadID);
+	}
+
+	device->Dispatch((UINT)ceilf((float)desc_src.Width / 8.0f), (UINT)ceilf((float)desc_src.Height / 8.0f), 1, threadID);
+
+	device->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	device->EventEnd(threadID);
+}
+
+
+
 // Should I care that usually buffers are not declared here?
 static GPUBuffer* bvhNodeBuffer = nullptr;
 static GPUBuffer* bvhAABBBuffer = nullptr;
@@ -6851,25 +6907,19 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 			desc.Height = (UINT)bins[0].size.h;
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
-			desc.Format = FORMAT_B8G8R8A8_UNORM;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
 			desc.SampleDesc.Count = 1;
 			desc.SampleDesc.Quality = 0;
 			desc.Usage = USAGE_DEFAULT;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
 			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
 
-			for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
+			for (auto& it : storedTextures)
 			{
-				for (auto& it : storedTextures)
-				{
-					if (mip < it.first->GetDesc().MipLevels)
-					{
-						device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-					}
-				}
+				CopyTexture2D_Region(atlasTexture, 0, it.second.x, it.second.y, it.first, 0, threadID);
 			}
 		}
 		else
@@ -7225,13 +7275,17 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 					desc.Height = (UINT)bins[0].size.h;
 					desc.MipLevels = 6;
 					desc.ArraySize = 1;
-					desc.Format = FORMAT_B8G8R8A8_UNORM; // png decals are loaded into this format! todo: DXT!
+					//desc.Format = FORMAT_R8G8B8A8_UNORM;
+					desc.Format = FORMAT_B8G8R8A8_UNORM; // png decals are loaded into this format! todo: Utility copytexture2d srcMIP!!!
 					desc.SampleDesc.Count = 1;
 					desc.SampleDesc.Quality = 0;
 					desc.Usage = USAGE_DEFAULT;
-					desc.BindFlags = BIND_SHADER_RESOURCE;
+					desc.BindFlags = BIND_SHADER_RESOURCE /*| BIND_UNORDERED_ACCESS*/;
 					desc.CPUAccessFlags = 0;
 					desc.MiscFlags = 0;
+
+					atlasTexture = new Texture2D;
+					atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 
 					device->CreateTexture2D(&desc, nullptr, &atlasTexture);
 
@@ -7242,6 +7296,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 							if (mip < it.first->GetDesc().MipLevels)
 							{
 								device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+								//CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
 							}
 						}
 					}

@@ -512,6 +512,9 @@ public:
 	static void GenerateMipChain(wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
 	static void GenerateMipChain(wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
 
+	// Performs copy operation even between different texture formats
+	static void CopyTexture2D_Region(wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, wiGraphicsTypes::Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID);
+
 	// dst: Texture2D with unordered access, the output will be written to this
 	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing
 	// randomness: random seed

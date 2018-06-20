@@ -1185,6 +1185,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
