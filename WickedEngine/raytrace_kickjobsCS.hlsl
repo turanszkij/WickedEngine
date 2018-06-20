@@ -5,7 +5,7 @@
 RWRAWBUFFER(counterBuffer_WRITE, 0);
 RWRAWBUFFER(indirectBuffer, 1);
 
-RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
+RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

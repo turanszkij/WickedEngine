@@ -6,15 +6,15 @@ RWTEXTURE2D(resultTexture, float4, 0);
 
 STRUCTUREDBUFFER(materialBuffer, Material, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(triangleBuffer, TracedRenderingMeshTriangle, TEXSLOT_ONDEMAND1);
-RAWBUFFER(clusterCounterBuffer, 0);
-STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_UNIQUE0);
-STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_UNIQUE1);
+RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND5);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
+STRUCTUREDBUFFER(bvhAABBBuffer, TracedRenderingAABB, TEXSLOT_ONDEMAND7);
 
-RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(rayBuffer_READ, xTracedRenderingStoredRay, TEXSLOT_ONDEMAND9);
+RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
+STRUCTUREDBUFFER(rayBuffer_READ, xTracedRenderingStoredRay, TEXSLOT_UNIQUE1);
 
 inline bool TraceSceneANY(Ray ray, float maxDistance)
 {
@@ -123,7 +123,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// Compute screen coordinates:
 		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
 
-		float seed = g_xFrame_Time + xTraceBounce;
+		float seed = xTraceRandomSeed;
 
 		float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 

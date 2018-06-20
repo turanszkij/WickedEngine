@@ -2,23 +2,24 @@
 #include "Renderable3DComponent.h"
 
 
-class TracedRenderableComponent :
+class PathTracingRenderableComponent :
 	public Renderable3DComponent
 {
 private:
-	float sam = 0;
+	int sam = -1;
 
 protected:
-	wiGraphicsTypes::Texture2D* traceResult = nullptr;
-	wiRenderTarget rtAccumulation;
+	static wiGraphicsTypes::Texture2D* traceResult;
+	static wiRenderTarget rtAccumulation;
 
 	virtual void ResizeBuffers();
 
+	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID) override;
 	virtual void RenderScene(GRAPHICSTHREAD threadID) override;
 
 public:
-	TracedRenderableComponent();
-	virtual ~TracedRenderableComponent();
+	PathTracingRenderableComponent();
+	virtual ~PathTracingRenderableComponent();
 
 	virtual wiDepthTarget* GetDepthBuffer() override { return nullptr; };
 

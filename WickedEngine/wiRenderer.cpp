@@ -6337,32 +6337,16 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	uint _width = GetInternalResolution().x;
 	uint _height = GetInternalResolution().y;
-	uint _raycount = _width * _height;
 
-	static GPUBuffer* materialBuffer = nullptr;
-	static MaterialCB materialArray[1000] = {};
+	// Ray storage buffer:
 	static GPUBuffer* rayBuffer[2] = {};
-	static GPUBuffer* indirectBuffer = nullptr;
-	static GPUBuffer* counterBuffer[2] = {};
+	static uint RayCountPrev = 0;
+	const uint _raycount = _width * _height;
 
-	if (materialBuffer == nullptr || rayBuffer == nullptr || indirectBuffer == nullptr || counterBuffer == nullptr)
+	if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
-
-		SAFE_DELETE(materialBuffer);
-		materialBuffer = new GPUBuffer;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.StructureByteStride = sizeof(MaterialCB);
-		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
-		assert(SUCCEEDED(hr));
-
 
 		SAFE_DELETE(rayBuffer[0]);
 		SAFE_DELETE(rayBuffer[1]);
@@ -6380,6 +6364,17 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
 		assert(SUCCEEDED(hr));
 
+		RayCountPrev = _raycount;
+	}
+
+	// Misc buffers:
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
+
+	if (indirectBuffer == nullptr || counterBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
 
 		SAFE_DELETE(indirectBuffer);
 		indirectBuffer = new GPUBuffer;
@@ -6412,8 +6407,49 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		assert(SUCCEEDED(hr));
 	}
 
+	static MaterialCB materialArray[1000] = {}; // todo realloc!
+	static GPUBuffer* materialBuffer = nullptr;
 
-	static bool allocateBVH = true;
+	if (materialBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(materialBuffer);
+		materialBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.StructureByteStride = sizeof(MaterialCB);
+		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	// Pre-gather scene properties:
+	uint32_t totalTriangles = 0;
+	uint32_t totalMaterials = 0;
+	for (auto& model : GetScene().models)
+	{
+		for (auto& iter : model->objects)
+		{
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			totalTriangles += (uint)mesh->indices.size() / 3;
+
+			for (auto& subset : mesh->subsets)
+			{
+				materialArray[totalMaterials].Create(*subset.material);
+				totalMaterials++;
+			}
+		}
+	}
+	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * totalMaterials);
+
 	static GPUBuffer* bvhNodeBuffer = nullptr;
 	static GPUBuffer* bvhAABBBuffer = nullptr;
 	static GPUBuffer* bvhFlagBuffer = nullptr;
@@ -6425,8 +6461,23 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	static GPUBuffer* clusterOffsetBuffer = nullptr;
 	static GPUBuffer* clusterAABBBuffer = nullptr;
 	static GPUBuffer* clusterConeBuffer = nullptr;
-	const uint maxClusterCount = 1000000;
-	const uint maxTriangleCount = 1000000;
+
+	static uint maxTriangleCount = totalTriangles;
+	static bool allocateBVH = maxTriangleCount > 0;
+
+	if (totalTriangles > maxTriangleCount)
+	{
+		maxTriangleCount = totalTriangles;
+		allocateBVH = true; // triggers realloc!
+	}
+
+	const uint maxClusterCount = maxTriangleCount; // triangle / cluster capacity
+
+	if (allocateBVH)
+	{
+		// realloc also triggers rebuild!
+		rebuildBVH = true;
+	}
 
 	if (allocateBVH)
 	{
@@ -6580,8 +6631,8 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		device->EventEnd(threadID);
 
 
-		uint32_t totalTriangles = 0;
-		uint32_t totalMaterials = 0;
+		uint32_t triangleCount = 0;
+		uint32_t materialCount = 0;
 
 		device->EventBegin("BVH - Classification", threadID);
 		{
@@ -6605,14 +6656,14 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 					TracedBVHCB cb;
 					cb.xTraceBVHWorld = object->world;
-					cb.xTraceBVHMaterialOffset = totalMaterials;
-					cb.xTraceBVHMeshTriangleOffset = totalTriangles;
+					cb.xTraceBVHMaterialOffset = materialCount;
+					cb.xTraceBVHMeshTriangleOffset = triangleCount;
 					cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
 					cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
 
 					device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE_BVH], &cb, threadID);
 
-					totalTriangles += cb.xTraceBVHMeshTriangleCount;
+					triangleCount += cb.xTraceBVHMeshTriangleCount;
 
 					device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE_BVH], CB_GETBINDSLOT(TracedBVHCB), threadID);
 
@@ -6625,32 +6676,10 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 					device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)TRACEDRENDERING_BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
 
-
-					///// TEMP:
-					GPUResource* tex[3] = {
-						wiTextureHelper::getInstance()->getWhite(),
-						wiTextureHelper::getInstance()->getNormalMapDefault(),
-						wiTextureHelper::getInstance()->getWhite(),
-					};
 					for (auto& subset : mesh->subsets)
 					{
-						if (subset.material->texture != nullptr)
-						{
-							tex[0] = subset.material->texture;
-						}
-						if (subset.material->normalMap != nullptr)
-						{
-							tex[1] = subset.material->normalMap;
-						}
-						if (subset.material->surfaceMap != nullptr)
-						{
-							tex[2] = subset.material->surfaceMap;
-						}
-
-						materialArray[totalMaterials].Create(*subset.material);
-						totalMaterials++;
+						materialCount++;
 					}
-					device->BindResources(CS, tex, TEXSLOT_ONDEMAND4, ARRAYSIZE(tex), threadID);
 				}
 			}
 
@@ -6764,47 +6793,6 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	}
 
 
-	// Gather scene properties:
-	uint32_t totalTriangles = 0;
-	uint32_t totalMaterials = 0;
-	for (auto& model : GetScene().models)
-	{
-		for (auto& iter : model->objects)
-		{
-			Object* object = iter;
-			Mesh* mesh = object->mesh;
-
-			totalTriangles += (uint)mesh->indices.size() / 3;
-
-			///// TEMP:
-			GPUResource* tex[3] = {
-				wiTextureHelper::getInstance()->getWhite(),
-				wiTextureHelper::getInstance()->getNormalMapDefault(),
-				wiTextureHelper::getInstance()->getWhite(),
-			};
-			for (auto& subset : mesh->subsets)
-			{
-				if (subset.material->texture != nullptr)
-				{
-					tex[0] = subset.material->texture;
-				}
-				if (subset.material->normalMap != nullptr)
-				{
-					tex[1] = subset.material->normalMap;
-				}
-				if (subset.material->surfaceMap != nullptr)
-				{
-					tex[2] = subset.material->surfaceMap;
-				}
-
-				materialArray[totalMaterials].Create(*subset.material);
-				totalMaterials++;
-			}
-			device->BindResources(CS, tex, TEXSLOT_ONDEMAND4, ARRAYSIZE(tex), threadID);
-		}
-	}
-
-
 	// Begin raytrace
 
 	wiProfiler::GetInstance().BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
@@ -6812,11 +6800,10 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
 	TracedRenderingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-	cb.xTraceBounce = 0;
+	cb.xTraceRandomSeed = renderTime;
 	cb.xTraceMeshTriangleCount = totalTriangles;
 
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(MaterialCB) * totalMaterials);
 
 	device->EventBegin("Clear", threadID);
 	{
@@ -6858,28 +6845,32 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	device->EventEnd(threadID);
 
 
+
+	// Set up tracing resources:
+	GPUResource* res[] = {
+		materialBuffer,
+		triangleBuffer,
+		clusterCounterBuffer,
+		clusterIndexBuffer,
+		clusterOffsetBuffer,
+		clusterConeBuffer,
+		bvhNodeBuffer,
+		bvhAABBBuffer,
+	};
+	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
 	for (int bounce = 0; bounce < 8; ++bounce)
 	{
 		const int __readBufferID = bounce % 2;
 		const int __writeBufferID = (bounce + 1) % 2;
 
-		// Set up tracing resources:
-		cb.xTraceBounce = (uint)bounce;
+		cb.xTraceRandomSeed = renderTime + (float)bounce;
 		device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
-		device->BindResource(CS, materialBuffer, TEXSLOT_ONDEMAND0, threadID);
-		device->BindResource(CS, triangleBuffer, TEXSLOT_ONDEMAND1, threadID);
-		device->BindResource(CS, clusterCounterBuffer, 0, threadID); // !!!
-		device->BindResource(CS, clusterIndexBuffer, TEXSLOT_ONDEMAND2, threadID);
-		device->BindResource(CS, clusterOffsetBuffer, TEXSLOT_ONDEMAND3, threadID);
-		device->BindResource(CS, clusterConeBuffer, TEXSLOT_ONDEMAND4, threadID);
-		device->BindResource(CS, bvhNodeBuffer, TEXSLOT_UNIQUE0, threadID);
-		device->BindResource(CS, bvhAABBBuffer, TEXSLOT_UNIQUE1, threadID);
 
-
-		// 1.) Prepare Tracing Step
-		device->EventBegin("Prepare Trace Step", threadID);
+		// 1.) Kick off raytracing jobs for this bounce
+		device->EventBegin("Kick Raytrace Jobs", threadID);
 		{
 			// Prepare indirect dispatch based on counter buffer value:
 			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
@@ -6887,7 +6878,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 			GPUResource* res[] = {
 				counterBuffer[__readBufferID],
 			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND8, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
 			GPUResource* uavs[] = {
 				counterBuffer[__writeBufferID],
 				indirectBuffer,
@@ -6918,7 +6909,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 					counterBuffer[__readBufferID],
 					rayBuffer[__readBufferID],
 				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND8, ARRAYSIZE(res), threadID);
+				device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
 				GPUResource* uavs[] = {
 					result,
 				};
@@ -6952,7 +6943,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				counterBuffer[__readBufferID],
 				rayBuffer[__readBufferID],
 			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND8, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
 			GPUResource* uavs[] = {
 				counterBuffer[__writeBufferID],
 				rayBuffer[__writeBufferID],

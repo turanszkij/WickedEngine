@@ -1179,7 +1179,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)TracedRenderableComponent.h">
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\PathTracingRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
   </ItemGroup>
@@ -2006,7 +2006,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TracedRenderableComponent.cpp">
+    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\PathTracingRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
     </ClCompile>
   </ItemGroup>

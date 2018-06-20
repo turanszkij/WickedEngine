@@ -1,4 +1,4 @@
-#include "TracedRenderableComponent.h"
+#include "PathTracingRenderableComponent.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiImageEffects.h"
@@ -10,17 +10,18 @@
 
 using namespace wiGraphicsTypes;
 
-TracedRenderableComponent::TracedRenderableComponent()
+PathTracingRenderableComponent::PathTracingRenderableComponent()
 {
 	Renderable3DComponent::setProperties();
 }
-TracedRenderableComponent::~TracedRenderableComponent()
+PathTracingRenderableComponent::~PathTracingRenderableComponent()
 {
-	SAFE_DELETE(traceResult);
 }
 
 
-void TracedRenderableComponent::ResizeBuffers()
+wiGraphicsTypes::Texture2D* PathTracingRenderableComponent::traceResult = nullptr;
+wiRenderTarget PathTracingRenderableComponent::rtAccumulation;
+void PathTracingRenderableComponent::ResizeBuffers()
 {
 	Renderable3DComponent::ResizeBuffers();
 
@@ -66,23 +67,27 @@ void TracedRenderableComponent::ResizeBuffers()
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
 		, false, FORMAT_R32G32B32A32_FLOAT); // needs full float for correct accumulation over long time period!
 
+
+
+	// also reset accumulation buffer state:
+	sam = -1;
 }
 
-void TracedRenderableComponent::Initialize()
+void PathTracingRenderableComponent::Initialize()
 {
 	ResizeBuffers();
 
 	Renderable3DComponent::Initialize();
 }
-void TracedRenderableComponent::Load()
+void PathTracingRenderableComponent::Load()
 {
 	Renderable3DComponent::Load();
 }
-void TracedRenderableComponent::Start()
+void PathTracingRenderableComponent::Start()
 {
 	Renderable3DComponent::Start();
 }
-void TracedRenderableComponent::Render()
+void PathTracingRenderableComponent::Render()
 {
 	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
 	RenderScene(GRAPHICSTHREAD_IMMEDIATE);
@@ -91,16 +96,24 @@ void TracedRenderableComponent::Render()
 }
 
 
-void TracedRenderableComponent::Update(float dt)
+void PathTracingRenderableComponent::Update(float dt)
 {
-
 	if (wiRenderer::getCamera()->hasChanged)
 	{
-		sam = 0;
+		sam = -1;
 	}
+	sam++;
+
+	Renderable3DComponent::Update(dt);
 }
 
-void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
+
+void PathTracingRenderableComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
+{
+	wiRenderer::UpdateRenderData(threadID);
+}
+
+void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
@@ -115,7 +128,7 @@ void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	fx.hdr = true;
 
 
-
+	// Accumulate with moving averaged blending:
 	fx.opacity = 1.0f / (sam + 1.0f);
 	fx.blendFlag = BLENDMODE_ALPHA;
 
@@ -123,66 +136,19 @@ void TracedRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiImage::Draw(traceResult, fx, threadID);
 
 
-
-	sam++;
-
-	//if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
-	//{
-	//	wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
-	//	wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
-	//	fx.blendFlag = BLENDMODE_OPAQUE;
-	//	int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
-	//	int history = 1 - current;
-	//	rtTemporalAA[current].Set(threadID); {
-	//		wiRenderer::UpdateGBuffer(nullptr, nullptr, nullptr, nullptr, nullptr, threadID);
-	//		fx.presentFullScreen = false;
-	//		fx.process.setTemporalAAResolve(true);
-	//		fx.setMaskMap(rtTemporalAA[history].GetTexture());
-	//		wiImage::Draw(traceResult, fx, threadID);
-	//		fx.process.clear();
-	//	}
-	//	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
-	//	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	//	wiProfiler::GetInstance().EndRange(threadID);
-	//	wiRenderer::GetDevice()->EventEnd(threadID);
-	//}
-
-
-
 	wiProfiler::GetInstance().EndRange(threadID); // Traced Scene
 }
 
-void TracedRenderableComponent::Compose()
+void PathTracingRenderableComponent::Compose()
 {
-	wiRenderer::GetDevice()->EventBegin("TracedRenderableComponent::Compose", GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->EventBegin("PathTracingRenderableComponent::Compose", GRAPHICSTHREAD_IMMEDIATE);
 
 
 	wiImageEffects fx;
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.presentFullScreen = true;
-
-
-
-	//wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
-	
-	
-	
-	
-	
 	
 	wiImage::Draw(rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
-
-
-
-	//if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
-	//{
-	//	int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
-	//	wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	//}
-	//else
-	//{
-	//	wiImage::Draw(traceResult, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//}
 
 
 	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);

@@ -17,7 +17,7 @@ static const uint ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR = ARGUMENTBUFFER_OFFSET
 CBUFFER(TracedRenderingCB, CBSLOT_RENDERER_TRACED)
 {
 	float2 xTracePixelOffset;
-	uint xTraceBounce;
+	float xTraceRandomSeed;
 	uint xTraceMeshTriangleCount;
 };
 

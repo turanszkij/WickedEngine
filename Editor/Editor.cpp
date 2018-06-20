@@ -262,8 +262,8 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	case EditorComponent::RENDERPATH_TILEDDEFERRED:
 		renderPath = new TiledDeferredRenderableComponent;
 		break;
-	case EditorComponent::RENDERPATH_TRACED:
-		renderPath = new TracedRenderableComponent;
+	case EditorComponent::RENDERPATH_PATHTRACING:
+		renderPath = new PathTracingRenderableComponent;
 		break;
 	default:
 		assert(0);
@@ -387,7 +387,7 @@ void EditorComponent::Load()
 			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
 			break;
 		case 4:
-			ChangeRenderPath(RENDERPATH_TRACED);
+			ChangeRenderPath(RENDERPATH_PATHTRACING);
 			break;
 		default:
 			break;
