@@ -6843,7 +6843,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	// Traced Scene Texture Atlas:
 	static Texture2D* atlasTexture = nullptr;
 	using namespace wiRectPacker;
-	static std::set<Texture2D*> sceneTextures;
+	static unordered_set<Texture2D*> sceneTextures;
 	if (sceneTextures.empty())
 	{
 		sceneTextures.insert(wiTextureHelper::getInstance()->getWhite());
@@ -6874,7 +6874,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	}
 
 	bool repackAtlas = false;
-	static std::map<Texture2D*, rect_xywhf> storedTextures;
+	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
 	const int atlasWrapBorder = 1;
 	for (Texture2D* tex : sceneTextures)
 	{
@@ -6885,7 +6885,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 		if (storedTextures.find(tex) == storedTextures.end())
 		{
-			// we need to pack this decal texture into the atlas
+			// we need to pack this texture into the atlas
 			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
 			storedTextures[tex] = newRect;
 
@@ -7286,10 +7286,16 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static set<Texture2D*> decalTextures;
+
+	static Texture2D* atlasTexture = nullptr;
+	bool repackAtlas = false;
+	const int atlasClampBorder = 1;
+
+	using namespace wiRectPacker;
+	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
 
 
-	// 1.) Gather all decal textures:
+	// Gather all decal textures:
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
@@ -7299,38 +7305,21 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 		{
 			if (decal->texture != nullptr)
 			{
-				decalTextures.insert(decal->texture);
+
+				if (storedTextures.find(decal->texture) == storedTextures.end())
+				{
+					// we need to pack this decal texture into the atlas
+					rect_xywhf newRect = rect_xywhf(0, 0, decal->texture->GetDesc().Width + atlasClampBorder * 2, decal->texture->GetDesc().Height + atlasClampBorder * 2);
+					storedTextures[decal->texture] = newRect;
+
+					repackAtlas = true;
+				}
 			}
 		}
 
 	}
 
-	static Texture2D* atlasTexture = nullptr;
-	bool repackAtlas = false;
-	const int atlasClampBorder = 1;
-
-	using namespace wiRectPacker;
-	static std::map<Texture2D*, rect_xywhf> storedTextures;
-
-	// 2.) Pack all decal textures into atlas:
-	for (Texture2D* tex : decalTextures)
-	{
-		if (tex == nullptr)
-		{
-			continue;
-		}
-
-		if (storedTextures.find(tex) == storedTextures.end())
-		{
-			// we need to pack this decal texture into the atlas
-			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasClampBorder * 2, tex->GetDesc().Height + atlasClampBorder * 2);
-			storedTextures[tex] = newRect;
-
-			repackAtlas = true;
-		}
-	}
-
-	// 3.) Update atlas texture if it is invalidated:
+	// Update atlas texture if it is invalidated:
 	if (repackAtlas)
 	{
 		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
@@ -7389,7 +7378,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 		SAFE_DELETE_ARRAY(out_rects);
 	}
 
-	// 4.) Assign atlas buckets to decals:
+	// Assign atlas buckets to decals:
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
