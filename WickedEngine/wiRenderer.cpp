@@ -6907,7 +6907,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		std::vector<bin> bins;
 		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
 		{
-			assert(bins.size() == 1 && "Tracing atlas packing into single texture failed!");
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
 			SAFE_DELETE(atlasTexture);
 
@@ -7306,6 +7306,8 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	}
 
 	static Texture2D* atlasTexture = nullptr;
+	bool repackAtlas = false;
+	const int atlasClampBorder = 1;
 
 	using namespace wiRectPacker;
 	static std::map<Texture2D*, rect_xywhf> storedTextures;
@@ -7321,67 +7323,73 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 		if (storedTextures.find(tex) == storedTextures.end())
 		{
 			// we need to pack this decal texture into the atlas
-			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width, tex->GetDesc().Height);
+			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasClampBorder * 2, tex->GetDesc().Height + atlasClampBorder * 2);
 			storedTextures[tex] = newRect;
 
-			rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
-			int i = 0;
-			for (auto& it : storedTextures)
-			{
-				out_rects[i] = &it.second;
-				i++;
-			}
-
-			std::vector<bin> bins;
-			if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
-			{
-				assert(bins.size() == 1 && "Decal atlas packing into single texture failed!");
-
-				SAFE_DELETE(atlasTexture);
-
-				TextureDesc desc;
-				ZeroMemory(&desc, sizeof(desc));
-				desc.Width = (UINT)bins[0].size.w;
-				desc.Height = (UINT)bins[0].size.h;
-				desc.MipLevels = 6;
-				desc.ArraySize = 1;
-				desc.Format = FORMAT_R8G8B8A8_UNORM;
-				desc.SampleDesc.Count = 1;
-				desc.SampleDesc.Quality = 0;
-				desc.Usage = USAGE_DEFAULT;
-				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = 0;
-
-				atlasTexture = new Texture2D;
-				atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-
-				device->CreateTexture2D(&desc, nullptr, &atlasTexture);
-
-				for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
-				{
-					for (auto& it : storedTextures)
-					{
-						if (mip < it.first->GetDesc().MipLevels)
-						{
-							//device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-
-							// This is better because it implements format conversion so we can use multiple decal source texture formats in the atlas:
-							CopyTexture2D(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-						}
-					}
-				}
-			}
-			else
-			{
-				wiBackLog::post("Decal atlas packing failed!");
-			}
-
-			SAFE_DELETE_ARRAY(out_rects);
+			repackAtlas = true;
 		}
 	}
 
-	// 3.) Assign atlas buckets to decals:
+	// 3.) Update atlas texture if it is invalidated:
+	if (repackAtlas)
+	{
+		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		int i = 0;
+		for (auto& it : storedTextures)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+			SAFE_DELETE(atlasTexture);
+
+			TextureDesc desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 0;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			atlasTexture = new Texture2D;
+			atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+
+			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+			for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
+			{
+				for (auto& it : storedTextures)
+				{
+					if (mip < it.first->GetDesc().MipLevels)
+					{
+						//device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+
+						// This is better because it implements format conversion so we can use multiple decal source texture formats in the atlas:
+						CopyTexture2D(atlasTexture, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
+					}
+				}
+			}
+		}
+		else
+		{
+			wiBackLog::post("Decal atlas packing failed!");
+		}
+
+		SAFE_DELETE_ARRAY(out_rects);
+	}
+
+	// 4.) Assign atlas buckets to decals:
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
@@ -7391,8 +7399,16 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 		{
 			if (decal->texture != nullptr)
 			{
+				const TextureDesc& desc = atlasTexture->GetDesc();
+
 				rect_xywhf rect = storedTextures[decal->texture];
-				TextureDesc desc = atlasTexture->GetDesc();
+
+				// eliminate border expansion:
+				rect.x += atlasClampBorder;
+				rect.y += atlasClampBorder;
+				rect.w -= atlasClampBorder * 2;
+				rect.h -= atlasClampBorder * 2;
+
 				decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 			}
 			else

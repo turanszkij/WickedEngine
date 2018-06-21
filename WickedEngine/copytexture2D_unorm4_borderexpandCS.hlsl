@@ -18,51 +18,69 @@ void main(int3 DTid : SV_DispatchThreadID)
 
 	output[writecoord] = input.Load(int3(readcoord, xCopySrcMIP));
 
-	// wrapped borders:
+	// border expansion:
+	const bool wrap = xCopyBorderExpandStyle == 1;
+	int2 readoffset;
 
 	// left
 	if (readcoord.x == 0)
 	{
-		output[writecoord + int2(-1, 0)] = input.Load(int3(readcoord + int2(xCopySrcSize.x - 1, 0), xCopySrcMIP));
+		readoffset = wrap ? int2(xCopySrcSize.x - 1, 0) : 0;
+
+		output[writecoord + int2(-1, 0)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 
 		// top left
 		if (readcoord.y == 0)
 		{
-			output[writecoord + int2(-1, -1)] = input.Load(int3(readcoord + int2(xCopySrcSize.x - 1, xCopySrcSize.x - 1), xCopySrcMIP));
+			readoffset = wrap ? int2(xCopySrcSize.x - 1, xCopySrcSize.x - 1) : 0;
+
+			output[writecoord + int2(-1, -1)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 		}
 	}
 	// right
 	if (readcoord.x == xCopySrcSize.x - 1)
 	{
-		output[writecoord + int2(1, 0)] = input.Load(int3(readcoord + int2(-xCopySrcSize.x + 1, 0), xCopySrcMIP));
+		readoffset = wrap ? int2(-xCopySrcSize.x + 1, 0) : 0;
+
+		output[writecoord + int2(1, 0)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 
 		// bottom right
 		if (readcoord.y == xCopySrcSize.y - 1)
 		{
-			output[writecoord + int2(1, 1)] = input.Load(int3(readcoord + int2(-xCopySrcSize.x + 1, -xCopySrcSize.x + 1), xCopySrcMIP));
+			readoffset = wrap ? int2(-xCopySrcSize.x + 1, -xCopySrcSize.x + 1) : 0;
+
+			output[writecoord + int2(1, 1)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 		}
 	}
 
 	// top
 	if (readcoord.y == 0)
 	{
-		output[writecoord + int2(0, -1)] = input.Load(int3(readcoord + int2(0, xCopySrcSize.x - 1), xCopySrcMIP));
+		readoffset = wrap ? int2(0, xCopySrcSize.x - 1) : 0;
+
+		output[writecoord + int2(0, -1)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 
 		// top right
 		if (readcoord.x == xCopySrcSize.x - 1)
 		{
-			output[writecoord + int2(1, -1)] = input.Load(int3(readcoord + int2(-xCopySrcSize.x + 1, xCopySrcSize.x - 1), xCopySrcMIP));
+			readoffset = wrap ? int2(-xCopySrcSize.x + 1, xCopySrcSize.x - 1) : 0;
+
+			output[writecoord + int2(1, -1)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 		}
 	}
 	// bottom
 	if (readcoord.y == xCopySrcSize.y - 1)
 	{
-		output[writecoord + int2(0, 1)] = input.Load(int3(readcoord + int2(0, -xCopySrcSize.x + 1), xCopySrcMIP));
+		readoffset = wrap ? int2(0, -xCopySrcSize.x + 1) : 0;
+
+		output[writecoord + int2(0, 1)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 
 		// bottom left
 		if (readcoord.x == 0)
 		{
-			output[writecoord + int2(-1, 1)] = input.Load(int3(readcoord + int2(xCopySrcSize.x - 1, -xCopySrcSize.x + 1), xCopySrcMIP));
+			readoffset = wrap ? int2(xCopySrcSize.x - 1, -xCopySrcSize.x + 1) : 0;
+
+			output[writecoord + int2(-1, 1)] = input.Load(int3(readcoord + readoffset, xCopySrcMIP));
 		}
 	}
 }
