@@ -512,8 +512,16 @@ public:
 	static void GenerateMipChain(wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
 	static void GenerateMipChain(wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
 
+	enum BORDEREXPANDSTYLE
+	{
+		BORDEREXPAND_DISABLE,
+		BORDEREXPAND_WRAP,
+		BORDEREXPAND_CLAMP,
+	};
 	// Performs copy operation even between different texture formats
-	static void CopyTexture2D_Region(wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, wiGraphicsTypes::Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID);
+	//	Can also expand border region according to desired sampler func
+	static void CopyTexture2D(wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, wiGraphicsTypes::Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, 
+		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
 	// dst: Texture2D with unordered access, the output will be written to this
 	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing

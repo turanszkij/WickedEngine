@@ -1476,7 +1476,8 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_COPYTEXTURE2DREGION_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2Dregion_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6336,7 +6337,7 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::CopyTexture2D_Region(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID)
+void wiRenderer::CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, BORDEREXPANDSTYLE borderExpand)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -6348,12 +6349,22 @@ void wiRenderer::CopyTexture2D_Region(Texture2D* dst, UINT DstMIP, UINT DstX, UI
 
 	device->EventBegin("CopyTexture2D_Region_UNORM4", threadID);
 
-	device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2DREGION_UNORM4], threadID);
+	if (borderExpand == BORDEREXPAND_DISABLE)
+	{
+		device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
+	}
+	else
+	{
+		device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
+	}
 
 	CopyTextureCB cb;
 	cb.xCopyDest.x = DstX;
 	cb.xCopyDest.y = DstY;
+	cb.xCopySrcSize.x = desc_src.Width >> SrcMIP;
+	cb.xCopySrcSize.y = desc_src.Height >> SrcMIP;
 	cb.xCopySrcMIP = SrcMIP;
+	cb.xCopyBorderExpandStyle = (uint)borderExpand;
 	device->UpdateBuffer(constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
 
 	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
@@ -6370,9 +6381,7 @@ void wiRenderer::CopyTexture2D_Region(Texture2D* dst, UINT DstMIP, UINT DstX, UI
 		device->BindUnorderedAccessResourceCS(dst, 0, threadID);
 	}
 
-	UINT mipW = desc_src.Width >> SrcMIP;
-	UINT mipH = desc_src.Height >> SrcMIP;
-	device->Dispatch((UINT)ceilf((float)mipW / 8.0f), (UINT)ceilf((float)mipH / 8.0f), 1, threadID);
+	device->Dispatch((UINT)ceilf((float)cb.xCopySrcSize.x / 8.0f), (UINT)ceilf((float)cb.xCopySrcSize.y / 8.0f), 1, threadID);
 
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
 
@@ -6866,6 +6875,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 	bool repackAtlas = false;
 	static std::map<Texture2D*, rect_xywhf> storedTextures;
+	const int atlasWrapBorder = 1;
 	for (Texture2D* tex : sceneTextures)
 	{
 		if (tex == nullptr)
@@ -6876,7 +6886,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		if (storedTextures.find(tex) == storedTextures.end())
 		{
 			// we need to pack this decal texture into the atlas
-			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width, tex->GetDesc().Height);
+			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
 			storedTextures[tex] = newRect;
 
 			repackAtlas = true;
@@ -6919,7 +6929,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 			for (auto& it : storedTextures)
 			{
-				CopyTexture2D_Region(atlasTexture, 0, it.second.x, it.second.y, it.first, 0, threadID);
+				CopyTexture2D(atlasTexture, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
 			}
 		}
 		else
@@ -6985,9 +6995,6 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				const TextureDesc& desc = atlasTexture->GetDesc();
 				rect_xywhf rect;
 
-				// shrink a bit to avoid overfiltering atlas boundary:
-				const float pixelOffset = -0.5f;
-
 
 				if (subset.material->GetBaseColorMap() != nullptr)
 				{
@@ -6997,8 +7004,13 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				{
 					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
 				}
-				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4(((float)rect.w - pixelOffset) / (float)desc.Width, ((float)rect.h - pixelOffset) / (float)desc.Height,
-					((float)rect.x + pixelOffset) / (float)desc.Width, ((float)rect.y + pixelOffset) / (float)desc.Height);
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 
 
@@ -7010,8 +7022,13 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				{
 					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
 				}
-				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4(((float)rect.w - pixelOffset) / (float)desc.Width, ((float)rect.h - pixelOffset) / (float)desc.Height,
-					((float)rect.x + pixelOffset) / (float)desc.Width, ((float)rect.y + pixelOffset) / (float)desc.Height);
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 
 
@@ -7024,8 +7041,13 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 
 					rect = storedTextures[wiTextureHelper::getInstance()->getNormalMapDefault()];
 				}
-				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4(((float)rect.w - pixelOffset) / (float)desc.Width, ((float)rect.h - pixelOffset) / (float)desc.Height,
-					((float)rect.x + pixelOffset) / (float)desc.Width, ((float)rect.y + pixelOffset) / (float)desc.Height);
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 
 				totalMaterials++;
@@ -7345,7 +7367,7 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 							//device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
 
 							// This is better because it implements format conversion so we can use multiple decal source texture formats in the atlas:
-							CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+							CopyTexture2D(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
 						}
 					}
 				}
