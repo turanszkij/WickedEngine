@@ -8,5 +8,5 @@ RWTEXTURE2D(output, unorm float4, 0);
 [numthreads(8, 8, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	output[DTid.xy + xCopyDest] = input[DTid.xy];
+	output[DTid.xy + xCopyDest] = input.Load(uint3(DTid.xy, xCopySrcMIP));
 }

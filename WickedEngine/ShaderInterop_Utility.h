@@ -5,7 +5,8 @@
 CBUFFER(CopyTextureCB, CBSLOT_RENDERER_UTILITY)
 {
 	uint2 xCopyDest;
-	uint2 padding0;
+	uint  xCopySrcMIP;
+	uint  padding0;
 };
 
 #endif //_SHADERINTEROP_UTILITY_H_

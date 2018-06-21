@@ -136,11 +136,9 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 		TracedRenderingMaterial mat = materialBuffer[materialIndex];
 
 		UV = frac(UV); // emulate wrap
-
-		// point sampling because of wrap emulation with atlas: we need to stay inside regions!
-		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_point_clamp, UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
-		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_point_clamp, UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
-		float4 normalMap = materialTextureAtlas.SampleLevel(sampler_point_clamp, UV * mat.normalMapAtlasMulAdd.xy + mat.normalMapAtlasMulAdd.zw, 0);
+		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
+		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
+		float4 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.normalMapAtlasMulAdd.xy + mat.normalMapAtlasMulAdd.zw, 0);
 		
 		float4 baseColor = DEGAMMA(mat.baseColor * baseColorMap);
 		float reflectance = mat.reflectance * surfaceMap.r;

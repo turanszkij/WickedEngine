@@ -6353,19 +6353,12 @@ void wiRenderer::CopyTexture2D_Region(Texture2D* dst, UINT DstMIP, UINT DstX, UI
 	CopyTextureCB cb;
 	cb.xCopyDest.x = DstX;
 	cb.xCopyDest.y = DstY;
+	cb.xCopySrcMIP = SrcMIP;
 	device->UpdateBuffer(constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
 
 	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
 
-	//if (SrcMIP > 0)
-	//{
-	//	assert(desc_src.MipLevels > SrcMIP);
-	//	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID, SrcMIP);
-	//}
-	//else
-	{
-		device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
-	}
+	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
 
 	if (DstMIP > 0)
 	{
@@ -6377,7 +6370,9 @@ void wiRenderer::CopyTexture2D_Region(Texture2D* dst, UINT DstMIP, UINT DstX, UI
 		device->BindUnorderedAccessResourceCS(dst, 0, threadID);
 	}
 
-	device->Dispatch((UINT)ceilf((float)desc_src.Width / 8.0f), (UINT)ceilf((float)desc_src.Height / 8.0f), 1, threadID);
+	UINT mipW = desc_src.Width >> SrcMIP;
+	UINT mipH = desc_src.Height >> SrcMIP;
+	device->Dispatch((UINT)ceilf((float)mipW / 8.0f), (UINT)ceilf((float)mipH / 8.0f), 1, threadID);
 
 	device->UnBindUnorderedAccessResources(0, 1, threadID);
 
@@ -6840,7 +6835,11 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	static Texture2D* atlasTexture = nullptr;
 	using namespace wiRectPacker;
 	static std::set<Texture2D*> sceneTextures;
-	static std::map<Texture2D*, rect_xywhf> storedTextures;
+	if (sceneTextures.empty())
+	{
+		sceneTextures.insert(wiTextureHelper::getInstance()->getWhite());
+		sceneTextures.insert(wiTextureHelper::getInstance()->getNormalMapDefault());
+	}
 
 	for (Model* model : GetScene().models)
 	{
@@ -6866,6 +6865,7 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 	}
 
 	bool repackAtlas = false;
+	static std::map<Texture2D*, rect_xywhf> storedTextures;
 	for (Texture2D* tex : sceneTextures)
 	{
 		if (tex == nullptr)
@@ -6982,17 +6982,50 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				materialArray[totalMaterials].parallaxOcclusionMapping = mat.normalMapStrength;
 
 				// Add extended properties:
-				TextureDesc desc = atlasTexture->GetDesc();
+				const TextureDesc& desc = atlasTexture->GetDesc();
 				rect_xywhf rect;
 
-				rect = storedTextures[subset.material->GetBaseColorMap()];
-				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (rect.x + 0.5f) / (float)desc.Width, (rect.y + 0.5f) / (float)desc.Height);
+				// shrink a bit to avoid overfiltering atlas boundary:
+				const float pixelOffset = -0.5f;
 
-				rect = storedTextures[subset.material->GetSurfaceMap()];
-				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (rect.x + 0.5f) / (float)desc.Width, (rect.y + 0.5f) / (float)desc.Height);
 
-				rect = storedTextures[subset.material->GetNormalMap()];
-				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (rect.x + 0.5f) / (float)desc.Width, (rect.y + 0.5f) / (float)desc.Height);
+				if (subset.material->GetBaseColorMap() != nullptr)
+				{
+					rect = storedTextures[subset.material->GetBaseColorMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+				}
+				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4(((float)rect.w - pixelOffset) / (float)desc.Width, ((float)rect.h - pixelOffset) / (float)desc.Height,
+					((float)rect.x + pixelOffset) / (float)desc.Width, ((float)rect.y + pixelOffset) / (float)desc.Height);
+
+
+
+				if (subset.material->GetSurfaceMap() != nullptr)
+				{
+					rect = storedTextures[subset.material->GetSurfaceMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+				}
+				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4(((float)rect.w - pixelOffset) / (float)desc.Width, ((float)rect.h - pixelOffset) / (float)desc.Height,
+					((float)rect.x + pixelOffset) / (float)desc.Width, ((float)rect.y + pixelOffset) / (float)desc.Height);
+
+
+
+				if (subset.material->GetNormalMap() != nullptr)
+				{
+					rect = storedTextures[subset.material->GetNormalMap()];
+				}
+				else
+				{
+
+					rect = storedTextures[wiTextureHelper::getInstance()->getNormalMapDefault()];
+				}
+				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4(((float)rect.w - pixelOffset) / (float)desc.Width, ((float)rect.h - pixelOffset) / (float)desc.Height,
+					((float)rect.x + pixelOffset) / (float)desc.Width, ((float)rect.y + pixelOffset) / (float)desc.Height);
 
 
 				totalMaterials++;
@@ -7231,8 +7264,10 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static Texture2D* atlasTexture = nullptr;
+	static set<Texture2D*> decalTextures;
 
+
+	// 1.) Gather all decal textures:
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
@@ -7240,78 +7275,109 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 		for (Decal* decal : model->decals)
 		{
-			if (decal->texture == nullptr)
+			if (decal->texture != nullptr)
 			{
-				continue;
+				decalTextures.insert(decal->texture);
+			}
+		}
+
+	}
+
+	static Texture2D* atlasTexture = nullptr;
+
+	using namespace wiRectPacker;
+	static std::map<Texture2D*, rect_xywhf> storedTextures;
+
+	// 2.) Pack all decal textures into atlas:
+	for (Texture2D* tex : decalTextures)
+	{
+		if (tex == nullptr)
+		{
+			continue;
+		}
+
+		if (storedTextures.find(tex) == storedTextures.end())
+		{
+			// we need to pack this decal texture into the atlas
+			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width, tex->GetDesc().Height);
+			storedTextures[tex] = newRect;
+
+			rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+			int i = 0;
+			for (auto& it : storedTextures)
+			{
+				out_rects[i] = &it.second;
+				i++;
 			}
 
-			using namespace wiRectPacker;
-			static std::map<Texture2D*, rect_xywhf> storedTextures;
-
-			if (storedTextures.find(decal->texture) == storedTextures.end())
+			std::vector<bin> bins;
+			if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
 			{
-				// we need to pack this decal texture into the atlas
-				rect_xywhf newRect = rect_xywhf(0, 0, decal->texture->GetDesc().Width, decal->texture->GetDesc().Height);
-				storedTextures[decal->texture] = newRect;
+				assert(bins.size() == 1 && "Decal atlas packing into single texture failed!");
 
-				rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
-				int i = 0;
-				for (auto& it : storedTextures)
+				SAFE_DELETE(atlasTexture);
+
+				TextureDesc desc;
+				ZeroMemory(&desc, sizeof(desc));
+				desc.Width = (UINT)bins[0].size.w;
+				desc.Height = (UINT)bins[0].size.h;
+				desc.MipLevels = 6;
+				desc.ArraySize = 1;
+				desc.Format = FORMAT_R8G8B8A8_UNORM;
+				desc.SampleDesc.Count = 1;
+				desc.SampleDesc.Quality = 0;
+				desc.Usage = USAGE_DEFAULT;
+				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+				desc.CPUAccessFlags = 0;
+				desc.MiscFlags = 0;
+
+				atlasTexture = new Texture2D;
+				atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+
+				device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+				for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
 				{
-					out_rects[i] = &it.second;
-					i++;
-				}
-
-				std::vector<bin> bins;
-				if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
-				{
-					assert(bins.size() == 1 && "Decal atlas packing into single texture failed!");
-
-					SAFE_DELETE(atlasTexture);
-
-					TextureDesc desc;
-					ZeroMemory(&desc, sizeof(desc));
-					desc.Width = (UINT)bins[0].size.w;
-					desc.Height = (UINT)bins[0].size.h;
-					desc.MipLevels = 6;
-					desc.ArraySize = 1;
-					//desc.Format = FORMAT_R8G8B8A8_UNORM;
-					desc.Format = FORMAT_B8G8R8A8_UNORM; // png decals are loaded into this format! todo: Utility copytexture2d srcMIP!!!
-					desc.SampleDesc.Count = 1;
-					desc.SampleDesc.Quality = 0;
-					desc.Usage = USAGE_DEFAULT;
-					desc.BindFlags = BIND_SHADER_RESOURCE /*| BIND_UNORDERED_ACCESS*/;
-					desc.CPUAccessFlags = 0;
-					desc.MiscFlags = 0;
-
-					atlasTexture = new Texture2D;
-					atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-
-					device->CreateTexture2D(&desc, nullptr, &atlasTexture);
-
-					for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
+					for (auto& it : storedTextures)
 					{
-						for (auto& it : storedTextures)
+						if (mip < it.first->GetDesc().MipLevels)
 						{
-							if (mip < it.first->GetDesc().MipLevels)
-							{
-								device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-								//CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-							}
+							//device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+
+							// This is better because it implements format conversion so we can use multiple decal source texture formats in the atlas:
+							CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
 						}
 					}
 				}
-				else
-				{
-					wiBackLog::post("Decal atlas packing failed!");
-				}
-
-				SAFE_DELETE_ARRAY(out_rects);
 			}
-			
-			rect_xywhf rect = storedTextures[decal->texture];
-			TextureDesc desc = atlasTexture->GetDesc();
-			decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+			else
+			{
+				wiBackLog::post("Decal atlas packing failed!");
+			}
+
+			SAFE_DELETE_ARRAY(out_rects);
+		}
+	}
+
+	// 3.) Assign atlas buckets to decals:
+	for (Model* model : GetScene().models)
+	{
+		if (model->decals.empty())
+			continue;
+
+		for (Decal* decal : model->decals)
+		{
+			if (decal->texture != nullptr)
+			{
+				rect_xywhf rect = storedTextures[decal->texture];
+				TextureDesc desc = atlasTexture->GetDesc();
+				decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+			}
+			else
+			{
+				decal->atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+			}
+
 		}
 
 	}
