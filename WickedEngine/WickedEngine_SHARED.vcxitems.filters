@@ -171,9 +171,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
@@ -1176,6 +1173,21 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.h">
+      <Filter>ENGINE\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1299,9 +1311,6 @@
       <Filter>ENGINE</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
@@ -1999,6 +2008,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.cpp">
+      <Filter>ENGINE\Components</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

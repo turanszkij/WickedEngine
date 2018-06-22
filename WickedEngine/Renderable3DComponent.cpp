@@ -457,33 +457,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
-	{
-		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
-		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
-		int history = 1 - current;
-		rtTemporalAA[current].Set(threadID); {
-			wiRenderer::UpdateGBuffer(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
-			fx.presentFullScreen = false;
-			fx.process.setTemporalAAResolve(true);
-			fx.setMaskMap(rtTemporalAA[history].GetTexture());
-			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
-			fx.process.clear();
-		}
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-		shadedSceneRT.Set(threadID, nullptr, false, 0); {
-			fx.presentFullScreen = true;
-			fx.quality = QUALITY_NEAREST;
-			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
-			fx.presentFullScreen = false;
-		}
-		wiProfiler::GetInstance().EndRange(threadID);
-		wiRenderer::GetDevice()->EventEnd(threadID);
-	}
-
 	if (getEmittedParticlesEnabled())
 	{
 		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
@@ -516,11 +489,39 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.hdr = true;
 
+	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
+	{
+		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
+		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+		fx.blendFlag = BLENDMODE_OPAQUE;
+		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
+		int history = 1 - current;
+		rtTemporalAA[current].Set(threadID); {
+			wiRenderer::UpdateGBuffer(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
+			fx.presentFullScreen = false;
+			fx.process.setTemporalAAResolve(true);
+			fx.setMaskMap(rtTemporalAA[history].GetTexture());
+			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
+			fx.process.clear();
+		}
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
+		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		shadedSceneRT.Set(threadID, nullptr, false, 0); {
+			fx.presentFullScreen = true;
+			fx.quality = QUALITY_NEAREST;
+			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
+			fx.presentFullScreen = false;
+		}
+		wiProfiler::GetInstance().EndRange(threadID);
+		wiRenderer::GetDevice()->EventEnd(threadID);
+	}
+
 	if (getBloomEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Bloom", threadID);
 		fx.process.clear();
 		fx.presentFullScreen = false;
+		fx.quality = QUALITY_BILINEAR;
 		rtBloom[0].Set(threadID); // separate bright parts
 		{
 			fx.bloom.separate = true;

@@ -8,6 +8,11 @@ float3 GetDynamicSkyColor(in float3 normal)
 	float aboveHorizon = saturate(pow(saturate(normal.y), 0.25f + g_xWorld_Fog.z) / (g_xWorld_Fog.z + 1));
 	float3 sky = lerp(GetHorizonColor(), GetZenithColor(), aboveHorizon);
 
+#ifdef NOSUN
+	return sky;
+
+#else
+
 #ifdef SHADERCOMPILER_SPIRV
 	//compiler bug workaround:
 	uint ucol = EntityArray[g_xFrame_SunEntityArrayIndex].color;
@@ -18,10 +23,11 @@ float3 GetDynamicSkyColor(in float3 normal)
 	sunc.z = (float)((ucol >> 16) & 0x000000FF) / 255.0f;
 #else
 	float3 sunc = GetSunColor();
-#endif
+#endif // SHADERCOMPILER_SPIRV
 
 	float3 sun = normal.y > 0 ? max(saturate(dot(GetSunDirection(), normal) > 0.9998 ? 1 : 0)*sunc * 1000, 0) : 0;
 	return sky + sun;
+#endif // NOSUN
 }
 
 void AddCloudLayer(inout float4 color, in float3 normal, bool dark)

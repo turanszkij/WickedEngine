@@ -336,15 +336,15 @@ public:
 	struct Vertex_POS
 	{
 		XMFLOAT3 pos;
-		uint32_t normal_wind;
+		uint32_t normal_wind_matID;
 
-		Vertex_POS() :pos(XMFLOAT3(0.0f, 0.0f, 0.0f)), normal_wind(0) {}
+		Vertex_POS() :pos(XMFLOAT3(0.0f, 0.0f, 0.0f)), normal_wind_matID(0) {}
 		Vertex_POS(const Vertex_FULL& vert)
 		{
 			pos.x = vert.pos.x;
 			pos.y = vert.pos.y;
 			pos.z = vert.pos.z;
-			NORWINDFromFloat(XMFLOAT3(vert.nor.x, vert.nor.y, vert.nor.z), vert.pos.w);
+			MakeFromParams(XMFLOAT3(vert.nor.x, vert.nor.y, vert.nor.z), vert.pos.w, static_cast<uint32_t>(vert.tex.z));
 		}
 		inline XMVECTOR LoadPOS() const
 		{
@@ -354,24 +354,43 @@ public:
 		{
 			return XMLoadFloat3(&GetNor_FULL());
 		}
-		inline void NORWINDFromFloat(const XMFLOAT3& normal, float wind)
+		inline void MakeFromParams(const XMFLOAT3& normal)
 		{
-			normal_wind = 0;
+			normal_wind_matID = normal_wind_matID & 0xFF000000; // reset only the normals
 
-			normal_wind |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-			normal_wind |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-			normal_wind |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
-			normal_wind |= (uint32_t)(wind * 255.0f) << 24;
+			normal_wind_matID |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+			normal_wind_matID |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+			normal_wind_matID |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+		}
+		inline void MakeFromParams(const XMFLOAT3& normal, float wind, uint32_t materialIndex)
+		{
+			assert(materialIndex < 16); // subset materialIndex is packed onto 4 bits
+
+			normal_wind_matID = 0;
+
+			normal_wind_matID |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+			normal_wind_matID |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+			normal_wind_matID |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+			normal_wind_matID |= ((uint32_t)(wind * 15.0f) & 0x0000000F) << 24;
+			normal_wind_matID |= (materialIndex & 0x0000000F) << 28;
 		}
 		inline XMFLOAT3 GetNor_FULL() const
 		{
 			XMFLOAT3 nor_FULL(0, 0, 0);
 
-			nor_FULL.x = (float)((normal_wind >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-			nor_FULL.y = (float)((normal_wind >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-			nor_FULL.z = (float)((normal_wind >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+			nor_FULL.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 
 			return nor_FULL;
+		}
+		inline float GetWind() const
+		{
+			return (float)((normal_wind_matID >> 24) & 0x0000000F) / 15.0f;
+		}
+		inline uint32_t GetMaterialIndex() const
+		{
+			return (normal_wind_matID >> 28) & 0x0000000F;
 		}
 
 		static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
@@ -418,7 +437,7 @@ public:
 			XMFLOAT4 ind_FULL(0, 0, 0, 0);
 
 			ind_FULL.x = (float)((ind >> 0)  & 0x0000FFFF);
-			ind_FULL.y = (float)((ind >> 16)  & 0x0000FFFF);
+			ind_FULL.y = (float)((ind >> 16) & 0x0000FFFF);
 			ind_FULL.z = (float)((ind >> 32) & 0x0000FFFF);
 			ind_FULL.w = (float)((ind >> 48) & 0x0000FFFF);
 
@@ -978,6 +997,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void SetUp(float newWidth, float newHeight, float newNear, float newFar, float fov = XM_PI / 3.0f)
 	{
+		hasChanged = true;
+
 		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0,0,1,0), Up = XMVectorSet(0,1,0,0), Eye = this->GetEye();
 
@@ -999,6 +1020,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void UpdateProps()
 	{
+		hasChanged = true;
+
 		XMMATRIX View = XMMATRIX();
 		XMVECTOR At = XMVectorSet(0, 0, 1, 0), Up = XMVectorSet(0, 1, 0, 0), Eye = this->GetEye();
 
@@ -1021,6 +1044,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void Move(const XMVECTOR& movevector)
 	{
+		hasChanged = true;
+
 		XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&rotation));
 		XMVECTOR rotVect = XMVector3Transform(movevector, camRot);
 		XMVECTOR Eye = XMLoadFloat3(&translation_rest);
@@ -1031,6 +1056,9 @@ struct Camera : public Transform, public ModelChild
 	void Reflect(Camera* toReflect, const XMFLOAT4& plane = XMFLOAT4(0,1,0,0))
 	{
 		*this = *toReflect;
+
+		hasChanged = true;
+
 
 		XMMATRIX reflectMatrix = XMMatrixReflect(XMLoadFloat4(&plane));
 
@@ -1061,6 +1089,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void UpdateProjection()
 	{
+		hasChanged = true;
+
 		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
 		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP));
 		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
@@ -1069,6 +1099,8 @@ struct Camera : public Transform, public ModelChild
 	}
 	void BakeMatrices()
 	{
+		hasChanged = true;
+
 		XMMATRIX V = XMLoadFloat4x4(&this->View);
 		XMMATRIX P = XMLoadFloat4x4(&this->Projection);
 		XMMATRIX VP = XMMatrixMultiply(V, P);

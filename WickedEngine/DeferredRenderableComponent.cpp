@@ -10,6 +10,8 @@
 
 using namespace wiGraphicsTypes;
 
+wiRenderTarget DeferredRenderableComponent::rtGBuffer, DeferredRenderableComponent::rtDeferred, DeferredRenderableComponent::rtLight, DeferredRenderableComponent::rtSSS[2];
+
 DeferredRenderableComponent::DeferredRenderableComponent()
 {
 	Renderable3DComponent::setProperties();
@@ -19,7 +21,6 @@ DeferredRenderableComponent::~DeferredRenderableComponent()
 }
 
 
-static wiRenderTarget rtGBuffer, rtDeferred, rtLight, rtSSS[2];
 void DeferredRenderableComponent::ResizeBuffers()
 {
 	Renderable3DComponent::ResizeBuffers();
@@ -111,7 +112,6 @@ void DeferredRenderableComponent::Render()
 }
 
 
-wiRenderTarget DeferredRenderableComponent::rtGBuffer, DeferredRenderableComponent::rtDeferred, DeferredRenderableComponent::rtLight, DeferredRenderableComponent::rtSSS[2];
 void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);

@@ -66,6 +66,7 @@
 #include "DeferredRenderableComponent.h"
 #include "TiledForwardRenderableComponent.h"
 #include "TiledDeferredRenderableComponent.h"
+#include "PathTracingRenderableComponent.h"
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 

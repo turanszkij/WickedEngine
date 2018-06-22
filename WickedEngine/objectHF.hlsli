@@ -289,7 +289,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 			// mipmapping needs to be performed by hand:
 			float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
 			float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-			float4 decalColor = texture_decalatlas.SampleGrad(sampler_objectshader, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+			float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
 			// blend out if close to cube Z:
 			float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 			decalColor.a *= edgeBlend;

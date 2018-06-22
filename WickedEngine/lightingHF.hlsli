@@ -6,7 +6,7 @@
 
 inline float3 GetSunColor()
 {
-	return EntityArray[g_xFrame_SunEntityArrayIndex].GetColor().rgb;
+	return EntityArray[g_xFrame_SunEntityArrayIndex].GetColor().rgb * EntityArray[g_xFrame_SunEntityArrayIndex].energy;
 }
 inline float3 GetSunDirection()
 {

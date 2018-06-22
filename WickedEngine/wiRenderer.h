@@ -191,6 +191,10 @@ public:
 		float	 mZRange;
 		float	 mZRange_Recip;
 		XMFLOAT4 mFrustumPlanesWS[6];
+		XMFLOAT3 mWorldBoundsMin; float pad0;
+		XMFLOAT3 mWorldBoundsMax; float pad1;
+		XMFLOAT3 mWorldBoundsExtents; float pad2;
+		XMFLOAT3 mWorldBoundsExtents_Inverse; float pad3;
 	};
 	CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	{
@@ -494,6 +498,9 @@ public:
 	static void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID);
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 
+	static void BuildSceneBVH(GRAPHICSTHREAD threadID);
+	static void DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+
 	enum MIPGENFILTER
 	{
 		MIPGENFILTER_POINT,
@@ -504,6 +511,17 @@ public:
 	static void GenerateMipChain(wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
 	static void GenerateMipChain(wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
 	static void GenerateMipChain(wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID);
+
+	enum BORDEREXPANDSTYLE
+	{
+		BORDEREXPAND_DISABLE,
+		BORDEREXPAND_WRAP,
+		BORDEREXPAND_CLAMP,
+	};
+	// Performs copy operation even between different texture formats
+	//	Can also expand border region according to desired sampler func
+	static void CopyTexture2D(wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, wiGraphicsTypes::Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, 
+		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
 	// dst: Texture2D with unordered access, the output will be written to this
 	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing

@@ -134,7 +134,7 @@ void wiGPUSortLib::Sort(UINT maxCount, GPUBuffer* comparisonBuffer_read, GPUBuff
 
 		unsigned int numThreadGroups = ((maxCount - 1) >> 9) + 1;
 
-		assert(numThreadGroups <= 1024);
+		//assert(numThreadGroups <= 1024);
 
 		if (numThreadGroups > 1)
 		{

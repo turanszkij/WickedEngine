@@ -26,6 +26,9 @@
 #include "wiOcean.h"
 #include "ShaderInterop_CloudGenerator.h"
 #include "ShaderInterop_Skinning.h"
+#include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_BVH.h"
+#include "ShaderInterop_Utility.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
 
@@ -594,6 +597,15 @@ void wiRenderer::LoadBuffers()
 
 	bd.ByteWidth = sizeof(CloudGeneratorCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
+
+	bd.ByteWidth = sizeof(TracedRenderingCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
+
+	bd.ByteWidth = sizeof(BVHCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
+
+	bd.ByteWidth = sizeof(CopyTextureCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
 
 
 
@@ -1209,7 +1221,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND_MATID",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		UINT numElements = ARRAYSIZE(layout);
 		VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER, layout, numElements));
@@ -1221,9 +1233,9 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				1, Mesh::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND_MATID",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",					0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",					0, Mesh::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1243,7 +1255,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND_MATID",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1260,8 +1272,8 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND_MATID",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",					0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1278,7 +1290,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND_MATID",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1295,7 +1307,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_WIND_MATID",	0, Mesh::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",				0, Mesh::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1464,9 +1476,22 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_CLUSTERPROCESSOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_clusterprocessorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -1742,6 +1767,7 @@ void wiRenderer::LoadShaders()
 			desc.rs = rasterizers[RSTYPE_FRONT];
 			desc.bs = blendStates[BSTYPE_DECAL];
 			desc.dss = depthStencils[DSSTYPE_DECAL];
+			desc.pt = TRIANGLESTRIP;
 
 			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_gbuffer_0;
@@ -6311,6 +6337,907 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->EventEnd(threadID);
 }
 
+void wiRenderer::CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, BORDEREXPANDSTYLE borderExpand)
+{
+	GraphicsDevice* device = GetDevice();
+
+	const TextureDesc& desc_dst = dst->GetDesc();
+	const TextureDesc& desc_src = src->GetDesc();
+
+	assert(desc_dst.BindFlags & BIND_UNORDERED_ACCESS);
+	assert(desc_src.BindFlags & BIND_SHADER_RESOURCE);
+
+	device->EventBegin("CopyTexture2D_Region_UNORM4", threadID);
+
+	if (borderExpand == BORDEREXPAND_DISABLE)
+	{
+		device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
+	}
+	else
+	{
+		device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
+	}
+
+	CopyTextureCB cb;
+	cb.xCopyDest.x = DstX;
+	cb.xCopyDest.y = DstY;
+	cb.xCopySrcSize.x = desc_src.Width >> SrcMIP;
+	cb.xCopySrcSize.y = desc_src.Height >> SrcMIP;
+	cb.xCopySrcMIP = SrcMIP;
+	cb.xCopyBorderExpandStyle = (uint)borderExpand;
+	device->UpdateBuffer(constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
+
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
+
+	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
+
+	if (DstMIP > 0)
+	{
+		assert(desc_dst.MipLevels > DstMIP);
+		device->BindUnorderedAccessResourceCS(dst, 0, threadID, DstMIP);
+	}
+	else
+	{
+		device->BindUnorderedAccessResourceCS(dst, 0, threadID);
+	}
+
+	device->Dispatch((UINT)ceilf((float)cb.xCopySrcSize.x / 8.0f), (UINT)ceilf((float)cb.xCopySrcSize.y / 8.0f), 1, threadID);
+
+	device->UnBindUnorderedAccessResources(0, 1, threadID);
+
+	device->EventEnd(threadID);
+}
+
+
+
+// Should I care that usually buffers are not declared here?
+static GPUBuffer* bvhNodeBuffer = nullptr;
+static GPUBuffer* bvhAABBBuffer = nullptr;
+static GPUBuffer* bvhFlagBuffer = nullptr;
+static GPUBuffer* triangleBuffer = nullptr;
+static GPUBuffer* clusterCounterBuffer = nullptr;
+static GPUBuffer* clusterIndexBuffer = nullptr;
+static GPUBuffer* clusterMortonBuffer = nullptr;
+static GPUBuffer* clusterSortedMortonBuffer = nullptr;
+static GPUBuffer* clusterOffsetBuffer = nullptr;
+static GPUBuffer* clusterAABBBuffer = nullptr;
+static GPUBuffer* clusterConeBuffer = nullptr;
+void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	// Pre-gather scene properties:
+	uint32_t totalTriangles = 0;
+	for (auto& model : GetScene().models)
+	{
+		for (auto& iter : model->objects)
+		{
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			totalTriangles += (uint)mesh->indices.size() / 3;
+		}
+	}
+
+	static uint maxTriangleCount = 0;
+	static uint maxClusterCount = 0;
+
+	if (totalTriangles > maxTriangleCount)
+	{
+		maxTriangleCount = totalTriangles;
+		maxClusterCount = maxTriangleCount; // todo: cluster / triangle capacity
+
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(bvhNodeBuffer);
+		SAFE_DELETE(bvhAABBBuffer);
+		SAFE_DELETE(bvhFlagBuffer);
+		SAFE_DELETE(triangleBuffer);
+		SAFE_DELETE(clusterCounterBuffer);
+		SAFE_DELETE(clusterIndexBuffer);
+		SAFE_DELETE(clusterMortonBuffer);
+		SAFE_DELETE(clusterSortedMortonBuffer);
+		SAFE_DELETE(clusterOffsetBuffer);
+		SAFE_DELETE(clusterAABBBuffer);
+		SAFE_DELETE(clusterConeBuffer);
+		bvhNodeBuffer = new GPUBuffer;
+		bvhAABBBuffer = new GPUBuffer;
+		bvhFlagBuffer = new GPUBuffer;
+		triangleBuffer = new GPUBuffer;
+		clusterCounterBuffer = new GPUBuffer;
+		clusterIndexBuffer = new GPUBuffer;
+		clusterMortonBuffer = new GPUBuffer;
+		clusterSortedMortonBuffer = new GPUBuffer;
+		clusterOffsetBuffer = new GPUBuffer;
+		clusterAABBBuffer = new GPUBuffer;
+		clusterConeBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHNode);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhNodeBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhAABBBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * (maxClusterCount - 1); // only for internal nodes
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhFlagBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHMeshTriangle);
+		desc.ByteWidth = desc.StructureByteStride * maxTriangleCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint2);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
+		assert(SUCCEEDED(hr));
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(ClusterCone);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	if (indirectBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+
+	wiProfiler::GetInstance().BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
+
+	device->EventBegin("BVH - Reset", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_RESET], threadID);
+
+		GPUResource* uavs[] = {
+			clusterCounterBuffer,
+			bvhNodeBuffer,
+			bvhAABBBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch(1, 1, 1, threadID);
+	}
+	device->EventEnd(threadID);
+
+
+	uint32_t triangleCount = 0;
+	uint32_t materialCount = 0;
+
+	device->EventBegin("BVH - Classification", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLASSIFICATION], threadID);
+		GPUResource* uavs[] = {
+			triangleBuffer,
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		for (auto& model : GetScene().models)
+		{
+			for (auto& iter : model->objects)
+			{
+				Object* object = iter;
+				Mesh* mesh = object->mesh;
+
+				BVHCB cb;
+				cb.xTraceBVHWorld = object->world;
+				cb.xTraceBVHMaterialOffset = materialCount;
+				cb.xTraceBVHMeshTriangleOffset = triangleCount;
+				cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
+				cb.xTraceBVHMeshVertexPOSStride = sizeof(Mesh::Vertex_POS);
+
+				device->UpdateBuffer(constantBuffers[CBTYPE_BVH], &cb, threadID);
+
+				triangleCount += cb.xTraceBVHMeshTriangleCount;
+
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_BVH], CB_GETBINDSLOT(BVHCB), threadID);
+
+				GPUResource* res[] = {
+					mesh->indexBuffer,
+					mesh->vertexBuffer_POS,
+					mesh->vertexBuffer_TEX,
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+				device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
+
+				for (auto& subset : mesh->subsets)
+				{
+					materialCount++;
+				}
+			}
+		}
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+
+	device->EventBegin("BVH - Sort Cluster Mortons", threadID);
+	wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Kick Jobs", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_KICKJOBS], threadID);
+		GPUResource* uavs[] = {
+			indirectBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->Dispatch(1, 1, 1, threadID);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Cluster Processor", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLUSTERPROCESSOR], threadID);
+		GPUResource* uavs[] = {
+			clusterSortedMortonBuffer,
+			clusterConeBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+			triangleBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Build Hierarchy", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_HIERARCHY], threadID);
+		GPUResource* uavs[] = {
+			bvhNodeBuffer,
+			bvhFlagBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterSortedMortonBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Propagate AABB", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
+		GPUResource* uavs[] = {
+			bvhAABBBuffer,
+			bvhFlagBuffer,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterAABBBuffer,
+			bvhNodeBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
+}
+
+void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("DrawTracedScene", threadID);
+
+	uint _width = GetInternalResolution().x;
+	uint _height = GetInternalResolution().y;
+
+	// Ray storage buffer:
+	static GPUBuffer* rayBuffer[2] = {};
+	static uint RayCountPrev = 0;
+	const uint _raycount = _width * _height;
+
+	if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(rayBuffer[0]);
+		SAFE_DELETE(rayBuffer[1]);
+		rayBuffer[0] = new GPUBuffer;
+		rayBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
+		desc.ByteWidth = desc.StructureByteStride * _raycount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
+		assert(SUCCEEDED(hr));
+
+		RayCountPrev = _raycount;
+	}
+
+	// Misc buffers:
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
+
+	if (indirectBuffer == nullptr || counterBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+
+
+		SAFE_DELETE(counterBuffer[0]);
+		SAFE_DELETE(counterBuffer[1]);
+		counterBuffer[0] = new GPUBuffer;
+		counterBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
+		assert(SUCCEEDED(hr));
+	}
+
+	// Traced Scene Texture Atlas:
+	static Texture2D* atlasTexture = nullptr;
+	using namespace wiRectPacker;
+	static unordered_set<Texture2D*> sceneTextures;
+	if (sceneTextures.empty())
+	{
+		sceneTextures.insert(wiTextureHelper::getInstance()->getWhite());
+		sceneTextures.insert(wiTextureHelper::getInstance()->getNormalMapDefault());
+	}
+
+	for (Model* model : GetScene().models)
+	{
+		for (auto& iter : model->objects)
+		{
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			for (auto& subset : mesh->subsets)
+			{
+				Material* mat = subset.material;
+
+				if (mat != nullptr)
+				{
+					sceneTextures.insert(mat->GetBaseColorMap());
+					sceneTextures.insert(mat->GetSurfaceMap());
+					sceneTextures.insert(mat->GetNormalMap());
+				}
+			}
+
+		}
+
+	}
+
+	bool repackAtlas = false;
+	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
+	const int atlasWrapBorder = 1;
+	for (Texture2D* tex : sceneTextures)
+	{
+		if (tex == nullptr)
+		{
+			continue;
+		}
+
+		if (storedTextures.find(tex) == storedTextures.end())
+		{
+			// we need to pack this texture into the atlas
+			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
+			storedTextures[tex] = newRect;
+
+			repackAtlas = true;
+		}
+
+	}
+
+	if (repackAtlas)
+	{
+		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		int i = 0;
+		for (auto& it : storedTextures)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+			SAFE_DELETE(atlasTexture);
+
+			TextureDesc desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+			for (auto& it : storedTextures)
+			{
+				CopyTexture2D(atlasTexture, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
+			}
+		}
+		else
+		{
+			wiBackLog::post("Tracing atlas packing failed!");
+		}
+
+		SAFE_DELETE_ARRAY(out_rects);
+	}
+
+	static TracedRenderingMaterial materialArray[1000] = {}; // todo realloc!
+	static GPUBuffer* materialBuffer = nullptr;
+
+	if (materialBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(materialBuffer);
+		materialBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
+		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	// Pre-gather scene properties:
+	uint32_t totalTriangles = 0;
+	uint32_t totalMaterials = 0;
+	for (auto& model : GetScene().models)
+	{
+		for (auto& iter : model->objects)
+		{
+			Object* object = iter;
+			Mesh* mesh = object->mesh;
+
+			totalTriangles += (uint)mesh->indices.size() / 3;
+
+			for (auto& subset : mesh->subsets)
+			{
+				MaterialCB mat;
+				mat.Create(*subset.material);
+
+				// Copy base params:
+				materialArray[totalMaterials].baseColor = mat.baseColor;
+				materialArray[totalMaterials].texMulAdd = mat.texMulAdd;
+				materialArray[totalMaterials].roughness = mat.roughness;
+				materialArray[totalMaterials].reflectance = mat.reflectance;
+				materialArray[totalMaterials].metalness = mat.metalness;
+				materialArray[totalMaterials].emissive = mat.emissive;
+				materialArray[totalMaterials].refractionIndex = mat.refractionIndex;
+				materialArray[totalMaterials].subsurfaceScattering = mat.subsurfaceScattering;
+				materialArray[totalMaterials].normalMapStrength = mat.normalMapStrength;
+				materialArray[totalMaterials].parallaxOcclusionMapping = mat.normalMapStrength;
+
+				// Add extended properties:
+				const TextureDesc& desc = atlasTexture->GetDesc();
+				rect_xywhf rect;
+
+
+				if (subset.material->GetBaseColorMap() != nullptr)
+				{
+					rect = storedTextures[subset.material->GetBaseColorMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (subset.material->GetSurfaceMap() != nullptr)
+				{
+					rect = storedTextures[subset.material->GetSurfaceMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (subset.material->GetNormalMap() != nullptr)
+				{
+					rect = storedTextures[subset.material->GetNormalMap()];
+				}
+				else
+				{
+
+					rect = storedTextures[wiTextureHelper::getInstance()->getNormalMapDefault()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+				totalMaterials++;
+			}
+		}
+	}
+	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(TracedRenderingMaterial) * totalMaterials);
+
+
+	// Begin raytrace
+
+	wiProfiler::GetInstance().BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
+
+	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
+	TracedRenderingCB cb;
+	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
+	cb.xTraceRandomSeed = renderTime;
+	cb.xTraceMeshTriangleCount = totalTriangles;
+
+	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+
+	device->EventBegin("Clear", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
+
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+		GPUResource* uavs[] = {
+			result,
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("Launch Rays", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LAUNCH], threadID);
+
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+		GPUResource* uavs[] = {
+			rayBuffer[0],
+		};
+		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+
+		// just write initial ray count:
+		device->UpdateBuffer(counterBuffer[0], &_raycount, threadID);
+	}
+	device->EventEnd(threadID);
+
+
+
+	// Set up tracing resources:
+	GPUResource* res[] = {
+		materialBuffer,
+		triangleBuffer,
+		clusterCounterBuffer,
+		clusterIndexBuffer,
+		clusterOffsetBuffer,
+		clusterConeBuffer,
+		bvhNodeBuffer,
+		bvhAABBBuffer,
+	};
+	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+	if (atlasTexture != nullptr)
+	{
+		device->BindResource(CS, atlasTexture, TEXSLOT_ONDEMAND8, threadID);
+	}
+	else
+	{
+		device->BindResource(CS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
+	}
+
+	for (int bounce = 0; bounce < 8; ++bounce)
+	{
+		const int __readBufferID = bounce % 2;
+		const int __writeBufferID = (bounce + 1) % 2;
+
+		cb.xTraceRandomSeed = renderTime + (float)bounce;
+		device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+
+		// 1.) Kick off raytracing jobs for this bounce
+		device->EventBegin("Kick Raytrace Jobs", threadID);
+		{
+			// Prepare indirect dispatch based on counter buffer value:
+			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
+
+			GPUResource* res[] = {
+				counterBuffer[__readBufferID],
+			};
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+			GPUResource* uavs[] = {
+				counterBuffer[__writeBufferID],
+				indirectBuffer,
+			};
+			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+			device->Dispatch(1, 1, 1, threadID);
+
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		}
+		device->EventEnd(threadID);
+
+		if (bounce > 0)
+		{
+			if (bounce == 1)
+			{
+				wiProfiler::GetInstance().BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+			}
+
+			// 2.) Light sampling (any hit) <- only after first bounce has occured
+			device->EventBegin("Light Sampling Rays", threadID);
+			{
+				// Indirect dispatch on active rays:
+				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
+
+				GPUResource* res[] = {
+					counterBuffer[__readBufferID],
+					rayBuffer[__readBufferID],
+				};
+				device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+				GPUResource* uavs[] = {
+					result,
+				};
+				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+				device->DispatchIndirect(indirectBuffer, 0, threadID);
+
+				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+			}
+			device->EventEnd(threadID);
+
+			if (bounce == 1)
+			{
+				wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Light Sampling
+			}
+		}
+
+		if (bounce == 0)
+		{
+			wiProfiler::GetInstance().BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
+		}
+
+		// 3.) Compute Primary Trace (closest hit)
+		device->EventBegin("Primary Rays Bounce", threadID);
+		{
+			// Indirect dispatch on active rays:
+			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
+
+			GPUResource* res[] = {
+				counterBuffer[__readBufferID],
+				rayBuffer[__readBufferID],
+			};
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+			GPUResource* uavs[] = {
+				counterBuffer[__writeBufferID],
+				rayBuffer[__writeBufferID],
+				result,
+			};
+			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+
+			device->DispatchIndirect(indirectBuffer, 0, threadID);
+
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		}
+		device->EventEnd(threadID);
+
+		if (bounce == 0)
+		{
+			wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Bounce
+		}
+
+	}
+
+	wiProfiler::GetInstance().EndRange(threadID); // RayTrace - ALL
+
+
+
+
+	device->EventEnd(threadID); // DrawTracedScene
+}
+
 void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("Cloud Generator", threadID);
@@ -6351,8 +7278,16 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static Texture2D* atlasTexture = nullptr;
 
+	static Texture2D* atlasTexture = nullptr;
+	bool repackAtlas = false;
+	const int atlasClampBorder = 1;
+
+	using namespace wiRectPacker;
+	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
+
+
+	// Gather all decal textures:
 	for (Model* model : GetScene().models)
 	{
 		if (model->decals.empty())
@@ -6360,71 +7295,108 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 		for (Decal* decal : model->decals)
 		{
-			if (decal->texture == nullptr)
+			if (decal->texture != nullptr)
 			{
-				continue;
+
+				if (storedTextures.find(decal->texture) == storedTextures.end())
+				{
+					// we need to pack this decal texture into the atlas
+					rect_xywhf newRect = rect_xywhf(0, 0, decal->texture->GetDesc().Width + atlasClampBorder * 2, decal->texture->GetDesc().Height + atlasClampBorder * 2);
+					storedTextures[decal->texture] = newRect;
+
+					repackAtlas = true;
+				}
 			}
+		}
 
-			using namespace wiRectPacker;
-			static std::map<Texture2D*, rect_xywhf> storedTextures;
+	}
 
-			if (storedTextures.find(decal->texture) == storedTextures.end())
+	// Update atlas texture if it is invalidated:
+	if (repackAtlas)
+	{
+		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		int i = 0;
+		for (auto& it : storedTextures)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+			SAFE_DELETE(atlasTexture);
+
+			TextureDesc desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 0;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			atlasTexture = new Texture2D;
+			atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+
+			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+			for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
 			{
-				// we need to pack this decal texture into the atlas
-				rect_xywhf newRect = rect_xywhf(0, 0, decal->texture->GetDesc().Width, decal->texture->GetDesc().Height);
-				storedTextures[decal->texture] = newRect;
-
-				rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
-				int i = 0;
 				for (auto& it : storedTextures)
 				{
-					out_rects[i] = &it.second;
-					i++;
-				}
-
-				std::vector<bin> bins;
-				if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
-				{
-					assert(bins.size() == 1 && "Decal atlas packing into single texture failed!");
-
-					SAFE_DELETE(atlasTexture);
-
-					TextureDesc desc;
-					ZeroMemory(&desc, sizeof(desc));
-					desc.Width = (UINT)bins[0].size.w;
-					desc.Height = (UINT)bins[0].size.h;
-					desc.MipLevels = 6;
-					desc.ArraySize = 1;
-					desc.Format = FORMAT_B8G8R8A8_UNORM; // png decals are loaded into this format! todo: DXT!
-					desc.SampleDesc.Count = 1;
-					desc.SampleDesc.Quality = 0;
-					desc.Usage = USAGE_DEFAULT;
-					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.CPUAccessFlags = 0;
-					desc.MiscFlags = 0;
-
-					device->CreateTexture2D(&desc, nullptr, &atlasTexture);
-
-					for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
+					if (mip < it.first->GetDesc().MipLevels)
 					{
-						for (auto& it : storedTextures)
-						{
-							if (mip < it.first->GetDesc().MipLevels)
-							{
-								device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-							}
-						}
+						//device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
+
+						// This is better because it implements format conversion so we can use multiple decal source texture formats in the atlas:
+						CopyTexture2D(atlasTexture, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
 					}
 				}
-				else
-				{
-					wiBackLog::post("Decal atlas packing failed!");
-				}
 			}
-			
-			rect_xywhf rect = storedTextures[decal->texture];
-			TextureDesc desc = atlasTexture->GetDesc();
-			decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+		}
+		else
+		{
+			wiBackLog::post("Decal atlas packing failed!");
+		}
+
+		SAFE_DELETE_ARRAY(out_rects);
+	}
+
+	// Assign atlas buckets to decals:
+	for (Model* model : GetScene().models)
+	{
+		if (model->decals.empty())
+			continue;
+
+		for (Decal* decal : model->decals)
+		{
+			if (decal->texture != nullptr)
+			{
+				const TextureDesc& desc = atlasTexture->GetDesc();
+
+				rect_xywhf rect = storedTextures[decal->texture];
+
+				// eliminate border expansion:
+				rect.x += atlasClampBorder;
+				rect.y += atlasClampBorder;
+				rect.w -= atlasClampBorder * 2;
+				rect.h -= atlasClampBorder * 2;
+
+				decal->atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+			}
+			else
+			{
+				decal->atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+			}
+
 		}
 
 	}
@@ -6570,6 +7542,24 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mFrustumPlanesWS[3] = camera->frustum.getBottomPlane();
 	cb.mFrustumPlanesWS[4] = camera->frustum.getNearPlane();
 	cb.mFrustumPlanesWS[5] = camera->frustum.getFarPlane();
+
+	if (spTree != nullptr && spTree->root != nullptr)
+	{
+		cb.mWorldBoundsMin = spTree->root->box.getMin();
+		cb.mWorldBoundsMax = spTree->root->box.getMax();
+		cb.mWorldBoundsExtents.x = abs(cb.mWorldBoundsMax.x - cb.mWorldBoundsMin.x);
+		cb.mWorldBoundsExtents.y = abs(cb.mWorldBoundsMax.y - cb.mWorldBoundsMin.y);
+		cb.mWorldBoundsExtents.z = abs(cb.mWorldBoundsMax.z - cb.mWorldBoundsMin.z);
+		cb.mWorldBoundsExtents_Inverse.x = 1.0f / cb.mWorldBoundsExtents.x;
+		cb.mWorldBoundsExtents_Inverse.y = 1.0f / cb.mWorldBoundsExtents.y;
+		cb.mWorldBoundsExtents_Inverse.z = 1.0f / cb.mWorldBoundsExtents.z;
+	}
+	else
+	{
+		cb.mWorldBoundsMin = XMFLOAT3(0, 0, 0);
+		cb.mWorldBoundsMax = XMFLOAT3(0, 0, 0);
+		cb.mWorldBoundsExtents = XMFLOAT3(0, 0, 0);
+	}
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }
@@ -6983,7 +7973,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 					XMStoreFloat3(&picked.position, pos);
 					XMStoreFloat3(&picked.normal, nor);
 					picked.distance = wiMath::Distance(pos, rayOrigin);
-					picked.subsetIndex = (int)mesh->vertices_FULL[i0].tex.z;
+					picked.subsetIndex = (int)mesh->vertices_POS[i0].GetMaterialIndex();
 					points.push_back(picked);
 				}
 			}

@@ -115,6 +115,9 @@
     <None Include="oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="tracedRenderingHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -718,6 +721,45 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="emittedparticle_sphpartitionoffsetsresetCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_launchCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_primaryCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_clearCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bvh_classificationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bvh_clusterprocessorCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bvh_hierarchyCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bvh_kickjobsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bvh_propagateaabbCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bvh_resetCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_lightsamplingCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_kickjobsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="copytexture2D_unorm4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="copytexture2D_unorm4_borderexpandCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

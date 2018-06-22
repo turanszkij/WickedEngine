@@ -262,6 +262,9 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	case EditorComponent::RENDERPATH_TILEDDEFERRED:
 		renderPath = new TiledDeferredRenderableComponent;
 		break;
+	case EditorComponent::RENDERPATH_PATHTRACING:
+		renderPath = new PathTracingRenderableComponent;
+		break;
 	default:
 		assert(0);
 		break;
@@ -367,6 +370,7 @@ void EditorComponent::Load()
 	renderPathComboBox->AddItem("Deferred");
 	renderPathComboBox->AddItem("Tiled Forward");
 	renderPathComboBox->AddItem("Tiled Deferred");
+	renderPathComboBox->AddItem("Path Tracing");
 	renderPathComboBox->OnSelect([&](wiEventArgs args) {
 		switch (args.iValue)
 		{
@@ -381,6 +385,9 @@ void EditorComponent::Load()
 			break;
 		case 3:
 			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
+			break;
+		case 4:
+			ChangeRenderPath(RENDERPATH_PATHTRACING);
 			break;
 		default:
 			break;
@@ -873,6 +880,7 @@ void EditorComponent::FixedUpdate()
 void EditorComponent::Update(float dt)
 {
 	Camera* cam = wiRenderer::getCamera();
+	cam->hasChanged = false;
 
 	// Follow camera proxy:
 	//	Outside of the next if, because we want to animate while hovering on GUI... (just better user experience)
@@ -933,21 +941,32 @@ void EditorComponent::Update(float dt)
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
+
 			if (!wiInputManager::GetInstance()->down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wiInputManager::GetInstance()->down('A')) moveNew += XMVectorSet(-1, 0, 0, 0);
-				if (wiInputManager::GetInstance()->down('D')) moveNew += XMVectorSet(1, 0, 0, 0);
-				if (wiInputManager::GetInstance()->down('W')) moveNew += XMVectorSet(0, 0, 1, 0);
-				if (wiInputManager::GetInstance()->down('S')) moveNew += XMVectorSet(0, 0, -1, 0);
-				if (wiInputManager::GetInstance()->down('E')) moveNew += XMVectorSet(0, 1, 0, 0);
-				if (wiInputManager::GetInstance()->down('Q')) moveNew += XMVectorSet(0, -1, 0, 0);
+				if (wiInputManager::GetInstance()->down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wiInputManager::GetInstance()->down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (wiInputManager::GetInstance()->down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (wiInputManager::GetInstance()->down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wiInputManager::GetInstance()->down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (wiInputManager::GetInstance()->down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 
 			move = XMVectorLerp(move, moveNew, 0.18f * dt / 0.0166f); // smooth the movement a bit
-			cam->Move(move);
-			cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+			float moveLength = XMVectorGetX(XMVector3Length(move));
+
+			if (moveLength < 0.01f)
+			{
+				move = XMVectorSet(0, 0, 0, 0);
+			}
+			
+			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.01f)
+			{
+				cam->Move(move);
+				cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+			}
 		}
 		else
 		{
@@ -967,7 +986,7 @@ void EditorComponent::Update(float dt)
 			{
 				cam->Translate(XMFLOAT3(0, 0, yDif * 4));
 			}
-			else
+			else if(abs(xDif) + abs(yDif) > 0)
 			{
 				cameraWnd->orbitalCamTarget->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
 			}
@@ -994,7 +1013,7 @@ void EditorComponent::Update(float dt)
 					static int decalselector = 0;
 					decalselector = (decalselector + 1) % 2;
 					Decal* decal = new Decal(hovered.position, XMFLOAT3(4,4,4), wiRenderer::getCamera()->rotation,
-						wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.png" : "images/blood1.png"));
+						wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
 					decal->attachTo(hovered.object);
 					wiRenderer::PutDecal(decal);
 				}
