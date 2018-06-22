@@ -7,7 +7,7 @@ RWSTRUCTUREDBUFFER(rayBuffer, TracedRenderingStoredRay, 0);
 [numthreads(TRACEDRENDERING_LAUNCH_BLOCKSIZE, TRACEDRENDERING_LAUNCH_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	if (DTid.x < GetInternalResolution().x && DTid.y < GetInternalResolution().y)
+	if (DTid.x < (uint)GetInternalResolution().x && DTid.y < (uint)GetInternalResolution().y)
 	{
 		// Compute screen coordinates:
 		float2 uv = float2((DTid.xy + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
