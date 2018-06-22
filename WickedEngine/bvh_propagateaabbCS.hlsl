@@ -45,7 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			//	Else, this is the second child to arrive, we can continue to parent, because there was already a child that arrived here and been discarded.
 			uint flag;
 			InterlockedAdd(bvhFlagBuffer[node.ParentIndex], 1, flag);
-			if (flag == 0)
+			if (flag != 1)
 			{
 				return;
 			}

@@ -287,12 +287,11 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 			// If we are in a bucket before the current bucket, the prefix read mask is 0xFFFFFFFF aka 11111111111....
 			uint prefixMask = 0xFFFFFFFF;
 
-			// If we are in the current bucket, then we need to only consider the bits before the current thread eg. 00000001111111.....
+			// If we are in the current bucket, then we need to only consider the bits before the current thread (and also the current thread!) eg. 00000001111111.....
 			[flatten]
 			if (i == bucket)
 			{
-				// We cannot shift with 32 in a 32-bit field (in the case of the first bucket element)
-				prefixMask = threadIndexInBucket == 0 ? 0 : (prefixMask >> (32 - threadIndexInBucket));
+				prefixMask >>= (31 - threadIndexInBucket);
 			}
 
 			activePrefixSum += countbits(GroupActiveRayMask[i] & prefixMask);

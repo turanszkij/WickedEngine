@@ -9,9 +9,9 @@
 //	- Because we are calling this shader per object, clusters will not span across different objects
 //	- Clusters will be sorted later based on morton code
 
-TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
-TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
+TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
+RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND2);
 
 RWSTRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, 0);
 RWRAWBUFFER(clusterCounterBuffer, 1);
@@ -21,7 +21,7 @@ RWSTRUCTUREDBUFFER(clusterOffsetBuffer, uint2, 4); // offset, count
 RWSTRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, 5);
 
 // if defined, triangles will be grouped into clusters, else every triangle will be its own cluster:
-#define CLUSTER_GROUP
+//#define CLUSTER_GROUP
 
 #ifdef CLUSTER_GROUP
 static const uint clusterTriangleCapacity = 4;

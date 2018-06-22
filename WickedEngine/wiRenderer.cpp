@@ -6635,7 +6635,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 					mesh->vertexBuffer_POS,
 					mesh->vertexBuffer_TEX,
 				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
 				device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
 
@@ -6666,7 +6666,6 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
-			clusterAABBBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
@@ -6744,7 +6743,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);

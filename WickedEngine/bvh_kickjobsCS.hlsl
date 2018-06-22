@@ -6,7 +6,6 @@
 //	- BVH cluster processor
 
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND1);
 
 RWRAWBUFFER(indirectDispatchBuffer, 0);
 
