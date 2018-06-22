@@ -6419,20 +6419,13 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		}
 	}
 
-	static uint maxTriangleCount = totalTriangles;
-	static bool allocateBVH = maxTriangleCount > 0;
+	static uint maxTriangleCount = 0;
+	static uint maxClusterCount = 0;
 
 	if (totalTriangles > maxTriangleCount)
 	{
 		maxTriangleCount = totalTriangles;
-		allocateBVH = true; // triggers realloc!
-	}
-
-	const uint maxClusterCount = maxTriangleCount; // triangle / cluster capacity
-
-	if (allocateBVH)
-	{
-		allocateBVH = false;
+		maxClusterCount = maxTriangleCount; // todo: cluster / triangle capacity
 
 		GPUBufferDesc desc;
 		HRESULT hr;
