@@ -160,8 +160,8 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 
 	const float fMin = bounds.c.z - bounds.r;
 	const float fMax = bounds.c.z + bounds.r;
-	const uint __entitymaskcellindexSTART = max(0, min(32, floor((fMin - depthRangeMin) * depthRangeRecip)));
-	const uint __entitymaskcellindexEND = max(0, min(32, floor((fMax - depthRangeMin) * depthRangeRecip)));
+	const uint __entitymaskcellindexSTART = max(0, min(31, floor((fMin - depthRangeMin) * depthRangeRecip)));
+	const uint __entitymaskcellindexEND = max(0, min(31, floor((fMax - depthRangeMin) * depthRangeRecip)));
 
 	//// Unoptimized mask construction with loop:
 	//// Construct mask from START to END:
@@ -180,7 +180,7 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	uint uLightMask = 0xFFFFFFFF;
 	//	- Then Shift right with spare amount to keep mask only:
 	//	0000000000000000000011111111111
-	uLightMask >>= 32 - (__entitymaskcellindexEND - __entitymaskcellindexSTART);
+	uLightMask >>= 31 - (__entitymaskcellindexEND - __entitymaskcellindexSTART);
 	//	- Last, shift left with START amount to correct mask position:
 	//	0000000000111111111110000000000
 	uLightMask <<= __entitymaskcellindexSTART;
@@ -274,8 +274,8 @@ void main(ComputeShaderInput IN)
 	// then we mark the occupied depth slices with atomic or from each thread
 	// we do all this in linear (view) space
 	float realDepthVS = ScreenToView(float4(0, 0, depth, 1)).z;
-	const float __depthRangeRecip = 32.0f / (maxDepthVS - minDepthVS);
-	const uint __depthmaskcellindex = max(0, min(32, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
+	const float __depthRangeRecip = 3.0f / (maxDepthVS - minDepthVS);
+	const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
 #endif
 
