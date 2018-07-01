@@ -60,7 +60,8 @@ inline RayHit TraceScene(Ray ray)
 
 		if (IntersectBox(ray, box))
 		{
-			if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
+			//if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
+			if (nodeIndex >= clusterCount - 1)
 			{
 				// Leaf node
 				const uint nodeToClusterID = nodeIndex - leafNodeOffset;
