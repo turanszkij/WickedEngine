@@ -39,35 +39,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			// Move up in the tree:
 			nodeIndex = node.ParentIndex;
-			node = bvhNodeBuffer[nodeIndex];
 
-			uint childCount = 0;
-
-			[flatten]
-			if (node.LeftChildIndex > 0)
-			{
-				childCount++;
-			}
-			[flatten]
-			if (node.RightChildIndex > 0)
-			{
-				childCount++;
-			}
-
-			if (childCount == 0)
-			{
-				return;
-			}
-
-			// In case of two children, an atomic flag to only allow one thread to write into parent. The other thread is discarded.
+			// Atomic flag to only allow one thread to write into parent. The other thread is discarded.
 			//	If the previous value was 0, that means it's the first child to arrive here, this will be discarded, because maybe the second child is not yet computed its AABB.
 			//	Else, this is the second child to arrive, we can continue to parent, because there was already a child that arrived here and been discarded.
 			uint flag;
 			InterlockedAdd(bvhFlagBuffer[nodeIndex], 1, flag);
-			if (flag < childCount - 1)
+			if (flag != 1)
 			{
 				return;
 			}
+
+			// Arrived at parent node:
+			node = bvhNodeBuffer[nodeIndex];
 
 			// Load up its two children's AABBs
 			BVHAABB leftAABB = bvhAABBBuffer[node.LeftChildIndex];
