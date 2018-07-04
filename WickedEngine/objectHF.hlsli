@@ -409,7 +409,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 
 inline void ApplyLighting(in Surface surface, in float3 diffuse, in float3 specular, in float ao, inout float4 color)
 {
-	color.rgb = (GetAmbientColor() * ao + diffuse) * surface.albedo + specular;
+	color.rgb = (GetAmbient(surface.N) * ao + diffuse) * surface.albedo + specular;
 }
 
 inline void ApplyFog(in float dist, inout float4 color)

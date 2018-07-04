@@ -4,11 +4,13 @@
 #include "brdf.hlsli"
 #include "packHF.hlsli"
 #include "objectHF.hlsli"
+#include "normalsCompressHF.hlsli"
 
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 color = texture_gbuffer0[uint2(PSIn.pos.xy)];
+	float3 N = decodeNormal(texture_gbuffer1[uint2(PSIn.pos.xy)].xy);
 	float emissive = texture_gbuffer2[uint2(PSIn.pos.xy)].a;
 
 	float4 g3 = texture_gbuffer3[int2(PSIn.pos.xy)];
@@ -23,7 +25,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float4 specular = texture_1[uint2(PSIn.pos.xy)]; // light specular
 	float ssao = texture_2.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).r;
 	float ao = diffuse.a;
-	color.rgb = (GetAmbientColor() * ao * ssao + diffuse.rgb) * albedo + specular.rgb;
+	color.rgb = (GetAmbient(N) * ao * ssao + diffuse.rgb) * albedo + specular.rgb;
 	color.rgb += color.rgb * GetEmissive(emissive);
 
 	ApplyFog(depth, color);

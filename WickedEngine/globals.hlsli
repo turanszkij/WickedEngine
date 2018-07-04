@@ -163,6 +163,7 @@ static const float	 SQRT2 = 1.41421356237309504880;
 inline float3 GetHorizonColor() { return g_xWorld_Horizon.rgb; }
 inline float3 GetZenithColor() { return g_xWorld_Zenith.rgb; }
 inline float3 GetAmbientColor() { return g_xWorld_Ambient.rgb; }
+inline float3 GetAmbient(in float3 N) { return lerp(GetHorizonColor(), GetZenithColor(), saturate(N.y)) + GetAmbientColor(); }
 inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
 inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
