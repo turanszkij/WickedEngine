@@ -363,6 +363,22 @@ void EditorComponent::Load()
 	float step = 105, x = -step;
 
 
+	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
+	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
+	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 55 - 860 - 120, 0));
+	cinemaModeCheckBox->SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
+	cinemaModeCheckBox->OnClick([&](wiEventArgs args) {
+		if (renderPath != nullptr)
+		{
+			renderPath->GetGUI().SetVisible(false);
+		}
+		GetGUI().SetVisible(false);
+		wiProfiler::GetInstance().ENABLED = false;
+		main->infoDisplay.active = false;
+	});
+	GetGUI().AddWidget(cinemaModeCheckBox);
+
+
 	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
 	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
 	renderPathComboBox->SetPos(XMFLOAT2(screenW - 55 - 860, 0));
@@ -888,6 +904,20 @@ void EditorComponent::Update(float dt)
 	{
 		cam->detach();
 		cam->Lerp(cam, cameraWnd->proxy, 1.0f - cameraWnd->followSlider->GetValue());
+	}
+
+	// Exit cinema mode:
+	if (wiInputManager::GetInstance()->down(VK_ESCAPE))
+	{
+		if (renderPath != nullptr)
+		{
+			renderPath->GetGUI().SetVisible(true);
+		}
+		GetGUI().SetVisible(true);
+		wiProfiler::GetInstance().ENABLED = true;
+		main->infoDisplay.active = true;
+
+		cinemaModeCheckBox->SetCheck(false);
 	}
 
 	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
@@ -1429,6 +1459,7 @@ void EditorComponent::Update(float dt)
 void EditorComponent::Render()
 {
 	// hover box
+	if (!cinemaModeCheckBox->GetCheck())
 	{
 		if (hovered.object != nullptr)
 		{
@@ -1449,7 +1480,7 @@ void EditorComponent::Render()
 
 	}
 
-	if (!selected.empty())
+	if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
 	{
 		if (translator_active)
 		{
@@ -1490,6 +1521,11 @@ void EditorComponent::Render()
 void EditorComponent::Compose()
 {
 	renderPath->Compose();
+
+	if (cinemaModeCheckBox->GetCheck())
+	{
+		return;
+	}
 
 	//static Texture2D* clouds = nullptr;
 	//if (clouds == nullptr)

@@ -50,6 +50,8 @@ public:
 
 	Editor*					main;
 
+	wiCheckBox* cinemaModeCheckBox;
+
 	EditorLoadingScreen*	loader;
 	Renderable3DComponent*	renderPath;
 	enum RENDERPATH

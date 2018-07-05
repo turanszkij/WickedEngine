@@ -16,6 +16,7 @@ private:
 	wiWidget* activeWidget;
 	GRAPHICSTHREAD threadID;
 	bool focus;
+	bool visible;
 
 	XMFLOAT2 pointerpos;
 public:
@@ -37,6 +38,9 @@ public:
 
 	// returns true if any gui element has the focus
 	bool HasFocus();
+
+	void SetVisible(bool value) { visible = value; }
+	bool IsVisible() { return visible; }
 
 	GRAPHICSTHREAD GetGraphicsThread() { return threadID; }
 

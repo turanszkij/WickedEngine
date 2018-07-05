@@ -6,7 +6,7 @@
 
 using namespace std;
 
-wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), pointerpos(XMFLOAT2(0,0))
+wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
 }
 
@@ -18,6 +18,11 @@ wiGUI::~wiGUI()
 
 void wiGUI::Update(float dt)
 {
+	if (!visible)
+	{
+		return;
+	}
+
 	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
 	pointerpos.x = _p.x;
 	pointerpos.y = _p.y;
@@ -49,6 +54,11 @@ void wiGUI::Update(float dt)
 
 void wiGUI::Render()
 {
+	if (!visible)
+	{
+		return;
+	}
+
 	wiRenderer::GetDevice()->EventBegin("GUI", GetGraphicsThread());
 	for (auto&x : widgets)
 	{
@@ -128,5 +138,10 @@ bool wiGUI::IsWidgetDisabled(wiWidget* widget)
 }
 bool wiGUI::HasFocus()
 {
+	if (!visible)
+	{
+		return false;
+	}
+
 	return focus;
 }
