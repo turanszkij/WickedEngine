@@ -1631,12 +1631,12 @@ namespace wiGraphicsTypes
 
 		// Create copy queue:
 		{
-			D3D12_COMMAND_QUEUE_DESC directQueueDesc = {};
-			directQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-			directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			directQueueDesc.NodeMask = 0;
-			hr = device->CreateCommandQueue(&directQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&copyQueue);
+			D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
+			copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+			copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			copyQueueDesc.NodeMask = 0;
+			hr = device->CreateCommandQueue(&copyQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&copyQueue);
 			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, __uuidof(ID3D12CommandAllocator), (void**)&copyAllocator);
 			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, copyAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&copyCommandList);
 		
