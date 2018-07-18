@@ -274,7 +274,7 @@ void main(ComputeShaderInput IN)
 	// then we mark the occupied depth slices with atomic or from each thread
 	// we do all this in linear (view) space
 	float realDepthVS = ScreenToView(float4(0, 0, depth, 1)).z;
-	const float __depthRangeRecip = 3.0f / (maxDepthVS - minDepthVS);
+	const float __depthRangeRecip = 31.0f / (maxDepthVS - minDepthVS);
 	const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
 #endif
