@@ -28,7 +28,7 @@ The full source code is provided with the MIT license, which means, anyone is fr
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-![Bistro](logo/bistro_out.png)
+![Windmill](logo/windmill.png)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
@@ -72,9 +72,6 @@ This feature is experimental, not tested thoroughly yet.
 * **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V, but the pyhton script you should run is called "generate_shader_buildtask_spirv.py" which will generate "build_HLSL6.bat". 
 This feature is experimental, not tested thoroughly yet.
 
-
-![Windmill](logo/windmill.png)
-
 ### Platforms:
 - Windows PC Desktop (x86, x64)
 - Universal Windows (PC, Phone, XBOX One)
@@ -86,9 +83,7 @@ This feature is experimental, not tested thoroughly yet.
 - Visual Studio 2017
 - Windows 10 SDK
 
-
-![Room](logo/room.png)
-![Particles](logo/particles.png)
+![Sponza](logo/sponza.png)
 
 
 ### Getting started: 
@@ -119,8 +114,6 @@ If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor 
 
 When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
 
-![Sponza](logo/sponza.png)
-
 ### Contents:
 
 - ./Documentation/						- Documentation files
@@ -148,10 +141,6 @@ and open them. You can also open OBJ format models, which are very simple model 
 Test model and scene files are now available in the WickedEngine/models directory.
 
 
-![VXGI](logo/vxgi.png)
-![BistroIn](logo/bistro_in.png)
-
-
 ### Model import/export:
 
 The only common model format supported right now is Wavefront OBJ.<br/>
@@ -174,8 +163,6 @@ Notes on exporting:
 	Suggested fix: implement curves support into the engine and the exporter
 - Only one uv map support<br/>
 	Light maps and other effects requiring multiple uv maps are not possible yet.
-
-![Trooper](logo/trooper.png)
 	
 
 ### Graphics:
