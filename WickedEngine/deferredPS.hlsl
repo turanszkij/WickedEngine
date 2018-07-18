@@ -10,7 +10,7 @@
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 color = texture_gbuffer0[uint2(PSIn.pos.xy)];
-	float3 N = decodeNormal(texture_gbuffer1[uint2(PSIn.pos.xy)].xy);
+	float3 N = decode(texture_gbuffer1[uint2(PSIn.pos.xy)].xy);
 	float emissive = texture_gbuffer2[uint2(PSIn.pos.xy)].a;
 
 	float4 g3 = texture_gbuffer3[int2(PSIn.pos.xy)];
