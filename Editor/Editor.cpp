@@ -967,7 +967,9 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			cam->detach();
 
-			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * dt;
+			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
+
+			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
@@ -984,15 +986,15 @@ void EditorComponent::Update(float dt)
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 
-			move = XMVectorLerp(move, moveNew, 0.18f * dt / 0.0166f); // smooth the movement a bit
+			move = XMVectorLerp(move, moveNew, 0.18f * clampedDT / 0.0166f); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
 
-			if (moveLength < 0.01f)
+			if (moveLength < 0.0001f)
 			{
 				move = XMVectorSet(0, 0, 0, 0);
 			}
 			
-			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.01f)
+			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.0001f)
 			{
 				cam->Move(move);
 				cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
