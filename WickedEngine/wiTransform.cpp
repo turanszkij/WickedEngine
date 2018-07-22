@@ -256,6 +256,7 @@ void Transform::RotateRollPitchYaw(const XMFLOAT3& value)
 	quat = XMQuaternionMultiply(x, quat);
 	quat = XMQuaternionMultiply(quat, y);
 	quat = XMQuaternionMultiply(z, quat);
+	quat = XMQuaternionNormalize(quat);
 
 	XMStoreFloat4(&rotation_rest, quat);
 
@@ -289,14 +290,67 @@ void Transform::CatmullRom(const Transform* a, const Transform* b, const Transfo
 		XMLoadFloat3(&d->translation),
 		t
 	);
-	XMVECTOR R = XMVectorCatmullRom( // not the best choice for quaternions, but it will do for now...
+
+	//XMVECTOR qA = XMQuaternionNormalize(XMLoadFloat4(&a->rotation));
+	//XMVECTOR qB = XMQuaternionNormalize(XMLoadFloat4(&b->rotation));
+	//XMVECTOR qC = XMQuaternionNormalize(XMLoadFloat4(&c->rotation));
+	//XMVECTOR qD = XMQuaternionNormalize(XMLoadFloat4(&d->rotation));
+
+	//XMQuaternionSquadSetup(&qB, &qC, &qD, qA, qB, qC, qD);
+
+	//XMVECTOR diff_ab = XMQuaternionMultiply(XMQuaternionInverse(qA), qB); // rot from a to b
+	//diff_ab = XMQuaternionNormalize(XMVectorMultiply(diff_ab, XMVectorSet(1, 1, 1, 0.33333f))); // div angle by 3 and normalize
+	//XMVECTOR modified_a = XMQuaternionNormalize(XMQuaternionMultiply(qB, diff_ab)); // rot b by diff_ab and normalize
+
+	//XMVECTOR diff_dc = XMQuaternionMultiply(XMQuaternionInverse(qD), qC); // rot from d to c
+	//diff_dc = XMQuaternionNormalize(XMVectorMultiply(diff_dc, XMVectorSet(1, 1, 1, 0.33333f))); // div angle by 3 and normalize
+	//XMVECTOR modified_d = XMQuaternionNormalize(XMQuaternionMultiply(qC, diff_dc)); // rot c by diff_dc and normalize
+
+	//XMVECTOR R = XMQuaternionSquad(qB, modified_a, modified_d, qC, t);
+
+	//XMVECTOR Q1, Q2, Q3;
+	//XMQuaternionSquadSetup(
+	//	&Q1, &Q2, &Q3,
+	//	XMLoadFloat4(&a->rotation),
+	//	XMLoadFloat4(&b->rotation),
+	//	XMLoadFloat4(&c->rotation),
+	//	XMLoadFloat4(&d->rotation)
+	//);
+	//float squadT = t * 0.3333f + 0.3333f;
+	//XMVECTOR R = XMQuaternionSquad(
+	//	XMQuaternionNormalize(XMLoadFloat4(&a->rotation)),
+	//	XMQuaternionNormalize(Q1), 
+	//	XMQuaternionNormalize(Q2), 
+	//	XMQuaternionNormalize(Q3),
+	//	squadT
+	//);
+
+	//XMVECTOR R = XMQuaternionSquad(
+	//	XMQuaternionNormalize(XMLoadFloat4(&b->rotation)),
+	//	XMQuaternionNormalize(XMLoadFloat4(&a->rotation)),
+	//	XMQuaternionNormalize(XMLoadFloat4(&d->rotation)),
+	//	XMQuaternionNormalize(XMLoadFloat4(&c->rotation)),
+	//	t
+	//);
+
+	// Catmull-rom has issues with full rotation for quaternions:
+	XMVECTOR R = XMVectorCatmullRom(
 		XMLoadFloat4(&a->rotation),
 		XMLoadFloat4(&b->rotation),
 		XMLoadFloat4(&c->rotation),
 		XMLoadFloat4(&d->rotation),
 		t
 	);
+
+	//// Simple blend that is not smooth on control point change:
+	//XMVECTOR R = XMQuaternionSlerp(
+	//	XMLoadFloat4(&b->rotation),
+	//	XMLoadFloat4(&c->rotation),
+	//	t
+	//);
+
 	R = XMQuaternionNormalize(R);
+
 	XMVECTOR S = XMVectorCatmullRom(
 		XMLoadFloat3(&a->scale),
 		XMLoadFloat3(&b->scale),
