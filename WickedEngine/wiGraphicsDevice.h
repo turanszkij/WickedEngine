@@ -89,18 +89,17 @@ namespace wiGraphicsTypes
 
 		///////////////Thread-sensitive////////////////////////
 
+		virtual void BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
-			GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
 		virtual void BindResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) = 0;
-		virtual void BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
-		virtual void BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) = 0;
-		virtual void UnBindResources(int slot, int num, GRAPHICSTHREAD threadID) = 0;
-		virtual void UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID) = 0;
+		virtual void BindUAV(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) = 0;
+		virtual void BindUAVs(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID) = 0;
+		virtual void UnbindResources(int slot, int num, GRAPHICSTHREAD threadID) = 0;
+		virtual void UnbindUAVs(int slot, int num, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID) = 0;
 		virtual void BindVertexBuffers(GPUBuffer *const* vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID) = 0;
@@ -125,7 +124,6 @@ namespace wiGraphicsTypes
 		virtual void* AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID) = 0;
 		virtual void InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID) = 0;
 		virtual bool DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
-		virtual void SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;

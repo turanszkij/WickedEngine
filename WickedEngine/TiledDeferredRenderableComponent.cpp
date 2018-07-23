@@ -57,7 +57,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 
 	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
 
@@ -82,7 +82,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	if (getSSAOEnabled()) {
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
@@ -124,7 +124,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		static int sssPassCount = 6;
 		for (int i = 0; i < sssPassCount; ++i)
 		{
-			wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 			rtSSS[i % 2].Set(threadID, rtGBuffer.depth);
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
 			static float stren = 0.018f;
@@ -147,7 +147,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			}
 		}
 		fx.process.clear();
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		rtSSS[0].Activate(threadID, rtGBuffer.depth); {
 			fx.setMaskMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
@@ -177,7 +177,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 	if (getSSREnabled()) {
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();

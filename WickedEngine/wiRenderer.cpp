@@ -3504,7 +3504,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					};
 
 					GetDevice()->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
-					GetDevice()->BindUnorderedAccessResourcesCS(sos, 0, ARRAYSIZE(sos), threadID);
+					GetDevice()->BindUAVs(CS, sos, 0, ARRAYSIZE(sos), threadID);
 
 					GetDevice()->Dispatch((UINT)ceilf((float)mesh->vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
 					GetDevice()->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
@@ -3528,8 +3528,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		if (streamOutSetUp)
 		{
-			GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
-			GetDevice()->UnBindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, threadID);
+			GetDevice()->UnbindUAVs(0, 2, threadID);
+			GetDevice()->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, threadID);
 		}
 
 	}
@@ -4820,7 +4820,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 		if (!culledLights.empty())
 		{
-			GetDevice()->UnBindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+			GetDevice()->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
 			int shadowCounter_2D = 0;
 			int shadowCounter_Cube = 0;
@@ -5867,7 +5867,9 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	GetDevice()->EventBegin("Voxel Radiance", threadID);
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Voxel Radiance", threadID);
 	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 
@@ -5888,7 +5890,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
 		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
+		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
@@ -5897,7 +5899,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = GetDevice()->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 	}
 	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
@@ -5911,7 +5913,7 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 
 		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
-		HRESULT hr = GetDevice()->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
+		HRESULT hr = device->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -5940,58 +5942,59 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 		VP.Height = (float)voxelSceneData.res;
 		VP.MinDepth = 0.0f;
 		VP.MaxDepth = 1.0f;
-		GetDevice()->BindViewports(1, &VP, threadID);
+		device->BindViewports(1, &VP, threadID);
 
 		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
-		GetDevice()->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
+		//device->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
+		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
 		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
-		GetDevice()->EventBegin("Voxel Scene Copy - Clear", threadID);
-		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-		GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-		GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+		device->EventBegin("Voxel Scene Copy - Clear", threadID);
+		device->BindRenderTargets(0, nullptr, nullptr, threadID);
+		device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
 
-		if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
 		{
-			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+			device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
 		}
 		else
 		{
-			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+			device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
 		}
-		GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
-		GetDevice()->EventEnd(threadID);
+		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
+		device->EventEnd(threadID);
 
 		if (voxelSceneData.secondaryBounceEnabled)
 		{
-			GetDevice()->EventBegin("Voxel Radiance Secondary Bounce", threadID);
-			GetDevice()->UnBindUnorderedAccessResources(1, 1, threadID);
+			device->EventBegin("Voxel Radiance Secondary Bounce", threadID);
+			device->UnbindUAVs(1, 1, threadID);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
 			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
-			GetDevice()->BindUnorderedAccessResourceCS(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
-			GetDevice()->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-			GetDevice()->BindResource(CS, resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
-			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
-			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, threadID);
-			GetDevice()->EventEnd(threadID);
+			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
+			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+			device->BindResource(CS, resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+			device->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
+			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, threadID);
+			device->EventEnd(threadID);
 
-			GetDevice()->EventBegin("Voxel Scene Clear Normals", threadID);
-			GetDevice()->UnBindResources(1, 1, threadID);
-			GetDevice()->BindUnorderedAccessResourceCS(resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-			GetDevice()->BindComputePSO(CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
-			GetDevice()->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
-			GetDevice()->EventEnd(threadID);
+			device->EventBegin("Voxel Scene Clear Normals", threadID);
+			device->UnbindResources(1, 1, threadID);
+			device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+			device->BindComputePSO(CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
+			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
+			device->EventEnd(threadID);
 
 			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
 
-		GetDevice()->UnBindUnorderedAccessResources(0, 2, threadID);
+		device->UnbindUAVs(0, 2, threadID);
 
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
-		//if (GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		//if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
 		//{
 		//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
 		//}
@@ -6003,13 +6006,13 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 	if (voxelHelper)
 	{
-		GetDevice()->BindResource(VS, result, TEXSLOT_VOXELRADIANCE, threadID);
+		device->BindResource(VS, result, TEXSLOT_VOXELRADIANCE, threadID);
 	}
-	GetDevice()->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
-	GetDevice()->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
+	device->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
+	device->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
 
 	wiProfiler::GetInstance().EndRange(threadID);
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 
 
@@ -6103,7 +6106,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		GPUResource* uavs[] = { frustumBuffer };
 
-		device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
 		device->BindComputePSO(CPSO[CSTYPE_TILEFRUSTUMS], threadID);
 
 		DispatchParamsCB dispatchParams;
@@ -6117,7 +6120,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
 		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
-		device->UnBindUnorderedAccessResources(UAVSLOT_TILEFRUSTUMS, 1, threadID);
+		device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 	}
 
@@ -6146,7 +6149,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	{
 		device->EventBegin("Entity Culling", threadID);
 
-		device->UnBindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
+		device->UnbindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
 
 		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 
@@ -6154,7 +6157,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 		if (GetDebugLightCulling())
 		{
-			device->BindUnorderedAccessResourceCS(textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
 		}
 
 
@@ -6179,7 +6182,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
 				textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV],
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
 			GetDevice()->BindResource(CS, Light::shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
 			GetDevice()->BindResource(CS, Light::shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
@@ -6194,13 +6197,13 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 				resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE],
 				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
 
 			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		}
 
-		device->UnBindUnorderedAccessResources(0, 8, threadID); // this unbinds pretty much every uav
+		device->UnbindUAVs(0, 8, threadID); // this unbinds pretty much every uav
 
 		device->EventEnd(threadID);
 	}
@@ -6212,7 +6215,7 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->EventBegin("Resolve MSAA DepthBuffer", threadID);
 
 	GetDevice()->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
-	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
+	GetDevice()->BindUAV(CS, dst, 0, threadID);
 
 	TextureDesc desc = src->GetDesc();
 
@@ -6220,8 +6223,8 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
 
 
-	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	GetDevice()->UnbindUAVs(0, 1, threadID);
 
 	GetDevice()->EventEnd(threadID);
 }
@@ -6266,7 +6269,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
-		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+		GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
 		GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
 		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
@@ -6277,8 +6280,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 			threadID);
 	}
 
-	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	GetDevice()->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	GetDevice()->UnbindUAVs(0, 1, threadID);
 
 	GetDevice()->EventEnd(threadID);
 }
@@ -6319,7 +6322,7 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
-		GetDevice()->BindUnorderedAccessResourceCS(texture, 0, threadID, i + 1);
+		GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
 		GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
 		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
@@ -6331,8 +6334,8 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 			threadID);
 	}
 
-	GetDevice()->UnBindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	GetDevice()->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	GetDevice()->UnbindUAVs(0, 1, threadID);
 
 	GetDevice()->EventEnd(threadID);
 }
@@ -6374,16 +6377,16 @@ void wiRenderer::CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY
 	if (DstMIP > 0)
 	{
 		assert(desc_dst.MipLevels > DstMIP);
-		device->BindUnorderedAccessResourceCS(dst, 0, threadID, DstMIP);
+		device->BindUAV(CS, dst, 0, threadID, DstMIP);
 	}
 	else
 	{
-		device->BindUnorderedAccessResourceCS(dst, 0, threadID);
+		device->BindUAV(CS, dst, 0, threadID);
 	}
 
 	device->Dispatch((UINT)ceilf((float)cb.xCopySrcSize.x / 8.0f), (UINT)ceilf((float)cb.xCopySrcSize.y / 8.0f), 1, threadID);
 
-	device->UnBindUnorderedAccessResources(0, 1, threadID);
+	device->UnbindUAVs(0, 1, threadID);
 
 	device->EventEnd(threadID);
 }
@@ -6587,7 +6590,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 			bvhNodeBuffer,
 			bvhAABBBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		device->Dispatch(1, 1, 1, threadID);
 	}
@@ -6608,7 +6611,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 			clusterOffsetBuffer,
 			clusterAABBBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		for (auto& model : GetScene().models)
 		{
@@ -6647,7 +6650,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		}
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -6662,7 +6665,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		GPUResource* uavs[] = {
 			indirectBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
@@ -6672,7 +6675,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		device->Dispatch(1, 1, 1, threadID);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -6683,7 +6686,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 			clusterSortedMortonBuffer,
 			clusterConeBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
@@ -6699,7 +6702,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -6710,7 +6713,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 			bvhNodeBuffer,
 			bvhFlagBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
@@ -6722,7 +6725,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -6733,7 +6736,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 			bvhAABBBuffer,
 			bvhFlagBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* res[] = {
 			clusterCounterBuffer,
@@ -6747,7 +6750,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -7070,12 +7073,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		GPUResource* uavs[] = {
 			result,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -7088,12 +7091,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 		GPUResource* uavs[] = {
 			rayBuffer[0],
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 
 		// just write initial ray count:
 		device->UpdateBuffer(counterBuffer[0], &_raycount, threadID);
@@ -7148,12 +7151,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				counterBuffer[__writeBufferID],
 				indirectBuffer,
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 			device->Dispatch(1, 1, 1, threadID);
 
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 		}
 		device->EventEnd(threadID);
 
@@ -7178,12 +7181,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				GPUResource* uavs[] = {
 					result,
 				};
-				device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+				device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 				device->DispatchIndirect(indirectBuffer, 0, threadID);
 
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-				device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+				device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 			}
 			device->EventEnd(threadID);
 
@@ -7214,12 +7217,12 @@ void wiRenderer::DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* res
 				rayBuffer[__writeBufferID],
 				result,
 			};
-			device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 			device->DispatchIndirect(indirectBuffer, 0, threadID);
 
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 		}
 		device->EventEnd(threadID);
 
@@ -7248,7 +7251,7 @@ void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float rand
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
 	GetDevice()->BindResource(CS, wiTextureHelper::getInstance()->getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
-	GetDevice()->BindUnorderedAccessResourceCS(dst, 0, threadID);
+	GetDevice()->BindUAV(CS, dst, 0, threadID);
 
 	CloudGeneratorCB cb;
 	cb.xNoiseTexDim = XMFLOAT2((float)src_desc.Width, (float)src_desc.Height);
@@ -7267,8 +7270,8 @@ void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float rand
 	GetDevice()->BindComputePSO(CPSO[CSTYPE_CLOUDGENERATOR], threadID);
 	GetDevice()->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, threadID);
 
-	GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	GetDevice()->UnBindUnorderedAccessResources(0, 1, threadID);
+	GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	GetDevice()->UnbindUAVs(0, 1, threadID);
 
 
 	GetDevice()->EventEnd(threadID);
@@ -7667,7 +7670,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		TextureDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
 		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
-		device->BindUnorderedAccessResourceCS(luminance_map, 0, threadID);
+		device->BindUAV(CS, luminance_map, 0, threadID);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
@@ -7676,7 +7679,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		{
 			luminance_avg_desc = luminance_avg[i]->GetDesc();
 			device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS2], threadID);
-			device->BindUnorderedAccessResourceCS(luminance_avg[i], 0, threadID);
+			device->BindUAV(CS, luminance_avg[i], 0, threadID);
 			if (i > 0)
 			{
 				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
@@ -7689,7 +7692,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 		}
 
 
-		device->UnBindUnorderedAccessResources(0, 1, threadID);
+		device->UnbindUAVs(0, 1, threadID);
 
 		return luminance_avg.back();
 	}

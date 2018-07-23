@@ -90,7 +90,7 @@ void wiGUI::ResetScissor()
 	scissor[0].left = (LONG)(0);
 	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
 	scissor[0].top = (LONG)(0);
-	wiRenderer::GetDevice()->SetScissorRects(1, scissor, GetGraphicsThread());
+	wiRenderer::GetDevice()->BindScissorRects(1, scissor, GetGraphicsThread());
 }
 
 void wiGUI::AddWidget(wiWidget* widget)

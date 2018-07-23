@@ -2779,6 +2779,10 @@ void GraphicsDevice_DX11::PresentEnd()
 	memset(prev_il, 0, sizeof(prev_il));
 	memset(prev_pt, 0, sizeof(prev_pt));
 
+	memset(raster_uavs, 0, sizeof(raster_uavs));
+	memset(raster_uavs_slot, 8, sizeof(raster_uavs_slot));
+	memset(raster_uavs_count, 0, sizeof(raster_uavs_count));
+
 	FRAMECOUNT++;
 
 	RESOLUTIONCHANGED = false;
@@ -2807,6 +2811,37 @@ void GraphicsDevice_DX11::FinishCommandList(GRAPHICSTHREAD thread)
 	deviceContexts[thread]->FinishCommandList(true, &commandLists[thread]);
 }
 
+
+void GraphicsDevice_DX11::validate_raster_uavs(GRAPHICSTHREAD threadID) 
+{
+	// This is a helper function to defer the graphics stage UAV bindings to OMSetRenderTargetsAndUnorderedAccessViews (if there was an update)
+	//	It is intended to be called before graphics stage executions (eg. Draw)
+	//	It is also explicitly maintained in BindRenderTargets function, because in that case, we will also bind some render targets in the same call
+
+	if(raster_uavs_count[threadID] > 0)
+	{
+		const UINT count = raster_uavs_count[threadID];
+		const UINT slot = raster_uavs_slot[threadID];
+
+		deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, slot, count, &raster_uavs[threadID][slot], nullptr);
+
+		raster_uavs_count[threadID] = 0;
+		raster_uavs_slot[threadID] = 8;
+	}
+}
+
+void GraphicsDevice_DX11::BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) {
+	assert(rects != nullptr);
+	assert(numRects <= 8);
+	D3D11_RECT pRects[8];
+	for(UINT i = 0; i < numRects; ++i) {
+		pRects[i].bottom = rects[i].bottom;
+		pRects[i].left = rects[i].left;
+		pRects[i].right = rects[i].right;
+		pRects[i].top = rects[i].top;
+	}
+	deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
+}
 void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) 
 {
 	assert(NumViewports <= 6);
@@ -2821,51 +2856,6 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 		d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
 	}
 	deviceContexts[threadID]->RSSetViewports(NumViewports, d3dViewPorts);
-}
-void GraphicsDevice_DX11::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
-	GRAPHICSTHREAD threadID, int arrayIndex)
-{
-	// RTVs:
-	ID3D11RenderTargetView* renderTargetViews[8];
-	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
-	for (UINT i = 0; i < min(NumViews, 8); ++i)
-	{
-		if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs_DX11.empty())
-		{
-			renderTargetViews[i] = ppRenderTargets[i]->RTV_DX11;
-		}
-		else
-		{
-			assert(ppRenderTargets[i]->additionalRTVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-			renderTargetViews[i] = ppRenderTargets[i]->additionalRTVs_DX11[arrayIndex];
-		}
-	}
-
-	// DSVs:
-	ID3D11DepthStencilView* depthStencilView = nullptr;
-	if (depthStencilTexture != nullptr)
-	{
-		if (arrayIndex < 0 || depthStencilTexture->additionalDSVs_DX11.empty())
-		{
-			depthStencilView = depthStencilTexture->DSV_DX11;
-		}
-		else
-		{
-			assert(depthStencilTexture->additionalDSVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-			depthStencilView = depthStencilTexture->additionalDSVs_DX11[arrayIndex];
-		}
-	}
-
-	// UAVs:
-	ID3D11UnorderedAccessView* UAVs[8];
-	ZeroMemory(UAVs, sizeof(UAVs));
-	for (int i = 0; i < min(countUAV, 8); ++i)
-	{
-		UAVs[i] = ppUAVs[i]->UAV_DX11;
-	}
-
-
-	deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slotUAV, countUAV, UAVs, nullptr);
 }
 void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
@@ -2900,7 +2890,21 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppR
 		}
 	}
 
-	deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
+	if(raster_uavs_count[threadID] > 0)
+	{
+		// UAVs:
+		const UINT count = raster_uavs_count[threadID];
+		const UINT slot = raster_uavs_slot[threadID];
+
+		deviceContexts[threadID]->OMSetRenderTargetsAndUnorderedAccessViews(NumViews, renderTargetViews, depthStencilView, slot, count, &raster_uavs[threadID][slot], nullptr);
+
+		raster_uavs_count[threadID] = 0;
+		raster_uavs_slot[threadID] = 8;
+	}
+	else 		
+	{
+		deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
+	}
 }
 void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 {
@@ -3028,32 +3032,65 @@ void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, GPUResource *const* r
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
 	{
 		if (arrayIndex < 0)
 		{
-			deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->UAV_DX11, nullptr);
+			if(stage == CS)
+			{
+				deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->UAV_DX11, nullptr);
+			}
+			else
+			{
+				raster_uavs[threadID][slot] = resource->UAV_DX11;
+				raster_uavs_slot[threadID] = min(raster_uavs_slot[threadID], slot);
+				raster_uavs_count[threadID] = max(raster_uavs_count[threadID], 1);
+			}
 		}
 		else
 		{
 			assert(resource->additionalUAVs_DX11.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-			deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->additionalUAVs_DX11[arrayIndex], nullptr);
+			
+			if(stage == CS)
+			{
+				deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, 1, &resource->additionalUAVs_DX11[arrayIndex], nullptr);
+			}
+			else
+			{
+				raster_uavs[threadID][slot] = resource->additionalUAVs_DX11[arrayIndex];
+				raster_uavs_slot[threadID] = min(raster_uavs_slot[threadID], slot);
+				raster_uavs_count[threadID] = max(raster_uavs_count[threadID], 1);
+			}
 		}
 	}
 }
-void GraphicsDevice_DX11::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 {
-	assert(count <= 8);
+	assert(slot + count <= 8);
 	ID3D11UnorderedAccessView* uavs[8];
 	for (int i = 0; i < count; ++i)
 	{
 		uavs[i] = resources[i] != nullptr ? resources[i]->UAV_DX11 : nullptr;
+
+		if(stage != CS)
+		{
+			raster_uavs[threadID][slot + i] = uavs[i];
+		}
 	}
-	deviceContexts[threadID]->CSSetUnorderedAccessViews(static_cast<UINT>(slot), static_cast<UINT>(count), uavs, nullptr);
+
+	if(stage == CS)
+	{
+		deviceContexts[threadID]->CSSetUnorderedAccessViews(static_cast<UINT>(slot), static_cast<UINT>(count), uavs, nullptr);
+	}
+	else
+	{
+		raster_uavs_slot[threadID] = min(raster_uavs_slot[threadID], slot);
+		raster_uavs_count[threadID] = max(raster_uavs_count[threadID], count);
+	}
 }
-void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::UnbindResources(int slot, int num, GRAPHICSTHREAD threadID)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[threadID]->PSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
@@ -3063,10 +3100,13 @@ void GraphicsDevice_DX11::UnBindResources(int slot, int num, GRAPHICSTHREAD thre
 	deviceContexts[threadID]->DSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 	deviceContexts[threadID]->CSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 }
-void GraphicsDevice_DX11::UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::UnbindUAVs(int slot, int num, GRAPHICSTHREAD threadID)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, num, (ID3D11UnorderedAccessView**)__nullBlob, 0);
+
+	raster_uavs_count[threadID] = 0;
+	raster_uavs_slot[threadID] = 8;
 }
 void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
 {
@@ -3138,7 +3178,6 @@ void GraphicsDevice_DX11::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUF
 	ID3D11Buffer* res = indexBuffer != nullptr ? indexBuffer->resource_DX11 : nullptr;
 	deviceContexts[threadID]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
 }
-
 void GraphicsDevice_DX11::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 {
 	stencilRef[threadID] = value;
@@ -3262,26 +3301,38 @@ void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadI
 }
 void GraphicsDevice_DX11::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
 {
+	validate_raster_uavs(threadID);
+
 	deviceContexts[threadID]->Draw(vertexCount, startVertexLocation);
 }
 void GraphicsDevice_DX11::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 {
+	validate_raster_uavs(threadID);
+
 	deviceContexts[threadID]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
 void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) 
 {
+	validate_raster_uavs(threadID);
+
 	deviceContexts[threadID]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 {
+	validate_raster_uavs(threadID);
+
 	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
+	validate_raster_uavs(threadID);
+
 	deviceContexts[threadID]->DrawInstancedIndirect(args->resource_DX11, args_offset);
 }
 void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
+	validate_raster_uavs(threadID);
+
 	deviceContexts[threadID]->DrawIndexedInstancedIndirect(args->resource_DX11, args_offset);
 }
 void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
@@ -3404,20 +3455,6 @@ bool GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer*
 	}
 
 	return result;
-}
-void GraphicsDevice_DX11::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
-{
-	assert(rects != nullptr);
-	assert(numRects <= 8);
-	D3D11_RECT pRects[8];
-	for (UINT i = 0; i < numRects; ++i)
-	{
-		pRects[i].bottom = rects[i].bottom;
-		pRects[i].left = rects[i].left;
-		pRects[i].right = rects[i].right;
-		pRects[i].top = rects[i].top;
-	}
-	deviceContexts[threadID]->RSSetScissorRects(numRects, pRects);
 }
 
 void GraphicsDevice_DX11::WaitForGPU()

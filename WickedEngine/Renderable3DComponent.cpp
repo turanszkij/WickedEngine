@@ -358,7 +358,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) > 0)
 	{
 		wiRenderer::GetDevice()->EventBegin("Light Shafts", threadID);
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 		rtSun[0].Activate(threadID, mainRT.depth); {
 			wiRenderer::DrawSun(threadID);
 		}
@@ -402,8 +402,8 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_GBUFFER0, 1, threadID);
+	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 	if (wiRenderer::GetAdvancedRefractionsEnabled())
 	{
 		wiRenderer::GenerateMipChain(rtSceneCopy.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
@@ -459,7 +459,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 
 	if (getEmittedParticlesEnabled())
 	{
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		rtParticle.Activate(threadID, 0, 0, 0, 0);
 		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), true, threadID);
 	}
@@ -504,8 +504,8 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 			fx.process.clear();
 		}
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_GBUFFER0, 1, threadID);
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_GBUFFER0, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		shadedSceneRT.Set(threadID, nullptr, false, 0); {
 			fx.presentFullScreen = true;
 			fx.quality = QUALITY_NEAREST;
@@ -608,7 +608,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		fx.process.setSharpen(getSharpenFilterAmount());
 		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 		fx.process.clear();
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
 		SwapPtr(rt0, rt1);
 	}

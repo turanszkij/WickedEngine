@@ -52,7 +52,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::ComputeTiledLightCulling(false, threadID);
 
-	wiRenderer::GetDevice()->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
 	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Set(threadID);
@@ -69,7 +69,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	if (getSSAOEnabled()) {
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
@@ -100,7 +100,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 	if (getSSREnabled()) {
-		wiRenderer::GetDevice()->UnBindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
+		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();

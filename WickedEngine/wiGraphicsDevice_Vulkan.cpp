@@ -4201,6 +4201,18 @@ namespace wiGraphicsTypes
 	}
 
 
+	void GraphicsDevice_Vulkan::BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) {
+		assert(rects != nullptr);
+		assert(numRects <= 8);
+		VkRect2D scissors[8];
+		for(UINT i = 0; i < numRects; ++i) {
+			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
+			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
+			scissors[i].offset.x = max(0, rects[i].left);
+			scissors[i].offset.y = max(0, rects[i].top);
+		}
+		vkCmdSetScissor(GetDirectCommandList(threadID), 0, numRects, scissors);
+	}
 	void GraphicsDevice_Vulkan::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID)
 	{
 		assert(NumViewports <= 6);
@@ -4215,19 +4227,6 @@ namespace wiGraphicsTypes
 			viewports[i].maxDepth = pViewports[i].MaxDepth;
 		}
 		vkCmdSetViewport(GetDirectCommandList(threadID), 0, NumViewports, viewports);
-	}
-	void GraphicsDevice_Vulkan::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
-		GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
-
-		if (ppUAVs != nullptr)
-		{
-			for (int i = 0; i < countUAV; ++i)
-			{
-				BindUnorderedAccessResource(PS, ppUAVs[i], slotUAV + i, threadID, -1);
-			}
-		}
 	}
 	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -4401,7 +4400,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_Vulkan::BindUAV(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 
@@ -4517,28 +4516,20 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::BindUnorderedAccessResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_Vulkan::BindUAVs(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
 			for (int i = 0; i < count; ++i)
 			{
-				BindUnorderedAccessResource(stage, resources[i], slot + i, threadID, -1);
+				BindUAV(stage, resources[i], slot + i, threadID, -1);
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindUnorderedAccessResource(CS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_Vulkan::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		BindUnorderedAccessResources(CS, resources, slot, count, threadID);
-	}
-	void GraphicsDevice_Vulkan::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_Vulkan::UnbindResources(int slot, int num, GRAPHICSTHREAD threadID)
 	{
 	}
-	void GraphicsDevice_Vulkan::UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_Vulkan::UnbindUAVs(int slot, int num, GRAPHICSTHREAD threadID)
 	{
 	}
 	void GraphicsDevice_Vulkan::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
@@ -4962,20 +4953,6 @@ namespace wiGraphicsTypes
 	bool GraphicsDevice_Vulkan::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
-	}
-	void GraphicsDevice_Vulkan::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
-	{
-		assert(rects != nullptr);
-		assert(numRects <= 8);
-		VkRect2D scissors[8];
-		for (UINT i = 0; i < numRects; ++i)
-		{
-			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
-			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
-			scissors[i].offset.x = max(0, rects[i].left);
-			scissors[i].offset.y = max(0, rects[i].top);
-		}
-		vkCmdSetScissor(GetDirectCommandList(threadID), 0, numRects, scissors);
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU()

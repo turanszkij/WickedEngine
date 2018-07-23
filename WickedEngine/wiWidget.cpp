@@ -356,7 +356,7 @@ void wiButton::Render(wiGUI* gui)
 	scissorRect.left = (LONG)(translation.x);
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
-	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	wiFont(text, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1, 
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
@@ -426,7 +426,7 @@ void wiLabel::Render(wiGUI* gui)
 	scissorRect.left = (LONG)(translation.x);
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
-	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	wiFont(text, wiFontProps((int)translation.x + 2, (int)translation.y + 2, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, 
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
@@ -583,7 +583,7 @@ void wiTextInputField::Render(wiGUI* gui)
 	scissorRect.left = (LONG)(translation.x);
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
-	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 
 	string activeText = text;
 	if (state == ACTIVE)
@@ -771,7 +771,7 @@ void wiSlider::Render(wiGUI* gui)
 
 	if (parent != nullptr)
 	{
-		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
 	// text
 	wiFont(text, wiFontProps((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
@@ -908,7 +908,7 @@ void wiCheckBox::Render(wiGUI* gui)
 
 	if (parent != nullptr)
 	{
-		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
 	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor )).Draw(gui->GetGraphicsThread());
@@ -1096,7 +1096,7 @@ void wiComboBox::Render(wiGUI* gui)
 
 	if (parent != nullptr)
 	{
-		wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
 	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
@@ -1418,7 +1418,7 @@ void wiWindow::Render(wiGUI* gui)
 	scissorRect.left = (LONG)(translation.x);
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
-	wiRenderer::GetDevice()->SetScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 

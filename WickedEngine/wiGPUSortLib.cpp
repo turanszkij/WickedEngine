@@ -90,7 +90,7 @@ void wiGPUSortLib::Sort(UINT maxCount, GPUBuffer* comparisonBuffer_read, GPUBuff
 	device->UpdateBuffer(sortCB, &sc, threadID);
 	device->BindConstantBuffer(CS, sortCB, CB_GETBINDSLOT(SortConstants), threadID);
 
-	device->UnBindUnorderedAccessResources(0, 8, threadID);
+	device->UnbindUAVs(0, 8, threadID);
 
 	// initialize sorting arguments:
 	{
@@ -104,19 +104,19 @@ void wiGPUSortLib::Sort(UINT maxCount, GPUBuffer* comparisonBuffer_read, GPUBuff
 		GPUResource* uavs[] = {
 			indirectBuffer,
 		};
-		device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		device->Dispatch(1, 1, 1, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 
-		device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 
 
 	GPUResource* uavs[] = {
 		indexBuffer_write,
 	};
-	device->BindUnorderedAccessResourcesCS(uavs, 0, ARRAYSIZE(uavs), threadID);
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 	GPUResource* resources[] = {
 		counterBuffer_read,
@@ -200,8 +200,8 @@ void wiGPUSortLib::Sort(UINT maxCount, GPUBuffer* comparisonBuffer_read, GPUBuff
 		presorted *= 2;
 	}
 
-	device->UnBindUnorderedAccessResources(0, ARRAYSIZE(uavs), threadID);
-	device->UnBindResources(0, ARRAYSIZE(resources), threadID);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	device->UnbindResources(0, ARRAYSIZE(resources), threadID);
 
 
 	device->EventEnd(threadID);

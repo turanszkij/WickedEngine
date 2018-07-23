@@ -261,7 +261,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), threadID);
 
 	GPUResource* cs0_uavs[1] = { m_pBuffer_Float2_Ht };
-	device->BindUnorderedAccessResourcesCS(cs0_uavs, 0, ARRAYSIZE(cs0_uavs), threadID);
+	device->BindUAVs(CS, cs0_uavs, 0, ARRAYSIZE(cs0_uavs), threadID);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
 	perFrameData.g_Time = time * m_param.time_scale;
@@ -278,8 +278,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->Dispatch(group_count_x, group_count_y, 1, threadID);
 	device->UAVBarrier(cs0_uavs, ARRAYSIZE(cs0_uavs), threadID);
 
-	device->UnBindUnorderedAccessResources(0, 1, threadID);
-	device->UnBindResources(TEXSLOT_ONDEMAND0, 2, threadID);
+	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 2, threadID);
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
@@ -294,7 +294,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// Update displacement map:
 	device->BindComputePSO(&CPSO_updateDisplacementMap, threadID);
 	GPUResource* cs_uavs[] = { m_pDisplacementMap };
-	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
+	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
 	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
@@ -303,15 +303,15 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	// Update gradient map:
 	device->BindComputePSO(&CPSO_updateGradientFolding, threadID);
 	cs_uavs[0] = { m_pGradientMap };
-	device->BindUnorderedAccessResourcesCS(cs_uavs, 0, 1, threadID);
+	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
 	cs_srvs[0] = m_pDisplacementMap;
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
 	// Unbind
-	device->UnBindUnorderedAccessResources(0, 1, threadID);
-	device->UnBindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
 
 	device->GenerateMips(m_pGradientMap, threadID);

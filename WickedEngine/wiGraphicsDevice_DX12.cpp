@@ -3154,6 +3154,18 @@ namespace wiGraphicsTypes
 	}
 
 
+	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) {
+		assert(rects != nullptr);
+		assert(numRects <= 8);
+		D3D12_RECT pRects[8];
+		for(UINT i = 0; i < numRects; ++i) {
+			pRects[i].bottom = rects[i].bottom;
+			pRects[i].left = rects[i].left;
+			pRects[i].right = rects[i].right;
+			pRects[i].top = rects[i].top;
+		}
+		GetDirectCommandList(threadID)->RSSetScissorRects(numRects, pRects);
+	}
 	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID)
 	{
 		assert(NumViewports <= 6);
@@ -3168,19 +3180,6 @@ namespace wiGraphicsTypes
 			d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
 		}
 		GetDirectCommandList(threadID)->RSSetViewports(NumViewports, d3dViewPorts);
-	}
-	void GraphicsDevice_DX12::BindRenderTargetsUAVs(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GPUResource* const *ppUAVs, int slotUAV, int countUAV,
-		GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindRenderTargets(NumViews, ppRenderTargets, depthStencilTexture, threadID, arrayIndex);
-
-		if (ppUAVs != nullptr)
-		{
-			for (int i = 0; i < countUAV; ++i)
-			{
-				BindUnorderedAccessResource(PS, ppUAVs[i], slotUAV + i, threadID, -1);
-			}
-		}
 	}
 	void GraphicsDevice_DX12::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
@@ -3283,7 +3282,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 
@@ -3305,25 +3304,17 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
 	{
 		if (resources != nullptr)
 		{
 			for (int i = 0; i < count; ++i)
 			{
-				BindUnorderedAccessResource(stage, resources[i], slot + i, threadID, -1);
+				BindUAV(stage, resources[i], slot + i, threadID, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourceCS(GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		BindUnorderedAccessResource(CS, resource, slot, threadID, arrayIndex);
-	}
-	void GraphicsDevice_DX12::BindUnorderedAccessResourcesCS(GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
-	{
-		BindUnorderedAccessResources(CS, resources, slot, count, threadID);
-	}
-	void GraphicsDevice_DX12::UnBindResources(int slot, int num, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::UnbindResources(int slot, int num, GRAPHICSTHREAD threadID)
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
@@ -3334,7 +3325,7 @@ namespace wiGraphicsTypes
 			}
 		}
 	}
-	void GraphicsDevice_DX12::UnBindUnorderedAccessResources(int slot, int num, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::UnbindUAVs(int slot, int num, GRAPHICSTHREAD threadID)
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
@@ -3637,20 +3628,6 @@ namespace wiGraphicsTypes
 	bool GraphicsDevice_DX12::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
-	}
-	void GraphicsDevice_DX12::SetScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID)
-	{
-		assert(rects != nullptr);
-		assert(numRects <= 8);
-		D3D12_RECT pRects[8];
-		for (UINT i = 0; i < numRects; ++i)
-		{
-			pRects[i].bottom = rects[i].bottom;
-			pRects[i].left = rects[i].left;
-			pRects[i].right = rects[i].right;
-			pRects[i].top = rects[i].top;
-		}
-		GetDirectCommandList(threadID)->RSSetScissorRects(numRects, pRects);
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()
