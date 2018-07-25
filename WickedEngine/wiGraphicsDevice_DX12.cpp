@@ -2290,7 +2290,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12.back());
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2303,7 +2303,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12.back());
 					}
 				}
 
@@ -2341,7 +2341,7 @@ namespace wiGraphicsTypes
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12[i]);
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12.back());
 					}
 				}
 
@@ -2592,6 +2592,46 @@ namespace wiGraphicsTypes
 				(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
 				device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
 
+
+				if ((*ppTexture2D)->independentSRVMIPs)
+				{
+					if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+					{
+						// independent MIPs
+						shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+						shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = 0;
+						shaderResourceViewDesc.TextureCubeArray.NumCubes = arraySize / 6;
+
+						for (UINT j = 0; j < (*ppTexture2D)->desc.MipLevels; ++j)
+						{
+							shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = j;
+							shaderResourceViewDesc.TextureCubeArray.MipLevels = 1;
+
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
+							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
+						}
+					}
+					else
+					{
+						UINT slices = arraySize;
+
+						shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+						shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
+						shaderResourceViewDesc.Texture2DArray.ArraySize = (*ppTexture2D)->desc.ArraySize;
+
+						for (UINT j = 0; j < (*ppTexture2D)->desc.MipLevels; ++j)
+						{
+							shaderResourceViewDesc.Texture2DArray.MostDetailedMip = j;
+							shaderResourceViewDesc.Texture2DArray.MipLevels = 1;
+
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
+							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
+						}
+					}
+				}
+
 				if ((*ppTexture2D)->independentSRVArraySlices)
 				{
 					if ((*ppTexture2D)->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
@@ -2609,7 +2649,7 @@ namespace wiGraphicsTypes
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
 						}
 					}
 					else
@@ -2636,7 +2676,7 @@ namespace wiGraphicsTypes
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
 							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
 						}
 					}
 				}
@@ -2684,31 +2724,63 @@ namespace wiGraphicsTypes
 
 		if ((*ppTexture2D)->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			assert((*ppTexture2D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
-
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-
-			if ((*ppTexture2D)->independentUAVMIPs)
+			if ((*ppTexture2D)->desc.ArraySize > 1)
 			{
-				// Create subresource UAVs:
-				UINT miplevels = (*ppTexture2D)->desc.MipLevels;
-				for (UINT i = 0; i < miplevels; ++i)
-				{
-					uav_desc.Texture2D.MipSlice = i;
+				D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+				ZeroMemory(&uav_desc, sizeof(uav_desc));
+				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+				uav_desc.Texture2DArray.FirstArraySlice = 0;
+				uav_desc.Texture2DArray.ArraySize = (*ppTexture2D)->desc.ArraySize;
+				uav_desc.Texture2DArray.MipSlice = 0;
 
-					(*ppTexture2D)->additionalUAVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-					(*ppTexture2D)->additionalUAVs_DX12.back()->ptr = ResourceAllocator->allocate();
-					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12[i]);
+				if ((*ppTexture2D)->independentUAVMIPs)
+				{
+					// Create subresource UAVs:
+					UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+					for (UINT i = 0; i < miplevels; ++i)
+					{
+						uav_desc.Texture2DArray.MipSlice = i;
+
+						(*ppTexture2D)->additionalUAVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
+						(*ppTexture2D)->additionalUAVs_DX12.back()->ptr = ResourceAllocator->allocate();
+						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12.back());
+					}
+				}
+
+				{
+					// Create main resource UAV:
+					uav_desc.Texture2D.MipSlice = 0;
+					(*ppTexture2D)->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
+					(*ppTexture2D)->UAV_DX12->ptr = ResourceAllocator->allocate();
+					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
 				}
 			}
-
+			else
 			{
-				// Create main resource UAV:
-				uav_desc.Texture2D.MipSlice = 0;
-				(*ppTexture2D)->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-				(*ppTexture2D)->UAV_DX12->ptr = ResourceAllocator->allocate();
-				device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
+				D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+
+				if ((*ppTexture2D)->independentUAVMIPs)
+				{
+					// Create subresource UAVs:
+					UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+					for (UINT i = 0; i < miplevels; ++i)
+					{
+						uav_desc.Texture2D.MipSlice = i;
+
+						(*ppTexture2D)->additionalUAVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
+						(*ppTexture2D)->additionalUAVs_DX12.back()->ptr = ResourceAllocator->allocate();
+						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12.back());
+					}
+				}
+
+				{
+					// Create main resource UAV:
+					uav_desc.Texture2D.MipSlice = 0;
+					(*ppTexture2D)->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
+					(*ppTexture2D)->UAV_DX12->ptr = ResourceAllocator->allocate();
+					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
+				}
 			}
 		}
 

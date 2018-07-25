@@ -1822,7 +1822,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 			{
 				// Create main resource UAV:
-				uav_desc.Texture2D.MipSlice = 0;
+				uav_desc.Texture2DArray.MipSlice = 0;
 				hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
 			}
 		}
@@ -2126,7 +2126,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 						}
 
 						pTexture->additionalSRVs_DX11.push_back(nullptr);
-						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11.back());
 						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 					}
 				}
@@ -2156,7 +2156,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 						shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
 						pTexture->additionalSRVs_DX11.push_back(nullptr);
-						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11.back());
 						assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 					}
 				}

@@ -15,6 +15,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 {
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y && DTid.z < outputResolution.z)
 	{
-		output[DTid] = input.SampleLevel(customsampler, ((float3)DTid + 0.5f) / (float3)outputResolution, 0);
+		output[DTid] = input.SampleLevel(customsampler, (DTid + 0.5f) / (float3)outputResolution, 0);
 	}
 }

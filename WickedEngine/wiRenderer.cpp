@@ -6317,6 +6317,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					1,
 					threadID);
+
+				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
 			}
 		}
 		else
@@ -6363,6 +6365,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					1,
 					threadID);
+
+				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
 			}
 		}
 
@@ -6415,6 +6419,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 				max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 				1,
 				threadID);
+
+			GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
 		}
 	}
 
