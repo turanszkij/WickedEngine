@@ -1796,30 +1796,61 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		assert((*ppTexture2D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
 
-		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
-		ZeroMemory(&uav_desc, sizeof(uav_desc));
-		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-
-		if ((*ppTexture2D)->independentUAVMIPs)
+		if (desc.ArraySize > 1)
 		{
-			// Create subresource UAVs:
-			UINT miplevels = (*ppTexture2D)->desc.MipLevels;
-			for (UINT i = 0; i < miplevels; ++i)
-			{
-				uav_desc.Texture2D.MipSlice = i;
+			D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+			ZeroMemory(&uav_desc, sizeof(uav_desc));
+			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+			uav_desc.Texture2DArray.FirstArraySlice = 0;
+			uav_desc.Texture2DArray.ArraySize = desc.ArraySize;
+			uav_desc.Texture2DArray.MipSlice = 0;
 
-				(*ppTexture2D)->additionalUAVs_DX11.push_back(nullptr);
-				hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->additionalUAVs_DX11[i]);
-				assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+			if ((*ppTexture2D)->independentUAVMIPs)
+			{
+				// Create subresource UAVs:
+				UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+				for (UINT i = 0; i < miplevels; ++i)
+				{
+					uav_desc.Texture2DArray.MipSlice = i;
+
+					(*ppTexture2D)->additionalUAVs_DX11.push_back(nullptr);
+					hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->additionalUAVs_DX11[i]);
+					assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+				}
+			}
+
+			{
+				// Create main resource UAV:
+				uav_desc.Texture2D.MipSlice = 0;
+				hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
 			}
 		}
-
+		else
 		{
-			// Create main resource UAV:
-			uav_desc.Texture2D.MipSlice = 0;
-			hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
+			D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+			ZeroMemory(&uav_desc, sizeof(uav_desc));
+			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+
+			if ((*ppTexture2D)->independentUAVMIPs)
+			{
+				// Create subresource UAVs:
+				UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+				for (UINT i = 0; i < miplevels; ++i)
+				{
+					uav_desc.Texture2D.MipSlice = i;
+
+					(*ppTexture2D)->additionalUAVs_DX11.push_back(nullptr);
+					hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->additionalUAVs_DX11[i]);
+					assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+				}
+			}
+
+			{
+				// Create main resource UAV:
+				uav_desc.Texture2D.MipSlice = 0;
+				hr = device->CreateUnorderedAccessView((*ppTexture2D)->texture2D_DX11, &uav_desc, &(*ppTexture2D)->UAV_DX11);
+			}
 		}
 
 		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
@@ -2012,6 +2043,46 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 			hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->SRV_DX11);
 			assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
 
+
+			if (pTexture->independentSRVMIPs)
+			{
+				if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				{
+					// independent MIPs
+					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+					shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = 0;
+					shaderResourceViewDesc.TextureCubeArray.NumCubes = arraySize / 6;
+
+					for (UINT j = 0; j < pTexture->desc.MipLevels; ++j)
+					{
+						shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = j;
+						shaderResourceViewDesc.TextureCubeArray.MipLevels = 1;
+
+						pTexture->additionalSRVs_DX11.push_back(nullptr);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11.back());
+						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
+					}
+				}
+				else
+				{
+					UINT slices = arraySize;
+
+					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+					shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
+					shaderResourceViewDesc.Texture2DArray.ArraySize = pTexture->desc.ArraySize;
+
+					for (UINT j = 0; j < pTexture->desc.MipLevels; ++j)
+					{
+						shaderResourceViewDesc.Texture2DArray.MostDetailedMip = j;
+						shaderResourceViewDesc.Texture2DArray.MipLevels = 1;
+
+						pTexture->additionalSRVs_DX11.push_back(nullptr);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11.back());
+						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
+					}
+				}
+			}
+
 			if (pTexture->independentSRVArraySlices)
 			{
 				if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
@@ -2028,7 +2099,7 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 						shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
 
 						pTexture->additionalSRVs_DX11.push_back(nullptr);
-						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11[i]);
+						hr = device->CreateShaderResourceView(pTexture->texture2D_DX11, &shaderResourceViewDesc, &pTexture->additionalSRVs_DX11.back());
 						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 					}
 				}
@@ -2059,7 +2130,9 @@ HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
 						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
 					}
 				}
+
 			}
+
 		}
 		else
 		{

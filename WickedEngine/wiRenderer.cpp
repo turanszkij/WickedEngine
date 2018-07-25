@@ -1485,6 +1485,8 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_float4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCube_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCube_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCubeArray_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCubeArray_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
@@ -4052,7 +4054,7 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 				sb.mTransform = XMMatrixTranspose(XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z));
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, x->textureIndex);
+				GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + x->textureIndex);
 
 				GetDevice()->Draw(2880, 0, threadID); // uv-sphere
 			}
@@ -5686,7 +5688,6 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	static const UINT envmapRes = 128;
 	static const UINT envmapCount = 16;
 	static const UINT envmapMIPs = 8;
-	static const FORMAT envmapFormat = FORMAT_R16G16B16A16_FLOAT;
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
 	{
@@ -5694,7 +5695,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
-		desc.Format = envmapFormat;
+		desc.Format = RTFormat_hdr;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = envmapMIPs;
@@ -5704,6 +5705,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentRenderTargetArraySlices(true);
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
@@ -6269,52 +6271,105 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 	if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 	{
 
-		switch (filter)
+		if (desc.ArraySize > 6)
 		{
-		case wiRenderer::MIPGENFILTER_POINT:
-			GetDevice()->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-			GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
-			break;
-		case wiRenderer::MIPGENFILTER_LINEAR:
-			GetDevice()->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-			GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
-			break;
-		case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
-			GetDevice()->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-			GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
-			break;
-		default:
-			assert(0);
-			break;
+			// Cubearray
+			assert(arrayIndex >= 0 && "You should only filter a specific cube in the array for now, so provide its index!");
+
+			switch (filter)
+			{
+			case wiRenderer::MIPGENFILTER_POINT:
+				GetDevice()->EventBegin("GenerateMipChain CubeArray - PointFilter", threadID);
+				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				break;
+			case wiRenderer::MIPGENFILTER_LINEAR:
+				GetDevice()->EventBegin("GenerateMipChain CubeArray - LinearFilter", threadID);
+				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				break;
+			case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+				GetDevice()->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", threadID);
+				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+
+			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+			{
+				GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
+				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+				desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+				desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+
+				GenerateMIPChainCB cb;
+				cb.outputResolution.x = desc.Width;
+				cb.outputResolution.y = desc.Height;
+				cb.arrayIndex = arrayIndex;
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+
+				GetDevice()->Dispatch(
+					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					1,
+					threadID);
+			}
+		}
+		else
+		{
+			// Cubemap
+			switch (filter)
+			{
+			case wiRenderer::MIPGENFILTER_POINT:
+				GetDevice()->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
+				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				break;
+			case wiRenderer::MIPGENFILTER_LINEAR:
+				GetDevice()->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
+				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				break;
+			case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+				GetDevice()->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
+				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				break;
+			default:
+				assert(0);
+				break;
+			}
+
+			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
+			{
+				GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
+				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+				desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
+				desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+
+				GenerateMIPChainCB cb;
+				cb.outputResolution.x = desc.Width;
+				cb.outputResolution.y = desc.Height;
+				cb.arrayIndex = 0;
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+
+				GetDevice()->Dispatch(
+					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					1,
+					threadID);
+			}
 		}
 
-		for (UINT i = 0; i < desc.MipLevels - 1; ++i)
-		{
-			GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
-			GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-			desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-			desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
-
-			GenerateMIPChainCB cb;
-			cb.outputResolution.x = desc.Width;
-			cb.outputResolution.y = desc.Height;
-			cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-			GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
-
-			GetDevice()->Dispatch(
-				max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-				max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-				1,
-				threadID);
-		}
 	}
 	else
 	{
-
+		// Texture2D
 		switch (filter)
 		{
 		case wiRenderer::MIPGENFILTER_POINT:

@@ -5,7 +5,7 @@
 #define MIP_OUTPUT_FORMAT float4
 #endif
 
-TEXTURECUBE(input, float4, TEXSLOT_UNIQUE0);
+TEXTURECUBEARRAY(input, float4, TEXSLOT_UNIQUE0);
 RWTEXTURE2DARRAY(output, MIP_OUTPUT_FORMAT, 0);
 
 SAMPLERSTATE(customsampler, SSLOT_ONDEMAND0);
@@ -18,6 +18,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float2 uv = (DTid.xy + 0.5f) / outputResolution.xy;
 		float3 N = UV_to_CubeMap(uv, DTid.z);
 
-		output[DTid.xyz] = input.SampleLevel(customsampler, N, 0);
+		output[uint3(DTid.xy, DTid.z + arrayIndex * 6)] = input.SampleLevel(customsampler, float4(N, arrayIndex), 0);
 	}
 }
