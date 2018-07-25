@@ -532,9 +532,10 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		}
 
+		wiRenderer::GenerateMipChain(rtBloom[0].GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
+
 		rtBloom[1].Set(threadID); //horizontal
 		{
-			wiRenderer::GetDevice()->GenerateMips(rtBloom[0].GetTexture(), threadID);
 			fx.mipLevel = 5.32f;
 			fx.blur = getBloomStrength();
 			fx.blurDir = 0;

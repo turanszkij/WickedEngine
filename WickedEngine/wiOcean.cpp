@@ -93,9 +93,11 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D** p
 	tex_desc.Usage = USAGE_DEFAULT;
 	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
 	tex_desc.CPUAccessFlags = 0;
-	tex_desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
+	//tex_desc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 
 	*ppTex = new Texture2D;
+	(*ppTex)->RequestIndependentShaderResourcesForMIPs(true);
+	(*ppTex)->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 	wiRenderer::GetDevice()->CreateTexture2D(&tex_desc, NULL, ppTex);
 
 }
@@ -314,8 +316,8 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
 
-	device->GenerateMips(m_pGradientMap, threadID);
-
+	//device->GenerateMips(m_pGradientMap, threadID);
+	wiRenderer::GenerateMipChain(m_pGradientMap, wiRenderer::MIPGENFILTER_LINEAR, threadID);
 
 	device->EventEnd(threadID);
 }

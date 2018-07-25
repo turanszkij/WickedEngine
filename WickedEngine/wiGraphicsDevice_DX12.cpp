@@ -3475,10 +3475,6 @@ namespace wiGraphicsTypes
 		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID, int arrayIndex)
-	{
-		// TODO
-	}
 	void GraphicsDevice_DX12::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{
 		GetDirectCommandList(threadID)->CopyResource(pDst->resource_DX12, pSrc->resource_DX12);

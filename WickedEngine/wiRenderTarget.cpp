@@ -66,7 +66,7 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 			texture->RequestIndependentShaderResourcesForMIPs(true);
 			texture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 			textureDesc.BindFlags |= BIND_UNORDERED_ACCESS;
-			textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
+			//textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 		}
 		renderTargets.push_back(texture);
 		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
@@ -114,13 +114,18 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 		textureDesc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
 		textureDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+
+		Texture2D* texture = new Texture2D;
 		if (mipMapLevelCount != 1)
 		{
-			textureDesc.MiscFlags |= RESOURCE_MISC_GENERATE_MIPS;
+			texture->RequestIndependentShaderResourcesForMIPs(true);
+			texture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+			textureDesc.BindFlags |= BIND_UNORDERED_ACCESS;
+			//textureDesc.MiscFlags |= RESOURCE_MISC_GENERATE_MIPS;
 		}
 
 		numViews = 1;
-		renderTargets.push_back(nullptr);
+		renderTargets.push_back(texture);
 		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
 		resolvedMSAAUptodate.push_back(true);
 	}

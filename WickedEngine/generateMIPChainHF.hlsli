@@ -1,5 +1,6 @@
 #ifndef _GENERATE_MIPCHAIN_HF_
 #define _GENERATE_MIPCHAIN_HF_
+#include "ShaderInterop_Utility.h"
 
 static const float gaussWeight0 = 1.0f;
 static const float gaussWeight1 = 0.9f;

@@ -2,6 +2,20 @@
 #define _SHADERINTEROP_UTILITY_H_
 #include "ShaderInterop.h"
 
+// MIP Generator params:
+#define GENERATEMIPCHAIN_1D_BLOCK_SIZE 64
+#define GENERATEMIPCHAIN_2D_BLOCK_SIZE 8
+#define GENERATEMIPCHAIN_3D_BLOCK_SIZE 4
+
+CBUFFER(GenerateMIPChainCB, CBSLOT_RENDERER_UTILITY)
+{
+	uint3 outputResolution;
+	uint arrayIndex;
+};
+
+
+
+// CopyTexture2D params:
 CBUFFER(CopyTextureCB, CBSLOT_RENDERER_UTILITY)
 {
 	int2 xCopyDest;

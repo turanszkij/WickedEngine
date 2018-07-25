@@ -111,6 +111,7 @@ typedef XMINT4 int4;
 #define TEXTURE2DMS(name, type, slot) Texture2DMS< type > name : register(t ## slot);
 #define TEXTURE2DARRAY(name, type, slot) Texture2DArray< type > name : register(t ## slot);
 #define RWTEXTURE2D(name, type, slot) RWTexture2D< type > name : register(u ## slot);
+#define RWTEXTURE2DARRAY(name, type, slot) RWTexture2DArray< type > name : register(u ## slot);
 #define ROVTEXTURE2D(name, type, slot) RasterizerOrderedTexture2D< type > name : register(u ## slot);
 
 #define TEXTURECUBE(name, type, slot) TextureCube< type > name : register(t ## slot);
@@ -189,12 +190,6 @@ struct ShaderEntityType
 #define MAX_SHADER_ENTITY_COUNT_PER_TILE 256
 
 #define MATRIXARRAY_COUNT	128
-
-
-// MIP Generator params:
-#define GENERATEMIPCHAIN_1D_BLOCK_SIZE 32
-#define GENERATEMIPCHAIN_2D_BLOCK_SIZE 16
-#define GENERATEMIPCHAIN_3D_BLOCK_SIZE 8
 
 
 #endif

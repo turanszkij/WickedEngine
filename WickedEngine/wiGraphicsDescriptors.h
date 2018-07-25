@@ -290,14 +290,14 @@ namespace wiGraphicsTypes
 		FORMAT_B4G4R4A4_UNORM,
 		FORMAT_FORCE_UINT = 0xffffffff,
 	};
-	enum MAP
-	{
-		MAP_READ,
-		MAP_WRITE,
-		MAP_READ_WRITE,
-		MAP_WRITE_DISCARD,
-		MAP_WRITE_NO_OVERWRITE
-	};
+	//enum MAP
+	//{
+	//	MAP_READ,
+	//	MAP_WRITE,
+	//	MAP_READ_WRITE,
+	//	MAP_WRITE_DISCARD,
+	//	MAP_WRITE_NO_OVERWRITE
+	//};
 	enum GPU_QUERY_TYPE
 	{
 		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depthstencil test?
@@ -335,7 +335,7 @@ namespace wiGraphicsTypes
 	};
 	enum RESOURCE_MISC_FLAG
 	{
-		RESOURCE_MISC_GENERATE_MIPS = 0x1L,
+		//RESOURCE_MISC_GENERATE_MIPS = 0x1L,
 		RESOURCE_MISC_SHARED = 0x2L,
 		RESOURCE_MISC_TEXTURECUBE = 0x4L,
 		RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10L,

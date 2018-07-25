@@ -438,19 +438,7 @@
     <FxCompile Include="voxelClearOnlyNormalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="generateMIPChain3D_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="voxelSceneCopyClear_TemporalSmoothing.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain3D_GaussianCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain2D_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain2D_GaussianCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="lightCullingCS_ADVANCED.hlsl">
@@ -760,6 +748,36 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="copytexture2D_unorm4_borderexpandCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_float4_GaussianCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_float4_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3D_float4_GaussianCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3D_float4_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_unorm4_GaussianCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_unorm4_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3D_unorm4_GaussianCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain3D_unorm4_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChainCube_float4_SimpleFilterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChainCube_unorm4_SimpleFilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

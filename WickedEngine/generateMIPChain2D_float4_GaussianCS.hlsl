@@ -1,8 +1,12 @@
 #include "globals.hlsli"
 #include "generateMIPChainHF.hlsli"
 
+#ifndef MIP_OUTPUT_FORMAT
+#define MIP_OUTPUT_FORMAT float4
+#endif
+
 TEXTURE2D(input, float4, TEXSLOT_UNIQUE0);
-globallycoherent RWTEXTURE2D(input_output, float4, 0);
+RWTEXTURE2D(input_output, MIP_OUTPUT_FORMAT, 0);
 
 // Shader requires feature: Typed UAV additional format loads!
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
@@ -10,15 +14,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 #ifndef SHADERCOMPILER_SPIRV
 
-	// Query the texture dimensions (width, height):
-	uint2 dim;
-	input_output.GetDimensions(dim.x, dim.y);
-
 	// Determine if the thread is alive (it is alive when the dispatchthreadID can directly index a pixel)
-	if (DTid.x < dim.x && DTid.y < dim.y)
+	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
 	{
 		// Do a bilinear sample first and write it out:
-		input_output[DTid.xy] = input.SampleLevel(sampler_linear_clamp, ((float2)DTid + 0.5f) / (float2)dim, 0);
+		input_output[DTid.xy] = input.SampleLevel(sampler_linear_clamp, ((float2)DTid + 0.5f) / (float2)outputResolution.xy, 0);
 		DeviceMemoryBarrier();
 
 		uint i = 0;

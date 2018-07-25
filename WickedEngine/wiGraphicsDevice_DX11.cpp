@@ -54,8 +54,6 @@ inline UINT _ParseResourceMiscFlags(UINT value)
 {
 	UINT _flag = 0;
 
-	if (value & RESOURCE_MISC_GENERATE_MIPS)
-		_flag |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
 	if (value & RESOURCE_MISC_SHARED)
 		_flag |= D3D11_RESOURCE_MISC_SHARED;
 	if (value & RESOURCE_MISC_TEXTURECUBE)
@@ -927,8 +925,6 @@ inline UINT _ParseResourceMiscFlags_Inv(UINT value)
 {
 	UINT _flag = 0;
 
-	if (value & D3D11_RESOURCE_MISC_GENERATE_MIPS)
-		_flag |= RESOURCE_MISC_GENERATE_MIPS;
 	if (value & D3D11_RESOURCE_MISC_SHARED)
 		_flag |= RESOURCE_MISC_SHARED;
 	if (value & D3D11_RESOURCE_MISC_TEXTURECUBE)
@@ -3342,17 +3338,6 @@ void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCount
 void GraphicsDevice_DX11::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->DispatchIndirect(args->resource_DX11, args_offset);
-}
-void GraphicsDevice_DX11::GenerateMips(Texture* texture, GRAPHICSTHREAD threadID, int arrayIndex)
-{
-	if (arrayIndex >= 0 && static_cast<int>(texture->additionalSRVs_DX11.size()) > arrayIndex)
-	{
-		deviceContexts[threadID]->GenerateMips(texture->additionalSRVs_DX11[arrayIndex]);
-	}
-	else
-	{
-		deviceContexts[threadID]->GenerateMips(texture->SRV_DX11);
-	}
 }
 void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {
