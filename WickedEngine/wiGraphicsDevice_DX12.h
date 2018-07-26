@@ -19,6 +19,7 @@ struct ID3D12DescriptorHeap;
 struct ID3D12CommandQueue;
 struct ID3D12RootSignature;
 struct ID3D12CommandSignature;
+struct D3D12_CPU_DESCRIPTOR_HANDLE;
 
 namespace wiGraphicsTypes
 {
@@ -80,13 +81,13 @@ namespace wiGraphicsTypes
 				UINT itemCount;
 				UINT ringOffset;
 				bool dirty[SHADERSTAGE_COUNT];
-				D3D12_CPU_DESCRIPTOR_HANDLE** boundDescriptors;
+				wiCPUHandle* boundDescriptors;
 
 				DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();
 
 				void reset(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV);
-				void update(SHADERSTAGE stage, UINT slot, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+				void update(SHADERSTAGE stage, UINT slot, wiCPUHandle descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
 				void validate(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
 			};
 			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];

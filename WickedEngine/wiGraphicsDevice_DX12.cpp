@@ -16,6 +16,13 @@ namespace wiGraphicsTypes
 {
 	// Engine -> Native converters
 
+	inline D3D12_CPU_DESCRIPTOR_HANDLE ToNativeHandle(wiCPUHandle handle)
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE native;
+		native.ptr = handle;
+		return native;
+	}
+
 	inline UINT _ParseColorWriteMask(UINT value)
 	{
 		UINT _flag = 0;
@@ -1217,7 +1224,7 @@ namespace wiGraphicsTypes
 		descriptorType = type;
 		itemSize = device->GetDescriptorHandleIncrementSize(type);
 
-		boundDescriptors = new D3D12_CPU_DESCRIPTOR_HANDLE*[SHADERSTAGE_COUNT * itemCount];
+		boundDescriptors = new wiCPUHandle[SHADERSTAGE_COUNT * itemCount];
 	}
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
 	{
@@ -1227,7 +1234,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV)
 	{
-		memset(boundDescriptors, 0, sizeof(D3D12_CPU_DESCRIPTOR_HANDLE*)*SHADERSTAGE_COUNT*itemCount);
+		memset(boundDescriptors, 0, sizeof(wiCPUHandle)*SHADERSTAGE_COUNT*itemCount);
 
 		ringOffset = 0;
 
@@ -1273,9 +1280,9 @@ namespace wiGraphicsTypes
 
 		}
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, D3D12_CPU_DESCRIPTOR_HANDLE* descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, wiCPUHandle descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 	{
-		if (descriptor == nullptr)
+		if (descriptor == WI_NULL_HANDLE)
 		{
 			return;
 		}
@@ -1293,7 +1300,7 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE dst_staging = heap_CPU->GetCPUDescriptorHandleForHeapStart();
 		dst_staging.ptr += idx * itemSize;
 
-		device->CopyDescriptorsSimple(1, dst_staging, *descriptor, (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
+		device->CopyDescriptorsSimple(1, dst_staging, ToNativeHandle(descriptor), (D3D12_DESCRIPTOR_HEAP_TYPE)descriptorType);
 	}
 	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::validate(ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 	{
@@ -2044,9 +2051,8 @@ namespace wiGraphicsTypes
 			cbv_desc.SizeInBytes = (UINT)alignedSize;
 			cbv_desc.BufferLocation = ppBuffer->resource_DX12->GetGPUVirtualAddress();
 
-			ppBuffer->CBV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			ppBuffer->CBV_DX12->ptr = ResourceAllocator->allocate();
-			device->CreateConstantBufferView(&cbv_desc, *ppBuffer->CBV_DX12);
+			ppBuffer->CBV_DX12 = ResourceAllocator->allocate();
+			device->CreateConstantBufferView(&cbv_desc, ToNativeHandle(ppBuffer->CBV_DX12));
 		}
 
 		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
@@ -2085,9 +2091,8 @@ namespace wiGraphicsTypes
 				srv_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 
-			ppBuffer->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			ppBuffer->SRV_DX12->ptr = ResourceAllocator->allocate();
-			device->CreateShaderResourceView(ppBuffer->resource_DX12, &srv_desc, *ppBuffer->SRV_DX12);
+			ppBuffer->SRV_DX12 = ResourceAllocator->allocate();
+			device->CreateShaderResourceView(ppBuffer->resource_DX12, &srv_desc, ToNativeHandle(ppBuffer->SRV_DX12));
 		}
 
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
@@ -2123,9 +2128,8 @@ namespace wiGraphicsTypes
 				uav_desc.Buffer.NumElements = pDesc->ByteWidth / pDesc->StructureByteStride;
 			}
 
-			ppBuffer->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			ppBuffer->UAV_DX12->ptr = ResourceAllocator->allocate();
-			device->CreateUnorderedAccessView(ppBuffer->resource_DX12, nullptr, &uav_desc, *ppBuffer->UAV_DX12);
+			ppBuffer->UAV_DX12 = ResourceAllocator->allocate();
+			device->CreateUnorderedAccessView(ppBuffer->resource_DX12, nullptr, &uav_desc, ToNativeHandle(ppBuffer->UAV_DX12));
 		}
 
 		return hr;
@@ -2288,9 +2292,8 @@ namespace wiGraphicsTypes
 						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
 						renderTargetViewDesc.Texture2DArray.ArraySize = 1;
 
-						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12.back());
+						(*ppTexture2D)->additionalRTVs_DX12.push_back(RTAllocator->allocate());
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2301,9 +2304,8 @@ namespace wiGraphicsTypes
 						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * 6;
 						renderTargetViewDesc.Texture2DArray.ArraySize = 6;
 
-						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12.back());
+						(*ppTexture2D)->additionalRTVs_DX12.push_back(RTAllocator->allocate());
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
 					}
 				}
 
@@ -2312,9 +2314,8 @@ namespace wiGraphicsTypes
 					renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
 					renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
 
-					(*ppTexture2D)->RTV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->RTV_DX12->ptr = RTAllocator->allocate();
-					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->RTV_DX12);
+					(*ppTexture2D)->RTV_DX12 = RTAllocator->allocate();
+					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->RTV_DX12));
 				}
 			}
 			else
@@ -2339,9 +2340,8 @@ namespace wiGraphicsTypes
 							renderTargetViewDesc.Texture2DArray.MipSlice = 0;
 						}
 
-						(*ppTexture2D)->additionalRTVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalRTVs_DX12.back()->ptr = RTAllocator->allocate();
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->additionalRTVs_DX12.back());
+						(*ppTexture2D)->additionalRTVs_DX12.push_back(RTAllocator->allocate());
+						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
 					}
 				}
 
@@ -2376,9 +2376,8 @@ namespace wiGraphicsTypes
 						}
 					}
 
-					(*ppTexture2D)->RTV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->RTV_DX12->ptr = RTAllocator->allocate();
-					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, *(*ppTexture2D)->RTV_DX12);
+					(*ppTexture2D)->RTV_DX12 = RTAllocator->allocate();
+					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->RTV_DX12));
 				}
 			}
 		}
@@ -2429,9 +2428,8 @@ namespace wiGraphicsTypes
 						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
 						depthStencilViewDesc.Texture2DArray.ArraySize = 1;
 
-						(*ppTexture2D)->additionalDSVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalDSVs_DX12.back()->ptr = DSAllocator->allocate();
-						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
+						(*ppTexture2D)->additionalDSVs_DX12.push_back(DSAllocator->allocate());
+						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2442,9 +2440,8 @@ namespace wiGraphicsTypes
 						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * 6;
 						depthStencilViewDesc.Texture2DArray.ArraySize = 6;
 
-						(*ppTexture2D)->additionalDSVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalDSVs_DX12.back()->ptr = DSAllocator->allocate();
-						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
+						(*ppTexture2D)->additionalDSVs_DX12.push_back(DSAllocator->allocate());
+						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
 					}
 				}
 
@@ -2453,9 +2450,8 @@ namespace wiGraphicsTypes
 					depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
 					depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
 
-					(*ppTexture2D)->DSV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->DSV_DX12->ptr = DSAllocator->allocate();
-					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->DSV_DX12);
+					(*ppTexture2D)->DSV_DX12 = DSAllocator->allocate();
+					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->DSV_DX12));
 				}
 			}
 			else
@@ -2480,9 +2476,8 @@ namespace wiGraphicsTypes
 							depthStencilViewDesc.Texture2DArray.ArraySize = 1;
 						}
 
-						(*ppTexture2D)->additionalDSVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalDSVs_DX12.back()->ptr = DSAllocator->allocate();
-						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->additionalDSVs_DX12[i]);
+						(*ppTexture2D)->additionalDSVs_DX12.push_back(DSAllocator->allocate());
+						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
 					}
 				}
 				else
@@ -2517,9 +2512,8 @@ namespace wiGraphicsTypes
 						}
 					}
 
-					(*ppTexture2D)->DSV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->DSV_DX12->ptr = DSAllocator->allocate();
-					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, *(*ppTexture2D)->DSV_DX12);
+					(*ppTexture2D)->DSV_DX12 = DSAllocator->allocate();
+					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->DSV_DX12));
 				}
 			}
 		}
@@ -2588,9 +2582,8 @@ namespace wiGraphicsTypes
 						shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
 					}
 				}
-				(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-				(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
-				device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+				(*ppTexture2D)->SRV_DX12 = ResourceAllocator->allocate();
+				device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
 
 
 				if ((*ppTexture2D)->independentSRVMIPs)
@@ -2607,9 +2600,8 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = j;
 							shaderResourceViewDesc.TextureCubeArray.MipLevels = 1;
 
-							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 					else
@@ -2625,9 +2617,8 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.Texture2DArray.MostDetailedMip = j;
 							shaderResourceViewDesc.Texture2DArray.MipLevels = 1;
 
-							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 				}
@@ -2647,9 +2638,8 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
 							shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
 
-							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 					else
@@ -2674,9 +2664,8 @@ namespace wiGraphicsTypes
 								shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
 							}
 
-							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12.back());
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 				}
@@ -2686,9 +2675,9 @@ namespace wiGraphicsTypes
 				if (multisampled)
 				{
 					shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
-					(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
-					device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+
+					(*ppTexture2D)->SRV_DX12 = ResourceAllocator->allocate();
+					device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
 				}
 				else
 				{
@@ -2703,9 +2692,8 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.Texture2D.MostDetailedMip = i;
 							shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
-							(*ppTexture2D)->additionalSRVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-							(*ppTexture2D)->additionalSRVs_DX12.back()->ptr = ResourceAllocator->allocate();
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->additionalSRVs_DX12[i]);
+							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
+							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 
@@ -2713,9 +2701,9 @@ namespace wiGraphicsTypes
 						// Create full-resource SRV:
 						shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
 						shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
-						(*ppTexture2D)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-						(*ppTexture2D)->SRV_DX12->ptr = ResourceAllocator->allocate();
-						device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, *(*ppTexture2D)->SRV_DX12);
+
+						(*ppTexture2D)->SRV_DX12 = ResourceAllocator->allocate();
+						device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
 					}
 				}
 			}
@@ -2741,18 +2729,17 @@ namespace wiGraphicsTypes
 					{
 						uav_desc.Texture2DArray.MipSlice = i;
 
-						(*ppTexture2D)->additionalUAVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalUAVs_DX12.back()->ptr = ResourceAllocator->allocate();
-						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12.back());
+						(*ppTexture2D)->additionalUAVs_DX12.push_back(ResourceAllocator->allocate());
+						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->additionalUAVs_DX12.back()));
 					}
 				}
 
 				{
 					// Create main resource UAV:
 					uav_desc.Texture2D.MipSlice = 0;
-					(*ppTexture2D)->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->UAV_DX12->ptr = ResourceAllocator->allocate();
-					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
+
+					(*ppTexture2D)->UAV_DX12 = ResourceAllocator->allocate();
+					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->UAV_DX12));
 				}
 			}
 			else
@@ -2768,18 +2755,18 @@ namespace wiGraphicsTypes
 					{
 						uav_desc.Texture2D.MipSlice = i;
 
-						(*ppTexture2D)->additionalUAVs_DX12.push_back(new D3D12_CPU_DESCRIPTOR_HANDLE);
-						(*ppTexture2D)->additionalUAVs_DX12.back()->ptr = ResourceAllocator->allocate();
-						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->additionalUAVs_DX12.back());
+
+						(*ppTexture2D)->additionalUAVs_DX12.push_back(ResourceAllocator->allocate());
+						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->additionalUAVs_DX12.back()));
 					}
 				}
 
 				{
 					// Create main resource UAV:
 					uav_desc.Texture2D.MipSlice = 0;
-					(*ppTexture2D)->UAV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-					(*ppTexture2D)->UAV_DX12->ptr = ResourceAllocator->allocate();
-					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, *(*ppTexture2D)->UAV_DX12);
+
+					(*ppTexture2D)->UAV_DX12 = ResourceAllocator->allocate();
+					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->UAV_DX12));
 				}
 			}
 		}
@@ -2892,9 +2879,8 @@ namespace wiGraphicsTypes
 
 		pSamplerState->desc = *pSamplerDesc;
 
-		pSamplerState->resource_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-		pSamplerState->resource_DX12->ptr = SamplerAllocator->allocate();
-		device->CreateSampler(&desc, *pSamplerState->resource_DX12);
+		pSamplerState->resource_DX12 = SamplerAllocator->allocate();
+		device->CreateSampler(&desc, ToNativeHandle(pSamplerState->resource_DX12));
 
 		return S_OK;
 	}
@@ -3258,12 +3244,12 @@ namespace wiGraphicsTypes
 			{
 				if (arrayIndex < 0 || depthStencilTexture->additionalRTVs_DX12.empty())
 				{
-					descriptors[i] = *ppRenderTargets[i]->RTV_DX12;
+					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->RTV_DX12);
 				}
 				else
 				{
 					assert(depthStencilTexture->additionalRTVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-					descriptors[i] = *ppRenderTargets[i]->additionalRTVs_DX12[arrayIndex];
+					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->additionalRTVs_DX12[arrayIndex]);
 				}
 			}
 		}
@@ -3273,12 +3259,12 @@ namespace wiGraphicsTypes
 		{
 			if (arrayIndex < 0 || depthStencilTexture->additionalDSVs_DX12.empty())
 			{
-				DSV = depthStencilTexture->DSV_DX12;
+				DSV = &ToNativeHandle(depthStencilTexture->DSV_DX12);
 			}
 			else
 			{
 				assert(depthStencilTexture->additionalDSVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-				DSV = depthStencilTexture->additionalDSVs_DX12[arrayIndex];
+				DSV = &ToNativeHandle(depthStencilTexture->additionalDSVs_DX12[arrayIndex]);
 			}
 		}
 
@@ -3290,11 +3276,11 @@ namespace wiGraphicsTypes
 		{
 			if (arrayIndex < 0)
 			{
-				GetDirectCommandList(threadID)->ClearRenderTargetView(*pTexture->RTV_DX12, ColorRGBA, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearRenderTargetView(ToNativeHandle(pTexture->RTV_DX12), ColorRGBA, 0, nullptr);
 			}
 			else
 			{
-				GetDirectCommandList(threadID)->ClearRenderTargetView(*pTexture->additionalRTVs_DX12[arrayIndex], ColorRGBA, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearRenderTargetView(ToNativeHandle(pTexture->additionalRTVs_DX12[arrayIndex]), ColorRGBA, 0, nullptr);
 			}
 		}
 	}
@@ -3310,11 +3296,11 @@ namespace wiGraphicsTypes
 
 			if (arrayIndex < 0)
 			{
-				GetDirectCommandList(threadID)->ClearDepthStencilView(*pTexture->DSV_DX12, (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearDepthStencilView(ToNativeHandle(pTexture->DSV_DX12), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 			else
 			{
-				GetDirectCommandList(threadID)->ClearDepthStencilView(*pTexture->additionalDSVs_DX12[arrayIndex], (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(threadID)->ClearDepthStencilView(ToNativeHandle(pTexture->additionalDSVs_DX12[arrayIndex]), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 		}
 	}
@@ -3326,7 +3312,7 @@ namespace wiGraphicsTypes
 		{
 			if (arrayIndex < 0)
 			{
-				if (resource->SRV_DX12 != nullptr)
+				if (resource->SRV_DX12 != WI_NULL_HANDLE)
 				{
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
 						resource->SRV_DX12, device, GetDirectCommandList(threadID));
@@ -3358,7 +3344,7 @@ namespace wiGraphicsTypes
 		{
 			if (arrayIndex < 0)
 			{
-				if (resource->UAV_DX12 != nullptr)
+				if (resource->UAV_DX12 != WI_NULL_HANDLE)
 				{
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
 						resource->UAV_DX12, device, GetDirectCommandList(threadID));
@@ -3389,7 +3375,7 @@ namespace wiGraphicsTypes
 			for (int i = 0; i < num; ++i)
 			{
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
-					nullSRV, device, GetDirectCommandList(threadID));
+					nullSRV->ptr, device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3400,7 +3386,7 @@ namespace wiGraphicsTypes
 			for (int i = 0; i < num; ++i)
 			{
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i,
-					nullUAV, device, GetDirectCommandList(threadID));
+					nullUAV->ptr, device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3408,7 +3394,7 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
 
-		if (sampler != nullptr && sampler->resource_DX12 != nullptr)
+		if (sampler != nullptr && sampler->resource_DX12 != WI_NULL_HANDLE)
 		{
 			GetFrameResources().SamplerDescriptorsGPU[threadID]->update(stage, slot,
 				sampler->resource_DX12, device, GetDirectCommandList(threadID));
@@ -3418,7 +3404,7 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 
-		if (buffer != nullptr && buffer->CBV_DX12 != nullptr)
+		if (buffer != nullptr && buffer->CBV_DX12 != WI_NULL_HANDLE)
 		{
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, slot,
 				buffer->CBV_DX12, device, GetDirectCommandList(threadID));

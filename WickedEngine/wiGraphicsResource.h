@@ -31,15 +31,9 @@ struct ID3D11Predicate;
 
 struct ID3D12Resource;
 struct ID3D12PipelineState;
-struct D3D12_CPU_DESCRIPTOR_HANDLE;
 
-#ifdef _WIN64
-typedef void* wiHandle;
-#define WI_NULL_HANDLE nullptr
-#else
-typedef uint64_t wiHandle;
-#define WI_NULL_HANDLE 0
-#endif
+typedef size_t wiCPUHandle;
+#define WI_NULL_HANDLE (0)
 
 
 namespace wiGraphicsTypes
@@ -137,14 +131,14 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11SamplerState*				resource_DX11;
-		D3D12_CPU_DESCRIPTOR_HANDLE*	resource_DX12;
-		wiHandle						resource_Vulkan;
+		size_t							resource_DX12;
+		wiCPUHandle						resource_Vulkan;
 		SamplerDesc desc;
 	public:
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != WI_NULL_HANDLE; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != WI_NULL_HANDLE || resource_Vulkan != WI_NULL_HANDLE; }
 		SamplerDesc GetDesc() { return desc; }
 	};
 
@@ -156,21 +150,21 @@ namespace wiGraphicsTypes
 	protected:
 		ID3D11ShaderResourceView*					SRV_DX11;					// main resource SRV
 		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
-		D3D12_CPU_DESCRIPTOR_HANDLE*				SRV_DX12;					// main resource SRV
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalSRVs_DX12;		// can be used for sub-resources if requested
-		wiHandle									SRV_Vulkan;					// main resource SRV
-		std::vector<wiHandle>						additionalSRVs_Vulkan;		// can be used for sub-resources if requested
+		wiCPUHandle									SRV_DX12;					// main resource SRV
+		std::vector<wiCPUHandle>					additionalSRVs_DX12;		// can be used for sub-resources if requested
+		wiCPUHandle									SRV_Vulkan;					// main resource SRV
+		std::vector<wiCPUHandle>					additionalSRVs_Vulkan;		// can be used for sub-resources if requested
 
 		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
 		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
-		D3D12_CPU_DESCRIPTOR_HANDLE*				UAV_DX12;					// main resource UAV
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalUAVs_DX12;		// can be used for sub-resources if requested
-		wiHandle									UAV_Vulkan;					// main resource UAV
-		std::vector<wiHandle>						additionalUAVs_Vulkan;		// can be used for sub-resources if requested
+		wiCPUHandle									UAV_DX12;					// main resource UAV
+		std::vector<wiCPUHandle>					additionalUAVs_DX12;		// can be used for sub-resources if requested
+		wiCPUHandle									UAV_Vulkan;					// main resource UAV
+		std::vector<wiCPUHandle>					additionalUAVs_Vulkan;		// can be used for sub-resources if requested
 
 		ID3D12Resource*								resource_DX12;
-		wiHandle									resource_Vulkan;
-		wiHandle									resourceMemory_Vulkan;
+		wiCPUHandle									resource_Vulkan;
+		wiCPUHandle									resourceMemory_Vulkan;
 
 		GPUResource();
 		virtual ~GPUResource();
@@ -183,7 +177,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11Buffer*								resource_DX11;
-		D3D12_CPU_DESCRIPTOR_HANDLE*				CBV_DX12;
+		wiCPUHandle									CBV_DX12;
 		GPUBufferDesc desc;
 	public:
 		GPUBuffer();
@@ -286,10 +280,10 @@ namespace wiGraphicsTypes
 		TextureDesc									desc;
 		ID3D11RenderTargetView*						RTV_DX11;
 		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
-		D3D12_CPU_DESCRIPTOR_HANDLE*				RTV_DX12;
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalRTVs_DX12;
-		wiHandle									RTV_Vulkan;
-		std::vector<wiHandle>						additionalRTVs_Vulkan;
+		wiCPUHandle									RTV_DX12;
+		std::vector<wiCPUHandle>					additionalRTVs_DX12;
+		wiCPUHandle									RTV_Vulkan;
+		std::vector<wiCPUHandle>					additionalRTVs_Vulkan;
 		bool										independentRTVArraySlices;
 		bool										independentRTVCubemapFaces;
 		bool										independentSRVArraySlices;
@@ -333,10 +327,10 @@ namespace wiGraphicsTypes
 	private:
 		ID3D11DepthStencilView*						DSV_DX11;
 		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
-		D3D12_CPU_DESCRIPTOR_HANDLE*				DSV_DX12;
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE*>	additionalDSVs_DX12;
-		wiHandle									DSV_Vulkan;
-		std::vector<wiHandle>						additionalDSVs_Vulkan;
+		wiCPUHandle									DSV_DX12;
+		std::vector<wiCPUHandle>					additionalDSVs_DX12;
+		wiCPUHandle									DSV_Vulkan;
+		std::vector<wiCPUHandle>					additionalDSVs_Vulkan;
 
 		ID3D11Texture2D*							texture2D_DX11;
 	public:
@@ -391,7 +385,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
-		wiHandle						pipeline_Vulkan;
+		wiCPUHandle						pipeline_Vulkan;
 		GraphicsPSODesc desc;
 
 	public:
@@ -407,7 +401,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D12PipelineState*			resource_DX12;
-		wiHandle						pipeline_Vulkan;
+		wiCPUHandle						pipeline_Vulkan;
 		ComputePSODesc desc;
 
 	public:

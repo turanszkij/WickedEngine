@@ -133,7 +133,7 @@ namespace wiGraphicsTypes
 				std::vector<VkWriteDescriptorSet> initWrites[SHADERSTAGE_COUNT];
 
 				// descriptor table rename guards:
-				std::vector<wiHandle> boundDescriptors[SHADERSTAGE_COUNT];
+				std::vector<wiCPUHandle> boundDescriptors[SHADERSTAGE_COUNT];
 
 				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();

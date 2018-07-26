@@ -62,22 +62,21 @@ namespace wiGraphicsTypes
 	Sampler::Sampler()
 	{
 		SAFE_INIT(resource_DX11);
-		SAFE_INIT(resource_DX12);
+		resource_DX12 = WI_NULL_HANDLE;
 		resource_Vulkan = WI_NULL_HANDLE;
 	}
 	Sampler::~Sampler()
 	{
 		SAFE_RELEASE(resource_DX11);
-		SAFE_DELETE(resource_DX12);
 	}
 
 	GPUResource::GPUResource()
 	{
 		SAFE_INIT(SRV_DX11);
-		SAFE_INIT(SRV_DX12);
+		SRV_DX12 = WI_NULL_HANDLE;
 		SRV_Vulkan = WI_NULL_HANDLE;
 		SAFE_INIT(UAV_DX11);
-		SAFE_INIT(UAV_DX12);
+		UAV_DX12 = WI_NULL_HANDLE;
 		UAV_Vulkan = WI_NULL_HANDLE;
 		SAFE_INIT(resource_DX12);
 		resource_Vulkan = WI_NULL_HANDLE;
@@ -91,23 +90,11 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(x);
 		}
 
-		SAFE_DELETE(SRV_DX12);
-		for (auto& x : additionalSRVs_DX12)
-		{
-			SAFE_DELETE(x);
-		}
-
 
 		SAFE_RELEASE(UAV_DX11);
 		for (auto& x : additionalUAVs_DX11)
 		{
 			SAFE_RELEASE(x);
-		}
-
-		SAFE_DELETE(UAV_DX12);
-		for (auto& x : additionalUAVs_DX12)
-		{
-			SAFE_DELETE(x);
 		}
 
 
@@ -117,12 +104,11 @@ namespace wiGraphicsTypes
 	GPUBuffer::GPUBuffer() : GPUResource()
 	{
 		SAFE_INIT(resource_DX11);
-		SAFE_INIT(CBV_DX12);
+		CBV_DX12 = WI_NULL_HANDLE;
 	}
 	GPUBuffer::~GPUBuffer()
 	{
 		SAFE_RELEASE(resource_DX11);
-		SAFE_DELETE(CBV_DX12);
 	}
 
 	VertexLayout::VertexLayout()
@@ -177,7 +163,7 @@ namespace wiGraphicsTypes
 		, independentSRVMIPs(false), independentUAVMIPs(false)
 	{
 		SAFE_INIT(RTV_DX11);
-		SAFE_INIT(RTV_DX12);
+		RTV_DX12 = WI_NULL_HANDLE;
 		RTV_Vulkan = WI_NULL_HANDLE;
 	}
 	Texture::~Texture()
@@ -188,11 +174,6 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(x);
 		}
 
-		SAFE_DELETE(RTV_DX12);
-		for (auto& x : additionalRTVs_DX12)
-		{
-			SAFE_DELETE(x);
-		}
 	}
 	void Texture::RequestIndependentRenderTargetArraySlices(bool value)
 	{
@@ -228,7 +209,7 @@ namespace wiGraphicsTypes
 	{
 		SAFE_INIT(texture2D_DX11);
 		SAFE_INIT(DSV_DX11);
-		SAFE_INIT(DSV_DX12);
+		DSV_DX12 = WI_NULL_HANDLE;
 		DSV_Vulkan = WI_NULL_HANDLE;
 	}
 	Texture2D::~Texture2D()
@@ -240,11 +221,6 @@ namespace wiGraphicsTypes
 			SAFE_RELEASE(x);
 		}
 
-		SAFE_DELETE(DSV_DX12);
-		for (auto& x : additionalDSVs_DX12)
-		{
-			SAFE_DELETE(x);
-		}
 	}
 
 	Texture3D::Texture3D() :Texture()
