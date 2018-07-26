@@ -1769,8 +1769,9 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
 	{
-		data = new D3D11_SUBRESOURCE_DATA[pDesc->ArraySize];
-		for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+		UINT dataCount = pDesc->ArraySize * max(1, pDesc->MipLevels);
+		data = new D3D11_SUBRESOURCE_DATA[dataCount];
+		for (UINT slice = 0; slice < dataCount; ++slice)
 		{
 			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 		}
@@ -1779,8 +1780,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 	HRESULT hr = S_OK;
 	
 	hr = device->CreateTexture2D(&desc, data, &((*ppTexture2D)->texture2D_DX11));
-	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "Texture2D creation failed!");
+	SAFE_DELETE_ARRAY(data);
 	if (FAILED(hr))
 		return hr;
 

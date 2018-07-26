@@ -5,6 +5,9 @@
 #include "wiTGATextureLoader.h"
 #include "wiTextureHelper.h"
 
+#include "Utility/stb_image.h"
+#include "Utility/nv_dds.h"
+
 using namespace std;
 using namespace wiGraphicsTypes;
 
@@ -96,20 +99,124 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		{
 			Texture2D* image = nullptr;
 
-			if (ext.compare("TGA") == 0)
+			if (!ext.compare(std::string("DDS")))
 			{
-				wiTGATextureLoader loader;
-				loader.load(nameStr);
-				image = new Texture2D;
-				HRESULT hr = wiTextureHelper::CreateTexture(image, loader.texels, (UINT)loader.header.width, (UINT)loader.header.height, 4);
-				if (FAILED(hr))
+				// Load dds
+
+				nv_dds::CDDSImage img;
+				img.load(nameStr, false);
+
+				if (img.is_valid())
 				{
-					SAFE_DELETE(image);
+					TextureDesc desc;
+					desc.ArraySize = 1;
+					desc.BindFlags = BIND_SHADER_RESOURCE;
+					desc.CPUAccessFlags = 0;
+					desc.Height = img.get_height();
+					desc.Width = img.get_width();
+					desc.MipLevels = 1;
+					desc.MiscFlags = 0;
+					desc.Usage = USAGE_IMMUTABLE;
+
+					switch (img.get_format())
+					{
+					case GL_RGB:
+					case GL_RGBA:
+						desc.Format = FORMAT_R8G8B8A8_UNORM;
+						break;
+					case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+						desc.Format = FORMAT_BC1_UNORM;
+						break;
+					case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+						desc.Format = FORMAT_BC1_UNORM;
+						break;
+					case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+						desc.Format = FORMAT_BC2_UNORM;
+						break;
+					case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+						desc.Format = FORMAT_BC3_UNORM;
+						break;
+					default:
+						desc.Format = FORMAT_R8G8B8A8_UNORM;
+						break;
+					}
+
+					std::vector<SubresourceData> InitData;
+
+					if (img.is_cubemap())
+					{
+						assert(0); // TODO
+					}
+					if (img.is_volume())
+					{
+						assert(0); // TODO
+					}
+
+					desc.MipLevels = 1 + img.get_num_mipmaps();
+					InitData.resize(desc.MipLevels);
+
+					InitData[0].pSysMem = static_cast<uint8_t*>(img); // call operator
+					InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height() * 4 /* img.get_components()*/); // todo: review + vulkan api slightly different
+
+					if (img.get_num_mipmaps() > 0)
+					{
+						for (UINT i = 0; i < img.get_num_mipmaps(); ++i)
+						{
+							const nv_dds::CSurface& surf = img.get_mipmap(i);
+
+							InitData[i + 1].pSysMem = static_cast<uint8_t*>(surf); // call operator
+							//InitData[i + 1].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height() * img.get_components());
+							InitData[i + 1].SysMemPitch = InitData[i].SysMemPitch / 2;
+						}
+					}
+
+					wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), &image);
+
 				}
+
 			}
 			else
 			{
-				wiRenderer::GetDevice()->CreateTextureFromFile(nameStr.c_str(), &image, true, GRAPHICSTHREAD_IMMEDIATE);
+				// png, tga, jpg, etc. loader:
+
+				const int channelCount = 4;
+				int width, height, bpp;
+				unsigned char* rgb = stbi_load(nameStr.c_str(), &width, &height, &bpp, channelCount);
+
+				if (rgb != nullptr)
+				{
+					TextureDesc desc;
+					desc.ArraySize = 1;
+					desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+					desc.CPUAccessFlags = 0;
+					desc.Format = FORMAT_R8G8B8A8_UNORM;
+					desc.Height = static_cast<uint32_t>(height);
+					desc.Width = static_cast<uint32_t>(width);
+					desc.MipLevels = (UINT)log2(max(width, height));
+					desc.MiscFlags = 0;
+					desc.Usage = USAGE_DEFAULT;
+
+					UINT mipwidth = width;
+					SubresourceData* InitData = new SubresourceData[desc.MipLevels];
+					for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+					{
+						InitData[mip].pSysMem = rgb;
+						InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
+						mipwidth = max(1, mipwidth / 2);
+					}
+
+					image = new Texture2D;
+					image->RequestIndependentShaderResourcesForMIPs(true);
+					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+					wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &image);
+				}
+
+				stbi_image_free(rgb);
+
+				if (image != nullptr)
+				{
+					wiRenderer::AddDeferredMIPGen(image);
+				}
 			}
 
 			success = image;

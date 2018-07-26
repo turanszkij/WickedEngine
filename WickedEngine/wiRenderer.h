@@ -643,6 +643,8 @@ public:
 	// Add box to render in next frame
 	static void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 
+	static void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
+
 	// Add model to the scene
 	static void AddModel(Model* value);
 	// Add Object Instance

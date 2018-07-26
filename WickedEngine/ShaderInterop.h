@@ -72,6 +72,7 @@ typedef XMINT4 int4;
 #define TEXTURE2DMS(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DMS< type > name;
 #define TEXTURE2DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] Texture2DArray< type > name;
 #define RWTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture2D< type > name;
+#define RWTEXTURE2DARRAY(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RWTexture2DArray< type > name;
 #define ROVTEXTURE2D(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] RasterizerOrderedTexture2D< type > name;
 
 #define TEXTURECUBE(name, type, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot, VULKAN_DESCRIPTOR_SET_ID)]] TextureCube< type > name;

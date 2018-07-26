@@ -2722,6 +2722,15 @@ namespace wiGraphicsTypes
 			for (UINT slice = 0; slice < pDesc->MipLevels; ++slice)
 			{
 				size_t cpysize = pInitialData[slice].SysMemPitch * height;
+				switch (pDesc->Format)
+				{
+				case FORMAT_BC1_UNORM:
+				case FORMAT_BC2_UNORM:
+				case FORMAT_BC3_UNORM:
+					cpysize /= 4;
+				default:
+					break;
+				}
 				uint8_t* cpyaddr = dest + cpyoffset;
 				memcpy(cpyaddr, pInitialData[slice].pSysMem, cpysize);
 				cpyoffset += cpysize;
@@ -4511,7 +4520,7 @@ namespace wiGraphicsTypes
 			}
 			else
 			{
-				assert(resource->additionalUAVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+				//assert(resource->additionalUAVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 
 			}
 		}

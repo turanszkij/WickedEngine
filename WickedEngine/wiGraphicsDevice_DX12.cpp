@@ -2239,9 +2239,9 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-
-			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[pDesc->ArraySize];
-			for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
+			UINT dataCount = pDesc->ArraySize * max(1, pDesc->MipLevels);
+			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[dataCount];
+			for (UINT slice = 0; slice < dataCount; ++slice)
 			{
 				data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 			}
@@ -2257,6 +2257,8 @@ namespace wiGraphicsTypes
 			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture2D)->resource_DX12,
 				textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
 			copyQueueLock.unlock();
+
+			SAFE_DELETE_ARRAY(data);
 		}
 
 

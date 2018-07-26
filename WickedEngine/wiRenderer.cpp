@@ -118,6 +118,9 @@ std::unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
 
 wiWaterPlane wiRenderer::waterPlane;
 
+wiSpinLock deferredMIPGenLock;
+unordered_set<Texture2D*> deferredMIPGens;
+
 #pragma endregion
 
 
@@ -369,6 +372,10 @@ void wiRenderer::ClearWorld()
 	cam->detach();
 
 	GetScene().ClearWorld();
+
+	deferredMIPGenLock.lock();
+	deferredMIPGens.clear();
+	deferredMIPGenLock.unlock();
 }
 XMVECTOR wiRenderer::GetSunPosition()
 {
@@ -3224,6 +3231,16 @@ void wiRenderer::UpdatePerFrameData(float dt)
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
+	// Process deferred MIP generation:
+	deferredMIPGenLock.lock();
+	for (auto& it : deferredMIPGens)
+	{
+		GenerateMipChain(it, MIPGENFILTER_LINEAR, threadID);
+	}
+	deferredMIPGens.clear();
+	deferredMIPGenLock.unlock();
+
+
 	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
 
 	// Fill Light Array with lights + envprobes + decals in the frustum:
@@ -8532,6 +8549,12 @@ void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& c
 	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
 }
 
+void wiRenderer::AddDeferredMIPGen(Texture2D* tex)
+{
+	deferredMIPGenLock.lock();
+	deferredMIPGens.insert(tex);
+	deferredMIPGenLock.unlock();
+}
 
 
 void wiRenderer::AddModel(Model* model)
