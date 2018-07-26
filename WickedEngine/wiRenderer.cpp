@@ -62,7 +62,7 @@ GPURingBuffer		*wiRenderer::dynamicVertexBufferPool;
 float wiRenderer::GAMMA = 2.2f;
 int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::TRANSPARENTSHADOWSENABLED = true;
+bool wiRenderer::TRANSPARENTSHADOWSENABLED = false;
 bool wiRenderer::ALPHACOMPOSITIONENABLED = false;
 bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::debugCameras = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
@@ -2272,8 +2272,6 @@ void wiRenderer::ReloadShaders(const std::string& path)
 		SHADERPATH = path;
 	}
 
-	GetDevice()->LOCK();
-
 	GetDevice()->WaitForGPU();
 
 	wiResourceManager::GetShaderManager()->CleanUp();
@@ -2287,8 +2285,6 @@ void wiRenderer::ReloadShaders(const std::string& path)
 	CSFFT_512x512_Data_t::LoadShaders();
 	wiWidget::LoadShaders();
 	wiGPUSortLib::LoadShaders();
-
-	GetDevice()->UNLOCK();
 }
 
 
@@ -8379,11 +8375,10 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position)
 	GetScene().GetWorldNode()->environmentProbes.push_back(probe);
 }
 
-void wiRenderer::CreateImpostor(Mesh* mesh)
+void wiRenderer::CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID)
 {
 	Mesh::CreateImpostorVB();
 
-	static const GRAPHICSTHREAD threadID;
 	static const int res = 256;
 
 	const AABB& bbox = mesh->aabb;
@@ -8396,8 +8391,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	}
 
 	Camera savedCam = *cam;
-
-	GetDevice()->LOCK();
 
 	BindPersistentState(threadID);
 
@@ -8535,8 +8528,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh)
 	mesh->impostorTarget.viewPort = savedViewPort;
 	*cam = savedCam;
 	UpdateCameraCB(cam, threadID);
-
-	GetDevice()->UNLOCK();
 }
 
 void wiRenderer::AddRenderableTranslator(wiTranslator* translator)

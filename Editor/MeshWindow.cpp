@@ -71,7 +71,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorCreateButton->OnClick([&](wiEventArgs args) {
 		if (mesh != nullptr)
 		{
-			wiRenderer::CreateImpostor(mesh);
+			wiRenderer::CreateImpostor(mesh, GRAPHICSTHREAD_IMMEDIATE);
 		}
 	});
 	meshWindow->AddWidget(impostorCreateButton);

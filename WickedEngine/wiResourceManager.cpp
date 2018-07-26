@@ -92,8 +92,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 
 		void* success = nullptr;
 
-		LOCK();
-
 		switch(type){
 		case Data_Type::IMAGE:
 		{
@@ -336,9 +334,11 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		};
 
 		if (success)
+		{
+			LOCK();
 			resources.insert(pair<wiHashString, Resource*>(name, new Resource(success, type)));
-
-		UNLOCK();
+			UNLOCK();
+		}
 
 		return success;
 	}

@@ -10,7 +10,7 @@
 namespace wiGraphicsTypes
 {
 
-	class GraphicsDevice : public wiThreadSafeManager
+	class GraphicsDevice
 	{
 	protected:
 		uint64_t FRAMECOUNT;
@@ -132,7 +132,6 @@ namespace wiGraphicsTypes
 
 		virtual void WaitForGPU() = 0;
 
-		virtual HRESULT CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID) = 0;
 		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID) = 0;
 		virtual HRESULT SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID) = 0;
 

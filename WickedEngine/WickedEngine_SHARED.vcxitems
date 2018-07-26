@@ -253,11 +253,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\nv_dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
@@ -308,11 +306,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\PlatformHelpers.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WicTextureLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h" />
@@ -540,11 +536,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_image.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp" />
@@ -670,10 +664,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pch.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WicTextureLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp" />

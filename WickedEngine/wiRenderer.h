@@ -633,7 +633,7 @@ public:
 
 	static void PutEnvProbe(const XMFLOAT3& position);
 
-	static void CreateImpostor(Mesh* mesh);
+	static void CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID);
 
 	static std::vector<wiTranslator*> renderableTranslators;
 	// Add translator to render in next frame

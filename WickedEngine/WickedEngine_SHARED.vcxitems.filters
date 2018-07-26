@@ -144,9 +144,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pch.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
@@ -154,9 +151,6 @@
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WicTextureLoader.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h">
@@ -1119,16 +1113,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h">
@@ -1295,16 +1283,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lzio.c">
       <Filter>LUA</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pch.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WicTextureLoader.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
@@ -1979,13 +1961,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\DDSTextureLoader12.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\WICTextureLoader12.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp">

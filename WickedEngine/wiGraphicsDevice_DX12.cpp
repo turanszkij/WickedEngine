@@ -5,8 +5,6 @@
 #include "ResourceMapping.h"
 
 #include "Utility/d3dx12.h"
-#include "Utility/WicTextureLoader12.h"
-#include "Utility/DDSTextureLoader12.h"
 #include "Utility/ScreenGrab12.h"
 
 #include <sstream>
@@ -3072,8 +3070,6 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_DX12::PresentBegin()
 	{
-		LOCK();
-
 		// Sync up copy queue:
 		copyQueueLock.lock();
 		{
@@ -3211,8 +3207,6 @@ namespace wiGraphicsTypes
 		}
 
 		RESOLUTIONCHANGED = false;
-
-		UNLOCK();
 	}
 
 	void GraphicsDevice_DX12::ExecuteDeferredContexts()
@@ -3750,69 +3744,6 @@ namespace wiGraphicsTypes
 	}
 
 
-	HRESULT GraphicsDevice_DX12::CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
-	{
-		HRESULT hr = E_FAIL;
-		(*ppTexture) = new Texture2D();
-
-		std::unique_ptr<uint8_t[]> imageData;
-		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-		bool isCubeMap = false;
-
-		if (!fileName.substr(fileName.length() - 4).compare(string(".dds")))
-		{
-			// Load dds
-			hr = LoadDDSTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources, 0, nullptr, &isCubeMap);
-		}
-		else
-		{
-			subresources.push_back({});
-			hr = LoadWICTextureFromFile(device, wstring(fileName.begin(), fileName.end()).c_str(), &(*ppTexture)->resource_DX12, imageData, subresources[0]);
-		}
-
-		if (FAILED(hr)) {
-			assert(0);
-			SAFE_DELETE(*ppTexture);
-		}
-		else { 
-			D3D12_RESOURCE_DESC desc = (*ppTexture)->resource_DX12->GetDesc();
-			(*ppTexture)->desc = _ConvertTextureDesc_Inv(desc);
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Format = desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			if (isCubeMap)
-			{
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-				srv_desc.TextureCube.MipLevels = -1;
-				srv_desc.TextureCube.MostDetailedMip = 0;
-				srv_desc.TextureCube.ResourceMinLODClamp = -1;
-			}
-			else
-			{
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-				srv_desc.Texture2D.MipLevels = -1;
-				srv_desc.Texture2D.MostDetailedMip = 0;
-				srv_desc.Texture2D.PlaneSlice = 0;
-				srv_desc.Texture2D.ResourceMinLODClamp = -1;
-			}
-			(*ppTexture)->SRV_DX12 = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			(*ppTexture)->SRV_DX12->ptr = ResourceAllocator->allocate();
-			device->CreateShaderResourceView((*ppTexture)->resource_DX12, &srv_desc, *(*ppTexture)->SRV_DX12);
-
-
-			UINT64 RequiredSize = 0;
-			device->GetCopyableFootprints(&desc, 0, (UINT)subresources.size(), 0, nullptr, nullptr, nullptr, &RequiredSize);
-			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-
-			copyQueueLock.lock();
-			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture)->resource_DX12, 
-				textureUploader->resource, textureUploader->calculateOffset(dest), 0, (UINT)subresources.size(), subresources.data());
-			copyQueueLock.unlock();
-		}
-
-		return hr;
-	}
 	HRESULT GraphicsDevice_DX12::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
 	{
 		return E_FAIL;

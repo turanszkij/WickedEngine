@@ -3,8 +3,6 @@
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
-#include "Utility/WicTextureLoader.h"
-#include "Utility/DDSTextureLoader.h"
 #include "Utility/ScreenGrab.h"
 
 #include <sstream>
@@ -2806,8 +2804,6 @@ HRESULT GraphicsDevice_DX11::CreateComputePSO(const ComputePSODesc* pDesc, Compu
 
 void GraphicsDevice_DX11::PresentBegin()
 {
-	LOCK();
-
 	BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(1, &renderTargetView, 0);
 	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
@@ -2856,8 +2852,6 @@ void GraphicsDevice_DX11::PresentEnd()
 	FRAMECOUNT++;
 
 	RESOLUTIONCHANGED = false;
-
-	UNLOCK();
 }
 
 void GraphicsDevice_DX11::ExecuteDeferredContexts()
@@ -3574,37 +3568,6 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 }
 
 
-HRESULT GraphicsDevice_DX11::CreateTextureFromFile(const std::string& fileName, Texture2D **ppTexture, bool mipMaps, GRAPHICSTHREAD threadID)
-{
-	HRESULT hr = E_FAIL;
-	(*ppTexture) = new Texture2D();
-
-	if (!fileName.substr(fileName.length() - 4).compare(string(".dds")))
-	{
-		// Load dds
-		hr = CreateDDSTextureFromFile(device, wstring(fileName.begin(),fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->SRV_DX11);
-	}
-	else
-	{
-		// Load WIC
-		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
-			LOCK();
-		hr = CreateWICTextureFromFile(mipMaps, device, deviceContexts[threadID], wstring(fileName.begin(), fileName.end()).c_str(), (ID3D11Resource**)&(*ppTexture)->texture2D_DX11, &(*ppTexture)->SRV_DX11);
-		if (mipMaps && threadID == GRAPHICSTHREAD_IMMEDIATE)
-			UNLOCK();
-	}
-
-	if (FAILED(hr)) {
-		SAFE_DELETE(*ppTexture);
-	}
-	else {
-		D3D11_TEXTURE2D_DESC desc;
-		(*ppTexture)->texture2D_DX11->GetDesc(&desc);
-		(*ppTexture)->desc = _ConvertTextureDesc_Inv(&desc);
-	}
-
-	return hr;
-}
 HRESULT GraphicsDevice_DX11::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
 {
 	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
