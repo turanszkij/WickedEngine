@@ -704,10 +704,10 @@ void EditorComponent::Load()
 					wiRenderer::LoadModel(fileName);
 				});
 				loader->onFinished([=] {
-					main->activateComponent(this);
+					main->activateComponent(this, 10, wiColor::Black);
 					worldWnd->UpdateFromRenderer();
 				});
-				main->activateComponent(loader);
+				main->activateComponent(loader,10,wiColor::Black);
 				ResetHistory();
 			}
 		}).detach();
