@@ -53,8 +53,7 @@ public:
 
 	const Resource* get(const wiHashString& name, bool IncRefCount = false);
 	//specify datatype for shaders
-	void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC
-		, wiGraphicsTypes::VertexLayoutDesc* vertexLayoutDesc = nullptr, UINT elementCount = 0);
+	void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC);
 	bool del(const wiHashString& name, bool forceDelete = false);
 	bool CleanUp();
 };

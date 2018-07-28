@@ -146,17 +146,6 @@ namespace wiGraphicsTypes
 		SAFE_RELEASE(resource_DX11);
 	}
 
-	VertexShaderInfo::VertexShaderInfo()
-	{
-		SAFE_INIT(vertexShader);
-		SAFE_INIT(vertexLayout);
-	}
-	VertexShaderInfo::~VertexShaderInfo()
-	{
-		SAFE_DELETE(vertexShader);
-		SAFE_DELETE(vertexLayout);
-	}
-
 	Texture::Texture() : GPUResource()
 		, independentRTVArraySlices(false), independentRTVCubemapFaces(false), independentSRVArraySlices(false)
 		, independentSRVMIPs(false), independentUAVMIPs(false)

@@ -705,10 +705,8 @@ void wiEmittedParticle::CleanUp()
 
 void wiEmittedParticle::LoadShaders()
 {
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticleVS.cso", wiResourceManager::VERTEXSHADER));
-	if (vsinfo != nullptr){
-		vertexShader = vsinfo->vertexShader;
-	}
+	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticleVS.cso", wiResourceManager::VERTEXSHADER));
+	
 
 
 	pixelShader[SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_soft.cso", wiResourceManager::PIXELSHADER));

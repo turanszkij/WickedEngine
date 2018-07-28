@@ -50,10 +50,11 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11VertexShader*		resource_DX11;
-		ShaderByteCode			code;
 	public:
 		VertexShader();
 		~VertexShader();
+
+		ShaderByteCode code;
 	};
 
 	class PixelShader
@@ -63,10 +64,11 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11PixelShader*		resource_DX11;
-		ShaderByteCode			code;
 	public:
 		PixelShader();
 		~PixelShader();
+
+		ShaderByteCode code;
 	};
 
 	class GeometryShader
@@ -76,10 +78,11 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11GeometryShader*	resource_DX11;
-		ShaderByteCode			code;
 	public:
 		GeometryShader();
 		~GeometryShader();
+
+		ShaderByteCode code;
 	};
 
 	class HullShader
@@ -89,10 +92,11 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11HullShader*		resource_DX11;
-		ShaderByteCode			code;
 	public:
 		HullShader();
 		~HullShader();
+
+		ShaderByteCode code;
 	};
 
 	class DomainShader
@@ -102,10 +106,11 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11DomainShader*		resource_DX11;
-		ShaderByteCode			code;
 	public:
 		DomainShader();
 		~DomainShader();
+
+		ShaderByteCode code;
 	};
 
 	class ComputeShader
@@ -115,10 +120,11 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11ComputeShader*	resource_DX11;
-		ShaderByteCode			code;
 	public:
 		ComputeShader();
 		~ComputeShader();
+
+		ShaderByteCode code;
 	};
 
 	class Sampler
@@ -257,15 +263,6 @@ namespace wiGraphicsTypes
 		~RasterizerState();
 
 		RasterizerStateDesc GetDesc() { return desc; }
-	};
-
-	struct VertexShaderInfo 
-	{
-		VertexShader* vertexShader;
-		VertexLayout* vertexLayout;
-
-		VertexShaderInfo();
-		~VertexShaderInfo();
 	};
 
 	class Texture : public GPUResource

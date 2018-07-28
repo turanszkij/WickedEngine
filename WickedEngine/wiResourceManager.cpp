@@ -66,8 +66,7 @@ const wiResourceManager::Resource* wiResourceManager::get(const wiHashString& na
 	return nullptr;
 }
 
-void* wiResourceManager::add(const wiHashString& name, Data_Type newType
-	, VertexLayoutDesc* vertexLayoutDesc, UINT elementCount)
+void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 {
 	if (types.empty())
 		SetUp();
@@ -234,21 +233,13 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType
 		{
 			BYTE* buffer;
 			size_t bufferSize;
-			if (wiHelper::readByteData(name.GetString(), &buffer, bufferSize))
-			{
-				VertexShaderInfo* vertexShaderInfo = new VertexShaderInfo;
-				vertexShaderInfo->vertexShader = new VertexShader;
-				vertexShaderInfo->vertexLayout = new VertexLayout;
-				wiRenderer::GetDevice()->CreateVertexShader(buffer, bufferSize, vertexShaderInfo->vertexShader);
-				if (vertexLayoutDesc != nullptr && elementCount > 0)
-				{
-					wiRenderer::GetDevice()->CreateInputLayout(vertexLayoutDesc, elementCount, buffer, bufferSize, vertexShaderInfo->vertexLayout);
-				}
-				success = vertexShaderInfo;
+			if (wiHelper::readByteData(nameStr, &buffer, bufferSize)) {
+				VertexShader* shader = new VertexShader;
+				wiRenderer::GetDevice()->CreateVertexShader(buffer, bufferSize, shader);
 				delete[] buffer;
+				success = shader;
 			}
-			else
-			{
+			else{
 				success = nullptr;
 			}
 		}
@@ -371,7 +362,7 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 				SAFE_DELETE(reinterpret_cast<Texture2D*&>(res->data));
 				break;
 			case Data_Type::VERTEXSHADER:
-				SAFE_DELETE(reinterpret_cast<VertexShaderInfo*&>(res->data));
+				SAFE_DELETE(reinterpret_cast<VertexShader*&>(res->data));
 				break;
 			case Data_Type::PIXELSHADER:
 				SAFE_DELETE(reinterpret_cast<PixelShader*&>(res->data));

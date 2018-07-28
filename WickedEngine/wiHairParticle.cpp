@@ -111,10 +111,8 @@ void wiHairParticle::CleanUpStatic()
 }
 void wiHairParticle::LoadShaders()
 {
-	VertexShaderInfo* vsinfo = static_cast<VertexShaderInfo*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
-	if (vsinfo != nullptr) {
-		vs = vsinfo->vertexShader;
-	}
+	vs = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
+	
 
 	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
 	{
