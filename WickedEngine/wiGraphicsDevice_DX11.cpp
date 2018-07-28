@@ -1588,6 +1588,8 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 
 HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
 {
+	ppBuffer->Register(this);
+
 	D3D11_BUFFER_DESC desc; 
 	desc.ByteWidth = pDesc->ByteWidth;
 	desc.Usage = _ConvertUsage(pDesc->Usage);
@@ -1697,6 +1699,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const Sub
 	{
 		(*ppTexture1D) = new Texture1D;
 	}
+	(*ppTexture1D)->Register(this);
+
 	(*ppTexture1D)->desc = *pDesc;
 
 	D3D11_TEXTURE1D_DESC desc = _ConvertTextureDesc1D(&(*ppTexture1D)->desc);
@@ -1748,6 +1752,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 	{
 		(*ppTexture2D) = new Texture2D;
 	}
+	(*ppTexture2D)->Register(this);
+
 	(*ppTexture2D)->desc = *pDesc;
 
 	if ((*ppTexture2D)->desc.SampleDesc.Count > 1)
@@ -1863,6 +1869,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 	{
 		(*ppTexture3D) = new Texture3D;
 	}
+	(*ppTexture3D)->Register(this);
+
 	(*ppTexture3D)->desc = *pDesc;
 
 	D3D11_TEXTURE3D_DESC desc = _ConvertTextureDesc3D(&(*ppTexture3D)->desc);
@@ -2543,6 +2551,8 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 	const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
 {
+	pInputLayout->Register(this);
+
 	pInputLayout->desc.reserve((size_t)NumElements);
 
 	D3D11_INPUT_ELEMENT_DESC* desc = new D3D11_INPUT_ELEMENT_DESC[NumElements];
@@ -2569,6 +2579,8 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 }
 HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 {
+	pVertexShader->Register(this);
+
 	pVertexShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
 	pVertexShader->code.size = BytecodeLength;
@@ -2576,6 +2588,8 @@ HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZ
 }
 HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 {
+	pPixelShader->Register(this);
+
 	pPixelShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
 	pPixelShader->code.size = BytecodeLength;
@@ -2583,6 +2597,8 @@ HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE
 }
 HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 {
+	pGeometryShader->Register(this);
+
 	pGeometryShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
 	pGeometryShader->code.size = BytecodeLength;
@@ -2590,6 +2606,8 @@ HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, S
 }
 HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 {
+	pHullShader->Register(this);
+
 	pHullShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
 	pHullShader->code.size = BytecodeLength;
@@ -2597,6 +2615,8 @@ HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_
 }
 HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 {
+	pDomainShader->Register(this);
+
 	pDomainShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
 	pDomainShader->code.size = BytecodeLength;
@@ -2604,6 +2624,8 @@ HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZ
 }
 HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 {
+	pComputeShader->Register(this);
+
 	pComputeShader->code.data = new BYTE[BytecodeLength];
 	memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
 	pComputeShader->code.size = BytecodeLength;
@@ -2611,6 +2633,8 @@ HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SI
 }
 HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
+	pBlendState->Register(this);
+
 	D3D11_BLEND_DESC desc;
 	desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
 	desc.IndependentBlendEnable = pBlendStateDesc->IndependentBlendEnable;
@@ -2631,6 +2655,8 @@ HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateD
 }
 HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 {
+	pDepthStencilState->Register(this);
+
 	D3D11_DEPTH_STENCIL_DESC desc;
 	desc.DepthEnable = pDepthStencilStateDesc->DepthEnable;
 	desc.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc->DepthWriteMask);
@@ -2652,6 +2678,8 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc
 }
 HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
+	pRasterizerState->Register(this);
+
 	pRasterizerState->desc = *pRasterizerStateDesc;
 
 	D3D11_RASTERIZER_DESC desc;
@@ -2727,6 +2755,8 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 }
 HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
+	pSamplerState->Register(this);
+
 	D3D11_SAMPLER_DESC desc;
 	desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
 	desc.AddressU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);
@@ -2747,6 +2777,8 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 }
 HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
+	pQuery->Register(this);
+
 	HRESULT hr = E_FAIL;
 
 	pQuery->desc = *pDesc;
@@ -2790,15 +2822,108 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 }
 HRESULT GraphicsDevice_DX11::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 {
+	pso->Register(this);
+
 	pso->desc = *pDesc;
 
 	return S_OK;
 }
 HRESULT GraphicsDevice_DX11::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 {
+	pso->Register(this);
+
 	pso->desc = *pDesc;
 
 	return S_OK;
+}
+
+
+void GraphicsDevice_DX11::DestroyResource(GPUResource* pResource)
+{
+	SAFE_RELEASE(pResource->SRV_DX11);
+	for (auto& x : pResource->additionalSRVs_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
+
+	SAFE_RELEASE(pResource->UAV_DX11);
+	for (auto& x : pResource->additionalUAVs_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
+}
+void GraphicsDevice_DX11::DestroyBuffer(GPUBuffer *pBuffer)
+{
+	SAFE_RELEASE(pBuffer->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyTexture1D(Texture1D *pTexture1D)
+{
+	SAFE_RELEASE(pTexture1D->texture1D_DX11);
+}
+void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
+{
+	SAFE_RELEASE(pTexture2D->texture2D_DX11);
+}
+void GraphicsDevice_DX11::DestroyTexture3D(Texture3D *pTexture3D)
+{
+	SAFE_RELEASE(pTexture3D->texture3D_DX11);
+}
+void GraphicsDevice_DX11::DestroyInputLayout(VertexLayout *pInputLayout)
+{
+	SAFE_RELEASE(pInputLayout->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyVertexShader(VertexShader *pVertexShader)
+{
+	SAFE_RELEASE(pVertexShader->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyPixelShader(PixelShader *pPixelShader)
+{
+	SAFE_RELEASE(pPixelShader->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyGeometryShader(GeometryShader *pGeometryShader)
+{
+	SAFE_RELEASE(pGeometryShader->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyHullShader(HullShader *pHullShader)
+{
+	SAFE_RELEASE(pHullShader->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyDomainShader(DomainShader *pDomainShader)
+{
+	SAFE_RELEASE(pDomainShader->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyComputeShader(ComputeShader *pComputeShader)
+{
+	SAFE_RELEASE(pComputeShader->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyBlendState(BlendState *pBlendState)
+{
+	SAFE_RELEASE(pBlendState->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyDepthStencilState(DepthStencilState *pDepthStencilState)
+{
+	SAFE_RELEASE(pDepthStencilState->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyRasterizerState(RasterizerState *pRasterizerState)
+{
+	SAFE_RELEASE(pRasterizerState->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroySamplerState(Sampler *pSamplerState)
+{
+	SAFE_RELEASE(pSamplerState->resource_DX11);
+}
+void GraphicsDevice_DX11::DestroyQuery(GPUQuery *pQuery)
+{
+	for (ID3D11Query* x : pQuery->resource_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
+}
+void GraphicsDevice_DX11::DestroyGraphicsPSO(GraphicsPSO* pso)
+{
+}
+void GraphicsDevice_DX11::DestroyComputePSO(ComputePSO* pso)
+{
 }
 
 

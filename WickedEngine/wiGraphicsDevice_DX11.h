@@ -77,6 +77,27 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso) override;
 		virtual HRESULT CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso) override;
 
+
+		virtual void DestroyResource(GPUResource* pResource) override;
+		virtual void DestroyBuffer(GPUBuffer *pBuffer) override;
+		virtual void DestroyTexture1D(Texture1D *pTexture1D) override;
+		virtual void DestroyTexture2D(Texture2D *pTexture2D) override;
+		virtual void DestroyTexture3D(Texture3D *pTexture3D) override;
+		virtual void DestroyInputLayout(VertexLayout *pInputLayout) override;
+		virtual void DestroyVertexShader(VertexShader *pVertexShader) override;
+		virtual void DestroyPixelShader(PixelShader *pPixelShader) override;
+		virtual void DestroyGeometryShader(GeometryShader *pGeometryShader) override;
+		virtual void DestroyHullShader(HullShader *pHullShader) override;
+		virtual void DestroyDomainShader(DomainShader *pDomainShader) override;
+		virtual void DestroyComputeShader(ComputeShader *pComputeShader) override;
+		virtual void DestroyBlendState(BlendState *pBlendState) override;
+		virtual void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) override;
+		virtual void DestroyRasterizerState(RasterizerState *pRasterizerState) override;
+		virtual void DestroySamplerState(Sampler *pSamplerState) override;
+		virtual void DestroyQuery(GPUQuery *pQuery) override;
+		virtual void DestroyGraphicsPSO(GraphicsPSO* pso) override;
+		virtual void DestroyComputePSO(ComputePSO* pso) override;
+
 		virtual void PresentBegin() override;
 		virtual void PresentEnd() override;
 

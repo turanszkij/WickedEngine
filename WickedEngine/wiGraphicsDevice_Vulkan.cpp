@@ -2430,6 +2430,8 @@ namespace wiGraphicsTypes
 
 	HRESULT GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
 	{
+		ppBuffer->Register(this);
+
 		HRESULT hr = E_FAIL;
 
 		ppBuffer->desc = *pDesc;
@@ -2623,10 +2625,14 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 	{
+		(*ppTexture1D)->Register(this);
+
 		return E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 	{
+		(*ppTexture2D)->Register(this);
+
 		if ((*ppTexture2D) == nullptr)
 		{
 			(*ppTexture2D) = new Texture2D;
@@ -3149,11 +3155,15 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 	{
+		(*ppTexture3D)->Register(this);
+
 		return E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
 		const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
 	{
+		pInputLayout->Register(this);
+
 		pInputLayout->desc.reserve((size_t)NumElements);
 		for (UINT i = 0; i < NumElements; ++i)
 		{
@@ -3164,6 +3174,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 	{
+		pVertexShader->Register(this);
+
 		pVertexShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pVertexShader->code.data, pShaderBytecode, BytecodeLength);
 		pVertexShader->code.size = BytecodeLength;
@@ -3172,6 +3184,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 	{
+		pPixelShader->Register(this);
+
 		pPixelShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pPixelShader->code.data, pShaderBytecode, BytecodeLength);
 		pPixelShader->code.size = BytecodeLength;
@@ -3180,6 +3194,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 	{
+		pGeometryShader->Register(this);
+
 		pGeometryShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pGeometryShader->code.data, pShaderBytecode, BytecodeLength);
 		pGeometryShader->code.size = BytecodeLength;
@@ -3188,6 +3204,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 	{
+		pHullShader->Register(this);
+
 		pHullShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pHullShader->code.data, pShaderBytecode, BytecodeLength);
 		pHullShader->code.size = BytecodeLength;
@@ -3196,6 +3214,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 	{
+		pDomainShader->Register(this);
+
 		pDomainShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pDomainShader->code.data, pShaderBytecode, BytecodeLength);
 		pDomainShader->code.size = BytecodeLength;
@@ -3204,6 +3224,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 	{
+		pComputeShader->Register(this);
+
 		pComputeShader->code.data = new BYTE[BytecodeLength];
 		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
 		pComputeShader->code.size = BytecodeLength;
@@ -3212,21 +3234,29 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
+		pBlendState->Register(this);
+
 		pBlendState->desc = *pBlendStateDesc;
 		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
+		pDepthStencilState->Register(this);
+
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
 		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
+		pRasterizerState->Register(this);
+
 		pRasterizerState->desc = *pRasterizerStateDesc;
 		return S_OK;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
+		pSamplerState->Register(this);
+
 		pSamplerState->desc = *pSamplerDesc;
 
 		VkSamplerCreateInfo createInfo = {};
@@ -3409,10 +3439,14 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
+		pQuery->Register(this);
+
 		return E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 	{
+		pso->Register(this);
+
 		pso->desc = *pDesc;
 
 		std::vector<VkAttachmentDescription> attachments;
@@ -3893,6 +3927,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 	{
+		pso->Register(this);
+
 		pso->desc = *pDesc;
 
 		VkComputePipelineCreateInfo pipelineInfo = {};
@@ -3931,6 +3967,84 @@ namespace wiGraphicsTypes
 		assert(SUCCEEDED(hr));
 
 		return hr;
+	}
+
+	// TODO: implement, test
+	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
+	{
+		//vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory_Vulkan, nullptr);
+	}
+	void GraphicsDevice_Vulkan::DestroyBuffer(GPUBuffer *pBuffer)
+	{
+		//vkDestroyBuffer(device, (VkBuffer)pBuffer->resource_Vulkan, nullptr);
+	}
+	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyInputLayout(VertexLayout *pInputLayout)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyVertexShader(VertexShader *pVertexShader)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyPixelShader(PixelShader *pPixelShader)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyGeometryShader(GeometryShader *pGeometryShader)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyHullShader(HullShader *pHullShader)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyDomainShader(DomainShader *pDomainShader)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyComputeShader(ComputeShader *pComputeShader)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyBlendState(BlendState *pBlendState)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyDepthStencilState(DepthStencilState *pDepthStencilState)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyRasterizerState(RasterizerState *pRasterizerState)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroySamplerState(Sampler *pSamplerState)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyQuery(GPUQuery *pQuery)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyGraphicsPSO(GraphicsPSO* pso)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::DestroyComputePSO(ComputePSO* pso)
+	{
+
 	}
 
 

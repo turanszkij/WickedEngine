@@ -35,6 +35,14 @@ typedef size_t wiCPUHandle;
 
 namespace wiGraphicsTypes
 {
+	class GraphicsDevice;
+
+	struct GraphicsDeviceChild
+	{
+		GraphicsDevice* device = nullptr;
+		void Register(GraphicsDevice* dev) { device = dev; }
+	};
+
 	struct ShaderByteCode
 	{
 		BYTE* data;
@@ -43,7 +51,7 @@ namespace wiGraphicsTypes
 		~ShaderByteCode() { SAFE_DELETE_ARRAY(data); }
 	};
 
-	class VertexShader
+	class VertexShader : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -57,7 +65,7 @@ namespace wiGraphicsTypes
 		ShaderByteCode code;
 	};
 
-	class PixelShader
+	class PixelShader : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -71,7 +79,7 @@ namespace wiGraphicsTypes
 		ShaderByteCode code;
 	};
 
-	class GeometryShader
+	class GeometryShader : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -85,7 +93,7 @@ namespace wiGraphicsTypes
 		ShaderByteCode code;
 	};
 
-	class HullShader
+	class HullShader : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -99,7 +107,7 @@ namespace wiGraphicsTypes
 		ShaderByteCode code;
 	};
 
-	class DomainShader
+	class DomainShader : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -113,7 +121,7 @@ namespace wiGraphicsTypes
 		ShaderByteCode code;
 	};
 
-	class ComputeShader
+	class ComputeShader : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -127,7 +135,7 @@ namespace wiGraphicsTypes
 		ShaderByteCode code;
 	};
 
-	class Sampler
+	class Sampler : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -145,7 +153,7 @@ namespace wiGraphicsTypes
 		SamplerDesc GetDesc() { return desc; }
 	};
 
-	class GPUResource
+	class GPUResource : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -206,7 +214,7 @@ namespace wiGraphicsTypes
 		size_t GetByteOffset() { return byteOffset; }
 	};
 
-	class VertexLayout
+	class VertexLayout : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -220,7 +228,7 @@ namespace wiGraphicsTypes
 		~VertexLayout();
 	};
 
-	class BlendState
+	class BlendState : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -235,7 +243,7 @@ namespace wiGraphicsTypes
 		BlendStateDesc GetDesc() { return desc; }
 	};
 
-	class DepthStencilState
+	class DepthStencilState : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -250,7 +258,7 @@ namespace wiGraphicsTypes
 		DepthStencilStateDesc GetDesc() { return desc; }
 	};
 
-	class RasterizerState
+	class RasterizerState : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -347,7 +355,7 @@ namespace wiGraphicsTypes
 
 
 
-	class GPUQuery
+	class GPUQuery : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -372,7 +380,7 @@ namespace wiGraphicsTypes
 	};
 
 
-	class GraphicsPSO
+	class GraphicsPSO : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;
@@ -388,7 +396,7 @@ namespace wiGraphicsTypes
 		GraphicsPSO();
 		~GraphicsPSO();
 	};
-	class ComputePSO
+	class ComputePSO : public GraphicsDeviceChild
 	{
 		friend class GraphicsDevice_DX11;
 		friend class GraphicsDevice_DX12;

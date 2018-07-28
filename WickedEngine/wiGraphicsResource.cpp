@@ -1,7 +1,5 @@
 #include "wiGraphicsResource.h"
-#include "Include_DX11.h"
-#include "Include_DX12.h"
-#include "Include_Vulkan.h"
+#include "wiGraphicsDevice.h"
 
 namespace wiGraphicsTypes
 {
@@ -11,7 +9,10 @@ namespace wiGraphicsTypes
 	}
 	VertexShader::~VertexShader()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr) 
+		{
+			device->DestroyVertexShader(this);
+		}
 	}
 
 	PixelShader::PixelShader()
@@ -20,7 +21,10 @@ namespace wiGraphicsTypes
 	}
 	PixelShader::~PixelShader()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyPixelShader(this);
+		}
 	}
 
 	GeometryShader::GeometryShader()
@@ -29,7 +33,10 @@ namespace wiGraphicsTypes
 	}
 	GeometryShader::~GeometryShader()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyGeometryShader(this);
+		}
 	}
 
 	DomainShader::DomainShader()
@@ -38,7 +45,10 @@ namespace wiGraphicsTypes
 	}
 	DomainShader::~DomainShader()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyDomainShader(this);
+		}
 	}
 
 	HullShader::HullShader()
@@ -47,7 +57,10 @@ namespace wiGraphicsTypes
 	}
 	HullShader::~HullShader()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyHullShader(this);
+		}
 	}
 
 	ComputeShader::ComputeShader()
@@ -56,7 +69,10 @@ namespace wiGraphicsTypes
 	}
 	ComputeShader::~ComputeShader()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyComputeShader(this);
+		}
 	}
 
 	Sampler::Sampler()
@@ -67,7 +83,10 @@ namespace wiGraphicsTypes
 	}
 	Sampler::~Sampler()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroySamplerState(this);
+		}
 	}
 
 	GPUResource::GPUResource()
@@ -84,20 +103,10 @@ namespace wiGraphicsTypes
 	}
 	GPUResource::~GPUResource()
 	{
-		SAFE_RELEASE(SRV_DX11);
-		for (auto& x : additionalSRVs_DX11)
+		if (device != nullptr)
 		{
-			SAFE_RELEASE(x);
+			device->DestroyResource(this);
 		}
-
-
-		SAFE_RELEASE(UAV_DX11);
-		for (auto& x : additionalUAVs_DX11)
-		{
-			SAFE_RELEASE(x);
-		}
-
-
 	}
 
 	GPUBuffer::GPUBuffer() : GPUResource()
@@ -107,7 +116,10 @@ namespace wiGraphicsTypes
 	}
 	GPUBuffer::~GPUBuffer()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyBuffer(this);
+		}
 	}
 
 	VertexLayout::VertexLayout()
@@ -116,7 +128,10 @@ namespace wiGraphicsTypes
 	}
 	VertexLayout::~VertexLayout()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyInputLayout(this);
+		}
 	}
 
 	BlendState::BlendState()
@@ -125,7 +140,10 @@ namespace wiGraphicsTypes
 	}
 	BlendState::~BlendState()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyBlendState(this);
+		}
 	}
 
 	DepthStencilState::DepthStencilState()
@@ -134,7 +152,10 @@ namespace wiGraphicsTypes
 	}
 	DepthStencilState::~DepthStencilState()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyDepthStencilState(this);
+		}
 	}
 
 	RasterizerState::RasterizerState()
@@ -143,7 +164,10 @@ namespace wiGraphicsTypes
 	}
 	RasterizerState::~RasterizerState()
 	{
-		SAFE_RELEASE(resource_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyRasterizerState(this);
+		}
 	}
 
 	Texture::Texture() : GPUResource()
@@ -156,12 +180,6 @@ namespace wiGraphicsTypes
 	}
 	Texture::~Texture()
 	{
-		SAFE_RELEASE(RTV_DX11);
-		for (auto& x : additionalRTVs_DX11)
-		{
-			SAFE_RELEASE(x);
-		}
-
 	}
 	void Texture::RequestIndependentRenderTargetArraySlices(bool value)
 	{
@@ -190,7 +208,10 @@ namespace wiGraphicsTypes
 	}
 	Texture1D::~Texture1D()
 	{
-		SAFE_RELEASE(texture1D_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyTexture1D(this);
+		}
 	}
 
 	Texture2D::Texture2D() :Texture()
@@ -202,13 +223,10 @@ namespace wiGraphicsTypes
 	}
 	Texture2D::~Texture2D()
 	{
-		SAFE_RELEASE(texture2D_DX11);
-		SAFE_RELEASE(DSV_DX11);
-		for (auto& x : additionalDSVs_DX11)
+		if (device != nullptr)
 		{
-			SAFE_RELEASE(x);
+			device->DestroyTexture2D(this);
 		}
-
 	}
 
 	Texture3D::Texture3D() :Texture()
@@ -217,7 +235,10 @@ namespace wiGraphicsTypes
 	}
 	Texture3D::~Texture3D()
 	{
-		SAFE_RELEASE(texture3D_DX11);
+		if (device != nullptr)
+		{
+			device->DestroyTexture3D(this);
+		}
 	}
 
 	GPUQuery::GPUQuery()
@@ -226,9 +247,9 @@ namespace wiGraphicsTypes
 	}
 	GPUQuery::~GPUQuery()
 	{
-		for (auto& x : resource_DX11)
+		if (device != nullptr)
 		{
-			SAFE_RELEASE(x);
+			device->DestroyQuery(this);
 		}
 	}
 
@@ -240,6 +261,10 @@ namespace wiGraphicsTypes
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
+		if (device != nullptr)
+		{
+			device->DestroyGraphicsPSO(this);
+		}
 	}
 
 	ComputePSO::ComputePSO()
@@ -249,5 +274,9 @@ namespace wiGraphicsTypes
 	}
 	ComputePSO::~ComputePSO()
 	{
+		if (device != nullptr)
+		{
+			device->DestroyComputePSO(this);
+		}
 	}
 }

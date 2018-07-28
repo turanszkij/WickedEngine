@@ -47,6 +47,27 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso) = 0;
 		virtual HRESULT CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso) = 0;
 
+
+		virtual void DestroyResource(GPUResource* pResource) = 0;
+		virtual void DestroyBuffer(GPUBuffer *pBuffer) = 0;
+		virtual void DestroyTexture1D(Texture1D *pTexture1D) = 0;
+		virtual void DestroyTexture2D(Texture2D *pTexture2D) = 0;
+		virtual void DestroyTexture3D(Texture3D *pTexture3D) = 0;
+		virtual void DestroyInputLayout(VertexLayout *pInputLayout) = 0;
+		virtual void DestroyVertexShader(VertexShader *pVertexShader) = 0;
+		virtual void DestroyPixelShader(PixelShader *pPixelShader) = 0;
+		virtual void DestroyGeometryShader(GeometryShader *pGeometryShader) = 0;
+		virtual void DestroyHullShader(HullShader *pHullShader) = 0;
+		virtual void DestroyDomainShader(DomainShader *pDomainShader) = 0;
+		virtual void DestroyComputeShader(ComputeShader *pComputeShader) = 0;
+		virtual void DestroyBlendState(BlendState *pBlendState) = 0;
+		virtual void DestroyDepthStencilState(DepthStencilState *pDepthStencilState) = 0;
+		virtual void DestroyRasterizerState(RasterizerState *pRasterizerState) = 0;
+		virtual void DestroySamplerState(Sampler *pSamplerState) = 0;
+		virtual void DestroyQuery(GPUQuery *pQuery) = 0;
+		virtual void DestroyGraphicsPSO(GraphicsPSO* pso) = 0;
+		virtual void DestroyComputePSO(ComputePSO* pso) = 0;
+
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;
 
