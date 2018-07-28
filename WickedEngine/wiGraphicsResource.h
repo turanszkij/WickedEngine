@@ -29,9 +29,6 @@ struct ID3D11Texture3D;
 struct ID3D11Query;
 struct ID3D11Predicate;
 
-struct ID3D12Resource;
-struct ID3D12PipelineState;
-
 typedef size_t wiCPUHandle;
 #define WI_NULL_HANDLE (0)
 
@@ -162,7 +159,7 @@ namespace wiGraphicsTypes
 		wiCPUHandle									UAV_Vulkan;					// main resource UAV
 		std::vector<wiCPUHandle>					additionalUAVs_Vulkan;		// can be used for sub-resources if requested
 
-		ID3D12Resource*								resource_DX12;
+		wiCPUHandle									resource_DX12;
 		wiCPUHandle									resource_Vulkan;
 		wiCPUHandle									resourceMemory_Vulkan;
 
@@ -183,7 +180,7 @@ namespace wiGraphicsTypes
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != nullptr || resource_Vulkan != WI_NULL_HANDLE; }
+		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != WI_NULL_HANDLE || resource_Vulkan != WI_NULL_HANDLE; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
@@ -384,7 +381,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 		friend class GraphicsDevice_Vulkan;
 	private:
-		ID3D12PipelineState*			resource_DX12;
+		wiCPUHandle						pipeline_DX12;
 		wiCPUHandle						pipeline_Vulkan;
 		GraphicsPSODesc desc;
 
@@ -400,7 +397,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 		friend class GraphicsDevice_Vulkan;
 	private:
-		ID3D12PipelineState*			resource_DX12;
+		wiCPUHandle						pipeline_DX12;
 		wiCPUHandle						pipeline_Vulkan;
 		ComputePSODesc desc;
 

@@ -15,6 +15,8 @@ struct ID3D12CommandAllocator;
 struct ID3D12CommandList;
 struct ID3D12GraphicsCommandList;
 struct ID3D12Fence;
+struct ID3D12Resource;
+struct ID3D12PipelineState;
 struct ID3D12DescriptorHeap;
 struct ID3D12CommandQueue;
 struct ID3D12RootSignature;
@@ -139,6 +141,7 @@ namespace wiGraphicsTypes
 		IDXGISwapChain3*			swapChain;
 		ViewPort					viewPort;
 
+		PRIMITIVETOPOLOGY prev_pt[GRAPHICSTHREAD_COUNT] = {};
 
 	public:
 		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);

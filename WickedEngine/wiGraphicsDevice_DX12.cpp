@@ -1977,7 +1977,7 @@ namespace wiGraphicsTypes
 	Texture2D GraphicsDevice_DX12::GetBackBuffer()
 	{
 		Texture2D result;
-		result.resource_DX12 = GetFrameResources().backBuffer;
+		result.resource_DX12 = (wiCPUHandle)GetFrameResources().backBuffer;
 		GetFrameResources().backBuffer->AddRef();
 		return result;
 	}
@@ -2039,7 +2039,7 @@ namespace wiGraphicsTypes
 			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth); 
 			copyQueueLock.lock();
 			static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->CopyBufferRegion(
-				ppBuffer->resource_DX12, 0, bufferUploader->resource, bufferUploader->calculateOffset(dest), pDesc->ByteWidth);
+				(ID3D12Resource*)ppBuffer->resource_DX12, 0, bufferUploader->resource, bufferUploader->calculateOffset(dest), pDesc->ByteWidth);
 			copyQueueLock.unlock();
 		}
 
@@ -2049,7 +2049,7 @@ namespace wiGraphicsTypes
 		{
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
 			cbv_desc.SizeInBytes = (UINT)alignedSize;
-			cbv_desc.BufferLocation = ppBuffer->resource_DX12->GetGPUVirtualAddress();
+			cbv_desc.BufferLocation = ((ID3D12Resource*)ppBuffer->resource_DX12)->GetGPUVirtualAddress();
 
 			ppBuffer->CBV_DX12 = ResourceAllocator->allocate();
 			device->CreateConstantBufferView(&cbv_desc, ToNativeHandle(ppBuffer->CBV_DX12));
@@ -2092,7 +2092,7 @@ namespace wiGraphicsTypes
 			}
 
 			ppBuffer->SRV_DX12 = ResourceAllocator->allocate();
-			device->CreateShaderResourceView(ppBuffer->resource_DX12, &srv_desc, ToNativeHandle(ppBuffer->SRV_DX12));
+			device->CreateShaderResourceView((ID3D12Resource*)ppBuffer->resource_DX12, &srv_desc, ToNativeHandle(ppBuffer->SRV_DX12));
 		}
 
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
@@ -2129,7 +2129,7 @@ namespace wiGraphicsTypes
 			}
 
 			ppBuffer->UAV_DX12 = ResourceAllocator->allocate();
-			device->CreateUnorderedAccessView(ppBuffer->resource_DX12, nullptr, &uav_desc, ToNativeHandle(ppBuffer->UAV_DX12));
+			device->CreateUnorderedAccessView((ID3D12Resource*)ppBuffer->resource_DX12, nullptr, &uav_desc, ToNativeHandle(ppBuffer->UAV_DX12));
 		}
 
 		return hr;
@@ -2256,7 +2256,7 @@ namespace wiGraphicsTypes
 			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 			copyQueueLock.lock();
-			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (*ppTexture2D)->resource_DX12,
+			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (ID3D12Resource*)(*ppTexture2D)->resource_DX12,
 				textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
 			copyQueueLock.unlock();
 
@@ -2293,7 +2293,7 @@ namespace wiGraphicsTypes
 						renderTargetViewDesc.Texture2DArray.ArraySize = 1;
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(RTAllocator->allocate());
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
+						device->CreateRenderTargetView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2305,7 +2305,7 @@ namespace wiGraphicsTypes
 						renderTargetViewDesc.Texture2DArray.ArraySize = 6;
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(RTAllocator->allocate());
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
+						device->CreateRenderTargetView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
 					}
 				}
 
@@ -2315,7 +2315,7 @@ namespace wiGraphicsTypes
 					renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
 
 					(*ppTexture2D)->RTV_DX12 = RTAllocator->allocate();
-					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->RTV_DX12));
+					device->CreateRenderTargetView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->RTV_DX12));
 				}
 			}
 			else
@@ -2341,7 +2341,7 @@ namespace wiGraphicsTypes
 						}
 
 						(*ppTexture2D)->additionalRTVs_DX12.push_back(RTAllocator->allocate());
-						device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
+						device->CreateRenderTargetView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->additionalRTVs_DX12.back()));
 					}
 				}
 
@@ -2377,7 +2377,7 @@ namespace wiGraphicsTypes
 					}
 
 					(*ppTexture2D)->RTV_DX12 = RTAllocator->allocate();
-					device->CreateRenderTargetView((*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->RTV_DX12));
+					device->CreateRenderTargetView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &renderTargetViewDesc, ToNativeHandle((*ppTexture2D)->RTV_DX12));
 				}
 			}
 		}
@@ -2429,7 +2429,7 @@ namespace wiGraphicsTypes
 						depthStencilViewDesc.Texture2DArray.ArraySize = 1;
 
 						(*ppTexture2D)->additionalDSVs_DX12.push_back(DSAllocator->allocate());
-						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
+						device->CreateDepthStencilView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
 					}
 				}
 				else if ((*ppTexture2D)->independentRTVArraySlices)
@@ -2441,7 +2441,7 @@ namespace wiGraphicsTypes
 						depthStencilViewDesc.Texture2DArray.ArraySize = 6;
 
 						(*ppTexture2D)->additionalDSVs_DX12.push_back(DSAllocator->allocate());
-						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
+						device->CreateDepthStencilView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
 					}
 				}
 
@@ -2451,7 +2451,7 @@ namespace wiGraphicsTypes
 					depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
 
 					(*ppTexture2D)->DSV_DX12 = DSAllocator->allocate();
-					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->DSV_DX12));
+					device->CreateDepthStencilView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->DSV_DX12));
 				}
 			}
 			else
@@ -2477,7 +2477,7 @@ namespace wiGraphicsTypes
 						}
 
 						(*ppTexture2D)->additionalDSVs_DX12.push_back(DSAllocator->allocate());
-						device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
+						device->CreateDepthStencilView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->additionalDSVs_DX12.back()));
 					}
 				}
 				else
@@ -2513,7 +2513,7 @@ namespace wiGraphicsTypes
 					}
 
 					(*ppTexture2D)->DSV_DX12 = DSAllocator->allocate();
-					device->CreateDepthStencilView((*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->DSV_DX12));
+					device->CreateDepthStencilView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &depthStencilViewDesc, ToNativeHandle((*ppTexture2D)->DSV_DX12));
 				}
 			}
 		}
@@ -2583,7 +2583,7 @@ namespace wiGraphicsTypes
 					}
 				}
 				(*ppTexture2D)->SRV_DX12 = ResourceAllocator->allocate();
-				device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
+				device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
 
 
 				if ((*ppTexture2D)->independentSRVMIPs)
@@ -2601,7 +2601,7 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.TextureCubeArray.MipLevels = 1;
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
+							device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 					else
@@ -2618,7 +2618,7 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.Texture2DArray.MipLevels = 1;
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
+							device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 				}
@@ -2639,7 +2639,7 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
+							device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 					else
@@ -2665,7 +2665,7 @@ namespace wiGraphicsTypes
 							}
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
+							device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 				}
@@ -2677,7 +2677,7 @@ namespace wiGraphicsTypes
 					shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
 
 					(*ppTexture2D)->SRV_DX12 = ResourceAllocator->allocate();
-					device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
+					device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
 				}
 				else
 				{
@@ -2693,7 +2693,7 @@ namespace wiGraphicsTypes
 							shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
 							(*ppTexture2D)->additionalSRVs_DX12.push_back(ResourceAllocator->allocate());
-							device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
+							device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->additionalSRVs_DX12.back()));
 						}
 					}
 
@@ -2703,7 +2703,7 @@ namespace wiGraphicsTypes
 						shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
 
 						(*ppTexture2D)->SRV_DX12 = ResourceAllocator->allocate();
-						device->CreateShaderResourceView((*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
+						device->CreateShaderResourceView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, &shaderResourceViewDesc, ToNativeHandle((*ppTexture2D)->SRV_DX12));
 					}
 				}
 			}
@@ -2730,7 +2730,7 @@ namespace wiGraphicsTypes
 						uav_desc.Texture2DArray.MipSlice = i;
 
 						(*ppTexture2D)->additionalUAVs_DX12.push_back(ResourceAllocator->allocate());
-						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->additionalUAVs_DX12.back()));
+						device->CreateUnorderedAccessView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->additionalUAVs_DX12.back()));
 					}
 				}
 
@@ -2739,7 +2739,7 @@ namespace wiGraphicsTypes
 					uav_desc.Texture2D.MipSlice = 0;
 
 					(*ppTexture2D)->UAV_DX12 = ResourceAllocator->allocate();
-					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->UAV_DX12));
+					device->CreateUnorderedAccessView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->UAV_DX12));
 				}
 			}
 			else
@@ -2757,7 +2757,7 @@ namespace wiGraphicsTypes
 
 
 						(*ppTexture2D)->additionalUAVs_DX12.push_back(ResourceAllocator->allocate());
-						device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->additionalUAVs_DX12.back()));
+						device->CreateUnorderedAccessView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->additionalUAVs_DX12.back()));
 					}
 				}
 
@@ -2766,7 +2766,7 @@ namespace wiGraphicsTypes
 					uav_desc.Texture2D.MipSlice = 0;
 
 					(*ppTexture2D)->UAV_DX12 = ResourceAllocator->allocate();
-					device->CreateUnorderedAccessView((*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->UAV_DX12));
+					device->CreateUnorderedAccessView((ID3D12Resource*)(*ppTexture2D)->resource_DX12, nullptr, &uav_desc, ToNativeHandle((*ppTexture2D)->UAV_DX12));
 				}
 			}
 		}
@@ -3026,7 +3026,7 @@ namespace wiGraphicsTypes
 
 		desc.pRootSignature = graphicsRootSig;
 
-		HRESULT hr = device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->resource_DX12);
+		HRESULT hr = device->CreateGraphicsPipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->pipeline_DX12);
 		assert(SUCCEEDED(hr));
 
 		SAFE_DELETE_ARRAY(elements);
@@ -3047,7 +3047,7 @@ namespace wiGraphicsTypes
 
 		desc.pRootSignature = computeRootSig;
 
-		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->resource_DX12);
+		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->pipeline_DX12);
 		assert(SUCCEEDED(hr));
 
 		return hr;
@@ -3192,6 +3192,8 @@ namespace wiGraphicsTypes
 			GetDirectCommandList((GRAPHICSTHREAD)threadID)->RSSetScissorRects(8, pRects);
 		}
 
+		memset(prev_pt, 0, sizeof(prev_pt));
+
 		RESOLUTIONCHANGED = false;
 	}
 
@@ -3308,7 +3310,7 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 
-		if (resource != nullptr && resource->resource_DX12 != nullptr)
+		if (resource != nullptr && resource->resource_DX12 != WI_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
 			{
@@ -3340,7 +3342,7 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 
-		if (resource != nullptr && resource->resource_DX12 != nullptr)
+		if (resource != nullptr && resource->resource_DX12 != WI_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
 			{
@@ -3418,7 +3420,7 @@ namespace wiGraphicsTypes
 		{
 			if (vertexBuffers[i] != nullptr)
 			{
-				res[i].BufferLocation = vertexBuffers[i]->resource_DX12->GetGPUVirtualAddress();
+				res[i].BufferLocation = ((ID3D12Resource*)vertexBuffers[i]->resource_DX12)->GetGPUVirtualAddress();
 				res[i].SizeInBytes = vertexBuffers[i]->desc.ByteWidth;
 				if (offsets != nullptr)
 				{
@@ -3435,7 +3437,7 @@ namespace wiGraphicsTypes
 		D3D12_INDEX_BUFFER_VIEW res = {};
 		if (indexBuffer != nullptr)
 		{
-			res.BufferLocation = indexBuffer->resource_DX12->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
+			res.BufferLocation = ((ID3D12Resource*)indexBuffer->resource_DX12)->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
 			res.SizeInBytes = indexBuffer->desc.ByteWidth;
 		}
@@ -3452,34 +3454,39 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
+		GetDirectCommandList(threadID)->SetPipelineState((ID3D12PipelineState*)pso->pipeline_DX12);
 
-		D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		switch (pso->desc.pt)
+		if (prev_pt[threadID] != pso->desc.pt)
 		{
-		case TRIANGLELIST:
-			d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			break;
-		case TRIANGLESTRIP:
-			d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-			break;
-		case POINTLIST:
-			d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-			break;
-		case LINELIST:
-			d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-			break;
-		case PATCHLIST:
-			d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-			break;
-		default:
-			break;
-		};
-		GetDirectCommandList(threadID)->IASetPrimitiveTopology(d3dType);
+			prev_pt[threadID] = pso->desc.pt;
+
+			D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			switch (pso->desc.pt)
+			{
+			case TRIANGLELIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+				break;
+			case TRIANGLESTRIP:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+				break;
+			case POINTLIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+				break;
+			case LINELIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+				break;
+			case PATCHLIST:
+				d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+				break;
+			default:
+				break;
+			};
+			GetDirectCommandList(threadID)->IASetPrimitiveTopology(d3dType);
+		}
 	}
 	void GraphicsDevice_DX12::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		GetDirectCommandList(threadID)->SetPipelineState(pso->resource_DX12);
+		GetDirectCommandList(threadID)->SetPipelineState((ID3D12PipelineState*)pso->pipeline_DX12);
 	}
 	void GraphicsDevice_DX12::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
@@ -3509,13 +3516,13 @@ namespace wiGraphicsTypes
 	{
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
+		GetDirectCommandList(threadID)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 	{
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
+		GetDirectCommandList(threadID)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 	{
@@ -3527,15 +3534,15 @@ namespace wiGraphicsTypes
 	{
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
 		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, args->resource_DX12, args_offset, nullptr, 0);
+		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, (ID3D12Resource*)args->resource_DX12, args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
 	{
-		GetDirectCommandList(threadID)->CopyResource(pDst->resource_DX12, pSrc->resource_DX12);
+		GetDirectCommandList(threadID)->CopyResource((ID3D12Resource*)pDst->resource_DX12, (ID3D12Resource*)pSrc->resource_DX12);
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = pDst->resource_DX12;
+		barrier.Transition.pResource = (ID3D12Resource*)pDst->resource_DX12;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -3544,16 +3551,16 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
 	{
-		D3D12_RESOURCE_DESC dst_desc = pDst->resource_DX12->GetDesc();
-		D3D12_RESOURCE_DESC src_desc = pSrc->resource_DX12->GetDesc();
+		D3D12_RESOURCE_DESC dst_desc = ((ID3D12Resource*)pDst->resource_DX12)->GetDesc();
+		D3D12_RESOURCE_DESC src_desc = ((ID3D12Resource*)pSrc->resource_DX12)->GetDesc();
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {};
-		dst.pResource = pDst->resource_DX12;
+		dst.pResource = (ID3D12Resource*)pDst->resource_DX12;
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		dst.SubresourceIndex = D3D12CalcSubresource(dstMip, 0, 0, dst_desc.MipLevels, dst_desc.DepthOrArraySize);
 
 		D3D12_TEXTURE_COPY_LOCATION src = {};
-		src.pResource = pSrc->resource_DX12;
+		src.pResource = (ID3D12Resource*)pSrc->resource_DX12;
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		src.SubresourceIndex = D3D12CalcSubresource(srcMip, 0, 0, src_desc.MipLevels, src_desc.DepthOrArraySize);
 
@@ -3562,7 +3569,7 @@ namespace wiGraphicsTypes
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = pDst->resource_DX12;
+		barrier.Transition.pResource = (ID3D12Resource*)pDst->resource_DX12;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -3589,7 +3596,7 @@ namespace wiGraphicsTypes
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = buffer->resource_DX12;
+		barrier.Transition.pResource = (ID3D12Resource*)buffer->resource_DX12;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 		{
@@ -3607,7 +3614,7 @@ namespace wiGraphicsTypes
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
 		memcpy(dest, data, dataSize);
 		GetDirectCommandList(threadID)->CopyBufferRegion(
-			buffer->resource_DX12, 0, 
+			(ID3D12Resource*)buffer->resource_DX12, 0,
 			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest), 
 			dataSize
 		);
@@ -3639,7 +3646,7 @@ namespace wiGraphicsTypes
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = buffer->resource_DX12;
+		barrier.Transition.pResource = (ID3D12Resource*)buffer->resource_DX12;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 		{
@@ -3656,7 +3663,7 @@ namespace wiGraphicsTypes
 
 		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
 		GetDirectCommandList(threadID)->CopyBufferRegion(
-			buffer->resource_DX12, (UINT64)position,
+			(ID3D12Resource*)buffer->resource_DX12, (UINT64)position,
 			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest),
 			dataSize
 		);
@@ -3707,7 +3714,7 @@ namespace wiGraphicsTypes
 		{
 			barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 			barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barriers[i].UAV.pResource = (uavs == nullptr ? nullptr : uavs[i]->resource_DX12);
+			barriers[i].UAV.pResource = (uavs == nullptr ? nullptr : (ID3D12Resource*)uavs[i]->resource_DX12);
 		}
 		GetDirectCommandList(threadID)->ResourceBarrier(NumBarriers, barriers);
 	}
@@ -3720,7 +3727,7 @@ namespace wiGraphicsTypes
 			{
 				barriers[i].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barriers[i].Transition.pResource = resources[i]->resource_DX12;
+				barriers[i].Transition.pResource = (ID3D12Resource*)resources[i]->resource_DX12;
 				barriers[i].Transition.StateBefore = _ConvertResourceStates(stateBefore);
 				barriers[i].Transition.StateAfter = _ConvertResourceStates(stateAfter);
 				barriers[i].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;

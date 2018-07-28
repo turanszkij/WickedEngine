@@ -78,7 +78,7 @@ namespace wiGraphicsTypes
 		SAFE_INIT(UAV_DX11);
 		UAV_DX12 = WI_NULL_HANDLE;
 		UAV_Vulkan = WI_NULL_HANDLE;
-		SAFE_INIT(resource_DX12);
+		resource_DX12 = WI_NULL_HANDLE;
 		resource_Vulkan = WI_NULL_HANDLE;
 		resourceMemory_Vulkan = WI_NULL_HANDLE;
 	}
@@ -98,7 +98,6 @@ namespace wiGraphicsTypes
 		}
 
 
-		SAFE_RELEASE(resource_DX12);
 	}
 
 	GPUBuffer::GPUBuffer() : GPUResource()
@@ -247,21 +246,19 @@ namespace wiGraphicsTypes
 
 	GraphicsPSO::GraphicsPSO()
 	{
-		SAFE_INIT(resource_DX12);
+		pipeline_DX12 = WI_NULL_HANDLE;
 		pipeline_Vulkan = WI_NULL_HANDLE;
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
-		SAFE_RELEASE(resource_DX12);
 	}
 
 	ComputePSO::ComputePSO()
 	{
-		SAFE_INIT(resource_DX12);
+		pipeline_DX12 = WI_NULL_HANDLE;
 		pipeline_Vulkan = WI_NULL_HANDLE;
 	}
 	ComputePSO::~ComputePSO()
 	{
-		SAFE_RELEASE(resource_DX12);
 	}
 }
