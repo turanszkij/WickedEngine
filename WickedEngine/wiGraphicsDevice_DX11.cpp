@@ -2859,14 +2859,38 @@ void GraphicsDevice_DX11::DestroyBuffer(GPUBuffer *pBuffer)
 void GraphicsDevice_DX11::DestroyTexture1D(Texture1D *pTexture1D)
 {
 	SAFE_RELEASE(pTexture1D->texture1D_DX11);
+
+	SAFE_RELEASE(pTexture1D->RTV_DX11);
+	for (ID3D11RenderTargetView* x : pTexture1D->additionalRTVs_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
 }
 void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
 {
 	SAFE_RELEASE(pTexture2D->texture2D_DX11);
+
+	SAFE_RELEASE(pTexture2D->RTV_DX11);
+	for (ID3D11RenderTargetView* x : pTexture2D->additionalRTVs_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
+
+	SAFE_RELEASE(pTexture2D->DSV_DX11);
+	for (ID3D11DepthStencilView* x : pTexture2D->additionalDSVs_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
 }
 void GraphicsDevice_DX11::DestroyTexture3D(Texture3D *pTexture3D)
 {
 	SAFE_RELEASE(pTexture3D->texture3D_DX11);
+
+	SAFE_RELEASE(pTexture3D->RTV_DX11);
+	for (ID3D11RenderTargetView* x : pTexture3D->additionalRTVs_DX11)
+	{
+		SAFE_RELEASE(x);
+	}
 }
 void GraphicsDevice_DX11::DestroyInputLayout(VertexLayout *pInputLayout)
 {
