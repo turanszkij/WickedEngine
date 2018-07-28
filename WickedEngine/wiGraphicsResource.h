@@ -128,7 +128,7 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_Vulkan;
 	private:
 		ID3D11SamplerState*				resource_DX11;
-		size_t							resource_DX12;
+		wiCPUHandle						resource_DX12;
 		wiCPUHandle						resource_Vulkan;
 		SamplerDesc desc;
 	public:
