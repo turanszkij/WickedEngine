@@ -49,17 +49,22 @@ namespace wiGraphicsTypes
 		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature;
 		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature;
 
-		struct DescriptorAllocator
+		struct DescriptorAllocator : public wiThreadSafeManager
 		{
 			ID3D12DescriptorHeap*	heap;
-			std::atomic<uint32_t>	itemCount;
+			size_t					heap_begin;
+			uint32_t				itemCount;
 			UINT					maxCount;
 			UINT					itemSize;
+			bool*					itemsAlive;
+			uint32_t				lastAlloc;
 
 			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount);
 			~DescriptorAllocator();
 
 			size_t allocate();
+			void clear();
+			void free(wiCPUHandle descriptorHandle);
 		};
 		DescriptorAllocator*		RTAllocator;
 		DescriptorAllocator*		DSAllocator;

@@ -1168,7 +1168,7 @@ namespace wiGraphicsTypes
 
 	// Allocator heaps:
 
-	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount)
+	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount) : wiThreadSafeManager()
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 		heapDesc.NodeMask = 0;
@@ -1178,17 +1178,75 @@ namespace wiGraphicsTypes
 		HRESULT hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&heap);
 		assert(SUCCEEDED(hr));
 
+		heap_begin = heap->GetCPUDescriptorHandleForHeapStart().ptr;
 		itemSize = device->GetDescriptorHandleIncrementSize(type);
-		itemCount.store(0);
+		itemCount = 0;
 		this->maxCount = maxCount;
+
+		itemsAlive = new bool[maxCount];
+		for (uint32_t i = 0; i < maxCount; ++i)
+		{
+			itemsAlive[i] = false;
+		}
+		lastAlloc = 0;
 	}
 	GraphicsDevice_DX12::DescriptorAllocator::~DescriptorAllocator()
 	{
 		SAFE_RELEASE(heap);
+		SAFE_DELETE_ARRAY(itemsAlive);
 	}
 	size_t GraphicsDevice_DX12::DescriptorAllocator::allocate()
 	{
-		return heap->GetCPUDescriptorHandleForHeapStart().ptr + itemCount.fetch_add(1) * itemSize;
+		size_t addr = 0;
+
+		LOCK();
+		if (itemCount < maxCount - 1)
+		{
+			while (itemsAlive[lastAlloc] == true)
+			{
+				lastAlloc = (lastAlloc + 1) % maxCount;
+			}
+			addr = heap_begin + lastAlloc * itemSize;
+			itemsAlive[lastAlloc] = true;
+
+			itemCount++;
+		}
+		else
+		{
+			assert(0);
+		}
+		UNLOCK();
+
+		return addr;
+	}
+	void GraphicsDevice_DX12::DescriptorAllocator::clear()
+	{
+		LOCK();
+		for (uint32_t i = 0; i < maxCount; ++i)
+		{
+			itemsAlive[i] = false;
+		}
+		itemCount = 0;
+		UNLOCK();
+	}
+	void GraphicsDevice_DX12::DescriptorAllocator::free(wiCPUHandle descriptorHandle)
+	{
+		if (descriptorHandle == WI_NULL_HANDLE)
+		{
+			return;
+		}
+
+		assert(descriptorHandle >= heap_begin);
+		assert(descriptorHandle < heap_begin + maxCount * itemSize);
+		uint32_t offset = (uint32_t)(descriptorHandle - heap_begin);
+		assert(offset % itemSize == 0);
+		offset = offset / itemSize;
+
+		LOCK();
+		itemsAlive[offset] = false;
+		assert(itemCount > 0);
+		itemCount--;
+		UNLOCK();
 	}
 
 
@@ -1446,7 +1504,9 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::UploadBuffer::clear()
 	{
+		LOCK();
 		dataCur = dataBegin;
+		UNLOCK();
 	}
 	uint64_t GraphicsDevice_DX12::UploadBuffer::calculateOffset(uint8_t* address)
 	{
@@ -2037,11 +2097,13 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint8_t* dest = bufferUploader->allocate(pDesc->ByteWidth, alignment);
-			memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth); 
 			copyQueueLock.lock();
-			static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->CopyBufferRegion(
-				(ID3D12Resource*)ppBuffer->resource_DX12, 0, bufferUploader->resource, bufferUploader->calculateOffset(dest), pDesc->ByteWidth);
+			{
+				uint8_t* dest = bufferUploader->allocate(pDesc->ByteWidth, alignment);
+				memcpy(dest, pInitialData->pSysMem, pDesc->ByteWidth);
+				static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->CopyBufferRegion(
+					(ID3D12Resource*)ppBuffer->resource_DX12, 0, bufferUploader->resource, bufferUploader->calculateOffset(dest), pDesc->ByteWidth);
+			}
 			copyQueueLock.unlock();
 		}
 
@@ -2259,11 +2321,15 @@ namespace wiGraphicsTypes
 
 			UINT64 RequiredSize = 0;
 			device->GetCopyableFootprints(&desc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &RequiredSize);
-			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+
 
 			copyQueueLock.lock();
-			UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (ID3D12Resource*)(*ppTexture2D)->resource_DX12,
-				textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
+			{
+				uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+
+				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (ID3D12Resource*)(*ppTexture2D)->resource_DX12,
+					textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
+			}
 			copyQueueLock.unlock();
 
 			SAFE_DELETE_ARRAY(data);
@@ -3089,29 +3155,59 @@ namespace wiGraphicsTypes
 		return hr;
 	}
 
-	// TODO: implement, test
+
 	void GraphicsDevice_DX12::DestroyResource(GPUResource* pResource)
 	{
-		//if (pResource->resource_DX12 != WI_NULL_HANDLE)
-		//{
-		//	((ID3D12Resource*)pResource->resource_DX12)->Release();
-		//}
+		if (pResource->resource_DX12 != WI_NULL_HANDLE)
+		{
+			((ID3D12Resource*)pResource->resource_DX12)->Release();
+		}
+
+		ResourceAllocator->free(pResource->SRV_DX12);
+		for (auto& x : pResource->additionalSRVs_DX12)
+		{
+			ResourceAllocator->free(x);
+		}
+
+		ResourceAllocator->free(pResource->UAV_DX12);
+		for (auto& x : pResource->additionalUAVs_DX12)
+		{
+			ResourceAllocator->free(x);
+		}
 	}
 	void GraphicsDevice_DX12::DestroyBuffer(GPUBuffer *pBuffer)
 	{
-
+		ResourceAllocator->free(pBuffer->CBV_DX12);
 	}
 	void GraphicsDevice_DX12::DestroyTexture1D(Texture1D *pTexture1D)
 	{
-
+		RTAllocator->free(pTexture1D->RTV_DX12);
+		for (auto& x : pTexture1D->additionalRTVs_DX12)
+		{
+			RTAllocator->free(x);
+		}
 	}
 	void GraphicsDevice_DX12::DestroyTexture2D(Texture2D *pTexture2D)
 	{
+		RTAllocator->free(pTexture2D->RTV_DX12);
+		for (auto& x : pTexture2D->additionalRTVs_DX12)
+		{
+			RTAllocator->free(x);
+		}
 
+		DSAllocator->free(pTexture2D->DSV_DX12);
+		for (auto& x : pTexture2D->additionalDSVs_DX12)
+		{
+			DSAllocator->free(x);
+		}
 	}
 	void GraphicsDevice_DX12::DestroyTexture3D(Texture3D *pTexture3D)
 	{
-
+		RTAllocator->free(pTexture3D->RTV_DX12);
+		for (auto& x : pTexture3D->additionalRTVs_DX12)
+		{
+			RTAllocator->free(x);
+		}
 	}
 	void GraphicsDevice_DX12::DestroyInputLayout(VertexLayout *pInputLayout)
 	{
@@ -3163,11 +3259,17 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DestroyGraphicsPSO(GraphicsPSO* pso)
 	{
-
+		if (pso->pipeline_DX12 != WI_NULL_HANDLE)
+		{
+			((ID3D12PipelineState*)pso->pipeline_DX12)->Release();
+		}
 	}
 	void GraphicsDevice_DX12::DestroyComputePSO(ComputePSO* pso)
 	{
-
+		if (pso->pipeline_DX12 != WI_NULL_HANDLE)
+		{
+			((ID3D12PipelineState*)pso->pipeline_DX12)->Release();
+		}
 	}
 
 
@@ -3184,7 +3286,7 @@ namespace wiGraphicsTypes
 			HRESULT result = copyQueue->Signal(copyFence, fenceToWaitFor);
 			copyFenceValue++;
 
-			// Wait until the GPU is done rendering.
+			// Wait until the GPU is done copying.
 			if (copyFence->GetCompletedValue() < fenceToWaitFor)
 			{
 				result = copyFence->SetEventOnCompletion(fenceToWaitFor, copyFenceEvent);
@@ -3193,6 +3295,9 @@ namespace wiGraphicsTypes
 
 			result = copyAllocator->Reset();
 			result = static_cast<ID3D12GraphicsCommandList*>(copyCommandList)->Reset(copyAllocator, nullptr);
+
+			bufferUploader->clear();
+			textureUploader->clear();
 		}
 		copyQueueLock.unlock();
 

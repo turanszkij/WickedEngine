@@ -343,6 +343,8 @@ void wiRenderer::CleanUpStatic()
 }
 void wiRenderer::ClearWorld()
 {
+	GetDevice()->WaitForGPU();
+
 	emitterSystems.clear();
 	
 	if (physicsEngine)

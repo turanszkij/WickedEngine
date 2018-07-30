@@ -839,7 +839,9 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::UploadBuffer::clear()
 	{
+		LOCK();
 		dataCur = dataBegin;
+		UNLOCK();
 	}
 	uint64_t GraphicsDevice_Vulkan::UploadBuffer::calculateOffset(uint8_t* address)
 	{
@@ -2519,16 +2521,15 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint8_t* dest = bufferUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
-			memcpy(dest, pInitialData->pSysMem, static_cast<size_t>(memRequirements.size));
-
-			VkBufferCopy copyRegion = {};
-			copyRegion.size = memRequirements.size;
-			copyRegion.srcOffset = bufferUploader->calculateOffset(dest);
-			copyRegion.dstOffset = 0;
-
 			copyQueueLock.lock();
 			{
+				uint8_t* dest = bufferUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
+				memcpy(dest, pInitialData->pSysMem, static_cast<size_t>(memRequirements.size));
+
+				VkBufferCopy copyRegion = {};
+				copyRegion.size = memRequirements.size;
+				copyRegion.srcOffset = bufferUploader->calculateOffset(dest);
+				copyRegion.dstOffset = 0;
 
 				VkBufferMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -2625,18 +2626,24 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
 	{
+		if ((*ppTexture1D) == nullptr)
+		{
+			(*ppTexture1D) = new Texture1D;
+		}
 		(*ppTexture1D)->Register(this);
+
+		(*ppTexture1D)->desc = *pDesc;
 
 		return E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
 	{
-		(*ppTexture2D)->Register(this);
-
 		if ((*ppTexture2D) == nullptr)
 		{
 			(*ppTexture2D) = new Texture2D;
 		}
+		(*ppTexture2D)->Register(this);
+
 		(*ppTexture2D)->desc = *pDesc;
 
 		if ((*ppTexture2D)->desc.MipLevels == 0)
@@ -2714,54 +2721,54 @@ namespace wiGraphicsTypes
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint8_t* dest = textureUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
-
-			VkBufferImageCopy copyRegions[16] = {};
-			assert(pDesc->ArraySize < 16);
-
-			size_t cpyoffset = 0;
-			uint32_t width = pDesc->Width;
-			uint32_t height = pDesc->Height;
-			for (UINT slice = 0; slice < pDesc->MipLevels; ++slice)
-			{
-				size_t cpysize = pInitialData[slice].SysMemPitch * height;
-				switch (pDesc->Format)
-				{
-				case FORMAT_BC1_UNORM:
-				case FORMAT_BC2_UNORM:
-				case FORMAT_BC3_UNORM:
-					cpysize /= 4;
-				default:
-					break;
-				}
-				uint8_t* cpyaddr = dest + cpyoffset;
-				memcpy(cpyaddr, pInitialData[slice].pSysMem, cpysize);
-				cpyoffset += cpysize;
-
-				VkBufferImageCopy& copyRegion = copyRegions[slice];
-				copyRegion.bufferOffset = textureUploader->calculateOffset(cpyaddr);
-				copyRegion.bufferRowLength = 0;
-				copyRegion.bufferImageHeight = 0;
-
-				// for now, only mips can be filled like this:
-				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				copyRegion.imageSubresource.mipLevel = slice;
-				copyRegion.imageSubresource.baseArrayLayer = 0;
-				copyRegion.imageSubresource.layerCount = 1;
-
-				copyRegion.imageOffset = { 0, 0, 0 };
-				copyRegion.imageExtent = {
-					width,
-					height,
-					1
-				};
-
-				width  = max(1, width / 2);
-				height /= max(1, height / 2);
-			}
-
 			copyQueueLock.lock();
 			{
+				uint8_t* dest = textureUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
+
+				VkBufferImageCopy copyRegions[16] = {};
+				assert(pDesc->ArraySize < 16);
+
+				size_t cpyoffset = 0;
+				uint32_t width = pDesc->Width;
+				uint32_t height = pDesc->Height;
+				for (UINT slice = 0; slice < pDesc->MipLevels; ++slice)
+				{
+					size_t cpysize = pInitialData[slice].SysMemPitch * height;
+					switch (pDesc->Format)
+					{
+					case FORMAT_BC1_UNORM:
+					case FORMAT_BC2_UNORM:
+					case FORMAT_BC3_UNORM:
+						cpysize /= 4;
+					default:
+						break;
+					}
+					uint8_t* cpyaddr = dest + cpyoffset;
+					memcpy(cpyaddr, pInitialData[slice].pSysMem, cpysize);
+					cpyoffset += cpysize;
+
+					VkBufferImageCopy& copyRegion = copyRegions[slice];
+					copyRegion.bufferOffset = textureUploader->calculateOffset(cpyaddr);
+					copyRegion.bufferRowLength = 0;
+					copyRegion.bufferImageHeight = 0;
+
+					// for now, only mips can be filled like this:
+					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					copyRegion.imageSubresource.mipLevel = slice;
+					copyRegion.imageSubresource.baseArrayLayer = 0;
+					copyRegion.imageSubresource.layerCount = 1;
+
+					copyRegion.imageOffset = { 0, 0, 0 };
+					copyRegion.imageExtent = {
+						width,
+						height,
+						1
+					};
+
+					width = max(1, width / 2);
+					height /= max(1, height / 2);
+				}
+
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrier.image = reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
@@ -2808,9 +2815,9 @@ namespace wiGraphicsTypes
 					0, nullptr,
 					1, &barrier
 				);
+
 			}
 			copyQueueLock.unlock();
-
 		}
 
 
@@ -3155,7 +3162,13 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
 	{
+		if ((*ppTexture3D) == nullptr)
+		{
+			(*ppTexture3D) = new Texture3D;
+		}
 		(*ppTexture3D)->Register(this);
+
+		(*ppTexture3D)->desc = *pDesc;
 
 		return E_FAIL;
 	}
@@ -3969,26 +3982,98 @@ namespace wiGraphicsTypes
 		return hr;
 	}
 
-	// TODO: implement, test
+
 	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
 	{
-		//vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory_Vulkan, nullptr);
+		vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory_Vulkan, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyBuffer(GPUBuffer *pBuffer)
 	{
-		//vkDestroyBuffer(device, (VkBuffer)pBuffer->resource_Vulkan, nullptr);
+		vkDestroyBuffer(device, (VkBuffer)pBuffer->resource_Vulkan, nullptr);
+
+		vkDestroyBufferView(device, (VkBufferView)pBuffer->SRV_Vulkan, nullptr);
+		for (auto& x : pBuffer->additionalSRVs_Vulkan)
+		{
+			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
+		}
+
+		vkDestroyBufferView(device, (VkBufferView)pBuffer->UAV_Vulkan, nullptr);
+		for (auto& x : pBuffer->additionalUAVs_Vulkan)
+		{
+			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
+		}
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
 	{
+		vkDestroyImage(device, (VkImage)pTexture1D->resource_Vulkan, nullptr);
 
+		vkDestroyImageView(device, (VkImageView)pTexture1D->RTV_Vulkan, nullptr);
+		for (auto& x : pTexture1D->additionalRTVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture1D->SRV_Vulkan, nullptr);
+		for (auto& x : pTexture1D->additionalSRVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture1D->UAV_Vulkan, nullptr);
+		for (auto& x : pTexture1D->additionalUAVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
 	{
+		vkDestroyImage(device, (VkImage)pTexture2D->resource_Vulkan, nullptr);
 
+		vkDestroyImageView(device, (VkImageView)pTexture2D->RTV_Vulkan, nullptr);
+		for (auto& x : pTexture2D->additionalRTVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture2D->DSV_Vulkan, nullptr);
+		for (auto& x : pTexture2D->additionalDSVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture2D->SRV_Vulkan, nullptr);
+		for (auto& x : pTexture2D->additionalSRVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture2D->UAV_Vulkan, nullptr);
+		for (auto& x : pTexture2D->additionalUAVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
 	{
+		vkDestroyImage(device, (VkImage)pTexture3D->resource_Vulkan, nullptr);
 
+		vkDestroyImageView(device, (VkImageView)pTexture3D->RTV_Vulkan, nullptr);
+		for (auto& x : pTexture3D->additionalRTVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture3D->SRV_Vulkan, nullptr);
+		for (auto& x : pTexture3D->additionalSRVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
+
+		vkDestroyImageView(device, (VkImageView)pTexture3D->UAV_Vulkan, nullptr);
+		for (auto& x : pTexture3D->additionalUAVs_Vulkan)
+		{
+			vkDestroyImageView(device, (VkImageView)x, nullptr);
+		}
 	}
 	void GraphicsDevice_Vulkan::DestroyInputLayout(VertexLayout *pInputLayout)
 	{
@@ -4040,11 +4125,11 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::DestroyGraphicsPSO(GraphicsPSO* pso)
 	{
-
+		vkDestroyPipeline(device, (VkPipeline)pso->pipeline_Vulkan, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyComputePSO(ComputePSO* pso)
 	{
-
+		vkDestroyPipeline(device, (VkPipeline)pso->pipeline_Vulkan, nullptr);
 	}
 
 
@@ -4087,6 +4172,9 @@ namespace wiGraphicsTypes
 
 			res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
 			assert(res == VK_SUCCESS);
+
+			bufferUploader->clear();
+			textureUploader->clear();
 		}
 		copyQueueLock.unlock();
 
@@ -5071,7 +5159,7 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::WaitForGPU()
 	{
-		//vkQueueWaitIdle(presentQueue);
+		vkQueueWaitIdle(graphicsQueue);
 	}
 
 	void GraphicsDevice_Vulkan::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
