@@ -10,7 +10,7 @@ RWTEXTURE2DARRAY(output, MIP_OUTPUT_FORMAT, 0);
 
 SAMPLERSTATE(customsampler, SSLOT_ONDEMAND0);
 
-[numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 6)]
+[numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)

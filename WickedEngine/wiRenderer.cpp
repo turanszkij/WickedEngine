@@ -616,6 +616,9 @@ void wiRenderer::LoadBuffers()
 	bd.ByteWidth = sizeof(GenerateMIPChainCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MIPGEN]);
 
+	bd.ByteWidth = sizeof(FilterEnvmapCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FILTERENVMAP]);
+
 	bd.ByteWidth = sizeof(CopyTextureCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
 
@@ -1475,6 +1478,7 @@ void wiRenderer::LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCube_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCubeArray_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCubeArray_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_FILTERENVMAP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "filterEnvMapCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
@@ -5856,6 +5860,49 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 			//GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
 			wiRenderer::GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe->textureIndex);
+			
+			// Filter the enviroment map mip chain according to BRDF:
+			//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
+			//	and we generatethe filtered MIPs from bottom to top.
+			GetDevice()->EventBegin("FilterEnvMap", threadID);
+			{
+				Texture* texture = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY];
+				TextureDesc desc = texture->GetDesc();
+				int arrayIndex = probe->textureIndex;
+
+				GetDevice()->BindComputePSO(CPSO[CSTYPE_FILTERENVMAP], threadID);
+
+				desc.Width = 1;
+				desc.Height = 1;
+				for (UINT i = desc.MipLevels - 1; i > 0; --i)
+				{
+					GetDevice()->BindUAV(CS, texture, 0, threadID, i);
+					GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, max(0, (int)i - 2));
+
+					FilterEnvmapCB cb;
+					cb.filterResolution.x = desc.Width;
+					cb.filterResolution.y = desc.Height;
+					cb.filterArrayIndex = arrayIndex;
+					cb.filterRoughness = (float)i / (float)desc.MipLevels;
+					cb.filterRayCount = 128;
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
+					GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
+
+					GetDevice()->Dispatch(
+						max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+						max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+						6,
+						threadID);
+
+					GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
+
+					desc.Width *= 2;
+					desc.Height *= 2;
+				}
+				GetDevice()->UnbindUAVs(0, 1, threadID);
+			}
+			GetDevice()->EventEnd(threadID);
+
 		}
 	}
 
@@ -6307,7 +6354,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 				GetDevice()->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					1,
+					6,
 					threadID);
 
 				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
@@ -6355,7 +6402,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 				GetDevice()->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					1,
+					6,
 					threadID);
 
 				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);

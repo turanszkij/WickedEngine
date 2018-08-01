@@ -786,6 +786,9 @@
     <FxCompile Include="generateMIPChainCubeArray_unorm4_SimpleFilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="filterEnvMapCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

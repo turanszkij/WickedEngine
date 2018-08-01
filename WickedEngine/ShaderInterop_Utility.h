@@ -13,6 +13,15 @@ CBUFFER(GenerateMIPChainCB, CBSLOT_RENDERER_UTILITY)
 	uint arrayIndex;
 };
 
+CBUFFER(FilterEnvmapCB, CBSLOT_RENDERER_UTILITY)
+{
+	uint2 filterResolution;
+	uint filterArrayIndex;
+	float filterRoughness;
+	uint filterRayCount;
+	uint3 padding_filterCB;
+};
+
 
 
 // CopyTexture2D params:
