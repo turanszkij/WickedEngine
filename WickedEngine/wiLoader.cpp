@@ -18,6 +18,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "wiObjLoader.h"
 
+#define TINYGLTF_IMPLEMENTATION
+#include "Utility/tiny_gltf.h"
+
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
@@ -2871,6 +2874,66 @@ void Model::LoadFromDisk(const std::string& fileName)
 		{
 			wiBackLog::post(obj_errors.c_str());
 		}
+	}
+	else if (!extension.compare("GLTF") || !extension.compare("GLB"))
+	{
+		tinygltf::Model gltfModel;
+		tinygltf::TinyGLTF loader;
+		std::string err;
+		std::string warn;
+
+		bool ret;
+		if (!extension.compare("GLTF"))
+		{
+			ret = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, fileName);
+		}
+		else
+		{
+			ret = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, fileName); // for binary glTF(.glb) 
+		}
+		if (!ret) {
+			wiHelper::messageBox(err, "GLTF error!");
+			return;
+		}
+
+		this->name = name;
+
+		for (auto& x : gltfModel.materials)
+		{
+			Material* material = new Material(x.name);
+			this->materials.insert(make_pair(material->name, material));
+		}
+
+		const tinygltf::Scene &scene = gltfModel.scenes[gltfModel.defaultScene];
+
+		for (size_t i = 0; i < scene.nodes.size(); i++) 
+		{
+			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+
+		}
+
+		for (auto&x : gltfModel.meshes)
+		{
+			Object* object = new Object(x.name);
+			Mesh* mesh = new Mesh(x.name + "_mesh");
+
+			object->mesh = mesh;
+			mesh->renderable = true;
+
+			XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+			XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+			for (auto& prim : x.primitives)
+			{
+				int ind = prim.indices;
+			}
+
+			mesh->aabb.create(min, max);
+
+			this->objects.insert(object);
+			this->meshes.insert(make_pair(mesh->name, mesh));
+		}
+
 	}
 	else
 	{

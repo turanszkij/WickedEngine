@@ -690,7 +690,7 @@ void EditorComponent::Load()
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Model Formats\0*.wimf;*.wio;*.obj\0";
+			ofn.lpstrFilter = "Model Formats\0*.wimf;*.wio;*.obj;*.gltf;*.glb\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
