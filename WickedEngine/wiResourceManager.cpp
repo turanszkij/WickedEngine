@@ -134,36 +134,63 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 						desc.Format = FORMAT_BC3_UNORM;
 						break;
 					default:
-						desc.Format = FORMAT_R8G8B8A8_UNORM;
+						desc.Format = FORMAT_B8G8R8A8_UNORM;
 						break;
 					}
 
 					std::vector<SubresourceData> InitData;
 
-					if (img.is_cubemap())
-					{
-						assert(0); // TODO
-					}
 					if (img.is_volume())
 					{
 						assert(0); // TODO
 					}
 
-					desc.MipLevels = 1 + img.get_num_mipmaps();
-					InitData.resize(desc.MipLevels);
-
-					InitData[0].pSysMem = static_cast<uint8_t*>(img); // call operator
-					InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height() * 4 /* img.get_components()*/); // todo: review + vulkan api slightly different
-
-					if (img.get_num_mipmaps() > 0)
+					if (img.is_cubemap())
 					{
-						for (UINT i = 0; i < img.get_num_mipmaps(); ++i)
-						{
-							const nv_dds::CSurface& surf = img.get_mipmap(i);
+						desc.ArraySize = 6;
+						desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
-							InitData[i + 1].pSysMem = static_cast<uint8_t*>(surf); // call operator
-							//InitData[i + 1].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height() * img.get_components());
-							InitData[i + 1].SysMemPitch = InitData[i].SysMemPitch / 2;
+						desc.MipLevels = 1 + img.get_num_mipmaps();
+						InitData.resize(desc.MipLevels * 6);
+
+						for (UINT dir = 0; dir < 6; ++dir)
+						{
+							const nv_dds::CTexture& face = img.get_cubemap_face(dir);
+
+							const UINT idx = dir * desc.MipLevels;
+							InitData[idx].pSysMem = face.operator uint8_t *();
+							InitData[idx].SysMemPitch = static_cast<UINT>(face.get_width() * 4);
+
+							if (face.get_num_mipmaps() > 0)
+							{
+								for (UINT i = 0; i < face.get_num_mipmaps(); ++i)
+								{
+									const nv_dds::CSurface& surf = face.get_mipmap(i);
+
+									InitData[idx + i + 1].pSysMem = surf.operator uint8_t *();
+									InitData[idx + i + 1].SysMemPitch = InitData[idx + i].SysMemPitch / 2;
+								}
+							}
+						}
+					}
+					else
+					{
+						desc.MipLevels = 1 + img.get_num_mipmaps();
+						InitData.resize(desc.MipLevels);
+
+						InitData[0].pSysMem = img.operator uint8_t *();
+						InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height() * 4 /* img.get_components()*/); // todo: review + vulkan api slightly different
+
+						if (img.get_num_mipmaps() > 0)
+						{
+							for (UINT i = 0; i < img.get_num_mipmaps(); ++i)
+							{
+								const nv_dds::CSurface& surf = img.get_mipmap(i);
+
+								InitData[i + 1].pSysMem = surf.operator uint8_t *();
+								//InitData[i + 1].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height() * img.get_components());
+								InitData[i + 1].SysMemPitch = InitData[i].SysMemPitch / 2;
+							}
 						}
 					}
 

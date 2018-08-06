@@ -2316,11 +2316,10 @@ namespace wiGraphicsTypes
 				data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 			}
 
-			UINT NumSubresources = pDesc->ArraySize;
 			UINT FirstSubresource = 0;
 
 			UINT64 RequiredSize = 0;
-			device->GetCopyableFootprints(&desc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &RequiredSize);
+			device->GetCopyableFootprints(&desc, 0, dataCount, 0, nullptr, nullptr, nullptr, &RequiredSize);
 
 
 			copyQueueLock.lock();
@@ -2328,7 +2327,7 @@ namespace wiGraphicsTypes
 				uint8_t* dest = textureUploader->allocate(static_cast<size_t>(RequiredSize), D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
 				UINT64 dataSize = UpdateSubresources(static_cast<ID3D12GraphicsCommandList*>(copyCommandList), (ID3D12Resource*)(*ppTexture2D)->resource_DX12,
-					textureUploader->resource, textureUploader->calculateOffset(dest), 0, NumSubresources, data);
+					textureUploader->resource, textureUploader->calculateOffset(dest), 0, dataCount, data);
 			}
 			copyQueueLock.unlock();
 
