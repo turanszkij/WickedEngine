@@ -10,7 +10,9 @@ RWTEXTURE2D(input_output, MIP_OUTPUT_FORMAT, 0);
 
 static const uint TILE_BORDER = 4;
 static const uint TILE_SIZE = TILE_BORDER + GENERATEMIPCHAIN_2D_BLOCK_SIZE + TILE_BORDER;
-groupshared float4 tile[TILE_SIZE][TILE_SIZE];
+groupshared float4 tile[TILE_SIZE * TILE_SIZE];
+
+#define FAKE_GAUSS // this is not completely correct, but two-pass, so faster
 
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
@@ -26,7 +28,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	for (i = 0; i < 4; ++i)
 	{
 		const uint2 coord = GTid.xy * 2 + co[i];
-		tile[coord.x][coord.y] = input.SampleLevel(sampler_linear_clamp, (tile_upperleft + coord + 1.0f) / (float2)outputResolution.xy, 0);
+		tile[flatten2D(coord, TILE_SIZE)] = input.SampleLevel(sampler_linear_clamp, (tile_upperleft + coord + 0.5f) / (float2)outputResolution.xy, 0);
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -34,30 +36,46 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 	float4 sum = 0;
 
-	// Then each thread processes just one pixel within tile, excluding border:
+
+#ifdef FAKE_GAUSS
 
 	// Horizontal accumulation for each tile pixel, with help of the border region
-	[unroll]
 	for (i = 0; i < 9; ++i)
 	{
 		const uint2 coord = thread_to_cache + int2(gaussianOffsets[i], 0);
-		sum += tile[coord.x][coord.y] * gaussianWeightsNormalized[i];
+		sum += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[i];
 	}
 
+	GroupMemoryBarrierWithGroupSync();
+
 	// write out into cache (excluding border region):
-	tile[thread_to_cache.x][thread_to_cache.y] = sum;
+	tile[flatten2D(thread_to_cache, TILE_SIZE)] = sum;
 
 	GroupMemoryBarrierWithGroupSync();
 
 	sum = 0;
 
 	// Vertical accumulation for each tile pixel, with help of the border region
-	[unroll]
 	for (i = 0; i < 9; ++i)
 	{
 		const uint2 coord = thread_to_cache + int2(0, gaussianOffsets[i]);
-		sum += tile[coord.x][coord.y] * gaussianWeightsNormalized[i];
+		sum += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[i];
 	}
+
+#else
+
+	for (i = 0; i < 9; ++i)
+	{
+		float4 sumY = 0;
+		for (uint j = 0; j < 9; ++j)
+		{
+			const uint2 coord = thread_to_cache + int2(gaussianOffsets[i], gaussianOffsets[j]);
+			sumY += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[j];
+		}
+		sum += sumY * gaussianWeightsNormalized[i];
+	}
+
+#endif // FAST_GAUSS
 
 
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
