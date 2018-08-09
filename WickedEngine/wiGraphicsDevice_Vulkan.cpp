@@ -2162,7 +2162,7 @@ namespace wiGraphicsTypes
 				// Create immediate resource allocators:
 				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 				{
-					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
+					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 256 * 1024 * 1024);
 				}
 
 
