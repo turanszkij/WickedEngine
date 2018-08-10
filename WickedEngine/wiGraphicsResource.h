@@ -15,7 +15,6 @@ struct ID3D11ComputeShader;
 struct ID3D11SamplerState;
 struct ID3D11ShaderResourceView;
 struct ID3D11UnorderedAccessView;
-struct ID3D11Buffer;
 struct ID3D11InputLayout;
 struct ID3D11BlendState;
 struct ID3D11DepthStencilState;
@@ -23,9 +22,6 @@ struct ID3D11RasterizerState;
 struct ID3D11RasterizerState2;
 struct ID3D11RenderTargetView;
 struct ID3D11DepthStencilView;
-struct ID3D11Texture1D;
-struct ID3D11Texture2D;
-struct ID3D11Texture3D;
 struct ID3D11Query;
 struct ID3D11Predicate;
 
@@ -173,6 +169,7 @@ namespace wiGraphicsTypes
 		wiCPUHandle									UAV_Vulkan;					// main resource UAV
 		std::vector<wiCPUHandle>					additionalUAVs_Vulkan;		// can be used for sub-resources if requested
 
+		wiCPUHandle									resource_DX11;
 		wiCPUHandle									resource_DX12;
 		wiCPUHandle									resource_Vulkan;
 		wiCPUHandle									resourceMemory_Vulkan;
@@ -187,14 +184,13 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 		friend class GraphicsDevice_Vulkan;
 	private:
-		ID3D11Buffer*								resource_DX11;
 		wiCPUHandle									CBV_DX12;
 		GPUBufferDesc desc;
 	public:
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != WI_NULL_HANDLE || resource_Vulkan != WI_NULL_HANDLE; }
+		bool IsValid() { return resource_DX11 != WI_NULL_HANDLE || resource_DX12 != WI_NULL_HANDLE || resource_Vulkan != WI_NULL_HANDLE; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
@@ -315,7 +311,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 		friend class GraphicsDevice_Vulkan;
 	private:
-		ID3D11Texture1D*			texture1D_DX11;
 	public:
 		Texture1D();
 		virtual ~Texture1D();
@@ -334,7 +329,6 @@ namespace wiGraphicsTypes
 		wiCPUHandle									DSV_Vulkan;
 		std::vector<wiCPUHandle>					additionalDSVs_Vulkan;
 
-		ID3D11Texture2D*							texture2D_DX11;
 	public:
 		Texture2D();
 		virtual ~Texture2D();
@@ -346,7 +340,6 @@ namespace wiGraphicsTypes
 		friend class GraphicsDevice_DX12;
 		friend class GraphicsDevice_Vulkan;
 	private:
-		ID3D11Texture3D*			texture3D_DX11;
 	public:
 		Texture3D();
 		virtual ~Texture3D();

@@ -4133,6 +4133,12 @@ namespace wiGraphicsTypes
 	}
 
 
+	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const std::string& name)
+	{
+
+	}
+
+
 	void GraphicsDevice_Vulkan::PresentBegin()
 	{
 		// Sync up copy queue:

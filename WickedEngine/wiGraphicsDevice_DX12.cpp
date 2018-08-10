@@ -3272,6 +3272,12 @@ namespace wiGraphicsTypes
 	}
 
 
+	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const std::string& name)
+	{
+		((ID3D12Resource*)pResource->resource_DX12)->SetName(wstring(name.begin(), name.end()).c_str());
+	}
+
+
 	void GraphicsDevice_DX12::PresentBegin()
 	{
 		// Sync up copy queue:

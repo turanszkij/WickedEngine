@@ -552,6 +552,7 @@ void wiRenderer::LoadBuffers()
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
 	GetDevice()->CreateBuffer(&bd, nullptr, dynamicVertexBufferPool);
+	GetDevice()->SetName(dynamicVertexBufferPool, "DynamicVertexBufferPool");
 
 
 	for (int i = 0; i < CBTYPE_LAST; ++i)
@@ -569,9 +570,11 @@ void wiRenderer::LoadBuffers()
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(WorldCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_WORLD], "PerWorldConstantBuffer");
 
 	bd.ByteWidth = sizeof(FrameCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
 
 	// The other constant buffers will be updated frequently (> per frame) so they should reside in DYNAMIC GPU memory!
 	bd.Usage = USAGE_DYNAMIC;
@@ -579,12 +582,15 @@ void wiRenderer::LoadBuffers()
 
 	bd.ByteWidth = sizeof(CameraCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
 
 	bd.ByteWidth = sizeof(MiscCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_MISC], "MiscConstantBuffer");
 
 	bd.ByteWidth = sizeof(APICB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_API], "APIConstantBuffer");
 
 
 	// On demand buffers...
@@ -6668,6 +6674,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, bvhNodeBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(bvhNodeBuffer, "BVHNodeBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHAABB);
@@ -6678,6 +6685,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, bvhAABBBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(bvhAABBBuffer, "BVHAABBBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
@@ -6688,6 +6696,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, bvhFlagBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(bvhFlagBuffer, "BVHFlagBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHMeshTriangle);
@@ -6698,6 +6707,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(triangleBuffer, "BVHTriangleBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
@@ -6708,6 +6718,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(clusterCounterBuffer, "BVHClusterCounterBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
@@ -6718,6 +6729,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(clusterIndexBuffer, "BVHClusterIndexBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
@@ -6729,6 +6741,8 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
 		hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(clusterMortonBuffer, "BVHClusterMortonBuffer");
+		device->SetName(clusterSortedMortonBuffer, "BVHSortedClusterMortonBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint2);
@@ -6739,6 +6753,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(clusterOffsetBuffer, "BVHClusterOffsetBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHAABB);
@@ -6749,6 +6764,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(clusterAABBBuffer, "BVHClusterAABBBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(ClusterCone);
@@ -6759,6 +6775,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
 		assert(SUCCEEDED(hr));
+		device->SetName(clusterConeBuffer, "BVHClusterConeBuffer");
 	}
 
 	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
