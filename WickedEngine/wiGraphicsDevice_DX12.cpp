@@ -3250,7 +3250,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DestroySamplerState(Sampler *pSamplerState)
 	{
-
+		SamplerAllocator->free(pSamplerState->resource_DX12);
 	}
 	void GraphicsDevice_DX12::DestroyQuery(GPUQuery *pQuery)
 	{

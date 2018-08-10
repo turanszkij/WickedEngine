@@ -4117,7 +4117,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::DestroySamplerState(Sampler *pSamplerState)
 	{
-
+		vkDestroySampler(device, (VkSampler)pSamplerState->resource_Vulkan, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyQuery(GPUQuery *pQuery)
 	{
