@@ -1629,7 +1629,7 @@ namespace wiGraphicsTypes
 		// Create common descriptor heaps
 		RTAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
 		DSAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
-		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4096);
+		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 8192);
 		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
 
 		// Create null resources for unbinding:
@@ -1689,7 +1689,7 @@ namespace wiGraphicsTypes
 
 				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 128);
+				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 256);
 			}
 		}
 
@@ -3250,7 +3250,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::DestroySamplerState(Sampler *pSamplerState)
 	{
-
+		SamplerAllocator->free(pSamplerState->resource_DX12);
 	}
 	void GraphicsDevice_DX12::DestroyQuery(GPUQuery *pQuery)
 	{
@@ -3269,6 +3269,12 @@ namespace wiGraphicsTypes
 		{
 			((ID3D12PipelineState*)pso->pipeline_DX12)->Release();
 		}
+	}
+
+
+	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const std::string& name)
+	{
+		((ID3D12Resource*)pResource->resource_DX12)->SetName(wstring(name.begin(), name.end()).c_str());
 	}
 
 

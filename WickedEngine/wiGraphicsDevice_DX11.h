@@ -13,6 +13,8 @@ struct ID3DUserDefinedAnnotation;
 enum D3D_DRIVER_TYPE;
 enum D3D_FEATURE_LEVEL;
 
+struct ID3D11Texture2D;
+
 namespace wiGraphicsTypes
 {
 
@@ -97,6 +99,9 @@ namespace wiGraphicsTypes
 		virtual void DestroyQuery(GPUQuery *pQuery) override;
 		virtual void DestroyGraphicsPSO(GraphicsPSO* pso) override;
 		virtual void DestroyComputePSO(ComputePSO* pso) override;
+
+
+		virtual void SetName(GPUResource* pResource, const std::string& name) override;
 
 		virtual void PresentBegin() override;
 		virtual void PresentEnd() override;

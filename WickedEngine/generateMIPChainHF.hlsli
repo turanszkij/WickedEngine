@@ -19,7 +19,7 @@ static const float gaussianWeightsNormalized[9] = {
 	gaussWeight3 * gaussNormalization,
 	gaussWeight4 * gaussNormalization,
 };
-static const uint gaussianOffsets[9] = {
+static const int gaussianOffsets[9] = {
 	-4, -3, -2, -1, 0, 1, 2, 3, 4
 };
 

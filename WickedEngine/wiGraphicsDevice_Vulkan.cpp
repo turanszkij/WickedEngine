@@ -2162,7 +2162,7 @@ namespace wiGraphicsTypes
 				// Create immediate resource allocators:
 				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 				{
-					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
+					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 256 * 1024 * 1024);
 				}
 
 
@@ -4117,7 +4117,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::DestroySamplerState(Sampler *pSamplerState)
 	{
-
+		vkDestroySampler(device, (VkSampler)pSamplerState->resource_Vulkan, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyQuery(GPUQuery *pQuery)
 	{
@@ -4130,6 +4130,12 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_Vulkan::DestroyComputePSO(ComputePSO* pso)
 	{
 		vkDestroyPipeline(device, (VkPipeline)pso->pipeline_Vulkan, nullptr);
+	}
+
+
+	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const std::string& name)
+	{
+
 	}
 
 

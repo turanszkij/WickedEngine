@@ -8,44 +8,79 @@
 TEXTURE2D(input, float4, TEXSLOT_UNIQUE0);
 RWTEXTURE2D(input_output, MIP_OUTPUT_FORMAT, 0);
 
-// Shader requires feature: Typed UAV additional format loads!
+static const uint TILE_BORDER = 4;
+static const uint TILE_SIZE = TILE_BORDER + GENERATEMIPCHAIN_2D_BLOCK_SIZE + TILE_BORDER;
+groupshared float4 tile[TILE_SIZE * TILE_SIZE];
+
+#define FAKE_GAUSS // this is not completely correct, but two-pass, so faster
+
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
 {
-#ifndef SHADERCOMPILER_SPIRV
+	uint i;
 
-	// Determine if the thread is alive (it is alive when the dispatchthreadID can directly index a pixel)
-	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
+	// First, we prewarm the tile cache, including border region:
+	const uint2 tile_upperleft = Gid.xy * GENERATEMIPCHAIN_2D_BLOCK_SIZE - TILE_BORDER;
+	const uint2 co[] = {
+		uint2(0, 0), uint2(1, 0),
+		uint2(0, 1), uint2(1, 1)
+	};
+	for (i = 0; i < 4; ++i)
 	{
-		// Do a bilinear sample first and write it out:
-		input_output[DTid.xy] = input.SampleLevel(sampler_linear_clamp, (DTid.xy + 0.5f) / (float2)outputResolution.xy, 0);
-		DeviceMemoryBarrier();
+		const uint2 coord = GTid.xy * 2 + co[i];
+		tile[flatten2D(coord, TILE_SIZE)] = input.SampleLevel(sampler_linear_clamp, (tile_upperleft + coord + 0.5f) / (float2)outputResolution.xy, 0);
+	}
+	GroupMemoryBarrierWithGroupSync();
 
-		uint i = 0;
-		float4 sum = 0;
+	const int2 thread_to_cache = GTid.xy + TILE_BORDER;
 
-		// Gather samples in the X (horizontal) direction:
-		[unroll]
-		for (i = 0; i < 9; ++i)
-		{
-			sum += input_output[DTid.xy + uint2(gaussianOffsets[i], 0)] * gaussianWeightsNormalized[i];
-		}
-		// Write out the result of the horizontal blur:
-		DeviceMemoryBarrier();
-		input_output[DTid.xy] = sum;
-		DeviceMemoryBarrier();
-		sum = 0;
+	float4 sum = 0;
 
-		// Gather samples in the Y (vertical) direction:
-		[unroll]
-		for (i = 0; i < 9; ++i)
-		{
-			sum += input_output[DTid.xy + uint2(0, gaussianOffsets[i])] * gaussianWeightsNormalized[i];
-		}
-		// Write out the result of the vertical blur:
-		DeviceMemoryBarrier();
-		input_output[DTid.xy] = sum;
+
+#ifdef FAKE_GAUSS
+
+	// Horizontal accumulation for each tile pixel, with help of the border region
+	for (i = 0; i < 9; ++i)
+	{
+		const uint2 coord = thread_to_cache + int2(gaussianOffsets[i], 0);
+		sum += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[i];
 	}
 
-#endif
+	GroupMemoryBarrierWithGroupSync();
+
+	// write out into cache (excluding border region):
+	tile[flatten2D(thread_to_cache, TILE_SIZE)] = sum;
+
+	GroupMemoryBarrierWithGroupSync();
+
+	sum = 0;
+
+	// Vertical accumulation for each tile pixel, with help of the border region
+	for (i = 0; i < 9; ++i)
+	{
+		const uint2 coord = thread_to_cache + int2(0, gaussianOffsets[i]);
+		sum += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[i];
+	}
+
+#else
+
+	for (i = 0; i < 9; ++i)
+	{
+		float4 sumY = 0;
+		for (uint j = 0; j < 9; ++j)
+		{
+			const uint2 coord = thread_to_cache + int2(gaussianOffsets[i], gaussianOffsets[j]);
+			sumY += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[j];
+		}
+		sum += sumY * gaussianWeightsNormalized[i];
+	}
+
+#endif // FAST_GAUSS
+
+
+	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
+	{
+		// Each valid thread writes out one pixel:
+		input_output[DTid.xy] = sum;
+	}
 }

@@ -18,7 +18,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y && DTid.z < outputResolution.z)
 	{
 		// Do a bilinear sample first and write it out:
-		input_output[DTid] = input.SampleLevel(sampler_linear_clamp, (DTid + 0.5f) / (float3)outputResolution, 0);
+		input_output[DTid] = input.SampleLevel(sampler_linear_clamp, ((float3)DTid + 0.5f) / (float3)outputResolution, 0);
 		DeviceMemoryBarrier();
 
 		uint i = 0;

@@ -97,6 +97,7 @@ namespace wiGraphicsTypes
 		SAFE_INIT(UAV_DX11);
 		UAV_DX12 = WI_NULL_HANDLE;
 		UAV_Vulkan = WI_NULL_HANDLE;
+		resource_DX11 = WI_NULL_HANDLE;
 		resource_DX12 = WI_NULL_HANDLE;
 		resource_Vulkan = WI_NULL_HANDLE;
 		resourceMemory_Vulkan = WI_NULL_HANDLE;
@@ -111,7 +112,6 @@ namespace wiGraphicsTypes
 
 	GPUBuffer::GPUBuffer() : GPUResource()
 	{
-		SAFE_INIT(resource_DX11);
 		CBV_DX12 = WI_NULL_HANDLE;
 	}
 	GPUBuffer::~GPUBuffer()
@@ -204,7 +204,6 @@ namespace wiGraphicsTypes
 
 	Texture1D::Texture1D() :Texture()
 	{
-		SAFE_INIT(texture1D_DX11);
 	}
 	Texture1D::~Texture1D()
 	{
@@ -216,7 +215,6 @@ namespace wiGraphicsTypes
 
 	Texture2D::Texture2D() :Texture()
 	{
-		SAFE_INIT(texture2D_DX11);
 		SAFE_INIT(DSV_DX11);
 		DSV_DX12 = WI_NULL_HANDLE;
 		DSV_Vulkan = WI_NULL_HANDLE;
@@ -231,7 +229,6 @@ namespace wiGraphicsTypes
 
 	Texture3D::Texture3D() :Texture()
 	{
-		SAFE_INIT(texture3D_DX11);
 	}
 	Texture3D::~Texture3D()
 	{

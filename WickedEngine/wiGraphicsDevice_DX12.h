@@ -194,6 +194,8 @@ namespace wiGraphicsTypes
 		virtual void DestroyGraphicsPSO(GraphicsPSO* pso) override;
 		virtual void DestroyComputePSO(ComputePSO* pso) override;
 
+		virtual void SetName(GPUResource* pResource, const std::string& name) override;
+
 		virtual void PresentBegin() override;
 		virtual void PresentEnd() override;
 
