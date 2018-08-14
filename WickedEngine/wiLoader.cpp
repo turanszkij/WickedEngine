@@ -2904,13 +2904,105 @@ void Model::LoadFromDisk(const std::string& fileName)
 			this->materials.insert(make_pair(material->name, material));
 		}
 
-		//const tinygltf::Scene &scene = gltfModel.scenes[gltfModel.defaultScene];
+		for (auto& skin : gltfModel.skins)
+		{
+			Armature* armature = new Armature(skin.name);
+			this->armatures.insert(armature);
 
-		//for (size_t i = 0; i < scene.nodes.size(); i++) 
-		//{
-		//	const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+			const tinygltf::Node& skeleton_node = gltfModel.nodes[skin.skeleton];
+			const size_t jointCount = skin.joints.size();
 
-		//}
+			armature->boneCollection.resize(jointCount);
+
+			// Create bone collection:
+			for (size_t i = 0; i < jointCount; ++i)
+			{
+				int jointIndex = skin.joints[i];
+				const tinygltf::Node& joint_node = gltfModel.nodes[jointIndex];
+
+				Bone* bone = new Bone(joint_node.name);
+				armature->boneCollection[i] = bone;
+
+				if (!joint_node.scale.empty())
+				{
+					bone->scale_rest = XMFLOAT3((float)joint_node.scale[0], (float)joint_node.scale[1], (float)joint_node.scale[2]);
+				}
+				if (!joint_node.rotation.empty())
+				{
+					bone->rotation_rest = XMFLOAT4((float)joint_node.rotation[0], (float)joint_node.rotation[1], (float)joint_node.rotation[2], (float)joint_node.rotation[3]);
+				}
+				if (!joint_node.translation.empty())
+				{
+					bone->translation_rest = XMFLOAT3((float)joint_node.translation[0], (float)joint_node.translation[1], (float)joint_node.translation[2]);
+				}
+
+
+				XMVECTOR quaternion = XMLoadFloat4(&bone->rotation_rest);
+				XMVECTOR translation = XMLoadFloat3(&bone->translation_rest);
+
+				XMMATRIX frame;
+				frame = XMMatrixRotationQuaternion(quaternion) * XMMatrixTranslationFromVector(translation);
+
+				XMStoreFloat3(&bone->translation_rest, translation);
+				XMStoreFloat4(&bone->rotation_rest, quaternion);
+				XMStoreFloat4x4(&bone->world_rest, frame);
+				XMStoreFloat4x4(&bone->restInv, XMMatrixInverse(0, frame));
+			}
+
+			// Create bone collection hierarchy:
+			for (size_t i = 0; i < jointCount; ++i)
+			{
+				int jointIndex = skin.joints[i];
+				const tinygltf::Node& joint_node = gltfModel.nodes[jointIndex];
+
+				for (int childJointIndex : joint_node.children)
+				{
+					for (size_t j = 0; j < jointCount; ++j)
+					{
+						if (skin.joints[j] == childJointIndex)
+						{
+							armature->boneCollection[i]->childrenI.push_back(armature->boneCollection[j]);
+						}
+					}
+				}
+			}
+
+			for (auto& bone : armature->boneCollection)
+			{
+				if (bone->parent == nullptr)
+				{
+					armature->rootbones.push_back(bone);
+				}
+			}
+
+			// Bind-pose:
+			{
+				const tinygltf::Accessor& accessor = gltfModel.accessors[skin.inverseBindMatrices];
+				const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+				const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+
+				int stride = accessor.ByteStride(bufferView);
+				size_t count = accessor.count;
+				assert(count == jointCount);
+
+				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+				assert(stride == 64);
+				for (size_t i = 0; i < count; ++i)
+				{
+					const XMFLOAT4X4& mat = ((XMFLOAT4X4*)data)[i];
+					armature->boneCollection[i]->restInv = mat;
+
+					XMFLOAT4X4 id = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+					armature->boneCollection[i]->boneRelativity = id;
+				}
+			}
+		}
+
+		for (auto& anim : gltfModel.animations)
+		{
+			AnimationLayer animLayer;
+		}
 
 		for (auto& x : gltfModel.meshes)
 		{
@@ -2920,21 +3012,65 @@ void Model::LoadFromDisk(const std::string& fileName)
 			object->mesh = mesh;
 			mesh->renderable = true;
 
+			if (!this->armatures.empty())
+			{
+				mesh->armature = *this->armatures.begin();
+				mesh->armatureName = mesh->armature->name;
+			}
+
 			XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 			XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
 			for (auto& prim : x.primitives)
 			{
+				assert(prim.indices >= 0);
+
 				// Fill indices:
 				const tinygltf::Accessor& accessor = gltfModel.accessors[prim.indices];
-				const tinygltf::BufferView& bufferView = gltfModel.bufferViews[prim.indices];
+				const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
 				const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
 
 				int stride = accessor.ByteStride(bufferView);
-				mesh->indices.resize(accessor.count);
-				for (size_t i = 0; i < accessor.count; ++i)
+				size_t count = accessor.count;
+
+				size_t offset = mesh->indices.size();
+				mesh->indices.resize(offset + count);
+
+				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+				if (stride == 1)
 				{
-					mesh->indices[i] = *(buffer.data.data() + bufferView.byteOffset + i * stride);
+					for (size_t i = 0; i < count; i += 3)
+					{
+						// reorder indices:
+						mesh->indices[offset + i + 0] = ((unsigned char*)data)[i + 0];
+						mesh->indices[offset + i + 1] = ((unsigned char*)data)[i + 2];
+						mesh->indices[offset + i + 2] = ((unsigned char*)data)[i + 1];
+					}
+				}
+				else if (stride == 2)
+				{
+					for (size_t i = 0; i < count; i += 3)
+					{
+						// reorder indices:
+						mesh->indices[offset + i + 0] = ((unsigned short*)data)[i + 0];
+						mesh->indices[offset + i + 1] = ((unsigned short*)data)[i + 2];
+						mesh->indices[offset + i + 2] = ((unsigned short*)data)[i + 1];
+					}
+				}
+				else if (stride == 4)
+				{
+					for (size_t i = 0; i < count; i += 3)
+					{
+						// reorder indices:
+						mesh->indices[offset + i + 0] = ((unsigned int*)data)[i + 0];
+						mesh->indices[offset + i + 1] = ((unsigned int*)data)[i + 2];
+						mesh->indices[offset + i + 2] = ((unsigned int*)data)[i + 1];
+					}
+				}
+				else
+				{
+					assert(0 && "unsupported index stride!");
 				}
 
 
@@ -2955,58 +3091,92 @@ void Model::LoadFromDisk(const std::string& fileName)
 				mesh->subsets.push_back(subset);
 			}
 
+			int matIndex = -1;
 			for (auto& prim : x.primitives)
 			{
+				matIndex++;
+				size_t offset = mesh->vertices_FULL.size();
+
 				for (auto& attr : prim.attributes)
 				{
 					const string& attr_name = attr.first;
 					int attr_data = attr.second;
 
 					const tinygltf::Accessor& accessor = gltfModel.accessors[attr_data];
-					const tinygltf::BufferView& bufferView = gltfModel.bufferViews[attr_data];
+					const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
 					const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
 
 					int stride = accessor.ByteStride(bufferView);
 					size_t count = accessor.count;
 
-					if (mesh->vertices_FULL.empty())
+					if (mesh->vertices_FULL.size() == offset)
 					{
-						mesh->vertices_FULL.resize(count);
+						mesh->vertices_FULL.resize(offset + count);
 					}
 
-					float* data = (float*)(buffer.data.data() + bufferView.byteOffset);
+					const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
-					if (attr_name.find("POSITION") != string::npos)
+					if (!attr_name.compare("POSITION"))
 					{
+						assert(stride == 12);
 						for (size_t i = 0; i < count; ++i)
 						{
-							XMFLOAT3 pos;
-							pos.x = data[i * 3 + 0];
-							pos.y = data[i * 3 + 1];
-							pos.z = data[i * 3 + 2];
+							const XMFLOAT3& pos = ((XMFLOAT3*)data)[i];
 
-							mesh->vertices_FULL[i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
+							mesh->vertices_FULL[offset + i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
 
 							min = wiMath::Min(min, pos);
 							max = wiMath::Max(max, pos);
 						}
 					}
-					else if (attr_name.find("NORMAL") != string::npos)
+					else if (!attr_name.compare("NORMAL"))
 					{
+						assert(stride == 12);
 						for (size_t i = 0; i < count; ++i)
 						{
-							mesh->vertices_FULL[i].nor.x = data[i * 3 + 0];
-							mesh->vertices_FULL[i].nor.y = data[i * 3 + 1];
-							mesh->vertices_FULL[i].nor.z = data[i * 3 + 2];
+							const XMFLOAT3& nor = ((XMFLOAT3*)data)[i];
+
+							mesh->vertices_FULL[offset + i].nor.x = nor.x;
+							mesh->vertices_FULL[offset + i].nor.y = nor.y;
+							mesh->vertices_FULL[offset + i].nor.z = nor.z;
 						}
 					}
-					else if (attr_name.find("TEXCOORD_0") != string::npos)
+					else if (!attr_name.compare("TEXCOORD_0"))
 					{
+						assert(stride == 8);
 						for (size_t i = 0; i < count; ++i)
 						{
-							mesh->vertices_FULL[i].tex.x = data[i * 2 + 0];
-							mesh->vertices_FULL[i].tex.y = data[i * 2 + 1];
-							mesh->vertices_FULL[i].tex.z = (float)prim.material;
+							const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
+
+							mesh->vertices_FULL[offset + i].tex.x = tex.x;
+							mesh->vertices_FULL[offset + i].tex.y = tex.y;
+							mesh->vertices_FULL[offset + i].tex.z = (float)matIndex /*prim.material*/;
+						}
+					}
+					else if (!attr_name.compare("JOINTS_0"))
+					{
+						assert(stride == 8);
+						struct JointTmp
+						{
+							unsigned short ind[4];
+						};
+
+						for (size_t i = 0; i < count; ++i)
+						{
+							const JointTmp& joint = ((JointTmp*)data)[i];
+
+							mesh->vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
+							mesh->vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
+							mesh->vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
+							mesh->vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+						}
+					}
+					else if (!attr_name.compare("WEIGHTS_0"))
+					{
+						assert(stride == 16);
+						for (size_t i = 0; i < count; ++i)
+						{
+							mesh->vertices_FULL[offset + i].wei = ((XMFLOAT4*)data)[i];
 						}
 					}
 
