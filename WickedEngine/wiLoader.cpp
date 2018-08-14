@@ -2904,15 +2904,15 @@ void Model::LoadFromDisk(const std::string& fileName)
 			this->materials.insert(make_pair(material->name, material));
 		}
 
-		const tinygltf::Scene &scene = gltfModel.scenes[gltfModel.defaultScene];
+		//const tinygltf::Scene &scene = gltfModel.scenes[gltfModel.defaultScene];
 
-		for (size_t i = 0; i < scene.nodes.size(); i++) 
-		{
-			const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+		//for (size_t i = 0; i < scene.nodes.size(); i++) 
+		//{
+		//	const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
 
-		}
+		//}
 
-		for (auto&x : gltfModel.meshes)
+		for (auto& x : gltfModel.meshes)
 		{
 			Object* object = new Object(x.name);
 			Mesh* mesh = new Mesh(x.name + "_mesh");
@@ -2925,14 +2925,104 @@ void Model::LoadFromDisk(const std::string& fileName)
 
 			for (auto& prim : x.primitives)
 			{
-				int ind = prim.indices;
+				// Fill indices:
+				const tinygltf::Accessor& accessor = gltfModel.accessors[prim.indices];
+				const tinygltf::BufferView& bufferView = gltfModel.bufferViews[prim.indices];
+				const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+
+				int stride = accessor.ByteStride(bufferView);
+				mesh->indices.resize(accessor.count);
+				for (size_t i = 0; i < accessor.count; ++i)
+				{
+					mesh->indices[i] = *(buffer.data.data() + bufferView.byteOffset + i * stride);
+				}
+
+
+				// Create mesh subset:
+				MeshSubset subset;
+
+				const string& mat_name = gltfModel.materials[prim.material].name;
+				auto& found_mat = this->materials.find(mat_name);
+				if (found_mat != this->materials.end())
+				{
+					subset.material = found_mat->second;
+				}
+				else
+				{
+					subset.material = new Material("gltfLoader-defaultMat");
+				}
+
+				mesh->subsets.push_back(subset);
+			}
+
+			for (auto& prim : x.primitives)
+			{
+				for (auto& attr : prim.attributes)
+				{
+					const string& attr_name = attr.first;
+					int attr_data = attr.second;
+
+					const tinygltf::Accessor& accessor = gltfModel.accessors[attr_data];
+					const tinygltf::BufferView& bufferView = gltfModel.bufferViews[attr_data];
+					const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+
+					int stride = accessor.ByteStride(bufferView);
+					size_t count = accessor.count;
+
+					if (mesh->vertices_FULL.empty())
+					{
+						mesh->vertices_FULL.resize(count);
+					}
+
+					float* data = (float*)(buffer.data.data() + bufferView.byteOffset);
+
+					if (attr_name.find("POSITION") != string::npos)
+					{
+						for (size_t i = 0; i < count; ++i)
+						{
+							XMFLOAT3 pos;
+							pos.x = data[i * 3 + 0];
+							pos.y = data[i * 3 + 1];
+							pos.z = data[i * 3 + 2];
+
+							mesh->vertices_FULL[i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
+
+							min = wiMath::Min(min, pos);
+							max = wiMath::Max(max, pos);
+						}
+					}
+					else if (attr_name.find("NORMAL") != string::npos)
+					{
+						for (size_t i = 0; i < count; ++i)
+						{
+							mesh->vertices_FULL[i].nor.x = data[i * 3 + 0];
+							mesh->vertices_FULL[i].nor.y = data[i * 3 + 1];
+							mesh->vertices_FULL[i].nor.z = data[i * 3 + 2];
+						}
+					}
+					else if (attr_name.find("TEXCOORD_0") != string::npos)
+					{
+						for (size_t i = 0; i < count; ++i)
+						{
+							mesh->vertices_FULL[i].tex.x = data[i * 2 + 0];
+							mesh->vertices_FULL[i].tex.y = data[i * 2 + 1];
+							mesh->vertices_FULL[i].tex.z = (float)prim.material;
+						}
+					}
+
+				}
+
 			}
 
 			mesh->aabb.create(min, max);
 
+			object->meshName = mesh->name;
+
 			this->objects.insert(object);
 			this->meshes.insert(make_pair(mesh->name, mesh));
 		}
+
+		this->FinishLoading();
 
 	}
 	else
