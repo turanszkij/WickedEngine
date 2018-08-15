@@ -632,12 +632,9 @@ struct Action
 };
 struct ActionFrames
 {
-	std::vector< KeyFrame > keyframesRot;
-	std::vector< KeyFrame > keyframesPos;
-	std::vector< KeyFrame > keyframesSca;
-
-	ActionFrames(){
-	}
+	std::vector<KeyFrame> keyframesRot;
+	std::vector<KeyFrame> keyframesPos;
+	std::vector<KeyFrame> keyframesSca;
 };
 struct Bone : public Transform
 {

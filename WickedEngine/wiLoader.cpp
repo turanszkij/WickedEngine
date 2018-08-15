@@ -19,6 +19,8 @@
 #include "wiObjLoader.h"
 
 #define TINYGLTF_IMPLEMENTATION
+//#define TINYGLTF_NO_STB_IMAGE
+//#define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "Utility/tiny_gltf.h"
 
 #include <algorithm>
@@ -991,6 +993,24 @@ void LoadWiDecals(const std::string&directory, const std::string& name, const st
 	}
 	file.close();
 }
+
+
+
+//namespace tinygltf
+//{
+//	bool LoadImageData(Image *image, std::string *err, std::string *warn,
+//		int req_width, int req_height, const unsigned char *bytes,
+//		int size, void *)
+//	{
+//		return false;
+//	}
+//
+//	bool WriteImageData(const std::string *basepath, const std::string *filename,
+//		Image *image, bool embedImages, void *)
+//	{
+//		return false;
+//	}
+//}
 
 
 #pragma region SCENE
@@ -2882,6 +2902,8 @@ void Model::LoadFromDisk(const std::string& fileName)
 		std::string err;
 		std::string warn;
 
+		loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
+
 		bool ret;
 		if (!extension.compare("GLTF"))
 		{
@@ -2902,14 +2924,99 @@ void Model::LoadFromDisk(const std::string& fileName)
 		{
 			Material* material = new Material(x.name);
 			this->materials.insert(make_pair(material->name, material));
+
+			material->baseColor = XMFLOAT3(1, 1, 1);
+			material->roughness = 0.2f;
+			material->metalness = 0.0f;
+			material->reflectance = 0.2f;
+			material->emissive = 0;
+
+			auto& baseColorTexture = x.values.find("baseColorTexture");
+			auto& metallicRoughnessTexture = x.values.find("metallicRoughnessTexture");
+			auto& normalTexture = x.additionalValues.find("normalTexture");
+			auto& emissiveTexture = x.additionalValues.find("emissiveTexture");
+			auto& occlusionTexture = x.additionalValues.find("occlusionTexture");
+
+			auto& baseColorFactor = x.values.find("baseColorFactor");
+			auto& roughnessFactor = x.values.find("roughnessFactor");
+			auto& metallicFactor = x.values.find("metallicFactor");
+			auto& emissiveFactor = x.additionalValues.find("emissiveFactor");
+			auto& alphaCutoff = x.additionalValues.find("alphaCutoff");
+
+			if (baseColorTexture != x.values.end())
+			{
+				auto& tex = gltfModel.textures[baseColorTexture->second.TextureIndex()];
+				auto& img = gltfModel.images[tex.source];
+				material->textureName = img.uri;
+				if(!material->textureName.empty())
+					material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(material->textureName);
+			}
+			if (normalTexture != x.additionalValues.end())
+			{
+				auto& tex = gltfModel.textures[normalTexture->second.TextureIndex()];
+				auto& img = gltfModel.images[tex.source];
+				material->normalMapName = img.uri;
+				if (!material->normalMapName.empty())
+					material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->normalMapName);
+			}
+			if (emissiveTexture != x.additionalValues.end())
+			{
+				auto& tex = gltfModel.textures[emissiveTexture->second.TextureIndex()];
+				auto& img = gltfModel.images[tex.source];
+				material->surfaceMapName = img.uri;
+				if (!material->surfaceMapName.empty())
+					material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->surfaceMapName);
+			}
+
+			if (baseColorFactor != x.values.end())
+			{
+				material->baseColor.x = static_cast<float>(baseColorFactor->second.ColorFactor()[0]);
+				material->baseColor.y = static_cast<float>(baseColorFactor->second.ColorFactor()[1]);
+				material->baseColor.z = static_cast<float>(baseColorFactor->second.ColorFactor()[2]);
+			}
+			if (roughnessFactor != x.values.end())
+			{
+				material->roughness = static_cast<float>(roughnessFactor->second.Factor());
+			}
+			if (metallicFactor != x.values.end())
+			{
+				material->metalness = static_cast<float>(metallicFactor->second.Factor());
+			}
+			if (emissiveFactor != x.additionalValues.end())
+			{
+				material->emissive = static_cast<float>(emissiveFactor->second.ColorFactor()[0]);
+			}
+			if (alphaCutoff != x.additionalValues.end())
+			{
+				material->alphaRef = static_cast<float>(alphaCutoff->second.Factor());
+			}
+
 		}
 
+		vector<Armature*> armatureArray;
 		for (auto& skin : gltfModel.skins)
 		{
 			Armature* armature = new Armature(skin.name);
 			this->armatures.insert(armature);
 
+			armatureArray.push_back(armature);
+
 			const tinygltf::Node& skeleton_node = gltfModel.nodes[skin.skeleton];
+
+			if (!skeleton_node.scale.empty())
+			{
+				armature->scale_rest = XMFLOAT3((float)skeleton_node.scale[0], (float)skeleton_node.scale[1], (float)skeleton_node.scale[2]);
+			}
+			if (!skeleton_node.rotation.empty())
+			{
+				armature->rotation_rest = XMFLOAT4((float)skeleton_node.rotation[0], (float)skeleton_node.rotation[1], (float)skeleton_node.rotation[2], (float)skeleton_node.rotation[3]);
+			}
+			if (!skeleton_node.translation.empty())
+			{
+				armature->translation_rest = XMFLOAT3((float)skeleton_node.translation[0], (float)skeleton_node.translation[1], (float)skeleton_node.translation[2]);
+			}
+
+
 			const size_t jointCount = skin.joints.size();
 
 			armature->boneCollection.resize(jointCount);
@@ -2921,6 +3028,14 @@ void Model::LoadFromDisk(const std::string& fileName)
 				const tinygltf::Node& joint_node = gltfModel.nodes[jointIndex];
 
 				Bone* bone = new Bone(joint_node.name);
+				if (bone->name.empty())
+				{
+					// GLTF might not contain bone names...
+					stringstream ss("");
+					ss << "Bone_" << i;
+					bone->name = ss.str();
+				}
+
 				armature->boneCollection[i] = bone;
 
 				if (!joint_node.scale.empty())
@@ -2936,20 +3051,44 @@ void Model::LoadFromDisk(const std::string& fileName)
 					bone->translation_rest = XMFLOAT3((float)joint_node.translation[0], (float)joint_node.translation[1], (float)joint_node.translation[2]);
 				}
 
+				XMVECTOR s = XMLoadFloat3(&bone->scale_rest);
+				XMVECTOR r = XMLoadFloat4(&bone->rotation_rest);
+				XMVECTOR t = XMLoadFloat3(&bone->translation_rest);
+				XMMATRIX& w =
+					XMMatrixScalingFromVector(s)*
+					XMMatrixRotationQuaternion(r)*
+					XMMatrixTranslationFromVector(t)
+					;
+				XMStoreFloat4x4(&bone->world_rest, w);
+				bone->world = bone->world_rest;
+				bone->translation = bone->translation_rest;
+				bone->rotation = bone->rotation_rest;
+				bone->scale = bone->scale_rest;
 
-				XMVECTOR quaternion = XMLoadFloat4(&bone->rotation_rest);
-				XMVECTOR translation = XMLoadFloat3(&bone->translation_rest);
-
-				XMMATRIX frame;
-				frame = XMMatrixRotationQuaternion(quaternion) * XMMatrixTranslationFromVector(translation);
-
-				XMStoreFloat3(&bone->translation_rest, translation);
-				XMStoreFloat4(&bone->rotation_rest, quaternion);
-				XMStoreFloat4x4(&bone->world_rest, frame);
-				XMStoreFloat4x4(&bone->restInv, XMMatrixInverse(0, frame));
+				XMStoreFloat4x4(&bone->restInv, XMMatrixInverse(nullptr, w));
 			}
 
-			// Create bone collection hierarchy:
+			//// Bind-pose:
+			//{
+			//	const tinygltf::Accessor& accessor = gltfModel.accessors[skin.inverseBindMatrices];
+			//	const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+			//	const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+
+			//	int stride = accessor.ByteStride(bufferView);
+			//	size_t count = accessor.count;
+			//	assert(count == jointCount);
+
+			//	const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+			//	assert(stride == 64);
+			//	for (size_t i = 0; i < count; ++i)
+			//	{
+			//		const XMFLOAT4X4& mat = ((XMFLOAT4X4*)data)[i];
+			//		armature->boneCollection[i]->restInv = mat;
+			//	}
+			//}
+
+			// Create bone name hierarchy:
 			for (size_t i = 0; i < jointCount; ++i)
 			{
 				int jointIndex = skin.joints[i];
@@ -2961,60 +3100,167 @@ void Model::LoadFromDisk(const std::string& fileName)
 					{
 						if (skin.joints[j] == childJointIndex)
 						{
-							armature->boneCollection[i]->childrenI.push_back(armature->boneCollection[j]);
+							armature->boneCollection[j]->parentName = armature->boneCollection[i]->name;
+							break;
 						}
 					}
 				}
 			}
 
-			for (auto& bone : armature->boneCollection)
-			{
-				if (bone->parent == nullptr)
-				{
-					armature->rootbones.push_back(bone);
-				}
-			}
+			// Final hierarchy and extra matrices created here:
+			armature->CreateFamily();
 
-			// Bind-pose:
-			{
-				const tinygltf::Accessor& accessor = gltfModel.accessors[skin.inverseBindMatrices];
-				const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-				const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
-
-				int stride = accessor.ByteStride(bufferView);
-				size_t count = accessor.count;
-				assert(count == jointCount);
-
-				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-				assert(stride == 64);
-				for (size_t i = 0; i < count; ++i)
-				{
-					const XMFLOAT4X4& mat = ((XMFLOAT4X4*)data)[i];
-					armature->boneCollection[i]->restInv = mat;
-
-					XMFLOAT4X4 id = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-					armature->boneCollection[i]->boneRelativity = id;
-				}
-			}
 		}
 
+		int animID = 0;
 		for (auto& anim : gltfModel.animations)
 		{
-			AnimationLayer animLayer;
+			if (armatureArray.empty())
+			{
+				break;
+			}
+			Armature* armature = armatureArray[0];
+
+			for (Bone* bone : armature->boneCollection)
+			{
+				bone->actionFrames.push_back(ActionFrames());
+			}
+
+			Action action;
+			action.name = anim.name;
+			if (action.name.empty())
+			{
+				stringstream ss("");
+				ss << "Action_" << animID++;
+				action.name = ss.str();
+			}
+
+			for (auto& channel : anim.channels)
+			{
+				const tinygltf::Node& target_node = gltfModel.nodes[channel.target_node];
+				const tinygltf::AnimationSampler& sam = anim.samplers[channel.sampler];
+
+				Bone* bone = nullptr;
+
+				// Search for the armature + bone this animation belongs to:
+				{
+					const auto& skin = gltfModel.skins[0];
+
+					const size_t jointCount = skin.joints.size();
+					assert(armature->boneCollection.size() == jointCount);
+
+					for (size_t i = 0; i < jointCount; ++i)
+					{
+						int jointIndex = skin.joints[i];
+
+						if (jointIndex == channel.target_node)
+						{
+							bone = armature->boneCollection[i];
+							break;
+						}
+					}
+				}
+
+				if (bone == nullptr)
+				{
+					assert(0 && "Corresponding bone not found!");
+					continue;
+				}
+				
+
+				vector<KeyFrame> keyframes;
+
+				// AnimationSampler input = keyframe times
+				{
+					const tinygltf::Accessor& accessor = gltfModel.accessors[sam.input];
+					const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+					const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+
+					assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+
+					int stride = accessor.ByteStride(bufferView);
+					size_t count = accessor.count;
+
+					keyframes.resize(count);
+
+					const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+					assert(stride == 4);
+					for (size_t i = 0; i < count; ++i)
+					{
+						keyframes[i].frameI = (int)( ((float*)data)[i] * 60 ); // !!! convert from time-base to frame-based !!!
+
+						action.frameCount = max(action.frameCount, keyframes[i].frameI);
+					}
+
+				}
+
+				// AnimationSampler output = keyframe data
+				{
+					const tinygltf::Accessor& accessor = gltfModel.accessors[sam.output];
+					const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
+					const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+
+					int stride = accessor.ByteStride(bufferView);
+					size_t count = accessor.count;
+
+					const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+					if (!channel.target_path.compare("scale"))
+					{
+						assert(stride == sizeof(XMFLOAT3));
+						for (size_t i = 0; i < count; ++i)
+						{
+							const XMFLOAT3& sca = ((XMFLOAT3*)data)[i];
+							keyframes[i].data = XMFLOAT4(sca.x, sca.y, sca.z, 0);
+						}
+						bone->actionFrames.back().keyframesSca.insert(bone->actionFrames.back().keyframesSca.end(), keyframes.begin(), keyframes.end());
+					}
+					else if (!channel.target_path.compare("rotation"))
+					{
+						assert(stride == sizeof(XMFLOAT4));
+						for (size_t i = 0; i < count; ++i)
+						{
+							const XMFLOAT4& rot = ((XMFLOAT4*)data)[i];
+							keyframes[i].data = rot;
+						}
+						bone->actionFrames.back().keyframesRot.insert(bone->actionFrames.back().keyframesRot.end(), keyframes.begin(), keyframes.end());
+					}
+					else if (!channel.target_path.compare("translation"))
+					{
+						assert(stride == sizeof(XMFLOAT3));
+						for (size_t i = 0; i < count; ++i)
+						{
+							const XMFLOAT3& tra = ((XMFLOAT3*)data)[i];
+							keyframes[i].data = XMFLOAT4(tra.x, tra.y, tra.z, 1);
+						}
+						bone->actionFrames.back().keyframesPos.insert(bone->actionFrames.back().keyframesPos.end(), keyframes.begin(), keyframes.end());
+					}
+					else
+					{
+						assert(0);
+					}
+				}
+
+
+			}
+
+			armature->actions.push_back(action);
+
 		}
 
+		vector<Mesh*> meshArray;
 		for (auto& x : gltfModel.meshes)
 		{
-			Object* object = new Object(x.name);
-			Mesh* mesh = new Mesh(x.name + "_mesh");
+			Mesh* mesh = new Mesh(x.name);
 
-			object->mesh = mesh;
+			meshArray.push_back(mesh);
+
 			mesh->renderable = true;
 
-			if (!this->armatures.empty())
+			if (!armatureArray.empty())
 			{
-				mesh->armature = *this->armatures.begin();
+				mesh->armature = armatureArray[0]; // How to resolve?
 				mesh->armatureName = mesh->armature->name;
 			}
 
@@ -3186,10 +3432,33 @@ void Model::LoadFromDisk(const std::string& fileName)
 
 			mesh->aabb.create(min, max);
 
-			object->meshName = mesh->name;
-
-			this->objects.insert(object);
 			this->meshes.insert(make_pair(mesh->name, mesh));
+		}
+
+		// Object transformations and mesh links:
+		for (auto& node : gltfModel.nodes)
+		{
+			if (node.mesh >= 0)
+			{
+				Object* object = new Object(node.name);
+				this->objects.insert(object);
+
+				object->mesh = meshArray[node.mesh];
+				object->meshName = object->mesh->name;
+
+				if (!node.scale.empty())
+				{
+					object->scale_rest = XMFLOAT3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
+				}
+				if (!node.rotation.empty())
+				{
+					object->rotation_rest = XMFLOAT4((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2], (float)node.rotation[3]);
+				}
+				if (!node.translation.empty())
+				{
+					object->translation_rest = XMFLOAT3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
+				}
+			}
 		}
 
 		this->FinishLoading();
@@ -4206,7 +4475,7 @@ void Armature::RecursiveRest(Bone* bone)
 		XMStoreFloat4x4(&bone->recursiveRestInv, XMMatrixInverse(0, XMLoadFloat4x4(&bone->recursiveRest)));
 	}
 
-	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
+	for (size_t i = 0; i < bone->childrenI.size(); ++i) {
 		RecursiveRest(bone->childrenI[i]);
 	}
 }
@@ -5122,3 +5391,6 @@ void EnvironmentProbe::Serialize(wiArchive& archive)
 	}
 }
 #pragma endregion
+
+
+
