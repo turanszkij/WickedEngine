@@ -641,10 +641,7 @@ struct Bone : public Transform
 	std::vector<std::string> childrenN;
 	std::vector<Bone*> childrenI;
 
-	XMFLOAT4X4 restInv;
 	std::vector<ActionFrames> actionFrames;
-
-	XMFLOAT4X4 recursivePose, recursiveRest, recursiveRestInv;
 
 	// These will be used in the skinning process to transform verts
 	XMFLOAT4X4 boneRelativity;
@@ -658,11 +655,11 @@ struct Bone : public Transform
 		childrenN.clear();
 		childrenI.clear();
 		actionFrames.clear();
-		// create identity action
-		actionFrames.push_back(ActionFrames());
-		actionFrames.back().keyframesPos.push_back(KeyFrame(1, 0, 0, 0, 1));
-		actionFrames.back().keyframesRot.push_back(KeyFrame(1, 0, 0, 0, 1));
-		actionFrames.back().keyframesSca.push_back(KeyFrame(1, 1, 1, 1, 0));
+		//// create identity action
+		//actionFrames.push_back(ActionFrames());
+		//actionFrames.back().keyframesPos.push_back(KeyFrame(1, 0, 0, 0, 1));
+		//actionFrames.back().keyframesRot.push_back(KeyFrame(1, 0, 0, 0, 1));
+		//actionFrames.back().keyframesSca.push_back(KeyFrame(1, 1, 1, 1, 0));
 		length=1.0f;
 		connected = false;
 	}
@@ -768,7 +765,6 @@ public:
 	AnimationLayer* GetAnimLayer(const std::string& name);
 	void AddAnimLayer(const std::string& name);
 	void DeleteAnimLayer(const std::string& name);
-	void RecursiveRest(Bone* bone);
 	virtual void UpdateTransform();
 	void UpdateArmature();
 	void CreateFamily();
@@ -779,13 +775,15 @@ public:
 	ALIGN_16
 
 private:
+	static void RecursiveRest(Bone* bone, XMMATRIX recursiveRest);
+	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentBoneMat);
+
 	enum KeyFrameType {
 		ROTATIONKEYFRAMETYPE,
 		POSITIONKEYFRAMETYPE,
 		SCALARKEYFRAMETYPE,
 	};
-	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
-	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount, const std::vector<KeyFrame>& keyframes, KeyFrameType type);
+	static XMVECTOR InterpolateKeyFrames(float currentFrame, const int frameCount, const std::vector<KeyFrame>& keyframes, KeyFrameType type);
 };
 struct SHCAM{	
 	XMFLOAT4X4 View,Projection;

@@ -93,7 +93,7 @@ void LoadWiArmatures(const std::string& directory, const std::string& name, unor
 						XMStoreFloat3(&armature->boneCollection.back()->translation_rest,translation);
 						XMStoreFloat4(&armature->boneCollection.back()->rotation_rest,quaternion);
 						XMStoreFloat4x4(&armature->boneCollection.back()->world_rest,frame);
-						XMStoreFloat4x4(&armature->boneCollection.back()->restInv,XMMatrixInverse(0,frame));
+						//XMStoreFloat4x4(&armature->boneCollection.back()->restInv,XMMatrixInverse(0,frame));
 						
 					}
 					break;
@@ -668,28 +668,34 @@ void LoadWiActions(const std::string& directory, const std::string& name, unorde
 				case 'r':
 					{
 						int f = 0;
-						float x=0,y=0,z=0,w=0;
-						file>>f>>x>>y>>z>>w;
+						float x = 0, y = 0, z = 0, w = 0;
+						file >> f >> x >> y >> z >> w;
 						if (boneI != nullptr)
-							boneI->actionFrames.back().keyframesRot.push_back(KeyFrame(f,x,y,z,w));
+						{
+							boneI->actionFrames.back().keyframesRot.push_back(KeyFrame(f, x, y, z, w));
+						}
 					}
 					break;
 				case 't':
 					{
 						int f = 0;
-						float x=0,y=0,z=0;
-						file>>f>>x>>y>>z;
+						float x = 0, y = 0, z = 0;
+						file >> f >> x >> y >> z;
 						if (boneI != nullptr)
-							boneI->actionFrames.back().keyframesPos.push_back(KeyFrame(f,x,y,z,0));
+						{
+							boneI->actionFrames.back().keyframesPos.push_back(KeyFrame(f, x, y, z, 0));
+						}
 					}
 					break;
 				case 's':
 					{
 						int f = 0;
-						float x=0,y=0,z=0;
-						file>>f>>x>>y>>z;
-						if(boneI!=nullptr)
-							boneI->actionFrames.back().keyframesSca.push_back(KeyFrame(f,x,y,z,0));
+						float x = 0, y = 0, z = 0;
+						file >> f >> x >> y >> z;
+						if (boneI != nullptr)
+						{
+							boneI->actionFrames.back().keyframesSca.push_back(KeyFrame(f, x, y, z, 0));
+						}
 					}
 					break;
 				default: break;
@@ -2947,7 +2953,7 @@ void Model::LoadFromDisk(const std::string& fileName)
 			{
 				auto& tex = gltfModel.textures[baseColorTexture->second.TextureIndex()];
 				auto& img = gltfModel.images[tex.source];
-				material->textureName = img.uri;
+				material->textureName = directory + img.uri;
 				if(!material->textureName.empty())
 					material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(material->textureName);
 			}
@@ -2955,7 +2961,7 @@ void Model::LoadFromDisk(const std::string& fileName)
 			{
 				auto& tex = gltfModel.textures[normalTexture->second.TextureIndex()];
 				auto& img = gltfModel.images[tex.source];
-				material->normalMapName = img.uri;
+				material->normalMapName = directory + img.uri;
 				if (!material->normalMapName.empty())
 					material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->normalMapName);
 			}
@@ -2963,7 +2969,7 @@ void Model::LoadFromDisk(const std::string& fileName)
 			{
 				auto& tex = gltfModel.textures[emissiveTexture->second.TextureIndex()];
 				auto& img = gltfModel.images[tex.source];
-				material->surfaceMapName = img.uri;
+				material->surfaceMapName = directory + img.uri;
 				if (!material->surfaceMapName.empty())
 					material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->surfaceMapName);
 			}
@@ -3002,20 +3008,6 @@ void Model::LoadFromDisk(const std::string& fileName)
 			armatureArray.push_back(armature);
 
 			const tinygltf::Node& skeleton_node = gltfModel.nodes[skin.skeleton];
-
-			if (!skeleton_node.scale.empty())
-			{
-				armature->scale_rest = XMFLOAT3((float)skeleton_node.scale[0], (float)skeleton_node.scale[1], (float)skeleton_node.scale[2]);
-			}
-			if (!skeleton_node.rotation.empty())
-			{
-				armature->rotation_rest = XMFLOAT4((float)skeleton_node.rotation[0], (float)skeleton_node.rotation[1], (float)skeleton_node.rotation[2], (float)skeleton_node.rotation[3]);
-			}
-			if (!skeleton_node.translation.empty())
-			{
-				armature->translation_rest = XMFLOAT3((float)skeleton_node.translation[0], (float)skeleton_node.translation[1], (float)skeleton_node.translation[2]);
-			}
-
 
 			const size_t jointCount = skin.joints.size();
 
@@ -3060,12 +3052,6 @@ void Model::LoadFromDisk(const std::string& fileName)
 					XMMatrixTranslationFromVector(t)
 					;
 				XMStoreFloat4x4(&bone->world_rest, w);
-				bone->world = bone->world_rest;
-				bone->translation = bone->translation_rest;
-				bone->rotation = bone->rotation_rest;
-				bone->scale = bone->scale_rest;
-
-				XMStoreFloat4x4(&bone->restInv, XMMatrixInverse(nullptr, w));
 			}
 
 			//// Bind-pose:
@@ -3084,7 +3070,9 @@ void Model::LoadFromDisk(const std::string& fileName)
 			//	for (size_t i = 0; i < count; ++i)
 			//	{
 			//		const XMFLOAT4X4& mat = ((XMFLOAT4X4*)data)[i];
-			//		armature->boneCollection[i]->restInv = mat;
+
+			//		Bone* bone = armature->boneCollection[i];
+			//		bone->recursiveRestInv = mat;
 			//	}
 			//}
 
@@ -3188,7 +3176,7 @@ void Model::LoadFromDisk(const std::string& fileName)
 					assert(stride == 4);
 					for (size_t i = 0; i < count; ++i)
 					{
-						keyframes[i].frameI = (int)( ((float*)data)[i] * 60 ); // !!! convert from time-base to frame-based !!!
+						keyframes[i].frameI = (int)( ((float*)data)[i] * 60 ); // !!! converting from time-base to frame-based !!!
 
 						action.frameCount = max(action.frameCount, keyframes[i].frameI);
 					}
@@ -3289,9 +3277,9 @@ void Model::LoadFromDisk(const std::string& fileName)
 					for (size_t i = 0; i < count; i += 3)
 					{
 						// reorder indices:
-						mesh->indices[offset + i + 0] = ((unsigned char*)data)[i + 0];
-						mesh->indices[offset + i + 1] = ((unsigned char*)data)[i + 2];
-						mesh->indices[offset + i + 2] = ((unsigned char*)data)[i + 1];
+						mesh->indices[offset + i + 0] = data[i + 0];
+						mesh->indices[offset + i + 1] = data[i + 2];
+						mesh->indices[offset + i + 2] = data[i + 1];
 					}
 				}
 				else if (stride == 2)
@@ -3299,9 +3287,9 @@ void Model::LoadFromDisk(const std::string& fileName)
 					for (size_t i = 0; i < count; i += 3)
 					{
 						// reorder indices:
-						mesh->indices[offset + i + 0] = ((unsigned short*)data)[i + 0];
-						mesh->indices[offset + i + 1] = ((unsigned short*)data)[i + 2];
-						mesh->indices[offset + i + 2] = ((unsigned short*)data)[i + 1];
+						mesh->indices[offset + i + 0] = ((uint16_t*)data)[i + 0];
+						mesh->indices[offset + i + 1] = ((uint16_t*)data)[i + 2];
+						mesh->indices[offset + i + 2] = ((uint16_t*)data)[i + 1];
 					}
 				}
 				else if (stride == 4)
@@ -3309,9 +3297,9 @@ void Model::LoadFromDisk(const std::string& fileName)
 					for (size_t i = 0; i < count; i += 3)
 					{
 						// reorder indices:
-						mesh->indices[offset + i + 0] = ((unsigned int*)data)[i + 0];
-						mesh->indices[offset + i + 1] = ((unsigned int*)data)[i + 2];
-						mesh->indices[offset + i + 2] = ((unsigned int*)data)[i + 1];
+						mesh->indices[offset + i + 0] = ((uint32_t*)data)[i + 0];
+						mesh->indices[offset + i + 1] = ((uint32_t*)data)[i + 2];
+						mesh->indices[offset + i + 2] = ((uint32_t*)data)[i + 1];
 					}
 				}
 				else
@@ -3335,6 +3323,7 @@ void Model::LoadFromDisk(const std::string& fileName)
 				}
 
 				mesh->subsets.push_back(subset);
+				mesh->materialNames.push_back(subset.material->name);
 			}
 
 			int matIndex = -1;
@@ -3404,7 +3393,7 @@ void Model::LoadFromDisk(const std::string& fileName)
 						assert(stride == 8);
 						struct JointTmp
 						{
-							unsigned short ind[4];
+							uint16_t ind[4];
 						};
 
 						for (size_t i = 0; i < count; ++i)
@@ -3967,6 +3956,8 @@ void Bone::Serialize(wiArchive& archive)
 {
 	Transform::Serialize(archive);
 
+	XMFLOAT4X4 tmp;
+
 	if (archive.IsReadMode())
 	{
 		size_t childCount;
@@ -3977,7 +3968,8 @@ void Bone::Serialize(wiArchive& archive)
 			archive >> tempName;
 			childrenN.push_back(tempName);
 		}
-		archive >> restInv;
+		//archive >> restInv;
+		archive >> tmp;
 		size_t actionFramesCount;
 		archive >> actionFramesCount;
 		for (size_t i = 0; i < actionFramesCount; ++i)
@@ -4005,9 +3997,12 @@ void Bone::Serialize(wiArchive& archive)
 			}
 			actionFrames.push_back(aframes);
 		}
-		archive >> recursivePose;
-		archive >> recursiveRest;
-		archive >> recursiveRestInv;
+		//archive >> recursivePose;
+		//archive >> recursiveRest;
+		//archive >> recursiveRestInv;
+		archive >> tmp;
+		archive >> tmp;
+		archive >> tmp;
 		archive >> length;
 		archive >> connected;
 	}
@@ -4018,7 +4013,8 @@ void Bone::Serialize(wiArchive& archive)
 		{
 			archive << x;
 		}
-		archive << restInv;
+		//archive << restInv;
+		archive << tmp;
 		archive << actionFrames.size();
 		int i = 0;
 		for (auto& x : actionFrames)
@@ -4039,9 +4035,12 @@ void Bone::Serialize(wiArchive& archive)
 				y.Serialize(archive);
 			}
 		}
-		archive << recursivePose;
-		archive << recursiveRest;
-		archive << recursiveRestInv;
+		//archive << recursivePose;
+		//archive << recursiveRest;
+		//archive << recursiveRestInv;
+		archive << tmp;
+		archive << tmp;
+		archive << tmp;
 		archive << length;
 		archive << connected;
 	}
@@ -4235,14 +4234,12 @@ void Armature::UpdateArmature()
 			anim.blendFact = 1;
 	}
 }
-void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat)
+void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentBoneMat)
 {
-	Bone* parent = (Bone*)bone->parent;
-
 	// TRANSITION BLENDING + ADDITIVE BLENDING
-	XMVECTOR& finalTrans = XMVectorSet(0, 0, 0, 0);
-	XMVECTOR& finalRotat = XMQuaternionIdentity();
-	XMVECTOR& finalScala = XMVectorSet(1, 1, 1, 0);
+	XMVECTOR finalTrans = XMVectorSet(0, 0, 0, 0);
+	XMVECTOR finalRotat = XMQuaternionIdentity();
+	XMVECTOR finalScala = XMVectorSet(1, 1, 1, 0);
 
 	for (auto& x : armature->animationLayers)
 	{
@@ -4252,13 +4249,13 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 		int activeAction = anim.activeAction, prevAction = anim.prevAction;
 		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
 
-		XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+		XMVECTOR prevTrans = InterpolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR prevRotat = InterpolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR prevScala = InterpolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
 
-		XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
+		XMVECTOR currTrans = InterpolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR currRotat = InterpolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR currScala = InterpolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
 
 		float blendFact = anim.blendFact;
 
@@ -4278,8 +4275,6 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 			break;
 		}
 	}
-	XMVectorSetW(finalTrans, 1);
-	XMVectorSetW(finalScala, 1);
 
 	bone->worldPrev = bone->world;
 	bone->translationPrev = bone->translation;
@@ -4288,38 +4283,47 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 	XMStoreFloat4(&bone->rotation, finalRotat);
 	XMStoreFloat3(&bone->scale, finalScala);
 
-	XMMATRIX& anim =
-		XMMatrixScalingFromVector(finalScala)
-		* XMMatrixRotationQuaternion(finalRotat)
-		* XMMatrixTranslationFromVector(finalTrans);
+	//// Bone local T-pose matrix (relative to parent):
+	//XMMATRIX rest = XMLoadFloat4x4(&bone->world_rest);
 
-	XMMATRIX& rest =
-		XMLoadFloat4x4(&bone->world_rest);
+	// Bone global T-pose matrix inverse (relative to root):
+	XMMATRIX recursive_rest_inv = XMLoadFloat4x4(&bone->parent_inv_rest);
 
-	XMMATRIX& boneMat =
-		anim * rest * parentCombinedMat
-		;
+	// Animation local matrix (relative to parent):
+	XMMATRIX anim = XMMatrixScalingFromVector(finalScala) * XMMatrixRotationQuaternion(finalRotat) * XMMatrixTranslationFromVector(finalTrans);
 
-	XMMATRIX& finalMat =
-		XMLoadFloat4x4(&bone->recursiveRestInv)*
-		boneMat
-		;
+	// Bone global final matrix (world-space):
+	XMMATRIX boneMat = anim /** rest*/ * parentBoneMat;
 
-	XMStoreFloat4x4(&bone->world, boneMat);
+	// Bone global final matrix (skinning-space):
+	XMMATRIX finalMat = recursive_rest_inv * boneMat;
 
-	XMStoreFloat4x4(&bone->boneRelativity, finalMat);
+	XMStoreFloat4x4(&bone->world, boneMat); // usable in scene graph
+	XMStoreFloat4x4(&bone->boneRelativity, finalMat); // usable in skinning
 
 	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
 		RecursiveBoneTransform(armature, bone->childrenI[i], boneMat);
 	}
 }
-XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const std::vector<KeyFrame>& keyframeList, KeyFrameType type)
+XMVECTOR Armature::InterpolateKeyFrames(float cf, const int maxCf, const std::vector<KeyFrame>& keyframeList, KeyFrameType type)
 {
 	XMVECTOR result = XMVectorSet(0, 0, 0, 0);
 
-	if (type == POSITIONKEYFRAMETYPE) result = XMVectorSet(0, 0, 0, 1);
-	if (type == ROTATIONKEYFRAMETYPE) result = XMVectorSet(0, 0, 0, 1);
-	if (type == SCALARKEYFRAMETYPE)   result = XMVectorSet(1, 1, 1, 1);
+	switch (type)
+	{
+	case Armature::ROTATIONKEYFRAMETYPE:
+		result = XMVectorSet(0, 0, 0, 1);
+		break;
+	case Armature::POSITIONKEYFRAMETYPE:
+		result = XMVectorSet(0, 0, 0, 1);
+		break;
+	case Armature::SCALARKEYFRAMETYPE:
+		result = XMVectorSet(1, 1, 1, 1);
+		break;
+	default:
+		assert(0);
+		break;
+	}
 
 	//SEARCH 2 INTERPOLATABLE FRAMES
 	int nearest[2] = { 0,0 };
@@ -4404,11 +4408,11 @@ void Armature::ChangeAction(const std::string& actionName, float blendFrames, co
 
 	if (actionName.length() > 0)
 	{
-		for (unsigned int i = 1; i < actions.size(); ++i)
+		for (size_t i = 1; i < actions.size(); ++i)
 		{
 			if (!actions[i].name.compare(actionName))
 			{
-				anim->ChangeAction(i, blendFrames, weight);
+				anim->ChangeAction((int)i, blendFrames, weight);
 				return;
 			}
 		}
@@ -4457,26 +4461,21 @@ void Armature::DeleteAnimLayer(const std::string& name)
 		}
 	}
 }
-void Armature::RecursiveRest(Bone* bone)
+void Armature::RecursiveRest(Bone* bone, XMMATRIX recursiveRest)
 {
 	Bone* parent = (Bone*)bone->parent;
 
-	if (parent != nullptr) {
-		XMMATRIX recRest =
-			XMLoadFloat4x4(&bone->world_rest)
-			*
-			XMLoadFloat4x4(&parent->recursiveRest)
-			;
-		XMStoreFloat4x4(&bone->recursiveRest, recRest);
-		XMStoreFloat4x4(&bone->recursiveRestInv, XMMatrixInverse(0, recRest));
+	if (parent == nullptr) {
+		recursiveRest = XMLoadFloat4x4(&bone->world_rest);
 	}
 	else {
-		bone->recursiveRest = bone->world_rest;
-		XMStoreFloat4x4(&bone->recursiveRestInv, XMMatrixInverse(0, XMLoadFloat4x4(&bone->recursiveRest)));
+		recursiveRest = XMLoadFloat4x4(&bone->world_rest) * recursiveRest;
 	}
 
+	XMStoreFloat4x4(&bone->parent_inv_rest, XMMatrixInverse(0, recursiveRest));
+
 	for (size_t i = 0; i < bone->childrenI.size(); ++i) {
-		RecursiveRest(bone->childrenI[i]);
+		RecursiveRest(bone->childrenI[i], recursiveRest);
 	}
 }
 void Armature::CreateFamily()
@@ -4497,11 +4496,17 @@ void Armature::CreateFamily()
 		else {
 			rootbones.push_back(i);
 		}
+
+		// create identity action
+		i->actionFrames.push_back(ActionFrames());
+		i->actionFrames.back().keyframesPos.push_back(KeyFrame(1, i->translation_rest.x, i->translation_rest.y, i->translation_rest.z, 1));
+		i->actionFrames.back().keyframesRot.push_back(KeyFrame(1, i->rotation_rest.x, i->rotation_rest.y, i->rotation_rest.z, i->rotation_rest.w));
+		i->actionFrames.back().keyframesSca.push_back(KeyFrame(1, i->scale_rest.x, i->scale_rest.y, i->scale_rest.z, 0));
 	}
 
 	for (unsigned int i = 0; i<rootbones.size(); ++i) 
 	{
-		RecursiveRest(rootbones[i]);
+		RecursiveRest(rootbones[i], XMMATRIX());
 	}
 }
 void Armature::CreateBuffers()

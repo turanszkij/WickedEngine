@@ -207,7 +207,7 @@ void Transform::UpdateTransform()
 	XMVECTOR s = XMLoadFloat3(&scale_rest);
 	XMVECTOR r = XMLoadFloat4(&rotation_rest);
 	XMVECTOR t = XMLoadFloat3(&translation_rest);
-	XMMATRIX& w =
+	XMMATRIX w =
 		XMMatrixScalingFromVector(s)*
 		XMMatrixRotationQuaternion(r)*
 		XMMatrixTranslationFromVector(t)
