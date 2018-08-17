@@ -963,9 +963,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h">
       <Filter>ENGINE\Physics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCVars.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1837,9 +1834,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBULLET.cpp">
       <Filter>ENGINE\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp">
-      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
       <Filter>ENGINE\Graphics</Filter>

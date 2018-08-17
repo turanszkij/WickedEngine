@@ -314,7 +314,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCVars.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h" />
@@ -664,7 +663,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp" />

@@ -3,7 +3,6 @@
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiResourceManager.h"
-#include "wiCVars.h"
 
 class RenderableComponent
 {
@@ -13,7 +12,6 @@ protected:
 	// create resolution dependant resources
 	virtual void ResizeBuffers() {}
 public:
-	wiCVars Params;
 	wiResourceManager Content;
 
 	std::function<void()> onStart;
