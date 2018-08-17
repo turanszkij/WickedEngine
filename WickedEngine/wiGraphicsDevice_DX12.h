@@ -250,9 +250,6 @@ namespace wiGraphicsTypes
 
 		virtual void WaitForGPU();
 
-		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID) override;
-		virtual HRESULT SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID) override;
-
 		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) override;
 		virtual void EventEnd(GRAPHICSTHREAD threadID) override;
 		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) override;

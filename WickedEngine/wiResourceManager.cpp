@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiSound.h"
 #include "wiHelper.h"
-#include "wiTGATextureLoader.h"
 #include "wiTextureHelper.h"
 
 #include "Utility/stb_image.h"

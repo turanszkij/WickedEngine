@@ -74,21 +74,22 @@ namespace wiHelper
 
 	void screenshot(const std::string& name)
 	{
-		CreateDirectoryA("screenshots", 0);
-		stringstream ss("");
-		if (name.length() <= 0)
-			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
-		else
-			ss << name;
-		if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer(), GRAPHICSTHREAD_IMMEDIATE)))
-		{
-			ss << " Saved successfully!";
-			wiBackLog::post(ss.str().c_str());
-		}
-		else
-		{
-			wiBackLog::post("Screenshot failed");
-		}
+		//CreateDirectoryA("screenshots", 0);
+		//stringstream ss("");
+		//if (name.length() <= 0)
+		//	ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
+		//else
+		//	ss << name;
+		//if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer(), GRAPHICSTHREAD_IMMEDIATE)))
+		//{
+		//	ss << " Saved successfully!";
+		//	wiBackLog::post(ss.str().c_str());
+		//}
+		//else
+		//{
+		//	wiBackLog::post("Screenshot failed");
+		//}
+		messageBox("Please reimplement wiHelper::screenshot functionality!");
 	}
 
 	string getCurrentDateTimeAsString()

@@ -126,57 +126,110 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	wiButton* convertDDSButton = new wiButton("HELPERSCRIPT - ConvertMaterialsDDS");
-	convertDDSButton->SetTooltip("Every material in the scene will have its textures saved and renamed as DDS into textures_dds folder.");
-	convertDDSButton->SetSize(XMFLOAT2(240, 30));
-	convertDDSButton->SetPos(XMFLOAT2(x - 100, y += step * 3));
-	convertDDSButton->OnClick([=](wiEventArgs args) {
-		
-		const Scene& scene = wiRenderer::GetScene();
-		for (Model* x : scene.models)
-		{
-			for (auto& y : x->materials)
-			{
-				Material* material = y.second;
 
-				CreateDirectory(L"textures_dds", 0);
 
-				if (!material->textureName.empty())
-				{
-					string newName = wiHelper::GetFileNameFromPath(material->textureName.substr(0, material->textureName.length() - 4) + ".dds");
-					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetBaseColorMap(), GRAPHICSTHREAD_IMMEDIATE);
-					material->textureName = newName;
-				}
-				if (!material->normalMapName.empty())
-				{
-					string newName = wiHelper::GetFileNameFromPath(material->normalMapName.substr(0, material->normalMapName.length() - 4) + ".dds");
-					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetNormalMap(), GRAPHICSTHREAD_IMMEDIATE);
-					material->normalMapName = newName;
-				}
-				if (!material->surfaceMapName.empty())
-				{
-					string newName = wiHelper::GetFileNameFromPath(material->surfaceMapName.substr(0, material->surfaceMapName.length() - 4) + ".dds");
-					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetSurfaceMap(), GRAPHICSTHREAD_IMMEDIATE);
-					material->surfaceMapName = newName;
-				}
-				if (!material->displacementMapName.empty())
-				{
-					string newName = wiHelper::GetFileNameFromPath(material->displacementMapName.substr(0, material->displacementMapName.length() - 4) + ".dds");
-					wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetDisplacementMap(), GRAPHICSTHREAD_IMMEDIATE);
-					material->displacementMapName = newName;
-				}
-			}
-		}
+
+	wiButton* preset1Button = new wiButton("WeatherPreset - Daytime");
+	preset1Button->SetTooltip("Apply this weather preset to the world.");
+	preset1Button->SetSize(XMFLOAT2(240, 30));
+	preset1Button->SetPos(XMFLOAT2(x - 100, y += step * 2));
+	preset1Button->OnClick([=](wiEventArgs args) {
+
+		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
+		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
+		wiRenderer::GetScene().worldInfo.cloudiness = 0.4f;
+		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(100, 1000, 0);
 
 	});
-	worldWindow->AddWidget(convertDDSButton);
+	worldWindow->AddWidget(preset1Button);
+
+	wiButton* preset2Button = new wiButton("WeatherPreset - Sunset");
+	preset2Button->SetTooltip("Apply this weather preset to the world.");
+	preset2Button->SetSize(XMFLOAT2(240, 30));
+	preset2Button->SetPos(XMFLOAT2(x - 100, y += step));
+	preset2Button->OnClick([=](wiEventArgs args) {
+
+		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
+		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
+		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
+		wiRenderer::GetScene().worldInfo.cloudiness = 0.36f;
+		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(50, 600, 0);
+
+	});
+	worldWindow->AddWidget(preset2Button);
+
+	wiButton* preset3Button = new wiButton("WeatherPreset - Cloudy");
+	preset3Button->SetTooltip("Apply this weather preset to the world.");
+	preset3Button->SetSize(XMFLOAT2(240, 30));
+	preset3Button->SetPos(XMFLOAT2(x - 100, y += step));
+	preset3Button->OnClick([=](wiEventArgs args) {
+
+		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
+		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
+		wiRenderer::GetScene().worldInfo.cloudiness = 0.75f;
+		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(0, 500, 0);
+
+	});
+	worldWindow->AddWidget(preset3Button);
+
+
+
+
+
+
+	//wiButton* convertDDSButton = new wiButton("HELPERSCRIPT - ConvertMaterialsDDS");
+	//convertDDSButton->SetTooltip("Every material in the scene will have its textures saved and renamed as DDS into textures_dds folder.");
+	//convertDDSButton->SetSize(XMFLOAT2(240, 30));
+	//convertDDSButton->SetPos(XMFLOAT2(x - 100, y += step * 3));
+	//convertDDSButton->OnClick([=](wiEventArgs args) {
+	//	
+	//	const Scene& scene = wiRenderer::GetScene();
+	//	for (Model* x : scene.models)
+	//	{
+	//		for (auto& y : x->materials)
+	//		{
+	//			Material* material = y.second;
+
+	//			CreateDirectory(L"textures_dds", 0);
+
+	//			if (!material->textureName.empty())
+	//			{
+	//				string newName = wiHelper::GetFileNameFromPath(material->textureName.substr(0, material->textureName.length() - 4) + ".dds");
+	//				wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetBaseColorMap(), GRAPHICSTHREAD_IMMEDIATE);
+	//				material->textureName = newName;
+	//			}
+	//			if (!material->normalMapName.empty())
+	//			{
+	//				string newName = wiHelper::GetFileNameFromPath(material->normalMapName.substr(0, material->normalMapName.length() - 4) + ".dds");
+	//				wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetNormalMap(), GRAPHICSTHREAD_IMMEDIATE);
+	//				material->normalMapName = newName;
+	//			}
+	//			if (!material->surfaceMapName.empty())
+	//			{
+	//				string newName = wiHelper::GetFileNameFromPath(material->surfaceMapName.substr(0, material->surfaceMapName.length() - 4) + ".dds");
+	//				wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetSurfaceMap(), GRAPHICSTHREAD_IMMEDIATE);
+	//				material->surfaceMapName = newName;
+	//			}
+	//			if (!material->displacementMapName.empty())
+	//			{
+	//				string newName = wiHelper::GetFileNameFromPath(material->displacementMapName.substr(0, material->displacementMapName.length() - 4) + ".dds");
+	//				wiRenderer::GetDevice()->SaveTextureDDS(wiHelper::GetWorkingDirectory() + "textures_dds/" + newName, material->GetDisplacementMap(), GRAPHICSTHREAD_IMMEDIATE);
+	//				material->displacementMapName = newName;
+	//			}
+	//		}
+	//	}
+
+	//});
+	//worldWindow->AddWidget(convertDDSButton);
 
 
 
 	wiButton* eliminateCoarseCascadesButton = new wiButton("HELPERSCRIPT - EliminateCoarseCascades");
 	eliminateCoarseCascadesButton->SetTooltip("Eliminate the coarse cascade mask for every object in the scene.");
 	eliminateCoarseCascadesButton->SetSize(XMFLOAT2(240, 30));
-	eliminateCoarseCascadesButton->SetPos(XMFLOAT2(x - 100, y += step));
+	eliminateCoarseCascadesButton->SetPos(XMFLOAT2(x - 100, y += step * 3));
 	eliminateCoarseCascadesButton->OnClick([=](wiEventArgs args) {
 
 		const Scene& scene = wiRenderer::GetScene();

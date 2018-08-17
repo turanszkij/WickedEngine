@@ -3,8 +3,6 @@
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
-#include "Utility/ScreenGrab.h"
-
 #include <sstream>
 #include <wincodec.h>
 
@@ -2950,7 +2948,7 @@ void GraphicsDevice_DX11::DestroyComputePSO(ComputePSO* pso)
 
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& name)
 {
-	((ID3D11Resource*)pResource->resource_DX11)->SetPrivateData(WKPDID_D3DDebugObjectName, name.length(), name.c_str());
+	((ID3D11Resource*)pResource->resource_DX11)->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
 }
 
 void GraphicsDevice_DX11::PresentBegin()
@@ -3718,25 +3716,6 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 	return hr != S_FALSE;
 }
 
-
-HRESULT GraphicsDevice_DX11::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
-{
-	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
-	if (tex2D != nullptr)
-	{
-		return SaveWICTextureToFile(deviceContexts[threadID], (ID3D11Resource*)pTexture->resource_DX11, GUID_ContainerFormatPng, wstring(fileName.begin(), fileName.end()).c_str());
-	}
-	return E_FAIL;
-}
-HRESULT GraphicsDevice_DX11::SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
-{
-	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
-	if (tex2D != nullptr)
-	{
-		return SaveDDSTextureToFile(deviceContexts[threadID], (ID3D11Resource*)tex2D->resource_DX11, wstring(fileName.begin(), fileName.end()).c_str());
-	}
-	return E_FAIL;
-}
 
 void GraphicsDevice_DX11::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 {

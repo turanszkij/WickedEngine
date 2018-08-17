@@ -16,6 +16,8 @@
 #include "ForceFieldWindow.h"
 #include "OceanWindow.h"
 
+#include "ModelImporter.h"
+
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
@@ -701,7 +703,44 @@ void EditorComponent::Load()
 				string fileName = ofn.lpstrFile;
 
 				loader->addLoadingFunction([=] {
-					wiRenderer::LoadModel(fileName);
+					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
+
+					if (!extension.compare("WIMF")) // serializer (.wimf)
+					{
+						wiRenderer::LoadModel(fileName);
+					}
+					else if (!extension.compare("WIO")) // blender-exporter
+					{
+						Model* model = ImportModel_WIO(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
+					else if (!extension.compare("OBJ")) // wavefront-obj
+					{
+						Model* model = ImportModel_OBJ(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
+					else if (!extension.compare("GLTF")) // text-based gltf
+					{
+						Model* model = ImportModel_GLTF(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
+					else if (!extension.compare("GLB")) // binary gltf
+					{
+						Model* model = ImportModel_GLTF(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
 				});
 				loader->onFinished([=] {
 					main->activateComponent(this, 10, wiColor::Black);

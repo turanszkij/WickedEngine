@@ -8278,24 +8278,101 @@ void wiRenderer::CalculateVertexAO(Object* object)
 
 Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
 {
-	static int unique_identifier = 0;
+	Model* model = nullptr;
 
-	Model* model = new Model;
-	model->LoadFromDisk(fileName);
+	wiArchive archive(fileName, true);
+	if (archive.IsOpen())
+	{
+		model = new Model;
+		model->Serialize(archive);
+		model->transform(transform);
 
-	model->transform(transform);
-
-	AddModel(model);
+		AddModel(model);
+	}
+	else
+	{
+		wiHelper::messageBox("Could not open archive!", "Error!");
+	}
 
 	LoadWorldInfo(fileName);
-
-	unique_identifier++;
 
 	return model;
 }
 void wiRenderer::LoadWorldInfo(const std::string& fileName)
 {
-	LoadWiWorldInfo(fileName, GetScene().worldInfo, GetScene().wind);
+	//LoadWiWorldInfo(fileName, GetScene().worldInfo, GetScene().wind);
+
+	WorldInfo& worldInfo = GetScene().worldInfo;
+	Wind& wind = GetScene().wind;
+
+	string extension = wiHelper::GetExtensionFromFileName(fileName);
+
+	string realName;
+	if (!extension.compare("wiw"))
+	{
+		realName = fileName;
+	}
+	else if (extension.empty())
+	{
+		realName = fileName + ".wiw";
+	}
+	else
+	{
+		realName = fileName;
+		wiHelper::RemoveExtensionFromFileName(realName);
+		realName += ".wiw";
+	}
+
+	ifstream file(realName);
+	if (file)
+	{
+		while (!file.eof())
+		{
+			string read = "";
+			file >> read;
+			switch (read[0])
+			{
+			case 'h':
+				file >> worldInfo.horizon.x >> worldInfo.horizon.y >> worldInfo.horizon.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.horizon.x = powf(worldInfo.horizon.x, 1.0f / 2.2f);
+				worldInfo.horizon.y = powf(worldInfo.horizon.y, 1.0f / 2.2f);
+				worldInfo.horizon.z = powf(worldInfo.horizon.z, 1.0f / 2.2f);
+				break;
+			case 'z':
+				file >> worldInfo.zenith.x >> worldInfo.zenith.y >> worldInfo.zenith.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
+				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
+				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
+				break;
+			case 'a':
+				file >> worldInfo.ambient.x >> worldInfo.ambient.y >> worldInfo.ambient.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
+				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
+				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
+				break;
+			case 'W':
+			{
+				XMFLOAT4 r;
+				float s;
+				file >> r.x >> r.y >> r.z >> r.w >> s;
+				XMStoreFloat3(&wind.direction, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
+			}
+			break;
+			case 'm':
+			{
+				float s, e, h;
+				file >> s >> e >> h;
+				worldInfo.fogSEH = XMFLOAT3(s, e, h);
+			}
+			break;
+			default:break;
+			}
+		}
+	}
+	file.close();
 }
 void wiRenderer::LoadDefaultLighting()
 {

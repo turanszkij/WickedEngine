@@ -409,7 +409,6 @@ public:
 	static int getActionByName(Armature* armature, const std::string& get);
 	static int getBoneByName(Armature* armature, const std::string& get);
 	static Material* getMaterialByName(const std::string& get);
-	HitSphere* getSphereByName(const std::string& get);
 	static Object* getObjectByName(const std::string& name);
 	static Camera* getCameraByName(const std::string& name);
 	static Light* getLightByName(const std::string& name);

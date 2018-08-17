@@ -17,7 +17,6 @@
 #include <deque>
 #include <sstream>
 
-struct HitSphere;
 class wiParticle;
 class wiEmittedParticle;
 class wiHairParticle;
@@ -510,13 +509,10 @@ public:
 
 	float tessellationFactor;
 
-	bool optimized;
 	bool renderDataComplete;
 
 	Mesh(const std::string& newName = "");
 	~Mesh();
-	void LoadFromFile(const std::string& newName, const std::string& fname, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures);
-	void Optimize();
 	void CreateRenderData();
 	static void CreateImpostorVB();
 	void ComputeNormals(bool smooth = false);
@@ -1199,7 +1195,6 @@ struct Model : public Transform
 	Model();
 	virtual ~Model();
 	void CleanUp();
-	void LoadFromDisk(const std::string& fileName);
 	void FinishLoading();
 	void UpdateModel();
 	void Add(Object* value);

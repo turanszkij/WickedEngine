@@ -141,18 +141,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lzio.h">
       <Filter>LUA</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pch.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\PlatformHelpers.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
@@ -1086,9 +1074,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
@@ -1116,17 +1101,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiOBJLoader.h">
-      <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
@@ -1175,6 +1151,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h">
+      <Filter>UTILITY</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1282,12 +1261,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lzio.c">
       <Filter>LUA</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pch.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.cpp">
-      <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
@@ -1961,17 +1934,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_image.cpp">
-      <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp">
       <Filter>UTILITY</Filter>
@@ -1990,6 +1954,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
