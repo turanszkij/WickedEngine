@@ -3054,28 +3054,6 @@ void Model::LoadFromDisk(const std::string& fileName)
 				XMStoreFloat4x4(&bone->world_rest, w);
 			}
 
-			//// Bind-pose:
-			//{
-			//	const tinygltf::Accessor& accessor = gltfModel.accessors[skin.inverseBindMatrices];
-			//	const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-			//	const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
-
-			//	int stride = accessor.ByteStride(bufferView);
-			//	size_t count = accessor.count;
-			//	assert(count == jointCount);
-
-			//	const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-			//	assert(stride == 64);
-			//	for (size_t i = 0; i < count; ++i)
-			//	{
-			//		const XMFLOAT4X4& mat = ((XMFLOAT4X4*)data)[i];
-
-			//		Bone* bone = armature->boneCollection[i];
-			//		bone->recursiveRestInv = mat;
-			//	}
-			//}
-
 			// Create bone name hierarchy:
 			for (size_t i = 0; i < jointCount; ++i)
 			{
@@ -3173,13 +3151,24 @@ void Model::LoadFromDisk(const std::string& fileName)
 
 					const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
+					int firstFrame = INT_MAX;
+
 					assert(stride == 4);
 					for (size_t i = 0; i < count; ++i)
 					{
 						keyframes[i].frameI = (int)( ((float*)data)[i] * 60 ); // !!! converting from time-base to frame-based !!!
 
 						action.frameCount = max(action.frameCount, keyframes[i].frameI);
+						firstFrame = min(firstFrame, keyframes[i].frameI);
 					}
+
+					// Cut out the empty part of the animation at the beginning:
+					firstFrame = min(firstFrame, action.frameCount);
+					for (size_t i = 0; i < count; ++i)
+					{
+						keyframes[i].frameI -= firstFrame;
+					}
+					action.frameCount -= firstFrame;
 
 				}
 
@@ -3192,6 +3181,11 @@ void Model::LoadFromDisk(const std::string& fileName)
 					int stride = accessor.ByteStride(bufferView);
 					size_t count = accessor.count;
 
+					// Unfortunately, GLTF stores absolute values for animation nodes, but the engine needs relative
+					//	Absolute = animation * rest (so the rest matrix is baked into animation, this can't be blended additively)
+					//	Relative = animation (so we can blend all animation tracks however we want, then post multiply with the rest matrix at runtime)
+					const XMMATRIX invRest = XMMatrixInverse(nullptr, XMLoadFloat4x4(&bone->world_rest));
+
 					const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 					if (!channel.target_path.compare("scale"))
@@ -3200,7 +3194,14 @@ void Model::LoadFromDisk(const std::string& fileName)
 						for (size_t i = 0; i < count; ++i)
 						{
 							const XMFLOAT3& sca = ((XMFLOAT3*)data)[i];
-							keyframes[i].data = XMFLOAT4(sca.x, sca.y, sca.z, 0);
+							//keyframes[i].data = XMFLOAT4(sca.x, sca.y, sca.z, 0);
+
+							// Remove rest matrix from animation track:
+							XMMATRIX mat = XMMatrixScalingFromVector(XMLoadFloat3(&sca));
+							mat = mat * invRest;
+							XMVECTOR s, r, t;
+							XMMatrixDecompose(&s, &r, &t, mat);
+							XMStoreFloat4(&keyframes[i].data, s);
 						}
 						bone->actionFrames.back().keyframesSca.insert(bone->actionFrames.back().keyframesSca.end(), keyframes.begin(), keyframes.end());
 					}
@@ -3210,7 +3211,14 @@ void Model::LoadFromDisk(const std::string& fileName)
 						for (size_t i = 0; i < count; ++i)
 						{
 							const XMFLOAT4& rot = ((XMFLOAT4*)data)[i];
-							keyframes[i].data = rot;
+							//keyframes[i].data = rot;
+
+							// Remove rest matrix from animation track:
+							XMMATRIX mat = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
+							mat = mat * invRest;
+							XMVECTOR s, r, t;
+							XMMatrixDecompose(&s, &r, &t, mat);
+							XMStoreFloat4(&keyframes[i].data, r);
 						}
 						bone->actionFrames.back().keyframesRot.insert(bone->actionFrames.back().keyframesRot.end(), keyframes.begin(), keyframes.end());
 					}
@@ -3220,7 +3228,14 @@ void Model::LoadFromDisk(const std::string& fileName)
 						for (size_t i = 0; i < count; ++i)
 						{
 							const XMFLOAT3& tra = ((XMFLOAT3*)data)[i];
-							keyframes[i].data = XMFLOAT4(tra.x, tra.y, tra.z, 1);
+							//keyframes[i].data = XMFLOAT4(tra.x, tra.y, tra.z, 1);
+
+							// Remove rest matrix from animation track:
+							XMMATRIX mat = XMMatrixTranslationFromVector(XMLoadFloat3(&tra));
+							mat = mat * invRest;
+							XMVECTOR s, r, t;
+							XMMatrixDecompose(&s, &r, &t, mat);
+							XMStoreFloat4(&keyframes[i].data, t);
 						}
 						bone->actionFrames.back().keyframesPos.insert(bone->actionFrames.back().keyframesPos.end(), keyframes.begin(), keyframes.end());
 					}
@@ -3311,13 +3326,17 @@ void Model::LoadFromDisk(const std::string& fileName)
 				// Create mesh subset:
 				MeshSubset subset;
 
-				const string& mat_name = gltfModel.materials[prim.material].name;
-				auto& found_mat = this->materials.find(mat_name);
-				if (found_mat != this->materials.end())
+				if (prim.material >= 0)
 				{
-					subset.material = found_mat->second;
+					const string& mat_name = gltfModel.materials[prim.material].name;
+					auto& found_mat = this->materials.find(mat_name);
+					if (found_mat != this->materials.end())
+					{
+						subset.material = found_mat->second;
+					}
 				}
-				else
+
+				if(subset.material == nullptr)
 				{
 					subset.material = new Material("gltfLoader-defaultMat");
 				}
@@ -3390,20 +3409,43 @@ void Model::LoadFromDisk(const std::string& fileName)
 					}
 					else if (!attr_name.compare("JOINTS_0"))
 					{
-						assert(stride == 8);
-						struct JointTmp
+						if (stride == 4)
 						{
-							uint16_t ind[4];
-						};
+							struct JointTmp
+							{
+								uint8_t ind[4];
+							};
 
-						for (size_t i = 0; i < count; ++i)
+							for (size_t i = 0; i < count; ++i)
+							{
+								const JointTmp& joint = ((JointTmp*)data)[i];
+
+								mesh->vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
+								mesh->vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
+								mesh->vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
+								mesh->vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+							}
+						}
+						else if (stride == 8)
 						{
-							const JointTmp& joint = ((JointTmp*)data)[i];
+							struct JointTmp
+							{
+								uint16_t ind[4];
+							};
 
-							mesh->vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
-							mesh->vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
-							mesh->vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
-							mesh->vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+							for (size_t i = 0; i < count; ++i)
+							{
+								const JointTmp& joint = ((JointTmp*)data)[i];
+
+								mesh->vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
+								mesh->vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
+								mesh->vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
+								mesh->vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+							}
+						}
+						else
+						{
+							assert(0);
 						}
 					}
 					else if (!attr_name.compare("WEIGHTS_0"))
@@ -3424,7 +3466,8 @@ void Model::LoadFromDisk(const std::string& fileName)
 			this->meshes.insert(make_pair(mesh->name, mesh));
 		}
 
-		// Object transformations and mesh links:
+		// Object transformations and mesh links and cameras:
+		int camID = 0;
 		for (auto& node : gltfModel.nodes)
 		{
 			if (node.mesh >= 0)
@@ -3448,9 +3491,37 @@ void Model::LoadFromDisk(const std::string& fileName)
 					object->translation_rest = XMFLOAT3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
 				}
 			}
+			if (node.camera >= 0)
+			{
+				Camera* camera = new Camera;
+				camera->SetUp((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+				this->cameras.push_back(camera);
+
+				camera->name = gltfModel.cameras[node.camera].name;
+				if (camera->name.empty())
+				{
+					stringstream ss("");
+					ss << "cam" << camID++;
+					camera->name = ss.str();
+				}
+
+				if (!node.rotation.empty())
+				{
+					camera->rotation_rest = XMFLOAT4((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2], (float)node.rotation[3]);
+				}
+				if (!node.translation.empty())
+				{
+					camera->translation_rest = XMFLOAT3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
+				}
+
+				camera->UpdateProps();
+			}
 		}
 
 		this->FinishLoading();
+
+		//XMMATRIX rightHandedToLeftHanded = XMMatrixRotationX(-XM_PIDIV2) * XMMatrixRotationY(XM_PIDIV2);
+		//this->transform(rightHandedToLeftHanded);
 
 	}
 	else
@@ -4245,33 +4316,34 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 	{
 		AnimationLayer& anim = *x;
 
-		float cf = anim.currentFrame, cfPrev = anim.currentFramePrevAction;
-		int activeAction = anim.activeAction, prevAction = anim.prevAction;
-		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
+		int frameCountPrev = armature->actions[anim.prevAction].frameCount;
+		XMVECTOR prevTrans = InterpolateKeyFrames(anim.currentFramePrevAction, frameCountPrev, bone->actionFrames[anim.prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR prevRotat = InterpolateKeyFrames(anim.currentFramePrevAction, frameCountPrev, bone->actionFrames[anim.prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR prevScala = InterpolateKeyFrames(anim.currentFramePrevAction, frameCountPrev, bone->actionFrames[anim.prevAction].keyframesSca, SCALARKEYFRAMETYPE);
 
-		XMVECTOR prevTrans = InterpolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR prevRotat = InterpolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR prevScala = InterpolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+		int frameCount = armature->actions[anim.activeAction].frameCount;
+		XMVECTOR currTrans = InterpolateKeyFrames(anim.currentFrame, frameCount, bone->actionFrames[anim.activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR currRotat = InterpolateKeyFrames(anim.currentFrame, frameCount, bone->actionFrames[anim.activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR currScala = InterpolateKeyFrames(anim.currentFrame, frameCount, bone->actionFrames[anim.activeAction].keyframesSca, SCALARKEYFRAMETYPE);
 
-		XMVECTOR currTrans = InterpolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR currRotat = InterpolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR currScala = InterpolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
-
-		float blendFact = anim.blendFact;
+		currTrans = XMVectorLerp(prevTrans, currTrans, anim.blendFact);
+		currRotat = XMQuaternionSlerp(prevRotat, currRotat, anim.blendFact);
+		currScala = XMVectorLerp(prevScala, currScala, anim.blendFact);
 
 		switch (anim.type)
 		{
 		case AnimationLayer::ANIMLAYER_TYPE_PRIMARY:
-			finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
-			finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
-			finalScala = XMVectorLerp(prevScala, currScala, blendFact);
+			finalTrans = currTrans;
+			finalRotat = currRotat;
+			finalScala = currScala;
 			break;
 		case AnimationLayer::ANIMLAYER_TYPE_ADDITIVE:
-			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, XMVectorLerp(prevTrans, currTrans, blendFact)), anim.weight);
-			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, XMQuaternionSlerp(prevRotat, currRotat, blendFact)), anim.weight); // normalize?
-			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, XMVectorLerp(prevScala, currScala, blendFact)), anim.weight);
+			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, currTrans), anim.weight);
+			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, currRotat), anim.weight); // normalize?
+			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, currScala), anim.weight);
 			break;
 		default:
+			assert(0);
 			break;
 		}
 	}
@@ -4279,27 +4351,31 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 	bone->worldPrev = bone->world;
 	bone->translationPrev = bone->translation;
 	bone->rotationPrev = bone->rotation;
+	bone->scalePrev = bone->scale;
 	XMStoreFloat3(&bone->translation, finalTrans);
 	XMStoreFloat4(&bone->rotation, finalRotat);
 	XMStoreFloat3(&bone->scale, finalScala);
 
-	//// Bone local T-pose matrix (relative to parent):
-	//XMMATRIX rest = XMLoadFloat4x4(&bone->world_rest);
+	// Bone local T-pose matrix (relative to PARENT):
+	XMMATRIX rest = XMLoadFloat4x4(&bone->world_rest);
 
-	// Bone global T-pose matrix inverse (relative to root):
+	// Bone global T-pose matrix inverse (relative to ROOT):
 	XMMATRIX recursive_rest_inv = XMLoadFloat4x4(&bone->parent_inv_rest);
 
-	// Animation local matrix (relative to parent):
-	XMMATRIX anim = XMMatrixScalingFromVector(finalScala) * XMMatrixRotationQuaternion(finalRotat) * XMMatrixTranslationFromVector(finalTrans);
+	// Animation local matrix (relative to ITSELF):
+	XMMATRIX anim_relative = XMMatrixScalingFromVector(finalScala) * XMMatrixRotationQuaternion(finalRotat) * XMMatrixTranslationFromVector(finalTrans);
 
-	// Bone global final matrix (world-space):
-	XMMATRIX boneMat = anim /** rest*/ * parentBoneMat;
+	// Animation local matrix (relative to PARENT):
+	XMMATRIX anim_absolute = anim_relative * rest;
 
-	// Bone global final matrix (skinning-space):
-	XMMATRIX finalMat = recursive_rest_inv * boneMat;
+	// Bone global final matrix (WORLD-SPACE):
+	XMMATRIX boneMat = anim_absolute * parentBoneMat;
+
+	// Bone global final matrix (SKINNING-SPACE):
+	XMMATRIX skinningMat = recursive_rest_inv * boneMat;
 
 	XMStoreFloat4x4(&bone->world, boneMat); // usable in scene graph
-	XMStoreFloat4x4(&bone->boneRelativity, finalMat); // usable in skinning
+	XMStoreFloat4x4(&bone->boneRelativity, skinningMat); // usable in skinning
 
 	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
 		RecursiveBoneTransform(armature, bone->childrenI[i], boneMat);
@@ -4496,12 +4572,6 @@ void Armature::CreateFamily()
 		else {
 			rootbones.push_back(i);
 		}
-
-		// create identity action
-		i->actionFrames.push_back(ActionFrames());
-		i->actionFrames.back().keyframesPos.push_back(KeyFrame(1, i->translation_rest.x, i->translation_rest.y, i->translation_rest.z, 1));
-		i->actionFrames.back().keyframesRot.push_back(KeyFrame(1, i->rotation_rest.x, i->rotation_rest.y, i->rotation_rest.z, i->rotation_rest.w));
-		i->actionFrames.back().keyframesSca.push_back(KeyFrame(1, i->scale_rest.x, i->scale_rest.y, i->scale_rest.z, 0));
 	}
 
 	for (unsigned int i = 0; i<rootbones.size(); ++i) 

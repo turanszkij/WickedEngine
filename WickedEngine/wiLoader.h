@@ -258,8 +258,6 @@ public:
 	wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
 	wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	void Serialize(wiArchive& archive);
-
-	ALIGN_16
 };
 struct RibbonVertex
 {
@@ -655,11 +653,11 @@ struct Bone : public Transform
 		childrenN.clear();
 		childrenI.clear();
 		actionFrames.clear();
-		//// create identity action
-		//actionFrames.push_back(ActionFrames());
-		//actionFrames.back().keyframesPos.push_back(KeyFrame(1, 0, 0, 0, 1));
-		//actionFrames.back().keyframesRot.push_back(KeyFrame(1, 0, 0, 0, 1));
-		//actionFrames.back().keyframesSca.push_back(KeyFrame(1, 1, 1, 1, 0));
+		// create identity action
+		actionFrames.push_back(ActionFrames());
+		actionFrames.back().keyframesPos.push_back(KeyFrame(1, 0, 0, 0, 1));
+		actionFrames.back().keyframesRot.push_back(KeyFrame(1, 0, 0, 0, 1));
+		actionFrames.back().keyframesSca.push_back(KeyFrame(1, 1, 1, 1, 0));
 		length=1.0f;
 		connected = false;
 	}
@@ -771,8 +769,6 @@ public:
 	void CreateBuffers();
 	Bone* GetBone(const std::string& name);
 	void Serialize(wiArchive& archive);
-
-	ALIGN_16
 
 private:
 	static void RecursiveRest(Bone* bone, XMMATRIX recursiveRest);
