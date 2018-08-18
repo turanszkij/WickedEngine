@@ -5157,7 +5157,7 @@ namespace wiGraphicsTypes
 	{
 		//vkUnmapMemory(device, static_cast<VkDeviceMemory>(buffer->resourceMemory_Vulkan));
 	}
-	bool GraphicsDevice_Vulkan::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
+	bool GraphicsDevice_Vulkan::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
 	}

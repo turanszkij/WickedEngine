@@ -23,7 +23,7 @@ namespace wiGraphicsTypes
 		bool TESSELLATION, MULTITHREADED_RENDERING, CONSERVATIVE_RASTERIZATION, RASTERIZER_ORDERED_VIEWS, UNORDEREDACCESSTEXTURE_LOAD_EXT;
 	public:
 		GraphicsDevice() 
-			:FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false), RESOLUTIONCHANGED(false), BACKBUFFER_FORMAT(FORMAT_R10G10B10A2_UNORM),
+			:FRAMECOUNT(0), VSYNC(true), SCREENWIDTH(0), SCREENHEIGHT(0), FULLSCREEN(false), RESOLUTIONCHANGED(false), BACKBUFFER_FORMAT(FORMAT_R8G8B8A8_UNORM/*FORMAT_R10G10B10A2_UNORM*/),
 			TESSELLATION(false), MULTITHREADED_RENDERING(false), CONSERVATIVE_RASTERIZATION(false),RASTERIZER_ORDERED_VIEWS(false), UNORDEREDACCESSTEXTURE_LOAD_EXT(false)
 		{}
 
@@ -145,7 +145,7 @@ namespace wiGraphicsTypes
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) = 0;
 		virtual void* AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID) = 0;
 		virtual void InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID) = 0;
-		virtual bool DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
+		virtual bool DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;

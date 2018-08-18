@@ -3,6 +3,8 @@
 #include "wiBackLog.h"
 #include "wiWindowRegistration.h"
 
+#include "Utility/stb_image_write.h"
+
 #include <locale>
 #include <direct.h>
 #include <chrono>
@@ -74,22 +76,50 @@ namespace wiHelper
 
 	void screenshot(const std::string& name)
 	{
-		//CreateDirectoryA("screenshots", 0);
-		//stringstream ss("");
-		//if (name.length() <= 0)
-		//	ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
-		//else
-		//	ss << name;
-		//if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer(), GRAPHICSTHREAD_IMMEDIATE)))
-		//{
-		//	ss << " Saved successfully!";
-		//	wiBackLog::post(ss.str().c_str());
-		//}
-		//else
-		//{
-		//	wiBackLog::post("Screenshot failed");
-		//}
-		messageBox("Please reimplement wiHelper::screenshot functionality!");
+		CreateDirectoryA("screenshots", 0);
+		stringstream ss("");
+		if (name.length() <= 0)
+			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".jpg";
+		else
+			ss << name;
+
+		using namespace wiGraphicsTypes;
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		
+		device->WaitForGPU();
+
+		static Texture2D tex = device->GetBackBuffer();
+		TextureDesc desc = tex.GetDesc();
+		UINT data_count = desc.Width * desc.Height;
+		UINT data_stride = device->GetFormatStride(desc.Format);
+		UINT data_size = data_count * data_stride;
+
+		static unsigned char* data = nullptr;
+		static Texture2D* stagingTex = nullptr;
+		if (stagingTex == nullptr)
+		{
+			TextureDesc staging_desc = desc;
+			staging_desc.Usage = USAGE_STAGING;
+			staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
+			staging_desc.BindFlags = 0;
+			staging_desc.MiscFlags = 0;
+			HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
+			assert(SUCCEEDED(hr));
+
+			data = new unsigned char[data_size];
+		}
+
+		bool download_success = device->DownloadResource(&tex, stagingTex, data, GRAPHICSTHREAD_IMMEDIATE);
+		assert(download_success);
+
+		// TODO: png would be better, but it has some problems now...
+
+		//int write_result = stbi_write_png(ss.str().c_str(), (int)desc.Width, (int)desc.Height, 4, data, (int)data_stride);
+		int write_result = stbi_write_jpg(ss.str().c_str(), (int)desc.Width, (int)desc.Height, 4, data, 100);
+		//int write_result = stbi_write_bmp(ss.str().c_str(), (int)desc.Width, (int)desc.Height, 4, data);
+		assert(write_result);
+
 	}
 
 	string getCurrentDateTimeAsString()

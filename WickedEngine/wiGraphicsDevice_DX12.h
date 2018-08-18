@@ -241,7 +241,7 @@ namespace wiGraphicsTypes
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) override;
 		virtual void* AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID) override;
 		virtual void InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID) override;
-		virtual bool DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID) override;
+		virtual bool DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) override;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) override;

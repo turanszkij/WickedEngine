@@ -647,7 +647,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	if (DEBUG)
 	{
-		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
+		device->DownloadResource(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
 	}
 }
 

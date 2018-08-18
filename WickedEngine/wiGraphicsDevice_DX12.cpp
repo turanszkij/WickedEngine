@@ -3908,7 +3908,7 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_DX12::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
 	{
 	}
-	bool GraphicsDevice_DX12::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
+	bool GraphicsDevice_DX12::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
 	}
