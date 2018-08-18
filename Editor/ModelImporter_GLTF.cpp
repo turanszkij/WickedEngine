@@ -1,12 +1,15 @@
 #include "stdafx.h"
 #include "ModelImporter.h"
 
+#include "Utility/stb_image.h"
+
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 
 #include <fstream>
+#include <sstream>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -27,9 +30,66 @@ namespace tinygltf
 		else
 		{
 			// embedded image
-			assert(0); // TODO
-			return false;
+
+			// We will load the texture2d by hand here and register to the resource manager
+			{
+				// png, tga, jpg, etc. loader:
+
+				const int channelCount = 4;
+				int width, height, bpp;
+				unsigned char* rgb = stbi_load_from_memory(bytes, size, &width, &height, &bpp, channelCount);
+
+				if (rgb != nullptr)
+				{
+					TextureDesc desc;
+					desc.ArraySize = 1;
+					desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+					desc.CPUAccessFlags = 0;
+					desc.Format = FORMAT_R8G8B8A8_UNORM;
+					desc.Height = static_cast<uint32_t>(height);
+					desc.Width = static_cast<uint32_t>(width);
+					desc.MipLevels = (UINT)log2(max(width, height));
+					desc.MiscFlags = 0;
+					desc.Usage = USAGE_DEFAULT;
+
+					UINT mipwidth = width;
+					SubresourceData* InitData = new SubresourceData[desc.MipLevels];
+					for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+					{
+						InitData[mip].pSysMem = rgb;
+						InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
+						mipwidth = max(1, mipwidth / 2);
+					}
+
+					Texture2D* tex = new Texture2D;
+					tex->RequestIndependentShaderResourcesForMIPs(true);
+					tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &tex);
+					assert(SUCCEEDED(hr));
+
+					if (tex != nullptr)
+					{
+						wiRenderer::AddDeferredMIPGen(tex);
+
+						if (image->name.empty())
+						{
+							static UINT imgcounter = 0;
+							stringstream ss("");
+							ss << "gltfLoader_embedded_image" << imgcounter++;
+							image->name = ss.str();
+						}
+						// We loaded the texture2d, so register to the resource manager to be retrieved later:
+						wiResourceManager::GetGlobal()->Register(image->name, tex, wiResourceManager::IMAGE);
+					}
+				}
+
+				free(rgb);
+			}
+
+			return true;
 		}
+
+		return false;
 	}
 
 	bool WriteImageData(const std::string *basepath, const std::string *filename,
@@ -101,26 +161,63 @@ Model* ImportModel_GLTF(const std::string& fileName)
 		{
 			auto& tex = gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = gltfModel.images[tex.source];
-			material->textureName = directory + img.uri;
-			if (!material->textureName.empty())
-				material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(material->textureName);
+			if (img.uri.empty())
+			{
+				// embedded image
+				material->textureName = img.name;
+			}
+			else
+			{
+				//external image
+				material->textureName = directory + img.uri;
+			}
 		}
+		else if(!gltfModel.images.empty())
+		{
+			// For some reason, we don't have diffuse texture, but have other textures
+			//	I have a problem, because one model viewer displays textures on a model which has no basecolor set in its material...
+			//	This is probably not how it should be (todo)
+			material->textureName = gltfModel.images[0].name;
+		}
+
 		if (normalTexture != x.additionalValues.end())
 		{
 			auto& tex = gltfModel.textures[normalTexture->second.TextureIndex()];
 			auto& img = gltfModel.images[tex.source];
-			material->normalMapName = directory + img.uri;
-			if (!material->normalMapName.empty())
-				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->normalMapName);
+			if (img.uri.empty())
+			{
+				// embedded image
+				material->normalMapName = img.name;
+			}
+			else
+			{
+				//external image
+				material->normalMapName = directory + img.uri;
+			}
 		}
 		if (emissiveTexture != x.additionalValues.end())
 		{
 			auto& tex = gltfModel.textures[emissiveTexture->second.TextureIndex()];
 			auto& img = gltfModel.images[tex.source];
-			material->surfaceMapName = directory + img.uri;
-			if (!material->surfaceMapName.empty())
-				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->surfaceMapName);
+			if (img.uri.empty())
+			{
+				// embedded image
+				material->surfaceMapName = img.name;
+			}
+			else
+			{
+				//external image
+				material->surfaceMapName = directory + img.uri;
+			}
 		}
+
+		// Retrieve textures by name:
+		if (!material->textureName.empty())
+			material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(material->textureName);
+		if (!material->normalMapName.empty())
+			material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->normalMapName);
+		if (!material->surfaceMapName.empty())
+			material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->surfaceMapName);
 
 		if (baseColorFactor != x.values.end())
 		{
@@ -439,7 +536,6 @@ Model* ImportModel_GLTF(const std::string& fileName)
 			{
 				for (size_t i = 0; i < count; i += 3)
 				{
-					// reorder indices:
 					mesh->indices[offset + i + 0] = data[i + 0];
 					mesh->indices[offset + i + 1] = data[i + 2];
 					mesh->indices[offset + i + 2] = data[i + 1];
@@ -449,7 +545,6 @@ Model* ImportModel_GLTF(const std::string& fileName)
 			{
 				for (size_t i = 0; i < count; i += 3)
 				{
-					// reorder indices:
 					mesh->indices[offset + i + 0] = ((uint16_t*)data)[i + 0];
 					mesh->indices[offset + i + 1] = ((uint16_t*)data)[i + 2];
 					mesh->indices[offset + i + 2] = ((uint16_t*)data)[i + 1];
@@ -459,7 +554,6 @@ Model* ImportModel_GLTF(const std::string& fileName)
 			{
 				for (size_t i = 0; i < count; i += 3)
 				{
-					// reorder indices:
 					mesh->indices[offset + i + 0] = ((uint32_t*)data)[i + 0];
 					mesh->indices[offset + i + 1] = ((uint32_t*)data)[i + 2];
 					mesh->indices[offset + i + 2] = ((uint32_t*)data)[i + 1];
@@ -486,7 +580,7 @@ Model* ImportModel_GLTF(const std::string& fileName)
 
 			if (subset.material == nullptr)
 			{
-				subset.material = new Material("gltfLoader-defaultMat");
+				subset.material = new Material("gltfLoader_defaultMat");
 			}
 
 			mesh->subsets.push_back(subset);
