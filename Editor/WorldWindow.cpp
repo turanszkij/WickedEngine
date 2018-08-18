@@ -142,6 +142,14 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		wiRenderer::GetScene().worldInfo.cloudiness = 0.4f;
 		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(100, 1000, 0);
 
+		for (auto& model : wiRenderer::GetScene().models)
+		{
+			for (auto& probe : model->environmentProbes)
+			{
+				probe->isUpToDate = false;
+			}
+		}
+
 	});
 	worldWindow->AddWidget(preset1Button);
 
@@ -156,6 +164,14 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
 		wiRenderer::GetScene().worldInfo.cloudiness = 0.36f;
 		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(50, 600, 0);
+
+		for (auto& model : wiRenderer::GetScene().models)
+		{
+			for (auto& probe : model->environmentProbes)
+			{
+				probe->isUpToDate = false;
+			}
+		}
 
 	});
 	worldWindow->AddWidget(preset2Button);
@@ -172,8 +188,39 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		wiRenderer::GetScene().worldInfo.cloudiness = 0.75f;
 		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(0, 500, 0);
 
+		for (auto& model : wiRenderer::GetScene().models)
+		{
+			for (auto& probe : model->environmentProbes)
+			{
+				probe->isUpToDate = false;
+			}
+		}
+
 	});
 	worldWindow->AddWidget(preset3Button);
+
+	wiButton* preset4Button = new wiButton("WeatherPreset - Night");
+	preset4Button->SetTooltip("Apply this weather preset to the world.");
+	preset4Button->SetSize(XMFLOAT2(240, 30));
+	preset4Button->SetPos(XMFLOAT2(x - 100, y += step));
+	preset4Button->OnClick([=](wiEventArgs args) {
+
+		wiRenderer::GetScene().worldInfo.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
+		wiRenderer::GetScene().worldInfo.horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
+		wiRenderer::GetScene().worldInfo.zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
+		wiRenderer::GetScene().worldInfo.cloudiness = 0.28f;
+		wiRenderer::GetScene().worldInfo.fogSEH = XMFLOAT3(10, 400, 0);
+
+		for (auto& model : wiRenderer::GetScene().models)
+		{
+			for (auto& probe : model->environmentProbes)
+			{
+				probe->isUpToDate = false;
+			}
+		}
+
+	});
+	worldWindow->AddWidget(preset4Button);
 
 
 
