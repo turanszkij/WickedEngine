@@ -9,6 +9,8 @@
 
 #include <DirectXCollision.h>
 
+#include <sstream>
+
 using namespace std;
 using namespace wiGraphicsTypes;
 

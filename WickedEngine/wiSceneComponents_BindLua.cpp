@@ -1,4 +1,4 @@
-#include "wiLoader_BindLua.h"
+#include "wiSceneComponents_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiEmittedParticle.h"
@@ -6,27 +6,23 @@
 
 using namespace std;
 
-namespace wiLoader_BindLua
+namespace wiSceneComponents_BindLua
 {
-	void Bind()
-	{
-		Node_BindLua::Bind();
-		Transform_BindLua::Bind();
-		Cullable_BindLua::Bind();
-		Object_BindLua::Bind();
-		Armature_BindLua::Bind();
-		Ray_BindLua::Bind();
-		AABB_BindLua::Bind();
-		EmittedParticle_BindLua::Bind();
-		Decal_BindLua::Bind();
-		Material_BindLua::Bind();
-		Camera_BindLua::Bind();
-		Model_BindLua::Bind();
-	}
+void Bind()
+{
+	Node_BindLua::Bind();
+	Transform_BindLua::Bind();
+	Cullable_BindLua::Bind();
+	Object_BindLua::Bind();
+	Armature_BindLua::Bind();
+	Ray_BindLua::Bind();
+	AABB_BindLua::Bind();
+	EmittedParticle_BindLua::Bind();
+	Decal_BindLua::Bind();
+	Material_BindLua::Bind();
+	Camera_BindLua::Bind();
+	Model_BindLua::Bind();
 }
-
-
-
 
 
 const char Node_BindLua::className[] = "Node";
@@ -2048,4 +2044,6 @@ void Model_BindLua::Bind()
 		initialized = true;
 		Luna<Model_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
+}
+
 }

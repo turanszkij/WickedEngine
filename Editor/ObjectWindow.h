@@ -1,6 +1,9 @@
 #pragma once
 
-struct Object;
+namespace wiSceneComponents
+{
+	struct Object;
+}
 
 class wiGUI;
 class wiWindow;
@@ -16,9 +19,9 @@ public:
 	ObjectWindow(wiGUI* gui);
 	~ObjectWindow();
 
-	void SetObject(Object* obj);
+	void SetObject(wiSceneComponents::Object* obj);
 
-	Object* object;
+	wiSceneComponents::Object* object;
 
 	wiGUI* GUI;
 

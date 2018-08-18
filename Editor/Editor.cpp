@@ -24,6 +24,7 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiRectPacker;
+using namespace wiSceneComponents;
 
 Editor::Editor()
 {

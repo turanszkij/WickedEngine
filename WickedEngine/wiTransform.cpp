@@ -4,6 +4,9 @@
 
 #include <vector>
 
+namespace wiSceneComponents
+{
+
 std::atomic<uint64_t> Node::__Unique_ID_Counter = 0;
 
 Node::Node() {
@@ -415,4 +418,6 @@ void Transform::Serialize(wiArchive& archive)
 		archive << copyParentS;
 
 	}
+}
+
 }

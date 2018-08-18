@@ -7,6 +7,9 @@
 
 class wiArchive;
 
+namespace wiSceneComponents
+{
+
 struct Node
 {
 private:
@@ -84,5 +87,7 @@ struct Transform : public Node
 	virtual uint32_t GetLayerMask() const override;
 	void Serialize(wiArchive& archive);
 };
+
+}
 
 #endif // _TRANSFORM_H_

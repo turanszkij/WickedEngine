@@ -1,4 +1,4 @@
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
 #include "wiMath.h"
@@ -12,9 +12,13 @@
 #include "wiArchive.h"
 #include "wiBackLog.h"
 
+#include <sstream>
 
 using namespace std;
 using namespace wiGraphicsTypes;
+
+namespace wiSceneComponents
+{
 
 #pragma region SCENE
 Model* _CreateWorldNode()
@@ -1069,6 +1073,60 @@ void Mesh::FlipNormals()
 	renderDataComplete = false;
 	CreateRenderData();
 }
+Mesh::Vertex_FULL Mesh::TransformVertex(int vertexI, const XMMATRIX& mat)
+{
+	XMMATRIX sump;
+	XMVECTOR pos = vertices_POS[vertexI].LoadPOS();
+	XMVECTOR nor = vertices_POS[vertexI].LoadNOR();
+
+	if (hasArmature() && !armature->boneCollection.empty())
+	{
+		XMFLOAT4 ind = vertices_BON[vertexI].GetInd_FULL();
+		XMFLOAT4 wei = vertices_BON[vertexI].GetWei_FULL();
+
+
+		float inWei[4] = {
+			wei.x,
+			wei.y,
+			wei.z,
+			wei.w
+		};
+		float inBon[4] = {
+			ind.x,
+			ind.y,
+			ind.z,
+			ind.w
+		};
+		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
+		{
+			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+			for (unsigned int i = 0; i < 4; i++)
+			{
+				sump += XMLoadFloat4x4(&armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
+			}
+		}
+		else
+		{
+			sump = XMMatrixIdentity();
+		}
+		sump = XMMatrixMultiply(sump, mat);
+	}
+	else
+	{
+		sump = mat;
+	}
+
+	XMFLOAT3 transformedP, transformedN;
+	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
+
+	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
+
+	Mesh::Vertex_FULL retV(transformedP);
+	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
+	retV.tex = vertices_FULL[vertexI].tex;
+
+	return retV;
+}
 
 int Mesh::GetRenderTypes() const
 {
@@ -1675,7 +1733,7 @@ void Model::Serialize(wiArchive& archive)
 			if (x->mesh == nullptr)
 			{
 				// find mesh
-				MeshCollection::iterator found = meshes.find(x->meshName);
+				auto& found = meshes.find(x->meshName);
 				if (found != meshes.end())
 				{
 					x->mesh = found->second;
@@ -1689,7 +1747,7 @@ void Model::Serialize(wiArchive& archive)
 				{
 					if (y.material == nullptr)
 					{
-						MaterialCollection::iterator it = materials.find(x->mesh->materialNames[i]);
+						auto& it = materials.find(x->mesh->materialNames[i]);
 						if (it != materials.end())
 						{
 							y.material = it->second;
@@ -1714,7 +1772,7 @@ void Model::Serialize(wiArchive& archive)
 			for (auto& y : x->eParticleSystems)
 			{
 				y->object = x;
-				MaterialCollection::iterator it = materials.find(y->materialName);
+				auto& it = materials.find(y->materialName);
 				if (it != materials.end())
 				{
 					y->material = it->second;
@@ -1723,7 +1781,7 @@ void Model::Serialize(wiArchive& archive)
 			for (auto& y : x->hParticleSystems)
 			{
 				y->object = x;
-				MaterialCollection::iterator it = materials.find(y->materialName);
+				auto& it = materials.find(y->materialName);
 				if (it != materials.end())
 				{
 					y->material = it->second;
@@ -2704,8 +2762,8 @@ void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 		if (base >= 0 && tip >= 0) {
 			XMFLOAT4 baseP, tipP;
 			XMFLOAT4 newCol = XMFLOAT4(col.x, col.y, col.z, 1);
-			baseP = wiRenderer::TransformVertex(mesh, base).pos;
-			tipP = wiRenderer::TransformVertex(mesh, tip).pos;
+			baseP = mesh->TransformVertex(base).pos;
+			tipP = mesh->TransformVertex(tip).pos;
 
 			trail.push_back(RibbonVertex(XMFLOAT3(baseP.x, baseP.y, baseP.z), XMFLOAT2(0,0), XMFLOAT4(0, 0, 0, 1),fadeSpeed));
 			trail.push_back(RibbonVertex(XMFLOAT3(tipP.x, tipP.y, tipP.z), XMFLOAT2(0,0), newCol,fadeSpeed));
@@ -3264,4 +3322,4 @@ void EnvironmentProbe::Serialize(wiArchive& archive)
 #pragma endregion
 
 
-
+}

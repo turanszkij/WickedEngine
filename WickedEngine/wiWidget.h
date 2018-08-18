@@ -25,7 +25,7 @@ struct wiEventArgs
 	std::string sValue;
 };
 
-class wiWidget : public Transform
+class wiWidget : public wiSceneComponents::Transform
 {
 	friend class wiGUI;
 public:

@@ -4,7 +4,7 @@
 #include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
 

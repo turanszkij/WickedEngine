@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ForceFieldWindow.h"
 
+using namespace wiSceneComponents;
+
 
 ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 {

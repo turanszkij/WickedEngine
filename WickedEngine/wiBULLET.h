@@ -50,19 +50,19 @@ public:
 	void addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
 	
-	void addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+	void addSoftBodyTriangleMesh(const wiSceneComponents::Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass, float newFriction, float newRestitution, float newDamping);
 
 	void addBone(float rad, float hei);
 	
-	void connectVerticesToSoftBody(Mesh* const mesh, int objectI);
-	void connectSoftBodyToVertices(const Mesh*  const mesh, int objectI);
+	void connectVerticesToSoftBody(wiSceneComponents::Mesh* const mesh, int objectI);
+	void connectSoftBodyToVertices(const wiSceneComponents::Mesh*  const mesh, int objectI);
 	void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI);
 
 	PhysicsTransform* getObject(int index);
 
-	void registerObject(Object* object);
-	void removeObject(Object* object);
+	void registerObject(wiSceneComponents::Object* object);
+	void removeObject(wiSceneComponents::Object* object);
 
 	void Update(float dt);
 	void MarkForRead();

@@ -19,7 +19,7 @@
 #include "wiFont.h"
 #include "wiFrameRate.h"
 #include "wiCpuInfo.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiRenderer.h"
@@ -69,9 +69,7 @@
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
 
-#include "wiGraphicsDevice_DX11.h"
-#include "wiGraphicsDevice_DX12.h"
-#include "wiGraphicsDevice_Vulkan.h"
+#include "wiGraphicsDevice.h"
 
 #ifdef _WIN32
 

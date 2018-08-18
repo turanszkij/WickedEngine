@@ -8,6 +8,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 Model* ImportModel_OBJ(const std::string& fileName)
 {

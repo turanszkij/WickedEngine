@@ -10,6 +10,8 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
+
 
 namespace tinygltf
 {

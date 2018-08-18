@@ -1,6 +1,5 @@
 #pragma once
 
-struct Material;
 class wiGUI;
 class wiWindow;
 class wiLabel;

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "EnvProbeWindow.h"
 
+using namespace wiSceneComponents;
+
 EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 {
 	probe = nullptr;

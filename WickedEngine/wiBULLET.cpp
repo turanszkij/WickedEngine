@@ -1,5 +1,5 @@
 #include "wiBULLET.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 
 
 
@@ -12,6 +12,7 @@
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
 using namespace std;
+using namespace wiSceneComponents;
 
 int PHYSICS::softBodyIterationCount=5;
 bool PHYSICS::rigidBodyPhysicsEnabled = true, PHYSICS::softBodyPhysicsEnabled = true;

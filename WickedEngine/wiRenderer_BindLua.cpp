@@ -1,9 +1,9 @@
 #include "wiRenderer_BindLua.h"
 #include "wiRenderer.h"
 #include "wiLines.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiHelper.h"
-#include "wiLoader_BindLua.h"
+#include "wiSceneComponents_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiWaterPlane.h"
@@ -14,6 +14,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents_BindLua;
 
 namespace wiRenderer_BindLua
 {

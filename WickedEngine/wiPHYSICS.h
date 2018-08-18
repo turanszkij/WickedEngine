@@ -3,8 +3,11 @@
 
 #include <vector>
 
-struct Mesh;
-struct Object;
+namespace wiSceneComponents
+{
+	struct Mesh;
+	struct Object;
+}
 
 class PHYSICS
 {
@@ -54,17 +57,17 @@ public:
 		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
 
 	
-	virtual void addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+	virtual void addSoftBodyTriangleMesh(const wiSceneComponents::Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1)=0;
 	
-	virtual void connectVerticesToSoftBody(Mesh* const mesh, int objectI)=0;
-	virtual void connectSoftBodyToVertices(const Mesh* const mesh, int objectI)=0;
+	virtual void connectVerticesToSoftBody(wiSceneComponents::Mesh* const mesh, int objectI)=0;
+	virtual void connectSoftBodyToVertices(const wiSceneComponents::Mesh* const mesh, int objectI)=0;
 	virtual void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI)=0;
 
 	virtual PhysicsTransform* getObject(int index)=0;
 
 	// add object to the simulation
-	virtual void registerObject(Object* object) = 0;
+	virtual void registerObject(wiSceneComponents::Object* object) = 0;
 	// remove object from simulation
-	virtual void removeObject(Object* object) = 0;
+	virtual void removeObject(wiSceneComponents::Object* object) = 0;
 };

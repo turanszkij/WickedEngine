@@ -222,9 +222,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
@@ -897,9 +894,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1152,6 +1146,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneComponents.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneComponents_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1323,9 +1323,6 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
@@ -1781,9 +1778,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1951,6 +1945,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneComponents.cpp">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneComponents_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

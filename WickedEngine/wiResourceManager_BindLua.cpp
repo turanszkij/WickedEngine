@@ -4,6 +4,8 @@
 #include "Texture_BindLua.h"
 #include "wiRenderer.h"
 
+#include <sstream>
+
 using namespace std;
 using namespace wiGraphicsTypes;
 

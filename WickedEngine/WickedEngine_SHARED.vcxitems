@@ -339,8 +339,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h" />
@@ -684,8 +684,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp" />

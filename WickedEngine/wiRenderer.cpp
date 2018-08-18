@@ -4,7 +4,7 @@
 #include "wiEmittedParticle.h"
 #include "wiResourceManager.h"
 #include "wiSprite.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiFrustum.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
@@ -38,6 +38,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 #pragma region STATICS
 GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
@@ -2873,7 +2874,7 @@ Material* wiRenderer::getMaterialByName(const std::string& get)
 {
 	for (Model* model : GetScene().models)
 	{
-		MaterialCollection::iterator iter = model->materials.find(get);
+		auto& iter = model->materials.find(get);
 		if (iter != model->materials.end())
 			return iter->second;
 	}
@@ -2924,60 +2925,6 @@ Light* wiRenderer::getLightByName(const std::string& name)
 	return nullptr;
 }
 
-Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
-{
-	XMMATRIX sump;
-	XMVECTOR pos = mesh->vertices_POS[vertexI].LoadPOS();
-	XMVECTOR nor = mesh->vertices_POS[vertexI].LoadNOR();
-
-	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
-	{
-		XMFLOAT4 ind = mesh->vertices_BON[vertexI].GetInd_FULL();
-		XMFLOAT4 wei = mesh->vertices_BON[vertexI].GetWei_FULL();
-
-
-		float inWei[4] = {
-			wei.x,
-			wei.y,
-			wei.z,
-			wei.w 
-		};
-		float inBon[4] = {
-			ind.x,
-			ind.y,
-			ind.z,
-			ind.w 
-		};
-		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
-		{
-			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-			for (unsigned int i = 0; i < 4; i++)
-			{
-				sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
-			}
-		}
-		else
-		{
-			sump = XMMatrixIdentity();
-		}
-		sump = XMMatrixMultiply(sump, mat);
-	}
-	else
-	{
-		sump = mat;
-	}
-
-	XMFLOAT3 transformedP, transformedN;
-	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
-
-	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
-
-	Mesh::Vertex_FULL retV(transformedP);
-	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
-	retV.tex = mesh->vertices_FULL[vertexI].tex;
-
-	return retV;
-}
 void wiRenderer::FixedUpdate()
 {
 	cam->UpdateTransform();
@@ -3461,7 +3408,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 
 			// Skinning:
-			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
+			for (auto& iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
 			{
 				Mesh* mesh = iter->second;
 
@@ -8163,7 +8110,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			{
 				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
 				{
-					_tmpvert = TransformVertex(mesh, (int)i);
+					_tmpvert = mesh->TransformVertex((int)i);
 					_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
 				}
 			}
@@ -8441,7 +8388,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 							for (std::map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
 							{
 								int vi = (*it).first;
-								Mesh::Vertex_FULL tvert = TransformVertex(mesh, vi, worldMat);
+								Mesh::Vertex_FULL tvert = mesh->TransformVertex(vi, worldMat);
 								mesh->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
 								mesh->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
 								++j;

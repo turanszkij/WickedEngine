@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "AnimationWindow.h"
 
+using namespace wiSceneComponents;
 
 AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 {

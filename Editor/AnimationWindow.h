@@ -1,6 +1,10 @@
 #pragma once
 
-struct Armature;
+namespace wiSceneComponents
+{
+	struct Armature;
+}
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -15,8 +19,8 @@ public:
 	~AnimationWindow();
 
 	wiGUI* GUI;
-	Armature* armature;
-	void SetArmature(Armature* armature);
+	wiSceneComponents::Armature* armature;
+	void SetArmature(wiSceneComponents::Armature* armature);
 
 	wiWindow*	animWindow;
 	wiComboBox*	actionsComboBox;

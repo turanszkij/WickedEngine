@@ -1,6 +1,6 @@
 #include "wiEmittedParticle.h"
 #include "wiMath.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiFrustum.h"
@@ -13,6 +13,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader[PARTICLESHADERTYPE_COUNT] = {};

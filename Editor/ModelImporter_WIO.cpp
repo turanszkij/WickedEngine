@@ -6,9 +6,10 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 
-Mesh* LoadMeshFromBinaryFile(const std::string& newName, const std::string& fname, const MaterialCollection& materialColl, const unordered_set<Armature*>& armatures)
+Mesh* LoadMeshFromBinaryFile(const std::string& newName, const std::string& fname, const std::map<std::string, Material*>& materialColl, const unordered_set<Armature*>& armatures)
 {
 	Mesh* mesh = new Mesh(newName);
 
@@ -83,7 +84,7 @@ Mesh* LoadMeshFromBinaryFile(const std::string& newName, const std::string& fnam
 
 			stringstream identified_matname("");
 			identified_matname << matName;
-			MaterialCollection::const_iterator iter = materialColl.find(identified_matname.str());
+			auto& iter = materialColl.find(identified_matname.str());
 			if (iter != materialColl.end()) {
 				mesh->subsets.push_back(MeshSubset());
 				mesh->subsets.back().material = iter->second;
@@ -393,7 +394,7 @@ void LoadWiArmatures(const std::string& directory, const std::string& name, unor
 	}
 
 }
-void LoadWiMaterialLibrary(const std::string& directory, const std::string& name, const std::string& texturesDir, MaterialCollection& materials)
+void LoadWiMaterialLibrary(const std::string& directory, const std::string& name, const std::string& texturesDir, std::map<std::string, Material*>& materials)
 {
 	int materialI = (int)(materials.size() - 1);
 
@@ -543,7 +544,7 @@ void LoadWiMaterialLibrary(const std::string& directory, const std::string& name
 }
 void LoadWiObjects(const std::string& directory, const std::string& name, unordered_set<Object*>& objects
 	, unordered_set<Armature*>& armatures
-	, MeshCollection& meshes, const MaterialCollection& materials)
+	, std::map<std::string, Mesh*>& meshes, const std::map<std::string, Material*>& materials)
 {
 
 	stringstream filename("");
@@ -572,7 +573,7 @@ void LoadWiObjects(const std::string& directory, const std::string& name, unorde
 					string meshName = "";
 					file >> meshName;
 					object->meshName = meshName;
-					MeshCollection::iterator iter = meshes.find(meshName);
+					auto& iter = meshes.find(meshName);
 
 					if (line[1] == 'b')
 					{
@@ -678,8 +679,8 @@ void LoadWiObjects(const std::string& directory, const std::string& name, unorde
 	file.close();
 
 }
-void LoadWiMeshes(const std::string& directory, const std::string& name, MeshCollection& meshes,
-	const unordered_set<Armature*>& armatures, const MaterialCollection& materials)
+void LoadWiMeshes(const std::string& directory, const std::string& name, std::map<std::string, Mesh*>& meshes,
+	const unordered_set<Armature*>& armatures, const std::map<std::string, Material*>& materials)
 {
 	int meshI = (int)(meshes.size() - 1);
 	Mesh* currentMesh = NULL;
@@ -838,7 +839,7 @@ void LoadWiMeshes(const std::string& directory, const std::string& name, MeshCol
 					string mName = "";
 					file >> mName;
 					currentMesh->materialNames.push_back(mName);
-					MaterialCollection::const_iterator iter = materials.find(mName);
+					auto& iter = materials.find(mName);
 					if (iter != materials.end()) {
 						currentMesh->subsets.push_back(MeshSubset());
 						currentMesh->renderable = true;

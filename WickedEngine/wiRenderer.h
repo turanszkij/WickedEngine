@@ -3,30 +3,36 @@
 #include "ShaderInterop.h"
 #include "wiEnums.h"
 #include "wiGraphicsAPI.h"
-#include "wiSPTree.h"
 #include "wiWindowRegistration.h"
+#include "wiSPTree.h"
+#include "wiFrustum.h"
 
 #include <unordered_set>
+#include <deque>
 
-struct Transform;
-struct Vertex;
-struct SkinnedVertex;
-struct Material;
-struct Object;
-struct Mesh;
-struct Armature;
-struct Bone;
-struct KeyFrame;
-struct SHCAM;
-struct Light;
-struct Decal;
-struct WorldInfo;
-struct Wind;
-struct Camera;
-struct RAY;
-struct Camera;
-struct Model;
-struct Scene;
+namespace wiSceneComponents
+{
+	struct Transform;
+	struct Vertex;
+	struct SkinnedVertex;
+	struct Material;
+	struct Object;
+	struct Mesh;
+	struct Armature;
+	struct Bone;
+	struct KeyFrame;
+	struct SHCAM;
+	struct Light;
+	struct Decal;
+	struct WorldInfo;
+	struct Wind;
+	struct Camera;
+	struct Model;
+	struct Scene;
+	struct Cullable;
+	struct EnvironmentProbe;
+	struct ForceField;
+}
 
 class  Lines;
 class  Cube;
@@ -37,16 +43,13 @@ class  wiHairParticle;
 class  wiSprite;
 class  wiSPTree;
 class  TaskThread;
-struct Cullable;
 class  PHYSICS;
 class  wiRenderTarget;
 class  wiWaterPlane;
 class  wiOcean;
 struct wiOceanParameter;
 
-typedef std::map<std::string, Mesh*> MeshCollection;
-typedef std::map<std::string, Material*> MaterialCollection;
-
+struct RAY;
 
 class wiRenderer
 {
@@ -275,7 +278,7 @@ protected:
 
 	static float GameSpeed, overrideGameSpeed;
 
-	static Scene* scene;
+	static wiSceneComponents::Scene* scene;
 
 	static wiWaterPlane waterPlane;
 
@@ -326,7 +329,7 @@ public:
 	static void OcclusionCulling_Read();
 	static void UpdateImages();
 	static void ManageImages();
-	static void PutDecal(Decal* decal);
+	static void PutDecal(wiSceneComponents::Decal* decal);
 	static void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	static void ManageWaterRipples();
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
@@ -403,20 +406,18 @@ public:
 	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	static wiWaterPlane GetWaterPlane();
 
-	static Transform* getTransformByName(const std::string& name);
-	static Transform* getTransformByID(uint64_t id);
-	static Armature* getArmatureByName(const std::string& get);
-	static int getActionByName(Armature* armature, const std::string& get);
-	static int getBoneByName(Armature* armature, const std::string& get);
-	static Material* getMaterialByName(const std::string& get);
-	static Object* getObjectByName(const std::string& name);
-	static Camera* getCameraByName(const std::string& name);
-	static Light* getLightByName(const std::string& name);
+	static wiSceneComponents::Transform* getTransformByName(const std::string& name);
+	static wiSceneComponents::Transform* getTransformByID(uint64_t id);
+	static wiSceneComponents::Armature* getArmatureByName(const std::string& get);
+	static int getActionByName(wiSceneComponents::Armature* armature, const std::string& get);
+	static int getBoneByName(wiSceneComponents::Armature* armature, const std::string& get);
+	static wiSceneComponents::Material* getMaterialByName(const std::string& get);
+	static wiSceneComponents::Object* getObjectByName(const std::string& name);
+	static wiSceneComponents::Camera* getCameraByName(const std::string& name);
+	static wiSceneComponents::Light* getLightByName(const std::string& name);
 
 	static void ReloadShaders(const std::string& path = "");
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
-
-	static Mesh::Vertex_FULL TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 
 	struct FrameCulling
 	{
@@ -426,8 +427,8 @@ public:
 		CulledCollection culledRenderer_transparent;
 		std::vector<wiHairParticle*> culledHairParticleSystems;
 		CulledList culledLights;
-		std::list<Decal*> culledDecals;
-		std::list<EnvironmentProbe*> culledEnvProbes;
+		std::list<wiSceneComponents::Decal*> culledDecals;
+		std::list<wiSceneComponents::EnvironmentProbe*> culledEnvProbes;
 
 		void Clear()
 		{
@@ -440,7 +441,7 @@ public:
 			culledEnvProbes.clear();
 		}
 	};
-	static std::unordered_map<Camera*, FrameCulling> frameCullings;
+	static std::unordered_map<wiSceneComponents::Camera*, FrameCulling> frameCullings;
 
 	inline static XMUINT3 GetEntityCullingTileCount()
 	{
@@ -455,7 +456,7 @@ public:
 
 	static void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
-	static void UpdateCameraCB(Camera* camera, GRAPHICSTHREAD threadID);
+	static void UpdateCameraCB(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
 	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
 	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
@@ -466,31 +467,31 @@ public:
 		bool tessellation = false, bool occlusionCulling = false, uint32_t layerMask = 0xFFFFFFFF);
 	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
-	static void DrawWorld(Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	static void DrawWorld(wiSceneComponents::Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
-	static void DrawWorldTransparent(Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
-	void DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawDebugCameras(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawSoftParticles(Camera* camera, bool distortion, GRAPHICSTHREAD threadID);
+	static void DrawWorldTransparent(wiSceneComponents::Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawDebugSpheres(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugBoneLines(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugLines(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugBoxes(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawTranslators(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugEnvProbes(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugGridHelper(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugVoxels(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugEmitters(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugForceFields(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDebugCameras(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawSoftParticles(wiSceneComponents::Camera* camera, bool distortion, GRAPHICSTHREAD threadID);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesAdd(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	//alpha-opaque
 	static void DrawImages(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
 	static void DrawImagesNormals(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
-	static void DrawLights(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawLightVisualizers(Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawVolumeLights(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLights(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLightVisualizers(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawVolumeLights(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
-	static void DrawDecals(Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDecals(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
 	static void RefreshEnvProbes(GRAPHICSTHREAD threadID);
 	static void VoxelRadiance(GRAPHICSTHREAD threadID);
 
@@ -498,7 +499,7 @@ public:
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 
 	static void BuildSceneBVH(GRAPHICSTHREAD threadID);
-	static void DrawTracedScene(Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+	static void DrawTracedScene(wiSceneComponents::Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
 
 	enum MIPGENFILTER
 	{
@@ -541,13 +542,13 @@ public:
 	static wiSPTree* spTree_lights;
 
 	// The scene holds all models, world information and wind information
-	static Scene& GetScene();
+	static wiSceneComponents::Scene& GetScene();
 
 	static std::vector<Lines*> boneLines;
 	static std::vector<Lines*> linesTemp;
 	static std::vector<Cube> cubes;
 
-	static std::unordered_set<Object*> objectsWithTrails;
+	static std::unordered_set<wiSceneComponents::Object*> objectsWithTrails;
 	static std::unordered_set<wiEmittedParticle*> emitterSystems;
 	
 	static std::deque<wiSprite*> images;
@@ -557,21 +558,21 @@ public:
 
 	static wiRenderTarget normalMapRT, imagesRT, imagesRTAdd;
 	
-	static Camera* cam, *refCam, *prevFrameCam;
-	static Camera* getCamera(){ return cam; }
-	static Camera* getRefCamera(){ return refCam; }
+	static wiSceneComponents::Camera* cam, *refCam, *prevFrameCam;
+	static wiSceneComponents::Camera* getCamera(){ return cam; }
+	static wiSceneComponents::Camera* getRefCamera(){ return refCam; }
 
 	std::string DIRECTORY;
 
 	struct Picked
 	{
-		Transform* transform;
-		Object* object;
-		Light* light;
-		Decal* decal;
-		EnvironmentProbe* envProbe;
-		ForceField* forceField;
-		Camera* camera;
+		wiSceneComponents::Transform* transform;
+		wiSceneComponents::Object* object;
+		wiSceneComponents::Light* light;
+		wiSceneComponents::Decal* decal;
+		wiSceneComponents::EnvironmentProbe* envProbe;
+		wiSceneComponents::ForceField* forceField;
+		wiSceneComponents::Camera* camera;
 		XMFLOAT3 position,normal;
 		float distance;
 		int subsetIndex;
@@ -617,7 +618,7 @@ public:
 	static RAY getPickRay(long cursorX, long cursorY);
 	static void RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, std::vector<Picked>& points,
 		int pickType = PICK_OPAQUE, bool dynamicObjects = true, bool onlyVisible = false, uint32_t layerMask = 0xFFFFFFFF);
-	static void CalculateVertexAO(Object* object);
+	static void CalculateVertexAO(wiSceneComponents::Object* object);
 
 	static PHYSICS* physicsEngine;
 	static void SynchronizeWithPhysicsEngine(float dt = 1.0f / 60.0f);
@@ -626,13 +627,13 @@ public:
 	static void SetOceanEnabled(bool enabled, const wiOceanParameter& params);
 	static wiOcean* GetOcean() { return ocean; }
 
-	static Model* LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
+	static wiSceneComponents::Model* LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
 	static void LoadWorldInfo(const std::string& fileName);
 	static void LoadDefaultLighting();
 
 	static void PutEnvProbe(const XMFLOAT3& position);
 
-	static void CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID);
+	static void CreateImpostor(wiSceneComponents::Mesh* mesh, GRAPHICSTHREAD threadID);
 
 	static std::vector<wiTranslator*> renderableTranslators;
 	// Add translator to render in next frame
@@ -645,22 +646,22 @@ public:
 	static void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
 
 	// Add model to the scene
-	static void AddModel(Model* value);
+	static void AddModel(wiSceneComponents::Model* value);
 	// Add Object Instance
-	static void Add(Object* value);
+	static void Add(wiSceneComponents::Object* value);
 	// Add Light Instance
-	static void Add(Light* value);
+	static void Add(wiSceneComponents::Light* value);
 	// Add Force Field Instance
-	static void Add(ForceField* value);
+	static void Add(wiSceneComponents::ForceField* value);
 	// Add Camera Instance
-	static void Add(Camera* value);
+	static void Add(wiSceneComponents::Camera* value);
 
 	// Remove from the scene
-	static void Remove(Object* value);
-	static void Remove(Light* value);
-	static void Remove(Decal* value);
-	static void Remove(EnvironmentProbe* value);
-	static void Remove(ForceField* value);
-	static void Remove(Camera* value);
+	static void Remove(wiSceneComponents::Object* value);
+	static void Remove(wiSceneComponents::Light* value);
+	static void Remove(wiSceneComponents::Decal* value);
+	static void Remove(wiSceneComponents::EnvironmentProbe* value);
+	static void Remove(wiSceneComponents::ForceField* value);
+	static void Remove(wiSceneComponents::Camera* value);
 };
 

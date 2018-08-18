@@ -5,13 +5,16 @@
 #include "wiSPTree.h"
 
 
-struct SkinnedVertex;
-struct Mesh;
-struct Object;
-struct Material;
-struct Camera;
-
 class wiArchive;
+
+namespace wiSceneComponents
+{
+	struct SkinnedVertex;
+	struct Mesh;
+	struct Object;
+	struct Material;
+	struct Camera;
+}
 
 class wiHairParticle
 {
@@ -54,14 +57,14 @@ public:
 public:
 	wiHairParticle();
 	wiHairParticle(const std::string& newName, float newLen, int newCount
-		, const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
+		, const std::string& newMat, wiSceneComponents::Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
 	wiHairParticle(const wiHairParticle& other);
 
 	void CleanUp();
 
 	void Generate();
-	void ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID);
-	void Draw(Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
+	void ComputeCulling(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	void Draw(wiSceneComponents::Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
@@ -70,9 +73,9 @@ public:
 	float length;
 	int count;
 	std::string name, densityG, lenG, materialName;
-	Material* material;
+	wiSceneComponents::Material* material;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
-	Object* object;
+	wiSceneComponents::Object* object;
 	size_t particleCount;
 
 	void Serialize(wiArchive& archive);

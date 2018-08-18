@@ -17,10 +17,17 @@
 #include <deque>
 #include <sstream>
 
+
+class wiArchive;
+
 class wiParticle;
 class wiEmittedParticle;
 class wiHairParticle;
 class wiRenderTarget;
+
+
+namespace wiSceneComponents
+{
 
 struct Armature;
 struct Bone;
@@ -28,11 +35,6 @@ struct Mesh;
 struct Material;
 struct Object;
 struct Model;
-
-typedef std::map<std::string,Mesh*> MeshCollection;
-typedef std::map<std::string,Material*> MaterialCollection;
-
-class wiArchive;
 
 struct ModelChild
 {
@@ -518,6 +520,7 @@ public:
 	void ComputeNormals(bool smooth = false);
 	void FlipCulling();
 	void FlipNormals();
+	Vertex_FULL TransformVertex(int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 	void init();
 	
 	bool hasArmature() const { return armature != nullptr; }
@@ -1183,8 +1186,8 @@ struct ForceField : public Transform, public ModelChild
 struct Model : public Transform
 {
 	std::unordered_set<Object*> objects;
-	MeshCollection meshes;
-	MaterialCollection materials;
+	std::map<std::string, Mesh*> meshes;
+	std::map<std::string, Material*> materials;
 	std::unordered_set<Armature*> armatures;
 	std::unordered_set<Light*> lights;
 	std::unordered_set<Decal*> decals;
@@ -1225,6 +1228,5 @@ struct Scene
 	void Update();
 };
 
-// Load world info from file:
-void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind);
+}
 

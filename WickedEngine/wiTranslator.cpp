@@ -4,6 +4,7 @@
 #include "wiMath.h"
 
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 GPUBuffer* wiTranslator::vertexBuffer_Axis = nullptr;
 GPUBuffer* wiTranslator::vertexBuffer_Plane = nullptr;

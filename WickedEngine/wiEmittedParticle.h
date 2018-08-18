@@ -5,10 +5,13 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "wiImageEffects.h"
 
-struct Object;
-struct Material;
-
 class wiArchive;
+
+namespace wiSceneComponents
+{
+	struct Object;
+	struct Material;
+}
 
 class wiEmittedParticle
 {
@@ -63,7 +66,7 @@ private:
 
 public:
 	wiEmittedParticle();
-	wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
+	wiEmittedParticle(const std::string& newName, const std::string& newMat, wiSceneComponents::Object* newObject, float newSize, float newRandomFac, float newNormalFac
 		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
 	wiEmittedParticle(const wiEmittedParticle& other);
 	static void SetUpStatic();
@@ -90,9 +93,9 @@ public:
 	PARTICLESHADERTYPE shaderType = SOFT;
 
 	std::string name;
-	Object* object;
+	wiSceneComponents::Object* object;
 	std::string materialName;
-	Material* material;
+	wiSceneComponents::Material* material;
 
 	float size,random_factor,normal_factor;
 	float count,life,random_life;

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "CameraWindow.h"
 
+using namespace wiSceneComponents;
+
 void CameraWindow::ResetCam()
 {
 	wiRenderer::getCamera()->Clear();

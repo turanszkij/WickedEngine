@@ -1,6 +1,9 @@
 #pragma once
 
-struct ForceField;
+namespace wiSceneComponents
+{
+	struct ForceField;
+}
 
 class wiGUI;
 class wiWindow;
@@ -16,9 +19,9 @@ public:
 	ForceFieldWindow(wiGUI* gui);
 	~ForceFieldWindow();
 
-	void SetForceField(ForceField* force);
+	void SetForceField(wiSceneComponents::ForceField* force);
 
-	ForceField* force;
+	wiSceneComponents::ForceField* force;
 
 	wiGUI* GUI;
 
