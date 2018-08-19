@@ -235,6 +235,12 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	pickTypeCameraCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeCameraCheckBox);
 
+	pickTypeArmatureCheckBox = new wiCheckBox("Pick Armatures: ");
+	pickTypeArmatureCheckBox->SetTooltip("Enable if you want to pick armatures with the pointer");
+	pickTypeArmatureCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeArmatureCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeArmatureCheckBox);
+
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
 	speedMultiplierSlider->SetSize(XMFLOAT2(100, 30));
@@ -571,6 +577,10 @@ int RendererWindow::GetPickType()
 	if (pickTypeCameraCheckBox->GetCheck())
 	{
 		pickType |= PICK_CAMERA;
+	}
+	if (pickTypeArmatureCheckBox->GetCheck())
+	{
+		pickType |= PICK_ARMATURE;
 	}
 
 	return pickType;

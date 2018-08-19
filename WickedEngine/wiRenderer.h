@@ -573,6 +573,7 @@ public:
 		wiSceneComponents::EnvironmentProbe* envProbe;
 		wiSceneComponents::ForceField* forceField;
 		wiSceneComponents::Camera* camera;
+		wiSceneComponents::Armature* armature;
 		XMFLOAT3 position,normal;
 		float distance;
 		int subsetIndex;
@@ -592,7 +593,8 @@ public:
 				decal == other.decal &&
 				envProbe == other.envProbe &&
 				forceField == other.forceField &&
-				camera == other.camera
+				camera == other.camera &&
+				armature == other.armature
 				;
 		}
 		void Clear()
@@ -606,6 +608,7 @@ public:
 			SAFE_INIT(envProbe);
 			SAFE_INIT(forceField);
 			SAFE_INIT(camera);
+			SAFE_INIT(armature);
 		}
 	};
 

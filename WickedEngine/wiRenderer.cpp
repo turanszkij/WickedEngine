@@ -8021,6 +8021,22 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, uint32_t layerMask)
 				}
 			}
 		}
+		if (pickType & PICK_ARMATURE)
+		{
+			for (auto& armature : model->armatures)
+			{
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&armature->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(armature->translation, cam->translation) * 0.05f)
+				{
+					Picked pick = Picked();
+					pick.transform = armature;
+					pick.armature = armature;
+					pick.distance = wiMath::Distance(armature->translation, ray.origin) * 0.95f;
+					pickPoints.push_back(pick);
+				}
+			}
+		}
 	}
 
 	if (!pickPoints.empty()) {

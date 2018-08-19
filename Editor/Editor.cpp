@@ -922,6 +922,7 @@ void EditorComponent::Load()
 	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
 	emitterTex = *(Texture2D*)Content.add("images/emitter.dds");
 	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
+	armatureTex = *(Texture2D*)Content.add("images/armature.dds");
 }
 void EditorComponent::Start()
 {
@@ -1153,6 +1154,38 @@ void EditorComponent::Update(float dt)
 					{
 						wiRenderer::Picked* picked = new wiRenderer::Picked;
 						picked->forceField = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->armatures)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->armature = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->cameras)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->camera = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->environmentProbes)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->envProbe = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->decals)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->decal = x;
 						picked->transform = x;
 
 						AddSelected(picked);
@@ -1730,6 +1763,37 @@ void EditorComponent::Compose()
 
 
 				wiImage::Draw(&cameraTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			}
+		}
+
+		if (rendererWnd->GetPickType() & PICK_ARMATURE)
+		{
+			for (auto& y : x->armatures)
+			{
+				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+
+				wiImageEffects fx;
+				fx.pos = y->translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.armature == y)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->armature == y)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
+
+
+				wiImage::Draw(&armatureTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 			}
 		}
 

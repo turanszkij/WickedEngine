@@ -48,6 +48,7 @@ public:
 	wiCheckBox* pickTypeForceFieldCheckBox;
 	wiCheckBox* pickTypeEmitterCheckBox;
 	wiCheckBox* pickTypeCameraCheckBox;
+	wiCheckBox* pickTypeArmatureCheckBox;
 	wiSlider*	speedMultiplierSlider;
 	wiCheckBox* transparentShadowsCheckBox;
 	wiComboBox* shadowProps2DComboBox;
