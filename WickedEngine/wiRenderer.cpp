@@ -8507,7 +8507,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID)
 		mesh->impostorTarget.viewPort.TopLeftY = 0.f;
 		mesh->impostorTarget.Set(threadID);
 
-		cam->Clear();
+		cam->ClearTransform();
 		cam->Translate(bbox.getCenter());
 		switch (i)
 		{

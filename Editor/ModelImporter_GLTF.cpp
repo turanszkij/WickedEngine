@@ -107,6 +107,8 @@ Model* ImportModel_GLTF(const std::string& fileName)
 	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
 	wiHelper::RemoveExtensionFromFileName(name);
 
+	// Transform the data from glTF space to engine-space:
+	const bool transform_to_LH = true;
 
 
 	tinygltf::Model gltfModel;
@@ -291,7 +293,7 @@ Model* ImportModel_GLTF(const std::string& fileName)
 			XMVECTOR s = XMLoadFloat3(&bone->scale_rest);
 			XMVECTOR r = XMLoadFloat4(&bone->rotation_rest);
 			XMVECTOR t = XMLoadFloat3(&bone->translation_rest);
-			XMMATRIX& w =
+			XMMATRIX w =
 				XMMatrixScalingFromVector(s)*
 				XMMatrixRotationQuaternion(r)*
 				XMMatrixTranslationFromVector(t)
@@ -316,6 +318,11 @@ Model* ImportModel_GLTF(const std::string& fileName)
 					}
 				}
 			}
+		}
+
+		if (transform_to_LH)
+		{
+			XMStoreFloat4x4(&armature->skinningRemap, XMMatrixScaling(1, 1, -1));
 		}
 
 		// Final hierarchy and extra matrices created here:
@@ -537,8 +544,8 @@ Model* ImportModel_GLTF(const std::string& fileName)
 				for (size_t i = 0; i < count; i += 3)
 				{
 					mesh->indices[offset + i + 0] = data[i + 0];
-					mesh->indices[offset + i + 1] = data[i + 2];
-					mesh->indices[offset + i + 2] = data[i + 1];
+					mesh->indices[offset + i + 1] = data[i + 1];
+					mesh->indices[offset + i + 2] = data[i + 2];
 				}
 			}
 			else if (stride == 2)
@@ -546,8 +553,8 @@ Model* ImportModel_GLTF(const std::string& fileName)
 				for (size_t i = 0; i < count; i += 3)
 				{
 					mesh->indices[offset + i + 0] = ((uint16_t*)data)[i + 0];
-					mesh->indices[offset + i + 1] = ((uint16_t*)data)[i + 2];
-					mesh->indices[offset + i + 2] = ((uint16_t*)data)[i + 1];
+					mesh->indices[offset + i + 1] = ((uint16_t*)data)[i + 1];
+					mesh->indices[offset + i + 2] = ((uint16_t*)data)[i + 2];
 				}
 			}
 			else if (stride == 4)
@@ -555,8 +562,8 @@ Model* ImportModel_GLTF(const std::string& fileName)
 				for (size_t i = 0; i < count; i += 3)
 				{
 					mesh->indices[offset + i + 0] = ((uint32_t*)data)[i + 0];
-					mesh->indices[offset + i + 1] = ((uint32_t*)data)[i + 2];
-					mesh->indices[offset + i + 2] = ((uint32_t*)data)[i + 1];
+					mesh->indices[offset + i + 1] = ((uint32_t*)data)[i + 1];
+					mesh->indices[offset + i + 2] = ((uint32_t*)data)[i + 2];
 				}
 			}
 			else
@@ -617,7 +624,12 @@ Model* ImportModel_GLTF(const std::string& fileName)
 					assert(stride == 12);
 					for (size_t i = 0; i < count; ++i)
 					{
-						const XMFLOAT3& pos = ((XMFLOAT3*)data)[i];
+						XMFLOAT3 pos = ((XMFLOAT3*)data)[i];
+
+						if (transform_to_LH)
+						{
+							pos.z = -pos.z;
+						}
 
 						mesh->vertices_FULL[offset + i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
 
@@ -634,7 +646,7 @@ Model* ImportModel_GLTF(const std::string& fileName)
 
 						mesh->vertices_FULL[offset + i].nor.x = nor.x;
 						mesh->vertices_FULL[offset + i].nor.y = nor.y;
-						mesh->vertices_FULL[offset + i].nor.z = nor.z;
+						mesh->vertices_FULL[offset + i].nor.z = -nor.z;
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
@@ -761,9 +773,6 @@ Model* ImportModel_GLTF(const std::string& fileName)
 	}
 
 	model->FinishLoading();
-
-	//XMMATRIX rightHandedToLeftHanded = XMMatrixRotationX(-XM_PIDIV2) * XMMatrixRotationY(XM_PIDIV2);
-	//this->transform(rightHandedToLeftHanded);
 
 	return model;
 }

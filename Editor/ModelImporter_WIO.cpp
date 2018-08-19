@@ -339,10 +339,10 @@ void LoadWiArmatures(const std::string& directory, const std::string& name, unor
 				case 't':
 					file >> trans[0] >> trans[1] >> trans[2];
 					armature->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
-					{
-						XMMATRIX world = XMMatrixScalingFromVector(XMLoadFloat3(&armature->scale))*XMMatrixRotationQuaternion(XMLoadFloat4(&armature->rotation))*XMMatrixTranslationFromVector(XMLoadFloat3(&armature->translation));
-						XMStoreFloat4x4(&armature->world_rest, world);
-					}
+					//{
+					//	XMMATRIX world = XMMatrixScalingFromVector(XMLoadFloat3(&armature->scale))*XMMatrixRotationQuaternion(XMLoadFloat4(&armature->rotation))*XMMatrixTranslationFromVector(XMLoadFloat3(&armature->translation));
+					//	XMStoreFloat4x4(&armature->world_rest, world);
+					//}
 					break;
 				case 'b':
 				{
@@ -390,6 +390,7 @@ void LoadWiArmatures(const std::string& directory, const std::string& name, unor
 	//CREATE FAMILY
 	for (Armature* armature : armatures)
 	{
+		armature->UpdateTransform();
 		armature->CreateFamily();
 	}
 

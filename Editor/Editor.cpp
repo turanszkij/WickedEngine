@@ -143,7 +143,7 @@ wiRenderer::Picked hovered;
 void BeginTranslate()
 {
 	translator_active = true;
-	translator->Clear();
+	translator->ClearTransform();
 
 	set<Transform*> uniqueTransforms;
 	for (auto& x : selected)
@@ -1832,7 +1832,7 @@ void ConsumeHistoryOperation(bool undo)
 				XMFLOAT4X4 start, end;
 				*archive >> start >> end;
 				translator->enabled = true;
-				translator->Clear();
+				translator->ClearTransform();
 				if (undo)
 				{
 					translator->transform(XMLoadFloat4x4(&start));

@@ -423,7 +423,7 @@ int Transform_BindLua::GetMatrix(lua_State* L)
 }
 int Transform_BindLua::ClearTransform(lua_State* L)
 {
-	transform->Clear();
+	transform->ClearTransform();
 	return 0;
 }
 int Transform_BindLua::SetTransform(lua_State* L)

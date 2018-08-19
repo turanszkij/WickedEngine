@@ -1893,8 +1893,13 @@ void Bone::Serialize(wiArchive& archive)
 			archive >> tempName;
 			childrenN.push_back(tempName);
 		}
-		//archive >> restInv;
-		archive >> tmp;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive >> restInv;
+			archive >> tmp;
+		}
+
 		size_t actionFramesCount;
 		archive >> actionFramesCount;
 		for (size_t i = 0; i < actionFramesCount; ++i)
@@ -1922,12 +1927,17 @@ void Bone::Serialize(wiArchive& archive)
 			}
 			actionFrames.push_back(aframes);
 		}
-		//archive >> recursivePose;
-		//archive >> recursiveRest;
-		//archive >> recursiveRestInv;
-		archive >> tmp;
-		archive >> tmp;
-		archive >> tmp;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive >> recursivePose;
+			//archive >> recursiveRest;
+			//archive >> recursiveRestInv;
+			archive >> tmp;
+			archive >> tmp;
+			archive >> tmp;
+		}
+
 		archive >> length;
 		archive >> connected;
 	}
@@ -1938,8 +1948,13 @@ void Bone::Serialize(wiArchive& archive)
 		{
 			archive << x;
 		}
-		//archive << restInv;
-		archive << tmp;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive << restInv;
+			archive << tmp;
+		}
+
 		archive << actionFrames.size();
 		int i = 0;
 		for (auto& x : actionFrames)
@@ -1960,12 +1975,17 @@ void Bone::Serialize(wiArchive& archive)
 				y.Serialize(archive);
 			}
 		}
-		//archive << recursivePose;
-		//archive << recursiveRest;
-		//archive << recursiveRestInv;
-		archive << tmp;
-		archive << tmp;
-		archive << tmp;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive << recursivePose;
+			//archive << recursiveRest;
+			//archive << recursiveRestInv;
+			archive << tmp;
+			archive << tmp;
+			archive << tmp;
+		}
+
 		archive << length;
 		archive << connected;
 	}
@@ -2085,21 +2105,24 @@ void Armature::UpdateTransform()
 {
 	Transform::UpdateTransform();
 
-	// Calculate local animation frame:
+	XMMATRIX worldMatrix = getMatrix();
+	XMMATRIX remapMat = XMLoadFloat4x4(&skinningRemap);
+
+	// Update bone tree from root:
 	for (Bone* root : rootbones)
 	{
-		RecursiveBoneTransform(this, root, XMMatrixIdentity());
-	}
+		// Update tree for skinning:
+		//	Note that skinning is not using the armature transform, it will be calculated in armature local space
+		//	This is needed because we want to skin meshes, then reuse the meshes for multiple objects without additional deform
+		RecursiveBoneTransform(this, root, remapMat);
 
-	// Local animation to world space and attachment transform:
-	XMMATRIX worldMatrix = getMatrix();
-	for (Bone* bone : boneCollection)
-	{
-		XMMATRIX boneMatrix = XMLoadFloat4x4(&bone->world);
+		// Update tree for bone attaching:
+		//	The Skinning (RecursiveBoneTrasform) was operating in armature local space, but for bone attachments without deform,
+		//	we need the matrices in world space
+		XMMATRIX boneMatrix = XMLoadFloat4x4(&root->world);
 		boneMatrix = boneMatrix * worldMatrix;
-		XMStoreFloat4x4(&bone->world, boneMatrix);
-
-		bone->UpdateTransform();
+		XMStoreFloat4x4(&root->world, boneMatrix);
+		root->UpdateTransform();
 	}
 }
 void Armature::UpdateArmature()
@@ -2395,12 +2418,7 @@ void Armature::RecursiveRest(Bone* bone, XMMATRIX recursiveRest)
 {
 	Bone* parent = (Bone*)bone->parent;
 
-	if (parent == nullptr) {
-		recursiveRest = XMLoadFloat4x4(&bone->world_rest);
-	}
-	else {
-		recursiveRest = XMLoadFloat4x4(&bone->world_rest) * recursiveRest;
-	}
+	recursiveRest = XMLoadFloat4x4(&bone->world_rest) * recursiveRest;
 
 	XMStoreFloat4x4(&bone->parent_inv_rest, XMMatrixInverse(0, recursiveRest));
 
@@ -2428,9 +2446,10 @@ void Armature::CreateFamily()
 		}
 	}
 
-	for (unsigned int i = 0; i<rootbones.size(); ++i) 
+	XMMATRIX remapMat = XMLoadFloat4x4(&skinningRemap);
+	for (Bone* root : rootbones)
 	{
-		RecursiveRest(rootbones[i], XMMATRIX());
+		RecursiveRest(root, remapMat);
 	}
 }
 void Armature::CreateBuffers()
@@ -2494,6 +2513,11 @@ void Armature::Serialize(wiArchive& archive)
 			actions.push_back(tempAction);
 		}
 
+		if (archive.GetVersion() >= 21)
+		{
+			archive >> skinningRemap;
+		}
+
 		CreateFamily();
 	}
 	else
@@ -2515,6 +2539,11 @@ void Armature::Serialize(wiArchive& archive)
 		{
 			archive << x.name;
 			archive << x.frameCount;
+		}
+
+		if (archive.GetVersion() >= 21)
+		{
+			archive << skinningRemap;
 		}
 	}
 }

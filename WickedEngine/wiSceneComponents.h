@@ -731,6 +731,10 @@ public:
 	std::vector<ShaderBoneType> boneData;
 	wiGraphicsTypes::GPUBuffer boneBuffer;
 
+	// This will be used to eg. mirror the whole skin, without modifying the armature transform itself
+	//	It will affect the skin only, so the mesh vertices should be mirrored as well to work correctly!
+	XMFLOAT4X4 skinningRemap;
+
 	Armature() :Transform(){
 		init();
 	};
@@ -748,6 +752,7 @@ public:
 		actions.back().name = "[WickedEngine-Default]{IdentityAction}";
 		actions.back().frameCount = 1;
 		XMStoreFloat4x4(&world, XMMatrixIdentity());
+		XMStoreFloat4x4(&skinningRemap, XMMatrixIdentity());
 		animationLayers.clear();
 		animationLayers.push_back(new AnimationLayer());
 		animationLayers.back()->type = AnimationLayer::ANIMLAYER_TYPE_PRIMARY;
@@ -762,7 +767,7 @@ public:
 	AnimationLayer* GetAnimLayer(const std::string& name);
 	void AddAnimLayer(const std::string& name);
 	void DeleteAnimLayer(const std::string& name);
-	virtual void UpdateTransform();
+	virtual void UpdateTransform() override;
 	void UpdateArmature();
 	void CreateFamily();
 	void CreateBuffers();
