@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "LightWindow.h"
 
+using namespace wiSceneComponents;
+
 
 LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 {

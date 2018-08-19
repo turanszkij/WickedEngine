@@ -3,8 +3,9 @@
 #include "wiResourceManager.h"
 #include "ShaderInterop_Ocean.h"
 
-using namespace wiGraphicsTypes;
 using namespace std;
+using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 ComputeShader*			wiOcean::m_pUpdateSpectrumCS = nullptr;
 ComputeShader*			wiOcean::m_pUpdateDisplacementMapCS = nullptr;

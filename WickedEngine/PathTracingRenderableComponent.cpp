@@ -7,6 +7,7 @@
 #include "wiSprite.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
+#include "wiSceneComponents.h"
 
 using namespace wiGraphicsTypes;
 

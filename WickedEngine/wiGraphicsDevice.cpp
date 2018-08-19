@@ -37,6 +37,7 @@ uint32_t GraphicsDevice::GetFormatStride(FORMAT value)
 	case FORMAT_R32G32_FLOAT:
 		return 8;
 		break;
+	case FORMAT_R11G11B10_FLOAT:
 	case FORMAT_R16G16_FLOAT:
 	case FORMAT_R32_FLOAT:
 	case FORMAT_R32_UINT:
@@ -44,6 +45,7 @@ uint32_t GraphicsDevice::GetFormatStride(FORMAT value)
 	case FORMAT_R8G8B8A8_SINT:
 	case FORMAT_R8G8B8A8_UNORM:
 	case FORMAT_R8G8B8A8_SNORM:
+	case FORMAT_R10G10B10A2_UNORM:
 		return 4;
 		break;
 	case FORMAT_R16_FLOAT:

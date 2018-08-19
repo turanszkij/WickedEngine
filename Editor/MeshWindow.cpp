@@ -4,6 +4,7 @@
 #include <sstream>
 
 using namespace std;
+using namespace wiSceneComponents;
 
 MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 {

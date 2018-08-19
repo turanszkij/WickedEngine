@@ -1,8 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 
-class wiTranslator : public Transform
+class wiTranslator : public wiSceneComponents::Transform
 {
 private:
 	XMFLOAT4 prevPointer;

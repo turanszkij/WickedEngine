@@ -16,12 +16,15 @@
 #include "ForceFieldWindow.h"
 #include "OceanWindow.h"
 
+#include "ModelImporter.h"
+
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
 using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiRectPacker;
+using namespace wiSceneComponents;
 
 Editor::Editor()
 {
@@ -140,7 +143,7 @@ wiRenderer::Picked hovered;
 void BeginTranslate()
 {
 	translator_active = true;
-	translator->Clear();
+	translator->ClearTransform();
 
 	set<Transform*> uniqueTransforms;
 	for (auto& x : selected)
@@ -690,7 +693,7 @@ void EditorComponent::Load()
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Model Formats\0*.wimf;*.wio;*.obj\0";
+			ofn.lpstrFilter = "Model Formats\0*.wimf;*.wio;*.obj;*.gltf;*.glb\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
@@ -701,7 +704,44 @@ void EditorComponent::Load()
 				string fileName = ofn.lpstrFile;
 
 				loader->addLoadingFunction([=] {
-					wiRenderer::LoadModel(fileName);
+					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
+
+					if (!extension.compare("WIMF")) // serializer (.wimf)
+					{
+						wiRenderer::LoadModel(fileName);
+					}
+					else if (!extension.compare("WIO")) // blender-exporter
+					{
+						Model* model = ImportModel_WIO(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
+					else if (!extension.compare("OBJ")) // wavefront-obj
+					{
+						Model* model = ImportModel_OBJ(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
+					else if (!extension.compare("GLTF")) // text-based gltf
+					{
+						Model* model = ImportModel_GLTF(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
+					else if (!extension.compare("GLB")) // binary gltf
+					{
+						Model* model = ImportModel_GLTF(fileName);
+						if (model != nullptr)
+						{
+							wiRenderer::AddModel(model);
+						}
+					}
 				});
 				loader->onFinished([=] {
 					main->activateComponent(this, 10, wiColor::Black);
@@ -882,6 +922,7 @@ void EditorComponent::Load()
 	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
 	emitterTex = *(Texture2D*)Content.add("images/emitter.dds");
 	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
+	armatureTex = *(Texture2D*)Content.add("images/armature.dds");
 }
 void EditorComponent::Start()
 {
@@ -1117,6 +1158,38 @@ void EditorComponent::Update(float dt)
 
 						AddSelected(picked);
 					}
+					for (auto& x : model->armatures)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->armature = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->cameras)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->camera = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->environmentProbes)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->envProbe = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
+					for (auto& x : model->decals)
+					{
+						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						picked->decal = x;
+						picked->transform = x;
+
+						AddSelected(picked);
+					}
 				}
 
 				BeginTranslate();
@@ -1203,16 +1276,16 @@ void EditorComponent::Update(float dt)
 
 					material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
 				}
-				if (picked->object->isArmatureDeformed())
-				{
-					animWnd->SetArmature(picked->object->mesh->armature);
-				}
+				//if (picked->object->isArmatureDeformed())
+				//{
+				//	animWnd->SetArmature(picked->object->mesh->armature);
+				//}
 			}
 			else
 			{
 				meshWnd->SetMesh(nullptr);
 				materialWnd->SetMaterial(nullptr);
-				animWnd->SetArmature(nullptr);
+				//animWnd->SetArmature(nullptr);
 			}
 
 			if (picked->light != nullptr)
@@ -1231,6 +1304,15 @@ void EditorComponent::Update(float dt)
 			if (picked->camera != nullptr)
 			{
 				cameraWnd->SetProxy(picked->camera);
+			}
+
+			if (picked->armature != nullptr)
+			{
+				animWnd->SetArmature(picked->armature);
+			}
+			else
+			{
+				animWnd->SetArmature(nullptr);
 			}
 
 			objectWnd->SetObject(picked->object);
@@ -1693,6 +1775,37 @@ void EditorComponent::Compose()
 			}
 		}
 
+		if (rendererWnd->GetPickType() & PICK_ARMATURE)
+		{
+			for (auto& y : x->armatures)
+			{
+				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+
+				wiImageEffects fx;
+				fx.pos = y->translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.armature == y)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->armature == y)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
+
+
+				wiImage::Draw(&armatureTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			}
+		}
+
 		if (rendererWnd->GetPickType() & PICK_EMITTER)
 		{
 			for (auto& y : x->objects)
@@ -1792,7 +1905,7 @@ void ConsumeHistoryOperation(bool undo)
 				XMFLOAT4X4 start, end;
 				*archive >> start >> end;
 				translator->enabled = true;
-				translator->Clear();
+				translator->ClearTransform();
 				if (undo)
 				{
 					translator->transform(XMLoadFloat4x4(&start));

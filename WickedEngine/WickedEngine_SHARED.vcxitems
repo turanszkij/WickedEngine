@@ -254,8 +254,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\nv_dds.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
@@ -305,10 +305,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SamplerMapping.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pch.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\PlatformHelpers.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h" />
@@ -318,7 +314,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCVars.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h" />
@@ -344,16 +339,14 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiMath.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiOBJLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiOcean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h" />
@@ -375,7 +368,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTransform.h" />
@@ -537,8 +529,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_image.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp" />
@@ -664,8 +655,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pch.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp" />
@@ -674,7 +663,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp" />
@@ -696,8 +684,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp" />
@@ -720,7 +708,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTransform.cpp" />

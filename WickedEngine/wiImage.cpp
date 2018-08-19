@@ -2,7 +2,7 @@
 #include "wiResourceManager.h"
 #include "wiRenderer.h"
 #include "wiImageEffects.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiHelper.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"

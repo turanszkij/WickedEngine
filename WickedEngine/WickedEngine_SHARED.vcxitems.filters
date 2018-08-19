@@ -141,18 +141,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lzio.h">
       <Filter>LUA</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pch.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\PlatformHelpers.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h">
       <Filter>ENGINE</Filter>
     </ClInclude>
@@ -232,9 +220,6 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
@@ -909,9 +894,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoader.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -974,9 +956,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h">
       <Filter>ENGINE\Physics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCVars.h">
-      <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
       <Filter>ENGINE\Graphics</Filter>
@@ -1086,9 +1065,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiMeshOptimizer.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
@@ -1116,17 +1092,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiOBJLoader.h">
-      <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
@@ -1175,6 +1142,15 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1283,12 +1259,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lzio.c">
       <Filter>LUA</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pch.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
@@ -1353,9 +1323,6 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
@@ -1811,9 +1778,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoader.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1864,9 +1828,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBULLET.cpp">
       <Filter>ENGINE\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCVars.cpp">
-      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
       <Filter>ENGINE\Graphics</Filter>
@@ -1961,17 +1922,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\ScreenGrab12.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTGATextureLoader.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\stb_image.cpp">
-      <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp">
       <Filter>UTILITY</Filter>
@@ -1990,6 +1942,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.cpp">
       <Filter>ENGINE\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
+      <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

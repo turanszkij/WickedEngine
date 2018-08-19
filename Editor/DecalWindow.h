@@ -1,13 +1,15 @@
 #pragma once
 
-struct Material;
+namespace wiSceneComponents
+{
+	struct Decal;
+}
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
-
-struct Decal;
 
 class DecalWindow
 {
@@ -17,9 +19,9 @@ public:
 
 	wiGUI* GUI;
 
-	void SetDecal(Decal* decal);
+	void SetDecal(wiSceneComponents::Decal* decal);
 
-	Decal* decal;
+	wiSceneComponents::Decal* decal;
 
 	wiWindow*	decalWindow;
 	wiSlider*	opacitySlider;

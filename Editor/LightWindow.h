@@ -1,6 +1,11 @@
 #pragma once
 
-struct Material;
+
+namespace wiSceneComponents
+{
+	struct Light;
+}
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -10,8 +15,6 @@ class wiButton;
 class wiColorPicker;
 class wiComboBox;
 
-struct Light;
-
 class LightWindow
 {
 public:
@@ -20,10 +23,10 @@ public:
 
 	wiGUI* GUI;
 
-	void SetLight(Light* light);
-	void SetLightType(Light::LightType type);
+	void SetLight(wiSceneComponents::Light* light);
+	void SetLightType(wiSceneComponents::Light::LightType type);
 
-	Light* light;
+	wiSceneComponents::Light* light;
 
 	wiWindow*	lightWindow;
 	wiSlider*	energySlider;

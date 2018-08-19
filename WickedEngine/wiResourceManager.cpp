@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiSound.h"
 #include "wiHelper.h"
-#include "wiTGATextureLoader.h"
 #include "wiTextureHelper.h"
 
 #include "Utility/stb_image.h"
@@ -11,7 +10,14 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-wiResourceManager::filetypes wiResourceManager::types;
+static const std::map<std::string, wiResourceManager::Data_Type> types = {
+	std::pair<string, wiResourceManager::Data_Type>("JPG", wiResourceManager::IMAGE),
+	std::pair<string, wiResourceManager::Data_Type>("PNG", wiResourceManager::IMAGE),
+	std::pair<string, wiResourceManager::Data_Type>("DDS", wiResourceManager::IMAGE),
+	std::pair<string, wiResourceManager::Data_Type>("TGA", wiResourceManager::IMAGE),
+	std::pair<string, wiResourceManager::Data_Type>("WAV", wiResourceManager::SOUND)
+};
+
 wiResourceManager* wiResourceManager::globalResources = nullptr;
 
 wiResourceManager::wiResourceManager():wiThreadSafeManager()
@@ -40,20 +46,11 @@ wiResourceManager* wiResourceManager::GetShaderManager()
 	return shaderManager;
 }
 
-void wiResourceManager::SetUp()
-{
-	types.clear();
-	types.insert(pair<string, Data_Type>("JPG", IMAGE));
-	types.insert(pair<string, Data_Type>("PNG", IMAGE));
-	types.insert(pair<string, Data_Type>("DDS", IMAGE));
-	types.insert(pair<string, Data_Type>("TGA", IMAGE));
-	types.insert(pair<string, Data_Type>("WAV", SOUND));
-}
 
 const wiResourceManager::Resource* wiResourceManager::get(const wiHashString& name, bool incRefCount)
 {
 	LOCK();
-	container::iterator it = resources.find(name);
+	auto& it = resources.find(name);
 	if (it != resources.end())
 	{
 		if(incRefCount)
@@ -68,9 +65,6 @@ const wiResourceManager::Resource* wiResourceManager::get(const wiHashString& na
 
 void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 {
-	if (types.empty())
-		SetUp();
-
 	const Resource* res = get(name,true);
 	if(!res)
 	{
@@ -80,7 +74,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 
 		// dynamic type selection:
 		if(newType==Data_Type::DYNAMIC){
-			filetypes::iterator it = types.find(ext);
+			auto& it = types.find(ext);
 			if(it!=types.end())
 				type = it->second;
 			else 
@@ -232,15 +226,16 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					image = new Texture2D;
 					image->RequestIndependentShaderResourcesForMIPs(true);
 					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-					wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &image);
+					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &image);
+					assert(SUCCEEDED(hr));
+
+					if (image != nullptr)
+					{
+						wiRenderer::AddDeferredMIPGen(image);
+					}
 				}
 
 				stbi_image_free(rgb);
-
-				if (image != nullptr)
-				{
-					wiRenderer::AddDeferredMIPGen(image);
-				}
 			}
 
 			success = image;
@@ -368,7 +363,7 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 {
 	LOCK();
 	Resource* res = nullptr;
-	container::iterator it = resources.find(name);
+	auto& it = resources.find(name);
 	if (it != resources.end())
 		res = it->second;
 	else
@@ -426,6 +421,20 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 	{
 		res->refCount--;
 	}
+	return false;
+}
+
+bool wiResourceManager::Register(const wiHashString& name, void* resource, Data_Type newType)
+{
+	LOCK();
+	if (resources.find(name) == resources.end())
+	{
+		resources.insert(make_pair(name, new Resource(resource, newType)));
+		UNLOCK();
+		return true;
+	}
+	UNLOCK();
+
 	return false;
 }
 

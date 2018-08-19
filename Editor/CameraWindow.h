@@ -1,6 +1,11 @@
 #pragma once
 
-struct Material;
+namespace wiSceneComponents
+{
+	struct Camera;
+	struct Transform;
+}
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -16,10 +21,10 @@ public:
 
 	void ResetCam();
 
-	Camera* proxy = nullptr;
-	void SetProxy(Camera* camera);
+	wiSceneComponents::Camera* proxy = nullptr;
+	void SetProxy(wiSceneComponents::Camera* camera);
 
-	Transform* orbitalCamTarget;
+	wiSceneComponents::Transform* orbitalCamTarget;
 
 	wiGUI* GUI;
 

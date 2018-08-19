@@ -17,11 +17,17 @@
 #include <deque>
 #include <sstream>
 
-struct HitSphere;
+
+class wiArchive;
+
 class wiParticle;
 class wiEmittedParticle;
 class wiHairParticle;
 class wiRenderTarget;
+
+
+namespace wiSceneComponents
+{
 
 struct Armature;
 struct Bone;
@@ -29,11 +35,6 @@ struct Mesh;
 struct Material;
 struct Object;
 struct Model;
-
-typedef std::map<std::string,Mesh*> MeshCollection;
-typedef std::map<std::string,Material*> MaterialCollection;
-
-class wiArchive;
 
 struct ModelChild
 {
@@ -258,8 +259,6 @@ public:
 	wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
 	wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	void Serialize(wiArchive& archive);
-
-	ALIGN_16
 };
 struct RibbonVertex
 {
@@ -512,18 +511,16 @@ public:
 
 	float tessellationFactor;
 
-	bool optimized;
 	bool renderDataComplete;
 
 	Mesh(const std::string& newName = "");
 	~Mesh();
-	void LoadFromFile(const std::string& newName, const std::string& fname, const MaterialCollection& materialColl, const std::unordered_set<Armature*>& armatures);
-	void Optimize();
 	void CreateRenderData();
 	static void CreateImpostorVB();
 	void ComputeNormals(bool smooth = false);
 	void FlipCulling();
 	void FlipNormals();
+	Vertex_FULL TransformVertex(int vertexI, const XMMATRIX& mat = XMMatrixIdentity());
 	void init();
 	
 	bool hasArmature() const { return armature != nullptr; }
@@ -632,22 +629,16 @@ struct Action
 };
 struct ActionFrames
 {
-	std::vector< KeyFrame > keyframesRot;
-	std::vector< KeyFrame > keyframesPos;
-	std::vector< KeyFrame > keyframesSca;
-
-	ActionFrames(){
-	}
+	std::vector<KeyFrame> keyframesRot;
+	std::vector<KeyFrame> keyframesPos;
+	std::vector<KeyFrame> keyframesSca;
 };
 struct Bone : public Transform
 {
 	std::vector<std::string> childrenN;
 	std::vector<Bone*> childrenI;
 
-	XMFLOAT4X4 restInv;
 	std::vector<ActionFrames> actionFrames;
-
-	XMFLOAT4X4 recursivePose, recursiveRest, recursiveRestInv;
 
 	// These will be used in the skinning process to transform verts
 	XMFLOAT4X4 boneRelativity;
@@ -740,6 +731,10 @@ public:
 	std::vector<ShaderBoneType> boneData;
 	wiGraphicsTypes::GPUBuffer boneBuffer;
 
+	// This will be used to eg. mirror the whole skin, without modifying the armature transform itself
+	//	It will affect the skin only, so the mesh vertices should be mirrored as well to work correctly!
+	XMFLOAT4X4 skinningRemap;
+
 	Armature() :Transform(){
 		init();
 	};
@@ -757,6 +752,7 @@ public:
 		actions.back().name = "[WickedEngine-Default]{IdentityAction}";
 		actions.back().frameCount = 1;
 		XMStoreFloat4x4(&world, XMMatrixIdentity());
+		XMStoreFloat4x4(&skinningRemap, XMMatrixIdentity());
 		animationLayers.clear();
 		animationLayers.push_back(new AnimationLayer());
 		animationLayers.back()->type = AnimationLayer::ANIMLAYER_TYPE_PRIMARY;
@@ -771,24 +767,23 @@ public:
 	AnimationLayer* GetAnimLayer(const std::string& name);
 	void AddAnimLayer(const std::string& name);
 	void DeleteAnimLayer(const std::string& name);
-	void RecursiveRest(Bone* bone);
-	virtual void UpdateTransform();
+	virtual void UpdateTransform() override;
 	void UpdateArmature();
 	void CreateFamily();
 	void CreateBuffers();
 	Bone* GetBone(const std::string& name);
 	void Serialize(wiArchive& archive);
 
-	ALIGN_16
-
 private:
+	static void RecursiveRest(Bone* bone, XMMATRIX recursiveRest);
+	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentBoneMat);
+
 	enum KeyFrameType {
 		ROTATIONKEYFRAMETYPE,
 		POSITIONKEYFRAMETYPE,
 		SCALARKEYFRAMETYPE,
 	};
-	static void RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat);
-	static XMVECTOR InterPolateKeyFrames(float currentFrame, const int frameCount, const std::vector<KeyFrame>& keyframes, KeyFrameType type);
+	static XMVECTOR InterpolateKeyFrames(float currentFrame, const int frameCount, const std::vector<KeyFrame>& keyframes, KeyFrameType type);
 };
 struct SHCAM{	
 	XMFLOAT4X4 View,Projection;
@@ -1196,8 +1191,8 @@ struct ForceField : public Transform, public ModelChild
 struct Model : public Transform
 {
 	std::unordered_set<Object*> objects;
-	MeshCollection meshes;
-	MaterialCollection materials;
+	std::map<std::string, Mesh*> meshes;
+	std::map<std::string, Material*> materials;
 	std::unordered_set<Armature*> armatures;
 	std::unordered_set<Light*> lights;
 	std::unordered_set<Decal*> decals;
@@ -1208,7 +1203,6 @@ struct Model : public Transform
 	Model();
 	virtual ~Model();
 	void CleanUp();
-	void LoadFromDisk(const std::string& fileName);
 	void FinishLoading();
 	void UpdateModel();
 	void Add(Object* value);
@@ -1239,6 +1233,5 @@ struct Scene
 	void Update();
 };
 
-// Load world info from file:
-void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind);
+}
 

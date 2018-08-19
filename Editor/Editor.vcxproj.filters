@@ -70,6 +70,18 @@
     <ClInclude Include="OceanWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="ModelImporter.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="tiny_obj_loader.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="json.hpp">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="tiny_gltf.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -121,6 +133,15 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="OceanWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelImporter_OBJ.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelImporter_GLTF.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelImporter_WIO.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

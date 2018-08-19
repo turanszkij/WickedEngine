@@ -1,6 +1,10 @@
 #pragma once
 
-struct Material;
+namespace wiSceneComponents
+{
+	struct Material;
+}
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -17,11 +21,11 @@ public:
 	MaterialWindow(wiGUI* gui);
 	~MaterialWindow();
 
-	void SetMaterial(Material* mat);
+	void SetMaterial(wiSceneComponents::Material* mat);
 
 	wiGUI* GUI;
 
-	Material* material;
+	wiSceneComponents::Material* material;
 
 	wiWindow*	materialWindow;
 	wiTextInputField*	materialNameField;

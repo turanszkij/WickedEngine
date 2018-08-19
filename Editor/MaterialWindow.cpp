@@ -6,6 +6,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 {

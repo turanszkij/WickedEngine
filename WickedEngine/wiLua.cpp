@@ -17,7 +17,7 @@
 #include "wiImageEffects_BindLua.h"
 #include "SpriteAnim_BindLua.h"
 #include "wiResourceManager_BindLua.h"
-#include "wiLoader_BindLua.h"
+#include "wiSceneComponents_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiInputManager_BindLua.h"
@@ -71,7 +71,7 @@ wiLua* wiLua::GetGlobal()
 		wiImageEffects_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
 		wiResourceManager_BindLua::Bind();
-		wiLoader_BindLua::Bind();
+		wiSceneComponents_BindLua::Bind();
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
 		wiInputManager_BindLua::Bind();

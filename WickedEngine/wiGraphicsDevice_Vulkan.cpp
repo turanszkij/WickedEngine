@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include "wiGraphicsDevice_Vulkan.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
@@ -5158,7 +5157,7 @@ namespace wiGraphicsTypes
 	{
 		//vkUnmapMemory(device, static_cast<VkDeviceMemory>(buffer->resourceMemory_Vulkan));
 	}
-	bool GraphicsDevice_Vulkan::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
+	bool GraphicsDevice_Vulkan::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
 	}
@@ -5264,15 +5263,6 @@ namespace wiGraphicsTypes
 
 	}
 
-
-	HRESULT GraphicsDevice_Vulkan::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
-	{
-		return E_FAIL;
-	}
-	HRESULT GraphicsDevice_Vulkan::SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
-	{
-		return E_FAIL;
-	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 	{

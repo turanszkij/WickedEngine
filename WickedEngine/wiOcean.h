@@ -7,8 +7,10 @@
 
 #include <vector>
 
-
-struct Camera;
+namespace wiSceneComponents
+{
+	struct Camera;
+}
 
 struct wiOceanParameter
 {
@@ -63,7 +65,7 @@ public:
 	~wiOcean();
 
 	void UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID);
-	void Render(const Camera* camera, float time, GRAPHICSTHREAD threadID);
+	void Render(const wiSceneComponents::Camera* camera, float time, GRAPHICSTHREAD threadID);
 
 	wiGraphicsTypes::Texture2D* getDisplacementMap();
 	wiGraphicsTypes::Texture2D* getGradientMap();

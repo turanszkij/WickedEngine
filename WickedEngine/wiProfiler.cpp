@@ -3,6 +3,8 @@
 #include "wiRenderer.h"
 #include "wiFont.h"
 
+#include <sstream>
+
 using namespace std;
 using namespace wiGraphicsTypes;
 

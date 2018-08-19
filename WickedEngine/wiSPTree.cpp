@@ -1,7 +1,9 @@
 #include "wiSPTree.h"
 #include "wiMath.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiFrustum.h"
+
+using namespace wiSceneComponents;
 
 #define SP_TREE_MAX_DEPTH 12
 #define SP_TREE_OBJECT_PER_NODE 6

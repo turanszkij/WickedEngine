@@ -1,6 +1,10 @@
 #pragma once
 
-struct Object;
+namespace wiSceneComponents
+{
+	struct Object;
+}
+
 class wiEmittedParticle;
 
 class wiGUI;
@@ -19,11 +23,11 @@ public:
 	EmitterWindow(wiGUI* gui);
 	~EmitterWindow();
 
-	void SetObject(Object* obj);
+	void SetObject(wiSceneComponents::Object* obj);
 	void SetMaterialWnd(MaterialWindow* wnd);
 	void UpdateData();
 
-	Object* object;
+	wiSceneComponents::Object* object;
 	wiEmittedParticle* GetEmitter();
 
 	wiGUI* GUI;

@@ -3,6 +3,8 @@
 #include "wiBackLog.h"
 #include "wiWindowRegistration.h"
 
+#include "Utility/stb_image_write.h"
+
 #include <locale>
 #include <direct.h>
 #include <chrono>
@@ -77,18 +79,75 @@ namespace wiHelper
 		CreateDirectoryA("screenshots", 0);
 		stringstream ss("");
 		if (name.length() <= 0)
-			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".png";
+			ss << GetOriginalWorkingDirectory() << "screenshots/sc_" << getCurrentDateTimeAsString() << ".jpg";
 		else
 			ss << name;
-		if (SUCCEEDED(wiRenderer::GetDevice()->SaveTexturePNG(ss.str(), &wiRenderer::GetDevice()->GetBackBuffer(), GRAPHICSTHREAD_IMMEDIATE)))
+
+		using namespace wiGraphicsTypes;
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		
+		device->WaitForGPU();
+
+		static Texture2D tex = device->GetBackBuffer();
+		TextureDesc desc = tex.GetDesc();
+		UINT data_count = desc.Width * desc.Height;
+		UINT data_stride = device->GetFormatStride(desc.Format);
+		UINT data_size = data_count * data_stride;
+
+		static unsigned char* data = nullptr;
+		static Texture2D* stagingTex = nullptr;
+		if (stagingTex == nullptr)
 		{
-			ss << " Saved successfully!";
-			wiBackLog::post(ss.str().c_str());
+			TextureDesc staging_desc = desc;
+			staging_desc.Usage = USAGE_STAGING;
+			staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
+			staging_desc.BindFlags = 0;
+			staging_desc.MiscFlags = 0;
+			HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
+			assert(SUCCEEDED(hr));
+
+			data = new unsigned char[data_size];
+		}
+
+		bool download_success = device->DownloadResource(&tex, stagingTex, data, GRAPHICSTHREAD_IMMEDIATE);
+		assert(download_success);
+
+		if (desc.Format == FORMAT_R10G10B10A2_UNORM)
+		{
+			// So this should be converted first to rgba8 before saving to common format...
+
+			uint32_t* data32 = (uint32_t*)data;
+
+			for (UINT i = 0; i < data_count; ++i)
+			{
+				uint32_t pixel = data32[i];
+				float r = ((pixel >> 0 ) & 1023) / 1023.0f;
+				float g = ((pixel >> 10) & 1023) / 1023.0f;
+				float b = ((pixel >> 20) & 1023) / 1023.0f;
+				float a = ((pixel >> 30) & 3   ) / 3.0f;
+				
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+				
+				data32[i] = rgba8;
+			}
 		}
 		else
 		{
-			wiBackLog::post("Screenshot failed");
+			assert(desc.Format == FORMAT_R8G8B8A8_UNORM); // If you need to save other backbuffer format, convert the data here yourself...
 		}
+
+		// TODO: png would be better, but it has some problems now...
+
+		//int write_result = stbi_write_png(ss.str().c_str(), (int)desc.Width, (int)desc.Height, 4, data, (int)data_stride);
+		int write_result = stbi_write_jpg(ss.str().c_str(), (int)desc.Width, (int)desc.Height, 4, data, 100);
+		//int write_result = stbi_write_bmp(ss.str().c_str(), (int)desc.Width, (int)desc.Height, 4, data);
+		assert(write_result);
+
 	}
 
 	string getCurrentDateTimeAsString()

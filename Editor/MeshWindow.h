@@ -1,14 +1,16 @@
 #pragma once
 
-struct Material;
+namespace wiSceneComponents
+{
+	struct Mesh;
+}
+
 class wiGUI;
 class wiWindow;
 class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiButton;
-
-struct Mesh;
 
 class MeshWindow
 {
@@ -18,9 +20,9 @@ public:
 
 	wiGUI* GUI;
 
-	void SetMesh(Mesh* mesh);
+	void SetMesh(wiSceneComponents::Mesh* mesh);
 
-	Mesh* mesh;
+	wiSceneComponents::Mesh* mesh;
 
 	wiWindow*	meshWindow;
 	wiLabel*	meshInfoLabel;

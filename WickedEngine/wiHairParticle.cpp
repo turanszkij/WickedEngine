@@ -1,7 +1,7 @@
 #include "wiHairParticle.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiMath.h"
 #include "wiFrustum.h"
 #include "wiRandom.h"
@@ -12,6 +12,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 VertexShader *wiHairParticle::vs = nullptr;
 PixelShader *wiHairParticle::ps[];

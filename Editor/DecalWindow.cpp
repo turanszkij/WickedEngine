@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "DecalWindow.h"
 
+using namespace wiSceneComponents;
+
 
 DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 {

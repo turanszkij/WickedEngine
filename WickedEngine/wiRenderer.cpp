@@ -4,7 +4,7 @@
 #include "wiEmittedParticle.h"
 #include "wiResourceManager.h"
 #include "wiSprite.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiFrustum.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
@@ -38,6 +38,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents;
 
 #pragma region STATICS
 GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
@@ -2873,7 +2874,7 @@ Material* wiRenderer::getMaterialByName(const std::string& get)
 {
 	for (Model* model : GetScene().models)
 	{
-		MaterialCollection::iterator iter = model->materials.find(get);
+		auto& iter = model->materials.find(get);
 		if (iter != model->materials.end())
 			return iter->second;
 	}
@@ -2924,60 +2925,6 @@ Light* wiRenderer::getLightByName(const std::string& name)
 	return nullptr;
 }
 
-Mesh::Vertex_FULL wiRenderer::TransformVertex(const Mesh* mesh, int vertexI, const XMMATRIX& mat)
-{
-	XMMATRIX sump;
-	XMVECTOR pos = mesh->vertices_POS[vertexI].LoadPOS();
-	XMVECTOR nor = mesh->vertices_POS[vertexI].LoadNOR();
-
-	if (mesh->hasArmature() && !mesh->armature->boneCollection.empty())
-	{
-		XMFLOAT4 ind = mesh->vertices_BON[vertexI].GetInd_FULL();
-		XMFLOAT4 wei = mesh->vertices_BON[vertexI].GetWei_FULL();
-
-
-		float inWei[4] = {
-			wei.x,
-			wei.y,
-			wei.z,
-			wei.w 
-		};
-		float inBon[4] = {
-			ind.x,
-			ind.y,
-			ind.z,
-			ind.w 
-		};
-		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
-		{
-			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-			for (unsigned int i = 0; i < 4; i++)
-			{
-				sump += XMLoadFloat4x4(&mesh->armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
-			}
-		}
-		else
-		{
-			sump = XMMatrixIdentity();
-		}
-		sump = XMMatrixMultiply(sump, mat);
-	}
-	else
-	{
-		sump = mat;
-	}
-
-	XMFLOAT3 transformedP, transformedN;
-	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
-
-	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
-
-	Mesh::Vertex_FULL retV(transformedP);
-	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
-	retV.tex = mesh->vertices_FULL[vertexI].tex;
-
-	return retV;
-}
 void wiRenderer::FixedUpdate()
 {
 	cam->UpdateTransform();
@@ -3461,7 +3408,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 
 			// Skinning:
-			for (MeshCollection::iterator iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
+			for (auto& iter = model->meshes.begin(); iter != model->meshes.end(); ++iter)
 			{
 				Mesh* mesh = iter->second;
 
@@ -8074,6 +8021,22 @@ wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, uint32_t layerMask)
 				}
 			}
 		}
+		if (pickType & PICK_ARMATURE)
+		{
+			for (auto& armature : model->armatures)
+			{
+				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&armature->translation));
+				float dis = XMVectorGetX(disV);
+				if (dis < wiMath::Distance(armature->translation, cam->translation) * 0.05f)
+				{
+					Picked pick = Picked();
+					pick.transform = armature;
+					pick.armature = armature;
+					pick.distance = wiMath::Distance(armature->translation, ray.origin) * 0.95f;
+					pickPoints.push_back(pick);
+				}
+			}
+		}
 	}
 
 	if (!pickPoints.empty()) {
@@ -8163,7 +8126,7 @@ void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObje
 			{
 				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
 				{
-					_tmpvert = TransformVertex(mesh, (int)i);
+					_tmpvert = mesh->TransformVertex((int)i);
 					_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
 				}
 			}
@@ -8278,24 +8241,101 @@ void wiRenderer::CalculateVertexAO(Object* object)
 
 Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
 {
-	static int unique_identifier = 0;
+	Model* model = nullptr;
 
-	Model* model = new Model;
-	model->LoadFromDisk(fileName);
+	wiArchive archive(fileName, true);
+	if (archive.IsOpen())
+	{
+		model = new Model;
+		model->Serialize(archive);
+		model->transform(transform);
 
-	model->transform(transform);
-
-	AddModel(model);
+		AddModel(model);
+	}
+	else
+	{
+		wiHelper::messageBox("Could not open archive!", "Error!");
+	}
 
 	LoadWorldInfo(fileName);
-
-	unique_identifier++;
 
 	return model;
 }
 void wiRenderer::LoadWorldInfo(const std::string& fileName)
 {
-	LoadWiWorldInfo(fileName, GetScene().worldInfo, GetScene().wind);
+	//LoadWiWorldInfo(fileName, GetScene().worldInfo, GetScene().wind);
+
+	WorldInfo& worldInfo = GetScene().worldInfo;
+	Wind& wind = GetScene().wind;
+
+	string extension = wiHelper::GetExtensionFromFileName(fileName);
+
+	string realName;
+	if (!extension.compare("wiw"))
+	{
+		realName = fileName;
+	}
+	else if (extension.empty())
+	{
+		realName = fileName + ".wiw";
+	}
+	else
+	{
+		realName = fileName;
+		wiHelper::RemoveExtensionFromFileName(realName);
+		realName += ".wiw";
+	}
+
+	ifstream file(realName);
+	if (file)
+	{
+		while (!file.eof())
+		{
+			string read = "";
+			file >> read;
+			switch (read[0])
+			{
+			case 'h':
+				file >> worldInfo.horizon.x >> worldInfo.horizon.y >> worldInfo.horizon.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.horizon.x = powf(worldInfo.horizon.x, 1.0f / 2.2f);
+				worldInfo.horizon.y = powf(worldInfo.horizon.y, 1.0f / 2.2f);
+				worldInfo.horizon.z = powf(worldInfo.horizon.z, 1.0f / 2.2f);
+				break;
+			case 'z':
+				file >> worldInfo.zenith.x >> worldInfo.zenith.y >> worldInfo.zenith.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
+				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
+				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
+				break;
+			case 'a':
+				file >> worldInfo.ambient.x >> worldInfo.ambient.y >> worldInfo.ambient.z;
+				// coming from blender, de-apply gamma correction:
+				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
+				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
+				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
+				break;
+			case 'W':
+			{
+				XMFLOAT4 r;
+				float s;
+				file >> r.x >> r.y >> r.z >> r.w >> s;
+				XMStoreFloat3(&wind.direction, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
+			}
+			break;
+			case 'm':
+			{
+				float s, e, h;
+				file >> s >> e >> h;
+				worldInfo.fogSEH = XMFLOAT3(s, e, h);
+			}
+			break;
+			default:break;
+			}
+		}
+	}
+	file.close();
 }
 void wiRenderer::LoadDefaultLighting()
 {
@@ -8364,7 +8404,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 							for (std::map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
 							{
 								int vi = (*it).first;
-								Mesh::Vertex_FULL tvert = TransformVertex(mesh, vi, worldMat);
+								Mesh::Vertex_FULL tvert = mesh->TransformVertex(vi, worldMat);
 								mesh->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
 								mesh->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
 								++j;
@@ -8483,7 +8523,7 @@ void wiRenderer::CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID)
 		mesh->impostorTarget.viewPort.TopLeftY = 0.f;
 		mesh->impostorTarget.Set(threadID);
 
-		cam->Clear();
+		cam->ClearTransform();
 		cam->Translate(bbox.getCenter());
 		switch (i)
 		{

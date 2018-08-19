@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "CameraWindow.h"
 
+using namespace wiSceneComponents;
+
 void CameraWindow::ResetCam()
 {
-	wiRenderer::getCamera()->Clear();
+	wiRenderer::getCamera()->ClearTransform();
 	wiRenderer::getCamera()->Translate(XMFLOAT3(0, 2, -10));
 }
 
@@ -67,7 +69,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	resetButton->SetSize(XMFLOAT2(140, 30));
 	resetButton->SetPos(XMFLOAT2(x, y += inc));
 	resetButton->OnClick([&](wiEventArgs args) {
-		orbitalCamTarget->Clear();
+		orbitalCamTarget->ClearTransform();
 		ResetCam();
 	});
 	cameraWindow->AddWidget(resetButton);

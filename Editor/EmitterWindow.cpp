@@ -5,6 +5,7 @@
 #include <sstream>
 
 using namespace std;
+using namespace wiSceneComponents;
 
 EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 {

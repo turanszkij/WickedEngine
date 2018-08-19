@@ -5,7 +5,6 @@
 #include "ResourceMapping.h"
 
 #include "Utility/d3dx12.h"
-#include "Utility/ScreenGrab12.h"
 
 #include <sstream>
 #include <wincodec.h>
@@ -3909,7 +3908,7 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_DX12::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
 	{
 	}
-	bool GraphicsDevice_DX12::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
+	bool GraphicsDevice_DX12::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
 	}
@@ -3963,15 +3962,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-
-	HRESULT GraphicsDevice_DX12::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
-	{
-		return E_FAIL;
-	}
-	HRESULT GraphicsDevice_DX12::SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
-	{
-		return E_FAIL;
-	}
 
 	void GraphicsDevice_DX12::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 	{

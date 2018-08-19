@@ -1,6 +1,5 @@
 #pragma once
 
-struct Material;
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -49,6 +48,7 @@ public:
 	wiCheckBox* pickTypeForceFieldCheckBox;
 	wiCheckBox* pickTypeEmitterCheckBox;
 	wiCheckBox* pickTypeCameraCheckBox;
+	wiCheckBox* pickTypeArmatureCheckBox;
 	wiSlider*	speedMultiplierSlider;
 	wiCheckBox* transparentShadowsCheckBox;
 	wiComboBox* shadowProps2DComboBox;

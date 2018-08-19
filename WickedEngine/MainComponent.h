@@ -1,7 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiResourceManager.h"
-#include "wiCVars.h"
 #include "wiColor.h"
 #include "wiFadeManager.h"
 #include "wiWindowRegistration.h"
@@ -32,7 +31,6 @@ public:
 	void activateComponent(RenderableComponent* component, int fadeFrames = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
 	RenderableComponent* getActiveComponent(){ return activeComponent; }
 
-	wiCVars Props;
 	wiResourceManager Content;
 
 	void	setFrameSkip(bool value){ frameskip = value; }

@@ -7,6 +7,9 @@
 
 class wiArchive;
 
+namespace wiSceneComponents
+{
+
 struct Node
 {
 private:
@@ -48,7 +51,7 @@ struct Transform : public Node
 
 	Transform();
 	virtual ~Transform();
-	void Clear()
+	virtual void ClearTransform()
 	{
 		copyParentT = copyParentR = copyParentS = 1;
 		translation_rest = translation = translationPrev = XMFLOAT3(0, 0, 0);
@@ -84,5 +87,7 @@ struct Transform : public Node
 	virtual uint32_t GetLayerMask() const override;
 	void Serialize(wiArchive& archive);
 };
+
+}
 
 #endif // _TRANSFORM_H_

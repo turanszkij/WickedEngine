@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+21: serialize armature skinningRemap matrix + remove redundant bone matrices
 20: serialize cameras
 19: serialized object cascade mask
 18: serialized emitter properties: sph properties, fixed timestep

@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ObjectWindow.h"
 
+using namespace wiSceneComponents;
+
 
 ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 {

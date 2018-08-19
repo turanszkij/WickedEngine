@@ -1,9 +1,9 @@
 #include "wiRenderer_BindLua.h"
 #include "wiRenderer.h"
 #include "wiLines.h"
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiHelper.h"
-#include "wiLoader_BindLua.h"
+#include "wiSceneComponents_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiWaterPlane.h"
@@ -14,6 +14,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneComponents_BindLua;
 
 namespace wiRenderer_BindLua
 {
@@ -788,6 +789,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RunText("PICK_FORCEFIELD = 64");
 			wiLua::GetGlobal()->RunText("PICK_EMITTER = 128");
 			wiLua::GetGlobal()->RunText("PICK_CAMERA = 256");
+			wiLua::GetGlobal()->RunText("PICK_ARMATURE = 512");
 
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);

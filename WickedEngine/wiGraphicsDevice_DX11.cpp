@@ -3,8 +3,6 @@
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 
-#include "Utility/ScreenGrab.h"
-
 #include <sstream>
 #include <wincodec.h>
 
@@ -1583,6 +1581,11 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 	Texture2D result;
 	result.resource_DX11 = (wiCPUHandle)backBuffer;
 	backBuffer->AddRef();
+
+	D3D11_TEXTURE2D_DESC desc;
+	backBuffer->GetDesc(&desc);
+	result.desc = _ConvertTextureDesc_Inv(&desc);
+
 	return result;
 }
 
@@ -2950,7 +2953,7 @@ void GraphicsDevice_DX11::DestroyComputePSO(ComputePSO* pso)
 
 void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& name)
 {
-	((ID3D11Resource*)pResource->resource_DX11)->SetPrivateData(WKPDID_D3DDebugObjectName, name.length(), name.c_str());
+	((ID3D11Resource*)pResource->resource_DX11)->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)name.length(), name.c_str());
 }
 
 void GraphicsDevice_DX11::PresentBegin()
@@ -3641,24 +3644,66 @@ void GraphicsDevice_DX11::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHRE
 {
 	deviceContexts[threadID]->Unmap((ID3D11Resource*)buffer->resource_DX11, 0);
 }
-bool GraphicsDevice_DX11::DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID)
+bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 {
-	assert(bufferToDownload->desc.ByteWidth <= bufferDest->desc.ByteWidth);
-	assert(bufferDest->desc.Usage & USAGE_STAGING);
-	assert(dataDest != nullptr);
-
-	deviceContexts[threadID]->CopyResource((ID3D11Resource*)bufferDest->resource_DX11, (ID3D11Resource*)bufferToDownload->resource_DX11);
-
-	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
-	HRESULT hr = deviceContexts[threadID]->Map((ID3D11Resource*)bufferDest->resource_DX11, 0, D3D11_MAP_READ, /*async ? D3D11_MAP_FLAG_DO_NOT_WAIT :*/ 0, &mappedResource);
-	bool result = SUCCEEDED(hr);
-	if (result)
+	// Download Buffer:
 	{
-		memcpy(dataDest, mappedResource.pData, bufferToDownload->desc.ByteWidth);
-		deviceContexts[threadID]->Unmap((ID3D11Resource*)bufferDest->resource_DX11, 0);
+		GPUBuffer* bufferToDownload = dynamic_cast<GPUBuffer*>(resourceToDownload);
+		GPUBuffer* bufferDest = dynamic_cast<GPUBuffer*>(resourceDest);
+
+		if (bufferToDownload != nullptr && bufferDest != nullptr)
+		{
+			assert(bufferToDownload->desc.ByteWidth <= bufferDest->desc.ByteWidth);
+			assert(bufferDest->desc.Usage & USAGE_STAGING);
+			assert(dataDest != nullptr);
+
+			deviceContexts[threadID]->CopyResource((ID3D11Resource*)bufferDest->resource_DX11, (ID3D11Resource*)bufferToDownload->resource_DX11);
+
+			D3D11_MAPPED_SUBRESOURCE mappedResource = {};
+			HRESULT hr = deviceContexts[threadID]->Map((ID3D11Resource*)bufferDest->resource_DX11, 0, D3D11_MAP_READ, /*async ? D3D11_MAP_FLAG_DO_NOT_WAIT :*/ 0, &mappedResource);
+			bool result = SUCCEEDED(hr);
+			if (result)
+			{
+				memcpy(dataDest, mappedResource.pData, bufferToDownload->desc.ByteWidth);
+				deviceContexts[threadID]->Unmap((ID3D11Resource*)bufferDest->resource_DX11, 0);
+			}
+
+			return result;
+		}
 	}
 
-	return result;
+	// Download Texture:
+	{
+		Texture* textureToDownload = dynamic_cast<Texture*>(resourceToDownload);
+		Texture* textureDest = dynamic_cast<Texture*>(resourceDest);
+
+		if (textureToDownload != nullptr && textureDest != nullptr)
+		{
+			assert(textureToDownload->desc.Width <= textureDest->desc.Width);
+			assert(textureToDownload->desc.Height <= textureDest->desc.Height);
+			assert(textureToDownload->desc.Depth <= textureDest->desc.Depth);
+			assert(textureDest->desc.Usage & USAGE_STAGING);
+			assert(dataDest != nullptr);
+
+			deviceContexts[threadID]->CopyResource((ID3D11Resource*)textureDest->resource_DX11, (ID3D11Resource*)textureToDownload->resource_DX11);
+
+			D3D11_MAPPED_SUBRESOURCE mappedResource = {};
+			HRESULT hr = deviceContexts[threadID]->Map((ID3D11Resource*)textureDest->resource_DX11, 0, D3D11_MAP_READ, 0, &mappedResource);
+			bool result = SUCCEEDED(hr);
+			if (result)
+			{
+				UINT cpycount = max(1, textureToDownload->desc.Width) * max(1, textureToDownload->desc.Height) * max(1, textureToDownload->desc.Depth);
+				UINT cpystride = GetFormatStride(textureToDownload->desc.Format);
+				UINT cpysize = cpycount * cpystride;
+				memcpy(dataDest, mappedResource.pData, cpysize);
+				deviceContexts[threadID]->Unmap((ID3D11Resource*)textureDest->resource_DX11, 0);
+			}
+
+			return result;
+		}
+	}
+
+	return false;
 }
 
 void GraphicsDevice_DX11::WaitForGPU()
@@ -3718,25 +3763,6 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 	return hr != S_FALSE;
 }
 
-
-HRESULT GraphicsDevice_DX11::SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID)
-{
-	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
-	if (tex2D != nullptr)
-	{
-		return SaveWICTextureToFile(deviceContexts[threadID], (ID3D11Resource*)pTexture->resource_DX11, GUID_ContainerFormatPng, wstring(fileName.begin(), fileName.end()).c_str());
-	}
-	return E_FAIL;
-}
-HRESULT GraphicsDevice_DX11::SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID)
-{
-	Texture2D* tex2D = dynamic_cast<Texture2D*>(pTexture);
-	if (tex2D != nullptr)
-	{
-		return SaveDDSTextureToFile(deviceContexts[threadID], (ID3D11Resource*)tex2D->resource_DX11, wstring(fileName.begin(), fileName.end()).c_str());
-	}
-	return E_FAIL;
-}
 
 void GraphicsDevice_DX11::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 {

@@ -1,16 +1,23 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiLoader.h"
+#include "wiIntersectables.h"
 
 #include <unordered_map>
 #include <list>
 
+namespace wiSceneComponents
+{
+	struct Mesh;
+	struct Object;
+	struct Cullable;
+}
+
 class Frustum;
 
-typedef std::list<Cullable*> CulledList;
+typedef std::list<wiSceneComponents::Cullable*> CulledList;
 
-typedef std::list<Object*> CulledObjectList;
-typedef std::unordered_map<Mesh*,CulledObjectList> CulledCollection;
+typedef std::list<wiSceneComponents::Object*> CulledObjectList;
+typedef std::unordered_map<wiSceneComponents::Mesh*,CulledObjectList> CulledCollection;
 
 class wiSPTree
 {
@@ -19,7 +26,7 @@ protected:
 	wiSPTree();
 public:
 	~wiSPTree();
-	void initialize(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
+	void initialize(const std::vector<wiSceneComponents::Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 
 	struct Node
 	{
@@ -63,7 +70,7 @@ public:
 	// Sort culled list by their distance to the origin point
 	static void Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE);
 
-	void AddObjects(Node* node, const std::vector<Cullable*>& newObjects);
+	void AddObjects(Node* node, const std::vector<wiSceneComponents::Cullable*>& newObjects);
 	void getVisible(Frustum& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
 	void getVisible(AABB& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
 	void getVisible(SPHERE& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
@@ -71,13 +78,13 @@ public:
 	void getAll(CulledList& objects, Node* node = nullptr);
 	// Updates the tree. Returns null if successful, returns a new tree if the tree is resized. The old tree can be thrown away then.
 	wiSPTree* updateTree(Node* node = nullptr);
-	void Remove(Cullable* value, Node* node = nullptr);
+	void Remove(wiSceneComponents::Cullable* value, Node* node = nullptr);
 };
 
 class Octree : public wiSPTree
 {
 public:
-	Octree(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX))
+	Octree(const std::vector<wiSceneComponents::Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX))
 	{
 		childCount=8;
 		initialize(objects, newMin, newMax);
@@ -86,7 +93,7 @@ public:
 class QuadTree : public wiSPTree
 {
 public:
-	QuadTree(const std::vector<Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX))
+	QuadTree(const std::vector<wiSceneComponents::Cullable*>& objects, const XMFLOAT3& newMin = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& newMax = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX))
 	{
 		childCount = 4;
 		initialize(objects, newMin, newMax);

@@ -1,4 +1,4 @@
-#include "wiLoader.h"
+#include "wiSceneComponents.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
 #include "wiMath.h"
@@ -12,983 +12,13 @@
 #include "wiArchive.h"
 #include "wiBackLog.h"
 
-#define FORSYTH_IMPLEMENTATION
-#include "wiMeshOptimizer.h"
-
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "wiObjLoader.h"
-
-#include <algorithm>
-#include <fstream>
-#include <iomanip>
+#include <sstream>
 
 using namespace std;
 using namespace wiGraphicsTypes;
 
-void LoadWiArmatures(const std::string& directory, const std::string& name, unordered_set<Armature*>& armatures)
+namespace wiSceneComponents
 {
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file)
-	{
-		Armature* armature = nullptr;
-		while(!file.eof())
-		{
-			float trans[] = { 0,0,0,0 };
-			string line="";
-			file>>line;
-			if(line[0]=='/' && line.substr(2,8)=="ARMATURE") 
-			{
-				armature = new Armature(line.substr(11, strlen(line.c_str()) - 11));
-				armatures.insert(armature);
-			}
-			else
-			{
-				switch(line[0])
-				{
-				case 'r':
-					file>>trans[0]>>trans[1]>>trans[2]>>trans[3];
-					armature->rotation_rest = XMFLOAT4(trans[0],trans[1],trans[2],trans[3]);
-					break;
-				case 's':
-					file>>trans[0]>>trans[1]>>trans[2];
-					armature->scale_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
-					break;
-				case 't':
-					file>>trans[0]>>trans[1]>>trans[2];
-					armature->translation_rest = XMFLOAT3(trans[0], trans[1], trans[2]);
-					{
-						XMMATRIX world = XMMatrixScalingFromVector(XMLoadFloat3(&armature->scale))*XMMatrixRotationQuaternion(XMLoadFloat4(&armature->rotation))*XMMatrixTranslationFromVector(XMLoadFloat3(&armature->translation));
-						XMStoreFloat4x4( &armature->world_rest,world );
-					}
-					break;
-				case 'b':
-					{
-						string boneName;
-						file>>boneName;
-						armature->boneCollection.push_back(new Bone(boneName));
-					}
-					break;
-				case 'p':
-					file>>armature->boneCollection.back()->parentName;
-					break;
-				case 'l':
-					{
-						float x=0,y=0,z=0,w=0;
-						file>>x>>y>>z>>w;
-						XMVECTOR quaternion = XMVectorSet(x,y,z,w);
-						file>>x>>y>>z;
-						XMVECTOR translation = XMVectorSet(x,y,z,0);
-
-						XMMATRIX frame;
-						frame= XMMatrixRotationQuaternion(quaternion) * XMMatrixTranslationFromVector(translation) ;
-
-						XMStoreFloat3(&armature->boneCollection.back()->translation_rest,translation);
-						XMStoreFloat4(&armature->boneCollection.back()->rotation_rest,quaternion);
-						XMStoreFloat4x4(&armature->boneCollection.back()->world_rest,frame);
-						XMStoreFloat4x4(&armature->boneCollection.back()->restInv,XMMatrixInverse(0,frame));
-						
-					}
-					break;
-				case 'c':
-					armature->boneCollection.back()->connected=true;
-					break;
-				case 'h':
-					file>>armature->boneCollection.back()->length;
-					break;
-				default: break;
-				}
-			}
-		}
-	}
-	file.close();
-
-
-
-	//CREATE FAMILY
-	for(Armature* armature : armatures)
-	{
-		armature->CreateFamily();
-	}
-
-}
-void LoadWiMaterialLibrary(const std::string& directory, const std::string& name, const std::string& texturesDir,MaterialCollection& materials)
-{
-	int materialI=(int)(materials.size()-1);
-
-	Material* currentMat = NULL;
-	
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof()){
-			string line="";
-			file>>line;
-			if(line[0]=='/' && !strcmp(line.substr(2,8).c_str(),"MATERIAL")) {
-				if (currentMat)
-				{
-					currentMat->ConvertToPhysicallyBasedMaterial();
-					materials.insert(pair<string, Material*>(currentMat->name, currentMat));
-				}
-				
-				currentMat = new Material(line.substr(11, strlen(line.c_str()) - 11));
-				materialI++;
-			}
-			else{
-				switch(line[0]){
-				case 'd':
-					file>>currentMat->diffuseColor.x;
-					file>>currentMat->diffuseColor.y;
-					file>>currentMat->diffuseColor.z;
-					break;
-				case 'X':
-					currentMat->cast_shadow=false;
-					break;
-				case 'r':
-					{
-						string resourceName="";
-						file>>resourceName;
-						stringstream ss("");
-						ss<<directory<<texturesDir<<resourceName.c_str();
-						currentMat->surfaceMapName = ss.str();
-						currentMat->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
-					}
-					break;
-				case 'n':
-					{
-						string resourceName="";
-						file>>resourceName;
-						stringstream ss("");
-						ss<<directory<<texturesDir<<resourceName.c_str();
-						currentMat->normalMapName=ss.str();
-						currentMat->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
-					}
-					break;
-				case 't':
-					{
-						string resourceName="";
-						file>>resourceName;
-						stringstream ss("");
-						ss<<directory<<texturesDir<<resourceName.c_str();
-						currentMat->textureName=ss.str();
-						currentMat->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
-					}
-					file>>currentMat->premultipliedTexture;
-					break;
-				case 'D':
-					{
-						string resourceName="";
-						file>>resourceName;
-						stringstream ss("");
-						ss<<directory<<texturesDir<<resourceName.c_str();
-						currentMat->displacementMapName=ss.str();
-						currentMat->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
-					}
-					break;
-				case 'S':
-					{
-						string resourceName="";
-						file>>resourceName;
-						stringstream ss("");
-						ss<<directory<<texturesDir<<resourceName.c_str();
-						currentMat->specularMapName=ss.str();
-						currentMat->specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(ss.str());
-					}
-					break;
-				case 'a':
-					file>>currentMat->alpha;
-					break;
-				case 'h':
-					currentMat->shadeless=true;
-					break;
-				case 'R':
-					file>>currentMat->refractionIndex;
-					break;
-				case 'e':
-					file>>currentMat->enviroReflection;
-					break;
-				case 's':
-					file>>currentMat->specular.x;
-					file>>currentMat->specular.y;
-					file>>currentMat->specular.z;
-					file>>currentMat->specular.w;
-					break;
-				case 'p':
-					file>>currentMat->specular_power;
-					break;
-				case 'k':
-					currentMat->isSky=true;
-					break;
-				case 'm':
-					file>>currentMat->movingTex.x;
-					file>>currentMat->movingTex.y;
-					file>>currentMat->movingTex.z;
-					currentMat->framesToWaitForTexCoordOffset=currentMat->movingTex.z;
-					break;
-				case 'w':
-					currentMat->water=true;
-					break;
-				case 'u':
-					currentMat->subsurfaceScattering=true;
-					break;
-				case 'b':
-					{
-						string blend;
-						file>>blend;
-						if(!blend.compare("ADD"))
-							currentMat->blendFlag=BLENDMODE_ADDITIVE;
-					}
-					break;
-				case 'i':
-					{
-						file>>currentMat->emissive;
-					}
-					break;
-				default:break;
-				}
-			}
-		}
-	}
-	file.close();
-	
-	if (currentMat)
-	{
-		currentMat->ConvertToPhysicallyBasedMaterial();
-		materials.insert(pair<string, Material*>(currentMat->name, currentMat));
-	}
-
-}
-void LoadWiObjects(const std::string& directory, const std::string& name, unordered_set<Object*>& objects
-					, unordered_set<Armature*>& armatures
-				   , MeshCollection& meshes, const MaterialCollection& materials)
-{
-	
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file)
-	{
-		Object* object = nullptr;
-		while(!file.eof())
-		{
-			float trans[] = { 0,0,0,0 };
-			string line="";
-			file>>line;
-			if(line[0]=='/' && !strcmp(line.substr(2,6).c_str(),"OBJECT")) 
-			{
-				object = new Object(line.substr(9, strlen(line.c_str()) - 9));
-				objects.insert(object);
-			}
-			else
-			{
-				switch(line[0])
-				{
-				case 'm':
-					{
-						string meshName="";
-						file>>meshName;
-						object->meshName = meshName;
-						MeshCollection::iterator iter = meshes.find(meshName);
-						
-						if(line[1]=='b')
-						{ 
-							//binary load mesh in place if not present
-							if(iter==meshes.end())
-							{
-								stringstream meshFileName("");
-								meshFileName << directory << meshName << ".wimesh";
-								Mesh* mesh = new Mesh();
-								mesh->LoadFromFile(meshName, meshFileName.str(), materials, armatures);
-								object->mesh = mesh;
-								meshes.insert(pair<string, Mesh*>(meshName, mesh));
-							}
-							else
-							{
-								object->mesh=iter->second;
-							}
-						}
-						else
-						{
-							if (iter != meshes.end())
-							{
-								object->mesh = iter->second;
-							}
-						}
-					}
-					break;
-				case 'p':
-					{
-						file >> object->parentName;
-					}
-					break;
-				case 'b':
-					{
-						file >> object->boneParent;
-					}
-					break;
-				case 'I':
-					{
-						XMFLOAT3 s,t;
-						XMFLOAT4 r;
-						file>>t.x>>t.y>>t.z>>r.x>>r.y>>r.z>>r.w>>s.x>>s.y>>s.z;
-						XMStoreFloat4x4(&object->parent_inv_rest
-								, XMMatrixScalingFromVector(XMLoadFloat3(&s)) *
-									XMMatrixRotationQuaternion(XMLoadFloat4(&r)) *
-									XMMatrixTranslationFromVector(XMLoadFloat3(&t))
-							);
-					}
-					break;
-				case 'r':
-					file>>trans[0]>>trans[1]>>trans[2]>>trans[3];
-					object->Rotate(XMFLOAT4(trans[0], trans[1], trans[2],trans[3]));
-					break;
-				case 's':
-					file>>trans[0]>>trans[1]>>trans[2];
-					object->Scale(XMFLOAT3(trans[0], trans[1], trans[2]));
-					break;
-				case 't':
-					file>>trans[0]>>trans[1]>>trans[2];
-					object->Translate(XMFLOAT3(trans[0], trans[1], trans[2]));
-					break;
-				case 'E':
-					{
-						string systemName,materialName;
-						bool visibleEmitter;
-						float size,randfac,norfac;
-						float count,life,randlife;
-						float scaleX,scaleY,rot;
-						file>>systemName>>visibleEmitter>>materialName>>size>>randfac>>norfac>>count>>life>>randlife;
-						file>>scaleX>>scaleY>>rot;
-
-						if (object->mesh)
-						{
-							object->eParticleSystems.push_back(
-								new wiEmittedParticle(systemName, materialName, object, size, randfac, norfac, count, life, randlife, scaleX, scaleY, rot)
-							);
-						}
-					}
-					break;
-				case 'H':
-					{
-						string name,mat,densityG,lenG;
-						float len;
-						int count;
-						file>>name>>mat>>len>>count>>densityG>>lenG;
-						
-						object->hParticleSystems.push_back(new wiHairParticle(name, len, count, mat, object, densityG, lenG));
-					}
-					break;
-				case 'P':
-					object->rigidBody = true;
-					file>>object->collisionShape>>object->mass>>
-						object->friction>>object->restitution>>object->damping>>object->physicsType>>
-						object->kinematic;
-					break;
-				case 'T':
-					file >> object->transparency;
-					break;
-				default: break;
-				}
-			}
-		}
-	}
-	file.close();
-
-}
-void LoadWiMeshes(const std::string& directory, const std::string& name, MeshCollection& meshes, 
-	const unordered_set<Armature*>& armatures, const MaterialCollection& materials)
-{
-	int meshI=(int)(meshes.size()-1);
-	Mesh* currentMesh = NULL;
-	
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof())
-		{
-			float trans[] = { 0,0,0,0 };
-			string line="";
-			file>>line;
-			if(line[0]=='/' && !line.substr(2,4).compare("MESH")) {
-				currentMesh = new Mesh(line.substr(7, strlen(line.c_str()) - 7));
-				meshes.insert( pair<string,Mesh*>(currentMesh->name,currentMesh) );
-				meshI++;
-			}
-			else
-			{
-				switch(line[0])
-				{
-				case 'p':
-					{
-						file >> currentMesh->parent;
-						for (auto& a : armatures)
-						{
-							if (!a->name.compare(currentMesh->parent))
-							{
-								currentMesh->armature = a;
-								break;
-							}
-						}
-					}
-					break;
-				case 'v': 
-					currentMesh->vertices_FULL.push_back(Mesh::Vertex_FULL());
-					file >> currentMesh->vertices_FULL.back().pos.x;
-					file >> currentMesh->vertices_FULL.back().pos.y;
-					file >> currentMesh->vertices_FULL.back().pos.z;
-					break;
-				case 'n':
-					if (currentMesh->isBillboarded){
-						currentMesh->vertices_FULL.back().nor.x = currentMesh->billboardAxis.x;
-						currentMesh->vertices_FULL.back().nor.y = currentMesh->billboardAxis.y;
-						currentMesh->vertices_FULL.back().nor.z = currentMesh->billboardAxis.z;
-					}
-					else{
-						file >> currentMesh->vertices_FULL.back().nor.x;
-						file >> currentMesh->vertices_FULL.back().nor.y;
-						file >> currentMesh->vertices_FULL.back().nor.z;
-					}
-					break;
-				case 'u':
-					file >> currentMesh->vertices_FULL.back().tex.x;
-					file >> currentMesh->vertices_FULL.back().tex.y;
-					break;
-				case 'w':
-					{
-						string nameB;
-						float weight=0;
-						int BONEINDEX=0;
-						file>>nameB>>weight;
-						bool gotBone=false;
-						if(currentMesh->armature != nullptr){
-							int j=0;
-							for (auto& b : currentMesh->armature->boneCollection)
-							{
-								if (!b->name.compare(nameB))
-								{
-									BONEINDEX = j;
-									break;
-								}
-								j++;
-							}
-						}
-						if (gotBone) 
-						{
-							//ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-							if (!currentMesh->vertices_FULL.back().wei.x) {
-								currentMesh->vertices_FULL.back().wei.x = weight;
-								currentMesh->vertices_FULL.back().ind.x = (float)BONEINDEX;
-							}
-							else if(!currentMesh->vertices_FULL.back().wei.y) {
-								currentMesh->vertices_FULL.back().wei.y=weight;
-								currentMesh->vertices_FULL.back().ind.y=(float)BONEINDEX;
-							}
-							else if(!currentMesh->vertices_FULL.back().wei.z) {
-								currentMesh->vertices_FULL.back().wei.z=weight;
-								currentMesh->vertices_FULL.back().ind.z=(float)BONEINDEX;
-							}
-							else if(!currentMesh->vertices_FULL.back().wei.w) {
-								currentMesh->vertices_FULL.back().wei.w = weight;
-								currentMesh->vertices_FULL.back().ind.w = (float)BONEINDEX;
-							}
-						}
-
-						 //(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
-
-						if(nameB.find("trailbase")!=string::npos)
-							currentMesh->trailInfo.base = (int)(currentMesh->vertices_FULL.size()-1);
-						else if(nameB.find("trailtip")!=string::npos)
-							currentMesh->trailInfo.tip = (int)(currentMesh->vertices_FULL.size()-1);
-						
-						bool windAffection=false;
-						if(nameB.find("wind")!=string::npos)
-							windAffection=true;
-						bool gotvg=false;
-						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v)
-							if(!nameB.compare(currentMesh->vertexGroups[v].name)){
-								gotvg=true;
-								currentMesh->vertexGroups[v].addVertex(VertexRef((int)(currentMesh->vertices_FULL.size() - 1), weight));
-								if(windAffection)
-									currentMesh->vertices_FULL.back().pos.w=weight;
-							}
-						if(!gotvg){
-							currentMesh->vertexGroups.push_back(VertexGroup(nameB));
-							currentMesh->vertexGroups.back().addVertex(VertexRef((int)(currentMesh->vertices_FULL.size() - 1), weight));
-							if(windAffection)
-								currentMesh->vertices_FULL.back().pos.w=weight;
-						}
-					}
-					break;
-				case 'i':
-					{
-						int count;
-						file>>count;
-						for(int i=0;i<count;i++){
-							int index;
-							file>>index;
-							currentMesh->indices.push_back(index);
-						}
-						break;
-					}
-				case 'V': 
-					{
-						XMFLOAT3 pos;
-						file >> pos.x>>pos.y>>pos.z;
-						currentMesh->physicsverts.push_back(pos);
-					}
-					break;
-				case 'I':
-					{
-						int count;
-						file>>count;
-						for(int i=0;i<count;i++){
-							int index;
-							file>>index;
-							currentMesh->physicsindices.push_back(index);
-						}
-						break;
-					}
-				case 'm':
-					{
-						string mName="";
-						file>>mName;
-						currentMesh->materialNames.push_back(mName);
-						MaterialCollection::const_iterator iter = materials.find(mName);
-						if(iter!=materials.end()) {
-							currentMesh->subsets.push_back(MeshSubset());
-							currentMesh->renderable=true;
-							currentMesh->subsets.back().material = (iter->second);
-						}
-					}
-					break;
-				case 'a':
-					file>>currentMesh->vertices_FULL.back().tex.z;
-					break;
-				case 'B':
-					for(int corner=0;corner<8;++corner){
-						file>>currentMesh->aabb.corners[corner].x;
-						file>>currentMesh->aabb.corners[corner].y;
-						file>>currentMesh->aabb.corners[corner].z;
-					}
-					break;
-				case 'b':
-					{
-						currentMesh->isBillboarded=true;
-						string read = "";
-						file>>read;
-						transform(read.begin(), read.end(), read.begin(), toupper);
-						if(read.find(toupper('y'))!=string::npos) currentMesh->billboardAxis=XMFLOAT3(0,1,0);
-						else if(read.find(toupper('x'))!=string::npos) currentMesh->billboardAxis=XMFLOAT3(1,0,0);
-						else if(read.find(toupper('z'))!=string::npos) currentMesh->billboardAxis=XMFLOAT3(0,0,1);
-						else currentMesh->billboardAxis=XMFLOAT3(0,0,0);
-					}
-					break;
-				case 'S':
-					{
-						currentMesh->softBody=true;
-						string mvgi="",gvgi="",svgi="";
-						file>>currentMesh->mass>>currentMesh->friction>>gvgi>>mvgi>>svgi;
-						for (unsigned int v = 0; v<currentMesh->vertexGroups.size(); ++v){
-							if(!strcmp(mvgi.c_str(),currentMesh->vertexGroups[v].name.c_str()))
-								currentMesh->massVG=v;
-							if(!strcmp(gvgi.c_str(),currentMesh->vertexGroups[v].name.c_str()))
-								currentMesh->goalVG=v;
-							if(!strcmp(svgi.c_str(),currentMesh->vertexGroups[v].name.c_str()))
-								currentMesh->softVG=v;
-						}
-					}
-					break;
-				default: break;
-				}
-			}
-		}
-	}
-	file.close();
-	
-	if(currentMesh)
-		meshes.insert( pair<string,Mesh*>(currentMesh->name,currentMesh) );
-
-}
-void LoadWiActions(const std::string& directory, const std::string& name, unordered_set<Armature*>& armatures)
-{
-	Armature* armatureI=nullptr;
-	Bone* boneI=nullptr;
-	int firstFrame=INT_MAX;
-
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file){
-		while(!file.eof()){
-			string line="";
-			file>>line;
-			if(line[0]=='/' && !strcmp(line.substr(2,8).c_str(),"ARMATURE")) {
-				string armaturename = line.substr(11, strlen(line.c_str()) - 11);
-				for (auto& a : armatures)
-				{
-					if (!a->name.compare(armaturename)) {
-						armatureI = a;
-						break;
-					}
-				}
-			}
-			else{
-				switch(line[0]){
-				case 'C':
-					armatureI->actions.push_back(Action());
-					file>> armatureI->actions.back().name;
-					break;
-				case 'A':
-					file>> armatureI->actions.back().frameCount;
-					break;
-				case 'b':
-					{
-						string boneName;
-						file>>boneName;
-						boneI = armatureI->GetBone(boneName);
-						if (boneI != nullptr)
-						{
-							boneI->actionFrames.resize(armatureI->actions.size());
-						}
-					}
-					break;
-				case 'r':
-					{
-						int f = 0;
-						float x=0,y=0,z=0,w=0;
-						file>>f>>x>>y>>z>>w;
-						if (boneI != nullptr)
-							boneI->actionFrames.back().keyframesRot.push_back(KeyFrame(f,x,y,z,w));
-					}
-					break;
-				case 't':
-					{
-						int f = 0;
-						float x=0,y=0,z=0;
-						file>>f>>x>>y>>z;
-						if (boneI != nullptr)
-							boneI->actionFrames.back().keyframesPos.push_back(KeyFrame(f,x,y,z,0));
-					}
-					break;
-				case 's':
-					{
-						int f = 0;
-						float x=0,y=0,z=0;
-						file>>f>>x>>y>>z;
-						if(boneI!=nullptr)
-							boneI->actionFrames.back().keyframesSca.push_back(KeyFrame(f,x,y,z,0));
-					}
-					break;
-				default: break;
-				}
-			}
-		}
-	}
-	file.close();
-}
-void LoadWiLights(const std::string& directory, const std::string& name, unordered_set<Light*>& lights)
-{
-
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file)
-	{
-		Light* light = nullptr;
-		while(!file.eof())
-		{
-			string line="";
-			file>>line;
-			switch(line[0])
-			{
-			case 'P':
-				{
-					light = new Light();
-					lights.insert(light);
-					light->SetType(Light::POINT);
-					file >> light->name >> light->shadow;
-				}
-				break;
-			case 'D':
-				{
-					light = new Light();
-					lights.insert(light);
-					light->SetType(Light::DIRECTIONAL);
-					file>>light->name; 
-					light->shadow = true;
-				}
-				break;
-			case 'S':
-				{
-					light = new Light();
-					lights.insert(light);
-					light->SetType(Light::SPOT);
-					file>>light->name;
-					file>>light->shadow>>light->enerDis.z;
-				}
-				break;
-			case 'p':
-				{
-					file >> light->parentName;
-				}
-				break;
-			case 'b':
-				{
-					file >> light->boneParent;
-				}
-				break;
-			case 'I':
-				{
-					XMFLOAT3 s,t;
-					XMFLOAT4 r;
-					file>>t.x>>t.y>>t.z>>r.x>>r.y>>r.z>>r.w>>s.x>>s.y>>s.z;
-					XMStoreFloat4x4(&light->parent_inv_rest
-							, XMMatrixScalingFromVector(XMLoadFloat3(&s)) *
-								XMMatrixRotationQuaternion(XMLoadFloat4(&r)) *
-								XMMatrixTranslationFromVector(XMLoadFloat3(&t))
-						);
-				}
-				break;
-			case 't':
-				{
-					float x,y,z;
-					file>>x>>y>>z;
-					light->Translate(XMFLOAT3(x, y, z));
-					break;
-				}
-			case 'r':
-				{
-					float x,y,z,w;
-					file>>x>>y>>z>>w;
-					light->Rotate(XMFLOAT4(x, y, z, w));
-					break;
-				}
-			case 'c':
-				{
-					float r,g,b;
-					file>>r>>g>>b;
-					light->color=XMFLOAT4(r,g,b,0);
-					break;
-				}
-			case 'e':
-				file>>light->enerDis.x;
-				break;
-			case 'd':
-				file>>light->enerDis.y;
-				break;
-			case 'n':
-				light->noHalo=true;
-				break;
-			case 'l':
-				{
-					string t="";
-					file>>t;
-					stringstream rim("");
-					rim<<directory<<"rims/"<<t;
-					Texture2D* tex=nullptr;
-					if ((tex = (Texture2D*)wiResourceManager::GetGlobal()->add(rim.str())) != nullptr){
-						light->lensFlareRimTextures.push_back(tex);
-						light->lensFlareNames.push_back(rim.str());
-					}
-				}
-				break;
-			default: break;
-			}
-		}
-
-	}
-	file.close();
-}
-void LoadWiWorldInfo(const std::string& fileName, WorldInfo& worldInfo, Wind& wind)
-{
-	string extension = wiHelper::GetExtensionFromFileName(fileName);
-
-	string realName;
-	if (!extension.compare("wiw"))
-	{
-		realName = fileName;
-	}
-	else if (extension.empty())
-	{
-		realName = fileName + ".wiw";
-	}
-	else
-	{
-		realName = fileName;
-		wiHelper::RemoveExtensionFromFileName(realName);
-		realName += ".wiw";
-	}
-
-	ifstream file(realName);
-	if (file)
-	{
-		while (!file.eof())
-		{
-			string read = "";
-			file >> read;
-			switch (read[0])
-			{
-			case 'h':
-				file >> worldInfo.horizon.x >> worldInfo.horizon.y >> worldInfo.horizon.z;
-				// coming from blender, de-apply gamma correction:
-				worldInfo.horizon.x = powf(worldInfo.horizon.x, 1.0f / 2.2f);
-				worldInfo.horizon.y = powf(worldInfo.horizon.y, 1.0f / 2.2f);
-				worldInfo.horizon.z = powf(worldInfo.horizon.z, 1.0f / 2.2f);
-				break;
-			case 'z':
-				file >> worldInfo.zenith.x >> worldInfo.zenith.y >> worldInfo.zenith.z;
-				// coming from blender, de-apply gamma correction:
-				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
-				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
-				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
-				break;
-			case 'a':
-				file >> worldInfo.ambient.x >> worldInfo.ambient.y >> worldInfo.ambient.z;
-				// coming from blender, de-apply gamma correction:
-				worldInfo.zenith.x = powf(worldInfo.zenith.x, 1.0f / 2.2f);
-				worldInfo.zenith.y = powf(worldInfo.zenith.y, 1.0f / 2.2f);
-				worldInfo.zenith.z = powf(worldInfo.zenith.z, 1.0f / 2.2f);
-				break;
-			case 'W':
-			{
-				XMFLOAT4 r;
-				float s;
-				file >> r.x >> r.y >> r.z >> r.w >> s;
-				XMStoreFloat3(&wind.direction, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
-			}
-			break;
-			case 'm':
-			{
-				float s, e, h;
-				file >> s >> e >> h;
-				worldInfo.fogSEH = XMFLOAT3(s, e, h);
-			}
-			break;
-			default:break;
-			}
-		}
-	}
-	file.close();
-}
-void LoadWiCameras(const std::string&directory, const std::string& name, std::list<Camera*>& cameras
-				   ,const unordered_set<Armature*>& armatures)
-{
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file)
-	{
-		string voidStr("");
-		file>>voidStr;
-		while(!file.eof()){
-			string line="";
-			file>>line;
-			switch(line[0]){
-
-			case 'c':
-				{
-					XMFLOAT3 trans;
-					XMFLOAT4 rot;
-					string name(""),parentA(""),parentB("");
-					file>>name>>parentA>>parentB>>trans.x>>trans.y>>trans.z>>rot.x>>rot.y>>rot.z>>rot.w;
-			
-					cameras.push_back(new Camera(
-						trans,rot
-						,name)
-						);
-
-					for (auto& a : armatures)
-					{
-						Bone* b = a->GetBone(parentB);
-						if (b != nullptr)
-						{
-							cameras.back()->attachTo(b);
-						}
-					}
-
-				}
-				break;
-			case 'I':
-				{
-					XMFLOAT3 s,t;
-					XMFLOAT4 r;
-					file>>t.x>>t.y>>t.z>>r.x>>r.y>>r.z>>r.w>>s.x>>s.y>>s.z;
-					XMStoreFloat4x4(&cameras.back()->parent_inv_rest
-							, XMMatrixScalingFromVector(XMLoadFloat3(&s)) *
-								XMMatrixRotationQuaternion(XMLoadFloat4(&r)) *
-								XMMatrixTranslationFromVector(XMLoadFloat3(&t))
-						);
-				}
-				break;
-			default:break;
-			}
-		}
-	}
-	file.close();
-}
-void LoadWiDecals(const std::string&directory, const std::string& name, const std::string& texturesDir, unordered_set<Decal*>& decals)
-{
-	stringstream filename("");
-	filename<<directory<<name;
-
-	ifstream file(filename.str().c_str());
-	if(file)
-	{
-		Decal* decal = nullptr;
-		string voidStr="";
-		file>>voidStr;
-		while(!file.eof())
-		{
-			string line="";
-			file>>line;
-			switch(line[0])
-			{
-			case 'd':
-				{
-					string name;
-					XMFLOAT3 loc,scale;
-					XMFLOAT4 rot;
-					file>>name>>scale.x>>scale.y>>scale.z>>loc.x>>loc.y>>loc.z>>rot.x>>rot.y>>rot.z>>rot.w;
-					decal = new Decal(loc, scale, rot);
-					decal->name=name;
-					decals.insert(decal);
-				}
-				break;
-			case 't':
-				{
-					string tex="";
-					file>>tex;
-					stringstream ss("");
-					ss<<directory<<texturesDir<<tex;
-					decal->addTexture(ss.str());
-				}
-				break;
-			case 'n':
-				{
-					string tex="";
-					file>>tex;
-					stringstream ss("");
-					ss<<directory<<texturesDir<<tex;
-					decal->addNormal(ss.str());
-				}
-				break;
-			default:break;
-			};
-		}
-	}
-	file.close();
-}
-
 
 #pragma region SCENE
 Model* _CreateWorldNode()
@@ -1423,7 +453,6 @@ void Mesh::init()
 	armatureName = "";
 	impostorDistance = 100.0f;
 	tessellationFactor = 0.0f;
-	optimized = false;
 	bufferOffset_POS = 0;
 	bufferOffset_PRE = 0;
 	indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
@@ -1434,329 +463,6 @@ void Mesh::init()
 	SAFE_INIT(vertexBuffer_BON);
 	SAFE_INIT(streamoutBuffer_POS);
 	SAFE_INIT(streamoutBuffer_PRE);
-}
-
-void Mesh::LoadFromFile(const std::string& newName, const std::string& fname, const MaterialCollection& materialColl, const unordered_set<Armature*>& armatures) {
-	name = newName;
-
-	BYTE* buffer;
-	size_t fileSize;
-	if (wiHelper::readByteData(fname, &buffer, fileSize)) {
-
-		int offset = 0;
-
-		int VERSION;
-		memcpy(&VERSION, buffer, sizeof(int));
-		offset += sizeof(int);
-
-		if (VERSION >= 1001) {
-			int doubleside;
-			memcpy(&doubleside, buffer + offset, sizeof(int));
-			offset += sizeof(int);
-			if (doubleside) {
-				doubleSided = true;
-			}
-		}
-
-		int billboard;
-		memcpy(&billboard, buffer + offset, sizeof(int));
-		offset += sizeof(int);
-		if (billboard) {
-			char axis;
-			memcpy(&axis, buffer + offset, 1);
-			offset += 1;
-
-			if (toupper(axis) == 'Y')
-				billboardAxis = XMFLOAT3(0, 1, 0);
-			else if (toupper(axis) == 'X')
-				billboardAxis = XMFLOAT3(1, 0, 0);
-			else if (toupper(axis) == 'Z')
-				billboardAxis = XMFLOAT3(0, 0, 1);
-			else
-				billboardAxis = XMFLOAT3(0, 0, 0);
-			isBillboarded = true;
-		}
-
-		int parented; //parentnamelength
-		memcpy(&parented, buffer + offset, sizeof(int));
-		offset += sizeof(int);
-		if (parented) {
-			char* pName = new char[parented + 1]();
-			memcpy(pName, buffer + offset, parented);
-			offset += parented;
-			parent = pName;
-			delete[] pName;
-
-			stringstream identified_parent("");
-			identified_parent << parent;
-			for (Armature* a : armatures) {
-				if (!a->name.compare(identified_parent.str())) {
-					armatureName = identified_parent.str();
-					armature = a;
-				}
-			}
-		}
-
-		int materialCount;
-		memcpy(&materialCount, buffer + offset, sizeof(int));
-		offset += sizeof(int);
-		for (int i = 0; i<materialCount; ++i) {
-			int matNameLen;
-			memcpy(&matNameLen, buffer + offset, sizeof(int));
-			offset += sizeof(int);
-			char* matName = new char[matNameLen + 1]();
-			memcpy(matName, buffer + offset, matNameLen);
-			offset += matNameLen;
-
-			stringstream identified_matname("");
-			identified_matname << matName;
-			MaterialCollection::const_iterator iter = materialColl.find(identified_matname.str());
-			if (iter != materialColl.end()) {
-				subsets.push_back(MeshSubset());
-				subsets.back().material = iter->second;
-				//materials.push_back(iter->second);
-			}
-
-			materialNames.push_back(identified_matname.str());
-			delete[] matName;
-		}
-		int rendermesh, vertexCount;
-		memcpy(&rendermesh, buffer + offset, sizeof(int));
-		offset += sizeof(int);
-		memcpy(&vertexCount, buffer + offset, sizeof(int));
-		offset += sizeof(int);
-
-		vertices_FULL.resize(vertexCount);
-
-		for (int i = 0; i<vertexCount; ++i) {
-			float v[8];
-			memcpy(v, buffer + offset, sizeof(float) * 8);
-			offset += sizeof(float) * 8;
-			vertices_FULL[i].pos.x = v[0];
-			vertices_FULL[i].pos.y = v[1];
-			vertices_FULL[i].pos.z = v[2];
-			vertices_FULL[i].pos.w = 0;
-			if (!isBillboarded) {
-				vertices_FULL[i].nor.x = v[3];
-				vertices_FULL[i].nor.y = v[4];
-				vertices_FULL[i].nor.z = v[5];
-			}
-			else {
-				vertices_FULL[i].nor.x = billboardAxis.x;
-				vertices_FULL[i].nor.y = billboardAxis.y;
-				vertices_FULL[i].nor.z = billboardAxis.z;
-			}
-			vertices_FULL[i].tex.x = v[6];
-			vertices_FULL[i].tex.y = v[7];
-			int matIndex;
-			memcpy(&matIndex, buffer + offset, sizeof(int));
-			offset += sizeof(int);
-			vertices_FULL[i].tex.z = (float)matIndex;
-
-			int weightCount = 0;
-			memcpy(&weightCount, buffer + offset, sizeof(int));
-			offset += sizeof(int);
-			for (int j = 0; j<weightCount; ++j) {
-
-				int weightNameLen = 0;
-				memcpy(&weightNameLen, buffer + offset, sizeof(int));
-				offset += sizeof(int);
-				char* weightName = new char[weightNameLen + 1](); //bone name
-				memcpy(weightName, buffer + offset, weightNameLen);
-				offset += weightNameLen;
-				float weightValue = 0;
-				memcpy(&weightValue, buffer + offset, sizeof(float));
-				offset += sizeof(float);
-
-#pragma region BONE INDEX SETUP
-				string nameB = weightName;
-				if (armature) {
-					bool gotBone = false;
-					int BONEINDEX = 0;
-					int b = 0;
-					while (!gotBone && b<(int)armature->boneCollection.size()) {
-						if (!armature->boneCollection[b]->name.compare(nameB)) {
-							gotBone = true;
-							BONEINDEX = b; //GOT INDEX OF BONE OF THE WEIGHT IN THE PARENT ARMATURE
-						}
-						b++;
-					}
-					if (gotBone) { //ONLY PROCEED IF CORRESPONDING BONE WAS FOUND
-						if (!vertices_FULL[i].wei.x) {
-							vertices_FULL[i].wei.x = weightValue;
-							vertices_FULL[i].ind.x = (float)BONEINDEX;
-						}
-						else if (!vertices_FULL[i].wei.y) {
-							vertices_FULL[i].wei.y = weightValue;
-							vertices_FULL[i].ind.y = (float)BONEINDEX;
-						}
-						else if (!vertices_FULL[i].wei.z) {
-							vertices_FULL[i].wei.z = weightValue;
-							vertices_FULL[i].ind.z = (float)BONEINDEX;
-						}
-						else if (!vertices_FULL[i].wei.w) {
-							vertices_FULL[i].wei.w = weightValue;
-							vertices_FULL[i].ind.w = (float)BONEINDEX;
-						}
-					}
-				}
-
-				//(+RIBBONTRAIL SETUP)(+VERTEXGROUP SETUP)
-
-				if (nameB.find("trailbase") != string::npos)
-					trailInfo.base = i;
-				else if (nameB.find("trailtip") != string::npos)
-					trailInfo.tip = i;
-
-				bool windAffection = false;
-				if (nameB.find("wind") != string::npos)
-					windAffection = true;
-				bool gotvg = false;
-				for (unsigned int v = 0; v<vertexGroups.size(); ++v)
-					if (!nameB.compare(vertexGroups[v].name)) {
-						gotvg = true;
-						vertexGroups[v].addVertex(VertexRef(i, weightValue));
-						if (windAffection)
-							vertices_FULL[i].pos.w = weightValue;
-					}
-				if (!gotvg) {
-					vertexGroups.push_back(VertexGroup(nameB));
-					vertexGroups.back().addVertex(VertexRef(i, weightValue));
-					if (windAffection)
-						vertices_FULL[i].pos.w = weightValue;
-				}
-#pragma endregion
-
-				delete[] weightName;
-
-
-			}
-
-		}
-
-		if (rendermesh) {
-			int indexCount;
-			memcpy(&indexCount, buffer + offset, sizeof(int));
-			offset += sizeof(int);
-			unsigned int* indexArray = new unsigned int[indexCount];
-			memcpy(indexArray, buffer + offset, sizeof(unsigned int)*indexCount);
-			offset += sizeof(unsigned int)*indexCount;
-			indices.reserve(indexCount);
-			for (int i = 0; i<indexCount; ++i) {
-				indices.push_back(indexArray[i]);
-			}
-			delete[] indexArray;
-
-			int softBody;
-			memcpy(&softBody, buffer + offset, sizeof(int));
-			offset += sizeof(int);
-			if (softBody) {
-				int softCount[2]; //ind,vert
-				memcpy(softCount, buffer + offset, sizeof(int) * 2);
-				offset += sizeof(int) * 2;
-				unsigned int* softind = new unsigned int[softCount[0]];
-				memcpy(softind, buffer + offset, sizeof(unsigned int)*softCount[0]);
-				offset += sizeof(unsigned int)*softCount[0];
-				float* softvert = new float[softCount[1]];
-				memcpy(softvert, buffer + offset, sizeof(float)*softCount[1]);
-				offset += sizeof(float)*softCount[1];
-
-				physicsindices.reserve(softCount[0]);
-				physicsverts.reserve(softCount[1] / 3);
-				for (int i = 0; i<softCount[0]; ++i) {
-					physicsindices.push_back(softind[i]);
-				}
-				for (int i = 0; i<softCount[1]; i += 3) {
-					physicsverts.push_back(XMFLOAT3(softvert[i], softvert[i + 1], softvert[i + 2]));
-				}
-
-				delete[] softind;
-				delete[] softvert;
-			}
-			else {
-
-			}
-		}
-		else {
-
-		}
-
-		memcpy(aabb.corners, buffer + offset, sizeof(aabb.corners));
-		offset += sizeof(aabb.corners);
-
-		int isSoftbody;
-		memcpy(&isSoftbody, buffer + offset, sizeof(int));
-		offset += sizeof(int);
-		if (isSoftbody) {
-			float prop[2]; //mass,friction
-			memcpy(prop, buffer + offset, sizeof(float) * 2);
-			offset += sizeof(float) * 2;
-			softBody = true;
-			mass = prop[0];
-			friction = prop[1];
-			int vglenghts[3]; //goal,mass,soft
-			memcpy(vglenghts, buffer + offset, sizeof(int) * 3);
-			offset += sizeof(int) * 3;
-
-			char* vgg = new char[vglenghts[0] + 1]();
-			char* vgm = new char[vglenghts[1] + 1]();
-			char* vgs = new char[vglenghts[2] + 1]();
-
-			memcpy(vgg, buffer + offset, vglenghts[0]);
-			offset += vglenghts[0];
-			memcpy(vgm, buffer + offset, vglenghts[1]);
-			offset += vglenghts[1];
-			memcpy(vgs, buffer + offset, vglenghts[2]);
-			offset += vglenghts[2];
-
-			for (unsigned int v = 0; v<vertexGroups.size(); ++v) {
-				if (!strcmp(vgm, vertexGroups[v].name.c_str()))
-					massVG = v;
-				if (!strcmp(vgg, vertexGroups[v].name.c_str()))
-					goalVG = v;
-				if (!strcmp(vgs, vertexGroups[v].name.c_str()))
-					softVG = v;
-			}
-
-			delete[]vgg;
-			delete[]vgm;
-			delete[]vgs;
-		}
-
-		delete[] buffer;
-
-		renderable = rendermesh == 0 ? false : true;
-	}
-}
-void Mesh::Optimize()
-{
-	// The optimizer is crashing for many models, remove for now (todo)
-
-	//if (optimized)
-	//{
-	//	return;
-	//}
-
-	//// Vertex cache optimization:
-	//{
-	//	ForsythVertexIndexType* _indices_in = new ForsythVertexIndexType[this->indices.size()];
-	//	ForsythVertexIndexType* _indices_out = new ForsythVertexIndexType[this->indices.size()];
-	//	for (size_t i = 0; i < indices.size(); ++i)
-	//	{
-	//		_indices_in[i] = this->indices[i];
-	//	}
-
-	//	ForsythVertexIndexType* result = forsythReorderIndices(_indices_out, _indices_in, (int)(this->indices.size() / 3), (int)(this->vertices_FULL.size()));
-
-	//	for (size_t i = 0; i < indices.size(); ++i)
-	//	{
-	//		this->indices[i] = _indices_out[i];
-	//	}
-	//	SAFE_DELETE_ARRAY(_indices_in);
-	//	SAFE_DELETE_ARRAY(_indices_out);
-	//}
-
-	//optimized = true;
 }
 void Mesh::CreateRenderData() 
 {
@@ -2367,6 +1073,60 @@ void Mesh::FlipNormals()
 	renderDataComplete = false;
 	CreateRenderData();
 }
+Mesh::Vertex_FULL Mesh::TransformVertex(int vertexI, const XMMATRIX& mat)
+{
+	XMMATRIX sump;
+	XMVECTOR pos = vertices_POS[vertexI].LoadPOS();
+	XMVECTOR nor = vertices_POS[vertexI].LoadNOR();
+
+	if (hasArmature() && !armature->boneCollection.empty())
+	{
+		XMFLOAT4 ind = vertices_BON[vertexI].GetInd_FULL();
+		XMFLOAT4 wei = vertices_BON[vertexI].GetWei_FULL();
+
+
+		float inWei[4] = {
+			wei.x,
+			wei.y,
+			wei.z,
+			wei.w
+		};
+		float inBon[4] = {
+			ind.x,
+			ind.y,
+			ind.z,
+			ind.w
+		};
+		if (inWei[0] || inWei[1] || inWei[2] || inWei[3])
+		{
+			sump = XMMATRIX(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+			for (unsigned int i = 0; i < 4; i++)
+			{
+				sump += XMLoadFloat4x4(&armature->boneCollection[int(inBon[i])]->boneRelativity) * inWei[i];
+			}
+		}
+		else
+		{
+			sump = XMMatrixIdentity();
+		}
+		sump = XMMatrixMultiply(sump, mat);
+	}
+	else
+	{
+		sump = mat;
+	}
+
+	XMFLOAT3 transformedP, transformedN;
+	XMStoreFloat3(&transformedP, XMVector3Transform(pos, sump));
+
+	XMStoreFloat3(&transformedN, XMVector3Normalize(XMVector3TransformNormal(nor, sump)));
+
+	Mesh::Vertex_FULL retV(transformedP);
+	retV.nor = XMFLOAT4(transformedN.x, transformedN.y, transformedN.z, retV.nor.w);
+	retV.tex = vertices_FULL[vertexI].tex;
+
+	return retV;
+}
 
 int Mesh::GetRenderTypes() const
 {
@@ -2504,7 +1264,8 @@ void Mesh::Serialize(wiArchive& archive)
 		{
 			archive >> impostorDistance;
 			archive >> tessellationFactor;
-			archive >> optimized;
+			bool tmp;
+			archive >> tmp/*optimized*/;
 		}
 	}
 	else
@@ -2597,7 +1358,8 @@ void Mesh::Serialize(wiArchive& archive)
 		{
 			archive << impostorDistance;
 			archive << tessellationFactor;
-			archive << optimized;
+			bool tmp = true;
+			archive << tmp/*optimized*/;
 		}
 	}
 }
@@ -2644,261 +1406,6 @@ void Model::CleanUp()
 		SAFE_DELETE(x);
 	}
 	environmentProbes.clear();
-}
-void Model::LoadFromDisk(const std::string& fileName)
-{
-	string directory, name;
-	wiHelper::SplitPath(fileName, directory, name);
-	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
-	wiHelper::RemoveExtensionFromFileName(name);
-
-	if (!extension.compare("WIMF"))
-	{
-		wiArchive archive(fileName, true);
-		if (archive.IsOpen())
-		{
-			this->Serialize(archive);
-		}
-		else
-		{
-			wiHelper::messageBox("Could not open archive!", "Error!");
-		}
-	}
-	else if (!extension.compare("OBJ"))
-	{
-		tinyobj::attrib_t obj_attrib;
-		vector<tinyobj::shape_t> obj_shapes;
-		vector<tinyobj::material_t> obj_materials;
-		string obj_errors;
-
-		bool success = tinyobj::LoadObj(&obj_attrib, &obj_shapes, &obj_materials, &obj_errors, fileName.c_str(), directory.c_str(), true);
-
-		if (success)
-		{
-			this->name = name;
-
-			// Load material library:
-			vector<Material*> materialLibrary = {};
-			for (auto& obj_material : obj_materials)
-			{
-				Material* material = new Material(obj_material.name);
-
-				material->diffuseColor = XMFLOAT3(obj_material.diffuse[0], obj_material.diffuse[1], obj_material.diffuse[2]);
-				material->textureName = obj_material.diffuse_texname;
-				material->displacementMapName = obj_material.displacement_texname;
-				if (material->displacementMapName.empty())
-				{
-					material->displacementMapName = obj_material.bump_texname;
-				}
-				material->emissive = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
-				//obj_material.emissive_texname;
-				material->refractionIndex = obj_material.ior;
-				material->metalness = obj_material.metallic;
-				//obj_material.metallic_texname;
-				material->normalMapName = obj_material.normal_texname;
-				material->surfaceMapName = obj_material.reflection_texname;
-				material->roughness = obj_material.roughness;
-				//obj_material.roughness_texname;
-				material->specular_power = (int)obj_material.shininess;
-				material->specular = XMFLOAT4(obj_material.specular[0], obj_material.specular[1], obj_material.specular[2], 1);
-				material->specularMapName = obj_material.specular_texname;
-
-				if (!material->surfaceMapName.empty())
-				{
-					material->surfaceMapName = directory + material->surfaceMapName;
-					material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->surfaceMapName);
-				}
-				if (!material->textureName.empty())
-				{
-					material->textureName = directory + material->textureName;
-					material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(material->textureName);
-				}
-				if (!material->normalMapName.empty())
-				{
-					material->normalMapName = directory + material->normalMapName;
-					material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->normalMapName);
-				}
-				if (!material->displacementMapName.empty())
-				{
-					material->displacementMapName = directory + material->displacementMapName;
-					material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->displacementMapName);
-				}
-				if (!material->specularMapName.empty())
-				{
-					material->specularMapName = directory + material->specularMapName;
-					material->specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material->specularMapName);
-				}
-
-				material->ConvertToPhysicallyBasedMaterial();
-
-				materialLibrary.push_back(material); // for subset-indexing...
-				this->materials.insert(make_pair(material->name, material));
-			}
-
-			if (materialLibrary.empty())
-			{
-				// Create default material if nothing was found:
-				Material* material = new Material("OBJImport_defaultMaterial");
-				materialLibrary.push_back(material);
-				this->materials.insert(make_pair(material->name, material));
-			}
-
-			// Load objects, meshes:
-			for (auto& shape : obj_shapes)
-			{
-				Object* object = new Object(shape.name);
-				Mesh* mesh = new Mesh(shape.name + "_mesh");
-
-				object->mesh = mesh;
-				mesh->renderable = true;
-
-				XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-				XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-				unordered_map<int, int> registered_materialIndices = {};
-				unordered_map<size_t, uint32_t> uniqueVertices = {};
-
-				for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
-				{
-					tinyobj::index_t reordered_indices[] = {
-						shape.mesh.indices[i + 0],
-						shape.mesh.indices[i + 1],
-						shape.mesh.indices[i + 2],
-					};
-
-					// todo: option param would be better
-					bool flipCulling = false;
-					if (flipCulling)
-					{
-						reordered_indices[1] = shape.mesh.indices[i + 2];
-						reordered_indices[2] = shape.mesh.indices[i + 1];
-					}
-
-					for (auto& index : reordered_indices)
-					{
-						Mesh::Vertex_FULL vert;
-
-						vert.pos = XMFLOAT4(
-							obj_attrib.vertices[index.vertex_index * 3 + 0],
-							obj_attrib.vertices[index.vertex_index * 3 + 1],
-							obj_attrib.vertices[index.vertex_index * 3 + 2],
-							0
-						);
-
-						if (!obj_attrib.normals.empty())
-						{
-							vert.nor = XMFLOAT4(
-								obj_attrib.normals[index.normal_index * 3 + 0],
-								obj_attrib.normals[index.normal_index * 3 + 1],
-								obj_attrib.normals[index.normal_index * 3 + 2],
-								0
-							);
-						}
-
-						if (index.texcoord_index >= 0 && !obj_attrib.texcoords.empty())
-						{
-							vert.tex = XMFLOAT4(
-								obj_attrib.texcoords[index.texcoord_index * 2 + 0],
-								1 - obj_attrib.texcoords[index.texcoord_index * 2 + 1],
-								0, 0
-							);
-						}
-
-						int materialIndex = max(0, shape.mesh.material_ids[i / 3]); // this indexes the material library
-						if (registered_materialIndices.count(materialIndex) == 0)
-						{
-							registered_materialIndices[materialIndex] = (int)mesh->subsets.size();
-							mesh->subsets.push_back(MeshSubset());
-							Material* material = materialLibrary[materialIndex];
-							mesh->subsets.back().material = material;
-							mesh->materialNames.push_back(material->name);
-						}
-						vert.tex.z = (float)registered_materialIndices[materialIndex]; // this indexes a mesh subset
-
-						// todo: option parameter would be better
-						const bool flipZ = true;
-						if (flipZ)
-						{
-							vert.pos.z *= -1;
-							vert.nor.z *= -1;
-						}
-
-						// eliminate duplicate vertices by means of hashing:
-						size_t hashes[] = {
-							hash<int>{}(index.vertex_index),
-							hash<int>{}(index.normal_index),
-							hash<int>{}(index.texcoord_index),
-							hash<int>{}(materialIndex),
-						};
-						size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1) ^ (hashes[3] << 1);
-
-						if (uniqueVertices.count(vertexHash) == 0)
-						{
-							uniqueVertices[vertexHash] = (uint32_t)mesh->vertices_FULL.size();
-							mesh->vertices_FULL.push_back(vert);
-						}
-						mesh->indices.push_back(uniqueVertices[vertexHash]);
-
-						min = wiMath::Min(min, XMFLOAT3(vert.pos.x, vert.pos.y, vert.pos.z));
-						max = wiMath::Max(max, XMFLOAT3(vert.pos.x, vert.pos.y, vert.pos.z));
-					}
-				}
-				mesh->aabb.create(min, max);
-
-				// We need to eliminate colliding mesh names, because objects can reference them by names:
-				//	Note: in engine, object is decoupled from mesh, for instancing support. OBJ file have only meshes and names can collide there.
-				string meshName = mesh->name;
-				uint32_t unique_counter = 0;
-				bool meshNameCollision = this->meshes.count(meshName) != 0;
-				while (meshNameCollision)
-				{
-					meshName = mesh->name + to_string(unique_counter);
-					meshNameCollision = this->meshes.count(meshName) != 0;
-					unique_counter++;
-				}
-				mesh->name = meshName;
-
-				object->meshName = mesh->name;
-
-				this->objects.insert(object);
-				this->meshes.insert(make_pair(mesh->name, mesh));
-			}
-
-			this->FinishLoading();
-		}
-
-		if (!obj_errors.empty())
-		{
-			wiBackLog::post(obj_errors.c_str());
-		}
-	}
-	else
-	{
-		// Old Importer
-
-		stringstream armatureFilePath(""), materialLibFilePath(""), meshesFilePath(""), objectsFilePath("")
-			, actionsFilePath(""), lightsFilePath(""), decalsFilePath(""), camerasFilePath("");
-
-		armatureFilePath << name << ".wia";
-		materialLibFilePath << name << ".wim";
-		meshesFilePath << name << ".wi";
-		objectsFilePath << name << ".wio";
-		actionsFilePath << name << ".wiact";
-		lightsFilePath << name << ".wil";
-		decalsFilePath << name << ".wid";
-		camerasFilePath << name << ".wic";
-
-		LoadWiArmatures(directory, armatureFilePath.str(), armatures);
-		LoadWiMaterialLibrary(directory, materialLibFilePath.str(), "textures/", materials);
-		LoadWiMeshes(directory, meshesFilePath.str(), meshes, armatures, materials);
-		LoadWiObjects(directory, objectsFilePath.str(), objects, armatures, meshes, materials);
-		LoadWiActions(directory, actionsFilePath.str(), armatures);
-		LoadWiLights(directory, lightsFilePath.str(), lights);
-		LoadWiDecals(directory, decalsFilePath.str(), "textures/", decals);
-		LoadWiCameras(directory, camerasFilePath.str(), cameras, armatures);
-
-		FinishLoading();
-	}
 }
 void Model::FinishLoading()
 {
@@ -3003,7 +1510,6 @@ void Model::FinishLoading()
 			}
 
 			// Mesh renderdata setup
-			x->mesh->Optimize();
 			x->mesh->CreateRenderData();
 
 			if (x->mesh->armature != nullptr)
@@ -3227,7 +1733,7 @@ void Model::Serialize(wiArchive& archive)
 			if (x->mesh == nullptr)
 			{
 				// find mesh
-				MeshCollection::iterator found = meshes.find(x->meshName);
+				auto& found = meshes.find(x->meshName);
 				if (found != meshes.end())
 				{
 					x->mesh = found->second;
@@ -3241,7 +1747,7 @@ void Model::Serialize(wiArchive& archive)
 				{
 					if (y.material == nullptr)
 					{
-						MaterialCollection::iterator it = materials.find(x->mesh->materialNames[i]);
+						auto& it = materials.find(x->mesh->materialNames[i]);
 						if (it != materials.end())
 						{
 							y.material = it->second;
@@ -3266,7 +1772,7 @@ void Model::Serialize(wiArchive& archive)
 			for (auto& y : x->eParticleSystems)
 			{
 				y->object = x;
-				MaterialCollection::iterator it = materials.find(y->materialName);
+				auto& it = materials.find(y->materialName);
 				if (it != materials.end())
 				{
 					y->material = it->second;
@@ -3275,7 +1781,7 @@ void Model::Serialize(wiArchive& archive)
 			for (auto& y : x->hParticleSystems)
 			{
 				y->object = x;
-				MaterialCollection::iterator it = materials.find(y->materialName);
+				auto& it = materials.find(y->materialName);
 				if (it != materials.end())
 				{
 					y->material = it->second;
@@ -3375,6 +1881,8 @@ void Bone::Serialize(wiArchive& archive)
 {
 	Transform::Serialize(archive);
 
+	XMFLOAT4X4 tmp;
+
 	if (archive.IsReadMode())
 	{
 		size_t childCount;
@@ -3385,7 +1893,13 @@ void Bone::Serialize(wiArchive& archive)
 			archive >> tempName;
 			childrenN.push_back(tempName);
 		}
-		archive >> restInv;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive >> restInv;
+			archive >> tmp;
+		}
+
 		size_t actionFramesCount;
 		archive >> actionFramesCount;
 		for (size_t i = 0; i < actionFramesCount; ++i)
@@ -3413,9 +1927,17 @@ void Bone::Serialize(wiArchive& archive)
 			}
 			actionFrames.push_back(aframes);
 		}
-		archive >> recursivePose;
-		archive >> recursiveRest;
-		archive >> recursiveRestInv;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive >> recursivePose;
+			//archive >> recursiveRest;
+			//archive >> recursiveRestInv;
+			archive >> tmp;
+			archive >> tmp;
+			archive >> tmp;
+		}
+
 		archive >> length;
 		archive >> connected;
 	}
@@ -3426,7 +1948,13 @@ void Bone::Serialize(wiArchive& archive)
 		{
 			archive << x;
 		}
-		archive << restInv;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive << restInv;
+			archive << tmp;
+		}
+
 		archive << actionFrames.size();
 		int i = 0;
 		for (auto& x : actionFrames)
@@ -3447,9 +1975,17 @@ void Bone::Serialize(wiArchive& archive)
 				y.Serialize(archive);
 			}
 		}
-		archive << recursivePose;
-		archive << recursiveRest;
-		archive << recursiveRestInv;
+
+		if (archive.GetVersion() < 21)
+		{
+			//archive << recursivePose;
+			//archive << recursiveRest;
+			//archive << recursiveRestInv;
+			archive << tmp;
+			archive << tmp;
+			archive << tmp;
+		}
+
 		archive << length;
 		archive << connected;
 	}
@@ -3569,21 +2105,24 @@ void Armature::UpdateTransform()
 {
 	Transform::UpdateTransform();
 
-	// Calculate local animation frame:
+	XMMATRIX worldMatrix = getMatrix();
+	XMMATRIX remapMat = XMLoadFloat4x4(&skinningRemap);
+
+	// Update bone tree from root:
 	for (Bone* root : rootbones)
 	{
-		RecursiveBoneTransform(this, root, XMMatrixIdentity());
-	}
+		// Update tree for skinning:
+		//	Note that skinning is not using the armature transform, it will be calculated in armature local space
+		//	This is needed because we want to skin meshes, then reuse the meshes for multiple objects without additional deform
+		RecursiveBoneTransform(this, root, remapMat);
 
-	// Local animation to world space and attachment transform:
-	XMMATRIX worldMatrix = getMatrix();
-	for (Bone* bone : boneCollection)
-	{
-		XMMATRIX boneMatrix = XMLoadFloat4x4(&bone->world);
+		// Update tree for bone attaching:
+		//	The Skinning (RecursiveBoneTrasform) was operating in armature local space, but for bone attachments without deform,
+		//	we need the matrices in world space
+		XMMATRIX boneMatrix = XMLoadFloat4x4(&root->world);
 		boneMatrix = boneMatrix * worldMatrix;
-		XMStoreFloat4x4(&bone->world, boneMatrix);
-
-		bone->UpdateTransform();
+		XMStoreFloat4x4(&root->world, boneMatrix);
+		root->UpdateTransform();
 	}
 }
 void Armature::UpdateArmature()
@@ -3643,91 +2182,101 @@ void Armature::UpdateArmature()
 			anim.blendFact = 1;
 	}
 }
-void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentCombinedMat)
+void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMATRIX& parentBoneMat)
 {
-	Bone* parent = (Bone*)bone->parent;
-
 	// TRANSITION BLENDING + ADDITIVE BLENDING
-	XMVECTOR& finalTrans = XMVectorSet(0, 0, 0, 0);
-	XMVECTOR& finalRotat = XMQuaternionIdentity();
-	XMVECTOR& finalScala = XMVectorSet(1, 1, 1, 0);
+	XMVECTOR finalTrans = XMVectorSet(0, 0, 0, 0);
+	XMVECTOR finalRotat = XMQuaternionIdentity();
+	XMVECTOR finalScala = XMVectorSet(1, 1, 1, 0);
 
 	for (auto& x : armature->animationLayers)
 	{
 		AnimationLayer& anim = *x;
 
-		float cf = anim.currentFrame, cfPrev = anim.currentFramePrevAction;
-		int activeAction = anim.activeAction, prevAction = anim.prevAction;
-		int maxCf = armature->actions[activeAction].frameCount, maxCfPrev = armature->actions[prevAction].frameCount;
+		int frameCountPrev = armature->actions[anim.prevAction].frameCount;
+		XMVECTOR prevTrans = InterpolateKeyFrames(anim.currentFramePrevAction, frameCountPrev, bone->actionFrames[anim.prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR prevRotat = InterpolateKeyFrames(anim.currentFramePrevAction, frameCountPrev, bone->actionFrames[anim.prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR prevScala = InterpolateKeyFrames(anim.currentFramePrevAction, frameCountPrev, bone->actionFrames[anim.prevAction].keyframesSca, SCALARKEYFRAMETYPE);
 
-		XMVECTOR& prevTrans = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR& prevRotat = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR& prevScala = InterPolateKeyFrames(cfPrev, maxCfPrev, bone->actionFrames[prevAction].keyframesSca, SCALARKEYFRAMETYPE);
+		int frameCount = armature->actions[anim.activeAction].frameCount;
+		XMVECTOR currTrans = InterpolateKeyFrames(anim.currentFrame, frameCount, bone->actionFrames[anim.activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
+		XMVECTOR currRotat = InterpolateKeyFrames(anim.currentFrame, frameCount, bone->actionFrames[anim.activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
+		XMVECTOR currScala = InterpolateKeyFrames(anim.currentFrame, frameCount, bone->actionFrames[anim.activeAction].keyframesSca, SCALARKEYFRAMETYPE);
 
-		XMVECTOR& currTrans = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesPos, POSITIONKEYFRAMETYPE);
-		XMVECTOR& currRotat = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesRot, ROTATIONKEYFRAMETYPE);
-		XMVECTOR& currScala = InterPolateKeyFrames(cf, maxCf, bone->actionFrames[activeAction].keyframesSca, SCALARKEYFRAMETYPE);
-
-		float blendFact = anim.blendFact;
+		currTrans = XMVectorLerp(prevTrans, currTrans, anim.blendFact);
+		currRotat = XMQuaternionSlerp(prevRotat, currRotat, anim.blendFact);
+		currScala = XMVectorLerp(prevScala, currScala, anim.blendFact);
 
 		switch (anim.type)
 		{
 		case AnimationLayer::ANIMLAYER_TYPE_PRIMARY:
-			finalTrans = XMVectorLerp(prevTrans, currTrans, blendFact);
-			finalRotat = XMQuaternionSlerp(prevRotat, currRotat, blendFact);
-			finalScala = XMVectorLerp(prevScala, currScala, blendFact);
+			finalTrans = currTrans;
+			finalRotat = currRotat;
+			finalScala = currScala;
 			break;
 		case AnimationLayer::ANIMLAYER_TYPE_ADDITIVE:
-			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, XMVectorLerp(prevTrans, currTrans, blendFact)), anim.weight);
-			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, XMQuaternionSlerp(prevRotat, currRotat, blendFact)), anim.weight); // normalize?
-			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, XMVectorLerp(prevScala, currScala, blendFact)), anim.weight);
+			finalTrans = XMVectorLerp(finalTrans, XMVectorAdd(finalTrans, currTrans), anim.weight);
+			finalRotat = XMQuaternionSlerp(finalRotat, XMQuaternionMultiply(finalRotat, currRotat), anim.weight); // normalize?
+			finalScala = XMVectorLerp(finalScala, XMVectorMultiply(finalScala, currScala), anim.weight);
 			break;
 		default:
+			assert(0);
 			break;
 		}
 	}
-	XMVectorSetW(finalTrans, 1);
-	XMVectorSetW(finalScala, 1);
 
 	bone->worldPrev = bone->world;
 	bone->translationPrev = bone->translation;
 	bone->rotationPrev = bone->rotation;
+	bone->scalePrev = bone->scale;
 	XMStoreFloat3(&bone->translation, finalTrans);
 	XMStoreFloat4(&bone->rotation, finalRotat);
 	XMStoreFloat3(&bone->scale, finalScala);
 
-	XMMATRIX& anim =
-		XMMatrixScalingFromVector(finalScala)
-		* XMMatrixRotationQuaternion(finalRotat)
-		* XMMatrixTranslationFromVector(finalTrans);
+	// Bone local T-pose matrix (relative to PARENT):
+	XMMATRIX rest = XMLoadFloat4x4(&bone->world_rest);
 
-	XMMATRIX& rest =
-		XMLoadFloat4x4(&bone->world_rest);
+	// Bone global T-pose matrix inverse (relative to ROOT):
+	XMMATRIX recursive_rest_inv = XMLoadFloat4x4(&bone->parent_inv_rest);
 
-	XMMATRIX& boneMat =
-		anim * rest * parentCombinedMat
-		;
+	// Animation local matrix (relative to ITSELF):
+	XMMATRIX anim_relative = XMMatrixScalingFromVector(finalScala) * XMMatrixRotationQuaternion(finalRotat) * XMMatrixTranslationFromVector(finalTrans);
 
-	XMMATRIX& finalMat =
-		XMLoadFloat4x4(&bone->recursiveRestInv)*
-		boneMat
-		;
+	// Animation local matrix (relative to PARENT):
+	XMMATRIX anim_absolute = anim_relative * rest;
 
-	XMStoreFloat4x4(&bone->world, boneMat);
+	// Bone global final matrix (WORLD-SPACE):
+	XMMATRIX boneMat = anim_absolute * parentBoneMat;
 
-	XMStoreFloat4x4(&bone->boneRelativity, finalMat);
+	// Bone global final matrix (SKINNING-SPACE):
+	XMMATRIX skinningMat = recursive_rest_inv * boneMat;
+
+	XMStoreFloat4x4(&bone->world, boneMat); // usable in scene graph
+	XMStoreFloat4x4(&bone->boneRelativity, skinningMat); // usable in skinning
 
 	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
 		RecursiveBoneTransform(armature, bone->childrenI[i], boneMat);
 	}
 }
-XMVECTOR Armature::InterPolateKeyFrames(float cf, const int maxCf, const std::vector<KeyFrame>& keyframeList, KeyFrameType type)
+XMVECTOR Armature::InterpolateKeyFrames(float cf, const int maxCf, const std::vector<KeyFrame>& keyframeList, KeyFrameType type)
 {
 	XMVECTOR result = XMVectorSet(0, 0, 0, 0);
 
-	if (type == POSITIONKEYFRAMETYPE) result = XMVectorSet(0, 0, 0, 1);
-	if (type == ROTATIONKEYFRAMETYPE) result = XMVectorSet(0, 0, 0, 1);
-	if (type == SCALARKEYFRAMETYPE)   result = XMVectorSet(1, 1, 1, 1);
+	switch (type)
+	{
+	case Armature::ROTATIONKEYFRAMETYPE:
+		result = XMVectorSet(0, 0, 0, 1);
+		break;
+	case Armature::POSITIONKEYFRAMETYPE:
+		result = XMVectorSet(0, 0, 0, 1);
+		break;
+	case Armature::SCALARKEYFRAMETYPE:
+		result = XMVectorSet(1, 1, 1, 1);
+		break;
+	default:
+		assert(0);
+		break;
+	}
 
 	//SEARCH 2 INTERPOLATABLE FRAMES
 	int nearest[2] = { 0,0 };
@@ -3812,11 +2361,11 @@ void Armature::ChangeAction(const std::string& actionName, float blendFrames, co
 
 	if (actionName.length() > 0)
 	{
-		for (unsigned int i = 1; i < actions.size(); ++i)
+		for (size_t i = 1; i < actions.size(); ++i)
 		{
 			if (!actions[i].name.compare(actionName))
 			{
-				anim->ChangeAction(i, blendFrames, weight);
+				anim->ChangeAction((int)i, blendFrames, weight);
 				return;
 			}
 		}
@@ -3865,26 +2414,16 @@ void Armature::DeleteAnimLayer(const std::string& name)
 		}
 	}
 }
-void Armature::RecursiveRest(Bone* bone)
+void Armature::RecursiveRest(Bone* bone, XMMATRIX recursiveRest)
 {
 	Bone* parent = (Bone*)bone->parent;
 
-	if (parent != nullptr) {
-		XMMATRIX recRest =
-			XMLoadFloat4x4(&bone->world_rest)
-			*
-			XMLoadFloat4x4(&parent->recursiveRest)
-			;
-		XMStoreFloat4x4(&bone->recursiveRest, recRest);
-		XMStoreFloat4x4(&bone->recursiveRestInv, XMMatrixInverse(0, recRest));
-	}
-	else {
-		bone->recursiveRest = bone->world_rest;
-		XMStoreFloat4x4(&bone->recursiveRestInv, XMMatrixInverse(0, XMLoadFloat4x4(&bone->recursiveRest)));
-	}
+	recursiveRest = XMLoadFloat4x4(&bone->world_rest) * recursiveRest;
 
-	for (unsigned int i = 0; i<bone->childrenI.size(); ++i) {
-		RecursiveRest(bone->childrenI[i]);
+	XMStoreFloat4x4(&bone->parent_inv_rest, XMMatrixInverse(0, recursiveRest));
+
+	for (size_t i = 0; i < bone->childrenI.size(); ++i) {
+		RecursiveRest(bone->childrenI[i], recursiveRest);
 	}
 }
 void Armature::CreateFamily()
@@ -3907,9 +2446,10 @@ void Armature::CreateFamily()
 		}
 	}
 
-	for (unsigned int i = 0; i<rootbones.size(); ++i) 
+	XMMATRIX remapMat = XMLoadFloat4x4(&skinningRemap);
+	for (Bone* root : rootbones)
 	{
-		RecursiveRest(rootbones[i]);
+		RecursiveRest(root, remapMat);
 	}
 }
 void Armature::CreateBuffers()
@@ -3973,6 +2513,11 @@ void Armature::Serialize(wiArchive& archive)
 			actions.push_back(tempAction);
 		}
 
+		if (archive.GetVersion() >= 21)
+		{
+			archive >> skinningRemap;
+		}
+
 		CreateFamily();
 	}
 	else
@@ -3994,6 +2539,11 @@ void Armature::Serialize(wiArchive& archive)
 		{
 			archive << x.name;
 			archive << x.frameCount;
+		}
+
+		if (archive.GetVersion() >= 21)
+		{
+			archive << skinningRemap;
 		}
 	}
 }
@@ -4241,8 +2791,8 @@ void Object::EmitTrail(const XMFLOAT3& col, float fadeSpeed) {
 		if (base >= 0 && tip >= 0) {
 			XMFLOAT4 baseP, tipP;
 			XMFLOAT4 newCol = XMFLOAT4(col.x, col.y, col.z, 1);
-			baseP = wiRenderer::TransformVertex(mesh, base).pos;
-			tipP = wiRenderer::TransformVertex(mesh, tip).pos;
+			baseP = mesh->TransformVertex(base).pos;
+			tipP = mesh->TransformVertex(tip).pos;
 
 			trail.push_back(RibbonVertex(XMFLOAT3(baseP.x, baseP.y, baseP.z), XMFLOAT2(0,0), XMFLOAT4(0, 0, 0, 1),fadeSpeed));
 			trail.push_back(RibbonVertex(XMFLOAT3(tipP.x, tipP.y, tipP.z), XMFLOAT2(0,0), newCol,fadeSpeed));
@@ -4799,3 +3349,6 @@ void EnvironmentProbe::Serialize(wiArchive& archive)
 	}
 }
 #pragma endregion
+
+
+}

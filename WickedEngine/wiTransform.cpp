@@ -4,6 +4,9 @@
 
 #include <vector>
 
+namespace wiSceneComponents
+{
+
 std::atomic<uint64_t> Node::__Unique_ID_Counter = 0;
 
 Node::Node() {
@@ -29,7 +32,7 @@ Transform::Transform() :Node() {
 	parent = nullptr;
 	parentName = "";
 	boneParent = "";
-	Clear();
+	ClearTransform();
 }
 Transform::~Transform()
 {
@@ -40,41 +43,6 @@ Transform::~Transform()
 
 XMMATRIX Transform::getMatrix(int getTranslation, int getRotation, int getScale) {
 	return XMLoadFloat4x4(&world);
-
-	//worldPrev=world;
-	//translationPrev=translation;
-	//scalePrev=scale;
-	//rotationPrev=rotation;
-
-	//XMVECTOR s = XMLoadFloat3(&scale_rest);
-	//XMVECTOR r = XMLoadFloat4(&rotation_rest);
-	//XMVECTOR t = XMLoadFloat3(&translation_rest);
-	//XMMATRIX& w = 
-	//	XMMatrixScalingFromVector(s)*
-	//	XMMatrixRotationQuaternion(r)*
-	//	XMMatrixTranslationFromVector(t)
-	//	;
-	//XMStoreFloat4x4( &world_rest,w );
-
-	//if(parent!=nullptr)
-	//{
-	//	w = w * XMLoadFloat4x4(&parent_inv_rest) * parent->getMatrix();
-	//	XMVECTOR v[3];
-	//	XMMatrixDecompose(&v[0],&v[1],&v[2],w);
-	//	XMStoreFloat3( &scale,v[0] );
-	//	XMStoreFloat4( &rotation,v[1] );
-	//	XMStoreFloat3( &translation,v[2] );
-	//	XMStoreFloat4x4( &world, w );
-	//}
-	//else
-	//{
-	//	world = world_rest;
-	//	translation=translation_rest;
-	//	rotation=rotation_rest;
-	//	scale=scale_rest;
-	//}
-
-	//return w;
 }
 //attach to parent
 void Transform::attachTo(Transform* newParent, int copyTranslation, int copyRotation, int copyScale) {
@@ -207,7 +175,7 @@ void Transform::UpdateTransform()
 	XMVECTOR s = XMLoadFloat3(&scale_rest);
 	XMVECTOR r = XMLoadFloat4(&rotation_rest);
 	XMVECTOR t = XMLoadFloat3(&translation_rest);
-	XMMATRIX& w =
+	XMMATRIX w =
 		XMMatrixScalingFromVector(s)*
 		XMMatrixRotationQuaternion(r)*
 		XMMatrixTranslationFromVector(t)
@@ -415,4 +383,6 @@ void Transform::Serialize(wiArchive& archive)
 		archive << copyParentS;
 
 	}
+}
+
 }

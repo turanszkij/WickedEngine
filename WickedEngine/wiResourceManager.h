@@ -7,8 +7,6 @@
 #include <map>
 #include <unordered_map>
 
-class wiSound;
-
 class wiResourceManager : public wiThreadSafeManager
 {
 public:
@@ -35,14 +33,10 @@ public:
 			refCount = 1;
 		};
 	};
-	typedef std::unordered_map<wiHashString, Resource*> container;
-	container resources;
+	std::unordered_map<wiHashString, Resource*> resources;
 
 protected:
-typedef std::map<std::string,Data_Type> filetypes;
-static filetypes types;
 static wiResourceManager* globalResources;
-static void SetUp();
 
 
 public:
@@ -55,6 +49,7 @@ public:
 	//specify datatype for shaders
 	void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC);
 	bool del(const wiHashString& name, bool forceDelete = false);
+	bool Register(const wiHashString& name, void* resource, Data_Type newType);
 	bool CleanUp();
 };
 

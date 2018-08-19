@@ -145,7 +145,7 @@ namespace wiGraphicsTypes
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) = 0;
 		virtual void* AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID) = 0;
 		virtual void InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID) = 0;
-		virtual bool DownloadBuffer(GPUBuffer* bufferToDownload, GPUBuffer* bufferDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
+		virtual bool DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
@@ -153,9 +153,6 @@ namespace wiGraphicsTypes
 		virtual void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) = 0;
 
 		virtual void WaitForGPU() = 0;
-
-		virtual HRESULT SaveTexturePNG(const std::string& fileName, Texture2D *pTexture, GRAPHICSTHREAD threadID) = 0;
-		virtual HRESULT SaveTextureDDS(const std::string& fileName, Texture *pTexture, GRAPHICSTHREAD threadID) = 0;
 
 		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) = 0;
 		virtual void EventEnd(GRAPHICSTHREAD threadID) = 0;

@@ -172,10 +172,12 @@
     <ClInclude Include="EmitterWindow.h" />
     <ClInclude Include="EnvProbeWindow.h" />
     <ClInclude Include="ForceFieldWindow.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="LightWindow.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="MaterialWindow.h" />
     <ClInclude Include="MeshWindow.h" />
+    <ClInclude Include="ModelImporter.h" />
     <ClInclude Include="ObjectWindow.h" />
     <ClInclude Include="OceanWindow.h" />
     <ClInclude Include="PostprocessWindow.h" />
@@ -183,6 +185,8 @@
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="tiny_gltf.h" />
+    <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="WorldWindow.h" />
   </ItemGroup>
   <ItemGroup>
@@ -197,6 +201,9 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MaterialWindow.cpp" />
     <ClCompile Include="MeshWindow.cpp" />
+    <ClCompile Include="ModelImporter_GLTF.cpp" />
+    <ClCompile Include="ModelImporter_OBJ.cpp" />
+    <ClCompile Include="ModelImporter_WIO.cpp" />
     <ClCompile Include="ObjectWindow.cpp" />
     <ClCompile Include="OceanWindow.cpp" />
     <ClCompile Include="PostprocessWindow.cpp" />
