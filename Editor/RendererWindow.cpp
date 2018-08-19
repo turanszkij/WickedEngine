@@ -15,7 +15,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 960));
+	rendererWindow->SetSize(XMFLOAT2(640, 760));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -191,55 +191,6 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	alphaCompositionCheckBox->SetCheck(wiRenderer::GetAlphaCompositionEnabled());
 	rendererWindow->AddWidget(alphaCompositionCheckBox);
-
-
-	pickTypeObjectCheckBox = new wiCheckBox("Pick Objects: ");
-	pickTypeObjectCheckBox->SetTooltip("Enable if you want to pick objects with the pointer");
-	pickTypeObjectCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeObjectCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeObjectCheckBox);
-
-	pickTypeEnvProbeCheckBox = new wiCheckBox("Pick EnvProbes: ");
-	pickTypeEnvProbeCheckBox->SetTooltip("Enable if you want to pick environment probes with the pointer");
-	pickTypeEnvProbeCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeEnvProbeCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeEnvProbeCheckBox);
-
-	pickTypeLightCheckBox = new wiCheckBox("Pick Lights: ");
-	pickTypeLightCheckBox->SetTooltip("Enable if you want to pick lights with the pointer");
-	pickTypeLightCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeLightCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeLightCheckBox);
-
-	pickTypeDecalCheckBox = new wiCheckBox("Pick Decals: ");
-	pickTypeDecalCheckBox->SetTooltip("Enable if you want to pick decals with the pointer");
-	pickTypeDecalCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeDecalCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeDecalCheckBox);
-
-	pickTypeForceFieldCheckBox = new wiCheckBox("Pick Force Fields: ");
-	pickTypeForceFieldCheckBox->SetTooltip("Enable if you want to pick force fields with the pointer");
-	pickTypeForceFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeForceFieldCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeForceFieldCheckBox);
-
-	pickTypeEmitterCheckBox = new wiCheckBox("Pick Emitters: ");
-	pickTypeEmitterCheckBox->SetTooltip("Enable if you want to pick emitters with the pointer");
-	pickTypeEmitterCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeEmitterCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
-
-	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
-	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
-	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeCameraCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeCameraCheckBox);
-
-	pickTypeArmatureCheckBox = new wiCheckBox("Pick Armatures: ");
-	pickTypeArmatureCheckBox->SetTooltip("Enable if you want to pick armatures with the pointer");
-	pickTypeArmatureCheckBox->SetPos(XMFLOAT2(x, y += step));
-	pickTypeArmatureCheckBox->SetCheck(true);
-	rendererWindow->AddWidget(pickTypeArmatureCheckBox);
 
 	speedMultiplierSlider = new wiSlider(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider->SetTooltip("Adjust the global speed (time multiplier)");
@@ -521,6 +472,57 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	});
 	gridHelperCheckBox->SetCheck(wiRenderer::GetToDrawGridHelper());
 	rendererWindow->AddWidget(gridHelperCheckBox);
+
+
+	pickTypeObjectCheckBox = new wiCheckBox("Pick Objects: ");
+	pickTypeObjectCheckBox->SetTooltip("Enable if you want to pick objects with the pointer");
+	pickTypeObjectCheckBox->SetPos(XMFLOAT2(x, y += step * 2));
+	pickTypeObjectCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeObjectCheckBox);
+
+	pickTypeEnvProbeCheckBox = new wiCheckBox("Pick EnvProbes: ");
+	pickTypeEnvProbeCheckBox->SetTooltip("Enable if you want to pick environment probes with the pointer");
+	pickTypeEnvProbeCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeEnvProbeCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeEnvProbeCheckBox);
+
+	pickTypeLightCheckBox = new wiCheckBox("Pick Lights: ");
+	pickTypeLightCheckBox->SetTooltip("Enable if you want to pick lights with the pointer");
+	pickTypeLightCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeLightCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeLightCheckBox);
+
+	pickTypeDecalCheckBox = new wiCheckBox("Pick Decals: ");
+	pickTypeDecalCheckBox->SetTooltip("Enable if you want to pick decals with the pointer");
+	pickTypeDecalCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeDecalCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeDecalCheckBox);
+
+	pickTypeForceFieldCheckBox = new wiCheckBox("Pick Force Fields: ");
+	pickTypeForceFieldCheckBox->SetTooltip("Enable if you want to pick force fields with the pointer");
+	pickTypeForceFieldCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeForceFieldCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeForceFieldCheckBox);
+
+	pickTypeEmitterCheckBox = new wiCheckBox("Pick Emitters: ");
+	pickTypeEmitterCheckBox->SetTooltip("Enable if you want to pick emitters with the pointer");
+	pickTypeEmitterCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeEmitterCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
+
+	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
+	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
+	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeCameraCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeCameraCheckBox);
+
+	pickTypeArmatureCheckBox = new wiCheckBox("Pick Armatures: ");
+	pickTypeArmatureCheckBox->SetTooltip("Enable if you want to pick armatures with the pointer");
+	pickTypeArmatureCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeArmatureCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeArmatureCheckBox);
+
+
 
 	freezeCullingCameraCheckBox = new wiCheckBox("Freeze culling camera: ");
 	freezeCullingCameraCheckBox->SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");

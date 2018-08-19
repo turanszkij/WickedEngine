@@ -1276,16 +1276,16 @@ void EditorComponent::Update(float dt)
 
 					material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
 				}
-				if (picked->object->isArmatureDeformed())
-				{
-					animWnd->SetArmature(picked->object->mesh->armature);
-				}
+				//if (picked->object->isArmatureDeformed())
+				//{
+				//	animWnd->SetArmature(picked->object->mesh->armature);
+				//}
 			}
 			else
 			{
 				meshWnd->SetMesh(nullptr);
 				materialWnd->SetMaterial(nullptr);
-				animWnd->SetArmature(nullptr);
+				//animWnd->SetArmature(nullptr);
 			}
 
 			if (picked->light != nullptr)
@@ -1304,6 +1304,15 @@ void EditorComponent::Update(float dt)
 			if (picked->camera != nullptr)
 			{
 				cameraWnd->SetProxy(picked->camera);
+			}
+
+			if (picked->armature != nullptr)
+			{
+				animWnd->SetArmature(picked->armature);
+			}
+			else
+			{
+				animWnd->SetArmature(nullptr);
 			}
 
 			objectWnd->SetObject(picked->object);
