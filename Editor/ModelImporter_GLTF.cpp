@@ -22,74 +22,134 @@ namespace tinygltf
 		int req_width, int req_height, const unsigned char *bytes,
 		int size, void *)
 	{
-		if (!image->uri.empty())
-		{
-			// external image will be loaded by resource manager
-			return true;
-		}
-		else
-		{
-			// embedded image
+		(void)warn;
 
-			// We will load the texture2d by hand here and register to the resource manager
-			{
-				// png, tga, jpg, etc. loader:
+		const int requiredComponents = 4;
 
-				const int channelCount = 4;
-				int width, height, bpp;
-				unsigned char* rgb = stbi_load_from_memory(bytes, size, &width, &height, &bpp, channelCount);
-
-				if (rgb != nullptr)
-				{
-					TextureDesc desc;
-					desc.ArraySize = 1;
-					desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-					desc.CPUAccessFlags = 0;
-					desc.Format = FORMAT_R8G8B8A8_UNORM;
-					desc.Height = static_cast<uint32_t>(height);
-					desc.Width = static_cast<uint32_t>(width);
-					desc.MipLevels = (UINT)log2(max(width, height));
-					desc.MiscFlags = 0;
-					desc.Usage = USAGE_DEFAULT;
-
-					UINT mipwidth = width;
-					SubresourceData* InitData = new SubresourceData[desc.MipLevels];
-					for (UINT mip = 0; mip < desc.MipLevels; ++mip)
-					{
-						InitData[mip].pSysMem = rgb;
-						InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
-						mipwidth = max(1, mipwidth / 2);
-					}
-
-					Texture2D* tex = new Texture2D;
-					tex->RequestIndependentShaderResourcesForMIPs(true);
-					tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &tex);
-					assert(SUCCEEDED(hr));
-
-					if (tex != nullptr)
-					{
-						wiRenderer::AddDeferredMIPGen(tex);
-
-						if (image->name.empty())
-						{
-							static UINT imgcounter = 0;
-							stringstream ss("");
-							ss << "gltfLoader_embedded_image" << imgcounter++;
-							image->name = ss.str();
-						}
-						// We loaded the texture2d, so register to the resource manager to be retrieved later:
-						wiResourceManager::GetGlobal()->Register(image->name, tex, wiResourceManager::IMAGE);
-					}
-				}
-
-				free(rgb);
+		int w, h, comp;
+		// if image cannot be decoded, ignore parsing and keep it by its path
+		// don't break in this case
+		// FIXME we should only enter this function if the image is embedded. If
+		// image->uri references
+		// an image file, it should be left as it is. Image loading should not be
+		// mandatory (to support other formats)
+		unsigned char *data = stbi_load_from_memory(bytes, size, &w, &h, &comp, requiredComponents);
+		if (!data) {
+			// NOTE: you can use `warn` instead of `err`
+			if (err) {
+				(*err) += "Unknown image format.\n";
 			}
-
-			return true;
+			return false;
 		}
 
-		return false;
+		if (w < 1 || h < 1) {
+			free(data);
+			if (err) {
+				(*err) += "Invalid image data.\n";
+			}
+			return false;
+		}
+
+		if (req_width > 0) {
+			if (req_width != w) {
+				free(data);
+				if (err) {
+					(*err) += "Image width mismatch.\n";
+				}
+				return false;
+			}
+		}
+
+		if (req_height > 0) {
+			if (req_height != h) {
+				free(data);
+				if (err) {
+					(*err) += "Image height mismatch.\n";
+				}
+				return false;
+			}
+		}
+
+		image->width = w;
+		image->height = h;
+		//image->component = comp;
+		image->component = requiredComponents;
+		image->image.resize(static_cast<size_t>(w * h * image->component));
+		std::copy(data, data + w * h * image->component, image->image.begin());
+
+		free(data);
+
+		return true;
+
+
+		//if (!image->uri.empty())
+		//{
+		//	// external image will be loaded by resource manager
+		//	return true;
+		//}
+		//else
+		//{
+		//	// embedded image
+
+		//	// We will load the texture2d by hand here and register to the resource manager
+		//	{
+		//		// png, tga, jpg, etc. loader:
+
+		//		const int channelCount = 4;
+		//		int width, height, bpp;
+		//		unsigned char* rgb = stbi_load_from_memory(bytes, size, &width, &height, &bpp, channelCount);
+
+		//		if (rgb != nullptr)
+		//		{
+		//			TextureDesc desc;
+		//			desc.ArraySize = 1;
+		//			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		//			desc.CPUAccessFlags = 0;
+		//			desc.Format = FORMAT_R8G8B8A8_UNORM;
+		//			desc.Height = static_cast<uint32_t>(height);
+		//			desc.Width = static_cast<uint32_t>(width);
+		//			desc.MipLevels = (UINT)log2(max(width, height));
+		//			desc.MiscFlags = 0;
+		//			desc.Usage = USAGE_DEFAULT;
+
+		//			UINT mipwidth = width;
+		//			SubresourceData* InitData = new SubresourceData[desc.MipLevels];
+		//			for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+		//			{
+		//				InitData[mip].pSysMem = rgb;
+		//				InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
+		//				mipwidth = max(1, mipwidth / 2);
+		//			}
+
+		//			Texture2D* tex = new Texture2D;
+		//			tex->RequestIndependentShaderResourcesForMIPs(true);
+		//			tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+		//			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &tex);
+		//			assert(SUCCEEDED(hr));
+
+		//			if (tex != nullptr)
+		//			{
+		//				wiRenderer::AddDeferredMIPGen(tex);
+
+		//				if (image->name.empty())
+		//				{
+		//					static UINT imgcounter = 0;
+		//					stringstream ss("");
+		//					ss << "gltfLoader_embedded_image" << imgcounter++;
+		//					image->name = ss.str();
+		//				}
+		//				// We loaded the texture2d, so register to the resource manager to be retrieved later:
+		//				wiResourceManager::GetGlobal()->Register(image->name, tex, wiResourceManager::IMAGE);
+		//			}
+		//		}
+
+		//		free(rgb);
+		//	}
+
+		//	return true;
+		//}
+
+		//return false;
 	}
 
 	bool WriteImageData(const std::string *basepath, const std::string *filename,
@@ -97,6 +157,62 @@ namespace tinygltf
 	{
 		assert(0); // TODO
 		return false;
+	}
+}
+
+
+void RegisterTexture2D(tinygltf::Image *image)
+{
+	// We will load the texture2d by hand here and register to the resource manager
+	{
+		int width = image->width;
+		int height = image->height;
+		int channelCount = image->component;
+		const unsigned char* rgb = image->image.data();
+
+		if (rgb != nullptr)
+		{
+			TextureDesc desc;
+			desc.ArraySize = 1;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.Height = static_cast<uint32_t>(height);
+			desc.Width = static_cast<uint32_t>(width);
+			desc.MipLevels = (UINT)log2(max(width, height));
+			desc.MiscFlags = 0;
+			desc.Usage = USAGE_DEFAULT;
+
+			UINT mipwidth = width;
+			SubresourceData* InitData = new SubresourceData[desc.MipLevels];
+			for (UINT mip = 0; mip < desc.MipLevels; ++mip)
+			{
+				InitData[mip].pSysMem = rgb;
+				InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
+				mipwidth = max(1, mipwidth / 2);
+			}
+
+			Texture2D* tex = new Texture2D;
+			tex->RequestIndependentShaderResourcesForMIPs(true);
+			tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &tex);
+			assert(SUCCEEDED(hr));
+
+			if (tex != nullptr)
+			{
+				wiRenderer::AddDeferredMIPGen(tex);
+
+				if (image->name.empty())
+				{
+					static UINT imgcounter = 0;
+					stringstream ss("");
+					ss << "gltfLoader_image" << imgcounter++;
+					image->name = ss.str();
+				}
+				// We loaded the texture2d, so register to the resource manager to be retrieved later:
+				wiResourceManager::GetGlobal()->Register(image->name, tex, wiResourceManager::IMAGE);
+			}
+		}
 	}
 }
 
@@ -144,7 +260,7 @@ Model* ImportModel_GLTF(const std::string& fileName)
 		material->baseColor = XMFLOAT3(1, 1, 1);
 		material->roughness = 0.2f;
 		material->metalness = 0.0f;
-		material->reflectance = 0.2f;
+		material->reflectance = 0.02f;
 		material->emissive = 0;
 
 		auto& baseColorTexture = x.values.find("baseColorTexture");
@@ -163,54 +279,155 @@ Model* ImportModel_GLTF(const std::string& fileName)
 		{
 			auto& tex = gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = gltfModel.images[tex.source];
-			if (img.uri.empty())
-			{
-				// embedded image
-				material->textureName = img.name;
-			}
-			else
-			{
-				//external image
-				material->textureName = directory + img.uri;
-			}
+			RegisterTexture2D(&img);
+			material->textureName = img.name;
 		}
 		else if(!gltfModel.images.empty())
 		{
 			// For some reason, we don't have diffuse texture, but have other textures
 			//	I have a problem, because one model viewer displays textures on a model which has no basecolor set in its material...
 			//	This is probably not how it should be (todo)
+			RegisterTexture2D(&gltfModel.images[0]);
 			material->textureName = gltfModel.images[0].name;
 		}
+
+		tinygltf::Image* img_nor = nullptr;
+		tinygltf::Image* img_met_rough = nullptr;
+		tinygltf::Image* img_emissive = nullptr;
 
 		if (normalTexture != x.additionalValues.end())
 		{
 			auto& tex = gltfModel.textures[normalTexture->second.TextureIndex()];
-			auto& img = gltfModel.images[tex.source];
-			if (img.uri.empty())
-			{
-				// embedded image
-				material->normalMapName = img.name;
-			}
-			else
-			{
-				//external image
-				material->normalMapName = directory + img.uri;
-			}
+			img_nor = &gltfModel.images[tex.source];
+		}
+		if (metallicRoughnessTexture != x.values.end())
+		{
+			auto& tex = gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
+			img_met_rough = &gltfModel.images[tex.source];
 		}
 		if (emissiveTexture != x.additionalValues.end())
 		{
 			auto& tex = gltfModel.textures[emissiveTexture->second.TextureIndex()];
-			auto& img = gltfModel.images[tex.source];
-			if (img.uri.empty())
+			img_emissive = &gltfModel.images[tex.source];
+		}
+
+		if (img_nor != nullptr)
+		{
+			uint32_t* data32_roughness = nullptr;
+			if (img_met_rough != nullptr && img_met_rough->width == img_nor->width && img_met_rough->height == img_nor->height)
 			{
-				// embedded image
-				material->surfaceMapName = img.name;
+				data32_roughness = (uint32_t*)img_met_rough->image.data();
 			}
-			else
+			else if (img_met_rough != nullptr)
 			{
-				//external image
-				material->surfaceMapName = directory + img.uri;
+				wiBackLog::post("[gltf] Warning: there is a normalmap and roughness texture, but not the same size! Roughness will not be baked in!");
 			}
+
+			// Convert normal map:
+			uint32_t* data32 = (uint32_t*)img_nor->image.data();
+			for (int i = 0; i < img_nor->width * img_nor->height; ++i)
+			{
+				uint32_t pixel = data32[i];
+				float r = ((pixel >> 0)  & 255) / 255.0f;
+				float g = ((pixel >> 8)  & 255) / 255.0f;
+				float b = ((pixel >> 16) & 255) / 255.0f;
+				float a = ((pixel >> 24) & 255) / 255.0f;
+
+				// swap normal y direction:
+				g = 1 - g;
+
+				// reset roughness:
+				a = 1;
+
+				if (data32_roughness != nullptr)
+				{
+					// add roughness from texture (G):
+					a = ((data32_roughness[i] >> 8) & 255) / 255.0f;
+				}
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+
+			RegisterTexture2D(img_nor);
+			material->normalMapName = img_nor->name;
+		}
+
+		if (img_met_rough != nullptr)
+		{
+			uint32_t* data32_emissive = nullptr;
+			if (img_emissive != nullptr && img_emissive->width == img_met_rough->width && img_emissive->height == img_met_rough->height)
+			{
+				data32_emissive = (uint32_t*)img_emissive->image.data();
+			}
+
+			uint32_t* data32 = (uint32_t*)img_met_rough->image.data();
+			for (int i = 0; i < img_met_rough->width * img_met_rough->height; ++i)
+			{
+				uint32_t pixel = data32[i];
+				float r = ((pixel >> 0) & 255) / 255.0f;
+				float g = ((pixel >> 8) & 255) / 255.0f;
+				float b = ((pixel >> 16) & 255) / 255.0f;
+				float a = ((pixel >> 24) & 255) / 255.0f;
+
+				float reflectance = 1;
+				float metalness = b;
+				float emissive = 0;
+				float sss = 1;
+
+				if (data32_emissive != nullptr)
+				{
+					// add emissive from texture (R):
+					//	(Currently only supporting single channel emissive)
+					emissive = ((data32_emissive[i] >> 0) & 255) / 255.0f;
+				}
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(reflectance * 255.0f) << 0;
+				rgba8 |= (uint32_t)(metalness * 255.0f) << 8;
+				rgba8 |= (uint32_t)(emissive * 255.0f) << 16;
+				rgba8 |= (uint32_t)(sss * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+
+			RegisterTexture2D(img_met_rough);
+			material->surfaceMapName = img_met_rough->name;
+		}
+		else if (img_emissive != nullptr)
+		{
+			// No metalness texture, just emissive...
+
+			uint32_t* data32 = (uint32_t*)img_emissive->image.data();
+			for (int i = 0; i < img_emissive->width * img_emissive->height; ++i)
+			{
+				uint32_t pixel = data32[i];
+				float r = ((pixel >> 0) & 255) / 255.0f;
+				float g = ((pixel >> 8) & 255) / 255.0f;
+				float b = ((pixel >> 16) & 255) / 255.0f;
+				float a = ((pixel >> 24) & 255) / 255.0f;
+
+				float reflectance = 1;
+				float metalness = 1;
+				float emissive = r;
+				float sss = 1;
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(reflectance * 255.0f) << 0;
+				rgba8 |= (uint32_t)(metalness * 255.0f) << 8;
+				rgba8 |= (uint32_t)(emissive * 255.0f) << 16;
+				rgba8 |= (uint32_t)(sss * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+
+			RegisterTexture2D(img_emissive);
+			material->surfaceMapName = img_emissive->name;
 		}
 
 		// Retrieve textures by name:
@@ -241,7 +458,7 @@ Model* ImportModel_GLTF(const std::string& fileName)
 		}
 		if (alphaCutoff != x.additionalValues.end())
 		{
-			material->alphaRef = static_cast<float>(alphaCutoff->second.Factor());
+			material->alphaRef = 1 - static_cast<float>(alphaCutoff->second.Factor());
 		}
 
 	}
