@@ -233,9 +233,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include_Vulkan.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.h" />
@@ -371,7 +368,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTransform.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTranslator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />

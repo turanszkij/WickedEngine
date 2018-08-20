@@ -37,7 +37,6 @@
 #include "wiTextureHelper.h"
 #include "wiRandom.h"
 #include "wiColor.h"
-#include "wiWaterPlane.h"
 #include "wiPHYSICS.h"
 #include "wiBULLET.h"
 #include "wiEnums.h"

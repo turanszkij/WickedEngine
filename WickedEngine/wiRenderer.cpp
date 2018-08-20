@@ -14,7 +14,6 @@
 #include "wiTextureHelper.h"
 #include "wiPHYSICS.h"
 #include "wiCube.h"
-#include "wiWaterPlane.h"
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
@@ -109,7 +108,7 @@ std::vector<wiRenderer::RenderableLine> wiRenderer::renderableLines;
 
 std::unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
 
-wiWaterPlane wiRenderer::waterPlane;
+XMFLOAT4 wiRenderer::waterPlane;
 
 wiSpinLock deferredMIPGenLock;
 unordered_set<Texture2D*> deferredMIPGens;
@@ -2954,9 +2953,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					{
 						// If it is the main camera's culling, then obtain the reflectors:
 						XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object->/*bounds.getCenter()*/translation), XMVectorSet(0, 1, 0, 0));
-						XMFLOAT4 plane;
-						XMStoreFloat4(&plane, _refPlane);
-						waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
+						XMStoreFloat4(&waterPlane, _refPlane);
 						requestReflectionRendering = true;
 					}
 				}
@@ -3064,9 +3061,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	{
 		requestReflectionRendering = true; 
 		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, ocean->waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
-		XMFLOAT4 plane;
-		XMStoreFloat4(&plane, _refPlane);
-		waterPlane = wiWaterPlane(plane.x, plane.y, plane.z, plane.w);
+		XMStoreFloat4(&waterPlane, _refPlane);
 	}
 
 	for (auto& x : emitterSystems)
@@ -3091,7 +3086,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = XMFLOAT2(0, 0);
 	}
 
-	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
+	refCam->Reflect(cam, waterPlane);
 
 	for (auto& x : waterRipples)
 	{
@@ -3636,7 +3631,7 @@ void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	img->effects.typeFlag=WORLD;
 	img->effects.quality=QUALITY_ANISOTROPIC;
 	img->effects.pivot = XMFLOAT2(0.5f, 0.5f);
-	img->effects.lookAt=waterPlane.getXMFLOAT4();
+	img->effects.lookAt=waterPlane;
 	img->effects.lookAt.w=1;
 	waterRipples.push_back(img);
 }
@@ -7788,7 +7783,7 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	return nullptr;
 }
 
-wiWaterPlane wiRenderer::GetWaterPlane()
+const XMFLOAT4& wiRenderer::GetWaterPlane()
 {
 	return waterPlane;
 }

@@ -978,9 +978,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWaterPlane.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -1056,9 +1053,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX11.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h">
       <Filter>ENGINE\Components</Filter>
     </ClInclude>
@@ -1080,9 +1074,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include_DX12.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
@@ -1093,9 +1084,6 @@
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include_Vulkan.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h">

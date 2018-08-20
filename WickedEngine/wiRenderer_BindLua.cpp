@@ -5,7 +5,6 @@
 #include "wiSceneComponents_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
-#include "wiWaterPlane.h"
 #include "Texture_BindLua.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"

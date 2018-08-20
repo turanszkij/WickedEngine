@@ -277,7 +277,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 		rtReflection.Activate(threadID); {
 			// reverse clipping if underwater
-			XMFLOAT4 water = wiRenderer::GetWaterPlane().getXMFLOAT4();
+			XMFLOAT4 water = wiRenderer::GetWaterPlane();
 			if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&water), wiRenderer::getCamera()->GetEye())) < 0)
 			{
 				water.x *= -1;

@@ -45,7 +45,6 @@ class  wiSPTree;
 class  TaskThread;
 class  PHYSICS;
 class  wiRenderTarget;
-class  wiWaterPlane;
 class  wiOcean;
 struct wiOceanParameter;
 
@@ -268,7 +267,7 @@ protected:
 
 	static wiSceneComponents::Scene* scene;
 
-	static wiWaterPlane waterPlane;
+	static XMFLOAT4 waterPlane;
 
 	static bool debugLightCulling;
 	static bool occlusionCulling;
@@ -386,7 +385,7 @@ public:
 	static void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex){ enviroMap = tex; }
 	static wiGraphicsTypes::Texture2D* GetEnviromentMap(){ return enviroMap; }
 	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
-	static wiWaterPlane GetWaterPlane();
+	static const XMFLOAT4& GetWaterPlane();
 
 	static wiSceneComponents::Transform* getTransformByName(const std::string& name);
 	static wiSceneComponents::Transform* getTransformByID(uint64_t id);

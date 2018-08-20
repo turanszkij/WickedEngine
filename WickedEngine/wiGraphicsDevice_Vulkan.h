@@ -6,8 +6,16 @@
 #include "wiWindowRegistration.h"
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
-#include "Include_Vulkan.h"
 #include "wiGraphicsDevice_SharedInternals.h"
+
+
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif // WIN32
+
+#ifdef WICKEDENGINE_BUILD_VULKAN
+#include <vulkan/vulkan.h>
+#endif // WICKEDENGINE_BUILD_VULKAN
 
 #include <vector>
 #include <unordered_map>

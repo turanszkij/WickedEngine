@@ -1,7 +1,6 @@
 #pragma once
 #include "Renderable2DComponent.h"
 #include "wiRenderer.h"
-#include "wiWaterPlane.h"
 #include "wiGraphicsDevice.h"
 
 class Renderable3DComponent :
