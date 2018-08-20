@@ -64,7 +64,6 @@ public:
 	};
 	void ChangeRenderPath(RENDERPATH path);
 	void DeleteWindows();
-	void UpdateFromPrimarySelection(const wiRenderer::Picked& sel);
 
 	void Initialize() override;
 	void Load() override;

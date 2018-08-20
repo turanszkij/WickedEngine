@@ -40,6 +40,7 @@ Luna<TiledDeferredRenderableComponent_BindLua>::FunctionType TiledDeferredRender
 	lunamethod(Renderable3DComponent_BindLua, SetFXAAEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetBloomEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetColorGradingEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetColorGradingTexture),
 	lunamethod(Renderable3DComponent_BindLua, SetEmitterParticlesEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesReflectionEnabled),
@@ -58,8 +59,7 @@ Luna<TiledDeferredRenderableComponent_BindLua>::FunctionType TiledDeferredRender
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
 
-	lunamethod(Renderable3DComponent_BindLua, SetPreferredThreadingCount),
-{ NULL, NULL }
+	{ NULL, NULL }
 };
 Luna<TiledDeferredRenderableComponent_BindLua>::PropertyType TiledDeferredRenderableComponent_BindLua::properties[] = {
 	{ NULL, NULL }

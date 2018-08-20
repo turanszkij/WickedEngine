@@ -1,6 +1,5 @@
 #include "wiRenderer_BindLua.h"
 #include "wiRenderer.h"
-#include "wiLines.h"
 #include "wiSceneComponents.h"
 #include "wiHelper.h"
 #include "wiSceneComponents_BindLua.h"
@@ -405,23 +404,6 @@ namespace wiRenderer_BindLua
 			wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) not enough arguments!");
 		return 0;
 	}
-	int SetColorGrading(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
-			if (tex != nullptr)
-			{
-				wiRenderer::SetColorGrading(tex->texture);
-			}
-			else
-				wiLua::SError(L, "SetColorGrading(Texture texture2D) argument is not a texture!");
-		}
-		else
-			wiLua::SError(L, "SetColorGrading(Texture texture2D) not enough arguments!");
-		return 0;
-	}
 	int HairParticleSettings(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -587,18 +569,18 @@ namespace wiRenderer_BindLua
 			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 			if (ray != nullptr)
 			{
-				int pickType = PICKTYPE::PICK_OPAQUE;
+				UINT renderTypeMask = RENDERTYPE_OPAQUE;
 				uint32_t layerMask = 0xFFFFFFFF;
 				if (argc > 1)
 				{
-					pickType = wiLua::SGetInt(L, 2);
+					renderTypeMask = (UINT)wiLua::SGetInt(L, 2);
 					if (argc > 2)
 					{
 						int mask = wiLua::SGetInt(L, 3);
 						layerMask = *reinterpret_cast<uint32_t*>(&mask);
 					}
 				}
-				wiRenderer::Picked pick = wiRenderer::Pick(ray->ray, pickType, layerMask);
+				auto& pick = wiRenderer::RayIntersectWorld(ray->ray, renderTypeMask, layerMask);
 				Luna<Object_BindLua>::push(L, new Object_BindLua(pick.object));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -609,35 +591,35 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 	int DrawLine(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 1)
 		{
-			int argc = wiLua::SGetArgCount(L);
-			if (argc > 1)
+			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
+			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (a && b)
 			{
-				Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
-				Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
-				if (a && b)
+				wiRenderer::RenderableLine line;
+				XMStoreFloat3(&line.start, a->vector);
+				XMStoreFloat3(&line.end, b->vector);
+				if (argc > 2)
 				{
-					XMFLOAT3 xa, xb;
-					XMFLOAT4 xc = XMFLOAT4(1, 1, 1, 1);
-					XMStoreFloat3(&xa, a->vector);
-					XMStoreFloat3(&xb, b->vector);
-					if (argc > 2)
-					{
-						Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
-						if (c)
-							XMStoreFloat4(&xc, c->vector);
-						else
-							wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
-					}
-					wiRenderer::linesTemp.push_back(new Lines(xa, xb, xc));
+					Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
+					if (c)
+						XMStoreFloat4(&line.color, c->vector);
+					else
+						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 				}
-				else
-					wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+				wiRenderer::AddRenderableLine(line);
 			}
 			else
-				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
-			return 0;
+				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 		}
+		else
+			wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
+
+		return 0;
+	}
 	int PutWaterRipple(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -756,7 +738,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
 			wiLua::GetGlobal()->RegisterFunc("DuplicateInstance", DuplicateInstance);
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
-			wiLua::GetGlobal()->RegisterFunc("SetColorGrading", SetColorGrading);
 			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
 			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowProps2D", SetShadowProps2D);
@@ -783,13 +764,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RunText("PICK_OPAQUE = 1");
 			wiLua::GetGlobal()->RunText("PICK_TRANSPARENT = 2");
 			wiLua::GetGlobal()->RunText("PICK_WATER = 4");
-			wiLua::GetGlobal()->RunText("PICK_LIGHT = 8");
-			wiLua::GetGlobal()->RunText("PICK_DECAL = 16");
-			wiLua::GetGlobal()->RunText("PICK_ENVPROBE = 32");
-			wiLua::GetGlobal()->RunText("PICK_FORCEFIELD = 64");
-			wiLua::GetGlobal()->RunText("PICK_EMITTER = 128");
-			wiLua::GetGlobal()->RunText("PICK_CAMERA = 256");
-			wiLua::GetGlobal()->RunText("PICK_ARMATURE = 512");
 
 
 			wiLua::GetGlobal()->RegisterFunc("ClearWorld", ClearWorld);

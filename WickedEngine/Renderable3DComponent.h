@@ -1,10 +1,8 @@
 #pragma once
 #include "Renderable2DComponent.h"
-#include "wiTaskThread.h"
 #include "wiRenderer.h"
 #include "wiWaterPlane.h"
 #include "wiGraphicsDevice.h"
-#include <atomic>
 
 class Renderable3DComponent :
 	public Renderable2DComponent
@@ -44,6 +42,8 @@ private:
 	bool tessellationEnabled;
 	bool sharpenFilterEnabled;
 
+	wiGraphicsTypes::Texture2D* colorGradingTex = nullptr;
+
 	UINT msaaSampleCount;
 
 protected:
@@ -65,8 +65,6 @@ protected:
 	static wiGraphicsTypes::Texture2D* smallDepth;
 
 	virtual void ResizeBuffers() override;
-
-	std::vector<wiTaskThread*> workerThreads;
 
 	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID);
 	virtual void RenderReflections(GRAPHICSTHREAD threadID);
@@ -113,9 +111,9 @@ public:
 	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	inline bool getSharpenFilterEnabled() { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
 
-	inline UINT getMSAASampleCount() { return msaaSampleCount; }
+	inline wiGraphicsTypes::Texture2D* getColorGradingTexture() { return colorGradingTex; }
 
-	inline unsigned int getThreadingCount(){ return (unsigned int)workerThreads.size(); }
+	inline UINT getMSAASampleCount() { return msaaSampleCount; }
 
 	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
 	inline void setBloomDownSample(float value){ bloomDownSample = value; }
@@ -151,10 +149,9 @@ public:
 	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
 	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
 
+	inline void setColorGradingTexture(wiGraphicsTypes::Texture2D* tex) { colorGradingTex = tex; }
+
 	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; ResizeBuffers(); }
-
-
-	virtual void setPreferredThreadingCount(unsigned short value);
 
 	void setProperties();
 

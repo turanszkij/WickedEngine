@@ -84,29 +84,12 @@ void DeferredRenderableComponent::Start()
 }
 void DeferredRenderableComponent::Render()
 {
-	if (getThreadingCount() > 1)
-	{
-		for (auto workerThread : workerThreads)
-		{
-			workerThread->wakeup();
-		}
-
-		for (auto workerThread : workerThreads)
-		{
-			workerThread->wait();
-		}
-
-		wiRenderer::GetDevice()->ExecuteDeferredContexts();
-	}
-	else
-	{
-		RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
-		RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
-		RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
-		RenderScene(GRAPHICSTHREAD_IMMEDIATE);
-		RenderSecondaryScene(rtGBuffer, GetFinalRT(), GRAPHICSTHREAD_IMMEDIATE);
-		RenderComposition(GetFinalRT(), rtGBuffer, GRAPHICSTHREAD_IMMEDIATE);
-	}
+	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
+	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
+	RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+	RenderScene(GRAPHICSTHREAD_IMMEDIATE);
+	RenderSecondaryScene(rtGBuffer, GetFinalRT(), GRAPHICSTHREAD_IMMEDIATE);
+	RenderComposition(GetFinalRT(), rtGBuffer, GRAPHICSTHREAD_IMMEDIATE);
 
 	Renderable2DComponent::Render();
 }
@@ -146,7 +129,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
+	wiRenderer::BindDepthTextures(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
 
 	if (getStereogramEnabled())
 	{
@@ -160,7 +143,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	rtGBuffer.Deactivate(threadID);
 
-	wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
+	wiRenderer::BindGBufferTextures(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
 
 
 
@@ -294,97 +277,3 @@ wiDepthTarget* DeferredRenderableComponent::GetDepthBuffer()
 {
 	return rtGBuffer.depth;
 }
-
-void DeferredRenderableComponent::setPreferredThreadingCount(unsigned short value)
-{
-	Renderable3DComponent::setPreferredThreadingCount(value);
-
-	if (!wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING))
-	{
-		if (value > 1)
-			wiHelper::messageBox("Multithreaded rendering not supported by your hardware! Falling back to single threading!", "Caution");
-		return;
-	}
-
-	switch (value){
-	case 2:
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
-			RenderReflections(GRAPHICSTHREAD_REFLECTIONS);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			RenderShadows(GRAPHICSTHREAD_SCENE);
-			RenderScene(GRAPHICSTHREAD_SCENE);
-			RenderSecondaryScene(rtGBuffer, GetFinalRT(), GRAPHICSTHREAD_SCENE);
-			RenderComposition(GetFinalRT(), rtGBuffer, GRAPHICSTHREAD_SCENE);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		}));
-		break;
-	case 3:
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
-			RenderReflections(GRAPHICSTHREAD_REFLECTIONS);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS); 
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			RenderShadows(GRAPHICSTHREAD_SCENE);
-			RenderScene(GRAPHICSTHREAD_SCENE);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC1);
-			RenderSecondaryScene(rtGBuffer, GetFinalRT(), GRAPHICSTHREAD_MISC1);
-			RenderComposition(GetFinalRT(), rtGBuffer, GRAPHICSTHREAD_MISC1);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
-		}));
-		break;
-	case 4:
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
-			RenderReflections(GRAPHICSTHREAD_REFLECTIONS);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS); 
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			RenderShadows(GRAPHICSTHREAD_SCENE);
-			RenderScene(GRAPHICSTHREAD_SCENE);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE); 
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC1);
-			RenderSecondaryScene(rtGBuffer, GetFinalRT(), GRAPHICSTHREAD_MISC1);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1); 
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC2);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC2);
-			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC2);
-			wiRenderer::UpdateGBuffer(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC2);
-			RenderComposition(GetFinalRT(), rtGBuffer, GRAPHICSTHREAD_MISC2);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
-		}));
-		break;
-	};
-}
-

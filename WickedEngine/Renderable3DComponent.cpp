@@ -15,10 +15,6 @@ Renderable3DComponent::Renderable3DComponent() : Renderable2DComponent()
 }
 Renderable3DComponent::~Renderable3DComponent()
 {
-	for (auto& wt : workerThreads)
-	{
-		delete wt;
-	}
 }
 
 wiRenderTarget
@@ -195,8 +191,6 @@ void Renderable3DComponent::setProperties()
 	setSharpenFilterEnabled(false);
 
 	setMSAASampleCount(1);
-
-	setPreferredThreadingCount(0);
 }
 
 void Renderable3DComponent::Initialize()
@@ -220,7 +214,6 @@ void Renderable3DComponent::Start()
 void Renderable3DComponent::FixedUpdate()
 {
 	wiRenderer::FixedUpdate();
-	wiRenderer::UpdateImages();
 
 	Renderable2DComponent::FixedUpdate();
 }
@@ -443,18 +436,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 				wiRenderer::DrawLensFlares(threadID);
 		}
 
-		wiRenderer::GetDevice()->EventBegin("Debug Geometry", threadID);
-		wiRenderer::DrawDebugGridHelper(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugVoxels(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugEnvProbes(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugBoneLines(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugLines(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugBoxes(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugForceFields(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugEmitters(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawDebugCameras(wiRenderer::getCamera(), threadID);
-		wiRenderer::DrawTranslators(wiRenderer::getCamera(), threadID);
-		wiRenderer::GetDevice()->EventEnd(threadID);
+		wiRenderer::DrawDebugWorld(wiRenderer::getCamera(), threadID);
 	}
 
 	if (getEmittedParticlesEnabled())
@@ -497,7 +479,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
 		int history = 1 - current;
 		rtTemporalAA[current].Set(threadID); {
-			wiRenderer::UpdateGBuffer(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
+			wiRenderer::BindGBufferTextures(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 			fx.presentFullScreen = false;
 			fx.process.setTemporalAAResolve(true);
 			fx.setMaskMap(rtTemporalAA[history].GetTexture());
@@ -683,9 +665,9 @@ void Renderable3DComponent::RenderColorGradedComposition()
 	if (getColorGradingEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Color Graded Composition", GRAPHICSTHREAD_IMMEDIATE);
-		if (wiRenderer::GetColorGrading() != nullptr){
+		if (colorGradingTex != nullptr){
 			fx.process.setColorGrade(true);
-			fx.setMaskMap(wiRenderer::GetColorGrading());
+			fx.setMaskMap(colorGradingTex);
 		}
 		else
 		{
@@ -708,15 +690,4 @@ void Renderable3DComponent::RenderColorGradedComposition()
 		wiImage::Draw(rtFinal[1].GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 	}
 	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
-}
-
-
-void Renderable3DComponent::setPreferredThreadingCount(unsigned short value)
-{
-	for (auto& wt : workerThreads)
-	{
-		delete wt;
-	}
-
-	workerThreads.clear();
 }

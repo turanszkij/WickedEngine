@@ -308,6 +308,13 @@ runProcess(function()
 		--intersection
 		DrawAxis(player.p,0.5)
 		
+		-- Head bone
+		DrawAxis(player.skeleton.GetBone("testa").GetPosition(),1.0)
+		-- Left hand bone
+		DrawAxis(player.skeleton.GetBone("mano_L").GetPosition(),1.0)
+		-- Right hand bone
+		DrawAxis(player.skeleton.GetBone("mano_R").GetPosition(),1.0)
+		
 		
 		-- Wait for the engine to render the scene
 		render()

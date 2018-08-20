@@ -143,9 +143,11 @@ Test model and scene files are now available in the WickedEngine/models director
 
 ### Model import/export:
 
-The only common model format supported right now is Wavefront OBJ.<br/>
+The Editor supports the importing of some common model formats (the list will potentially grow): <b>OBJ</b>, <b>GLTF 2.0</b>
+The Engine itself can open the serialized model format (<b>WIMF</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WIMF</b>, then any WickedEngine application can open them.
 
-For advanced model format capabilities, like skeletal animations, particle systems, physics, etc. use the provided Blender exporter python script: io_export_wicked_wi_bin.py <br/>
+There is an additional model format designed for Blender supporting like skeletal animations, particle systems, physics, etc... Use the provided Blender exporter python script: <b>io_export_wicked_wi_bin.py</b> <br/>
+The Editor can open <b>WIO</b> files exported from Blender, and save them as <b>WIMF</b> models.
 
 Notes on exporting:
 - Names should not contain spaces inside Blender<br/>

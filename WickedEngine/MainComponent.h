@@ -77,8 +77,5 @@ public:
 	};
 	// display all-time engine information text
 	InfoDisplayer infoDisplay;
-
-	// display the default color grading palette
-	bool colorGradingPaletteDisplayEnabled;
 };
 

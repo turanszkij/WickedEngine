@@ -32,7 +32,6 @@ Editor::Editor()
 	SAFE_INIT(loader);
 }
 
-
 Editor::~Editor()
 {
 	//SAFE_DELETE(renderComponent);
@@ -135,11 +134,61 @@ void ConsumeHistoryOperation(bool undo);
 
 
 
+struct Picked
+{
+	Transform* transform;
+	Object* object;
+	Light* light;
+	Decal* decal;
+	EnvironmentProbe* envProbe;
+	ForceField* forceField;
+	Camera* camera;
+	Armature* armature;
+	XMFLOAT3 position, normal;
+	float distance;
+	int subsetIndex;
+
+	Picked()
+	{
+		Clear();
+	}
+
+	// Subset index, position, normal, distance don't distinguish between pickeds! 
+	bool operator==(const Picked& other)
+	{
+		return
+			transform == other.transform &&
+			object == other.object &&
+			light == other.light &&
+			decal == other.decal &&
+			envProbe == other.envProbe &&
+			forceField == other.forceField &&
+			camera == other.camera &&
+			armature == other.armature
+			;
+	}
+	void Clear()
+	{
+		distance = FLT_MAX;
+		subsetIndex = -1;
+		SAFE_INIT(transform);
+		SAFE_INIT(object);
+		SAFE_INIT(light);
+		SAFE_INIT(decal);
+		SAFE_INIT(envProbe);
+		SAFE_INIT(forceField);
+		SAFE_INIT(camera);
+		SAFE_INIT(armature);
+	}
+};
+
+
+
 wiTranslator* translator = nullptr;
 bool translator_active = false;
-list<wiRenderer::Picked*> selected;
+list<Picked*> selected;
 std::map<Transform*,Transform*> savedParents;
-wiRenderer::Picked hovered;
+Picked hovered;
 void BeginTranslate()
 {
 	translator_active = true;
@@ -206,9 +255,9 @@ void ClearSelected()
 	selected.clear();
 	savedParents.clear();
 }
-void AddSelected(wiRenderer::Picked* picked, bool deselectIfAlreadySelected = false)
+void AddSelected(Picked* picked, bool deselectIfAlreadySelected = false)
 {
-	list<wiRenderer::Picked*>::iterator it = selected.begin();
+	list<Picked*>::iterator it = selected.begin();
 	for (; it != selected.end(); ++it)
 	{
 		if ((**it) == *picked)
@@ -322,10 +371,6 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(emitterWnd);
 	SAFE_DELETE(forceFieldWnd);
 	SAFE_DELETE(oceanWnd);
-}
-void EditorComponent::UpdateFromPrimarySelection(const wiRenderer::Picked& sel)
-{
-
 }
 
 void EditorComponent::Initialize()
@@ -860,11 +905,11 @@ void EditorComponent::Load()
 		if (helpLabel == nullptr)
 		{
 			stringstream ss("");
-			ss << "Help: " << endl << "############" << endl << endl;
+			ss << "Help:   " << endl << "############" << endl << endl;
 			ss << "Move camera: WASD" << endl;
 			ss << "Look: Middle mouse button / arrow keys" << endl;
 			ss << "Select: Right mouse button" << endl;
-			ss << "Place decal/interact: Left mouse button when nothing is selected" << endl;
+			ss << "Place decal, interact with water: Left mouse button when nothing is selected" << endl;
 			ss << "Camera speed: SHIFT button" << endl;
 			ss << "Camera up: E, down: Q" << endl;
 			ss << "Duplicate entity (with instancing): Ctrl + D" << endl;
@@ -877,9 +922,10 @@ void EditorComponent::Load()
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
 			ss << "You can find sample models in the models directory. Try to load one." << endl;
-			ss << "You can also import models from .OBJ files." << endl;
+			ss << "You can also import models from .OBJ, .GLTF, .GLB, .WIO files." << endl;
 			ss << "You can also export models from Blender with the io_export_wicked_wi_bin.py script." << endl;
 			ss << "You can find a program configuration file at Editor/config.ini" << endl;
+			ss << "You can find sample LUA scripts in the scripts directory. Try to load one." << endl;
 			ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << endl;
 			ss << endl << endl << "For questions, bug reports, feedback, requests, please open an issue at:" << endl;
 			ss << "https://github.com/turanszkij/WickedEngine" << endl;
@@ -1065,7 +1111,146 @@ void EditorComponent::Update(float dt)
 			}
 		}
 
-		hovered = wiRenderer::Pick((long)currentMouse.x, (long)currentMouse.y, rendererWnd->GetPickType());
+		// Begin picking:
+		UINT pickMask = rendererWnd->GetPickType();
+		RAY pickRay = wiRenderer::getPickRay((long)currentMouse.x, (long)currentMouse.y);
+		{
+			hovered.Clear();
+
+			// Try to pick objects-meshes:
+			if (pickMask & PICK_OBJECT)
+			{
+				auto& picked = wiRenderer::RayIntersectWorld(pickRay, pickMask);
+
+				hovered.object = picked.object;
+				hovered.distance = picked.distance;
+				hovered.subsetIndex = picked.subsetIndex;
+				hovered.position = picked.position;
+				hovered.normal = picked.normal;
+
+				hovered.transform = picked.object;
+			}
+
+			for (auto& model : wiRenderer::GetScene().models)
+			{
+				if (pickMask & PICK_LIGHT)
+				{
+					for (auto& light : model->lights)
+					{
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&light->translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(light->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.transform = light;
+							hovered.light = light;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_DECAL)
+				{
+					for (auto& decal : model->decals)
+					{
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&decal->translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(decal->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.transform = decal;
+							hovered.decal = decal;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_FORCEFIELD)
+				{
+					for (auto& force : model->forces)
+					{
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&force->translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(force->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.transform = force;
+							hovered.forceField = force;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_EMITTER)
+				{
+					for (auto& object : model->objects)
+					{
+						if (object->eParticleSystems.empty())
+						{
+							continue;
+						}
+
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&object->translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(object->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.transform = object;
+							hovered.object = object;
+							hovered.distance = dis;
+						}
+					}
+				}
+
+				if (pickMask & PICK_ENVPROBE)
+				{
+					for (auto& x : model->environmentProbes)
+					{
+						if (SPHERE(x->translation, 1).intersects(pickRay))
+						{
+							float dis = wiMath::Distance(x->translation, pickRay.origin);
+							if (dis < hovered.distance)
+							{
+								hovered.Clear();
+								hovered.transform = x;
+								hovered.envProbe = x;
+								hovered.distance = dis;
+							}
+						}
+					}
+				}
+				if (pickMask & PICK_CAMERA)
+				{
+					for (auto& camera : model->cameras)
+					{
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&camera->translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(camera->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.transform = camera;
+							hovered.camera = camera;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_ARMATURE)
+				{
+					for (auto& armature : model->armatures)
+					{
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&armature->translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(armature->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.transform = armature;
+							hovered.armature = armature;
+							hovered.distance = dis;
+						}
+					}
+				}
+			}
+
+		}
+
+
 
 		// Interact:
 		if (hovered.object != nullptr && selected.empty())
@@ -1136,7 +1321,7 @@ void EditorComponent::Update(float dt)
 				{
 					for (auto& x : model->objects)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->object = x;
 						picked->transform = x;
 
@@ -1144,7 +1329,7 @@ void EditorComponent::Update(float dt)
 					}
 					for (auto& x : model->lights)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->light = x;
 						picked->transform = x;
 
@@ -1152,7 +1337,7 @@ void EditorComponent::Update(float dt)
 					}
 					for (auto& x : model->forces)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->forceField = x;
 						picked->transform = x;
 
@@ -1160,7 +1345,7 @@ void EditorComponent::Update(float dt)
 					}
 					for (auto& x : model->armatures)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->armature = x;
 						picked->transform = x;
 
@@ -1168,7 +1353,7 @@ void EditorComponent::Update(float dt)
 					}
 					for (auto& x : model->cameras)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->camera = x;
 						picked->transform = x;
 
@@ -1176,7 +1361,7 @@ void EditorComponent::Update(float dt)
 					}
 					for (auto& x : model->environmentProbes)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->envProbe = x;
 						picked->transform = x;
 
@@ -1184,7 +1369,7 @@ void EditorComponent::Update(float dt)
 					}
 					for (auto& x : model->decals)
 					{
-						wiRenderer::Picked* picked = new wiRenderer::Picked;
+						Picked* picked = new Picked;
 						picked->decal = x;
 						picked->transform = x;
 
@@ -1197,7 +1382,7 @@ void EditorComponent::Update(float dt)
 			else if (hovered.transform != nullptr)
 			{
 				// Add the hovered item to the selection:
-				wiRenderer::Picked* picked = new wiRenderer::Picked(hovered);
+				Picked* picked = new Picked(hovered);
 				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
 				{
 					AddSelected(picked, true);
@@ -1261,7 +1446,7 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			wiRenderer::Picked* picked = selected.back();
+			Picked* picked = selected.back();
 
 			assert(picked->transform != nullptr);
 
@@ -2002,7 +2187,7 @@ void ConsumeHistoryOperation(bool undo)
 
 				// Read selections states from archive:
 
-				list<wiRenderer::Picked*> selectedBEFORE;
+				list<Picked*> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				*archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
@@ -2010,7 +2195,7 @@ void ConsumeHistoryOperation(bool undo)
 					uint64_t id;
 					*archive >> id;
 
-					wiRenderer::Picked* sel = new wiRenderer::Picked;
+					Picked* sel = new Picked;
 					sel->transform = wiRenderer::getTransformByID(id);
 					assert(sel->transform != nullptr);
 					*archive >> sel->position;
@@ -2034,7 +2219,7 @@ void ConsumeHistoryOperation(bool undo)
 					savedParentsBEFORE.insert(pair<Transform*, Transform*>(t1, t2));
 				}
 
-				list<wiRenderer::Picked*> selectedAFTER;
+				list<Picked*> selectedAFTER;
 				size_t selectionCountAFTER;
 				*archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
@@ -2042,7 +2227,7 @@ void ConsumeHistoryOperation(bool undo)
 					uint64_t id;
 					*archive >> id;
 
-					wiRenderer::Picked* sel = new wiRenderer::Picked;
+					Picked* sel = new Picked;
 					sel->transform = wiRenderer::getTransformByID(id);
 					assert(sel->transform != nullptr);
 					*archive >> sel->position;
@@ -2069,7 +2254,7 @@ void ConsumeHistoryOperation(bool undo)
 
 				// Restore proper selection state:
 
-				list<wiRenderer::Picked*>* selectedCURRENT = nullptr;
+				list<Picked*>* selectedCURRENT = nullptr;
 				if (undo)
 				{
 					selectedCURRENT = &selectedBEFORE;

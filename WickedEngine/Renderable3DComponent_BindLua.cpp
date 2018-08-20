@@ -1,5 +1,6 @@
 #include "Renderable3DComponent_BindLua.h"
 #include "wiResourceManager_BindLua.h"
+#include "Texture_BindLua.h"
 
 const char Renderable3DComponent_BindLua::className[] = "Renderable3DComponent";
 
@@ -41,6 +42,7 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 	lunamethod(Renderable3DComponent_BindLua, SetFXAAEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetBloomEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetColorGradingEnabled),
+	lunamethod(Renderable3DComponent_BindLua, SetColorGradingTexture),
 	lunamethod(Renderable3DComponent_BindLua, SetEmitterParticlesEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesEnabled),
 	lunamethod(Renderable3DComponent_BindLua, SetHairParticlesReflectionEnabled),
@@ -59,8 +61,6 @@ Luna<Renderable3DComponent_BindLua>::FunctionType Renderable3DComponent_BindLua:
 
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldFocus),
 	lunamethod(Renderable3DComponent_BindLua, SetDepthOfFieldStrength),
-
-	lunamethod(Renderable3DComponent_BindLua, SetPreferredThreadingCount),
 	{ NULL, NULL }
 };
 Luna<Renderable3DComponent_BindLua>::PropertyType Renderable3DComponent_BindLua::properties[] = {
@@ -171,6 +171,24 @@ int Renderable3DComponent_BindLua::SetColorGradingEnabled(lua_State* L)
 		((Renderable3DComponent*)component)->setColorGradingEnabled(wiLua::SGetBool(L, 1));
 	else
 		wiLua::SError(L, "SetColorGradingEnabled(bool value) not enough arguments!");
+	return 0;
+}
+int Renderable3DComponent_BindLua::SetColorGradingTexture(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
+		if (tex != nullptr)
+		{
+			((Renderable3DComponent*)component)->setColorGradingTexture(tex->texture);
+		}
+		else
+			wiLua::SError(L, "SetColorGradingTexture(Texture texture2D) argument is not a texture!");
+	}
+	else
+		wiLua::SError(L, "SetColorGradingTexture(Texture texture2D) not enough arguments!");
+
 	return 0;
 }
 int Renderable3DComponent_BindLua::SetEmitterParticlesEnabled(lua_State* L)
@@ -412,22 +430,6 @@ int Renderable3DComponent_BindLua::SetDepthOfFieldStrength(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetDepthOfFieldStrength(float value) not enough arguments!");
-	return 0;
-}
-
-int Renderable3DComponent_BindLua::SetPreferredThreadingCount(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetPreferredThreadingCount(int value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-	{
-		((Renderable3DComponent*)component)->setPreferredThreadingCount((unsigned short)wiLua::SGetInt(L, 1));
-	}
-	else
-		wiLua::SError(L, "SetPreferredThreadingCount(int value) not enough arguments!");
 	return 0;
 }
 

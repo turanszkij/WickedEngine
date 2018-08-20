@@ -1,36 +1,14 @@
 #pragma once
 #include "wiPHYSICS.h"
 
-#include "BULLET/btBulletDynamicsCommon.h"
-
-class btCollisionConfiguration;
-class btCollisionDispatcher;
-class btBroadphaseInterface;
-class btSequentialImpulseConstraintSolver;
-class btDynamicsWorld;
-class btCollisionShape;
-class btSoftBodySolver;
-class btSoftBodySolverOutput;
+struct BulletPhysicsWorld;
 
 struct RAY;
 
 class wiBULLET:public PHYSICS
 {
 private:
-	btCollisionConfiguration* collisionConfiguration;
-	btCollisionDispatcher* dispatcher;
-	btBroadphaseInterface* overlappingPairCache;
-	btSequentialImpulseConstraintSolver* solver;
-	btDynamicsWorld* dynamicsWorld;
-	btAlignedObjectArray<btCollisionShape*> collisionShapes;
-
-	btSoftBodySolver* softBodySolver;
-	btSoftBodySolverOutput* softBodySolverOutput;
-
-	btVector3 wind;
-
-	static bool grab;
-	static RAY grabRay;
+	BulletPhysicsWorld * bulletPhysics = nullptr;
 
 	void deleteObject(int id);
 public:
@@ -72,10 +50,5 @@ public:
 	void ClearWorld();
 	void CleanUp();
 
-	void setGrab(bool val, const RAY& ray);
-	static void pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep);
-	static void soundTickCallback(btDynamicsWorld *world, btScalar timeStep);
-
-	ALIGN_16
 };
 

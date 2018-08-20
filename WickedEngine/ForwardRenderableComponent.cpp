@@ -15,8 +15,6 @@ ForwardRenderableComponent::ForwardRenderableComponent()
 	setSSREnabled(false);
 	setSSAOEnabled(false);
 	setShadowsEnabled(false);
-
-	setPreferredThreadingCount(0);
 }
 ForwardRenderableComponent::~ForwardRenderableComponent()
 {
@@ -68,30 +66,12 @@ void ForwardRenderableComponent::Start()
 }
 void ForwardRenderableComponent::Render()
 {
-	if (getThreadingCount() > 1)
-	{
-
-		for (auto workerThread : workerThreads)
-		{
-			workerThread->wakeup();
-		}
-
-		for (auto workerThread : workerThreads)
-		{
-			workerThread->wait();
-		}
-
-		wiRenderer::GetDevice()->ExecuteDeferredContexts();
-	}
-	else
-	{
-		RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
-		RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
-		RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
-		RenderScene(GRAPHICSTHREAD_IMMEDIATE);
-		RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_IMMEDIATE);
-		RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_IMMEDIATE);
-	}
+	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
+	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
+	RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+	RenderScene(GRAPHICSTHREAD_IMMEDIATE);
+	RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_IMMEDIATE);
+	RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_IMMEDIATE);
 
 	Renderable2DComponent::Render();
 }
@@ -117,7 +97,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);
-	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
+	wiRenderer::BindGBufferTextures(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
 
@@ -135,7 +115,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	rtLinearDepth.Deactivate(threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
+	wiRenderer::BindDepthTextures(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
 
 
 	if (getSSAOEnabled()) {
@@ -189,99 +169,4 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 wiDepthTarget* ForwardRenderableComponent::GetDepthBuffer()
 {
 	return rtMain.depth;
-}
-
-void ForwardRenderableComponent::setPreferredThreadingCount(unsigned short value)
-{
-	Renderable3DComponent::setPreferredThreadingCount(value);
-
-	if (!wiRenderer::GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING))
-	{
-		if (value > 1)
-			wiHelper::messageBox("Multithreaded rendering not supported by your hardware! Falling back to single threading!", "Caution");
-		return;
-	}
-
-
-	switch (value) {
-	case 2:
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
-			RenderReflections(GRAPHICSTHREAD_REFLECTIONS);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			RenderShadows(GRAPHICSTHREAD_SCENE);
-			RenderScene(GRAPHICSTHREAD_SCENE);
-			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_SCENE);
-			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_SCENE);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		}));
-		break;
-	case 3:
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
-			RenderReflections(GRAPHICSTHREAD_REFLECTIONS);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			RenderShadows(GRAPHICSTHREAD_SCENE);
-			RenderScene(GRAPHICSTHREAD_SCENE);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), rtMain.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC1);
-			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
-			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
-		}));
-		break;
-	case 4:
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			RenderFrameSetUp(GRAPHICSTHREAD_REFLECTIONS);
-			RenderReflections(GRAPHICSTHREAD_REFLECTIONS);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_SCENE);
-			RenderShadows(GRAPHICSTHREAD_SCENE);
-			RenderScene(GRAPHICSTHREAD_SCENE);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_SCENE);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC1);
-			wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), rtMain.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC1);
-			RenderSecondaryScene(rtMain, rtMain, GRAPHICSTHREAD_MISC1);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC1);
-		}));
-		workerThreads.push_back(new wiTaskThread([&]
-		{
-			wiRenderer::BindPersistentState(GRAPHICSTHREAD_MISC2);
-			wiImage::BindPersistentState(GRAPHICSTHREAD_MISC2);
-			wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), GRAPHICSTHREAD_MISC2);
-			wiRenderer::UpdateGBuffer(rtMain.GetTexture(0), rtMain.GetTexture(1), rtMain.GetTexture(2), nullptr, nullptr, GRAPHICSTHREAD_MISC2);
-			RenderComposition(rtMain, rtMain, GRAPHICSTHREAD_MISC2);
-			wiRenderer::GetDevice()->FinishCommandList(GRAPHICSTHREAD_MISC2);
-		}));
-		break;
-	};
-
 }

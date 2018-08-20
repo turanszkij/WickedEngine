@@ -160,7 +160,8 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 	colorGradingButton->SetPos(XMFLOAT2(x + 35, y));
 	colorGradingButton->SetSize(XMFLOAT2(200, 18));
 	colorGradingButton->OnClick([=](wiEventArgs args) {
-		auto x = wiRenderer::GetColorGrading();
+		//auto x = wiRenderer::GetColorGrading();
+		auto x = component->getColorGradingTexture();
 
 		if (x == nullptr)
 		{
@@ -184,14 +185,19 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 				if (GetOpenFileNameA(&ofn) == TRUE) {
 					string fileName = ofn.lpstrFile;
-					wiRenderer::SetColorGrading((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
-					colorGradingButton->SetText(fileName);
+					//wiRenderer::SetColorGrading((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+					component->setColorGradingTexture((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+					if (component->getColorGradingTexture() != nullptr)
+					{
+						colorGradingButton->SetText(fileName);
+					}
 				}
 			}).detach();
 		}
 		else
 		{
-			wiRenderer::SetColorGrading(nullptr);
+			//wiRenderer::SetColorGrading(nullptr);
+			component->setColorGradingTexture(nullptr);
 			colorGradingButton->SetText("Load Color Grading LUT...");
 		}
 

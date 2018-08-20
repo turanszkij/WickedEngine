@@ -120,7 +120,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - LoadWorldInfo(string fileName)		-- Loads world information from file
 - DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
 - SetEnvironmentMap(Texture cubemap)
-- SetColorGrading(Texture texture2D)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetAlphaCompositionEnabled(opt bool enabled)
 - SetShadowProps2D(int resolution, int count, int softShadowQuality)
@@ -454,7 +453,6 @@ The main component which holds information and manages the running of the curren
 - SetWatermarkDisplay(bool active)
 - SetFPSDisplay(bool active)
 - SetCPUDisplay(bool active)
-- SetColorGradePaletteDisplay(bool active)
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderableComponent
@@ -502,6 +500,7 @@ It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
 - SetFXAAEnabled(bool value)
 - SetBloomEnabled(bool value)
 - SetColorGradingEnabled(bool value)
+- SetColorGradingTexture(Texture value)
 - SetEmitterParticlesEnabled(bool value)
 - SetHairParticlesEnabled(bool value)
 - SetHairParticlesReflectionEnabled(bool value)
@@ -513,7 +512,6 @@ It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
 - SetDepthOfFieldEnabled(bool value)
 - SetDepthOfFieldFocus(float value)
 - SetDepthOfFieldStrength(float value)
-- SetPreferredThreadingCount(int value)
 - SetTessellationEnabled(bool value)
 - SetMSAASampleCount(int count)
 - SetStereogramEnabled(bool value)

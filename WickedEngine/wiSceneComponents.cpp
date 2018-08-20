@@ -1458,35 +1458,42 @@ void Model::FinishLoading()
 	{
 		if (x->parent == nullptr)
 		{
-			for (Transform* y : transforms)
+			if (x->boneParent.empty())
 			{
-				if (x != y && !x->parentName.empty() && !x->parentName.compare(y->name))
+				// Normal parenting:
+				if (!x->parentName.empty())
 				{
-					Transform* parent = y;
-					string parentName = parent->name;
-					if (!x->boneParent.empty())
+					for (Transform* y : transforms)
 					{
-						Armature* armature = dynamic_cast<Armature*>(y);
-						if (armature != nullptr)
+						if (x != y && !x->parentName.compare(y->name))
 						{
-							for (Bone* bone : armature->boneCollection)
-							{
-								if (!bone->name.compare(x->boneParent))
-								{
-									parent = bone;
-									break;
-								}
-							}
+							XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
+							x->attachTo(y);
+							x->parent_inv_rest = saved_parent_rest_inv;
+							break;
 						}
 					}
-					// Match parent
-					XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
-					x->attachTo(parent);
-					x->parent_inv_rest = saved_parent_rest_inv;
-					x->parentName = parentName; // this will ensure that the bone parenting is always resolved as armature->bone
-					break;
 				}
 			}
+			else
+			{
+				// Bone parenting:
+				for (Armature* armature : armatures)
+				{
+					if (armature != x)
+					{
+						Bone* y = armature->GetBone(x->boneParent);
+						if (y != nullptr)
+						{
+							XMFLOAT4X4 saved_parent_rest_inv = x->parent_inv_rest;
+							x->attachTo(y);
+							x->parent_inv_rest = saved_parent_rest_inv;
+							break;
+						}
+					}
+				}
+			}
+
 		}
 
 		// If it has still no parent, then attach to this model!
@@ -1861,11 +1868,6 @@ void Model::Serialize(wiArchive& archive)
 #pragma endregion
 
 #pragma region BONE
-XMMATRIX Bone::getMatrix(int getTranslation, int getRotation, int getScale)
-{
-	
-	return XMMatrixTranslation(0,0,length)*XMLoadFloat4x4(&world);
-}
 void Bone::UpdateTransform()
 {
 	//Transform::UpdateTransform();
@@ -2105,24 +2107,40 @@ void Armature::UpdateTransform()
 {
 	Transform::UpdateTransform();
 
-	XMMATRIX worldMatrix = getMatrix();
 	XMMATRIX remapMat = XMLoadFloat4x4(&skinningRemap);
-
-	// Update bone tree from root:
 	for (Bone* root : rootbones)
 	{
 		// Update tree for skinning:
 		//	Note that skinning is not using the armature transform, it will be calculated in armature local space
 		//	This is needed because we want to skin meshes, then reuse the meshes for multiple objects without additional deform
 		RecursiveBoneTransform(this, root, remapMat);
+	}
 
-		// Update tree for bone attaching:
+	XMMATRIX worldMatrix = getMatrix();
+	for (Bone* bone : boneCollection)
+	{
+		// Update each bone for attaching:
 		//	The Skinning (RecursiveBoneTrasform) was operating in armature local space, but for bone attachments without deform,
 		//	we need the matrices in world space
-		XMMATRIX boneMatrix = XMLoadFloat4x4(&root->world);
+		XMMATRIX boneMatrix = XMLoadFloat4x4(&bone->world);
 		boneMatrix = boneMatrix * worldMatrix;
-		XMStoreFloat4x4(&root->world, boneMatrix);
-		root->UpdateTransform();
+
+		// Save individual components for prev-frame:
+		bone->worldPrev = bone->world;
+		bone->translationPrev = bone->translation;
+		bone->rotationPrev = bone->rotation;
+		bone->scalePrev = bone->scale;
+
+		// Update individual components:
+		XMVECTOR v[3];
+		XMMatrixDecompose(&v[0], &v[1], &v[2], boneMatrix);
+		XMStoreFloat3(&bone->scale, v[0]);
+		XMStoreFloat4(&bone->rotation, v[1]);
+		XMStoreFloat3(&bone->translation, v[2]);
+		XMStoreFloat4x4(&bone->world, boneMatrix);
+
+		// Any attachments should be updated too:
+		bone->UpdateTransform();
 	}
 }
 void Armature::UpdateArmature()
@@ -2224,14 +2242,6 @@ void Armature::RecursiveBoneTransform(Armature* armature, Bone* bone, const XMMA
 			break;
 		}
 	}
-
-	bone->worldPrev = bone->world;
-	bone->translationPrev = bone->translation;
-	bone->rotationPrev = bone->rotation;
-	bone->scalePrev = bone->scale;
-	XMStoreFloat3(&bone->translation, finalTrans);
-	XMStoreFloat4(&bone->rotation, finalRotat);
-	XMStoreFloat3(&bone->scale, finalScala);
 
 	// Bone local T-pose matrix (relative to PARENT):
 	XMMATRIX rest = XMLoadFloat4x4(&bone->world_rest);

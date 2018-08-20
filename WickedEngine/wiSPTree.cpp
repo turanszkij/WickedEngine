@@ -128,7 +128,7 @@ void wiSPTree::Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortTy
 	}
 }
 
-void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+void wiSPTree::getVisible(const Frustum& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
 {
 	if (node == nullptr)
 	{
@@ -170,7 +170,7 @@ void wiSPTree::getVisible(Frustum& frustum, CulledList& objects, SortType sortTy
 		Sort(frustum.getCamPos(), objects, sortType);
 	}
 }
-void wiSPTree::getVisible(AABB& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+void wiSPTree::getVisible(const AABB& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
 {
 	if (node == nullptr)
 	{
@@ -211,7 +211,7 @@ void wiSPTree::getVisible(AABB& frustum, CulledList& objects, SortType sortType,
 		Sort(frustum.getCenter(), objects, sortType);
 	}
 }
-void wiSPTree::getVisible(SPHERE& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+void wiSPTree::getVisible(const SPHERE& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
 {
 	if (node == nullptr)
 	{
@@ -247,7 +247,7 @@ void wiSPTree::getVisible(SPHERE& frustum, CulledList& objects, SortType sortTyp
 		Sort(frustum.center, objects, sortType);
 	}
 }
-void wiSPTree::getVisible(RAY& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
+void wiSPTree::getVisible(const RAY& frustum, CulledList& objects, SortType sortType, CullStrictness type, Node* node)
 {
 	if (node == nullptr)
 	{

@@ -38,8 +38,7 @@ MainComponent::MainComponent()
 	setTargetFrameRate(60);
 	setApplicationControlLostThreshold(10);
 
-	infoDisplay = InfoDisplayer(); 
-	colorGradingPaletteDisplayEnabled = false;
+	infoDisplay = InfoDisplayer();
 
 	fadeManager.Clear();
 }
@@ -281,14 +280,6 @@ void MainComponent::Compose()
 	}
 
 	wiProfiler::GetInstance().DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);
-
-	// Draw the color grading palette
-	if (colorGradingPaletteDisplayEnabled)
-	{
-		//wiImage::BatchBegin();
-		wiImage::Draw(wiTextureHelper::getInstance()->getColorGradeDefault(), wiImageEffects(0, 0, 256, 16), GRAPHICSTHREAD_IMMEDIATE);
-		wiImage::Draw(wiRenderer::GetColorGrading(), wiImageEffects(screenW-256.f, 0, 256, 16), GRAPHICSTHREAD_IMMEDIATE);
-	}
 
 	wiBackLog::Draw();
 }

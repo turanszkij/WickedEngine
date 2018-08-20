@@ -26,7 +26,6 @@
 #include "wiDirectInput.h"
 #include "wiXInput.h"
 #include "wiRawInput.h"
-#include "wiTaskThread.h"
 #include "wiMath.h"
 #include "wiLensFlare.h"
 #include "wiSound.h"

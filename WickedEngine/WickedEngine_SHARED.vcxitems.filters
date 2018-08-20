@@ -924,9 +924,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTaskThread.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -958,9 +955,6 @@
       <Filter>ENGINE\Physics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLines.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h">
@@ -1830,9 +1824,6 @@
       <Filter>ENGINE\Physics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLines.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp">

@@ -13,7 +13,6 @@
 #include "wiLensFlare.h"
 #include "wiTextureHelper.h"
 #include "wiPHYSICS.h"
-#include "wiLines.h"
 #include "wiCube.h"
 #include "wiWaterPlane.h"
 #include "wiEnums.h"
@@ -79,14 +78,12 @@ UINT wiRenderer::entityArrayOffset_Decals = 0, wiRenderer::entityArrayCount_Deca
 UINT wiRenderer::entityArrayOffset_ForceFields = 0, wiRenderer::entityArrayCount_ForceFields = 0;
 UINT wiRenderer::entityArrayOffset_EnvProbes = 0, wiRenderer::entityArrayCount_EnvProbes = 0;
 
-Texture2D* wiRenderer::enviroMap,*wiRenderer::colorGrading;
-float wiRenderer::GameSpeed=1,wiRenderer::overrideGameSpeed=1;
+Texture2D* wiRenderer::enviroMap = nullptr;
+float wiRenderer::GameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
 bool wiRenderer::occlusionCulling = false;
 bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
 wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
-int wiRenderer::visibleCount;
-wiRenderTarget wiRenderer::normalMapRT, wiRenderer::imagesRT, wiRenderer::imagesRTAdd;
 Camera *wiRenderer::cam = nullptr, *wiRenderer::refCam = nullptr, *wiRenderer::prevFrameCam = nullptr;
 PHYSICS* wiRenderer::physicsEngine = nullptr;
 wiOcean* wiRenderer::ocean = nullptr;
@@ -96,8 +93,6 @@ string wiRenderer::SHADERPATH = "shaders/";
 
 #pragma region STATIC TEMP
 
-int wiRenderer::vertexCount;
-deque<wiSprite*> wiRenderer::images;
 deque<wiSprite*> wiRenderer::waterRipples;
 
 wiSPTree* wiRenderer::spTree = nullptr;
@@ -108,12 +103,9 @@ Scene* wiRenderer::scene = nullptr;
 unordered_set<Object*>			  wiRenderer::objectsWithTrails;
 unordered_set<wiEmittedParticle*> wiRenderer::emitterSystems;
 
-std::vector<Lines*>	wiRenderer::boneLines;
-std::vector<Lines*>	wiRenderer::linesTemp;
-std::vector<Cube>	wiRenderer::cubes;
-
 std::vector<wiTranslator*> wiRenderer::renderableTranslators;
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
+std::vector<wiRenderer::RenderableLine> wiRenderer::renderableLines;
 
 std::unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
 
@@ -124,10 +116,6 @@ unordered_set<Texture2D*> deferredMIPGens;
 
 #pragma endregion
 
-
-wiRenderer::wiRenderer()
-{
-}
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
 {
@@ -150,10 +138,6 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 
 }
 
-
-void wiRenderer::CleanUp()
-{
-}
 
 void wiRenderer::SetUpStaticComponents()
 {
@@ -231,36 +215,7 @@ void wiRenderer::SetUpStaticComponents()
 	wiHairParticle::SetUpStatic();
 	wiEmittedParticle::SetUpStatic();
 
-	GameSpeed=1;
-
-	resetVertexCount();
-	resetVisibleObjectCount();
-
-	GetScene().wind=Wind();
-
 	Cube::LoadStatic();
-
-	spTree_lights=nullptr;
-
-
-	waterRipples.resize(0);
-
-	
-	normalMapRT.Initialize(
-		GetInternalResolution().x
-		, GetInternalResolution().y
-		,false, RTFormat_normalmaps
-		);
-	imagesRTAdd.Initialize(
-		GetInternalResolution().x
-		, GetInternalResolution().y
-		,false
-		);
-	imagesRT.Initialize(
-		GetInternalResolution().x
-		, GetInternalResolution().y
-		,false
-		);
 
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
@@ -352,13 +307,7 @@ void wiRenderer::ClearWorld()
 		physicsEngine->ClearWorld();
 
 	enviroMap = nullptr;
-	colorGrading = nullptr;
 
-	wiRenderer::resetVertexCount();
-	
-	for (wiSprite* x : images)
-		x->CleanUp();
-	images.clear();
 	for (wiSprite* x : waterRipples)
 		x->CleanUp();
 	waterRipples.clear();
@@ -410,119 +359,119 @@ int wiRenderer::GetSunArrayIndex()
 	}
 	return -1;
 }
-float wiRenderer::GetGameSpeed() { return GameSpeed*overrideGameSpeed; }
+float wiRenderer::GetGameSpeed() { return GameSpeed; }
 
-void wiRenderer::SetUpBoneLines()
-{
-	boneLines.clear();
-	for (Model* model : GetScene().models)
-	{
-		//for (unsigned int i = 0; i < model->armatures.size(); i++) {
-		//	for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
-		//		boneLines.push_back(new Lines(model->armatures[i]->boneCollection[j]->length, XMFLOAT4A(1, 1, 1, 1), i, j));
-		//	}
-		//}
-		int i = 0;
-		for (auto& a : model->armatures)
-		{
-			int j = 0;
-			for (auto& b : a->boneCollection)
-			{
-				boneLines.push_back(new Lines(b->length, XMFLOAT4A(1, 1, 1, 1), i, j));
-				j++;
-			}
-			i++;
-		}
-	}
-}
-void wiRenderer::UpdateBoneLines()
-{
-	if (debugBoneLines)
-	{
-		for (unsigned int i = 0; i < boneLines.size(); i++) {
-			int armatureI = boneLines[i]->parentArmature;
-			int boneI = boneLines[i]->parentBone;
-
-			int arm = 0;
-			for (Model* model : GetScene().models)
-			{
-				for (Armature* armature : model->armatures)
-				{
-					if (arm == armatureI)
-					{
-						int bonI = 0;
-						for (Bone* b : armature->boneCollection)
-						{
-							if (boneI == bonI)
-							{
-								boneLines[i]->Transform(b->world);
-							}
-							bonI++;
-						}
-					}
-					arm++;
-				}
-			}
-		}
-	}
-}
-void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col);
-void iterateSPTree(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
-	if(!n) return;
-	if(n->count){
-		for (unsigned int i = 0; i<n->children.size(); ++i)
-			iterateSPTree(n->children[i],cubes,col);
-	}
-	if(!n->objects.empty()){
-		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
-		for(Cullable* object:n->objects){
-			cubes.push_back(Cube(object->bounds.getCenter(),object->bounds.getHalfWidth(),XMFLOAT4A(1,0,0,1)));
-			//Object* o = (Object*)object;
-			//for(wiHairParticle& hps : o->hParticleSystems)
-			//	iterateSPTree2(hps.spTree->root,cubes,XMFLOAT4A(0,1,0,1));
-		}
-	}
-}
-void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
-	if(!n) return;
-	if(n->count){
-		for (unsigned int i = 0; i<n->children.size(); ++i)
-			iterateSPTree2(n->children[i],cubes,col);
-	}
-	if(!n->objects.empty()){
-		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
-	}
-}
-void wiRenderer::SetUpCubes(){
-	/*if(debugBoxes){
-		cubes.resize(0);
-		iterateSPTree(spTree->root,cubes);
-		for(Object* object:objects)
-			cubes.push_back(Cube(XMFLOAT3(0,0,0),XMFLOAT3(1,1,1),XMFLOAT4A(1,0,0,1)));
-	}*/
-	cubes.clear();
-}
-void wiRenderer::UpdateCubes(){
-	if(debugPartitionTree && spTree && spTree->root){
-		/*int num=0;
-		iterateSPTreeUpdate(spTree->root,cubes,num);
-		for(Object* object:objects){
-			AABB b=object->frameBB;
-			XMFLOAT3 c = b.getCenter();
-			XMFLOAT3 hw = b.getHalfWidth();
-			cubes[num].Transform( XMMatrixScaling(hw.x,hw.y,hw.z) * XMMatrixTranslation(c.x,c.y,c.z) );
-			num+=1;
-		}*/
-		cubes.clear();
-		if(spTree) iterateSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
-		if(spTree_lights) iterateSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
-	}
-	//if(debugBoxes){
-	//	for(Decal* decal : decals){
-	//		cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
-	//	}
-	//}
-}
+//void wiRenderer::SetUpBoneLines()
+//{
+//	boneLines.clear();
+//	for (Model* model : GetScene().models)
+//	{
+//		//for (unsigned int i = 0; i < model->armatures.size(); i++) {
+//		//	for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
+//		//		boneLines.push_back(new Lines(model->armatures[i]->boneCollection[j]->length, XMFLOAT4A(1, 1, 1, 1), i, j));
+//		//	}
+//		//}
+//		int i = 0;
+//		for (auto& a : model->armatures)
+//		{
+//			int j = 0;
+//			for (auto& b : a->boneCollection)
+//			{
+//				boneLines.push_back(new Lines(b->length, XMFLOAT4A(1, 1, 1, 1), i, j));
+//				j++;
+//			}
+//			i++;
+//		}
+//	}
+//}
+//void wiRenderer::UpdateBoneLines()
+//{
+//	if (debugBoneLines)
+//	{
+//		for (unsigned int i = 0; i < boneLines.size(); i++) {
+//			int armatureI = boneLines[i]->parentArmature;
+//			int boneI = boneLines[i]->parentBone;
+//
+//			int arm = 0;
+//			for (Model* model : GetScene().models)
+//			{
+//				for (Armature* armature : model->armatures)
+//				{
+//					if (arm == armatureI)
+//					{
+//						int bonI = 0;
+//						for (Bone* b : armature->boneCollection)
+//						{
+//							if (boneI == bonI)
+//							{
+//								boneLines[i]->Transform(b->world);
+//							}
+//							bonI++;
+//						}
+//					}
+//					arm++;
+//				}
+//			}
+//		}
+//	}
+//}
+//void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col);
+//void iterateSPTree(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
+//	if(!n) return;
+//	if(n->count){
+//		for (unsigned int i = 0; i<n->children.size(); ++i)
+//			iterateSPTree(n->children[i],cubes,col);
+//	}
+//	if(!n->objects.empty()){
+//		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
+//		for(Cullable* object:n->objects){
+//			cubes.push_back(Cube(object->bounds.getCenter(),object->bounds.getHalfWidth(),XMFLOAT4A(1,0,0,1)));
+//			//Object* o = (Object*)object;
+//			//for(wiHairParticle& hps : o->hParticleSystems)
+//			//	iterateSPTree2(hps.spTree->root,cubes,XMFLOAT4A(0,1,0,1));
+//		}
+//	}
+//}
+//void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
+//	if(!n) return;
+//	if(n->count){
+//		for (unsigned int i = 0; i<n->children.size(); ++i)
+//			iterateSPTree2(n->children[i],cubes,col);
+//	}
+//	if(!n->objects.empty()){
+//		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
+//	}
+//}
+//void wiRenderer::SetUpCubes(){
+//	/*if(debugBoxes){
+//		cubes.resize(0);
+//		iterateSPTree(spTree->root,cubes);
+//		for(Object* object:objects)
+//			cubes.push_back(Cube(XMFLOAT3(0,0,0),XMFLOAT3(1,1,1),XMFLOAT4A(1,0,0,1)));
+//	}*/
+//	cubes.clear();
+//}
+//void wiRenderer::UpdateCubes(){
+//	if(debugPartitionTree && spTree && spTree->root){
+//		/*int num=0;
+//		iterateSPTreeUpdate(spTree->root,cubes,num);
+//		for(Object* object:objects){
+//			AABB b=object->frameBB;
+//			XMFLOAT3 c = b.getCenter();
+//			XMFLOAT3 hw = b.getHalfWidth();
+//			cubes[num].Transform( XMMatrixScaling(hw.x,hw.y,hw.z) * XMMatrixTranslation(c.x,c.y,c.z) );
+//			num+=1;
+//		}*/
+//		cubes.clear();
+//		if(spTree) iterateSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
+//		if(spTree_lights) iterateSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
+//	}
+//	//if(debugBoxes){
+//	//	for(Decal* decal : decals){
+//	//		cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
+//	//	}
+//	//}
+//}
 
 bool wiRenderer::ResolutionChanged()
 {
@@ -1207,7 +1156,6 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_GRID,
 	DEBUGRENDERING_CUBE,
 	DEBUGRENDERING_LINES,
-	DEBUGRENDERING_BONELINES,
 	DEBUGRENDERING_EMITTER,
 	DEBUGRENDERING_VOXEL,
 	DEBUGRENDERING_FORCEFIELD_POINT,
@@ -2144,15 +2092,6 @@ void wiRenderer::LoadShaders()
 				desc.pt = LINELIST;
 				break;
 			case DEBUGRENDERING_LINES:
-				desc.vs = vertexShaders[VSTYPE_LINE];
-				desc.ps = pixelShaders[PSTYPE_LINE];
-				desc.il = vertexLayouts[VLTYPE_LINE];
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = LINELIST;
-				break;
-			case DEBUGRENDERING_BONELINES:
 				desc.vs = vertexShaders[VSTYPE_LINE];
 				desc.ps = pixelShaders[PSTYPE_LINE];
 				desc.il = vertexLayouts[VLTYPE_LINE];
@@ -3154,8 +3093,10 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 	refCam->Reflect(cam, waterPlane.getXMFLOAT4());
 
-	UpdateBoneLines();
-	UpdateCubes();
+	for (auto& x : waterRipples)
+	{
+		x->Update(dt * 60 * GameSpeed);
+	}
 
 	renderTime_Prev = renderTime;
 	renderTime += dt * GameSpeed;
@@ -3679,24 +3620,6 @@ void wiRenderer::OcclusionCulling_Read()
 
 	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
 }
-void wiRenderer::UpdateImages()
-{
-	for (wiSprite* x : images)
-		x->Update(GameSpeed);
-	for (wiSprite* x : waterRipples)
-		x->Update(GameSpeed);
-
-	ManageImages();
-	ManageWaterRipples();
-}
-void wiRenderer::ManageImages()
-{
-	while (!images.empty() &&
-		(images.front()->effects.opacity <= 0 + FLT_EPSILON || images.front()->effects.fade == 1))
-	{
-		images.pop_front();
-	}
-}
 void wiRenderer::PutDecal(Decal* decal)
 {
 	GetScene().GetWorldNode()->decals.insert(decal);
@@ -3733,115 +3656,134 @@ void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::DrawDebugSpheres(Camera* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawDebugWorld(Camera* camera, GRAPHICSTHREAD threadID)
 {
-	//if(debugSpheres){
-	//	BindPrimitiveTopology(TRIANGLESTRIP,threadID);
-	//	BindVertexLayout(vertexLayouts[VLTYPE_EFFECT] : vertexLayouts[VLTYPE_LINE],threadID);
-	//
-	//	BindRasterizerState(rasterizers[RSTYPE_FRONT],threadID);
-	//	BindDepthStencilState(depthStencils[DSSTYPE_XRAY],STENCILREF_EMPTY,threadID);
-	//	BindBlendState(blendStates[BSTYPE_TRANSPARENT],threadID);
+	GraphicsDevice* device = GetDevice();
 
+	device->EventBegin("DrawDebugWorld", threadID);
 
-	//	BindPS(linePS,threadID);
-	//	BindVS(lineVS,threadID);
-
-	//	BindVertexBuffer(HitSphere::vertexBuffer,0,sizeof(XMFLOAT3A),threadID);
-
-	//	for (unsigned int i = 0; i<spheres.size(); i++){
-	//		//MAPPED_SUBRESOURCE mappedResource;
-	//		LineBuffer sb;
-	//		sb.mWorldViewProjection=XMMatrixTranspose(
-	//			XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
-	//			XMMatrixScaling( spheres[i]->radius,spheres[i]->radius,spheres[i]->radius ) *
-	//			XMMatrixTranslationFromVector( XMLoadFloat3(&spheres[i]->translation) )
-	//			*camera->GetViewProjection()
-	//			);
-
-	//		XMFLOAT4A propColor;
-	//		if(spheres[i]->TYPE==HitSphere::HitSphereType::HITTYPE)      propColor = XMFLOAT4A(0.1098f,0.4196f,1,1);
-	//		else if(spheres[i]->TYPE==HitSphere::HitSphereType::INVTYPE) propColor=XMFLOAT4A(0,0,0,1);
-	//		else if(spheres[i]->TYPE==HitSphere::HitSphereType::ATKTYPE) propColor=XMFLOAT4A(0.96f,0,0,1);
-	//		sb.color=propColor;
-
-	//		UpdateBuffer(lineBuffer,&sb,threadID);
-
-
-	//		//threadID->Draw((HitSphere::RESOLUTION+1)*2,0);
-	//		Draw((HitSphere::RESOLUTION+1)*2,threadID);
-
-	//	}
-	//}
-	
-}
-void wiRenderer::DrawDebugBoneLines(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if(debugBoneLines)
+	if (debugBoneLines)
 	{
-		GetDevice()->EventBegin("DebugBoneLines", threadID);
-		
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_BONELINES], threadID);
+		device->EventBegin("DebugBoneLines", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
 
 		MiscCB sb;
-		for (unsigned int i = 0; i<boneLines.size(); i++){
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&boneLines[i]->desc.transform)*camera->GetViewProjection());
-			sb.mColor = boneLines[i]->desc.color;
+		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		for (auto& model : GetScene().models)
+		{
+			for (auto& armature : model->armatures)
+			{
+				if (armature->boneCollection.empty())
+				{
+					continue;
+				}
 
-			GPUBuffer* vbs[] = {
-				&boneLines[i]->vertexBuffer,
-			};
-			const UINT strides[] = {
-				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-			};
-			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-			GetDevice()->Draw(2, 0, threadID);
+				struct LineSegment
+				{
+					XMFLOAT4 a, colorA, b, colorB;
+				};
+				UINT offset;
+				void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * armature->boneCollection.size(), offset, threadID);
+
+				int i = 0;
+				for (auto& bone : armature->boneCollection)
+				{
+					XMMATRIX world = XMLoadFloat4x4(&bone->world);
+					XMVECTOR a = XMVectorSet(0, 0, 0, 1);
+					XMVECTOR b = XMVectorSet(0, 0, bone->length, 1);
+
+					a = XMVector4Transform(a, world);
+					b = XMVector4Transform(b, world);
+
+
+					LineSegment segment;
+					XMStoreFloat4(&segment.a, a);
+					XMStoreFloat4(&segment.b, b);
+
+					memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+					i++;
+				}
+
+				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+				GPUBuffer* vbs[] = {
+					dynamicVertexBufferPool,
+				};
+				const UINT strides[] = {
+					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+				};
+				const UINT offsets[] = {
+					offset,
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+				device->Draw(2 * i, 0, threadID);
+
+			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawDebugLines(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if (linesTemp.empty())
-		return;
+	
+	if (!renderableLines.empty())
+	{
+		device->EventBegin("DebugLines", threadID);
 
-	GetDevice()->EventBegin("DebugLines", threadID);
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
 
-	GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+		MiscCB sb;
+		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	MiscCB sb;
-	for (unsigned int i = 0; i<linesTemp.size(); i++){
-		sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&linesTemp[i]->desc.transform)*camera->GetViewProjection());
-		sb.mColor = linesTemp[i]->desc.color;
+		struct LineSegment
+		{
+			XMFLOAT4 a, colorA, b, colorB;
+		};
+		UINT offset;
+		void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * renderableLines.size(), offset, threadID);
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		int i = 0;
+		for (auto& line : renderableLines)
+		{
+			LineSegment segment;
+			segment.a = XMFLOAT4(line.start.x, line.start.y, line.start.z, 1);
+			segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
+			segment.colorA = segment.colorB = line.color;
+
+			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			i++;
+		}
+
+		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 		GPUBuffer* vbs[] = {
-			&linesTemp[i]->vertexBuffer,
+			dynamicVertexBufferPool,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->Draw(2, 0, threadID);
+		const UINT offsets[] = {
+			offset,
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+		device->Draw(2 * i, 0, threadID);
+
+		renderableLines.clear();
+
+		device->EventEnd(threadID);
 	}
 
-	for (Lines* x : linesTemp)
-		delete x;
-	linesTemp.clear();
-
-	GetDevice()->EventEnd(threadID);
-}
-void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if(debugPartitionTree || !renderableBoxes.empty())
+	if (debugPartitionTree && spTree != nullptr)
 	{
-		GetDevice()->EventBegin("DebugBoxes", threadID);
-		
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->EventBegin("DebugPartitionTree", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
 			&Cube::vertexBuffer,
@@ -3849,41 +3791,74 @@ void wiRenderer::DrawDebugBoxes(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
-		for (auto& x : cubes)
+
+
+		wiSPTree::Node* nodes[100];
+		UINT stackpos = 0;
+
+		nodes[stackpos++] = spTree->root;
+
+		do
 		{
-			sb.mTransform =XMMatrixTranspose(XMLoadFloat4x4(&x.desc.transform)*camera->GetViewProjection());
-			sb.mColor=x.desc.color;
+			wiSPTree::Node* node = nodes[--stackpos];
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			for (auto& child : node->children)
+			{
+				nodes[stackpos++] = child;
+			}
+			
+			sb.mTransform = XMMatrixTranspose(node->box.getAsBoxMatrix() * camera->GetViewProjection());
+			sb.mColor = XMFLOAT4(1, 1, 0, 1);
 
-			GetDevice()->DrawIndexed(24, 0, 0, threadID);
-		}
-		cubes.clear();
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+
+		} while (stackpos > 0);
+
+		device->EventEnd(threadID);
+	}
+
+	if (!renderableBoxes.empty())
+	{
+		device->EventBegin("DebugBoxes", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+
+		GPUBuffer* vbs[] = {
+			&Cube::vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+
+		MiscCB sb;
 
 		for (auto& x : renderableBoxes)
 		{
 			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
 			sb.mColor = x.second;
 
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			GetDevice()->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, threadID);
 		}
 		renderableBoxes.clear();
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if(!renderableTranslators.empty())
+
+
+	if (!renderableTranslators.empty())
 	{
-		GetDevice()->EventBegin("Translators", threadID);
-		
+		device->EventBegin("Translators", threadID);
+
 		XMMATRIX VP = camera->GetViewProjection();
 
 		MiscCB sb;
@@ -3905,27 +3880,27 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
 			}
 
 			// xy
 			sb.mTransform = matX;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
 			// xz
 			sb.mTransform = matZ;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
 			// yz
 			sb.mTransform = matY;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
 
 			// Lines:
 			{
@@ -3935,27 +3910,27 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_WIREPART], threadID);
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_WIREPART], threadID);
 			}
 
 			// x
 			sb.mTransform = matX;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
 			// y
 			sb.mTransform = matY;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
 			// z
 			sb.mTransform = matZ;
 			sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			GetDevice()->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
 
 			// Origin:
 			{
@@ -3965,30 +3940,27 @@ void wiRenderer::DrawTranslators(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				sb.mTransform = XMMatrixTranspose(mat);
 				sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-				GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
-				GetDevice()->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
+				device->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
 			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 
 		renderableTranslators.clear();
 	}
-}
-void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if (debugEnvProbes) 
+
+
+	if (debugEnvProbes)
 	{
-		GetDevice()->EventBegin("Debug EnvProbes", threadID);
-
-
+		device->EventBegin("Debug EnvProbes", threadID);
 		// Envmap spheres:
 
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
 
 		MiscCB sb;
 		for (Model* model : GetScene().models)
@@ -4001,18 +3973,18 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 				}
 
 				sb.mTransform = XMMatrixTranspose(XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z));
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + x->textureIndex);
+				device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + x->textureIndex);
 
-				GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+				device->Draw(2880, 0, threadID); // uv-sphere
 			}
 		}
 
 
 		// Local proxy boxes:
 
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
 			&Cube::vertexBuffer,
@@ -4020,8 +3992,8 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
 		for (Model* model : GetScene().models)
 		{
@@ -4030,22 +4002,21 @@ void wiRenderer::DrawDebugEnvProbes(Camera* camera, GRAPHICSTHREAD threadID)
 				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->world)*camera->GetViewProjection());
 				sb.mColor = XMFLOAT4(0, 1, 1, 1);
 
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				GetDevice()->DrawIndexed(24, 0, 0, threadID);
+				device->DrawIndexed(24, 0, 0, threadID);
 			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if(gridHelper)
-	{
-		GetDevice()->EventBegin("GridHelper", threadID);
 
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
+
+	if (gridHelper)
+	{
+		device->EventBegin("GridHelper", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
 
 		static float col = 0.7f;
 		static int gridVertexCount = 0;
@@ -4054,23 +4025,23 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		{
 			const float h = 0.01f; // avoid z-fight with zero plane
 			const int a = 20;
-			XMFLOAT4 verts[((a+1) * 2 + (a+1) * 2) * 2];
+			XMFLOAT4 verts[((a + 1) * 2 + (a + 1) * 2) * 2];
 
 			int count = 0;
 			for (int i = 0; i <= a; ++i)
 			{
-				verts[count++] = XMFLOAT4(i - a*0.5f, h, -a*0.5f, 1);
+				verts[count++] = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
 				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 
-				verts[count++] = XMFLOAT4(i - a*0.5f, h, +a*0.5f, 1);
+				verts[count++] = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
 				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
 			}
 			for (int j = 0; j <= a; ++j)
 			{
-				verts[count++] = XMFLOAT4(-a*0.5f, h, j - a*0.5f, 1);
+				verts[count++] = XMFLOAT4(-a * 0.5f, h, j - a * 0.5f, 1);
 				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 
-				verts[count++] = XMFLOAT4(+a*0.5f, h, j - a*0.5f, 1);
+				verts[count++] = XMFLOAT4(+a * 0.5f, h, j - a * 0.5f, 1);
 				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
 			}
 
@@ -4086,14 +4057,14 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
 			grid = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, grid);
+			device->CreateBuffer(&bd, &InitData, grid);
 		}
 
 		MiscCB sb;
 		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		GPUBuffer* vbs[] = {
 			grid,
@@ -4101,39 +4072,35 @@ void wiRenderer::DrawDebugGridHelper(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->Draw(gridVertexCount, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->Draw(gridVertexCount, 0, threadID);
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawDebugVoxels(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr) 
-	{
-		GetDevice()->EventBegin("Debug Voxels", threadID);
 
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
+	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr)
+	{
+		device->EventBegin("Debug Voxels", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
 
 
 		MiscCB sb;
 		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-		GetDevice()->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
+		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if (debugEmitters || !renderableBoxes.empty()) 
+
+	if (debugEmitters || !renderableBoxes.empty())
 	{
-		GetDevice()->EventBegin("DebugEmitters", threadID);
-		
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
+		device->EventBegin("DebugEmitters", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
 
 		MiscCB sb;
 		for (auto& x : emitterSystems)
@@ -4142,7 +4109,7 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 			{
 				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
 				sb.mColor = XMFLOAT4(0, 1, 0, 1);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 				GPUBuffer* vbs[] = {
 					x->object->mesh->vertexBuffer_POS,
@@ -4150,21 +4117,20 @@ void wiRenderer::DrawDebugEmitters(Camera* camera, GRAPHICSTHREAD threadID)
 				const UINT strides[] = {
 					sizeof(Mesh::Vertex_POS),
 				};
-				GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				GetDevice()->BindIndexBuffer(x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindIndexBuffer(x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
 
-				GetDevice()->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
+				device->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
 			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
-{
-	if (debugForceFields) 
+
+
+	if (debugForceFields)
 	{
-		GetDevice()->EventBegin("DebugForceFields", threadID);
+		device->EventBegin("DebugForceFields", threadID);
 
 		MiscCB sb;
 		uint32_t i = 0;
@@ -4174,17 +4140,17 @@ void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 			{
 				sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
 				sb.mColor = XMFLOAT4(camera->translation.x, camera->translation.y, camera->translation.z, (float)i);
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 				switch (force->type)
 				{
 				case ENTITY_TYPE_FORCEFIELD_POINT:
-					GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
-					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+					device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
+					device->Draw(2880, 0, threadID); // uv-sphere
 					break;
 				case ENTITY_TYPE_FORCEFIELD_PLANE:
-					GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
-					GetDevice()->Draw(14, 0, threadID); // box
+					device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
+					device->Draw(14, 0, threadID); // box
 					break;
 				}
 
@@ -4192,16 +4158,15 @@ void wiRenderer::DrawDebugForceFields(Camera* camera, GRAPHICSTHREAD threadID)
 			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
-}
-void wiRenderer::DrawDebugCameras(Camera* camera, GRAPHICSTHREAD threadID)
-{
+
+
 	if (debugCameras)
 	{
-		GetDevice()->EventBegin("DebugCameras", threadID);
+		device->EventBegin("DebugCameras", threadID);
 
-		GetDevice()->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
 			&Cube::vertexBuffer,
@@ -4209,8 +4174,8 @@ void wiRenderer::DrawDebugCameras(Camera* camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		GetDevice()->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
@@ -4221,14 +4186,16 @@ void wiRenderer::DrawDebugCameras(Camera* camera, GRAPHICSTHREAD threadID)
 			{
 				sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->world)*camera->GetViewProjection());
 
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-				GetDevice()->DrawIndexed(24, 0, 0, threadID);
+				device->DrawIndexed(24, 0, 0, threadID);
 			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
+
+	device->EventEnd(threadID);
 }
 
 void wiRenderer::DrawSoftParticles(Camera* camera, bool distortion, GRAPHICSTHREAD threadID)
@@ -4344,51 +4311,6 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 	//}
 
 	//GetDevice()->EventEnd(threadID);
-}
-void wiRenderer::DrawImagesAdd(GRAPHICSTHREAD threadID, Texture2D* refracRes){
-	imagesRTAdd.Activate(threadID,0,0,0,1);
-	//wiImage::BatchBegin(threadID);
-	for(wiSprite* x : images){
-		if(x->effects.blendFlag==BLENDMODE_ADDITIVE){
-			/*Texture2D* nor = x->effects.normalMap;
-			x->effects.setNormalMap(nullptr);
-			bool changedBlend=false;
-			if(x->effects.blendFlag==BLENDMODE_OPAQUE && nor){
-				x->effects.blendFlag=BLENDMODE_ADDITIVE;
-				changedBlend=true;
-			}*/
-			x->Draw(refracRes,  threadID);
-			/*if(changedBlend)
-				x->effects.blendFlag=BLENDMODE_OPAQUE;
-			x->effects.setNormalMap(nor);*/
-		}
-	}
-}
-void wiRenderer::DrawImages(GRAPHICSTHREAD threadID, Texture2D* refracRes){
-	imagesRT.Activate(threadID,0,0,0,0);
-	//wiImage::BatchBegin(threadID);
-	for(wiSprite* x : images){
-		if(x->effects.blendFlag==BLENDMODE_ALPHA || x->effects.blendFlag==BLENDMODE_OPAQUE){
-			/*Texture2D* nor = x->effects.normalMap;
-			x->effects.setNormalMap(nullptr);
-			bool changedBlend=false;
-			if(x->effects.blendFlag==BLENDMODE_OPAQUE && nor){
-				x->effects.blendFlag=BLENDMODE_ADDITIVE;
-				changedBlend=true;
-			}*/
-			x->Draw(refracRes,  threadID);
-			/*if(changedBlend)
-				x->effects.blendFlag=BLENDMODE_OPAQUE;
-			x->effects.setNormalMap(nor);*/
-		}
-	}
-}
-void wiRenderer::DrawImagesNormals(GRAPHICSTHREAD threadID, Texture2D* refracRes){
-	normalMapRT.Activate(threadID,0,0,0,0);
-	//wiImage::BatchBegin(threadID);
-	for(wiSprite* x : images){
-		x->DrawNormal(threadID);
-	}
 }
 void wiRenderer::DrawLights(Camera* camera, GRAPHICSTHREAD threadID)
 {
@@ -7649,10 +7571,9 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mEnvProbeArrayOffset = entityArrayOffset_EnvProbes;
 	cb.mEnvProbeArrayCount = entityArrayCount_EnvProbes;
 	cb.mVoxelRadianceRetargetted = voxelSceneData.centerChangedThisFrame ? 1 : 0;
-	auto& wind = GetScene().wind;
-	cb.mWindRandomness = wind.randomness;
-	cb.mWindWaveSize = wind.waveSize;
-	cb.mWindDirection = wind.direction;
+	cb.mWindRandomness = GetScene().worldInfo.windRandomness;
+	cb.mWindWaveSize = GetScene().worldInfo.windWaveSize;
+	cb.mWindDirection = GetScene().worldInfo.windDirection;
 	cb.mFrameCount = (UINT)GetDevice()->GetFrameCount();
 	cb.mSunEntityArrayIndex = GetSunArrayIndex();
 	cb.mTemporalAASampleRotation = 0;
@@ -7758,7 +7679,7 @@ void wiRenderer::SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 	}
 }
-void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
+void wiRenderer::BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
 	GetDevice()->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
@@ -7772,7 +7693,7 @@ void wiRenderer::UpdateGBuffer(Texture2D* slot0, Texture2D* slot1, Texture2D* sl
 	GetDevice()->BindResource(CS, slot3, TEXSLOT_GBUFFER3, threadID);
 	GetDevice()->BindResource(CS, slot4, TEXSLOT_GBUFFER4, threadID);
 }
-void wiRenderer::UpdateDepthBuffer(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
+void wiRenderer::BindDepthTextures(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->BindResource(PS, depth, TEXSLOT_DEPTH, threadID);
 	GetDevice()->BindResource(VS, depth, TEXSLOT_DEPTH, threadID);
@@ -7872,193 +7793,8 @@ wiWaterPlane wiRenderer::GetWaterPlane()
 	return waterPlane;
 }
 
-wiRenderer::Picked wiRenderer::Pick(RAY& ray, int pickType, uint32_t layerMask)
-{
-	std::vector<Picked> pickPoints;
 
-	// pick meshes...
-	CulledCollection culledRenderer;
-	CulledList culledObjects;
-	wiSPTree* searchTree = spTree;
-	if (searchTree != nullptr)
-	{
-		searchTree->getVisible(ray, culledObjects);
-
-		RayIntersectMeshes(ray, culledObjects, pickPoints, pickType, true, true, layerMask);
-	}
-
-	// pick other...
-	for (auto& model : GetScene().models)
-	{
-		if (pickType & PICK_LIGHT)
-		{
-			for (auto& light : model->lights)
-			{
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&light->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(light->translation, cam->translation) * 0.05f)
-				{
-					Picked pick = Picked();
-					pick.transform = light;
-					pick.light = light;
-					pick.distance = wiMath::Distance(light->translation, ray.origin) * 0.95f;
-					pickPoints.push_back(pick);
-				}
-				//if (light->bounds.intersects(ray))
-				//{
-				//	Picked pick = Picked();
-				//	pick.transform = light;
-				//	pick.light = light;
-				//	if (light->type == Light::DIRECTIONAL)
-				//	{
-				//		pick.distance = FLT_MAX;
-				//	}
-				//	else
-				//	{
-				//		pick.distance = wiMath::Distance(light->translation, ray.origin);
-				//	}
-				//	pickPoints.push_back(pick);
-				//}
-			}
-		}
-		if (pickType & PICK_DECAL)
-		{
-			for (auto& decal : model->decals)
-			{
-				//XMVECTOR localOrigin = XMLoadFloat3(&ray.origin), localDirection = XMLoadFloat3(&ray.direction);
-				//XMMATRIX localTransform = XMLoadFloat4x4(&decal->world);
-				//localTransform = XMMatrixInverse(nullptr, localTransform);
-				//localOrigin = XMVector3Transform(localOrigin, localTransform);
-				//localDirection = XMVector3TransformNormal(localDirection, localTransform);
-				//RAY localRay = RAY(localOrigin, localDirection);
-				//if (AABB(XMFLOAT3(-1, -1, -1), XMFLOAT3(1, 1, 1)).intersects(localRay))
-				//{
-				//	Picked pick = Picked();
-				//	pick.transform = decal;
-				//	pick.decal = decal;
-				//	pick.distance = wiMath::Distance(decal->translation, ray.origin);
-				//	pickPoints.push_back(pick);
-				//}
-
-				// decals are now picked like lights instead (user experience reasons)
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&decal->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(decal->translation, cam->translation) * 0.05f)
-				{
-					Picked pick = Picked();
-					pick.transform = decal;
-					pick.decal = decal;
-					pick.distance = wiMath::Distance(decal->translation, ray.origin) * 0.95f;
-					pickPoints.push_back(pick);
-				}
-			}
-		}
-		if (pickType & PICK_FORCEFIELD)
-		{
-			for (auto& force : model->forces)
-			{
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&force->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(force->translation, cam->translation) * 0.05f)
-				{
-					Picked pick = Picked();
-					pick.transform = force;
-					pick.forceField = force;
-					pick.distance = wiMath::Distance(force->translation, ray.origin) * 0.95f;
-					pickPoints.push_back(pick);
-				}
-			}
-		}
-		if (pickType & PICK_EMITTER)
-		{
-			for (auto& object : model->objects)
-			{
-				if (object->eParticleSystems.empty())
-				{
-					continue;
-				}
-
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&object->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(object->translation, cam->translation) * 0.05f)
-				{
-					Picked pick = Picked();
-					pick.transform = object;
-					pick.object = object;
-					pick.distance = wiMath::Distance(object->translation, ray.origin) * 0.95f;
-					pickPoints.push_back(pick);
-				}
-			}
-		}
-
-		if (pickType & PICK_ENVPROBE)
-		{
-			for (auto& x : model->environmentProbes)
-			{
-				if (SPHERE(x->translation, 1).intersects(ray))
-				{
-					Picked pick = Picked();
-					pick.transform = x;
-					pick.envProbe = x;
-					pick.distance = wiMath::Distance(x->translation, ray.origin);
-					pickPoints.push_back(pick);
-				}
-			}
-		}
-		if (pickType & PICK_CAMERA)
-		{
-			for (auto& camera : model->cameras)
-			{
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&camera->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(camera->translation, cam->translation) * 0.05f)
-				{
-					Picked pick = Picked();
-					pick.transform = camera;
-					pick.camera = camera;
-					pick.distance = wiMath::Distance(camera->translation, ray.origin) * 0.95f;
-					pickPoints.push_back(pick);
-				}
-			}
-		}
-		if (pickType & PICK_ARMATURE)
-		{
-			for (auto& armature : model->armatures)
-			{
-				XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction), XMLoadFloat3(&armature->translation));
-				float dis = XMVectorGetX(disV);
-				if (dis < wiMath::Distance(armature->translation, cam->translation) * 0.05f)
-				{
-					Picked pick = Picked();
-					pick.transform = armature;
-					pick.armature = armature;
-					pick.distance = wiMath::Distance(armature->translation, ray.origin) * 0.95f;
-					pickPoints.push_back(pick);
-				}
-			}
-		}
-	}
-
-	if (!pickPoints.empty()) {
-		Picked min = pickPoints.front();
-		for (unsigned int i = 1; i < pickPoints.size(); ++i) {
-			if (pickPoints[i].distance < min.distance) {
-				min = pickPoints[i];
-			}
-		}
-		return min;
-	}
-
-	return Picked();
-}
-wiRenderer::Picked wiRenderer::Pick(long cursorX, long cursorY, int pickType, uint32_t layerMask)
-{
-	RAY ray = getPickRay(cursorX, cursorY);
-
-	return Pick(ray, pickType, layerMask);
-}
-
-RAY wiRenderer::getPickRay(long cursorX, long cursorY){
+RAY wiRenderer::getPickRay(long cursorX, long cursorY) {
 	Camera* cam = getCamera();
 	XMMATRIX V = cam->GetView();
 	XMMATRIX P = cam->GetRealProjection();
@@ -8069,174 +7805,116 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY){
 	return RAY(lineStart, rayDirection);
 }
 
-void wiRenderer::RayIntersectMeshes(const RAY& ray, const CulledList& culledObjects, std::vector<Picked>& points,
-	int pickType, bool dynamicObjects, bool onlyVisible, uint32_t layerMask)
+wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask, bool dynamicObjects, bool onlyVisible)
 {
-	if (culledObjects.empty())
+	RayIntersectWorldResult result;
+
+	if (spTree != nullptr)
 	{
-		return;
-	}
+		CulledList culledObjects;
+		spTree->getVisible(ray, culledObjects);
 
-	const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
-	const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
-
-	// pre allocate helper vector array:
-	static size_t _arraySize = 10000;
-	static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
-
-	for (Cullable* culled : culledObjects)
-	{
-		Object* object = (Object*)culled;
-
-		const uint32_t objectLayerMask = object->GetLayerMask();
-		if (objectLayerMask & layerMask)
+		if (culledObjects.empty())
 		{
+			return result;
+		}
 
-			if (!(pickType & object->GetRenderTypes()))
+		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
+
+		// pre allocate helper vector array:
+		static size_t _arraySize = 10000;
+		static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
+
+		for (Cullable* culled : culledObjects)
+		{
+			Object* object = (Object*)culled;
+
+			const uint32_t objectLayerMask = object->GetLayerMask();
+			if (objectLayerMask & layerMask)
 			{
-				continue;
-			}
-			if (!dynamicObjects && object->isDynamic())
-			{
-				continue;
-			}
-			if (onlyVisible && object->IsOccluded() && GetOcclusionCullingEnabled())
-			{
-				continue;
-			}
 
-			Mesh* mesh = object->mesh;
-			if (mesh->vertices_POS.size() >= _arraySize)
-			{
-				// grow preallocated vector helper array
-				_mm_free(_vertices);
-				_arraySize = (mesh->vertices_POS.size() + 1) * 2;
-				_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
-			}
-
-			const XMMATRIX objectMat = object->getMatrix();
-			const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
-
-			const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
-			const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
-
-			Mesh::Vertex_FULL _tmpvert;
-
-			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
-			{
-				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+				if (!(renderTypeMask & object->GetRenderTypes()))
 				{
-					_tmpvert = mesh->TransformVertex((int)i);
-					_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
+					continue;
 				}
-			}
-			else if (mesh->hasDynamicVB())
-			{
-				for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
+				if (!dynamicObjects && object->isDynamic())
 				{
-					_vertices[i] = mesh->vertices_Transformed_POS[i].LoadPOS();
+					continue;
 				}
-			}
-			else
-			{
-				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+				if (onlyVisible && object->IsOccluded() && GetOcclusionCullingEnabled())
 				{
-					_vertices[i] = mesh->vertices_POS[i].LoadPOS();
+					continue;
 				}
-			}
 
-			for (size_t i = 0; i < mesh->indices.size(); i += 3)
-			{
-				int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-				float distance;
-				if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+				Mesh* mesh = object->mesh;
+				if (mesh->vertices_POS.size() >= _arraySize)
 				{
-					XMVECTOR& pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
-					XMVECTOR& nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
-					Picked picked = Picked();
-					picked.transform = object;
-					picked.object = object;
-					XMStoreFloat3(&picked.position, pos);
-					XMStoreFloat3(&picked.normal, nor);
-					picked.distance = wiMath::Distance(pos, rayOrigin);
-					picked.subsetIndex = (int)mesh->vertices_POS[i0].GetMaterialIndex();
-					points.push_back(picked);
+					// grow preallocated vector helper array
+					_mm_free(_vertices);
+					_arraySize = (mesh->vertices_POS.size() + 1) * 2;
+					_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 				}
+
+				const XMMATRIX objectMat = object->getMatrix();
+				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+
+				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+
+				Mesh::Vertex_FULL _tmpvert;
+
+				if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
+				{
+					for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+					{
+						_tmpvert = mesh->TransformVertex((int)i);
+						_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
+					}
+				}
+				else if (mesh->hasDynamicVB())
+				{
+					for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
+					{
+						_vertices[i] = mesh->vertices_Transformed_POS[i].LoadPOS();
+					}
+				}
+				else
+				{
+					for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
+					{
+						_vertices[i] = mesh->vertices_POS[i].LoadPOS();
+					}
+				}
+
+				for (size_t i = 0; i < mesh->indices.size(); i += 3)
+				{
+					int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
+					float distance;
+					if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+					{
+						XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+						distance = wiMath::Distance(pos, rayOrigin);
+
+						if (distance < result.distance)
+						{
+							XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
+
+							result.object = object;
+							XMStoreFloat3(&result.position, pos);
+							XMStoreFloat3(&result.normal, nor);
+							result.distance = distance;
+							result.subsetIndex = (int)mesh->vertices_POS[i0].GetMaterialIndex();
+						}
+					}
+				}
+
 			}
 
 		}
-
 	}
-}
 
-void wiRenderer::CalculateVertexAO(Object* object)
-{
-	////TODO
-
-	//static const float minAmbient = 0.05f;
-	//static const float falloff = 0.1f;
-
-	//Mesh* mesh = object->mesh;
-
-	//XMMATRIX& objectMat = object->getMatrix();
-
-	//CulledCollection culledRenderer;
-	//CulledList culledObjects;
-	//wiSPTree* searchTree = spTree;
-
-	//int ind = 0;
-	//for (SkinnedVertex& vert : mesh->vertices)
-	//{
-	//	float ambientShadow = 0.0f;
-
-	//	XMFLOAT3 vPos, vNor;
-
-	//	//XMVECTOR p = XMVector4Transform(XMVectorSet(vert.pos.x, vert.pos.y, vert.pos.z, 1), XMLoadFloat4x4(&object->world));
-	//	//XMVECTOR n = XMVector3Transform(XMVectorSet(vert.nor.x, vert.nor.y, vert.nor.z, 0), XMLoadFloat4x4(&object->world));
-
-	//	//XMStoreFloat3(&vPos, p);
-	//	//XMStoreFloat3(&vNor, n);
-
-	//	Vertex v = TransformVertex(mesh, vert, objectMat);
-	//	vPos.x = v.pos.x;
-	//	vPos.y = v.pos.y;
-	//	vPos.z = v.pos.z;
-	//	vNor.x = v.nor.x;
-	//	vNor.y = v.nor.y;
-	//	vNor.z = v.nor.z;
-
-	//		RAY ray = RAY(vPos, vNor);
-	//		XMVECTOR& rayOrigin = XMLoadFloat3(&ray.origin);
-	//		XMVECTOR& rayDirection = XMLoadFloat3(&ray.direction);
-
-	//		searchTree->getVisible(ray, culledObjects);
-
-	//		std::vector<Picked> points;
-
-	//		RayIntersectMeshes(ray, culledObjects, points, PICK_OPAQUE, false);
-
-
-	//		if (!points.empty()){
-	//			Picked min = points.front();
-	//			float mini = wiMath::DistanceSquared(min.position, ray.origin);
-	//			for (unsigned int i = 1; i<points.size(); ++i){
-	//				if (float nm = wiMath::DistanceSquared(points[i].position, ray.origin)<mini){
-	//					min = points[i];
-	//					mini = nm;
-	//				}
-	//			}
-
-	//			float ambientLightIntensity = wiMath::Clamp(abs(wiMath::Distance(ray.origin, min.position)) / falloff, 0, 1);
-	//			ambientLightIntensity += minAmbient;
-
-	//			vert.nor.w = ambientLightIntensity;
-	//			mesh->vertices[ind].nor.w = ambientLightIntensity;
-	//		}
-
-	//		++ind;
-	//}
-
-	//mesh->calculatedAO = true;
+	return result;
 }
 
 Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
@@ -8266,7 +7944,6 @@ void wiRenderer::LoadWorldInfo(const std::string& fileName)
 	//LoadWiWorldInfo(fileName, GetScene().worldInfo, GetScene().wind);
 
 	WorldInfo& worldInfo = GetScene().worldInfo;
-	Wind& wind = GetScene().wind;
 
 	string extension = wiHelper::GetExtensionFromFileName(fileName);
 
@@ -8321,7 +7998,7 @@ void wiRenderer::LoadWorldInfo(const std::string& fileName)
 				XMFLOAT4 r;
 				float s;
 				file >> r.x >> r.y >> r.z >> r.w >> s;
-				XMStoreFloat3(&wind.direction, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
+				XMStoreFloat3(&worldInfo.windDirection, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
 			}
 			break;
 			case 'm':
@@ -8376,7 +8053,7 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 {
 	if (physicsEngine && GetGameSpeed())
 	{
-		physicsEngine->addWind(GetScene().wind.direction);
+		physicsEngine->addWind(GetScene().worldInfo.windDirection);
 
 		// Update physics world data
 		for (Model* model : GetScene().models)
@@ -8617,10 +8294,13 @@ void wiRenderer::AddRenderableTranslator(wiTranslator* translator)
 {
 	renderableTranslators.push_back(translator);
 }
-
 void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
 	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
+}
+void wiRenderer::AddRenderableLine(const RenderableLine& line)
+{
+	renderableLines.push_back(line);
 }
 
 void wiRenderer::AddDeferredMIPGen(Texture2D* tex)
@@ -8662,9 +8342,6 @@ void wiRenderer::AddModel(Model* model)
 			spTree_lights = new Octree(collection);
 		}
 	}
-
-	SetUpCubes();
-	SetUpBoneLines();
 }
 
 void wiRenderer::Add(Object* value)

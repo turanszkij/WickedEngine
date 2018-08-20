@@ -547,14 +547,12 @@ RendererWindow::~RendererWindow()
 	SAFE_DELETE(rendererWindow);
 }
 
-int RendererWindow::GetPickType()
+UINT RendererWindow::GetPickType()
 {
-	int pickType = PICK_VOID;
+	UINT pickType = PICK_VOID;
 	if (pickTypeObjectCheckBox->GetCheck())
 	{
-		pickType |= PICK_OPAQUE;
-		pickType |= PICK_TRANSPARENT;
-		pickType |= PICK_WATER;
+		pickType |= PICK_OBJECT;
 	}
 	if (pickTypeEnvProbeCheckBox->GetCheck())
 	{

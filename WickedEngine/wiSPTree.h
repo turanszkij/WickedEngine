@@ -71,10 +71,10 @@ public:
 	static void Sort(const XMFLOAT3& origin, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE);
 
 	void AddObjects(Node* node, const std::vector<wiSceneComponents::Cullable*>& newObjects);
-	void getVisible(Frustum& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
-	void getVisible(AABB& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
-	void getVisible(SPHERE& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
-	void getVisible(RAY& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(const Frustum& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(const AABB& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(const SPHERE& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
+	void getVisible(const RAY& frustum, CulledList& objects, SortType sortType = SP_TREE_SORT_UNIQUE, CullStrictness type = SP_TREE_STRICT_CULL, Node* node = nullptr);
 	void getAll(CulledList& objects, Node* node = nullptr);
 	// Updates the tree. Returns null if successful, returns a new tree if the tree is resized. The old tree can be thrown away then.
 	wiSPTree* updateTree(Node* node = nullptr);

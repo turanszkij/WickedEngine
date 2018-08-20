@@ -661,8 +661,7 @@ struct Bone : public Transform
 		connected = false;
 	}
 
-	XMMATRIX getMatrix(int getTranslation = 1, int getRotation = 1, int getScale = 1);
-	virtual void UpdateTransform();
+	virtual void UpdateTransform() override;
 	void Serialize(wiArchive& archive);
 };
 struct AnimationLayer
@@ -950,6 +949,9 @@ struct WorldInfo{
 	float cloudiness;
 	float cloudScale;
 	float cloudSpeed;
+	XMFLOAT3 windDirection;
+	float windRandomness;
+	float windWaveSize;
 
 	WorldInfo(){
 		horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -960,13 +962,10 @@ struct WorldInfo{
 		cloudiness = 0.0f;
 		cloudScale = 0.0003f;
 		cloudSpeed = 0.1f;
+		windDirection = XMFLOAT3(0, 0, 0);
+		windRandomness = 5;
+		windWaveSize = 1;
 	}
-};
-struct Wind{
-	XMFLOAT3 direction;
-	float randomness;
-	float waveSize;
-	Wind():direction(XMFLOAT3(0,0,0)),randomness(5),waveSize(1){}
 };
 struct Camera : public Transform, public ModelChild
 {
@@ -1222,7 +1221,6 @@ struct Scene
 	// First is always the world node
 	std::vector<Model*> models;
 	WorldInfo worldInfo;
-	Wind wind;
 
 	Scene();
 	~Scene();

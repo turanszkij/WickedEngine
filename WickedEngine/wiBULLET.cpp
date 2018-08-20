@@ -2,6 +2,7 @@
 #include "wiSceneComponents.h"
 
 
+#include "btBulletDynamicsCommon.h"
 
 #include "LinearMath/btHashMap.h"
 #include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
@@ -16,48 +17,63 @@ using namespace wiSceneComponents;
 
 int PHYSICS::softBodyIterationCount=5;
 bool PHYSICS::rigidBodyPhysicsEnabled = true, PHYSICS::softBodyPhysicsEnabled = true;
-bool wiBULLET::grab=false;
-RAY wiBULLET::grabRay=RAY();
+
+struct BulletPhysicsWorld
+{
+	btCollisionConfiguration* collisionConfiguration;
+	btCollisionDispatcher* dispatcher;
+	btBroadphaseInterface* overlappingPairCache;
+	btSequentialImpulseConstraintSolver* solver;
+	btDynamicsWorld* dynamicsWorld;
+	btAlignedObjectArray<btCollisionShape*> collisionShapes;
+
+	btSoftBodySolver* softBodySolver;
+	btSoftBodySolverOutput* softBodySolverOutput;
+
+	btVector3 wind;
+};
 
 wiBULLET::wiBULLET()
 {
+	bulletPhysics = new BulletPhysicsWorld;
+
 	registeredObjects=-1;
 
 	///-----initialization_start-----
 	//softBodySolver = new btDefaultSoftBodySolver();
-	softBodySolver=NULL;
+	bulletPhysics->softBodySolver = nullptr;
 
 	///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
 	//collisionConfiguration = new btDefaultCollisionConfiguration();
-	collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration();
+	bulletPhysics->collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration();
 
 	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-	dispatcher = new	btCollisionDispatcher(collisionConfiguration);
+	bulletPhysics->dispatcher = new	btCollisionDispatcher(bulletPhysics->collisionConfiguration);
 
 	///btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
-	overlappingPairCache = new btDbvtBroadphase();
+	bulletPhysics->overlappingPairCache = new btDbvtBroadphase();
 
 	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-	solver = new btSequentialImpulseConstraintSolver;
+	bulletPhysics->solver = new btSequentialImpulseConstraintSolver;
 
 	//dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
-	dynamicsWorld = new btSoftRigidDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration,softBodySolver);
+	bulletPhysics->dynamicsWorld = new btSoftRigidDynamicsWorld(bulletPhysics->dispatcher, bulletPhysics->overlappingPairCache, bulletPhysics->solver, bulletPhysics->collisionConfiguration, bulletPhysics->softBodySolver);
 	
 
-	dynamicsWorld->getSolverInfo().m_solverMode|=SOLVER_RANDMIZE_ORDER;
-	dynamicsWorld->getDispatchInfo().m_enableSatConvex = true;
-	dynamicsWorld->getSolverInfo().m_splitImpulse=true;
+	bulletPhysics->dynamicsWorld->getSolverInfo().m_solverMode|=SOLVER_RANDMIZE_ORDER;
+	bulletPhysics->dynamicsWorld->getDispatchInfo().m_enableSatConvex = true;
+	bulletPhysics->dynamicsWorld->getSolverInfo().m_splitImpulse=true;
 
-	dynamicsWorld->setGravity(btVector3(0,-11,0));
-	((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().air_density			=	(btScalar)1.0;
-	((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().water_density		=	0;
-	((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().water_offset			=	0;
-	((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().water_normal			=	btVector3(0,0,0);
-	((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().m_gravity.setValue(0,-11,0);
-	((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().m_sparsesdf.Initialize(); //???
+	bulletPhysics->dynamicsWorld->setGravity(btVector3(0,-11,0));
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().air_density			=	(btScalar)1.0;
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_density		=	0;
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_offset			=	0;
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_normal			=	btVector3(0,0,0);
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().m_gravity.setValue(0,-11,0);
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().m_sparsesdf.Initialize(); //???
 
-	dynamicsWorld->setInternalTickCallback(soundTickCallback,this,true);
-	dynamicsWorld->setInternalTickCallback(pickingPreTickCallback,this,true);
+	//dynamicsWorld->setInternalTickCallback(soundTickCallback,this,true);
+	//dynamicsWorld->setInternalTickCallback(pickingPreTickCallback,this,true);
 
 
 #ifdef BACKLOG
@@ -76,29 +92,31 @@ wiBULLET::~wiBULLET()
 	ClearWorld();
 
 	//delete dynamics world
-	delete dynamicsWorld;
+	delete bulletPhysics->dynamicsWorld;
 
 	//delete solver
-	delete solver;
+	delete bulletPhysics->solver;
 
 	//delete broadphase
-	delete overlappingPairCache;
+	delete bulletPhysics->overlappingPairCache;
 
 	//delete dispatcher
-	delete dispatcher;
+	delete bulletPhysics->dispatcher;
 
-	delete collisionConfiguration;
+	delete bulletPhysics->collisionConfiguration;
 
 	//next line is optional: it will be cleared by the destructor when the array goes out of scope
-	collisionShapes.clear();
+	bulletPhysics->collisionShapes.clear();
 
 	///-----cleanup_end-----
 	CleanUp();
+
+	delete bulletPhysics;
 }
 
 
 void wiBULLET::addWind(const XMFLOAT3& wind){
-	this->wind = btVector3(btScalar(wind.x),btScalar(wind.y),btScalar(wind.z));
+	this->bulletPhysics->wind = btVector3(btScalar(wind.x),btScalar(wind.y),btScalar(wind.z));
 }
 
 
@@ -107,7 +125,7 @@ void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& 
 
 	btCollisionShape* shape = new btBoxShape(btVector3(sca.x,sca.y,sca.z));
 	shape->setMargin(btScalar(0.05));
-	collisionShapes.push_back(shape);
+	bulletPhysics->collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
 	shapeTransform.setIdentity();
@@ -137,7 +155,7 @@ void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& 
 		body->setActivationState(DISABLE_DEACTIVATION);
 
 		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
+		bulletPhysics->dynamicsWorld->addRigidBody(body);
 
 		
 		if (body->getMotionState())
@@ -218,7 +236,7 @@ void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
 
 	btCollisionShape* shape = new btSphereShape(btScalar(rad));
 	shape->setMargin(btScalar(0.05));
-	collisionShapes.push_back(shape);
+	bulletPhysics->collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
 	shapeTransform.setIdentity();
@@ -247,7 +265,7 @@ void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
 		body->setActivationState(DISABLE_DEACTIVATION);
 
 		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
+		bulletPhysics->dynamicsWorld->addRigidBody(body);
 
 		
 		if (body->getMotionState())
@@ -270,7 +288,7 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 
 	btCollisionShape* shape = new btCapsuleShape(btScalar(rad),btScalar(hei));
 	shape->setMargin(btScalar(0.05));
-	collisionShapes.push_back(shape);
+	bulletPhysics->collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
 	shapeTransform.setIdentity();
@@ -300,7 +318,7 @@ void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLO
 		body->setActivationState(DISABLE_DEACTIVATION);
 
 		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
+		bulletPhysics->dynamicsWorld->addRigidBody(body);
 
 		
 		if (body->getMotionState())
@@ -326,7 +344,7 @@ void wiBULLET::addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOA
 	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
 	shape->setMargin(btScalar(0.05));
 
-	collisionShapes.push_back(shape);
+	bulletPhysics->collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
 	shapeTransform.setIdentity();
@@ -358,7 +376,7 @@ void wiBULLET::addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOA
 		body->setActivationState(DISABLE_DEACTIVATION);
 
 		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
+		bulletPhysics->dynamicsWorld->addRigidBody(body);
 
 		
 		if (body->getMotionState())
@@ -408,7 +426,7 @@ void wiBULLET::addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std:
 	shape->setMargin(btScalar(0.05));
 	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
 
-	collisionShapes.push_back(shape);
+	bulletPhysics->collisionShapes.push_back(shape);
 
 	btTransform shapeTransform;
 	shapeTransform.setIdentity();
@@ -438,7 +456,7 @@ void wiBULLET::addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std:
 		body->setActivationState( DISABLE_DEACTIVATION );
 
 		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
+		bulletPhysics->dynamicsWorld->addRigidBody(body);
 
 		
 		if (body->getMotionState())
@@ -477,7 +495,7 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 
 	
 	btSoftBody* softBody = btSoftBodyHelpers::CreateFromTriMesh(
-			((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo()
+			((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo()
 			,&btVerts[0]
 			,&btInd[0]
 			,tCount
@@ -556,13 +574,13 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 
 		softBody->getCollisionShape()->setMargin(btScalar(0.2));
 
-		softBody->setWindVelocity(wind);
+		softBody->setWindVelocity(bulletPhysics->wind);
 		
 		softBody->setPose(true,true);
 
 		softBody->setActivationState(DISABLE_DEACTIVATION);
 
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->addSoftBody(softBody);
+		((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->addSoftBody(softBody);
 
 		transforms.push_back(new PhysicsTransform);
 	}
@@ -574,7 +592,7 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 	if (!softBodyPhysicsEnabled)
 		return;
 
-	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
+	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[objectI];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 
 
@@ -583,7 +601,7 @@ void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
 		softBody->getAabb(min, max);
 		mesh->aabb.create(XMFLOAT3(min.x(), min.y(), min.z()), XMFLOAT3(max.x(), max.y(), max.z()));
 
-		softBody->setWindVelocity(wind);
+		softBody->setWindVelocity(bulletPhysics->wind);
 
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
@@ -608,7 +626,7 @@ void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
 		return;
 
 	if(!firstRunWorld){
-		btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
+		btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[objectI];
 		btSoftBody* softBody = btSoftBody::upcast(obj);
 
 		if(softBody){
@@ -634,7 +652,7 @@ void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objec
 		return;
 	}
 
-	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[objectI];
+	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[objectI];
 	btRigidBody* rigidBody = btRigidBody::upcast(obj);
 	if(rigidBody){
 		btTransform transform;
@@ -647,7 +665,7 @@ void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objec
 
 PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 	
-	btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[index];
+	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[index];
 	btTransform trans;
 
 	btRigidBody* body = btRigidBody::upcast(obj);
@@ -776,7 +794,7 @@ void wiBULLET::removeObject(Object* object)
 
 void wiBULLET::Update(float dt){
 	if (rigidBodyPhysicsEnabled || softBodyPhysicsEnabled)
-		dynamicsWorld->stepSimulation(dt, 6);
+		bulletPhysics->dynamicsWorld->stepSimulation(dt, 6);
 }
 void wiBULLET::MarkForRead(){
 
@@ -791,16 +809,16 @@ void wiBULLET::UnMarkForWrite(){
 
 }
 void wiBULLET::ClearWorld(){
-	for(int i=dynamicsWorld->getNumCollisionObjects()-1;i>=0;i--)
+	for(int i= bulletPhysics->dynamicsWorld->getNumCollisionObjects()-1;i>=0;i--)
 	{
 		deleteObject(i);
 	}
 
 	//delete collision shapes
-	for (int j=0;j<collisionShapes.size();j++)
+	for (int j=0;j<bulletPhysics->collisionShapes.size();j++)
 	{
-		btCollisionShape* shape = collisionShapes[j];
-		collisionShapes[j] = 0;
+		btCollisionShape* shape = bulletPhysics->collisionShapes[j];
+		bulletPhysics->collisionShapes[j] = 0;
 		delete shape;
 	}
 
@@ -818,101 +836,101 @@ void wiBULLET::CleanUp(){
 
 void wiBULLET::deleteObject(int id)
 {
-	btCollisionObject*	obj = dynamicsWorld->getCollisionObjectArray()[id];
+	btCollisionObject*	obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[id];
 	btRigidBody*		body = btRigidBody::upcast(obj);
 
 	if (body && body->getMotionState())
 	{
 		delete body->getMotionState();
 	}
-	while (dynamicsWorld->getNumConstraints())
+	while (bulletPhysics->dynamicsWorld->getNumConstraints())
 	{
-		btTypedConstraint*	pc = dynamicsWorld->getConstraint(0);
-		dynamicsWorld->removeConstraint(pc);
+		btTypedConstraint*	pc = bulletPhysics->dynamicsWorld->getConstraint(0);
+		bulletPhysics->dynamicsWorld->removeConstraint(pc);
 		delete pc;
 	}
 
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 	if (softBody)
 	{
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softBody);
+		((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->removeSoftBody(softBody);
 	}
 	else
 	{
 		btRigidBody* body = btRigidBody::upcast(obj);
 		if (body)
-			dynamicsWorld->removeRigidBody(body);
+			bulletPhysics->dynamicsWorld->removeRigidBody(body);
 		else
-			dynamicsWorld->removeCollisionObject(obj);
+			bulletPhysics->dynamicsWorld->removeCollisionObject(obj);
 	}
 	delete obj;
 
 	registeredObjects--;
 }
 
-
-void wiBULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
-	int numManifolds = world->getDispatcher()->getNumManifolds();
-    for (int i=0;i<numManifolds;i++)
-    {
-
-        btPersistentManifold* contactManifold =  world->getDispatcher()->getManifoldByIndexInternal(i);
-        btCollisionObject* obA = (btCollisionObject*)(contactManifold->getBody0());
-        btCollisionObject* obB = (btCollisionObject*)(contactManifold->getBody1());
-
-        int numContacts = contactManifold->getNumContacts();
-        for (int j=0;j<numContacts;j++)
-        {
-            btManifoldPoint& pt = contactManifold->getContactPoint(j);
-            if (pt.getDistance()<0.f)
-            {
-				if(pt.getAppliedImpulse()>10.f){
-					//TODO: play some sound
-				}
-                const btVector3& ptA = pt.getPositionWorldOnA();
-                const btVector3& ptB = pt.getPositionWorldOnB();
-                const btVector3& normalOnB = pt.m_normalWorldOnB;
-            }
-        }
-    }
-}
-
-void wiBULLET::pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep)
-{
-//	world->getWorldUserInfo();
 //
-//	if(grab)
-//	{
-//		/*const int				x=softDemo->m_lastmousepos[0];
-//		const int				y=softDemo->m_lastmousepos[1];
-//		const btVector3			rayFrom=softDemo->getCameraPosition();
-//		const btVector3			rayTo=softDemo->getRayTo(x,y);
-//		const btVector3			rayDir=(rayTo-rayFrom).normalized();
-//		const btVector3			N=(softDemo->getCameraTargetPosition()-softDemo->getCameraPosition()).normalized();
-//		const btScalar			O=btDot(softDemo->m_impact,N);*/
-//		const btVector3			rayFrom=btVector3(grabRay.origin.x,grabRay.origin.y,grabRay.origin.z);
-//		const btVector3			rayDir=btVector3(grabRay.direction.x,grabRay.direction.y,grabRay.direction.z);
-//		//const btScalar			den=btDot(N,rayDir);
-//		//if((den*den)>0)
-///*		{
-//			const btScalar			num=O-btDot(N,rayFrom);
-//			const btScalar			hit=num/den;
-//			if((hit>0)&&(hit<1500))
-//			{				
-//				softDemo->m_goal=rayFrom+rayDir*hit;
-//			}				
-//		}*/		
-//		btVector3				delta=softDemo->m_goal-softDemo->m_node->m_x;
-//		static const btScalar	maxdrag=10;
-//		if(delta.length2()>(maxdrag*maxdrag))
-//		{
-//			delta=delta.normalized()*maxdrag;
-//		}
-//		softDemo->m_node->m_v+=delta/timeStep;
-//	}
+//void wiBULLET::soundTickCallback(btDynamicsWorld *world, btScalar timeStep) {
+//	int numManifolds = world->getDispatcher()->getNumManifolds();
+//    for (int i=0;i<numManifolds;i++)
+//    {
 //
-}
-void wiBULLET::setGrab(bool value, const RAY& ray){
-	grab=value;
-	grabRay=ray;
-}
+//        btPersistentManifold* contactManifold =  world->getDispatcher()->getManifoldByIndexInternal(i);
+//        btCollisionObject* obA = (btCollisionObject*)(contactManifold->getBody0());
+//        btCollisionObject* obB = (btCollisionObject*)(contactManifold->getBody1());
+//
+//        int numContacts = contactManifold->getNumContacts();
+//        for (int j=0;j<numContacts;j++)
+//        {
+//            btManifoldPoint& pt = contactManifold->getContactPoint(j);
+//            if (pt.getDistance()<0.f)
+//            {
+//				if(pt.getAppliedImpulse()>10.f){
+//					//TODO: play some sound
+//				}
+//                const btVector3& ptA = pt.getPositionWorldOnA();
+//                const btVector3& ptB = pt.getPositionWorldOnB();
+//                const btVector3& normalOnB = pt.m_normalWorldOnB;
+//            }
+//        }
+//    }
+//}
+//
+//void wiBULLET::pickingPreTickCallback (btDynamicsWorld *world, btScalar timeStep)
+//{
+////	world->getWorldUserInfo();
+////
+////	if(grab)
+////	{
+////		/*const int				x=softDemo->m_lastmousepos[0];
+////		const int				y=softDemo->m_lastmousepos[1];
+////		const btVector3			rayFrom=softDemo->getCameraPosition();
+////		const btVector3			rayTo=softDemo->getRayTo(x,y);
+////		const btVector3			rayDir=(rayTo-rayFrom).normalized();
+////		const btVector3			N=(softDemo->getCameraTargetPosition()-softDemo->getCameraPosition()).normalized();
+////		const btScalar			O=btDot(softDemo->m_impact,N);*/
+////		const btVector3			rayFrom=btVector3(grabRay.origin.x,grabRay.origin.y,grabRay.origin.z);
+////		const btVector3			rayDir=btVector3(grabRay.direction.x,grabRay.direction.y,grabRay.direction.z);
+////		//const btScalar			den=btDot(N,rayDir);
+////		//if((den*den)>0)
+/////*		{
+////			const btScalar			num=O-btDot(N,rayFrom);
+////			const btScalar			hit=num/den;
+////			if((hit>0)&&(hit<1500))
+////			{				
+////				softDemo->m_goal=rayFrom+rayDir*hit;
+////			}				
+////		}*/		
+////		btVector3				delta=softDemo->m_goal-softDemo->m_node->m_x;
+////		static const btScalar	maxdrag=10;
+////		if(delta.length2()>(maxdrag*maxdrag))
+////		{
+////			delta=delta.normalized()*maxdrag;
+////		}
+////		softDemo->m_node->m_v+=delta/timeStep;
+////	}
+////
+//}
+//void wiBULLET::setGrab(bool value, const RAY& ray){
+//	grab=value;
+//	grabRay=ray;
+//}

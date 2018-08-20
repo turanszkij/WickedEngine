@@ -48,7 +48,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	rtLinearDepth.Deactivate(threadID);
 
-	wiRenderer::UpdateDepthBuffer(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
+	wiRenderer::BindDepthTextures(dtDepthCopy.GetTextureResolvedMSAA(threadID), rtLinearDepth.GetTexture(), threadID);
 
 	wiRenderer::ComputeTiledLightCulling(false, threadID);
 
@@ -64,7 +64,7 @@ void TiledForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);
-	wiRenderer::UpdateGBuffer(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
+	wiRenderer::BindGBufferTextures(rtMain.GetTextureResolvedMSAA(threadID, 0), rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 
 
 

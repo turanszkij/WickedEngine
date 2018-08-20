@@ -7,6 +7,19 @@ class wiCheckBox;
 class wiSlider;
 class wiComboBox;
 
+enum PICKTYPE
+{
+	PICK_VOID				= 0,
+	PICK_OBJECT				= RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER,
+	PICK_LIGHT				= 8,
+	PICK_DECAL				= 16,
+	PICK_ENVPROBE			= 32,
+	PICK_FORCEFIELD			= 64,
+	PICK_EMITTER			= 128,
+	PICK_CAMERA				= 256,
+	PICK_ARMATURE			= 512,
+};
+
 class RendererWindow
 {
 public:
@@ -61,6 +74,6 @@ public:
 
 	wiCheckBox* freezeCullingCameraCheckBox;
 
-	int GetPickType();
+	UINT GetPickType();
 };
 

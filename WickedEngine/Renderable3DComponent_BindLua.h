@@ -22,6 +22,7 @@ public:
 	int SetFXAAEnabled(lua_State* L);
 	int SetBloomEnabled(lua_State* L);
 	int SetColorGradingEnabled(lua_State* L);
+	int SetColorGradingTexture(lua_State* L);
 	int SetEmitterParticlesEnabled(lua_State* L);
 	int SetHairParticlesEnabled(lua_State* L);
 	int SetHairParticlesReflectionEnabled(lua_State* L);
@@ -40,8 +41,6 @@ public:
 
 	int SetDepthOfFieldFocus(lua_State* L);
 	int SetDepthOfFieldStrength(lua_State* L);
-
-	int SetPreferredThreadingCount(lua_State* L);
 
 	static void Bind();
 };
