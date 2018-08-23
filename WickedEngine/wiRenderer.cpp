@@ -17,7 +17,6 @@
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
-#include "wiTranslator.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
@@ -102,13 +101,12 @@ Scene* wiRenderer::scene = nullptr;
 unordered_set<Object*>			  wiRenderer::objectsWithTrails;
 unordered_set<wiEmittedParticle*> wiRenderer::emitterSystems;
 
-std::vector<wiTranslator*> wiRenderer::renderableTranslators;
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
 std::vector<wiRenderer::RenderableLine> wiRenderer::renderableLines;
 
 std::unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
 
-XMFLOAT4 wiRenderer::waterPlane;
+XMFLOAT4 wiRenderer::waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 wiSpinLock deferredMIPGenLock;
 unordered_set<Texture2D*> deferredMIPGens;
@@ -1149,8 +1147,6 @@ GraphicsPSO* PSO_sky[SKYRENDERING_COUNT] = {};
 
 enum DEBUGRENDERING
 {
-	DEBUGRENDERING_TRANSLATOR_WIREPART,
-	DEBUGRENDERING_TRANSLATOR_SOLIDPART,
 	DEBUGRENDERING_ENVPROBE,
 	DEBUGRENDERING_GRID,
 	DEBUGRENDERING_CUBE,
@@ -2046,24 +2042,6 @@ void wiRenderer::LoadShaders()
 
 			switch (debug)
 			{
-			case DEBUGRENDERING_TRANSLATOR_WIREPART:
-				desc.vs = vertexShaders[VSTYPE_LINE];
-				desc.ps = pixelShaders[PSTYPE_LINE];
-				desc.il = vertexLayouts[VLTYPE_LINE];
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = LINELIST;
-				break;
-			case DEBUGRENDERING_TRANSLATOR_SOLIDPART:
-				desc.vs = vertexShaders[VSTYPE_LINE];
-				desc.ps = pixelShaders[PSTYPE_LINE];
-				desc.il = vertexLayouts[VLTYPE_LINE];
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-				desc.bs = blendStates[BSTYPE_ADDITIVE];
-				desc.pt = TRIANGLELIST;
-				break;
 			case DEBUGRENDERING_ENVPROBE:
 				desc.vs = vertexShaders[VSTYPE_SPHERE];
 				desc.ps = pixelShaders[PSTYPE_CUBEMAP];
@@ -3847,106 +3825,6 @@ void wiRenderer::DrawDebugWorld(Camera* camera, GRAPHICSTHREAD threadID)
 		renderableBoxes.clear();
 
 		device->EventEnd(threadID);
-	}
-
-
-	if (!renderableTranslators.empty())
-	{
-		device->EventBegin("Translators", threadID);
-
-		XMMATRIX VP = camera->GetViewProjection();
-
-		MiscCB sb;
-		for (auto& x : renderableTranslators)
-		{
-			if (!x->enabled)
-				continue;
-
-			XMMATRIX mat = XMMatrixScaling(x->dist, x->dist, x->dist)*XMMatrixTranslation(x->translation.x, x->translation.y, x->translation.z)*VP;
-			XMMATRIX matX = XMMatrixTranspose(mat);
-			XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
-			XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
-
-			// Planes:
-			{
-				GPUBuffer* vbs[] = {
-					wiTranslator::vertexBuffer_Plane,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
-			}
-
-			// xy
-			sb.mTransform = matX;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
-
-			// xz
-			sb.mTransform = matZ;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
-
-			// yz
-			sb.mTransform = matY;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->Draw(wiTranslator::vertexCount_Plane, 0, threadID);
-
-			// Lines:
-			{
-				GPUBuffer* vbs[] = {
-					wiTranslator::vertexBuffer_Axis,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_WIREPART], threadID);
-			}
-
-			// x
-			sb.mTransform = matX;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
-
-			// y
-			sb.mTransform = matY;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
-
-			// z
-			sb.mTransform = matZ;
-			sb.mColor = x->state == wiTranslator::TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->Draw(wiTranslator::vertexCount_Axis, 0, threadID);
-
-			// Origin:
-			{
-				GPUBuffer* vbs[] = {
-					wiTranslator::vertexBuffer_Origin,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				sb.mTransform = XMMatrixTranspose(mat);
-				sb.mColor = x->state == wiTranslator::TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
-				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_TRANSLATOR_SOLIDPART], threadID);
-				device->Draw(wiTranslator::vertexCount_Origin, 0, threadID);
-			}
-		}
-
-		device->EventEnd(threadID);
-
-		renderableTranslators.clear();
 	}
 
 
@@ -8285,10 +8163,6 @@ void wiRenderer::CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID)
 	UpdateCameraCB(cam, threadID);
 }
 
-void wiRenderer::AddRenderableTranslator(wiTranslator* translator)
-{
-	renderableTranslators.push_back(translator);
-}
 void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
 	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));

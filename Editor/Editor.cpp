@@ -17,6 +17,7 @@
 #include "OceanWindow.h"
 
 #include "ModelImporter.h"
+#include "Translator.h"
 
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
@@ -184,7 +185,7 @@ struct Picked
 
 
 
-wiTranslator* translator = nullptr;
+Translator* translator = nullptr;
 bool translator_active = false;
 list<Picked*> selected;
 std::map<Transform*,Transform*> savedParents;
@@ -401,7 +402,7 @@ void EditorComponent::Load()
 {
 	__super::Load();
 
-	translator = new wiTranslator;
+	translator = new Translator;
 	translator->enabled = false;
 
 
@@ -1751,11 +1752,6 @@ void EditorComponent::Render()
 
 	if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
 	{
-		if (translator_active)
-		{
-			wiRenderer::AddRenderableTranslator(translator);
-		}
-
 		AABB selectedAABB = AABB(XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX),XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
 		for (auto& picked : selected)
 		{
@@ -1796,28 +1792,7 @@ void EditorComponent::Compose()
 		return;
 	}
 
-	//static Texture2D* clouds = nullptr;
-	//if (clouds == nullptr)
-	//{
-	//	TextureDesc desc;
-	//	desc.ArraySize = 1;
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_R8G8B8A8_UNORM;
-	//	desc.Height = 512;
-	//	desc.Width = 512;
-	//	desc.MipLevels = 1;
-	//	desc.MiscFlags = 0;
-	//	desc.Usage = USAGE_DEFAULT;
-
-	//	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &clouds);
-	//}
-	//static float ran = 0;
-	//ran += 0.01f;
-	//wiRenderer::GenerateClouds(clouds, 0, ran, GRAPHICSTHREAD_IMMEDIATE);
-	//wiImage::Draw(clouds, wiImageEffects(200, 200, 256, 256), GRAPHICSTHREAD_IMMEDIATE);
-
-	//__super::Compose();
+	Camera* camera = wiRenderer::getCamera();
 
 	for (auto& x : wiRenderer::GetScene().models)
 	{
@@ -1825,7 +1800,7 @@ void EditorComponent::Compose()
 		{
 			for (auto& y : x->lights)
 			{
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+				float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;
@@ -1870,7 +1845,7 @@ void EditorComponent::Compose()
 		{
 			for (auto& y : x->decals)
 			{
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+				float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;
@@ -1902,7 +1877,7 @@ void EditorComponent::Compose()
 		{
 			for (auto& y : x->forces)
 			{
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+				float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;
@@ -1933,7 +1908,7 @@ void EditorComponent::Compose()
 		{
 			for (auto& y : x->cameras)
 			{
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+				float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;
@@ -1964,7 +1939,7 @@ void EditorComponent::Compose()
 		{
 			for (auto& y : x->armatures)
 			{
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+				float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;
@@ -2000,7 +1975,7 @@ void EditorComponent::Compose()
 					continue;
 				}
 
-				float dist = wiMath::Distance(y->translation, wiRenderer::getCamera()->translation) * 0.08f;
+				float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
 
 				wiImageEffects fx;
 				fx.pos = y->translation;
@@ -2027,6 +2002,12 @@ void EditorComponent::Compose()
 			}
 		}
 
+	}
+
+
+	if (translator_active && translator->enabled)
+	{
+		translator->Draw(camera, GRAPHICSTHREAD_IMMEDIATE);
 	}
 }
 void EditorComponent::Unload()

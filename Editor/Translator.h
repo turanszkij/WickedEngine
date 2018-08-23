@@ -2,7 +2,12 @@
 #include "CommonInclude.h"
 #include "wiSceneComponents.h"
 
-class wiTranslator : public wiSceneComponents::Transform
+namespace wiSceneComponents
+{
+	struct Camera;
+}
+
+class Translator : public wiSceneComponents::Transform
 {
 private:
 	XMFLOAT4 prevPointer;
@@ -11,10 +16,11 @@ private:
 	bool dragStarted;
 	bool dragEnded;
 public:
-	wiTranslator();
-	~wiTranslator();
+	Translator();
+	~Translator();
 
 	void Update();
+	void Draw(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
 
 	bool enabled;
 
@@ -41,12 +47,5 @@ public:
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded();
 	XMFLOAT4X4 GetDragEnd();
-
-	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis;
-	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane;
-	static wiGraphicsTypes::GPUBuffer* vertexBuffer_Origin;
-	static int vertexCount_Axis;
-	static int vertexCount_Plane;
-	static int vertexCount_Origin;
 };
 

@@ -187,6 +187,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="tiny_gltf.h" />
     <ClInclude Include="tiny_obj_loader.h" />
+    <ClInclude Include="Translator.h" />
     <ClInclude Include="WorldWindow.h" />
   </ItemGroup>
   <ItemGroup>
@@ -214,6 +215,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Translator.cpp" />
     <ClCompile Include="WorldWindow.cpp" />
   </ItemGroup>
   <ItemGroup>

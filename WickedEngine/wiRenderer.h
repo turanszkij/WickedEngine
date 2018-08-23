@@ -36,7 +36,7 @@ namespace wiSceneComponents
 
 class  Lines;
 class  Cube;
-class  wiTranslator;
+class  Translator;
 class  wiParticle;
 class  wiEmittedParticle;
 class  wiHairParticle;
@@ -544,10 +544,6 @@ public:
 	static void PutEnvProbe(const XMFLOAT3& position);
 
 	static void CreateImpostor(wiSceneComponents::Mesh* mesh, GRAPHICSTHREAD threadID);
-
-	static std::vector<wiTranslator*> renderableTranslators;
-	// Add translator to render in next frame
-	static void AddRenderableTranslator(wiTranslator* translator);
 
 	static std::vector<std::pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
 	// Add box to render in next frame

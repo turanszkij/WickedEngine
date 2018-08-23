@@ -1011,9 +1011,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h">
       <Filter>ENGINE\Tools</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiTranslator.h">
-      <Filter>ENGINE\Tools</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -1857,9 +1854,6 @@
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp">
-      <Filter>ENGINE\Tools</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiTranslator.cpp">
       <Filter>ENGINE\Tools</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">

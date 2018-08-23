@@ -1,4 +1,5 @@
-#include "wiTranslator.h"
+#include "stdafx.h"
+#include "Translator.h"
 #include "wiRenderer.h"
 #include "wiInputManager.h"
 #include "wiMath.h"
@@ -6,15 +7,17 @@
 using namespace wiGraphicsTypes;
 using namespace wiSceneComponents;
 
-GPUBuffer* wiTranslator::vertexBuffer_Axis = nullptr;
-GPUBuffer* wiTranslator::vertexBuffer_Plane = nullptr;
-GPUBuffer* wiTranslator::vertexBuffer_Origin = nullptr;
-int wiTranslator::vertexCount_Axis = 0;
-int wiTranslator::vertexCount_Plane = 0;
-int wiTranslator::vertexCount_Origin = 0;
+GraphicsPSO* pso_solidpart = nullptr;
+GraphicsPSO* pso_wirepart = nullptr;
+wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis = nullptr;
+wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane = nullptr;
+wiGraphicsTypes::GPUBuffer* vertexBuffer_Origin = nullptr;
+int vertexCount_Axis = 0;
+int vertexCount_Plane = 0;
+int vertexCount_Origin = 0;
 
 
-wiTranslator::wiTranslator() :Transform()
+Translator::Translator() :Transform()
 {
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
@@ -32,6 +35,41 @@ wiTranslator::wiTranslator() :Transform()
 	dist = 1;
 
 	isTranslator = true; isScalator = false; isRotator = false;
+
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	if (pso_solidpart == nullptr)
+	{
+		GraphicsPSODesc desc;
+
+		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = wiRenderer::blendStates[BSTYPE_ADDITIVE];
+		desc.pt = TRIANGLELIST;
+
+		pso_solidpart = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, pso_solidpart);
+	}
+
+	if (pso_wirepart == nullptr)
+	{
+		GraphicsPSODesc desc;
+
+		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+		desc.rs = wiRenderer::rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+		desc.bs = wiRenderer::blendStates[BSTYPE_TRANSPARENT];
+		desc.pt = LINELIST;
+
+		pso_wirepart = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, pso_wirepart);
+	}
 
 	if (vertexBuffer_Axis == nullptr)
 	{
@@ -52,7 +90,7 @@ wiTranslator::wiTranslator() :Transform()
 			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
 			vertexBuffer_Axis = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_Axis);
+			device->CreateBuffer(&bd, &InitData, vertexBuffer_Axis);
 		}
 	}
 
@@ -80,7 +118,7 @@ wiTranslator::wiTranslator() :Transform()
 			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
 			vertexBuffer_Plane = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_Plane);
+			device->CreateBuffer(&bd, &InitData, vertexBuffer_Plane);
 		}
 	}
 
@@ -138,16 +176,16 @@ wiTranslator::wiTranslator() :Transform()
 			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
 			vertexBuffer_Origin = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_Origin);
+			device->CreateBuffer(&bd, &InitData, vertexBuffer_Origin);
 		}
 	}
 }
 
-wiTranslator::~wiTranslator()
+Translator::~Translator()
 {
 }
 
-void wiTranslator::Update()
+void Translator::Update()
 {
 	dragStarted = false;
 	dragEnded = false;
@@ -378,21 +416,113 @@ void wiTranslator::Update()
 
 	prevPointer = pointer;
 }
+void Translator::Draw(Camera* camera, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	device->EventBegin("Editor - Translator", threadID);
 
-bool wiTranslator::IsDragStarted()
+	XMMATRIX VP = camera->GetViewProjection();
+
+	wiRenderer::MiscCB sb;
+
+	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslation(translation.x, translation.y, translation.z) * VP;
+	XMMATRIX matX = XMMatrixTranspose(mat);
+	XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
+	XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
+
+	// Planes:
+	{
+		device->BindGraphicsPSO(pso_solidpart, threadID);
+		GPUBuffer* vbs[] = {
+			vertexBuffer_Plane,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	}
+
+	// xy
+	sb.mTransform = matX;
+	sb.mColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->Draw(vertexCount_Plane, 0, threadID);
+
+	// xz
+	sb.mTransform = matZ;
+	sb.mColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->Draw(vertexCount_Plane, 0, threadID);
+
+	// yz
+	sb.mTransform = matY;
+	sb.mColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->Draw(vertexCount_Plane, 0, threadID);
+
+	// Lines:
+	{
+		device->BindGraphicsPSO(pso_wirepart, threadID);
+		GPUBuffer* vbs[] = {
+			vertexBuffer_Axis,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+	}
+
+	// x
+	sb.mTransform = matX;
+	sb.mColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->Draw(vertexCount_Axis, 0, threadID);
+
+	// y
+	sb.mTransform = matY;
+	sb.mColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->Draw(vertexCount_Axis, 0, threadID);
+
+	// z
+	sb.mTransform = matZ;
+	sb.mColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
+	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->Draw(vertexCount_Axis, 0, threadID);
+
+	// Origin:
+	{
+		device->BindGraphicsPSO(pso_solidpart, threadID);
+		GPUBuffer* vbs[] = {
+			vertexBuffer_Origin,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		sb.mTransform = XMMatrixTranspose(mat);
+		sb.mColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
+		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->Draw(vertexCount_Origin, 0, threadID);
+	}
+
+	device->EventEnd(threadID);
+}
+
+bool Translator::IsDragStarted()
 {
 	return dragStarted;
 }
-XMFLOAT4X4 wiTranslator::GetDragStart()
+XMFLOAT4X4 Translator::GetDragStart()
 {
 	return dragStart;
 }
-bool wiTranslator::IsDragEnded()
+bool Translator::IsDragEnded()
 {
 	return dragEnded;
 }
-XMFLOAT4X4 wiTranslator::GetDragEnd()
+XMFLOAT4X4 Translator::GetDragEnd()
 {
 	return dragEnd;
 }
