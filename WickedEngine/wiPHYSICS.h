@@ -1,13 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiSceneSystem_Decl.h"
+#include "wiECS.h"
 
 #include <vector>
-
-namespace wiSceneComponents
-{
-	struct Mesh;
-	struct Object;
-}
 
 class PHYSICS
 {
@@ -36,10 +32,6 @@ public:
 	int getObjectCount(){return registeredObjects+1;}
 
 	virtual void Update(float dt)=0;
-	virtual void MarkForRead()=0;
-	virtual void UnMarkForRead()=0;
-	virtual void MarkForWrite()=0;
-	virtual void UnMarkForWrite()=0;
 	virtual void ClearWorld()=0;
 	virtual void CleanUp()=0;
 
@@ -57,17 +49,17 @@ public:
 		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
 
 	
-	virtual void addSoftBodyTriangleMesh(const wiSceneComponents::Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+	virtual void addSoftBodyTriangleMesh(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
 		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1)=0;
 	
-	virtual void connectVerticesToSoftBody(wiSceneComponents::Mesh* const mesh, int objectI)=0;
-	virtual void connectSoftBodyToVertices(const wiSceneComponents::Mesh* const mesh, int objectI)=0;
+	virtual void connectVerticesToSoftBody(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, int objectI)=0;
+	virtual void connectSoftBodyToVertices(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, int objectI)=0;
 	virtual void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI)=0;
 
 	virtual PhysicsTransform* getObject(int index)=0;
 
 	// add object to the simulation
-	virtual void registerObject(wiSceneComponents::Object* object) = 0;
+	virtual void registerObject(wiECS::ComponentManager<wiSceneSystem::Object>::ref object_ref) = 0;
 	// remove object from simulation
-	virtual void removeObject(wiSceneComponents::Object* object) = 0;
+	virtual void removeObject(wiECS::ComponentManager<wiSceneSystem::Object>::ref object_ref) = 0;
 };

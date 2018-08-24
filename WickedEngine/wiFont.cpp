@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
-#include "wiSceneComponents.h"
 #include "ResourceMapping.h"
 
 #include <fstream>

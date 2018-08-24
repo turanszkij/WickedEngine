@@ -6,33 +6,11 @@
 #include "wiWindowRegistration.h"
 #include "wiSPTree.h"
 #include "wiFrustum.h"
+#include "wiSceneSystem_Decl.h"
+#include "wiECS.h"
 
 #include <unordered_set>
 #include <deque>
-
-namespace wiSceneComponents
-{
-	struct Transform;
-	struct Vertex;
-	struct SkinnedVertex;
-	struct Material;
-	struct Object;
-	struct Mesh;
-	struct Armature;
-	struct Bone;
-	struct KeyFrame;
-	struct SHCAM;
-	struct Light;
-	struct Decal;
-	struct WorldInfo;
-	struct Wind;
-	struct Camera;
-	struct Model;
-	struct Scene;
-	struct Cullable;
-	struct EnvironmentProbe;
-	struct ForceField;
-}
 
 class  Cube;
 class  Translator;
@@ -45,6 +23,9 @@ class  PHYSICS;
 class  wiRenderTarget;
 class  wiOcean;
 struct wiOceanParameter;
+
+struct FrameCulling;
+struct CulledCollection;
 
 struct RAY;
 
@@ -263,7 +244,7 @@ protected:
 
 	static float GameSpeed;
 
-	static wiSceneComponents::Scene* scene;
+	static wiSceneSystem::Scene* scene;
 
 	static XMFLOAT4 waterPlane;
 
@@ -310,7 +291,6 @@ public:
 	static void UpdateRenderData(GRAPHICSTHREAD threadID);
 	static void OcclusionCulling_Render(GRAPHICSTHREAD threadID);
 	static void OcclusionCulling_Read();
-	static void PutDecal(wiSceneComponents::Decal* decal);
 	static void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	static void ManageWaterRipples();
 	static void DrawWaterRipples(GRAPHICSTHREAD threadID);
@@ -385,42 +365,32 @@ public:
 	static wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	static const XMFLOAT4& GetWaterPlane();
 
-	static wiSceneComponents::Transform* getTransformByName(const std::string& name);
-	static wiSceneComponents::Transform* getTransformByID(uint64_t id);
-	static wiSceneComponents::Armature* getArmatureByName(const std::string& get);
-	static int getActionByName(wiSceneComponents::Armature* armature, const std::string& get);
-	static int getBoneByName(wiSceneComponents::Armature* armature, const std::string& get);
-	static wiSceneComponents::Material* getMaterialByName(const std::string& get);
-	static wiSceneComponents::Object* getObjectByName(const std::string& name);
-	static wiSceneComponents::Camera* getCameraByName(const std::string& name);
-	static wiSceneComponents::Light* getLightByName(const std::string& name);
-
 	static void ReloadShaders(const std::string& path = "");
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
 
-	struct FrameCulling
-	{
-		Frustum frustum;
-		CulledCollection culledRenderer;
-		CulledCollection culledRenderer_opaque;
-		CulledCollection culledRenderer_transparent;
-		std::vector<wiHairParticle*> culledHairParticleSystems;
-		CulledList culledLights;
-		std::list<wiSceneComponents::Decal*> culledDecals;
-		std::list<wiSceneComponents::EnvironmentProbe*> culledEnvProbes;
+	//struct FrameCulling
+	//{
+	//	Frustum frustum;
+	//	CulledCollection culledRenderer;
+	//	CulledCollection culledRenderer_opaque;
+	//	CulledCollection culledRenderer_transparent;
+	//	std::vector<wiHairParticle*> culledHairParticleSystems;
+	//	CulledList culledLights;
+	//	std::list<wiSceneSystem::Decal*> culledDecals;
+	//	std::list<wiSceneSystem::EnvironmentProbe*> culledEnvProbes;
 
-		void Clear()
-		{
-			culledRenderer.clear();
-			culledRenderer_opaque.clear();
-			culledRenderer_transparent.clear();
-			culledHairParticleSystems.clear();
-			culledLights.clear();
-			culledDecals.clear();
-			culledEnvProbes.clear();
-		}
-	};
-	static std::unordered_map<wiSceneComponents::Camera*, FrameCulling> frameCullings;
+	//	void Clear()
+	//	{
+	//		culledRenderer.clear();
+	//		culledRenderer_opaque.clear();
+	//		culledRenderer_transparent.clear();
+	//		culledHairParticleSystems.clear();
+	//		culledLights.clear();
+	//		culledDecals.clear();
+	//		culledEnvProbes.clear();
+	//	}
+	//};
+	static std::unordered_map<wiSceneSystem::Camera*, FrameCulling*> frameCullings;
 
 	inline static XMUINT3 GetEntityCullingTileCount()
 	{
@@ -435,7 +405,7 @@ public:
 
 	static void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
-	static void UpdateCameraCB(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void UpdateCameraCB(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
 	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
 	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
@@ -446,17 +416,17 @@ public:
 		bool tessellation = false, bool occlusionCulling = false, uint32_t layerMask = 0xFFFFFFFF);
 	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
-	static void DrawWorld(wiSceneComponents::Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	static void DrawWorld(wiSceneSystem::Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
-	static void DrawWorldTransparent(wiSceneComponents::Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
-	static void DrawDebugWorld(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawSoftParticles(wiSceneComponents::Camera* camera, bool distortion, GRAPHICSTHREAD threadID);
+	static void DrawWorldTransparent(wiSceneSystem::Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	static void DrawDebugWorld(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawSoftParticles(wiSceneSystem::Camera* camera, bool distortion, GRAPHICSTHREAD threadID);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
-	static void DrawLights(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawLightVisualizers(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawVolumeLights(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLights(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLightVisualizers(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawVolumeLights(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
-	static void DrawDecals(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDecals(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
 	static void RefreshEnvProbes(GRAPHICSTHREAD threadID);
 	static void VoxelRadiance(GRAPHICSTHREAD threadID);
 
@@ -464,7 +434,7 @@ public:
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 
 	static void BuildSceneBVH(GRAPHICSTHREAD threadID);
-	static void DrawTracedScene(wiSceneComponents::Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+	static void DrawTracedScene(wiSceneSystem::Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
 
 	enum MIPGENFILTER
 	{
@@ -499,27 +469,24 @@ public:
 	static XMFLOAT4 GetSunColor();
 	static int GetSunArrayIndex();
 
-	static wiSPTree* spTree;
-	static wiSPTree* spTree_lights;
+	//static wiSPTree* spTree;
+	//static wiSPTree* spTree_lights;
 
 	// The scene holds all models, and world information
-	static wiSceneComponents::Scene& GetScene();
-
-	static std::unordered_set<wiSceneComponents::Object*> objectsWithTrails;
-	static std::unordered_set<wiEmittedParticle*> emitterSystems;
+	static wiSceneSystem::Scene& GetScene();
 	
 	static std::deque<wiSprite*> waterRipples;
 	static void ClearWorld();
 	
-	static wiSceneComponents::Camera* cam, *refCam, *prevFrameCam;
-	static wiSceneComponents::Camera* getCamera(){ return cam; }
-	static wiSceneComponents::Camera* getRefCamera(){ return refCam; }
+	static wiSceneSystem::Camera* cam, *refCam, *prevFrameCam;
+	static wiSceneSystem::Camera* getCamera(){ return cam; }
+	static wiSceneSystem::Camera* getRefCamera(){ return refCam; }
 
 	static RAY getPickRay(long cursorX, long cursorY);
 
 	struct RayIntersectWorldResult
 	{
-		wiSceneComponents::Object* object = nullptr;
+		wiECS::ComponentManager<wiSceneSystem::Object>::ref object_ref;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float distance = FLT_MAX;
@@ -535,13 +502,12 @@ public:
 	static void SetOceanEnabled(bool enabled, const wiOceanParameter& params);
 	static wiOcean* GetOcean() { return ocean; }
 
-	static wiSceneComponents::Model* LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
+	static wiECS::ComponentManager<wiSceneSystem::Model>::ref LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
 	static void LoadWorldInfo(const std::string& fileName);
-	static void LoadDefaultLighting();
 
 	static void PutEnvProbe(const XMFLOAT3& position);
 
-	static void CreateImpostor(wiSceneComponents::Mesh* mesh, GRAPHICSTHREAD threadID);
+	static void CreateImpostor(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, GRAPHICSTHREAD threadID);
 
 	static std::vector<std::pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
 	// Add box to render in next frame
@@ -558,19 +524,5 @@ public:
 
 	static void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
 
-
-	static void AddModel(wiSceneComponents::Model* value);
-	static void Add(wiSceneComponents::Object* value);
-	static void Add(wiSceneComponents::Light* value);
-	static void Add(wiSceneComponents::ForceField* value);
-	static void Add(wiSceneComponents::Camera* value);
-
-	// Remove from the scene
-	static void Remove(wiSceneComponents::Object* value);
-	static void Remove(wiSceneComponents::Light* value);
-	static void Remove(wiSceneComponents::Decal* value);
-	static void Remove(wiSceneComponents::EnvironmentProbe* value);
-	static void Remove(wiSceneComponents::ForceField* value);
-	static void Remove(wiSceneComponents::Camera* value);
 };
 

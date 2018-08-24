@@ -4,13 +4,9 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 #include "wiFFTGenerator.h"
+#include "wiSceneSystem_Decl.h"
 
 #include <vector>
-
-namespace wiSceneComponents
-{
-	struct Camera;
-}
 
 struct wiOceanParameter
 {
@@ -65,7 +61,7 @@ public:
 	~wiOcean();
 
 	void UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID);
-	void Render(const wiSceneComponents::Camera* camera, float time, GRAPHICSTHREAD threadID);
+	void Render(const wiSceneSystem::Camera* camera, float time, GRAPHICSTHREAD threadID);
 
 	wiGraphicsTypes::Texture2D* getDisplacementMap();
 	wiGraphicsTypes::Texture2D* getGradientMap();

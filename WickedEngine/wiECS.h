@@ -24,21 +24,13 @@ namespace wiECS
 			indices.reserve(reservedCount);
 		}
 
-		// The iterator is an indirection to the components. Components will be moved around to remain compacted, but iterator will always be able to reference a component.
-		struct iterator
+		// The ref is an indirection to the components. Components will be moved around to remain compacted, but ref will always be able to reference a component.
+		struct ref
 		{
 			size_t value = ~0;
-
-			inline iterator operator=(iterator other) { value = other.value; return *this; }
-			inline bool operator==(iterator other) const { return value == other.value; }
-			inline bool operator!=(iterator other) const { return value != other.value; }
-			inline iterator& operator++() { value++; return *this; }
-			inline iterator operator++(int v) { iterator temp = *this; ++*this; return temp; }
-			inline iterator& operator--() { value--; return *this; }
-			inline iterator operator--(int v) { iterator temp = *this; --*this; return temp; }
 		};
 
-		// Clear the whole container, invalidate all iterators
+		// Clear the whole container, invalidate all refs
 		inline void Clear()
 		{
 			components.clear();
@@ -48,42 +40,26 @@ namespace wiECS
 			dead.clear();
 		}
 
-		// Get the beginning of the iteration sequence (iterator is safe but uses indirection):
-		inline iterator Begin() const
-		{
-			iterator it;
-			it.value = 0;
-			return it;
-		}
-
-		// Get the end of the iteration sequence (iterator is safe but uses indirection):
-		inline iterator End() const
-		{
-			iterator it;
-			it.value = indices.size();
-			return it;
-		}
-
-		// Check if an iterator is referencing a component or not (iterator is safe but uses indirection):
-		inline bool IsValid(iterator it) const
+		// Check if an ref is referencing a component or not (ref is safe but uses indirection):
+		inline bool IsValid(ref it) const
 		{
 			return it.value < indices.size() && indices[it.value] < components.size();
 		}
 
-		// Check if an iterator is referencing a specific entity or not (iterator is safe but uses indirection):
-		inline bool IsValid(iterator it, Entity entity) const
+		// Check if an ref is referencing a specific entity or not (ref is safe but uses indirection):
+		inline bool IsValid(ref it, Entity entity) const
 		{
 			assert(entities.size() == components.size());
 			return IsValid(it) && entities[indices[it.value]] == entity;
 		}
 
-		// Create a new component and retrieve iterator (iterator is safe but uses indirection):
-		inline iterator Create(Entity entity)
+		// Create a new component and retrieve ref (ref is safe but uses indirection):
+		inline ref Create(Entity entity)
 		{
 			// Only one of this component type per entity is allowed!
 			assert(!IsValid(Find(entity)));
 
-			iterator it;
+			ref it;
 
 			if (dead.empty())
 			{
@@ -99,7 +75,7 @@ namespace wiECS
 				// We have dead elements, which means components was popped, but indices only swapped, so there must be less components than indices:
 				assert(components.size() < indices.size());
 
-				// Essentially we pop the last dead iterator and update its value to the new component (that will always be pushed to the end of components):
+				// Essentially we pop the last dead ref and update its value to the new component (that will always be pushed to the end of components):
 				it = dead.back();
 				dead.pop_back();
 				indices[it.value] = components.size();
@@ -124,17 +100,17 @@ namespace wiECS
 		// Remove a component of a certain entity if it exists (referencing by Entity involves multiple indirection):
 		inline void Remove(Entity entity)
 		{
-			iterator it = Find(entity);
+			ref it = Find(entity);
 			if (IsValid(it))
 			{
 				Remove(it);
 			}
 		}
 
-		// Remove a component referenced by a certain iterator (iterator is safe but uses indirection):
-		inline void Remove(iterator it)
+		// Remove a component referenced by a certain ref (ref is safe but uses indirection):
+		inline void Remove(ref it)
 		{
-			// Iterator should be valid:
+			// ref should be valid:
 			assert(IsValid(it));
 
 			// Directly index into components and entities array:
@@ -150,16 +126,16 @@ namespace wiECS
 			entities[index] = entities.back();
 			entities.pop_back();
 
-			// Because the last element of the container was moved to the position of the removed element, we update its iterator accordingly:
+			// Because the last element of the container was moved to the position of the removed element, we update its ref accordingly:
 			indices[components.size()] = index;
 
-			//The current iterator is marked as dead:
+			//The current ref is marked as dead:
 			indices[it.value] = ~0;
 			dead.push_back(it);
 		}
 
-		// Swap two components' data that are referenced by iterators (iterator is safe but uses indirection):
-		inline void Swap(iterator a, iterator b)
+		// Swap two components' data that are referenced by refs (ref is safe but uses indirection):
+		inline void Swap(ref a, ref b)
 		{
 			const size_t index_a = indices[a.value];
 			const size_t index_b = indices[b.value];
@@ -178,7 +154,7 @@ namespace wiECS
 		}
 
 		// Find a specific component of a certain entity if exists (referencing by Entity involves multiple indirection):
-		inline iterator Find(Entity entity) const
+		inline ref Find(Entity entity) const
 		{
 			auto it = lookup.find(entity);
 			if (it != lookup.end())
@@ -186,17 +162,17 @@ namespace wiECS
 				return it->second;
 			}
 
-			return End();
+			return ref();
 		}
 
-		// Retrieve a component specified by an iterator (iterator is safe but uses indirection):
-		inline T& GetComponent(iterator it)
+		// Retrieve a component specified by an ref (ref is safe but uses indirection):
+		inline T& GetComponent(ref it)
 		{
 			assert(IsValid(it));
 			return components[indices[it.value]];
 		}
-		// Retrieve an entity specified by an iterator (iterator is safe but uses indirection):
-		inline Entity GetEntity(iterator it) const
+		// Retrieve an entity specified by an ref (ref is safe but uses indirection):
+		inline Entity GetEntity(ref it) const
 		{
 			assert(IsValid(it));
 			return entities[indices[it.value]];
@@ -223,11 +199,11 @@ namespace wiECS
 		// This is a linear array of entities corresponding to each alive component:
 		std::vector<Entity> entities;
 		// This is a lookup table for entities:
-		std::unordered_map<Entity, iterator> lookup;
-		// This is the indirection of iterator->component index:
+		std::unordered_map<Entity, ref> lookup;
+		// This is the indirection of ref->component index:
 		std::vector<size_t> indices;
 		// The indices will also contain dead elements, and those are saved here:
-		std::vector<iterator> dead;
+		std::vector<ref> dead;
 	};
 }
 

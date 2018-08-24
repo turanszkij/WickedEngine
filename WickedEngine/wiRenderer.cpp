@@ -4,7 +4,7 @@
 #include "wiEmittedParticle.h"
 #include "wiResourceManager.h"
 #include "wiSprite.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
 #include "wiFrustum.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
@@ -35,7 +35,8 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
-using namespace wiSceneComponents;
+using namespace wiSceneSystem;
+using namespace wiECS;
 
 #pragma region STATICS
 GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
@@ -98,13 +99,10 @@ wiSPTree* wiRenderer::spTree_lights = nullptr;
 
 Scene* wiRenderer::scene = nullptr;
 
-unordered_set<Object*>			  wiRenderer::objectsWithTrails;
-unordered_set<wiEmittedParticle*> wiRenderer::emitterSystems;
-
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
 std::vector<wiRenderer::RenderableLine> wiRenderer::renderableLines;
 
-std::unordered_map<Camera*, wiRenderer::FrameCulling> wiRenderer::frameCullings;
+std::unordered_map<Camera*, FrameCulling*> wiRenderer::frameCullings;
 
 XMFLOAT4 wiRenderer::waterPlane = XMFLOAT4(0, 1, 0, 0);
 
@@ -112,6 +110,11 @@ wiSpinLock deferredMIPGenLock;
 unordered_set<Texture2D*> deferredMIPGens;
 
 #pragma endregion
+
+struct FrameCulling
+{
+
+};
 
 
 void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
@@ -2736,111 +2739,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 }
 
-Transform* wiRenderer::getTransformByName(const std::string& get)
-{
-	//auto transf = transforms.find(get);
-	//if (transf != transforms.end())
-	//{
-	//	return transf->second;
-	//}
-	return GetScene().GetWorldNode()->find(get);
-}
-Transform* wiRenderer::getTransformByID(uint64_t id)
-{
-	for (Model* model : GetScene().models)
-	{
-		Transform* found = model->find(id);
-		if (found != nullptr)
-		{
-			return found;
-		}
-	}
-	return nullptr;
-}
-Armature* wiRenderer::getArmatureByName(const std::string& get)
-{
-	for (Model* model : GetScene().models)
-	{
-		for (Armature* armature : model->armatures)
-			if (!armature->name.compare(get))
-				return armature;
-	}
-	return nullptr;
-}
-int wiRenderer::getActionByName(Armature* armature, const std::string& get)
-{
-	if(armature==nullptr)
-		return (-1);
-
-	stringstream ss("");
-	ss<<armature->name<<get;
-	for (unsigned int j = 0; j<armature->actions.size(); j++)
-		if(!armature->actions[j].name.compare(ss.str()))
-			return j;
-	return (-1);
-}
-int wiRenderer::getBoneByName(Armature* armature, const std::string& get)
-{
-	for (unsigned int j = 0; j<armature->boneCollection.size(); j++)
-		if(!armature->boneCollection[j]->name.compare(get))
-			return j;
-	return (-1);
-}
-Material* wiRenderer::getMaterialByName(const std::string& get)
-{
-	for (Model* model : GetScene().models)
-	{
-		auto& iter = model->materials.find(get);
-		if (iter != model->materials.end())
-			return iter->second;
-	}
-	return NULL;
-}
-Object* wiRenderer::getObjectByName(const std::string& name)
-{
-	for (Model* model : GetScene().models)
-	{
-		for (auto& x : model->objects)
-		{
-			if (!x->name.compare(name))
-			{
-				return x;
-			}
-		}
-	}
-
-	return nullptr;
-}
-Camera* wiRenderer::getCameraByName(const std::string& name)
-{
-	for (Model* model : GetScene().models)
-	{
-		for (auto& x : model->cameras)
-		{
-			if (!x->name.compare(name))
-			{
-				return x;
-			}
-		}
-	}
-
-	return nullptr;
-}
-Light* wiRenderer::getLightByName(const std::string& name)
-{
-	for (Model* model : GetScene().models)
-	{
-		for (auto& x : model->lights)
-		{
-			if (!x->name.compare(name))
-			{
-				return x;
-			}
-		}
-	}
-	return nullptr;
-}
-
 void wiRenderer::FixedUpdate()
 {
 	cam->UpdateTransform();
@@ -3087,7 +2985,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	deferredMIPGenLock.unlock();
 
 
-	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
+	const FrameCulling& mainCameraCulling = *frameCullings[getCamera()];
 
 	// Fill Light Array with lights + envprobes + decals in the frustum:
 	{
@@ -3592,10 +3490,6 @@ void wiRenderer::OcclusionCulling_Read()
 	}
 
 	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
-}
-void wiRenderer::PutDecal(Decal* decal)
-{
-	GetScene().GetWorldNode()->decals.insert(decal);
 }
 void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
@@ -7790,7 +7684,7 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 	return result;
 }
 
-Model* wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
+ComponentManager<Model>::iterator wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
 {
 	Model* model = nullptr;
 
@@ -7887,32 +7781,6 @@ void wiRenderer::LoadWorldInfo(const std::string& fileName)
 	}
 	file.close();
 }
-void wiRenderer::LoadDefaultLighting()
-{
-	GetScene().worldInfo.ambient = XMFLOAT3(0.3f, 0.3f, 0.3f);
-
-	Light* defaultLight = new Light();
-	defaultLight->name = "_WickedEngine_DefaultLight_";
-	defaultLight->SetType(Light::DIRECTIONAL);
-	defaultLight->color = XMFLOAT4(1, 1, 1, 1);
-	defaultLight->enerDis = XMFLOAT4(3, 0, 0, 0);
-	XMStoreFloat4(&defaultLight->rotation_rest, XMQuaternionRotationRollPitchYaw(0, -XM_PIDIV4, XM_PIDIV4));
-	defaultLight->UpdateTransform();
-	defaultLight->UpdateLight();
-
-	Model* model = new Model;
-	model->name = "_WickedEngine_DefaultLight_Holder_";
-	model->lights.insert(defaultLight);
-	GetScene().models.push_back(model);
-
-	if (spTree_lights) {
-		spTree_lights->AddObjects(spTree_lights->root, std::vector<Cullable*>(model->lights.begin(), model->lights.end()));
-	}
-	else
-	{
-		spTree_lights = new Octree(std::vector<Cullable*>(model->lights.begin(), model->lights.end()));
-	}
-}
 Scene& wiRenderer::GetScene()
 {
 	if (scene == nullptr)
@@ -8008,7 +7876,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position)
 	GetScene().GetWorldNode()->environmentProbes.push_back(probe);
 }
 
-void wiRenderer::CreateImpostor(Mesh* mesh, GRAPHICSTHREAD threadID)
+void wiRenderer::CreateImpostor(ComponentManager<Mesh>::iterator mesh, GRAPHICSTHREAD threadID)
 {
 	Mesh::CreateImpostorVB();
 
@@ -8177,202 +8045,6 @@ void wiRenderer::AddDeferredMIPGen(Texture2D* tex)
 	deferredMIPGenLock.lock();
 	deferredMIPGens.insert(tex);
 	deferredMIPGenLock.unlock();
-}
-
-
-void wiRenderer::AddModel(Model* model)
-{
-	GetScene().AddModel(model);
-
-	FixedUpdate();
-
-	// add object batch 
-	{
-		vector<Cullable*> collection(model->objects.begin(), model->objects.end());
-		if (spTree != nullptr)
-		{
-			spTree->AddObjects(spTree->root, collection);
-		}
-		else
-		{
-			spTree = new Octree(collection);
-		}
-	}
-
-	// add light batch
-	{
-		vector<Cullable*> collection(model->lights.begin(), model->lights.end());
-		if (spTree_lights != nullptr)
-		{
-			spTree_lights->AddObjects(spTree_lights->root, collection);
-		}
-		else
-		{
-			spTree_lights = new Octree(collection);
-		}
-	}
-}
-
-void wiRenderer::Add(Object* value)
-{
-	if (value->parentModel == nullptr)
-	{
-		GetScene().GetWorldNode()->Add(value);
-	}
-	else
-	{
-		value->parentModel->Add(value);
-	}
-
-	if (value->parent == nullptr)
-	{
-		value->attachTo(GetScene().GetWorldNode());
-	}
-
-	vector<Cullable*> collection(0);
-	collection.push_back(value);
-	if (spTree != nullptr) 
-	{
-		spTree->AddObjects(spTree->root, collection);
-	}
-	else
-	{
-		spTree = new Octree(collection);
-	}
-}
-void wiRenderer::Add(Light* value)
-{
-	if (value->parentModel == nullptr)
-	{
-		GetScene().GetWorldNode()->Add(value);
-	}
-	else
-	{
-		value->parentModel->Add(value);
-	}
-
-	if (value->parent == nullptr)
-	{
-		value->attachTo(GetScene().GetWorldNode());
-	}
-
-	vector<Cullable*> collection(0);
-	collection.push_back(value);
-	if (spTree_lights != nullptr) 
-	{
-		spTree_lights->AddObjects(spTree_lights->root, collection);
-	}
-	else
-	{
-		spTree_lights = new Octree(collection);
-	}
-}
-void wiRenderer::Add(ForceField* value)
-{
-	if (value->parentModel == nullptr)
-	{
-		GetScene().GetWorldNode()->Add(value);
-	}
-	else
-	{
-		value->parentModel->Add(value);
-	}
-
-	if (value->parent == nullptr)
-	{
-		value->attachTo(GetScene().GetWorldNode());
-	}
-}
-void wiRenderer::Add(Camera* value)
-{
-	if (value->parentModel == nullptr)
-	{
-		GetScene().GetWorldNode()->Add(value);
-	}
-	else
-	{
-		value->parentModel->Add(value);
-	}
-
-	if (value->parent == nullptr)
-	{
-		value->attachTo(GetScene().GetWorldNode());
-	}
-}
-
-void wiRenderer::Remove(Object* value)
-{
-	if (value != nullptr)
-	{
-		for (auto& x : GetScene().models)
-		{
-			x->objects.erase(value);
-			value->parentModel = nullptr;
-		}
-		spTree->Remove(value);
-		value->detach();
-	}
-}
-void wiRenderer::Remove(Light* value)
-{
-	if (value != nullptr)
-	{
-		for (auto& x : GetScene().models)
-		{
-			x->lights.erase(value);
-			value->parentModel = nullptr;
-		}
-		spTree_lights->Remove(value);
-		value->detach();
-	}
-}
-void wiRenderer::Remove(Decal* value)
-{
-	if (value != nullptr)
-	{
-		for (auto& x : GetScene().models)
-		{
-			x->decals.erase(value);
-			value->parentModel = nullptr;
-		}
-		value->detach();
-	}
-}
-void wiRenderer::Remove(EnvironmentProbe* value)
-{
-	if (value != nullptr)
-	{
-		for (auto& x : GetScene().models)
-		{
-			x->environmentProbes.remove(value);
-			value->parentModel = nullptr;
-		}
-		value->detach();
-	}
-}
-void wiRenderer::Remove(ForceField* value)
-{
-	if (value != nullptr)
-	{
-		for (auto& x : GetScene().models)
-		{
-			x->forces.erase(value);
-			value->parentModel = nullptr;
-		}
-		value->detach();
-	}
-}
-void wiRenderer::Remove(Camera* value)
-{
-	if (value != nullptr)
-	{
-		for (auto& x : GetScene().models)
-		{
-			x->cameras.remove(value);
-			value->parentModel = nullptr;
-		}
-		value->detach();
-	}
 }
 
 

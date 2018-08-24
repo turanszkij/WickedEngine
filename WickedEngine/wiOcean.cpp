@@ -2,10 +2,11 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "ShaderInterop_Ocean.h"
+#include "wiSceneSystem.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
-using namespace wiSceneComponents;
+using namespace wiSceneSystem;
 
 ComputeShader*			wiOcean::m_pUpdateSpectrumCS = nullptr;
 ComputeShader*			wiOcean::m_pUpdateDisplacementMapCS = nullptr;

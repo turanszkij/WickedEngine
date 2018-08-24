@@ -15,32 +15,33 @@ public:
 	wiBULLET();
 	~wiBULLET();
 
-	void addWind(const XMFLOAT3& wind);
+	virtual void addWind(const XMFLOAT3& wind) override;
 
-	void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	void addSphere(float rad, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	void addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	void addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic);
-	
-	void addSoftBodyTriangleMesh(const wiSceneComponents::Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping);
+	virtual void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
+	virtual void addSphere(float rad, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
+	virtual void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
+	virtual void addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
+	virtual void addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
 
-	void addBone(float rad, float hei);
-	
-	void connectVerticesToSoftBody(wiSceneComponents::Mesh* const mesh, int objectI);
-	void connectSoftBodyToVertices(const wiSceneComponents::Mesh*  const mesh, int objectI);
-	void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI);
 
-	PhysicsTransform* getObject(int index);
+	virtual void addSoftBodyTriangleMesh(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+		, float newMass = 1, float newFriction = 1, float newRestitution = 1, float newDamping = 1) override;
 
-	void registerObject(wiSceneComponents::Object* object);
-	void removeObject(wiSceneComponents::Object* object);
+	virtual void connectVerticesToSoftBody(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, int objectI) override;
+	virtual void connectSoftBodyToVertices(wiECS::ComponentManager<wiSceneSystem::Mesh>::ref mesh_ref, int objectI) override;
+	virtual void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI) override;
+
+	virtual PhysicsTransform* getObject(int index) override;
+
+	// add object to the simulation
+	virtual void registerObject(wiECS::ComponentManager<wiSceneSystem::Object>::ref object_ref) override;
+	// remove object from simulation
+	virtual void removeObject(wiECS::ComponentManager<wiSceneSystem::Object>::ref object_ref) override;
 
 	void Update(float dt);
 	void MarkForRead();

@@ -5,11 +5,13 @@
 #include "wiIntersectables.h"
 #include "ShaderInterop.h"
 #include "wiFrustum.h"
+#include "wiRenderTarget.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
 
 #include <string>
+#include <unordered_map>
 
 namespace wiSceneSystem
 {
@@ -22,7 +24,7 @@ namespace wiSceneSystem
 	
 	struct Transform
 	{
-		wiECS::ComponentManager<Transform>::iterator parent_ref;
+		wiECS::ComponentManager<Transform>::ref parent_ref;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
@@ -36,7 +38,7 @@ namespace wiSceneSystem
 
 	struct Material
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
 
 		bool dirty = true;
 
@@ -281,15 +283,44 @@ namespace wiSceneSystem
 
 		AABB aabb;
 
-		wiECS::ComponentManager<Armature>::iterator armature_ref;
+		wiECS::ComponentManager<Armature>::ref armature_ref;
+
+
+
+		struct VertexRef {
+			int index;
+			float weight;
+			VertexRef() { index = 0; weight = 0; }
+			VertexRef(int i, float w) { index = i; weight = w; }
+		};
+		struct VertexGroup {
+			std::string name;
+			std::unordered_map<int, float> vertices;
+			VertexGroup() { name = ""; }
+			VertexGroup(const std::string& n) { name = n; }
+			void addVertex(const VertexRef& vRef) { vertices.insert(std::pair<int, float>(vRef.index, vRef.weight)); }
+		};
+
+		std::vector<VertexGroup> vertexGroups;
+		bool softBody;
+		float mass, friction;
+		int massVG, goalVG, softVG; //vertexGroupID
+		std::vector<XMFLOAT3> goalPositions, goalNormals;
+
+		wiRenderTarget	impostorTarget;
+		float impostorDistance;
+		static wiGraphicsTypes::GPUBuffer impostorVB_POS;
+		static wiGraphicsTypes::GPUBuffer impostorVB_TEX;
+
+		float tessellationFactor;
 
 	};
 
 	struct Object
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
-		wiECS::ComponentManager<Mesh>::iterator mesh_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<Mesh>::ref mesh_ref;
 
 		bool renderable;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
@@ -300,12 +331,17 @@ namespace wiSceneSystem
 		uint32_t occlusionHistory;
 		// occlusion query pool index
 		int occlusionQueryID;
+
+		int physicsObjectID;
+		bool rigidBody, kinematic;
+		std::string collisionShape, physicsType;
+		float mass, friction, restitution, damping;
 	};
 
 	struct Bone
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 
 		XMFLOAT4X4 inverseBindPoseMatrix;
 		XMFLOAT4X4 skinningMatrix;
@@ -313,10 +349,10 @@ namespace wiSceneSystem
 
 	struct Armature
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 
-		std::vector<wiECS::ComponentManager<Bone>::iterator> bone_refs;
+		std::vector<wiECS::ComponentManager<Bone>::ref> bone_refs;
 
 		GFX_STRUCT ShaderBoneType
 		{
@@ -343,8 +379,8 @@ namespace wiSceneSystem
 
 	struct Light
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 
 		enum LightType {
 			DIRECTIONAL			= ENTITY_TYPE_DIRECTIONALLIGHT,
@@ -381,8 +417,8 @@ namespace wiSceneSystem
 
 	struct Camera
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 
 		XMFLOAT4X4 View, Projection, VP;
 		XMFLOAT3 Eye, At, Up;
@@ -437,8 +473,8 @@ namespace wiSceneSystem
 
 	struct EnvironmentProbe
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 		int textureIndex = -1;
 		bool realTime = false;
 		bool isUpToDate = false;
@@ -446,33 +482,33 @@ namespace wiSceneSystem
 
 	struct ForceField
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 	};
 
 	struct Decal
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
-		wiECS::ComponentManager<Material>::iterator material_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<Material>::ref material_ref;
 
 		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 	};
 
 	struct Model
 	{
-		wiECS::ComponentManager<Node>::iterator node_ref;
-		wiECS::ComponentManager<Transform>::iterator transform_ref;
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
 
-		std::vector<wiECS::ComponentManager<Material>::iterator> material_refs;
-		std::vector<wiECS::ComponentManager<Mesh>::iterator> mesh_refs;
-		std::vector<wiECS::ComponentManager<Object>::iterator> object_refs;
-		std::vector<wiECS::ComponentManager<Armature>::iterator> armature_refs;
-		std::vector<wiECS::ComponentManager<Light>::iterator> light_refs;
-		std::vector<wiECS::ComponentManager<EnvironmentProbe>::iterator> probe_refs;
-		std::vector<wiECS::ComponentManager<ForceField>::iterator> force_refs;
-		std::vector<wiECS::ComponentManager<Decal>::iterator> decal_refs;
-		std::vector<wiECS::ComponentManager<Camera>::iterator> camera_refs;
+		std::vector<wiECS::ComponentManager<Material>::ref> material_refs;
+		std::vector<wiECS::ComponentManager<Mesh>::ref> mesh_refs;
+		std::vector<wiECS::ComponentManager<Object>::ref> object_refs;
+		std::vector<wiECS::ComponentManager<Armature>::ref> armature_refs;
+		std::vector<wiECS::ComponentManager<Light>::ref> light_refs;
+		std::vector<wiECS::ComponentManager<EnvironmentProbe>::ref> probe_refs;
+		std::vector<wiECS::ComponentManager<ForceField>::ref> force_refs;
+		std::vector<wiECS::ComponentManager<Decal>::ref> decal_refs;
+		std::vector<wiECS::ComponentManager<Camera>::ref> camera_refs;
 	};
 
 	struct Scene

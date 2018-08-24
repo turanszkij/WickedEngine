@@ -3,18 +3,9 @@
 #include "wiGraphicsAPI.h"
 #include "ShaderInterop.h"
 #include "wiSPTree.h"
-
+#include "wiSceneSystem_Decl.h"
 
 class wiArchive;
-
-namespace wiSceneComponents
-{
-	struct SkinnedVertex;
-	struct Mesh;
-	struct Object;
-	struct Material;
-	struct Camera;
-}
 
 class wiHairParticle
 {
@@ -56,15 +47,15 @@ public:
 
 public:
 	wiHairParticle();
-	wiHairParticle(const std::string& newName, float newLen, int newCount
-		, const std::string& newMat, wiSceneComponents::Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
+	//wiHairParticle(const std::string& newName, float newLen, int newCount
+	//	, const std::string& newMat, wiSceneComponents::Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
 	wiHairParticle(const wiHairParticle& other);
 
 	void CleanUp();
 
 	void Generate();
-	void ComputeCulling(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
-	void Draw(wiSceneComponents::Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
+	void ComputeCulling(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	void Draw(wiSceneSystem::Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
@@ -73,9 +64,9 @@ public:
 	float length;
 	int count;
 	std::string name, densityG, lenG, materialName;
-	wiSceneComponents::Material* material;
+	//wiSceneComponents::Material* material;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
-	wiSceneComponents::Object* object;
+	//wiSceneComponents::Object* object;
 	size_t particleCount;
 
 	void Serialize(wiArchive& archive);

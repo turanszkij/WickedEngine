@@ -1,5 +1,6 @@
 #include "wiBULLET.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
+#include "wiRenderer.h"
 
 
 #include "btBulletDynamicsCommon.h"
@@ -13,7 +14,8 @@
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
 using namespace std;
-using namespace wiSceneComponents;
+using namespace wiSceneSystem;
+using namespace wiECS;
 
 int PHYSICS::softBodyIterationCount=5;
 bool PHYSICS::rigidBodyPhysicsEnabled = true, PHYSICS::softBodyPhysicsEnabled = true;
@@ -475,22 +477,24 @@ void wiBULLET::addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std:
 }
 
 
-void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-	, float newMass, float newFriction, float newRestitution, float newDamping){
+void wiBULLET::addSoftBodyTriangleMesh(ComponentManager<Mesh>::ref mesh_ref, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
+	, float newMass, float newFriction, float newRestitution, float newDamping)
+{
+	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(mesh_ref);
 
-	const int vCount = (int)mesh->physicsverts.size();
+	const int vCount = (int)mesh.physicsverts.size();
 	btScalar* btVerts = new btScalar[vCount*3];
 	for(int i=0;i<vCount*3;i+=3){
 		const int vindex = i/3;
-		btVerts[i] = btScalar(mesh->physicsverts[vindex].x);
-		btVerts[i+1] = btScalar(mesh->physicsverts[vindex].y);
-		btVerts[i+2] = btScalar(mesh->physicsverts[vindex].z);
+		btVerts[i] = btScalar(mesh.physicsverts[vindex].x);
+		btVerts[i+1] = btScalar(mesh.physicsverts[vindex].y);
+		btVerts[i+2] = btScalar(mesh.physicsverts[vindex].z);
 	}
-	const int iCount = (int)mesh->physicsindices.size();
+	const int iCount = (int)mesh.physicsindices.size();
 	const int tCount = iCount/3;
 	int* btInd = new int[iCount];
 	for(int i=0;i<iCount;++i){
-		btInd[i] = mesh->physicsindices[i];
+		btInd[i] = mesh.physicsindices[i];
 	}
 
 	
@@ -550,22 +554,22 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 		btScalar mass = btScalar(newMass);
 		softBody->setTotalMass(mass);
 		
-		int mvg = mesh->massVG;
+		int mvg = mesh.massVG;
 		if(mvg>=0){
-			for(std::map<int,float>::const_iterator it=mesh->vertexGroups[mvg].vertices.begin();it!=mesh->vertexGroups[mvg].vertices.end();++it){
+			for(auto it=mesh.vertexGroups[mvg].vertices.begin();it!=mesh.vertexGroups[mvg].vertices.end();++it){
 				int vi = (*it).first;
 				float wei = (*it).second;
-				int index=mesh->physicalmapGP[vi];
+				int index=mesh.physicalmapGP[vi];
 				softBody->setMass(index,softBody->getMass(index)*btScalar(wei));
 			}
 		}
 
 		
-		int gvg = mesh->goalVG;
+		int gvg = mesh.goalVG;
 		if(gvg>=0){
-			for(std::map<int,float>::const_iterator it=mesh->vertexGroups[gvg].vertices.begin();it!=mesh->vertexGroups[gvg].vertices.end();++it){
+			for(auto it=mesh.vertexGroups[gvg].vertices.begin();it!=mesh.vertexGroups[gvg].vertices.end();++it){
 				int vi = (*it).first;
-				int index=mesh->physicalmapGP[vi];
+				int index=mesh.physicalmapGP[vi];
 				float weight = (*it).second;
 				if(weight==1)
 					softBody->setMass(index,0);
@@ -588,40 +592,42 @@ void wiBULLET::addSoftBodyTriangleMesh(const Mesh* mesh, const XMFLOAT3& sca, co
 }
 
 
-void wiBULLET::connectVerticesToSoftBody(Mesh* const mesh, int objectI){
+void wiBULLET::connectVerticesToSoftBody(ComponentManager<Mesh>::ref mesh_ref, int objectI)
+{
 	if (!softBodyPhysicsEnabled)
 		return;
 
 	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[objectI];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 
+	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(mesh_ref);
 
 	if(softBody){
 		btVector3 min, max;
 		softBody->getAabb(min, max);
-		mesh->aabb.create(XMFLOAT3(min.x(), min.y(), min.z()), XMFLOAT3(max.x(), max.y(), max.z()));
+		mesh.aabb.create(XMFLOAT3(min.x(), min.y(), min.z()), XMFLOAT3(max.x(), max.y(), max.z()));
 
 		softBody->setWindVelocity(bulletPhysics->wind);
 
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
-		int gvg = mesh->goalVG;
-		for (unsigned int i = 0; i<mesh->vertices_POS.size(); ++i)
+		int gvg = mesh.goalVG;
+		for (unsigned int i = 0; i<mesh.vertices_POS.size(); ++i)
 		{
-			int indexP = mesh->physicalmapGP[i];
-			float weight = mesh->vertexGroups[gvg].vertices[indexP];
+			int indexP = mesh.physicalmapGP[i];
+			float weight = mesh.vertexGroups[gvg].vertices[indexP];
 
-			Mesh::Vertex_POS& vert = mesh->vertices_Transformed_POS[i];
+			Mesh::Vertex_POS& vert = mesh.vertices_Transformed_POS[i];
 
-			mesh->vertices_Transformed_PRE[i] = vert;
+			mesh.vertices_Transformed_PRE[i] = vert;
 			vert.pos.x = nodes[indexP].m_x.getX();
 			vert.pos.y = nodes[indexP].m_x.getY();
 			vert.pos.z = nodes[indexP].m_x.getZ();
-			mesh->vertices_Transformed_POS[i].MakeFromParams(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ())/*, vert.GetWind(), vert.GetMaterialIndex()*/);
+			mesh.vertices_Transformed_POS[i].MakeFromParams(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ())/*, vert.GetWind(), vert.GetMaterialIndex()*/);
 		}
 	}
 }
-void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
+void wiBULLET::connectSoftBodyToVertices(ComponentManager<Mesh>::ref mesh_ref, int objectI){
 	if (!softBodyPhysicsEnabled)
 		return;
 
@@ -629,17 +635,19 @@ void wiBULLET::connectSoftBodyToVertices(const Mesh* const mesh, int objectI){
 		btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[objectI];
 		btSoftBody* softBody = btSoftBody::upcast(obj);
 
+		Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(mesh_ref);
+
 		if(softBody){
 			btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
-			int gvg = mesh->goalVG;
+			int gvg = mesh.goalVG;
 			if(gvg>=0){
 				int j=0;
-				for(std::map<int,float>::const_iterator it=mesh->vertexGroups[gvg].vertices.begin();it!=mesh->vertexGroups[gvg].vertices.end();++it){
+				for (auto it = mesh.vertexGroups[gvg].vertices.begin(); it != mesh.vertexGroups[gvg].vertices.end(); ++it) {
 					int vi = (*it).first;
-					int index=mesh->physicalmapGP[vi];
+					int index = mesh.physicalmapGP[vi];
 					float weight = (*it).second;
-					nodes[index].m_x=nodes[index].m_x.lerp(btVector3(mesh->goalPositions[j].x,mesh->goalPositions[j].y,mesh->goalPositions[j].z),weight);
+					nodes[index].m_x = nodes[index].m_x.lerp(btVector3(mesh.goalPositions[j].x, mesh.goalPositions[j].y, mesh.goalPositions[j].z), weight);
 					++j;
 				}
 			}
@@ -687,109 +695,114 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 	return transforms[index];
 }
 
-void wiBULLET::registerObject(Object* object){
-	if(object->rigidBody && object->mesh != nullptr && rigidBodyPhysicsEnabled){
-		XMFLOAT3 S,T;
-		XMFLOAT4 R;
-		object->applyTransform();
-		object->attachTo(object->GetRoot());
-
-		S = object->scale;
-		T = object->translation;
-		R = object->rotation;
-
-		if(!object->collisionShape.compare("BOX")){
-			addBox(
-				S,R,T
-				,object->mass,object->friction,object->restitution
-				,object->damping,object->kinematic
-			);
-			object->physicsObjectID = ++registeredObjects;
-		}
-		if(!object->collisionShape.compare("SPHERE")){
-			addSphere(
-				S.x,T
-				,object->mass,object->friction,object->restitution
-				,object->damping,object->kinematic
-			);
-			object->physicsObjectID = ++registeredObjects;
-		}
-		if(!object->collisionShape.compare("CAPSULE")){
-			addCapsule(
-				S.x,S.y,R,T
-				,object->mass,object->friction,object->restitution
-				,object->damping,object->kinematic
-			);
-			object->physicsObjectID = ++registeredObjects;
-		}
-		if(!object->collisionShape.compare("CONVEX_HULL")){
-			vector<XMFLOAT4> pos_stream(object->mesh->vertices_POS.size());
-			for (size_t i = 0; i < object->mesh->vertices_POS.size(); ++i)
-			{
-				pos_stream[i].x = object->mesh->vertices_POS[i].pos.x;
-				pos_stream[i].y = object->mesh->vertices_POS[i].pos.y;
-				pos_stream[i].z = object->mesh->vertices_POS[i].pos.z;
-				pos_stream[i].w = 1;
-			}
-
-			addConvexHull(
-				pos_stream,
-				S,R,T
-				,object->mass,object->friction,object->restitution
-				,object->damping,object->kinematic
-			);
-			object->physicsObjectID = ++registeredObjects;
-		}
-		if(!object->collisionShape.compare("MESH")){
-			vector<XMFLOAT4> pos_stream(object->mesh->vertices_POS.size());
-			for (size_t i = 0; i < object->mesh->vertices_POS.size(); ++i)
-			{
-				pos_stream[i].x = object->mesh->vertices_POS[i].pos.x;
-				pos_stream[i].y = object->mesh->vertices_POS[i].pos.y;
-				pos_stream[i].z = object->mesh->vertices_POS[i].pos.z;
-				pos_stream[i].w = 1;
-			}
-
-			addTriangleMesh(
-				pos_stream,object->mesh->indices,
-				S,R,T
-				,object->mass,object->friction,object->restitution
-				,object->damping,object->kinematic
-			);
-			object->physicsObjectID = ++registeredObjects;
-		}
-	}
-
-	if(object->mesh != nullptr && object->mesh->softBody && softBodyPhysicsEnabled){
-		XMFLOAT3 s,t;
-		XMFLOAT4 r;
-		if(object->mesh->hasArmature()){
-			s=object->mesh->armature->scale;
-			r=object->mesh->armature->rotation;
-			t=object->mesh->armature->translation;
-		}
-		else{
-			s=object->scale;
-			r=object->rotation;
-			t=object->translation;
-		}
-		addSoftBodyTriangleMesh(
-			object->mesh
-			,s,r,t
-			,object->mass,object->mesh->friction,object->restitution,object->damping
-		);
-		object->physicsObjectID = ++registeredObjects;
-	}
-}
-void wiBULLET::removeObject(Object* object)
+void wiBULLET::registerObject(ComponentManager<Object>::ref object_ref)
 {
-	if (object == nullptr || object->physicsObjectID < 0)
+	Object& object = wiRenderer::GetScene().objects.GetComponent(object_ref);
+	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(object.mesh_ref);
+	Transform& transform = wiRenderer::GetScene().transforms.GetComponent(object.transform_ref);
+
+	//if(object.rigidBody&& rigidBodyPhysicsEnabled){
+	//	XMFLOAT3 S,T;
+	//	XMFLOAT4 R;
+
+	//	S = transform.scale;
+	//	T = transform.translation;
+	//	R = transform.rotation;
+
+	//	if(!object.collisionShape.compare("BOX")){
+	//		addBox(
+	//			S,R,T
+	//			,object.mass,object.friction,object.restitution
+	//			,object.damping,object.kinematic
+	//		);
+	//		object.physicsObjectID = ++registeredObjects;
+	//	}
+	//	if(!object.collisionShape.compare("SPHERE")){
+	//		addSphere(
+	//			S.x,T
+	//			,object.mass,object.friction,object.restitution
+	//			,object.damping,object.kinematic
+	//		);
+	//		object.physicsObjectID = ++registeredObjects;
+	//	}
+	//	if(!object.collisionShape.compare("CAPSULE")){
+	//		addCapsule(
+	//			S.x,S.y,R,T
+	//			,object.mass,object.friction,object.restitution
+	//			,object.damping,object.kinematic
+	//		);
+	//		object.physicsObjectID = ++registeredObjects;
+	//	}
+	//	if(!object.collisionShape.compare("CONVEX_HULL")){
+	//		vector<XMFLOAT4> pos_stream(object.mesh->vertices_POS.size());
+	//		for (size_t i = 0; i < object.mesh->vertices_POS.size(); ++i)
+	//		{
+	//			pos_stream[i].x = object.mesh->vertices_POS[i].pos.x;
+	//			pos_stream[i].y = object.mesh->vertices_POS[i].pos.y;
+	//			pos_stream[i].z = object.mesh->vertices_POS[i].pos.z;
+	//			pos_stream[i].w = 1;
+	//		}
+
+	//		addConvexHull(
+	//			pos_stream,
+	//			S,R,T
+	//			,object.mass,object.friction,object.restitution
+	//			,object.damping,object.kinematic
+	//		);
+	//		object.physicsObjectID = ++registeredObjects;
+	//	}
+	//	if(!object.collisionShape.compare("MESH")){
+	//		vector<XMFLOAT4> pos_stream(object.mesh->vertices_POS.size());
+	//		for (size_t i = 0; i < object.mesh->vertices_POS.size(); ++i)
+	//		{
+	//			pos_stream[i].x = object.mesh->vertices_POS[i].pos.x;
+	//			pos_stream[i].y = object.mesh->vertices_POS[i].pos.y;
+	//			pos_stream[i].z = object.mesh->vertices_POS[i].pos.z;
+	//			pos_stream[i].w = 1;
+	//		}
+
+	//		addTriangleMesh(
+	//			pos_stream,object.mesh->indices,
+	//			S,R,T
+	//			,object.mass,object.friction,object.restitution
+	//			,object.damping,object.kinematic
+	//		);
+	//		object.physicsObjectID = ++registeredObjects;
+	//	}
+	//}
+
+	//if(mesh.softBody && softBodyPhysicsEnabled){
+	//	XMFLOAT3 s,t;
+	//	XMFLOAT4 r;
+	//	if(mesh.hasArmature()){
+	//		s=mesh.armature->scale;
+	//		r=mesh.armature->rotation;
+	//		t=mesh.armature->translation;
+	//	}
+	//	else{
+	//		s=object.scale;
+	//		r=object.rotation;
+	//		t=object.translation;
+	//	}
+	//	addSoftBodyTriangleMesh(
+	//		object.mesh
+	//		,s,r,t
+	//		,object.mass,object.mesh->friction,object.restitution,object.damping
+	//	);
+	//	object.physicsObjectID = ++registeredObjects;
+	//}
+}
+void wiBULLET::removeObject(ComponentManager<Object>::ref object_ref)
+{
+	Object& object = wiRenderer::GetScene().objects.GetComponent(object_ref);
+
+	if (object.physicsObjectID < 0)
 	{
 		return;
 	}
 
-	deleteObject(object->physicsObjectID);
-	object->physicsObjectID = -1;
+	deleteObject(object.physicsObjectID);
+	object.physicsObjectID = -1;
 }
 
 void wiBULLET::Update(float dt){
