@@ -116,477 +116,8 @@ wiBULLET::~wiBULLET()
 }
 
 
-void wiBULLET::addWind(const XMFLOAT3& wind){
+void wiBULLET::setWind(const XMFLOAT3& wind){
 	this->bulletPhysics->wind = btVector3(btScalar(wind.x),btScalar(wind.y),btScalar(wind.z));
-}
-
-
-void wiBULLET::addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
-
-	btCollisionShape* shape = new btBoxShape(btVector3(sca.x,sca.y,sca.z));
-	shape->setMargin(btScalar(0.05));
-	bulletPhysics->collisionShapes.push_back(shape);
-
-	btTransform shapeTransform;
-	shapeTransform.setIdentity();
-	shapeTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
-	shapeTransform.setRotation(btQuaternion(rot.x,rot.y,rot.z,rot.w));
-	{
-		btScalar mass(newMass);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f && !kinematic);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			shape->calculateLocalInertia(mass,localInertia);
-		else 
-			mass=0;
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
-		rbInfo.m_friction=newFriction;
-		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping = newDamping;
-		rbInfo.m_angularDamping = newDamping;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-		body->setActivationState(DISABLE_DEACTIVATION);
-
-		//add the body to the dynamics world
-		bulletPhysics->dynamicsWorld->addRigidBody(body);
-
-		
-		if (body->getMotionState())
-		{
-			btTransform trans;
-			body->getMotionState()->getWorldTransform(trans);
-			btQuaternion nRot = trans.getRotation();
-			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new PhysicsTransform(
-				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
-				);
-		}
-	}
-
-	
-}
-
-void wiBULLET::addSphere(float rad, const XMFLOAT3& pos
-					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
-	///create a few basic rigid bodies
-	/*btCollisionShape* groundShape = new btshape(btVector3(btScalar(50.),btScalar(50.),btScalar(50.)));
-
-	collisionShapes.push_back(groundShape);
-
-	btTransform groundTransform;
-	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0,-56,0));
-
-	{
-		btScalar mass(0.);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			groundShape->calculateLocalInertia(mass,localInertia);
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,groundShape,localInertia);
-		btRigidBody* body = new btRigidBody(rbInfo);
-
-		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
-	}
-
-
-	{
-		//create a dynamic rigidbody
-
-		//btCollisionShape* colShape = new btshape(btVector3(1,1,1));
-		btCollisionShape* colShape = new btSphereShape(btScalar(1.));
-		collisionShapes.push_back(colShape);
-
-		/// Create Dynamic Objects
-		btTransform startTransform;
-		startTransform.setIdentity();
-
-		btScalar	mass(1.f);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			colShape->calculateLocalInertia(mass,localInertia);
-
-			startTransform.setOrigin(btVector3(2,10,0));
-		
-			//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-			btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-			btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,colShape,localInertia);
-			btRigidBody* body = new btRigidBody(rbInfo);
-
-			dynamicsWorld->addRigidBody(body);
-	}*/
-
-	btCollisionShape* shape = new btSphereShape(btScalar(rad));
-	shape->setMargin(btScalar(0.05));
-	bulletPhysics->collisionShapes.push_back(shape);
-
-	btTransform shapeTransform;
-	shapeTransform.setIdentity();
-	shapeTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
-	{
-		btScalar mass(newMass);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f && !kinematic);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			shape->calculateLocalInertia(mass,localInertia);
-		else 
-			mass=0;
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
-		rbInfo.m_friction=newFriction;
-		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping=newDamping;
-		rbInfo.m_angularDamping = newDamping;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-		body->setActivationState(DISABLE_DEACTIVATION);
-
-		//add the body to the dynamics world
-		bulletPhysics->dynamicsWorld->addRigidBody(body);
-
-		
-		if (body->getMotionState())
-		{
-			btTransform trans;
-			body->getMotionState()->getWorldTransform(trans);
-			btQuaternion nRot = trans.getRotation();
-			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new PhysicsTransform(
-				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
-				);
-		}
-	}
-
-	
-}
-
-void wiBULLET::addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
-
-	btCollisionShape* shape = new btCapsuleShape(btScalar(rad),btScalar(hei));
-	shape->setMargin(btScalar(0.05));
-	bulletPhysics->collisionShapes.push_back(shape);
-
-	btTransform shapeTransform;
-	shapeTransform.setIdentity();
-	shapeTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
-	shapeTransform.setRotation(btQuaternion(rot.x,rot.y,rot.z,rot.w));
-	{
-		btScalar mass(newMass);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f && !kinematic);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			shape->calculateLocalInertia(mass,localInertia);
-		else 
-			mass=0;
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
-		rbInfo.m_friction=newFriction;
-		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping = newDamping;
-		rbInfo.m_angularDamping = newDamping;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-		body->setActivationState(DISABLE_DEACTIVATION);
-
-		//add the body to the dynamics world
-		bulletPhysics->dynamicsWorld->addRigidBody(body);
-
-		
-		if (body->getMotionState())
-		{
-			btTransform trans;
-			body->getMotionState()->getWorldTransform(trans);
-			btQuaternion nRot = trans.getRotation();
-			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new PhysicsTransform(
-				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
-				);
-		}
-	}
-
-	
-}
-
-void wiBULLET::addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
-	btCollisionShape* shape = new btConvexHullShape();
-	for (unsigned int i = 0; i<vertices.size(); ++i)
-		((btConvexHullShape*)shape)->addPoint(btVector3(vertices[i].x,vertices[i].y,vertices[i].z));
-	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
-	shape->setMargin(btScalar(0.05));
-
-	bulletPhysics->collisionShapes.push_back(shape);
-
-	btTransform shapeTransform;
-	shapeTransform.setIdentity();
-	shapeTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
-	shapeTransform.setRotation(btQuaternion(rot.x,rot.y,rot.z,rot.w));
-	{
-		btScalar mass(newMass);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f && !kinematic);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			shape->calculateLocalInertia(mass,localInertia);
-		else
-			mass=0;
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
-		rbInfo.m_friction=newFriction;
-		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping = newDamping;
-		rbInfo.m_angularDamping = newDamping;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		if(kinematic) {
-			body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-		}
-		body->setActivationState(DISABLE_DEACTIVATION);
-
-		//add the body to the dynamics world
-		bulletPhysics->dynamicsWorld->addRigidBody(body);
-
-		
-		if (body->getMotionState())
-		{
-			btTransform trans;
-			body->getMotionState()->getWorldTransform(trans);
-			btQuaternion nRot = trans.getRotation();
-			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new PhysicsTransform(
-				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
-				);
-		}
-	}
-
-	
-}
-
-void wiBULLET::addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-					, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic){
-	
-	int totalVerts = (int)vertices.size();
-	int totalTriangles = (int)indices.size() / 3;
-
-	btVector3* btVerts = new btVector3[totalVerts];
-	for (unsigned int i = 0; i<vertices.size(); ++i)
-		btVerts[i] = (btVector3(vertices[i].x,vertices[i].y,vertices[i].z));
-
-	int* btInd = new int[indices.size()];
-	for (unsigned int i = 0; i<indices.size(); ++i)
-		btInd[i] = indices[i];
-	
-	int vertStride = sizeof(btVector3);
-	int indexStride = 3*sizeof(int);
-
-	btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray(
-		totalTriangles,
-		btInd,
-		indexStride,
-		totalVerts,
-		(btScalar*) &btVerts[0].x(),
-		vertStride
-		);
-
-	bool useQuantizedAabbCompression = true;
-						
-	btCollisionShape* shape = new btBvhTriangleMeshShape(indexVertexArrays,useQuantizedAabbCompression);
-	shape->setMargin(btScalar(0.05));
-	shape->setLocalScaling(btVector3(sca.x,sca.y,sca.z));
-
-	bulletPhysics->collisionShapes.push_back(shape);
-
-	btTransform shapeTransform;
-	shapeTransform.setIdentity();
-	shapeTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
-	shapeTransform.setRotation(btQuaternion(rot.x,rot.y,rot.z,rot.w));
-	{
-		btScalar mass(newMass);
-
-		//rigidbody is dynamic if and only if mass is non zero, otherwise static
-		bool isDynamic = (mass != 0.f && !kinematic);
-
-		btVector3 localInertia(0,0,0);
-		if (isDynamic)
-			shape->calculateLocalInertia(mass,localInertia);
-		else 
-			mass=0;
-
-		//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-		btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
-		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass,myMotionState,shape,localInertia);
-		rbInfo.m_friction=newFriction;
-		rbInfo.m_restitution=newRestitution;
-		rbInfo.m_linearDamping = newDamping;
-		rbInfo.m_angularDamping = newDamping;
-		btRigidBody* body = new btRigidBody(rbInfo);
-		if(kinematic) body->setCollisionFlags( body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-		body->setActivationState( DISABLE_DEACTIVATION );
-
-		//add the body to the dynamics world
-		bulletPhysics->dynamicsWorld->addRigidBody(body);
-
-		
-		if (body->getMotionState())
-		{
-			btTransform trans;
-			body->getMotionState()->getWorldTransform(trans);
-			btQuaternion nRot = trans.getRotation();
-			btVector3 nPos = trans.getOrigin();
-			transforms.push_back(new PhysicsTransform(
-				XMFLOAT4(nRot.getX(),nRot.getY(),nRot.getZ(),nRot.getW()),XMFLOAT3(nPos.getX(),nPos.getY(),nPos.getZ()))
-				);
-		}
-	}
-
-	
-}
-
-
-void wiBULLET::addSoftBodyTriangleMesh(PhysicsComponent& physicscomponent)
-{
-	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
-
-	//const int vCount = (int)mesh.physicsverts.size();
-	//btScalar* btVerts = new btScalar[vCount*3];
-	//for(int i=0;i<vCount*3;i+=3){
-	//	const int vindex = i/3;
-	//	btVerts[i] = btScalar(mesh.physicsverts[vindex].x);
-	//	btVerts[i+1] = btScalar(mesh.physicsverts[vindex].y);
-	//	btVerts[i+2] = btScalar(mesh.physicsverts[vindex].z);
-	//}
-	//const int iCount = (int)mesh.physicsindices.size();
-	//const int tCount = iCount/3;
-	//int* btInd = new int[iCount];
-	//for(int i=0;i<iCount;++i){
-	//	btInd[i] = mesh.physicsindices[i];
-	//}
-
-	//
-	//btSoftBody* softBody = btSoftBodyHelpers::CreateFromTriMesh(
-	//		((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo()
-	//		,&btVerts[0]
-	//		,&btInd[0]
-	//		,tCount
-	//		,false
-	//);
-
-	//
-	//delete[] btVerts;
-	//delete[] btInd;
-	//
-	//if(softBody){
-	//	btSoftBody::Material* pm=softBody->appendMaterial();
-	//	pm->m_kLST = 0.5;
-	//	pm->m_kVST = 0.5;
-	//	pm->m_kAST = 0.5;
-	//	pm->m_flags = 0;
-	//	softBody->generateBendingConstraints(2,pm);
-	//	softBody->randomizeConstraints();
-	//	
-	//	btTransform shapeTransform;
-	//	shapeTransform.setIdentity();
-	//	shapeTransform.setOrigin(btVector3(pos.x,pos.y,pos.z));
-	//	shapeTransform.setRotation(btQuaternion(rot.x,rot.y,rot.z,rot.w));
-	//	softBody->scale(btVector3(sca.x,sca.y,sca.z));
-	//	softBody->transform(shapeTransform);
-
-
-	//	softBody->m_cfg.piterations	=	softBodyIterationCount;
-	//	softBody->m_cfg.aeromodel=btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
-
-	//	softBody->m_cfg.kAHR		=btScalar(.69); //0.69		Anchor hardness  [0,1]
-	//	softBody->m_cfg.kCHR		=btScalar(1.0); //1			Rigid contact hardness  [0,1]
-	//	softBody->m_cfg.kDF			=btScalar(0.2); //0.2		Dynamic friction coefficient  [0,1]
-	//	softBody->m_cfg.kDG			=btScalar(0.01); //0			Drag coefficient  [0,+inf]
-	//	softBody->m_cfg.kDP			=btScalar(0.0); //0			Damping coefficient  [0,1]
-	//	softBody->m_cfg.kKHR		=btScalar(0.1); //0.1		Kinetic contact hardness  [0,1]
-	//	softBody->m_cfg.kLF			=btScalar(0.1); //0			Lift coefficient  [0,+inf]
-	//	softBody->m_cfg.kMT			=btScalar(0.0); //0			Pose matching coefficient  [0,1]
-	//	softBody->m_cfg.kPR			=btScalar(0.0); //0			Pressure coefficient  [-1,1]
-	//	softBody->m_cfg.kSHR		=btScalar(1.0); //1			Soft contacts hardness  [0,1]
-	//	softBody->m_cfg.kVC			=btScalar(0.0); //0			Volume conseration coefficient  [0,+inf]
-	//	softBody->m_cfg.kVCF		=btScalar(1.0); //1			Velocities correction factor (Baumgarte)
-
-	//	softBody->m_cfg.kSKHR_CL	=btScalar(1.0); //1			Soft vs. kinetic hardness   [0,1]
-	//	softBody->m_cfg.kSK_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-	//	softBody->m_cfg.kSRHR_CL	=btScalar(0.1); //0.1		Soft vs. rigid hardness  [0,1]
-	//	softBody->m_cfg.kSR_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-	//	softBody->m_cfg.kSSHR_CL	=btScalar(0.5); //0.5		Soft vs. soft hardness  [0,1]
-	//	softBody->m_cfg.kSS_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-	//	
-
-	//	btScalar mass = btScalar(newMass);
-	//	softBody->setTotalMass(mass);
-	//	
-	//	int mvg = mesh.massVG;
-	//	if(mvg>=0){
-	//		for(auto it=mesh.vertexGroups[mvg].vertices.begin();it!=mesh.vertexGroups[mvg].vertices.end();++it){
-	//			int vi = (*it).first;
-	//			float wei = (*it).second;
-	//			int index=mesh.physicalmapGP[vi];
-	//			softBody->setMass(index,softBody->getMass(index)*btScalar(wei));
-	//		}
-	//	}
-
-	//	
-	//	int gvg = mesh.goalVG;
-	//	if(gvg>=0){
-	//		for(auto it=mesh.vertexGroups[gvg].vertices.begin();it!=mesh.vertexGroups[gvg].vertices.end();++it){
-	//			int vi = (*it).first;
-	//			int index=mesh.physicalmapGP[vi];
-	//			float weight = (*it).second;
-	//			if(weight==1)
-	//				softBody->setMass(index,0);
-	//		}
-	//	}
-
-	//	softBody->getCollisionShape()->setMargin(btScalar(0.2));
-
-	//	softBody->setWindVelocity(bulletPhysics->wind);
-	//	
-	//	softBody->setPose(true,true);
-
-	//	softBody->setActivationState(DISABLE_DEACTIVATION);
-
-	//	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->addSoftBody(softBody);
-
-	//	transforms.push_back(new PhysicsTransform);
-	//}
-
 }
 
 
@@ -609,10 +140,10 @@ void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent)
 
 		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
-		int gvg = mesh.goalVG;
+		int gvg = physicscomponent.goalVG;
 		for (unsigned int i = 0; i<mesh.vertices_POS.size(); ++i)
 		{
-			int indexP = mesh.physicalmapGP[i];
+			int indexP = physicscomponent.physicalmapGP[i];
 			float weight = mesh.vertexGroups[gvg].vertices[indexP];
 
 			Mesh::Vertex_POS& vert = mesh.vertices_Transformed_POS[i];
@@ -638,14 +169,14 @@ void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent){
 		if(softBody){
 			btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 		
-			int gvg = mesh.goalVG;
+			int gvg = physicscomponent.goalVG;
 			if(gvg>=0){
 				int j=0;
 				for (auto it = mesh.vertexGroups[gvg].vertices.begin(); it != mesh.vertexGroups[gvg].vertices.end(); ++it) {
 					int vi = (*it).first;
-					int index = mesh.physicalmapGP[vi];
+					int index = physicscomponent.physicalmapGP[vi];
 					float weight = (*it).second;
-					nodes[index].m_x = nodes[index].m_x.lerp(btVector3(mesh.goalPositions[j].x, mesh.goalPositions[j].y, mesh.goalPositions[j].z), weight);
+					nodes[index].m_x = nodes[index].m_x.lerp(btVector3(physicscomponent.goalPositions[j].x, physicscomponent.goalPositions[j].y, physicscomponent.goalPositions[j].z), weight);
 					++j;
 				}
 			}
@@ -695,100 +226,416 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 
 void wiBULLET::registerObject(PhysicsComponent& physicscomponent)
 {
-	//Object& object = wiRenderer::GetScene().objects.GetComponent(object_ref);
-	//Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(object.mesh_ref);
-	//Transform& transform = wiRenderer::GetScene().transforms.GetComponent(object.transform_ref);
+	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
+	Transform& transform = wiRenderer::GetScene().transforms.GetComponent(physicscomponent.transform_ref);
 
-	//if(object.rigidBody&& rigidBodyPhysicsEnabled){
-	//	XMFLOAT3 S,T;
-	//	XMFLOAT4 R;
+	btVector3 S = btVector3(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
+	btQuaternion R = btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.z);
+	btVector3 T = btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z);
 
-	//	S = transform.scale;
-	//	T = transform.translation;
-	//	R = transform.rotation;
+	if(physicscomponent.rigidBody&& rigidBodyPhysicsEnabled){
 
-	//	if(!object.collisionShape.compare("BOX")){
-	//		addBox(
-	//			S,R,T
-	//			,object.mass,object.friction,object.restitution
-	//			,object.damping,object.kinematic
-	//		);
-	//		object.physicsObjectID = ++registeredObjects;
-	//	}
-	//	if(!object.collisionShape.compare("SPHERE")){
-	//		addSphere(
-	//			S.x,T
-	//			,object.mass,object.friction,object.restitution
-	//			,object.damping,object.kinematic
-	//		);
-	//		object.physicsObjectID = ++registeredObjects;
-	//	}
-	//	if(!object.collisionShape.compare("CAPSULE")){
-	//		addCapsule(
-	//			S.x,S.y,R,T
-	//			,object.mass,object.friction,object.restitution
-	//			,object.damping,object.kinematic
-	//		);
-	//		object.physicsObjectID = ++registeredObjects;
-	//	}
-	//	if(!object.collisionShape.compare("CONVEX_HULL")){
-	//		vector<XMFLOAT4> pos_stream(object.mesh->vertices_POS.size());
-	//		for (size_t i = 0; i < object.mesh->vertices_POS.size(); ++i)
-	//		{
-	//			pos_stream[i].x = object.mesh->vertices_POS[i].pos.x;
-	//			pos_stream[i].y = object.mesh->vertices_POS[i].pos.y;
-	//			pos_stream[i].z = object.mesh->vertices_POS[i].pos.z;
-	//			pos_stream[i].w = 1;
-	//		}
+		if(!physicscomponent.collisionShape.compare("BOX"))
+		{
+			btCollisionShape* shape = new btBoxShape(S);
+			shape->setMargin(btScalar(0.05));
+			bulletPhysics->collisionShapes.push_back(shape);
 
-	//		addConvexHull(
-	//			pos_stream,
-	//			S,R,T
-	//			,object.mass,object.friction,object.restitution
-	//			,object.damping,object.kinematic
-	//		);
-	//		object.physicsObjectID = ++registeredObjects;
-	//	}
-	//	if(!object.collisionShape.compare("MESH")){
-	//		vector<XMFLOAT4> pos_stream(object.mesh->vertices_POS.size());
-	//		for (size_t i = 0; i < object.mesh->vertices_POS.size(); ++i)
-	//		{
-	//			pos_stream[i].x = object.mesh->vertices_POS[i].pos.x;
-	//			pos_stream[i].y = object.mesh->vertices_POS[i].pos.y;
-	//			pos_stream[i].z = object.mesh->vertices_POS[i].pos.z;
-	//			pos_stream[i].w = 1;
-	//		}
+			btTransform shapeTransform;
+			shapeTransform.setIdentity();
+			shapeTransform.setOrigin(T);
+			shapeTransform.setRotation(R);
+			{
+				btScalar mass(physicscomponent.mass);
 
-	//		addTriangleMesh(
-	//			pos_stream,object.mesh->indices,
-	//			S,R,T
-	//			,object.mass,object.friction,object.restitution
-	//			,object.damping,object.kinematic
-	//		);
-	//		object.physicsObjectID = ++registeredObjects;
-	//	}
-	//}
+				//rigidbody is dynamic if and only if mass is non zero, otherwise static
+				bool isDynamic = (mass != 0.f && !physicscomponent.kinematic);
 
-	//if(mesh.softBody && softBodyPhysicsEnabled){
-	//	XMFLOAT3 s,t;
-	//	XMFLOAT4 r;
-	//	if(mesh.hasArmature()){
-	//		s=mesh.armature->scale;
-	//		r=mesh.armature->rotation;
-	//		t=mesh.armature->translation;
-	//	}
-	//	else{
-	//		s=object.scale;
-	//		r=object.rotation;
-	//		t=object.translation;
-	//	}
-	//	addSoftBodyTriangleMesh(
-	//		object.mesh
-	//		,s,r,t
-	//		,object.mass,object.mesh->friction,object.restitution,object.damping
-	//	);
-	//	object.physicsObjectID = ++registeredObjects;
-	//}
+				btVector3 localInertia(0, 0, 0);
+				if (isDynamic)
+					shape->calculateLocalInertia(mass, localInertia);
+				else
+					mass = 0;
+
+				//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+				btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+				rbInfo.m_friction = physicscomponent.friction;
+				rbInfo.m_restitution = physicscomponent.restitution;
+				rbInfo.m_linearDamping = physicscomponent.damping;
+				rbInfo.m_angularDamping = physicscomponent.damping;
+				btRigidBody* body = new btRigidBody(rbInfo);
+				if (physicscomponent.kinematic) 
+					body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				body->setActivationState(DISABLE_DEACTIVATION);
+
+				//add the body to the dynamics world
+				bulletPhysics->dynamicsWorld->addRigidBody(body);
+
+
+				if (body->getMotionState())
+				{
+					btTransform trans;
+					body->getMotionState()->getWorldTransform(trans);
+					btQuaternion nRot = trans.getRotation();
+					btVector3 nPos = trans.getOrigin();
+					transforms.push_back(new PhysicsTransform(
+						XMFLOAT4(nRot.getX(), nRot.getY(), nRot.getZ(), nRot.getW()), XMFLOAT3(nPos.getX(), nPos.getY(), nPos.getZ()))
+					);
+				}
+			}
+		}
+		if(!physicscomponent.collisionShape.compare("SPHERE"))
+		{
+			btCollisionShape* shape = new btSphereShape(btScalar(S.x()));
+			shape->setMargin(btScalar(0.05));
+			bulletPhysics->collisionShapes.push_back(shape);
+
+			btTransform shapeTransform;
+			shapeTransform.setIdentity();
+			shapeTransform.setOrigin(T);
+			{
+				btScalar mass(physicscomponent.mass);
+
+				//rigidbody is dynamic if and only if mass is non zero, otherwise static
+				bool isDynamic = (mass != 0.f && !physicscomponent.kinematic);
+
+				btVector3 localInertia(0, 0, 0);
+				if (isDynamic)
+					shape->calculateLocalInertia(mass, localInertia);
+				else
+					mass = 0;
+
+				//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+				btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+				rbInfo.m_friction = physicscomponent.friction;
+				rbInfo.m_restitution = physicscomponent.restitution;
+				rbInfo.m_linearDamping = physicscomponent.damping;
+				rbInfo.m_angularDamping = physicscomponent.damping;
+				btRigidBody* body = new btRigidBody(rbInfo);
+				if (physicscomponent.kinematic)
+					body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				body->setActivationState(DISABLE_DEACTIVATION);
+
+				//add the body to the dynamics world
+				bulletPhysics->dynamicsWorld->addRigidBody(body);
+
+
+				if (body->getMotionState())
+				{
+					btTransform trans;
+					body->getMotionState()->getWorldTransform(trans);
+					btQuaternion nRot = trans.getRotation();
+					btVector3 nPos = trans.getOrigin();
+					transforms.push_back(new PhysicsTransform(
+						XMFLOAT4(nRot.getX(), nRot.getY(), nRot.getZ(), nRot.getW()), XMFLOAT3(nPos.getX(), nPos.getY(), nPos.getZ()))
+					);
+				}
+			}
+
+		}
+		if(!physicscomponent.collisionShape.compare("CAPSULE"))
+		{
+			btCollisionShape* shape = new btCapsuleShape(btScalar(S.x()), btScalar(S.y()));
+			shape->setMargin(btScalar(0.05));
+			bulletPhysics->collisionShapes.push_back(shape);
+
+			btTransform shapeTransform;
+			shapeTransform.setIdentity();
+			shapeTransform.setOrigin(T);
+			shapeTransform.setRotation(R);
+			{
+				btScalar mass(physicscomponent.mass);
+
+				//rigidbody is dynamic if and only if mass is non zero, otherwise static
+				bool isDynamic = (mass != 0.f && !physicscomponent.kinematic);
+
+				btVector3 localInertia(0, 0, 0);
+				if (isDynamic)
+					shape->calculateLocalInertia(mass, localInertia);
+				else
+					mass = 0;
+
+				//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+				btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+				rbInfo.m_friction = physicscomponent.friction;
+				rbInfo.m_restitution = physicscomponent.restitution;
+				rbInfo.m_linearDamping = physicscomponent.damping;
+				rbInfo.m_angularDamping = physicscomponent.damping;
+				btRigidBody* body = new btRigidBody(rbInfo);
+				if (physicscomponent.kinematic)
+					body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				body->setActivationState(DISABLE_DEACTIVATION);
+
+				//add the body to the dynamics world
+				bulletPhysics->dynamicsWorld->addRigidBody(body);
+
+
+				if (body->getMotionState())
+				{
+					btTransform trans;
+					body->getMotionState()->getWorldTransform(trans);
+					btQuaternion nRot = trans.getRotation();
+					btVector3 nPos = trans.getOrigin();
+					transforms.push_back(new PhysicsTransform(
+						XMFLOAT4(nRot.getX(), nRot.getY(), nRot.getZ(), nRot.getW()), XMFLOAT3(nPos.getX(), nPos.getY(), nPos.getZ()))
+					);
+				}
+			}
+		}
+		if(!physicscomponent.collisionShape.compare("CONVEX_HULL"))
+		{
+			btCollisionShape* shape = new btConvexHullShape();
+			for (auto& x : mesh.vertices_POS)
+			{
+				((btConvexHullShape*)shape)->addPoint(btVector3(x.pos.x, x.pos.y, x.pos.z));
+			}
+			shape->setLocalScaling(S);
+			shape->setMargin(btScalar(0.05));
+
+			bulletPhysics->collisionShapes.push_back(shape);
+
+			btTransform shapeTransform;
+			shapeTransform.setIdentity();
+			shapeTransform.setOrigin(T);
+			shapeTransform.setRotation(R);
+			{
+				btScalar mass(physicscomponent.mass);
+
+				//rigidbody is dynamic if and only if mass is non zero, otherwise static
+				bool isDynamic = (mass != 0.f && !physicscomponent.kinematic);
+
+				btVector3 localInertia(0, 0, 0);
+				if (isDynamic)
+					shape->calculateLocalInertia(mass, localInertia);
+				else
+					mass = 0;
+
+				//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+				btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+				rbInfo.m_friction = physicscomponent.friction;
+				rbInfo.m_restitution = physicscomponent.restitution;
+				rbInfo.m_linearDamping = physicscomponent.damping;
+				rbInfo.m_angularDamping = physicscomponent.damping;
+				btRigidBody* body = new btRigidBody(rbInfo);
+				if (physicscomponent.kinematic)
+					body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				body->setActivationState(DISABLE_DEACTIVATION);
+
+				//add the body to the dynamics world
+				bulletPhysics->dynamicsWorld->addRigidBody(body);
+
+
+				if (body->getMotionState())
+				{
+					btTransform trans;
+					body->getMotionState()->getWorldTransform(trans);
+					btQuaternion nRot = trans.getRotation();
+					btVector3 nPos = trans.getOrigin();
+					transforms.push_back(new PhysicsTransform(
+						XMFLOAT4(nRot.getX(), nRot.getY(), nRot.getZ(), nRot.getW()), XMFLOAT3(nPos.getX(), nPos.getY(), nPos.getZ()))
+					);
+				}
+			}
+		}
+		if(!physicscomponent.collisionShape.compare("MESH"))
+		{
+			int totalVerts = (int)mesh.vertices_POS.size();
+			int totalTriangles = (int)mesh.indices.size() / 3;
+
+			btVector3* btVerts = new btVector3[totalVerts];
+			size_t i = 0;
+			for (auto& x : mesh.vertices_POS)
+			{
+				btVerts[i++] = btVector3(x.pos.x, x.pos.y, x.pos.z);
+			}
+
+			int* btInd = new int[mesh.indices.size()];
+			for (unsigned int i = 0; i < mesh.indices.size(); ++i)
+			{
+				btInd[i] = mesh.indices[i];
+			}
+
+			int vertStride = sizeof(btVector3);
+			int indexStride = 3 * sizeof(int);
+
+			btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray(
+				totalTriangles,
+				btInd,
+				indexStride,
+				totalVerts,
+				(btScalar*)&btVerts[0].x(),
+				vertStride
+			);
+
+			bool useQuantizedAabbCompression = true;
+
+			btCollisionShape* shape = new btBvhTriangleMeshShape(indexVertexArrays, useQuantizedAabbCompression);
+			shape->setMargin(btScalar(0.05));
+			shape->setLocalScaling(S);
+
+			bulletPhysics->collisionShapes.push_back(shape);
+
+			btTransform shapeTransform;
+			shapeTransform.setIdentity();
+			shapeTransform.setOrigin(T);
+			shapeTransform.setRotation(R);
+			{
+				btScalar mass(physicscomponent.mass);
+
+				//rigidbody is dynamic if and only if mass is non zero, otherwise static
+				bool isDynamic = (mass != 0.f && !physicscomponent.kinematic);
+
+				btVector3 localInertia(0, 0, 0);
+				if (isDynamic)
+					shape->calculateLocalInertia(mass, localInertia);
+				else
+					mass = 0;
+
+				//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+				btDefaultMotionState* myMotionState = new btDefaultMotionState(shapeTransform);
+				btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, shape, localInertia);
+				rbInfo.m_friction = physicscomponent.friction;
+				rbInfo.m_restitution = physicscomponent.restitution;
+				rbInfo.m_linearDamping = physicscomponent.damping;
+				rbInfo.m_angularDamping = physicscomponent.damping;
+				btRigidBody* body = new btRigidBody(rbInfo);
+				if (physicscomponent.kinematic) 
+					body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				body->setActivationState(DISABLE_DEACTIVATION);
+
+				//add the body to the dynamics world
+				bulletPhysics->dynamicsWorld->addRigidBody(body);
+
+
+				if (body->getMotionState())
+				{
+					btTransform trans;
+					body->getMotionState()->getWorldTransform(trans);
+					btQuaternion nRot = trans.getRotation();
+					btVector3 nPos = trans.getOrigin();
+					transforms.push_back(new PhysicsTransform(
+						XMFLOAT4(nRot.getX(), nRot.getY(), nRot.getZ(), nRot.getW()), XMFLOAT3(nPos.getX(), nPos.getY(), nPos.getZ()))
+					);
+				}
+			}
+		}
+	}
+
+	if(physicscomponent.softBody && softBodyPhysicsEnabled)
+	{
+		const int vCount = (int)physicscomponent.physicsverts.size();
+		btScalar* btVerts = new btScalar[vCount*3];
+		for(int i=0;i<vCount*3;i+=3){
+			const int vindex = i/3;
+			btVerts[i] = btScalar(physicscomponent.physicsverts[vindex].x);
+			btVerts[i+1] = btScalar(physicscomponent.physicsverts[vindex].y);
+			btVerts[i+2] = btScalar(physicscomponent.physicsverts[vindex].z);
+		}
+		const int iCount = (int)physicscomponent.physicsindices.size();
+		const int tCount = iCount/3;
+		int* btInd = new int[iCount];
+		for(int i=0;i<iCount;++i){
+			btInd[i] = physicscomponent.physicsindices[i];
+		}
+
+		
+		btSoftBody* softBody = btSoftBodyHelpers::CreateFromTriMesh(
+				((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo()
+				,&btVerts[0]
+				,&btInd[0]
+				,tCount
+				,false
+		);
+
+		
+		delete[] btVerts;
+		delete[] btInd;
+		
+		if(softBody){
+			btSoftBody::Material* pm=softBody->appendMaterial();
+			pm->m_kLST = 0.5;
+			pm->m_kVST = 0.5;
+			pm->m_kAST = 0.5;
+			pm->m_flags = 0;
+			softBody->generateBendingConstraints(2,pm);
+			softBody->randomizeConstraints();
+			
+			btTransform shapeTransform;
+			shapeTransform.setIdentity();
+			shapeTransform.setOrigin(T);
+			shapeTransform.setRotation(R);
+			softBody->scale(S);
+			softBody->transform(shapeTransform);
+
+
+			softBody->m_cfg.piterations	=	softBodyIterationCount;
+			softBody->m_cfg.aeromodel=btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
+
+			softBody->m_cfg.kAHR		=btScalar(.69); //0.69		Anchor hardness  [0,1]
+			softBody->m_cfg.kCHR		=btScalar(1.0); //1			Rigid contact hardness  [0,1]
+			softBody->m_cfg.kDF			=btScalar(0.2); //0.2		Dynamic friction coefficient  [0,1]
+			softBody->m_cfg.kDG			=btScalar(0.01); //0			Drag coefficient  [0,+inf]
+			softBody->m_cfg.kDP			=btScalar(0.0); //0			Damping coefficient  [0,1]
+			softBody->m_cfg.kKHR		=btScalar(0.1); //0.1		Kinetic contact hardness  [0,1]
+			softBody->m_cfg.kLF			=btScalar(0.1); //0			Lift coefficient  [0,+inf]
+			softBody->m_cfg.kMT			=btScalar(0.0); //0			Pose matching coefficient  [0,1]
+			softBody->m_cfg.kPR			=btScalar(0.0); //0			Pressure coefficient  [-1,1]
+			softBody->m_cfg.kSHR		=btScalar(1.0); //1			Soft contacts hardness  [0,1]
+			softBody->m_cfg.kVC			=btScalar(0.0); //0			Volume conseration coefficient  [0,+inf]
+			softBody->m_cfg.kVCF		=btScalar(1.0); //1			Velocities correction factor (Baumgarte)
+
+			softBody->m_cfg.kSKHR_CL	=btScalar(1.0); //1			Soft vs. kinetic hardness   [0,1]
+			softBody->m_cfg.kSK_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			softBody->m_cfg.kSRHR_CL	=btScalar(0.1); //0.1		Soft vs. rigid hardness  [0,1]
+			softBody->m_cfg.kSR_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			softBody->m_cfg.kSSHR_CL	=btScalar(0.5); //0.5		Soft vs. soft hardness  [0,1]
+			softBody->m_cfg.kSS_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			
+
+			btScalar mass = btScalar(physicscomponent.mass);
+			softBody->setTotalMass(mass);
+			
+			int mvg = physicscomponent.massVG;
+			if(mvg>=0){
+				for(auto it=mesh.vertexGroups[mvg].vertices.begin();it!=mesh.vertexGroups[mvg].vertices.end();++it){
+					int vi = (*it).first;
+					float wei = (*it).second;
+					int index= physicscomponent.physicalmapGP[vi];
+					softBody->setMass(index,softBody->getMass(index)*btScalar(wei));
+				}
+			}
+
+			
+			int gvg = physicscomponent.goalVG;
+			if(gvg>=0){
+				for(auto it=mesh.vertexGroups[gvg].vertices.begin();it!=mesh.vertexGroups[gvg].vertices.end();++it){
+					int vi = (*it).first;
+					int index= physicscomponent.physicalmapGP[vi];
+					float weight = (*it).second;
+					if(weight==1)
+						softBody->setMass(index,0);
+				}
+			}
+
+			softBody->getCollisionShape()->setMargin(btScalar(0.2));
+
+			softBody->setWindVelocity(bulletPhysics->wind);
+			
+			softBody->setPose(true,true);
+
+			softBody->setActivationState(DISABLE_DEACTIVATION);
+
+			((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->addSoftBody(softBody);
+
+			transforms.push_back(new PhysicsTransform);
+		}
+	}
+
+	physicscomponent.physicsObjectID = ++registeredObjects;
 }
 void wiBULLET::removeObject(PhysicsComponent& physicscomponent)
 {

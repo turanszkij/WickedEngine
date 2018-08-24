@@ -248,9 +248,6 @@ namespace wiSceneSystem
 		std::vector<Vertex_POS>		vertices_Transformed_POS; // for soft body simulation
 		std::vector<Vertex_POS>		vertices_Transformed_PRE; // for soft body simulation
 		std::vector<uint32_t>		indices;
-		std::vector<XMFLOAT3>		physicsverts;
-		std::vector<uint32_t>		physicsindices;
-		std::vector<int>			physicalmapGP;
 
 		struct MeshSubset
 		{
@@ -302,10 +299,6 @@ namespace wiSceneSystem
 		};
 
 		std::vector<VertexGroup> vertexGroups;
-		bool softBody;
-		float mass, friction;
-		int massVG, goalVG, softVG; //vertexGroupID
-		std::vector<XMFLOAT3> goalPositions, goalNormals;
 
 		wiRenderTarget	impostorTarget;
 		float impostorDistance;
@@ -343,6 +336,14 @@ namespace wiSceneSystem
 		bool rigidBody, kinematic;
 		std::string collisionShape, physicsType;
 		float mass, friction, restitution, damping;
+
+		bool softBody;
+		int massVG, goalVG, softVG; //vertexGroupID
+		std::vector<XMFLOAT3> goalPositions, goalNormals;
+
+		std::vector<XMFLOAT3>		physicsverts;
+		std::vector<uint32_t>		physicsindices;
+		std::vector<int>			physicalmapGP;
 	};
 
 	struct Bone

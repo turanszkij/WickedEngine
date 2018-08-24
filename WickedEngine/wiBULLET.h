@@ -15,21 +15,7 @@ public:
 	wiBULLET();
 	~wiBULLET();
 
-	virtual void addWind(const XMFLOAT3& wind) override;
-
-	virtual void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
-	virtual void addSphere(float rad, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
-	virtual void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
-	virtual void addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
-	virtual void addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass, float newFriction, float newRestitution, float newDamping, bool kinematic) override;
-
-
-	virtual void addSoftBodyTriangleMesh(wiSceneSystem::PhysicsComponent& physicscomponent) override;
+	virtual void setWind(const XMFLOAT3& wind) override;
 
 	virtual void connectVerticesToSoftBody(wiSceneSystem::PhysicsComponent& physicscomponent) override;
 	virtual void connectSoftBodyToVertices(wiSceneSystem::PhysicsComponent& physicscomponent) override;

@@ -34,21 +34,7 @@ public:
 	virtual void ClearWorld()=0;
 	virtual void CleanUp()=0;
 
-	virtual void addWind(const XMFLOAT3& wind)=0;
-	
-	virtual void addBox(const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
-	virtual void addSphere(float rad, const XMFLOAT3& pos
-		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
-	virtual void addCapsule(float rad, float hei, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
-	virtual void addConvexHull(const std::vector<XMFLOAT4>& vertices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
-	virtual void addTriangleMesh(const std::vector<XMFLOAT4>& vertices, const std::vector<unsigned int>& indices, const XMFLOAT3& sca, const XMFLOAT4& rot, const XMFLOAT3& pos
-		, float newMass=1, float newFriction=1, float newRestitution=1, float newDamping=1, bool kinematic=false)=0;
-
-	
-	virtual void addSoftBodyTriangleMesh(wiSceneSystem::PhysicsComponent& physicscomponent)=0;
+	virtual void setWind(const XMFLOAT3& wind)=0;
 	
 	virtual void connectVerticesToSoftBody(wiSceneSystem::PhysicsComponent& physicscomponent)=0;
 	virtual void connectSoftBodyToVertices(wiSceneSystem::PhysicsComponent& physicscomponent)=0;
