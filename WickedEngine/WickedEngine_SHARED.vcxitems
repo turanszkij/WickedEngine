@@ -254,6 +254,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
@@ -354,6 +355,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_Decl.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h" />
@@ -692,6 +695,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp" />

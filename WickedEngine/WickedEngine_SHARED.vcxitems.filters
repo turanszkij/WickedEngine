@@ -61,6 +61,9 @@
     <Filter Include="Documentation">
       <UniqueIdentifier>{052d6b54-4254-4260-ba34-79b6fb943b4a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ENGINE\System">
+      <UniqueIdentifier>{f9156b5b-9cc8-436c-9faa-536f7dce4f27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -1131,6 +1134,15 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_Decl.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1924,6 +1936,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneComponents_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem.cpp">
+      <Filter>ENGINE\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -34,14 +34,12 @@ namespace wiSceneComponents
 	struct ForceField;
 }
 
-class  Lines;
 class  Cube;
 class  Translator;
 class  wiParticle;
 class  wiEmittedParticle;
 class  wiHairParticle;
 class  wiSprite;
-class  wiSPTree;
 class  TaskThread;
 class  PHYSICS;
 class  wiRenderTarget;
