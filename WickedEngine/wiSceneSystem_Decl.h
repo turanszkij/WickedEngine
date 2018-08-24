@@ -8,6 +8,7 @@ namespace wiSceneSystem
 	struct Material;
 	struct Mesh;
 	struct Object;
+	struct PhysicsComponent;
 	struct Bone;
 	struct Armature;
 	struct Light;

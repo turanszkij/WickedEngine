@@ -111,9 +111,109 @@ unordered_set<Texture2D*> deferredMIPGens;
 
 #pragma endregion
 
+
+
+
 struct FrameCulling
 {
 
+};
+
+GFX_STRUCT Instance
+{
+	XMFLOAT4A mat0;
+	XMFLOAT4A mat1;
+	XMFLOAT4A mat2;
+	XMFLOAT4A color_dither; //rgb:color, a:dither
+
+	Instance(){}
+	Instance(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)){
+		Create(matIn, dither, color);
+	}
+	inline void Create(const XMFLOAT4X4& matIn, float dither = 0.0f, const XMFLOAT3& color = XMFLOAT3(1, 1, 1)) volatile
+	{
+		mat0.x = matIn._11;
+		mat0.y = matIn._21;
+		mat0.z = matIn._31;
+		mat0.w = matIn._41;
+
+		mat1.x = matIn._12;
+		mat1.y = matIn._22;
+		mat1.z = matIn._32;
+		mat1.w = matIn._42;
+
+		mat2.x = matIn._13;
+		mat2.y = matIn._23;
+		mat2.z = matIn._33;
+		mat2.w = matIn._43;
+
+		color_dither.x = color.x;
+		color_dither.y = color.y;
+		color_dither.z = color.z;
+		color_dither.w = dither;
+	}
+
+	ALIGN_16
+};
+GFX_STRUCT InstancePrev
+{
+	XMFLOAT4A mat0;
+	XMFLOAT4A mat1;
+	XMFLOAT4A mat2;
+
+	InstancePrev(){}
+	InstancePrev(const XMFLOAT4X4& matIn)
+	{
+		Create(matIn);
+	}
+	inline void Create(const XMFLOAT4X4& matIn) volatile
+	{
+		mat0.x = matIn._11;
+		mat0.y = matIn._21;
+		mat0.z = matIn._31;
+		mat0.w = matIn._41;
+
+		mat1.x = matIn._12;
+		mat1.y = matIn._22;
+		mat1.z = matIn._32;
+		mat1.w = matIn._42;
+
+		mat2.x = matIn._13;
+		mat2.y = matIn._23;
+		mat2.z = matIn._33;
+		mat2.w = matIn._43;
+	}
+
+	ALIGN_16
+};
+CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
+{
+	XMFLOAT4 baseColor; // + alpha (.w)
+	XMFLOAT4 texMulAdd;
+	float roughness;
+	float reflectance;
+	float metalness;
+	float emissive;
+	float refractionIndex;
+	float subsurfaceScattering;
+	float normalMapStrength;
+	float parallaxOcclusionMapping;
+
+	MaterialCB() {};
+	MaterialCB(const Material& mat) { Create(mat); };
+	void Create(const Material& mat)
+	{
+		baseColor = mat.baseColor;
+		texMulAdd = mat.texMulAdd;
+		roughness = mat.roughness;
+		reflectance = mat.reflectance;
+		metalness = mat.metalness;
+		emissive = mat.emissive;
+		refractionIndex = mat.refractionIndex;
+		subsurfaceScattering = mat.subsurfaceScattering;
+		normalMapStrength = (mat.normalMap == nullptr ? 0 : mat.normalMapStrength);
+		parallaxOcclusionMapping = mat.parallaxOcclusionMapping;
+	}
 };
 
 

@@ -331,6 +331,13 @@ namespace wiSceneSystem
 		uint32_t occlusionHistory;
 		// occlusion query pool index
 		int occlusionQueryID;
+	};
+
+	struct PhysicsComponent
+	{
+		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<Mesh>::ref mesh_ref;
 
 		int physicsObjectID;
 		bool rigidBody, kinematic;
@@ -503,6 +510,7 @@ namespace wiSceneSystem
 		std::vector<wiECS::ComponentManager<Material>::ref> material_refs;
 		std::vector<wiECS::ComponentManager<Mesh>::ref> mesh_refs;
 		std::vector<wiECS::ComponentManager<Object>::ref> object_refs;
+		std::vector<wiECS::ComponentManager<PhysicsComponent>::ref> physicscomponent_refs;
 		std::vector<wiECS::ComponentManager<Armature>::ref> armature_refs;
 		std::vector<wiECS::ComponentManager<Light>::ref> light_refs;
 		std::vector<wiECS::ComponentManager<EnvironmentProbe>::ref> probe_refs;
@@ -518,6 +526,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<Material> materials;
 		wiECS::ComponentManager<Mesh> meshes;
 		wiECS::ComponentManager<Object> objects;
+		wiECS::ComponentManager<PhysicsComponent> physicscomponents;
 		wiECS::ComponentManager<Bone> bones;
 		wiECS::ComponentManager<Armature> armatures;
 		wiECS::ComponentManager<Light> lights;
