@@ -390,7 +390,7 @@ public:
 	//		culledEnvProbes.clear();
 	//	}
 	//};
-	static std::unordered_map<wiSceneSystem::Camera*, FrameCulling*> frameCullings;
+	static std::unordered_map<wiSceneSystem::CameraComponent*, FrameCulling*> frameCullings;
 
 	inline static XMUINT3 GetEntityCullingTileCount()
 	{
@@ -405,7 +405,7 @@ public:
 
 	static void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	static void UpdateFrameCB(GRAPHICSTHREAD threadID);
-	static void UpdateCameraCB(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	static void UpdateCameraCB(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
 	static void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
 	static void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
 	static void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
@@ -416,17 +416,17 @@ public:
 		bool tessellation = false, bool occlusionCulling = false, uint32_t layerMask = 0xFFFFFFFF);
 	static void DrawSky(GRAPHICSTHREAD threadID);
 	static void DrawSun(GRAPHICSTHREAD threadID);
-	static void DrawWorld(wiSceneSystem::Camera* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	static void DrawWorld(wiSceneSystem::CameraComponent* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	static void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
-	static void DrawWorldTransparent(wiSceneSystem::Camera* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
-	static void DrawDebugWorld(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawSoftParticles(wiSceneSystem::Camera* camera, bool distortion, GRAPHICSTHREAD threadID);
+	static void DrawWorldTransparent(wiSceneSystem::CameraComponent* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	static void DrawDebugWorld(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
+	static void DrawSoftParticles(wiSceneSystem::CameraComponent* camera, bool distortion, GRAPHICSTHREAD threadID);
 	static void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
-	static void DrawLights(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawLightVisualizers(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
-	static void DrawVolumeLights(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawLights(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
+	static void DrawLightVisualizers(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
+	static void DrawVolumeLights(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
 	static void DrawLensFlares(GRAPHICSTHREAD threadID);
-	static void DrawDecals(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
+	static void DrawDecals(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
 	static void RefreshEnvProbes(GRAPHICSTHREAD threadID);
 	static void VoxelRadiance(GRAPHICSTHREAD threadID);
 
@@ -434,7 +434,7 @@ public:
 	static void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 
 	static void BuildSceneBVH(GRAPHICSTHREAD threadID);
-	static void DrawTracedScene(wiSceneSystem::Camera* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+	static void DrawTracedScene(wiSceneSystem::CameraComponent* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
 
 	enum MIPGENFILTER
 	{
@@ -464,10 +464,6 @@ public:
 	static void GenerateClouds(wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
 
 	static void ManageDecalAtlas(GRAPHICSTHREAD threadID);
-	
-	static XMVECTOR GetSunPosition();
-	static XMFLOAT4 GetSunColor();
-	static int GetSunArrayIndex();
 
 	//static wiSPTree* spTree;
 	//static wiSPTree* spTree_lights;
@@ -478,9 +474,9 @@ public:
 	static std::deque<wiSprite*> waterRipples;
 	static void ClearWorld();
 	
-	static wiSceneSystem::Camera* cam, *refCam, *prevFrameCam;
-	static wiSceneSystem::Camera* getCamera(){ return cam; }
-	static wiSceneSystem::Camera* getRefCamera(){ return refCam; }
+	static wiSceneSystem::CameraComponent* cam, *refCam, *prevFrameCam;
+	static wiSceneSystem::CameraComponent* getCamera(){ return cam; }
+	static wiSceneSystem::CameraComponent* getRefCamera(){ return refCam; }
 
 	static RAY getPickRay(long cursorX, long cursorY);
 

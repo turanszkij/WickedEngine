@@ -35,41 +35,41 @@ wiHairParticle::wiHairParticle()
 	lenG = "";
 	length = 0;
 	count = 0;
-	material = nullptr;
-	object = nullptr;
+	//material = nullptr;
+	//object = nullptr;
 	materialName = ""; 
 	particleCount = 0;
 }
-wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int newCount
-						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
-{
-	cb = nullptr;
-	particleBuffer = nullptr;
-	ib = nullptr;
-	ib_transposed = nullptr;
-	drawargs = nullptr;
-	name=newName;
-	densityG=densityGroup;
-	lenG=lengthGroup;
-	length=newLen;
-	count=newCount;
-	material=nullptr;
-	object = newObject;
-	materialName = newMat;
-	particleCount = 0;
-	for (MeshSubset& subset : object->mesh->subsets)
-	{
-		if (!newMat.compare(subset.material->name)) {
-			material = subset.material;
-			break;
-		}
-	}
-	
-	if (material)
-	{
-		Generate();
-	}
-}
+//wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int newCount
+//						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
+//{
+//	cb = nullptr;
+//	particleBuffer = nullptr;
+//	ib = nullptr;
+//	ib_transposed = nullptr;
+//	drawargs = nullptr;
+//	name=newName;
+//	densityG=densityGroup;
+//	lenG=lengthGroup;
+//	length=newLen;
+//	count=newCount;
+//	material=nullptr;
+//	object = newObject;
+//	materialName = newMat;
+//	particleCount = 0;
+//	for (MeshSubset& subset : object->mesh->subsets)
+//	{
+//		if (!newMat.compare(subset.material->name)) {
+//			material = subset.material;
+//			break;
+//		}
+//	}
+//	
+//	if (material)
+//	{
+//		Generate();
+//	}
+//}
 wiHairParticle::wiHairParticle(const wiHairParticle& other)
 {
 	cb = nullptr;
@@ -82,13 +82,13 @@ wiHairParticle::wiHairParticle(const wiHairParticle& other)
 	lenG = other.lenG;
 	length = other.length;
 	count = other.count;
-	material = other.material;
-	object = other.object;
+	//material = other.material;
+	//object = other.object;
 	materialName = other.materialName;
 	particleCount = other.particleCount;
-	material = other.material;
+	//material = other.material;
 
-	if (material)
+	//if (material)
 	{
 		Generate();
 	}
@@ -300,276 +300,276 @@ void wiHairParticle::Settings(int l0,int l1,int l2)
 
 void wiHairParticle::Generate()
 {
-	std::vector<Patch> points;
+	//std::vector<Patch> points;
 
-	Mesh* mesh = object->mesh;
+	//Mesh* mesh = object->mesh;
 
-	XMMATRIX matr = object->getMatrix();
-	XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, matr));
+	//XMMATRIX matr = object->getMatrix();
+	//XMStoreFloat4x4(&OriginalMatrix_Inverse, XMMatrixInverse(nullptr, matr));
 
-	int dVG = -1, lVG = -1;
-	if (densityG.compare("")) {
-		for (unsigned int i = 0; i < mesh->vertexGroups.size(); ++i)
-			if (!mesh->vertexGroups[i].name.compare(densityG))
-				dVG = i;
-	}
-	if (lenG.compare("")) {
-		for (unsigned int i = 0; i < mesh->vertexGroups.size(); ++i)
-			if (!mesh->vertexGroups[i].name.compare(lenG))
-				lVG = i;
-	}
-	
-	float avgPatchSize;
-	if(dVG>=0)
-		avgPatchSize = (float)count/((float)mesh->vertexGroups[dVG].vertices.size()/3.0f);
-	else
-		avgPatchSize = (float)count/((float)mesh->indices.size()/3.0f);
+	//int dVG = -1, lVG = -1;
+	//if (densityG.compare("")) {
+	//	for (unsigned int i = 0; i < mesh->vertexGroups.size(); ++i)
+	//		if (!mesh->vertexGroups[i].name.compare(densityG))
+	//			dVG = i;
+	//}
+	//if (lenG.compare("")) {
+	//	for (unsigned int i = 0; i < mesh->vertexGroups.size(); ++i)
+	//		if (!mesh->vertexGroups[i].name.compare(lenG))
+	//			lVG = i;
+	//}
+	//
+	//float avgPatchSize;
+	//if(dVG>=0)
+	//	avgPatchSize = (float)count/((float)mesh->vertexGroups[dVG].vertices.size()/3.0f);
+	//else
+	//	avgPatchSize = (float)count/((float)mesh->indices.size()/3.0f);
 
-	if (mesh->indices.size() < 4)
-		return;
+	//if (mesh->indices.size() < 4)
+	//	return;
 
-	for (unsigned int i = 0; i<mesh->indices.size() - 3; i += 3)
-	{
+	//for (unsigned int i = 0; i<mesh->indices.size() - 3; i += 3)
+	//{
 
-		unsigned int vi[]={mesh->indices[i],mesh->indices[i+1],mesh->indices[i+2]};
-		float denMod[]={1,1,1},lenMod[]={1,1,1};
-		if (dVG >= 0) {
-			auto found = mesh->vertexGroups[dVG].vertices.find(vi[0]);
-			if (found != mesh->vertexGroups[dVG].vertices.end())
-				denMod[0] = found->second;
-			else
-				continue;
+	//	unsigned int vi[]={mesh->indices[i],mesh->indices[i+1],mesh->indices[i+2]};
+	//	float denMod[]={1,1,1},lenMod[]={1,1,1};
+	//	if (dVG >= 0) {
+	//		auto found = mesh->vertexGroups[dVG].vertices.find(vi[0]);
+	//		if (found != mesh->vertexGroups[dVG].vertices.end())
+	//			denMod[0] = found->second;
+	//		else
+	//			continue;
 
-			found = mesh->vertexGroups[dVG].vertices.find(vi[1]);
-			if (found != mesh->vertexGroups[dVG].vertices.end())
-				denMod[1] = found->second;
-			else
-				continue;
+	//		found = mesh->vertexGroups[dVG].vertices.find(vi[1]);
+	//		if (found != mesh->vertexGroups[dVG].vertices.end())
+	//			denMod[1] = found->second;
+	//		else
+	//			continue;
 
-			found = mesh->vertexGroups[dVG].vertices.find(vi[2]);
-			if (found != mesh->vertexGroups[dVG].vertices.end())
-				denMod[2] = found->second;
-			else
-				continue;
-		}
-		if (lVG >= 0) {
-			auto found = mesh->vertexGroups[lVG].vertices.find(vi[0]);
-			if (found != mesh->vertexGroups[lVG].vertices.end())
-				lenMod[0] = found->second;
-			else
-				continue;
+	//		found = mesh->vertexGroups[dVG].vertices.find(vi[2]);
+	//		if (found != mesh->vertexGroups[dVG].vertices.end())
+	//			denMod[2] = found->second;
+	//		else
+	//			continue;
+	//	}
+	//	if (lVG >= 0) {
+	//		auto found = mesh->vertexGroups[lVG].vertices.find(vi[0]);
+	//		if (found != mesh->vertexGroups[lVG].vertices.end())
+	//			lenMod[0] = found->second;
+	//		else
+	//			continue;
 
-			found = mesh->vertexGroups[lVG].vertices.find(vi[1]);
-			if (found != mesh->vertexGroups[lVG].vertices.end())
-				lenMod[1] = found->second;
-			else
-				continue;
+	//		found = mesh->vertexGroups[lVG].vertices.find(vi[1]);
+	//		if (found != mesh->vertexGroups[lVG].vertices.end())
+	//			lenMod[1] = found->second;
+	//		else
+	//			continue;
 
-			found = mesh->vertexGroups[lVG].vertices.find(vi[2]);
-			if (found != mesh->vertexGroups[lVG].vertices.end())
-				lenMod[2] = found->second;
-			else
-				continue;
-		}
-		for (int m = 0; m < 3; ++m) {
-			if (denMod[m] < 0) denMod[m] = 0;
-			if (lenMod[m] < 0) lenMod[m] = 0;
-		}
+	//		found = mesh->vertexGroups[lVG].vertices.find(vi[2]);
+	//		if (found != mesh->vertexGroups[lVG].vertices.end())
+	//			lenMod[2] = found->second;
+	//		else
+	//			continue;
+	//	}
+	//	for (int m = 0; m < 3; ++m) {
+	//		if (denMod[m] < 0) denMod[m] = 0;
+	//		if (lenMod[m] < 0) lenMod[m] = 0;
+	//	}
 
-		Mesh::Vertex_FULL verts[] = {
-			mesh->vertices_FULL[vi[0]],
-			mesh->vertices_FULL[vi[1]],
-			mesh->vertices_FULL[vi[2]],
-		};
+	//	Mesh::Vertex_FULL verts[] = {
+	//		mesh->vertices_FULL[vi[0]],
+	//		mesh->vertices_FULL[vi[1]],
+	//		mesh->vertices_FULL[vi[2]],
+	//	};
 
-		if(
-			(denMod[0]>FLT_EPSILON || denMod[1]>FLT_EPSILON || denMod[2]>FLT_EPSILON) &&
-			(lenMod[0]>FLT_EPSILON || lenMod[1]>FLT_EPSILON || lenMod[2]>FLT_EPSILON)
-		  )
-		{
+	//	if(
+	//		(denMod[0]>FLT_EPSILON || denMod[1]>FLT_EPSILON || denMod[2]>FLT_EPSILON) &&
+	//		(lenMod[0]>FLT_EPSILON || lenMod[1]>FLT_EPSILON || lenMod[2]>FLT_EPSILON)
+	//	  )
+	//	{
 
-			float density = (float)(denMod[0]+denMod[1]+denMod[2])/3.0f*avgPatchSize;
-			int rdense = (int)(( density - (int)density ) * 100);
-			density += ((wiRandom::getRandom(0, 99)) <= rdense ? 1.0f : 0.0f);
-			int PATCHSIZE = material->texture?(int)density:(int)density*10;
-			  
-			if(PATCHSIZE)
-			{
+	//		float density = (float)(denMod[0]+denMod[1]+denMod[2])/3.0f*avgPatchSize;
+	//		int rdense = (int)(( density - (int)density ) * 100);
+	//		density += ((wiRandom::getRandom(0, 99)) <= rdense ? 1.0f : 0.0f);
+	//		int PATCHSIZE = material->texture?(int)density:(int)density*10;
+	//		  
+	//		if(PATCHSIZE)
+	//		{
 
-				for(int p=0;p<PATCHSIZE;++p)
-				{
-					float f = wiRandom::getRandom(0, 1000) * 0.001f, g = wiRandom::getRandom(0, 1000) * 0.001f;
-					if (f + g > 1)
-					{
-						f = 1 - f;
-						g = 1 - g;
-					}
-					XMVECTOR pos[] = {
-						XMVector3Transform(XMLoadFloat4(&verts[0].pos),matr)
-						,	XMVector3Transform(XMLoadFloat4(&verts[1].pos),matr)
-						,	XMVector3Transform(XMLoadFloat4(&verts[2].pos),matr)
-					};
-					XMVECTOR vbar=XMVectorBaryCentric(
-							pos[0],pos[1],pos[2]
-						,	f
-						,	g
-						);
-					XMVECTOR nbar=XMVectorBaryCentric(
-							XMLoadFloat4(&verts[0].nor)
-						,	XMLoadFloat4(&verts[1].nor)
-						,	XMLoadFloat4(&verts[2].nor)
-						,	f
-						,	g
-						);
-					int ti = wiRandom::getRandom(0, 2);
-					XMVECTOR tangent = XMVector3Normalize(XMVectorSubtract(pos[ti], pos[(ti + 1) % 3]));
-					
-					Patch addP;
-					::XMStoreFloat4(&addP.posLen,vbar);
+	//			for(int p=0;p<PATCHSIZE;++p)
+	//			{
+	//				float f = wiRandom::getRandom(0, 1000) * 0.001f, g = wiRandom::getRandom(0, 1000) * 0.001f;
+	//				if (f + g > 1)
+	//				{
+	//					f = 1 - f;
+	//					g = 1 - g;
+	//				}
+	//				XMVECTOR pos[] = {
+	//					XMVector3Transform(XMLoadFloat4(&verts[0].pos),matr)
+	//					,	XMVector3Transform(XMLoadFloat4(&verts[1].pos),matr)
+	//					,	XMVector3Transform(XMLoadFloat4(&verts[2].pos),matr)
+	//				};
+	//				XMVECTOR vbar=XMVectorBaryCentric(
+	//						pos[0],pos[1],pos[2]
+	//					,	f
+	//					,	g
+	//					);
+	//				XMVECTOR nbar=XMVectorBaryCentric(
+	//						XMLoadFloat4(&verts[0].nor)
+	//					,	XMLoadFloat4(&verts[1].nor)
+	//					,	XMLoadFloat4(&verts[2].nor)
+	//					,	f
+	//					,	g
+	//					);
+	//				int ti = wiRandom::getRandom(0, 2);
+	//				XMVECTOR tangent = XMVector3Normalize(XMVectorSubtract(pos[ti], pos[(ti + 1) % 3]));
+	//				
+	//				Patch addP;
+	//				::XMStoreFloat4(&addP.posLen,vbar);
 
-					XMFLOAT3 nor, tan;
-					::XMStoreFloat3(&nor,XMVector3Normalize(nbar));
-					::XMStoreFloat3(&tan,tangent);
+	//				XMFLOAT3 nor, tan;
+	//				::XMStoreFloat3(&nor,XMVector3Normalize(nbar));
+	//				::XMStoreFloat3(&tan,tangent);
 
-					addP.normalRand = wiMath::CompressNormal(nor);
-					addP.tangent = wiMath::CompressNormal(tan);
+	//				addP.normalRand = wiMath::CompressNormal(nor);
+	//				addP.tangent = wiMath::CompressNormal(tan);
 
-					float lbar = lenMod[0] + f*(lenMod[1]-lenMod[0]) + g*(lenMod[2]-lenMod[0]);
-					addP.posLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
-					addP.normalRand |= (uint8_t)wiRandom::getRandom(0, 256) << 24;
-					points.push_back(addP);
-				}
+	//				float lbar = lenMod[0] + f*(lenMod[1]-lenMod[0]) + g*(lenMod[2]-lenMod[0]);
+	//				addP.posLen.w = length*lbar + (float)(wiRandom::getRandom(0, 1000) - 500)*0.001f*length*lbar;
+	//				addP.normalRand |= (uint8_t)wiRandom::getRandom(0, 256) << 24;
+	//				points.push_back(addP);
+	//			}
 
-			}
-		}
-	}
+	//		}
+	//	}
+	//}
 
-	particleCount = points.size();
+	//particleCount = points.size();
 
-	SAFE_DELETE(cb);
-	SAFE_DELETE(particleBuffer);
-	SAFE_DELETE(ib);
-	SAFE_DELETE(ib_transposed);
+	//SAFE_DELETE(cb);
+	//SAFE_DELETE(particleBuffer);
+	//SAFE_DELETE(ib);
+	//SAFE_DELETE(ib_transposed);
 
-	GPUBufferDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = USAGE_IMMUTABLE;
-	bd.ByteWidth = (UINT)(sizeof(Patch) * particleCount);
-	bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-	bd.CPUAccessFlags = 0;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	SubresourceData data = {};
-	data.pSysMem = points.data();
-	particleBuffer = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, particleBuffer);
-
-
-	uint32_t* indices = new uint32_t[particleCount];
-	for (size_t i = 0; i < points.size(); ++i)
-	{
-		indices[i] = (uint32_t)i;
-	}
-	data.pSysMem = indices;
-
-	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = (UINT)(sizeof(uint32_t) * particleCount);
-	bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	ib = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, ib);
-	ib_transposed = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, ib_transposed);
-
-	SAFE_DELETE_ARRAY(indices);
+	//GPUBufferDesc bd;
+	//ZeroMemory(&bd, sizeof(bd));
+	//bd.Usage = USAGE_IMMUTABLE;
+	//bd.ByteWidth = (UINT)(sizeof(Patch) * particleCount);
+	//bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+	//bd.CPUAccessFlags = 0;
+	//bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	//SubresourceData data = {};
+	//data.pSysMem = points.data();
+	//particleBuffer = new GPUBuffer;
+	//wiRenderer::GetDevice()->CreateBuffer(&bd, &data, particleBuffer);
 
 
-	IndirectDrawArgsIndexedInstanced args;
-	args.BaseVertexLocation = 0;
-	args.IndexCountPerInstance = (UINT)points.size();
-	args.InstanceCount = 1;
-	args.StartIndexLocation = 0;
-	args.StartInstanceLocation = 0;
-	data.pSysMem = &args;
+	//uint32_t* indices = new uint32_t[particleCount];
+	//for (size_t i = 0; i < points.size(); ++i)
+	//{
+	//	indices[i] = (uint32_t)i;
+	//}
+	//data.pSysMem = indices;
 
-	bd.ByteWidth = (UINT)(sizeof(IndirectDrawArgsIndexedInstanced));
-	bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	bd.BindFlags = BIND_UNORDERED_ACCESS;
-	drawargs = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, drawargs);
+	//bd.Usage = USAGE_DEFAULT;
+	//bd.ByteWidth = (UINT)(sizeof(uint32_t) * particleCount);
+	//bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
+	//bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	//ib = new GPUBuffer;
+	//wiRenderer::GetDevice()->CreateBuffer(&bd, &data, ib);
+	//ib_transposed = new GPUBuffer;
+	//wiRenderer::GetDevice()->CreateBuffer(&bd, &data, ib_transposed);
+
+	//SAFE_DELETE_ARRAY(indices);
+
+
+	//IndirectDrawArgsIndexedInstanced args;
+	//args.BaseVertexLocation = 0;
+	//args.IndexCountPerInstance = (UINT)points.size();
+	//args.InstanceCount = 1;
+	//args.StartIndexLocation = 0;
+	//args.StartInstanceLocation = 0;
+	//data.pSysMem = &args;
+
+	//bd.ByteWidth = (UINT)(sizeof(IndirectDrawArgsIndexedInstanced));
+	//bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	//bd.BindFlags = BIND_UNORDERED_ACCESS;
+	//drawargs = new GPUBuffer;
+	//wiRenderer::GetDevice()->CreateBuffer(&bd, &data, drawargs);
 
 
 
 
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	cb = new GPUBuffer;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb);
+	//ZeroMemory(&bd, sizeof(bd));
+	//bd.Usage = USAGE_DYNAMIC;
+	//bd.ByteWidth = sizeof(ConstantBuffer);
+	//bd.BindFlags = BIND_CONSTANT_BUFFER;
+	//bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	//cb = new GPUBuffer;
+	//wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb);
 
 }
 
-void wiHairParticle::ComputeCulling(Camera* camera, GRAPHICSTHREAD threadID)
+void wiHairParticle::ComputeCulling(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("HairParticle - Culling", threadID);
+	//GraphicsDevice* device = wiRenderer::GetDevice();
+	//device->EventBegin("HairParticle - Culling", threadID);
 
-	XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
-	XMMATRIX renderMatrix = inverseMat * object->getMatrix();
+	//XMMATRIX inverseMat = XMLoadFloat4x4(&OriginalMatrix_Inverse);
+	//XMMATRIX renderMatrix = inverseMat * object->getMatrix();
 
-	ConstantBuffer gcb;
-	gcb.mWorld = XMMatrixTranspose(renderMatrix);
-	gcb.color = material->baseColor;
-	gcb.LOD0 = (float)LOD[0];
-	gcb.LOD1 = (float)LOD[1];
-	gcb.LOD2 = (float)LOD[2];
+	//ConstantBuffer gcb;
+	//gcb.mWorld = XMMatrixTranspose(renderMatrix);
+	//gcb.color = material->baseColor;
+	//gcb.LOD0 = (float)LOD[0];
+	//gcb.LOD1 = (float)LOD[1];
+	//gcb.LOD2 = (float)LOD[2];
 
-	device->UpdateBuffer(cb, &gcb, threadID);
+	//device->UpdateBuffer(cb, &gcb, threadID);
 
-	// old solution removed, todo new solution
+	//// old solution removed, todo new solution
 
-	device->EventEnd(threadID);
+	//device->EventEnd(threadID);
 }
 
-void wiHairParticle::Draw(Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID)
+void wiHairParticle::Draw(CameraComponent* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID)
 {
-	Texture2D* texture = material->texture;
-	texture = texture == nullptr ? wiTextureHelper::getInstance()->getWhite() : texture;
+	//Texture2D* texture = material->texture;
+	//texture = texture == nullptr ? wiTextureHelper::getInstance()->getWhite() : texture;
 
-	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin("HairParticle - Draw", threadID);
+	//{
+	//	GraphicsDevice* device = wiRenderer::GetDevice();
+	//	device->EventBegin("HairParticle - Draw", threadID);
 
-		if (wiRenderer::IsWireRender())
-		{
-			if (transparent || shaderType == SHADERTYPE_DEPTHONLY)
-			{
-				return;
-			}
-			device->BindGraphicsPSO(&PSO_wire, threadID);
-			device->BindResource(VS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND0, threadID);
-			device->BindConstantBuffer(PS, cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
-		}
-		else
-		{
-			device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
+	//	if (wiRenderer::IsWireRender())
+	//	{
+	//		if (transparent || shaderType == SHADERTYPE_DEPTHONLY)
+	//		{
+	//			return;
+	//		}
+	//		device->BindGraphicsPSO(&PSO_wire, threadID);
+	//		device->BindResource(VS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND0, threadID);
+	//		device->BindConstantBuffer(PS, cb, CB_GETBINDSLOT(ConstantBuffer), threadID);
+	//	}
+	//	else
+	//	{
+	//		device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
 
-			if (texture)
-			{
-				device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
-				device->BindResource(VS, texture, TEXSLOT_ONDEMAND0, threadID);
-			}
-		}
+	//		if (texture)
+	//		{
+	//			device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
+	//			device->BindResource(VS, texture, TEXSLOT_ONDEMAND0, threadID);
+	//		}
+	//	}
 
-		device->BindConstantBuffer(VS, cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
+	//	device->BindConstantBuffer(VS, cb, CB_GETBINDSLOT(ConstantBuffer),threadID);
 
-		device->BindResource(VS, particleBuffer, 0, threadID);
+	//	device->BindResource(VS, particleBuffer, 0, threadID);
 
-		device->Draw((int)particleCount * 12, 0, threadID);
+	//	device->Draw((int)particleCount * 12, 0, threadID);
 
-		device->EventEnd(threadID);
-	}
+	//	device->EventEnd(threadID);
+	//}
 }
 
 

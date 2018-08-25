@@ -192,7 +192,11 @@ namespace wiECS
 
 		// Directly index a specific component without indirection:
 		//	0 <= index < GetCount()
-		inline T& GetComponent(size_t index) const { return components[index]; }
+		inline T& GetComponent(size_t index) { return components[index]; }
+
+		// Directly index a specific component without indirection:
+		//	0 <= index < GetCount()
+		inline const T& GetComponent(size_t index) const { return components[index]; }
 
 		// Directly index a specific component without indirection:
 		//	0 <= index < GetCount()
@@ -201,6 +205,10 @@ namespace wiECS
 		// Directly index a specific component without indirection:
 		//	0 <= index < GetCount()
 		inline T& operator[](size_t index) { return components[index]; }
+
+		// Directly index a specific component without indirection:
+		//	0 <= index < GetCount()
+		inline const T& operator[](size_t index) const { return components[index]; }
 
 	private:
 		// This is a linear array of alive components:

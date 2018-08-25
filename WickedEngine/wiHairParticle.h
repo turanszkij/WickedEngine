@@ -54,8 +54,8 @@ public:
 	void CleanUp();
 
 	void Generate();
-	void ComputeCulling(wiSceneSystem::Camera* camera, GRAPHICSTHREAD threadID);
-	void Draw(wiSceneSystem::Camera* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
+	void ComputeCulling(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
+	void Draw(wiSceneSystem::CameraComponent* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
 
 	static void CleanUpStatic();
 	static void SetUpStatic();

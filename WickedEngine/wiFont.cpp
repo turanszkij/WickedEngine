@@ -5,6 +5,7 @@
 #include "ResourceMapping.h"
 
 #include <fstream>
+#include <sstream>
 
 using namespace std;
 using namespace wiGraphicsTypes;

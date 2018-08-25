@@ -61,7 +61,7 @@ public:
 	~wiOcean();
 
 	void UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID);
-	void Render(const wiSceneSystem::Camera* camera, float time, GRAPHICSTHREAD threadID);
+	void Render(const wiSceneSystem::CameraComponent* camera, float time, GRAPHICSTHREAD threadID);
 
 	wiGraphicsTypes::Texture2D* getDisplacementMap();
 	wiGraphicsTypes::Texture2D* getGradientMap();

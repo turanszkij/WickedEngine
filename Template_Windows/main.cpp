@@ -189,7 +189,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case VK_BACK:
 			if (wiBackLog::isActive())
 				wiBackLog::deletefromInput();
-			wiTextInputField::DeleteFromInput();
+			//wiTextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
 			if (wiBackLog::isActive())
@@ -202,7 +202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				wiBackLog::input(c);
 			}
-			wiTextInputField::AddInput(c);
+			//wiTextInputField::AddInput(c);
 		}
 		break;
 		}

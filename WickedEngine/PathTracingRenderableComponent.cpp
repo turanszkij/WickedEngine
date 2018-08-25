@@ -10,6 +10,7 @@
 #include "wiSceneSystem.h"
 
 using namespace wiGraphicsTypes;
+using namespace wiSceneSystem;
 
 PathTracingRenderableComponent::PathTracingRenderableComponent()
 {
@@ -99,9 +100,17 @@ void PathTracingRenderableComponent::Render()
 
 void PathTracingRenderableComponent::Update(float dt)
 {
-	if (wiRenderer::getCamera()->hasChanged)
+	const Scene& scene = wiRenderer::GetScene();
+
+	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 	{
-		sam = -1;
+		const TransformComponent& transform = scene.transforms[i];
+
+		if (transform.dirty)
+		{
+			sam = -1;
+			break;
+		}
 	}
 	sam++;
 

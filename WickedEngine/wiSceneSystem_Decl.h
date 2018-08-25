@@ -9,6 +9,7 @@ namespace wiSceneSystem
 	struct MeshComponent;
 	struct ObjectComponent;
 	struct PhysicsComponent;
+	struct CullableComponent;
 	struct BoneComponent;
 	struct ArmatureComponent;
 	struct LightComponent;
@@ -18,5 +19,4 @@ namespace wiSceneSystem
 	struct DecalComponent;
 	struct ModelComponent;
 	struct Scene;
-	struct Camera;
 }

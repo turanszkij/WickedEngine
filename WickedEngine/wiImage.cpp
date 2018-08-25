@@ -8,8 +8,8 @@
 
 #include <thread>
 
-using namespace wiGraphicsTypes;
 using namespace std;
+using namespace wiGraphicsTypes;
 
 #pragma region STATICS
 GPUBuffer			wiImage::constantBuffer, wiImage::processCb;
@@ -392,7 +392,8 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		ImageCB cb;
 
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
-			if(effects.typeFlag==SCREEN){
+			//if (effects.typeFlag == SCREEN)
+			{
 				cb.mTransform = XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x*effects.siz.x, effects.scale.y*effects.siz.y, 1)
 					* XMMatrixRotationZ(effects.rotation)
@@ -400,38 +401,39 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 					* device->GetScreenProjection()
 				);
 			}
-			else if(effects.typeFlag==WORLD){
-				XMMATRIX faceRot = XMMatrixIdentity();
-				if(effects.lookAt.w){
-					XMVECTOR vvv = (effects.lookAt.x==1 && !effects.lookAt.y && !effects.lookAt.z)?XMVectorSet(0,1,0,0):XMVectorSet(1,0,0,0);
-					faceRot = 
-						XMMatrixLookAtLH(XMVectorSet(0,0,0,0)
-							,XMLoadFloat4(&effects.lookAt)
-							,XMVector3Cross(
-								vvv, XMLoadFloat4(&effects.lookAt)
-							)
-						)
-					;
-				}
-				else
-				{
-					faceRot = XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
-				}
+			//else if (effects.typeFlag == WORLD)
+			//{
+			//	XMMATRIX faceRot = XMMatrixIdentity();
+			//	if (effects.lookAt.w)
+			//	{
+			//		XMVECTOR vvv = (effects.lookAt.x == 1 && !effects.lookAt.y && !effects.lookAt.z) ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
+			//		faceRot =
+			//			XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 0)
+			//				, XMLoadFloat4(&effects.lookAt)
+			//				, XMVector3Cross(
+			//					vvv, XMLoadFloat4(&effects.lookAt)
+			//				)
+			//			);
+			//	}
+			//	else
+			//	{
+			//		faceRot = XMMatrixRotationQuaternion(XMLoadFloat4(&wiRenderer::getCamera()->rotation));
+			//	}
 
-				XMMATRIX view = wiRenderer::getCamera()->GetView();
-				XMMATRIX projection = wiRenderer::getCamera()->GetProjection();
-				// Remove possible jittering from temporal camera:
-				projection.r[2] = XMVectorSetX(projection.r[2], 0);
-				projection.r[2] = XMVectorSetY(projection.r[2], 0);
+			//	XMMATRIX view = wiRenderer::getCamera()->GetView();
+			//	XMMATRIX projection = wiRenderer::getCamera()->GetProjection();
+			//	// Remove possible jittering from temporal camera:
+			//	projection.r[2] = XMVectorSetX(projection.r[2], 0);
+			//	projection.r[2] = XMVectorSetY(projection.r[2], 0);
 
-				cb.mTransform = XMMatrixTranspose(
-						XMMatrixScaling(effects.scale.x*effects.siz.x,-1*effects.scale.y*effects.siz.y,1)
-						*XMMatrixRotationZ(effects.rotation)
-						*faceRot
-						*XMMatrixTranslation(effects.pos.x,effects.pos.y,effects.pos.z)
-						*view * projection
-					);
-			}
+			//	cb.mTransform = XMMatrixTranspose(
+			//		XMMatrixScaling(effects.scale.x*effects.siz.x, -1 * effects.scale.y*effects.siz.y, 1)
+			//		*XMMatrixRotationZ(effects.rotation)
+			//		*faceRot
+			//		*XMMatrixTranslation(effects.pos.x, effects.pos.y, effects.pos.z)
+			//		*view * projection
+			//	);
+			//}
 
 			// todo: effects.drawRec -> texmuladd!
 

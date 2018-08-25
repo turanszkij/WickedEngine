@@ -1,7 +1,7 @@
-#include "wiSPTree.h"
-#include "wiMath.h"
-#include "wiSceneComponents.h"
-#include "wiFrustum.h"
+//#include "wiSPTree.h"
+//#include "wiMath.h"
+//#include "wiSceneComponents.h"
+//#include "wiFrustum.h"
 
 //using namespace wiSceneComponents;
 //

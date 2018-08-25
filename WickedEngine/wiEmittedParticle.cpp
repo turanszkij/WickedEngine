@@ -33,9 +33,9 @@ ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finish
 wiEmittedParticle::wiEmittedParticle()
 {
 	name = "";
-	object = nullptr;
+	//object = nullptr;
 	materialName = "";
-	material = nullptr;
+	//material = nullptr;
 
 	size = 1;
 	random_factor = 0;
@@ -54,43 +54,45 @@ wiEmittedParticle::wiEmittedParticle()
 
 	SetMaxParticleCount(10000);
 }
-wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
-		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot)
-{
-	name=newName;
-	object=newObject;
-	materialName = newMat;
-	for (MeshSubset& subset : object->mesh->subsets)
-	{
-		if (!newMat.compare(subset.material->name)) {
-			material = subset.material;
-			break;
-		}
-	}
 
-	size=newSize;
-	random_factor=newRandomFac;
-	normal_factor=newNormalFac;
+//wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
+//		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot)
+//{
+//	name=newName;
+//	object=newObject;
+//	materialName = newMat;
+//	for (MeshSubset& subset : object->mesh->subsets)
+//	{
+//		if (!newMat.compare(subset.material->name)) {
+//			material = subset.material;
+//			break;
+//		}
+//	}
+//
+//	size=newSize;
+//	random_factor=newRandomFac;
+//	normal_factor=newNormalFac;
+//
+//	count=newCount;
+//	life=newLife;
+//	random_life=newRandLife;
+//	emit=0;
+//	
+//	scaleX=newScaleX;
+//	scaleY=newScaleY;
+//	rotation = newRot;
+//
+//	motionBlurAmount = 0.0f;
+//
+//	SetMaxParticleCount(10000);
+//}
 
-	count=newCount;
-	life=newLife;
-	random_life=newRandLife;
-	emit=0;
-	
-	scaleX=newScaleX;
-	scaleY=newScaleY;
-	rotation = newRot;
-
-	motionBlurAmount = 0.0f;
-
-	SetMaxParticleCount(10000);
-}
 wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
 {
 	name = other.name + "0";
-	object = other.object;
+	//object = other.object;
 	materialName = other.materialName;
-	material = other.material;
+	//material = other.material;
 	size = other.size;
 	random_factor = other.random_factor;
 	normal_factor = other.normal_factor;
@@ -293,7 +295,8 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 
 XMFLOAT3 wiEmittedParticle::GetPosition() const
 {
-	return object == nullptr ? XMFLOAT3(0, 0, 0) : object->translation;
+	//return object == nullptr ? XMFLOAT3(0, 0, 0) : object->translation;
+	return XMFLOAT3(0, 0, 0);
 }
 
 void wiEmittedParticle::Update(float dt)
@@ -319,370 +322,370 @@ void wiEmittedParticle::Restart()
 //#define DEBUG_SORTING // slow but great for debug!!
 void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 {
-	CreateSelfBuffers();
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-
-	if (!PAUSED)
-	{
-
-		device->EventBegin("UpdateEmittedParticles", threadID);
-
-		EmittedParticleCB cb;
-		cb.xEmitterWorld = object->world;
-		cb.xEmitCount = (UINT)emit;
-		cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
-		cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
-		cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
-		cb.xParticleLifeSpan = life / 60.0f;
-		cb.xParticleLifeSpanRandomness = random_life;
-		cb.xParticleNormalFactor = normal_factor;
-		cb.xParticleRandomFactor = random_factor;
-		cb.xParticleScaling = scaleX;
-		cb.xParticleSize = size;
-		cb.xParticleMotionBlurAmount = motionBlurAmount;
-		cb.xParticleRotation = rotation * XM_PI * 60;
-		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
-		cb.xEmitterOpacity = material->alpha;
-		cb.xParticleMass = mass;
-		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
-		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
-
-		// SPH:
-		cb.xSPH_h = SPH_h;
-		cb.xSPH_h_rcp = 1.0f / SPH_h;
-		cb.xSPH_h2 = SPH_h * SPH_h;
-		cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
-		const float h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
-		const float h9 = cb.xSPH_h3 * cb.xSPH_h3;
-		cb.xSPH_poly6_constant = (315.0f / (64.0f * XM_PI * h9));
-		cb.xSPH_spiky_constant = (-45 / (XM_PI * h6));
-		cb.xSPH_K = SPH_K;
-		cb.xSPH_p0 = SPH_p0;
-		cb.xSPH_e = SPH_e;
-		cb.xSPH_ENABLED = SPH_FLUIDSIMULATION ? 1 : 0;
-
-		device->UpdateBuffer(constantBuffer, &cb, threadID);
-		device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
-
-		GPUResource* uavs[] = {
-			particleBuffer,
-			aliveList[0], // CURRENT alivelist
-			aliveList[1], // NEW alivelist
-			deadList,
-			counterBuffer,
-			indirectBuffers,
-			distanceBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-		GPUResource* resources[] = {
-			wiTextureHelper::getInstance()->getRandom64x64(),
-			object->mesh->indexBuffer,
-			object->mesh->vertexBuffer_POS,
-		};
-		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
-		GPUResource* indres[] = {
-			indirectBuffers
-		};
-		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
-
-		// kick off updating, set up state
-		device->EventBegin("KickOff Update", threadID);
-		device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
-		device->Dispatch(1, 1, 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->EventEnd(threadID);
-
-		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
-
-		// emit the required amount if there are free slots in dead list
-		device->EventBegin("Emit", threadID);
-		device->BindComputePSO(&CPSO_emit, threadID);
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->EventEnd(threadID);
-
-		if (SPH_FLUIDSIMULATION)
-		{
-			wiProfiler::GetInstance().BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
-
-			// Smooth Particle Hydrodynamics:
-			device->EventBegin("SPH - Simulation", threadID);
-
-#ifdef SPH_USE_ACCELERATION_GRID
-			// 1.) Assign particles into partitioning grid:
-			device->EventBegin("Partitioning", threadID);
-			device->BindComputePSO(&CPSO_sphpartition, threadID);
-			device->UnbindUAVs(0, 8, threadID);
-			GPUResource* res_partition[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				particleBuffer,
-			};
-			device->BindResources(CS, res_partition, 0, ARRAYSIZE(res_partition), threadID);
-			GPUResource* uav_partition[] = {
-				sphPartitionCellIndices,
-			};
-			device->BindUAVs(CS, uav_partition, 0, ARRAYSIZE(uav_partition), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), threadID);
-			device->EventEnd(threadID);
-
-			// 2.) Sort particle index list based on partition grid cell index:
-			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0], threadID);
-
-			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
-			device->EventBegin("PartitionOffsetsReset", threadID);
-			device->BindComputePSO(&CPSO_sphpartitionoffsetsreset, threadID);
-			device->UnbindUAVs(0, 8, threadID);
-			GPUResource* uav_partitionoffsets[] = {
-				sphPartitionCellOffsets,
-			};
-			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), threadID);
-			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, threadID);
-			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
-			device->EventEnd(threadID);
-
-			// 4.) Assemble grid cell offsets from the sorted particle index list <--> grid cell index list connection:
-			device->EventBegin("PartitionOffsets", threadID);
-			device->BindComputePSO(&CPSO_sphpartitionoffsets, threadID);
-			GPUResource* res_partitionoffsets[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				sphPartitionCellIndices,
-			};
-			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
-			device->EventEnd(threadID);
-
-#endif // SPH_USE_ACCELERATION_GRID
-
-			// 5.) Compute particle density field:
-			device->EventBegin("Density Evaluation", threadID);
-			device->BindComputePSO(&CPSO_sphdensity, threadID);
-			device->UnbindUAVs(0, 8, threadID);
-			GPUResource* res_density[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				particleBuffer,
-				sphPartitionCellIndices,
-				sphPartitionCellOffsets,
-			};
-			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
-			GPUResource* uav_density[] = {
-				densityBuffer
-			};
-			device->BindUAVs(CS, uav_density, 0, ARRAYSIZE(uav_density), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), threadID);
-			device->EventEnd(threadID);
-
-			// 6.) Compute particle pressure forces:
-			device->EventBegin("Force Evaluation", threadID);
-			device->BindComputePSO(&CPSO_sphforce, threadID);
-			device->UnbindUAVs(0, 8, threadID);
-			GPUResource* res_force[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				densityBuffer,
-				sphPartitionCellIndices,
-				sphPartitionCellOffsets,
-			};
-			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
-			GPUResource* uav_force[] = {
-				particleBuffer,
-			};
-			device->BindUAVs(CS, uav_force, 0, ARRAYSIZE(uav_force), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), threadID);
-			device->EventEnd(threadID);
-
-			device->UnbindResources(0, 3, threadID);
-			device->UnbindUAVs(0, 8, threadID);
-
-			device->EventEnd(threadID);
-
-			wiProfiler::GetInstance().EndRange(threadID);
-		}
-
-		device->EventBegin("Simulate", threadID);
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
-		// update CURRENT alive list, write NEW alive list
-		if (SORTING)
-		{
-			if (DEPTHCOLLISIONS)
-			{
-				device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
-			}
-			else
-			{
-				device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
-			}
-		}
-		else
-		{
-			if (DEPTHCOLLISIONS)
-			{
-				device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
-			}
-			else
-			{
-				device->BindComputePSO(&CPSO_simulate, threadID);
-			}
-		}
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->EventEnd(threadID);
-
-
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
-
-		device->EventEnd(threadID);
-
-	}
-
-	if (SORTING)
-	{
-#ifdef DEBUG_SORTING
-		vector<uint32_t> before(maxCount);
-		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, before.data(), threadID);
-
-		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
-		uint32_t particleCount = debugData.aliveCount_afterSimulation;
-#endif // DEBUG_SORTING
-
-
-		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], threadID);
-
-
-#ifdef DEBUG_SORTING
-		vector<uint32_t> after(maxCount);
-		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, after.data(), threadID);
-
-		vector<float> distances(maxCount);
-		device->DownloadBuffer(distanceBuffer, debugDataReadbackDistanceBuffer, distances.data(), threadID);
-
-		if (particleCount > 1)
-		{
-			// CPU sort:
-			for (uint32_t i = 0; i < particleCount - 1; ++i)
-			{
-				for (uint32_t j = i + 1; j < particleCount; ++j)
-				{
-					uint32_t particleIndexA = before[i];
-					uint32_t particleIndexB = before[j];
-
-					float distA = distances[particleIndexA];
-					float distB = distances[particleIndexB];
-
-					if (distA > distB)
-					{
-						before[i] = particleIndexB;
-						before[j] = particleIndexA;
-					}
-				}
-			}
-
-			// Validate:
-			bool valid = true;
-			uint32_t i = 0;
-			for (i = 0; i < particleCount; ++i)
-			{
-				if (before[i] != after[i])
-				{
-					if (distances[before[i]] != distances[after[i]]) // if distances are equal, we just don't care...
-					{
-						valid = false;
-						break;
-					}
-				}
-			}
-
-			assert(valid && "Invalid GPU sorting result!");
-
-			// Also we can reupload CPU sorted particles to verify:
-			if (!valid)
-			{
-				device->UpdateBuffer(aliveList[1], before.data(), threadID);
-			}
-		}
-#endif // DEBUG_SORTING
-	}
-
-	if (!PAUSED)
-	{
-		// finish updating, update draw argument buffer:
-		device->EventBegin("FinishUpdate", threadID);
-		device->BindComputePSO(&CPSO_finishUpdate, threadID);
-
-		GPUResource* res[] = {
-			counterBuffer,
-		};
-		device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
-
-		GPUResource* uavs[] = {
-			indirectBuffers,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-		device->Dispatch(1, 1, 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-		device->UnbindResources(0, ARRAYSIZE(res), threadID);
-		device->EventEnd(threadID);
-
-
-		// Swap CURRENT alivelist with NEW alivelist
-		SwapPtr(aliveList[0], aliveList[1]);
-		emit -= (UINT)emit;
-	}
-
-	if (DEBUG)
-	{
-		device->DownloadResource(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
-	}
+//	CreateSelfBuffers();
+//
+//	GraphicsDevice* device = wiRenderer::GetDevice();
+//
+//
+//	if (!PAUSED)
+//	{
+//
+//		device->EventBegin("UpdateEmittedParticles", threadID);
+//
+//		EmittedParticleCB cb;
+//		cb.xEmitterWorld = object->world;
+//		cb.xEmitCount = (UINT)emit;
+//		cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
+//		cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
+//		cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
+//		cb.xParticleLifeSpan = life / 60.0f;
+//		cb.xParticleLifeSpanRandomness = random_life;
+//		cb.xParticleNormalFactor = normal_factor;
+//		cb.xParticleRandomFactor = random_factor;
+//		cb.xParticleScaling = scaleX;
+//		cb.xParticleSize = size;
+//		cb.xParticleMotionBlurAmount = motionBlurAmount;
+//		cb.xParticleRotation = rotation * XM_PI * 60;
+//		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
+//		cb.xEmitterOpacity = material->alpha;
+//		cb.xParticleMass = mass;
+//		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
+//		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
+//
+//		// SPH:
+//		cb.xSPH_h = SPH_h;
+//		cb.xSPH_h_rcp = 1.0f / SPH_h;
+//		cb.xSPH_h2 = SPH_h * SPH_h;
+//		cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
+//		const float h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
+//		const float h9 = cb.xSPH_h3 * cb.xSPH_h3;
+//		cb.xSPH_poly6_constant = (315.0f / (64.0f * XM_PI * h9));
+//		cb.xSPH_spiky_constant = (-45 / (XM_PI * h6));
+//		cb.xSPH_K = SPH_K;
+//		cb.xSPH_p0 = SPH_p0;
+//		cb.xSPH_e = SPH_e;
+//		cb.xSPH_ENABLED = SPH_FLUIDSIMULATION ? 1 : 0;
+//
+//		device->UpdateBuffer(constantBuffer, &cb, threadID);
+//		device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+//
+//		GPUResource* uavs[] = {
+//			particleBuffer,
+//			aliveList[0], // CURRENT alivelist
+//			aliveList[1], // NEW alivelist
+//			deadList,
+//			counterBuffer,
+//			indirectBuffers,
+//			distanceBuffer,
+//		};
+//		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+//
+//		GPUResource* resources[] = {
+//			wiTextureHelper::getInstance()->getRandom64x64(),
+//			object->mesh->indexBuffer,
+//			object->mesh->vertexBuffer_POS,
+//		};
+//		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+//
+//		GPUResource* indres[] = {
+//			indirectBuffers
+//		};
+//		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
+//
+//		// kick off updating, set up state
+//		device->EventBegin("KickOff Update", threadID);
+//		device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
+//		device->Dispatch(1, 1, 1, threadID);
+//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+//		device->EventEnd(threadID);
+//
+//		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
+//
+//		// emit the required amount if there are free slots in dead list
+//		device->EventBegin("Emit", threadID);
+//		device->BindComputePSO(&CPSO_emit, threadID);
+//		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
+//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+//		device->EventEnd(threadID);
+//
+//		if (SPH_FLUIDSIMULATION)
+//		{
+//			wiProfiler::GetInstance().BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
+//
+//			// Smooth Particle Hydrodynamics:
+//			device->EventBegin("SPH - Simulation", threadID);
+//
+//#ifdef SPH_USE_ACCELERATION_GRID
+//			// 1.) Assign particles into partitioning grid:
+//			device->EventBegin("Partitioning", threadID);
+//			device->BindComputePSO(&CPSO_sphpartition, threadID);
+//			device->UnbindUAVs(0, 8, threadID);
+//			GPUResource* res_partition[] = {
+//				aliveList[0], // CURRENT alivelist
+//				counterBuffer,
+//				particleBuffer,
+//			};
+//			device->BindResources(CS, res_partition, 0, ARRAYSIZE(res_partition), threadID);
+//			GPUResource* uav_partition[] = {
+//				sphPartitionCellIndices,
+//			};
+//			device->BindUAVs(CS, uav_partition, 0, ARRAYSIZE(uav_partition), threadID);
+//			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+//			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), threadID);
+//			device->EventEnd(threadID);
+//
+//			// 2.) Sort particle index list based on partition grid cell index:
+//			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0], threadID);
+//
+//			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
+//			device->EventBegin("PartitionOffsetsReset", threadID);
+//			device->BindComputePSO(&CPSO_sphpartitionoffsetsreset, threadID);
+//			device->UnbindUAVs(0, 8, threadID);
+//			GPUResource* uav_partitionoffsets[] = {
+//				sphPartitionCellOffsets,
+//			};
+//			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), threadID);
+//			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, threadID);
+//			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
+//			device->EventEnd(threadID);
+//
+//			// 4.) Assemble grid cell offsets from the sorted particle index list <--> grid cell index list connection:
+//			device->EventBegin("PartitionOffsets", threadID);
+//			device->BindComputePSO(&CPSO_sphpartitionoffsets, threadID);
+//			GPUResource* res_partitionoffsets[] = {
+//				aliveList[0], // CURRENT alivelist
+//				counterBuffer,
+//				sphPartitionCellIndices,
+//			};
+//			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), threadID);
+//			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+//			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
+//			device->EventEnd(threadID);
+//
+//#endif // SPH_USE_ACCELERATION_GRID
+//
+//			// 5.) Compute particle density field:
+//			device->EventBegin("Density Evaluation", threadID);
+//			device->BindComputePSO(&CPSO_sphdensity, threadID);
+//			device->UnbindUAVs(0, 8, threadID);
+//			GPUResource* res_density[] = {
+//				aliveList[0], // CURRENT alivelist
+//				counterBuffer,
+//				particleBuffer,
+//				sphPartitionCellIndices,
+//				sphPartitionCellOffsets,
+//			};
+//			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
+//			GPUResource* uav_density[] = {
+//				densityBuffer
+//			};
+//			device->BindUAVs(CS, uav_density, 0, ARRAYSIZE(uav_density), threadID);
+//			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+//			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), threadID);
+//			device->EventEnd(threadID);
+//
+//			// 6.) Compute particle pressure forces:
+//			device->EventBegin("Force Evaluation", threadID);
+//			device->BindComputePSO(&CPSO_sphforce, threadID);
+//			device->UnbindUAVs(0, 8, threadID);
+//			GPUResource* res_force[] = {
+//				aliveList[0], // CURRENT alivelist
+//				counterBuffer,
+//				densityBuffer,
+//				sphPartitionCellIndices,
+//				sphPartitionCellOffsets,
+//			};
+//			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
+//			GPUResource* uav_force[] = {
+//				particleBuffer,
+//			};
+//			device->BindUAVs(CS, uav_force, 0, ARRAYSIZE(uav_force), threadID);
+//			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+//			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), threadID);
+//			device->EventEnd(threadID);
+//
+//			device->UnbindResources(0, 3, threadID);
+//			device->UnbindUAVs(0, 8, threadID);
+//
+//			device->EventEnd(threadID);
+//
+//			wiProfiler::GetInstance().EndRange(threadID);
+//		}
+//
+//		device->EventBegin("Simulate", threadID);
+//		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+//		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+//
+//		// update CURRENT alive list, write NEW alive list
+//		if (SORTING)
+//		{
+//			if (DEPTHCOLLISIONS)
+//			{
+//				device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
+//			}
+//			else
+//			{
+//				device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
+//			}
+//		}
+//		else
+//		{
+//			if (DEPTHCOLLISIONS)
+//			{
+//				device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
+//			}
+//			else
+//			{
+//				device->BindComputePSO(&CPSO_simulate, threadID);
+//			}
+//		}
+//		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+//		device->EventEnd(threadID);
+//
+//
+//		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+//		device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+//
+//		device->EventEnd(threadID);
+//
+//	}
+//
+//	if (SORTING)
+//	{
+//#ifdef DEBUG_SORTING
+//		vector<uint32_t> before(maxCount);
+//		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, before.data(), threadID);
+//
+//		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
+//		uint32_t particleCount = debugData.aliveCount_afterSimulation;
+//#endif // DEBUG_SORTING
+//
+//
+//		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], threadID);
+//
+//
+//#ifdef DEBUG_SORTING
+//		vector<uint32_t> after(maxCount);
+//		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, after.data(), threadID);
+//
+//		vector<float> distances(maxCount);
+//		device->DownloadBuffer(distanceBuffer, debugDataReadbackDistanceBuffer, distances.data(), threadID);
+//
+//		if (particleCount > 1)
+//		{
+//			// CPU sort:
+//			for (uint32_t i = 0; i < particleCount - 1; ++i)
+//			{
+//				for (uint32_t j = i + 1; j < particleCount; ++j)
+//				{
+//					uint32_t particleIndexA = before[i];
+//					uint32_t particleIndexB = before[j];
+//
+//					float distA = distances[particleIndexA];
+//					float distB = distances[particleIndexB];
+//
+//					if (distA > distB)
+//					{
+//						before[i] = particleIndexB;
+//						before[j] = particleIndexA;
+//					}
+//				}
+//			}
+//
+//			// Validate:
+//			bool valid = true;
+//			uint32_t i = 0;
+//			for (i = 0; i < particleCount; ++i)
+//			{
+//				if (before[i] != after[i])
+//				{
+//					if (distances[before[i]] != distances[after[i]]) // if distances are equal, we just don't care...
+//					{
+//						valid = false;
+//						break;
+//					}
+//				}
+//			}
+//
+//			assert(valid && "Invalid GPU sorting result!");
+//
+//			// Also we can reupload CPU sorted particles to verify:
+//			if (!valid)
+//			{
+//				device->UpdateBuffer(aliveList[1], before.data(), threadID);
+//			}
+//		}
+//#endif // DEBUG_SORTING
+//	}
+//
+//	if (!PAUSED)
+//	{
+//		// finish updating, update draw argument buffer:
+//		device->EventBegin("FinishUpdate", threadID);
+//		device->BindComputePSO(&CPSO_finishUpdate, threadID);
+//
+//		GPUResource* res[] = {
+//			counterBuffer,
+//		};
+//		device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
+//
+//		GPUResource* uavs[] = {
+//			indirectBuffers,
+//		};
+//		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+//
+//		device->Dispatch(1, 1, 1, threadID);
+//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+//
+//		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+//		device->UnbindResources(0, ARRAYSIZE(res), threadID);
+//		device->EventEnd(threadID);
+//
+//
+//		// Swap CURRENT alivelist with NEW alivelist
+//		SwapPtr(aliveList[0], aliveList[1]);
+//		emit -= (UINT)emit;
+//	}
+//
+//	if (DEBUG)
+//	{
+//		device->DownloadResource(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
+//	}
 }
 
 
 void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("EmittedParticle", threadID);
+	//GraphicsDevice* device = wiRenderer::GetDevice();
+	//device->EventBegin("EmittedParticle", threadID);
 
-	if (wiRenderer::IsWireRender())
-	{
-		device->BindGraphicsPSO(&PSO_wire, threadID);
-	}
-	else
-	{
-		device->BindGraphicsPSO(&PSO[material->blendFlag][shaderType], threadID);
-	}
+	//if (wiRenderer::IsWireRender())
+	//{
+	//	device->BindGraphicsPSO(&PSO_wire, threadID);
+	//}
+	//else
+	//{
+	//	device->BindGraphicsPSO(&PSO[material->blendFlag][shaderType], threadID);
+	//}
 
-	device->BindConstantBuffer(VS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+	//device->BindConstantBuffer(VS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
-	GPUResource* res[] = {
-		particleBuffer,
-		aliveList[0]
-	};
-	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
-	device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);
+	//GPUResource* res[] = {
+	//	particleBuffer,
+	//	aliveList[0]
+	//};
+	//device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
+	//device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);
 
-	if (!wiRenderer::IsWireRender() && material->texture)
-	{
-		device->BindResource(PS, material->texture, TEXSLOT_ONDEMAND0, threadID);
-	}
+	//if (!wiRenderer::IsWireRender() && material->texture)
+	//{
+	//	device->BindResource(PS, material->texture, TEXSLOT_ONDEMAND0, threadID);
+	//}
 
-	device->DrawInstancedIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
+	//device->DrawInstancedIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
 
-	device->EventEnd(threadID);
+	//device->EventEnd(threadID);
 }
 
 

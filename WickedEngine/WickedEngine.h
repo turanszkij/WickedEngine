@@ -19,7 +19,7 @@
 #include "wiFont.h"
 #include "wiFrameRate.h"
 #include "wiCpuInfo.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiRenderer.h"
