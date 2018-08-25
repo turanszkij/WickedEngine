@@ -94,8 +94,8 @@ string wiRenderer::SHADERPATH = "shaders/";
 
 deque<wiSprite*> wiRenderer::waterRipples;
 
-wiSPTree* wiRenderer::spTree = nullptr;
-wiSPTree* wiRenderer::spTree_lights = nullptr;
+//wiSPTree* wiRenderer::spTree = nullptr;
+//wiSPTree* wiRenderer::spTree_lights = nullptr;
 
 Scene* wiRenderer::scene = nullptr;
 
@@ -116,7 +116,6 @@ unordered_set<Texture2D*> deferredMIPGens;
 
 struct FrameCulling
 {
-
 };
 
 GFX_STRUCT Instance

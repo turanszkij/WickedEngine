@@ -129,7 +129,7 @@ void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent)
 	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
 
-	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
+	MeshComponent& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
 
 	if(softBody){
 		btVector3 min, max;
@@ -144,9 +144,9 @@ void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent)
 		for (unsigned int i = 0; i<mesh.vertices_POS.size(); ++i)
 		{
 			int indexP = physicscomponent.physicalmapGP[i];
-			float weight = mesh.vertexGroups[gvg].vertices[indexP];
+			float weight = mesh.vertexGroups[gvg].vertex_weights[indexP];
 
-			Mesh::Vertex_POS& vert = mesh.vertices_Transformed_POS[i];
+			MeshComponent::Vertex_POS& vert = mesh.vertices_Transformed_POS[i];
 
 			mesh.vertices_Transformed_PRE[i] = vert;
 			vert.pos.x = nodes[indexP].m_x.getX();
@@ -164,7 +164,7 @@ void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent){
 		btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
 		btSoftBody* softBody = btSoftBody::upcast(obj);
 
-		Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
+		MeshComponent& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
 
 		if(softBody){
 			btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
@@ -172,7 +172,7 @@ void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent){
 			int gvg = physicscomponent.goalVG;
 			if(gvg>=0){
 				int j=0;
-				for (auto it = mesh.vertexGroups[gvg].vertices.begin(); it != mesh.vertexGroups[gvg].vertices.end(); ++it) {
+				for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it) {
 					int vi = (*it).first;
 					int index = physicscomponent.physicalmapGP[vi];
 					float weight = (*it).second;
@@ -226,8 +226,8 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 
 void wiBULLET::registerObject(PhysicsComponent& physicscomponent)
 {
-	Mesh& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
-	Transform& transform = wiRenderer::GetScene().transforms.GetComponent(physicscomponent.transform_ref);
+	MeshComponent& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
+	TransformComponent& transform = wiRenderer::GetScene().transforms.GetComponent(physicscomponent.transform_ref);
 
 	btVector3 S = btVector3(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
 	btQuaternion R = btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.z);
@@ -601,7 +601,7 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent)
 			
 			int mvg = physicscomponent.massVG;
 			if(mvg>=0){
-				for(auto it=mesh.vertexGroups[mvg].vertices.begin();it!=mesh.vertexGroups[mvg].vertices.end();++it){
+				for(auto it=mesh.vertexGroups[mvg].vertex_weights.begin();it!=mesh.vertexGroups[mvg].vertex_weights.end();++it){
 					int vi = (*it).first;
 					float wei = (*it).second;
 					int index= physicscomponent.physicalmapGP[vi];
@@ -612,7 +612,7 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent)
 			
 			int gvg = physicscomponent.goalVG;
 			if(gvg>=0){
-				for(auto it=mesh.vertexGroups[gvg].vertices.begin();it!=mesh.vertexGroups[gvg].vertices.end();++it){
+				for(auto it=mesh.vertexGroups[gvg].vertex_weights.begin();it!=mesh.vertexGroups[gvg].vertex_weights.end();++it){
 					int vi = (*it).first;
 					int index= physicscomponent.physicalmapGP[vi];
 					float weight = (*it).second;

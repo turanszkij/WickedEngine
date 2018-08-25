@@ -9,6 +9,7 @@
 namespace wiECS
 {
 	typedef uint64_t Entity;
+	static const Entity INVALID_ENTITY = 0;
 
 	template<typename T>
 	class ComponentManager
@@ -28,6 +29,14 @@ namespace wiECS
 		struct ref
 		{
 			size_t value = ~0;
+
+			inline ref operator=(ref other) { value = other.value; return *this; }
+			inline bool operator==(ref other) const { return value == other.value; }
+			inline bool operator!=(ref other) const { return value != other.value; }
+			inline ref& operator++() { value++; return *this; }
+			inline ref operator++(int v) { ref temp = *this; ++*this; return temp; }
+			inline ref& operator--() { value--; return *this; }
+			inline ref operator--(int v) { ref temp = *this; --*this; return temp; }
 		};
 
 		// Clear the whole container, invalidate all refs

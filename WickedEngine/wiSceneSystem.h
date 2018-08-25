@@ -12,19 +12,21 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <unordered_set>
 
 namespace wiSceneSystem
 {
 
-	struct Node
+	struct NodeComponent
 	{
 		uint32_t layerMask = ~0;
 		std::string name;
 	};
 	
-	struct Transform
+	struct TransformComponent
 	{
-		wiECS::ComponentManager<Transform>::ref parent_ref;
+		wiECS::ComponentManager<TransformComponent>::ref parent_ref;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
@@ -36,32 +38,32 @@ namespace wiSceneSystem
 		XMFLOAT4X4 world_parent_bind;	// uninitialized on purpose
 	};
 
-	struct Material
+	struct MaterialComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
 
 		bool dirty = true;
 
-		STENCILREF engineStencilRef;
-		uint8_t userStencilRef;
-		BLENDMODE blendFlag;
+		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
+		uint8_t userStencilRef = 0;
+		BLENDMODE blendFlag = BLENDMODE_OPAQUE;
 
-		XMFLOAT4 baseColor; // + alpha (.w)
-		XMFLOAT4 texMulAdd;
-		float roughness;
-		float reflectance;
-		float metalness;
-		float emissive;
-		float refractionIndex;
-		float subsurfaceScattering;
-		float normalMapStrength;
-		float parallaxOcclusionMapping;
+		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		float roughness = 0.2f;
+		float reflectance = 0.02f;
+		float metalness = 0.0f;
+		float emissive = 0.0f;
+		float refractionIndex = 0.0f;
+		float subsurfaceScattering = 0.0f;
+		float normalMapStrength = 1.0f;
+		float parallaxOcclusionMapping = 0.0f;
 
-		float alphaRef;
+		float alphaRef = 1.0f;
 
-		bool cast_shadow;
-		bool planar_reflections;
-		bool water;
+		bool cast_shadow = true;
+		bool planar_reflections = false;
+		bool water = false;
 
 		std::string baseColorMapName;
 		wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
@@ -93,7 +95,7 @@ namespace wiSceneSystem
 		wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 	};
 
-	struct Mesh
+	struct MeshComponent
 	{
 		struct Vertex_FULL
 		{
@@ -251,8 +253,8 @@ namespace wiSceneSystem
 
 		struct MeshSubset
 		{
-			wiECS::ComponentManager<Material> material_ref;
-			UINT indexBufferOffset;
+			wiECS::ComponentManager<MaterialComponent> material_ref;
+			UINT indexBufferOffset = 0;
 
 			std::vector<uint32_t> subsetIndices;
 
@@ -261,18 +263,18 @@ namespace wiSceneSystem
 		};
 		std::vector<MeshSubset>		subsets;
 
-		wiGraphicsTypes::GPUBuffer*	indexBuffer;
-		wiGraphicsTypes::GPUBuffer*	vertexBuffer_POS;
-		wiGraphicsTypes::GPUBuffer*	vertexBuffer_TEX;
-		wiGraphicsTypes::GPUBuffer*	vertexBuffer_BON;
-		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_POS;
-		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_PRE;
+		wiGraphicsTypes::GPUBuffer*	indexBuffer = nullptr;
+		wiGraphicsTypes::GPUBuffer*	vertexBuffer_POS = nullptr;
+		wiGraphicsTypes::GPUBuffer*	vertexBuffer_TEX = nullptr;
+		wiGraphicsTypes::GPUBuffer*	vertexBuffer_BON = nullptr;
+		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_POS = nullptr;
+		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_PRE = nullptr;
 
 		// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
-		UINT bufferOffset_POS;
-		UINT bufferOffset_PRE;
+		UINT bufferOffset_POS = 0;
+		UINT bufferOffset_PRE = 0;
 
-		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat;
+		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
 
 		bool renderable = true;
 		bool doubleSided = false;
@@ -280,28 +282,17 @@ namespace wiSceneSystem
 
 		AABB aabb;
 
-		wiECS::ComponentManager<Armature>::ref armature_ref;
+		wiECS::ComponentManager<ArmatureComponent>::ref armature_ref;
 
-
-
-		struct VertexRef {
-			int index;
-			float weight;
-			VertexRef() { index = 0; weight = 0; }
-			VertexRef(int i, float w) { index = i; weight = w; }
-		};
-		struct VertexGroup {
+		struct VertexGroup 
+		{
 			std::string name;
-			std::unordered_map<int, float> vertices;
-			VertexGroup() { name = ""; }
-			VertexGroup(const std::string& n) { name = n; }
-			void addVertex(const VertexRef& vRef) { vertices.insert(std::pair<int, float>(vRef.index, vRef.weight)); }
+			std::unordered_map<int, float> vertex_weights; // maps vertex index to weight value...
 		};
-
 		std::vector<VertexGroup> vertexGroups;
 
 		wiRenderTarget	impostorTarget;
-		float impostorDistance;
+		float impostorDistance = 100.0f;
 		static wiGraphicsTypes::GPUBuffer impostorVB_POS;
 		static wiGraphicsTypes::GPUBuffer impostorVB_TEX;
 
@@ -309,58 +300,67 @@ namespace wiSceneSystem
 
 	};
 
-	struct Object
+	struct ObjectComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
-		wiECS::ComponentManager<Mesh>::ref mesh_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
+		wiECS::ComponentManager<MeshComponent>::ref mesh_ref;
 
-		bool renderable;
+		bool renderable = true;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		AABB aabb;
-		XMFLOAT4 color;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
-		uint32_t occlusionHistory;
+		uint32_t occlusionHistory = ~0;
 		// occlusion query pool index
-		int occlusionQueryID;
+		int occlusionQueryID = -1;
 	};
 
 	struct PhysicsComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
-		wiECS::ComponentManager<Mesh>::ref mesh_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
+		wiECS::ComponentManager<MeshComponent>::ref mesh_ref;
 
-		int physicsObjectID;
-		bool rigidBody, kinematic;
-		std::string collisionShape, physicsType;
-		float mass, friction, restitution, damping;
+		std::string collisionShape;
+		std::string physicsType;
 
-		bool softBody;
-		int massVG, goalVG, softVG; //vertexGroupID
-		std::vector<XMFLOAT3> goalPositions, goalNormals;
+		int physicsObjectID = -1;
+		bool rigidBody = false;
+		bool softBody = false;
+		bool kinematic = false;
+		float mass = 1.0f;
+		float friction = 1.0f;
+		float restitution = 1.0f;
+		float damping = 1.0f;
 
-		std::vector<XMFLOAT3>		physicsverts;
-		std::vector<uint32_t>		physicsindices;
-		std::vector<int>			physicalmapGP;
+		int massVG; // vertex group ID for masses
+		int goalVG; // vertex group ID for soft body goals (how much the vertex is driven by anim/other than physics systems)
+		int softVG; // vertex group ID for soft body softness (how much to blend in soft body sim to a vertex)
+		std::vector<XMFLOAT3> goalPositions;
+		std::vector<XMFLOAT3> goalNormals;
+
+		std::vector<XMFLOAT3> physicsverts;
+		std::vector<uint32_t> physicsindices;
+		std::vector<int>	  physicalmapGP;
 	};
 
-	struct Bone
+	struct BoneComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 
 		XMFLOAT4X4 inverseBindPoseMatrix;
 		XMFLOAT4X4 skinningMatrix;
 	};
 
-	struct Armature
+	struct ArmatureComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 
-		std::vector<wiECS::ComponentManager<Bone>::ref> bone_refs;
+		std::vector<wiECS::ComponentManager<BoneComponent>::ref> bone_refs;
 
 		GFX_STRUCT ShaderBoneType
 		{
@@ -382,13 +382,13 @@ namespace wiSceneSystem
 
 		// This will be used to eg. mirror the whole skin, without modifying the armature transform itself
 		//	It will affect the skin only, so the mesh vertices should be mirrored as well to work correctly!
-		XMFLOAT4X4 skinningRemap;
+		XMFLOAT4X4 skinningRemap = XMFLOAT4X4(1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1);
 	};
 
-	struct Light
+	struct LightComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 
 		enum LightType {
 			DIRECTIONAL			= ENTITY_TYPE_DIRECTIONALLIGHT,
@@ -401,38 +401,40 @@ namespace wiSceneSystem
 			LIGHTTYPE_COUNT,
 		};
 
-		XMFLOAT4 color;
-		XMFLOAT4 enerDis;
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 enerDis = XMFLOAT4(1, 10, 0, 0);
 		bool volumetrics = false;
-		bool noHalo;
-		bool shadow;
+		bool visualizer = false;
+		bool shadow = false;
 		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 		std::vector<std::string> lensFlareNames;
 
 		static wiGraphicsTypes::Texture2D* shadowMapArray_2D;
 		static wiGraphicsTypes::Texture2D* shadowMapArray_Cube;
 		static wiGraphicsTypes::Texture2D* shadowMapArray_Transparent;
-		int shadowMap_index;
-		int entityArray_index;
+		int shadowMap_index = -1;
+		int entityArray_index = -1;
 
-		std::vector<XMFLOAT4X4> shadowMaterices;
+		std::vector<XMFLOAT4X4> shadowMatrices;
 
-		float shadowBias;
+		float shadowBias = 0.0001f;
 
 		// area light props:
-		float radius, width, height;
+		float radius = 1.0f;
+		float width = 1.0f;
+		float height = 1.0f;
 	};
 
-	struct Camera
+	struct CameraComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 
+		float width = 0.0f, height = 0.0f;
+		float zNearP = 0.001f, zFarP = 800.0f;
+		float fov = XM_PI / 3.0f;
 		XMFLOAT4X4 View, Projection, VP;
 		XMFLOAT3 Eye, At, Up;
-		float width, height;
-		float zNearP, zFarP;
-		float fov;
 		Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
@@ -479,63 +481,70 @@ namespace wiSceneSystem
 		}
 	};
 
-	struct EnvironmentProbe
+	struct EnvironmentProbeComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 		int textureIndex = -1;
 		bool realTime = false;
 		bool isUpToDate = false;
 	};
 
-	struct ForceField
+	struct ForceFieldComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
+
+		int type = ENTITY_TYPE_FORCEFIELD_POINT;
+		float gravity = 0.0f; // negative = deflector, positive = attractor
+		float range = 0.0f; // affection range
 	};
 
-	struct Decal
+	struct DecalComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
-		wiECS::ComponentManager<Material>::ref material_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
+		wiECS::ComponentManager<MaterialComponent>::ref material_ref;
 
 		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 	};
 
-	struct Model
+	struct ModelComponent
 	{
-		wiECS::ComponentManager<Node>::ref node_ref;
-		wiECS::ComponentManager<Transform>::ref transform_ref;
+		wiECS::ComponentManager<NodeComponent>::ref node_ref;
+		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 
-		std::vector<wiECS::ComponentManager<Material>::ref> material_refs;
-		std::vector<wiECS::ComponentManager<Mesh>::ref> mesh_refs;
-		std::vector<wiECS::ComponentManager<Object>::ref> object_refs;
-		std::vector<wiECS::ComponentManager<PhysicsComponent>::ref> physicscomponent_refs;
-		std::vector<wiECS::ComponentManager<Armature>::ref> armature_refs;
-		std::vector<wiECS::ComponentManager<Light>::ref> light_refs;
-		std::vector<wiECS::ComponentManager<EnvironmentProbe>::ref> probe_refs;
-		std::vector<wiECS::ComponentManager<ForceField>::ref> force_refs;
-		std::vector<wiECS::ComponentManager<Decal>::ref> decal_refs;
-		std::vector<wiECS::ComponentManager<Camera>::ref> camera_refs;
+		std::unordered_set<wiECS::ComponentManager<MaterialComponent>::ref> material_refs;
+		std::unordered_set<wiECS::ComponentManager<MeshComponent>::ref> mesh_refs;
+		std::unordered_set<wiECS::ComponentManager<ObjectComponent>::ref> object_refs;
+		std::unordered_set<wiECS::ComponentManager<PhysicsComponent>::ref> physicscomponent_refs;
+		std::unordered_set<wiECS::ComponentManager<BoneComponent>::ref> bone_refs;
+		std::unordered_set<wiECS::ComponentManager<ArmatureComponent>::ref> armature_refs;
+		std::unordered_set<wiECS::ComponentManager<LightComponent>::ref> light_refs;
+		std::unordered_set<wiECS::ComponentManager<EnvironmentProbeComponent>::ref> probe_refs;
+		std::unordered_set<wiECS::ComponentManager<ForceFieldComponent>::ref> force_refs;
+		std::unordered_set<wiECS::ComponentManager<DecalComponent>::ref> decal_refs;
+		std::unordered_set<wiECS::ComponentManager<CameraComponent>::ref> camera_refs;
 	};
 
 	struct Scene
 	{
-		wiECS::ComponentManager<Node> nodes;
-		wiECS::ComponentManager<Transform> transforms;
-		wiECS::ComponentManager<Material> materials;
-		wiECS::ComponentManager<Mesh> meshes;
-		wiECS::ComponentManager<Object> objects;
+		std::unordered_set<wiECS::Entity> entities;
+
+		wiECS::ComponentManager<NodeComponent> nodes;
+		wiECS::ComponentManager<TransformComponent> transforms;
+		wiECS::ComponentManager<MaterialComponent> materials;
+		wiECS::ComponentManager<MeshComponent> meshes;
+		wiECS::ComponentManager<ObjectComponent> objects;
 		wiECS::ComponentManager<PhysicsComponent> physicscomponents;
-		wiECS::ComponentManager<Bone> bones;
-		wiECS::ComponentManager<Armature> armatures;
-		wiECS::ComponentManager<Light> lights;
-		wiECS::ComponentManager<Camera> cameras;
-		wiECS::ComponentManager<EnvironmentProbe> probes;
-		wiECS::ComponentManager<ForceField> forces;
-		wiECS::ComponentManager<Decal> decals;
-		wiECS::ComponentManager<Model> models;
+		wiECS::ComponentManager<BoneComponent> bones;
+		wiECS::ComponentManager<ArmatureComponent> armatures;
+		wiECS::ComponentManager<LightComponent> lights;
+		wiECS::ComponentManager<CameraComponent> cameras;
+		wiECS::ComponentManager<EnvironmentProbeComponent> probes;
+		wiECS::ComponentManager<ForceFieldComponent> forces;
+		wiECS::ComponentManager<DecalComponent> decals;
+		wiECS::ComponentManager<ModelComponent> models;
 
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.00f, 0.00f, 0.0f);
@@ -550,6 +559,12 @@ namespace wiSceneSystem
 		float windWaveSize = 1;
 
 		void Update(float dt);
+	};
+
+	struct Camera
+	{
+		TransformComponent transformComponent;
+		CameraComponent cameraComponent;
 	};
 
 }
