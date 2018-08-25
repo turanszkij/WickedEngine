@@ -33,9 +33,12 @@ namespace wiSceneSystem
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
 		bool dirty = true;
-		XMFLOAT4X4 world;				// uninitialized on purpose
-		XMFLOAT4X4 world_prev;			// uninitialized on purpose
-		XMFLOAT4X4 world_parent_bind;	// uninitialized on purpose
+		XMFLOAT3 scale;
+		XMFLOAT4 rotation;
+		XMFLOAT3 translation;
+		XMFLOAT4X4 world;
+		XMFLOAT4X4 world_prev;
+		XMFLOAT4X4 world_parent_bind;
 
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);

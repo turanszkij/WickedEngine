@@ -59,13 +59,13 @@ namespace wiSceneSystem
 	{
 		dirty = true;
 
-		XMMATRIX aW = XMLoadFloat4x4(&a.world);
-		XMVECTOR aS, aR, aT;
-		XMMatrixDecompose(&aS, &aR, &aT, aW);
+		XMVECTOR aS = XMLoadFloat3(&a.scale);
+		XMVECTOR aR = XMLoadFloat4(&a.rotation);
+		XMVECTOR aT = XMLoadFloat3(&a.translation);
 
-		XMMATRIX bW = XMLoadFloat4x4(&b.world);
-		XMVECTOR bS, bR, bT;
-		XMMatrixDecompose(&bS, &bR, &bT, bW);
+		XMVECTOR bS = XMLoadFloat3(&b.scale);
+		XMVECTOR bR = XMLoadFloat4(&b.rotation);
+		XMVECTOR bT = XMLoadFloat3(&b.translation);
 
 		XMVECTOR S = XMVectorLerp(aS, bS, t);
 		XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
@@ -79,21 +79,21 @@ namespace wiSceneSystem
 	{
 		dirty = true;
 
-		XMMATRIX aW = XMLoadFloat4x4(&a.world);
-		XMVECTOR aS, aR, aT;
-		XMMatrixDecompose(&aS, &aR, &aT, aW);
+		XMVECTOR aS = XMLoadFloat3(&a.scale);
+		XMVECTOR aR = XMLoadFloat4(&a.rotation);
+		XMVECTOR aT = XMLoadFloat3(&a.translation);
 
-		XMMATRIX bW = XMLoadFloat4x4(&b.world);
-		XMVECTOR bS, bR, bT;
-		XMMatrixDecompose(&bS, &bR, &bT, bW);
+		XMVECTOR bS = XMLoadFloat3(&b.scale);
+		XMVECTOR bR = XMLoadFloat4(&b.rotation);
+		XMVECTOR bT = XMLoadFloat3(&b.translation);
 
-		XMMATRIX cW = XMLoadFloat4x4(&c.world);
-		XMVECTOR cS, cR, cT;
-		XMMatrixDecompose(&cS, &cR, &cT, cW);
+		XMVECTOR cS = XMLoadFloat3(&c.scale);
+		XMVECTOR cR = XMLoadFloat4(&c.rotation);
+		XMVECTOR cT = XMLoadFloat3(&c.translation);
 
-		XMMATRIX dW = XMLoadFloat4x4(&d.world);
-		XMVECTOR dS, dR, dT;
-		XMMatrixDecompose(&dS, &dR, &dT, dW);
+		XMVECTOR dS = XMLoadFloat3(&d.scale);
+		XMVECTOR dR = XMLoadFloat4(&d.rotation);
+		XMVECTOR dT = XMLoadFloat3(&d.translation);
 
 		XMVECTOR T = XMVectorCatmullRom(aT, bT, cT, dT, t);
 
@@ -171,6 +171,12 @@ namespace wiSceneSystem
 					XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
 					world = world * bindMatrix * world_parent;
 				}
+
+				XMVECTOR S, R, T;
+				XMMatrixDecompose(&S, &R, &T, world);
+				XMStoreFloat3(&transform.scale, S);
+				XMStoreFloat4(&transform.rotation, R);
+				XMStoreFloat3(&transform.translation, T);
 
 				transform.world_prev = transform.world;
 				XMStoreFloat4x4(&transform.world, world);
