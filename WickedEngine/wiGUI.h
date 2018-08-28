@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiEnums.h"
+#include "wiSceneSystem.h"
 
 #include <list>
 
@@ -51,5 +52,7 @@ public:
 	{
 		return pointerpos;
 	}
+
+	wiECS::ComponentManager<wiSceneSystem::TransformComponent> transforms;
 };
 

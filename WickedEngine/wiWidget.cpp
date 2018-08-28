@@ -14,9 +14,6 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-
-wiECS::ComponentManager<wiSceneSystem::TransformComponent> wiWidget::transforms(100);
-
 static GraphicsPSO* PSO_colorpicker = nullptr;
 
 
@@ -37,10 +34,6 @@ wiWidget::wiWidget()
 	tooltipTimer = 0;
 	textColor = wiColor(255, 255, 255, 255);
 	textShadowColor = wiColor(0, 0, 0, 255);
-
-	static wiECS::Entity entityID = 0;
-	transform_ref = transforms.Create(++entityID);
-	auto& transform = wiWidget::transforms.GetComponent(transform_ref);
 }
 wiWidget::~wiWidget()
 {
@@ -59,14 +52,45 @@ void wiWidget::Update(wiGUI* gui, float dt )
 	}
 
 	wiECS::Entity entityID = (wiECS::Entity)fastName.GetHash();
-	auto ref = transforms.Find(entityID);
-	if (transforms.IsValid(ref, entityID))
+	auto ref = gui->transforms.Find(entityID);
+	if (gui->transforms.IsValid(ref, entityID))
 	{
-		const auto& transform = transforms.GetComponent(ref);
+		const auto& transform = gui->transforms.GetComponent(ref);
 		hitBox.pos.x = transform.translation.x;
 		hitBox.pos.y = transform.translation.y;
 		hitBox.siz.x = transform.scale.x;
 		hitBox.siz.y = transform.scale.y;
+	}
+	else
+	{
+		auto ref = gui->transforms.Create(entityID);
+		auto& transform = gui->transforms.GetComponent(ref);
+		transform.translation_local.x = hitBox.pos.x;
+		transform.translation_local.y = hitBox.pos.y;
+		transform.scale_local.x = hitBox.siz.x;
+		transform.scale_local.y = hitBox.siz.y;
+
+		XMVECTOR scale_local = XMLoadFloat3(&transform.scale_local);
+		XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
+		XMVECTOR translation_local = XMLoadFloat3(&transform.translation_local);
+		XMMATRIX world =
+			XMMatrixScalingFromVector(scale_local) *
+			XMMatrixRotationQuaternion(rotation_local) *
+			XMMatrixTranslationFromVector(translation_local);
+		XMStoreFloat4x4(&transform.world, world);
+
+		if (container != nullptr)
+		{
+			wiECS::Entity entityID_parent = (wiECS::Entity)fastName.GetHash();
+			auto ref_parent = gui->transforms.Find(entityID_parent);
+			const auto& transform_parent = gui->transforms.GetComponent(ref_parent);
+
+			XMMATRIX world_parent = XMLoadFloat4x4(&transform_parent.world);
+			XMMATRIX world_parent_inv = XMMatrixInverse(nullptr, world_parent);
+			XMStoreFloat4x4(&transform.world_parent_bind, world_parent_inv);
+
+			transform.parent_ref = ref_parent;
+		}
 	}
 }
 void wiWidget::RenderTooltip(wiGUI* gui)
@@ -144,20 +168,10 @@ void wiWidget::SetScriptTip(const std::string& value)
 }
 void wiWidget::SetPos(const XMFLOAT2& value)
 {
-	auto& transform = GetTransform();
-	transform.translation_local.x = value.x;
-	transform.translation_local.y = value.y;
-	transform.dirty = true;
-
 	hitBox.pos = value;
 }
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
-	auto& transform = GetTransform();
-	transform.scale_local.x = value.x;
-	transform.scale_local.y = value.y;
-	transform.dirty = true;
-
 	hitBox.siz = value;
 }
 wiWidget::WIDGETSTATE wiWidget::GetState()
@@ -240,10 +254,6 @@ void wiWidget::LoadShaders()
 		HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
 		assert(SUCCEEDED(hr));
 	}
-}
-wiSceneSystem::TransformComponent& wiWidget::GetTransform()
-{
-	return wiWidget::transforms.GetComponent(transform_ref);
 }
 
 
@@ -648,8 +658,7 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		this->end = max(this->end, args.fValue);
 		onSlide(args);
 	});
-	valueInputField->GetTransform().parent_ref = this->transform_ref;
-
+	valueInputField->container = this;
 }
 wiSlider::~wiSlider()
 {

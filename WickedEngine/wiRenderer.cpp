@@ -511,8 +511,8 @@ void wiRenderer::SetUpStaticComponents()
 			MeshComponent::Vertex_TEX impostorVertices_TEX[ARRAYSIZE(impostorVertices)];
 			for (int i = 0; i < ARRAYSIZE(impostorVertices); ++i)
 			{
-				impostorVertices_POS[i] = MeshComponent::Vertex_POS(impostorVertices[i]);
-				impostorVertices_TEX[i] = MeshComponent::Vertex_TEX(impostorVertices[i]);
+				impostorVertices_POS[i].FromFULL(impostorVertices[i]);
+				impostorVertices_TEX[i].FromFULL(impostorVertices[i]);
 			}
 
 

@@ -23,13 +23,13 @@ void wiGUI::Update(float dt)
 		return;
 	}
 
-	for (size_t i = 0; i < wiWidget::transforms.GetCount(); ++i)
+	for (size_t i = 0; i < transforms.GetCount(); ++i)
 	{
-		auto& transform = wiWidget::transforms[i];
+		auto& transform = transforms[i];
 
-		const bool parented = wiWidget::transforms.IsValid(transform.parent_ref);
+		const bool parented = transforms.IsValid(transform.parent_ref);
 
-		if (transform.dirty || parented)
+		//if (transform.dirty || parented)
 		{
 			transform.dirty = false;
 
@@ -43,10 +43,14 @@ void wiGUI::Update(float dt)
 
 			if (parented)
 			{
-				auto& parent = wiWidget::transforms.GetComponent(transform.parent_ref);
+				auto& parent = transforms.GetComponent(transform.parent_ref);
 				XMMATRIX world_parent = XMLoadFloat4x4(&parent.world);
 				XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
 				world = world * bindMatrix * world_parent;
+			}
+			else
+			{
+				transform.translation_local.x += 0.1f;
 			}
 
 			XMVECTOR S, R, T;

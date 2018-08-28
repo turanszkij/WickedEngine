@@ -116,34 +116,18 @@ namespace wiSceneSystem
 	{
 		struct Vertex_FULL
 		{
-			XMFLOAT4 pos; //pos, wind
-			XMFLOAT4 nor; //normal, unused
-			XMFLOAT4 tex; //tex, matIndex, unused
-			XMFLOAT4 ind; //bone indices
-			XMFLOAT4 wei; //bone weights
-
-			Vertex_FULL() {
-				pos = XMFLOAT4(0, 0, 0, 0);
-				nor = XMFLOAT4(0, 0, 0, 1);
-				tex = XMFLOAT4(0, 0, 0, 0);
-				ind = XMFLOAT4(0, 0, 0, 0);
-				wei = XMFLOAT4(0, 0, 0, 0);
-			};
-			Vertex_FULL(const XMFLOAT3& newPos) {
-				pos = XMFLOAT4(newPos.x, newPos.y, newPos.z, 1);
-				nor = XMFLOAT4(0, 0, 0, 1);
-				tex = XMFLOAT4(0, 0, 0, 0);
-				ind = XMFLOAT4(0, 0, 0, 0);
-				wei = XMFLOAT4(0, 0, 0, 0);
-			}
+			XMFLOAT4 pos = XMFLOAT4(0, 0, 0, 0); //pos, wind
+			XMFLOAT4 nor = XMFLOAT4(0, 0, 0, 1); //normal, unused
+			XMFLOAT4 tex = XMFLOAT4(0, 0, 0, 0); //tex, matIndex, unused
+			XMFLOAT4 ind = XMFLOAT4(0, 0, 0, 0); //bone indices
+			XMFLOAT4 wei = XMFLOAT4(0, 0, 0, 0); //bone weights
 		};
 		struct Vertex_POS
 		{
-			XMFLOAT3 pos;
-			uint32_t normal_wind_matID;
+			XMFLOAT3 pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
+			uint32_t normal_wind_matID = 0;
 
-			Vertex_POS() :pos(XMFLOAT3(0.0f, 0.0f, 0.0f)), normal_wind_matID(0) {}
-			Vertex_POS(const Vertex_FULL& vert)
+			void FromFULL(const Vertex_FULL& vert)
 			{
 				pos.x = vert.pos.x;
 				pos.y = vert.pos.y;
@@ -201,10 +185,9 @@ namespace wiSceneSystem
 		};
 		struct Vertex_TEX
 		{
-			XMHALF2 tex;
+			XMHALF2 tex = XMHALF2(0.0f, 0.0f);
 
-			Vertex_TEX() :tex(XMHALF2(0.0f, 0.0f)) {}
-			Vertex_TEX(const Vertex_FULL& vert)
+			void FromFULL(const Vertex_FULL& vert)
 			{
 				tex = XMHALF2(vert.tex.x, vert.tex.y);
 			}
@@ -213,15 +196,10 @@ namespace wiSceneSystem
 		};
 		struct Vertex_BON
 		{
-			uint64_t ind;
-			uint64_t wei;
+			uint64_t ind = 0;
+			uint64_t wei = 0;
 
-			Vertex_BON()
-			{
-				ind = 0;
-				wei = 0;
-			}
-			Vertex_BON(const Vertex_FULL& vert)
+			void FromFULL(const Vertex_FULL& vert)
 			{
 				ind = 0;
 				wei = 0;
