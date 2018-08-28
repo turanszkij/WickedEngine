@@ -13,11 +13,13 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneSystem;
 
-static GraphicsPSO* PSO_colorpicker = nullptr;
+
+static wiGraphicsTypes::GraphicsPSO* PSO_colorpicker = nullptr;
 
 
-wiWidget::wiWidget()
+wiWidget::wiWidget() : TransformComponent()
 {
 	state = IDLE;
 	enabled = true;
@@ -38,7 +40,7 @@ wiWidget::wiWidget()
 wiWidget::~wiWidget()
 {
 }
-void wiWidget::Update(wiGUI* gui, float dt )
+void wiWidget::Update(wiGUI* gui, float dt)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -51,46 +53,15 @@ void wiWidget::Update(wiGUI* gui, float dt )
 		tooltipTimer = 0;
 	}
 
-	wiECS::Entity entityID = (wiECS::Entity)fastName.GetHash();
-	auto ref = gui->transforms.Find(entityID);
-	if (gui->transforms.IsValid(ref, entityID))
+	// Only do the updatetransform if it has no parent because if it has, its transform
+	// will be updated down the chain anyway
+	if (container == nullptr)
 	{
-		const auto& transform = gui->transforms.GetComponent(ref);
-		hitBox.pos.x = transform.translation.x;
-		hitBox.pos.y = transform.translation.y;
-		hitBox.siz.x = transform.scale.x;
-		hitBox.siz.y = transform.scale.y;
+		UpdateTransform();
 	}
 	else
 	{
-		auto ref = gui->transforms.Create(entityID);
-		auto& transform = gui->transforms.GetComponent(ref);
-		transform.translation_local.x = hitBox.pos.x;
-		transform.translation_local.y = hitBox.pos.y;
-		transform.scale_local.x = hitBox.siz.x;
-		transform.scale_local.y = hitBox.siz.y;
-
-		XMVECTOR scale_local = XMLoadFloat3(&transform.scale_local);
-		XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
-		XMVECTOR translation_local = XMLoadFloat3(&transform.translation_local);
-		XMMATRIX world =
-			XMMatrixScalingFromVector(scale_local) *
-			XMMatrixRotationQuaternion(rotation_local) *
-			XMMatrixTranslationFromVector(translation_local);
-		XMStoreFloat4x4(&transform.world, world);
-
-		if (container != nullptr)
-		{
-			wiECS::Entity entityID_parent = (wiECS::Entity)fastName.GetHash();
-			auto ref_parent = gui->transforms.Find(entityID_parent);
-			const auto& transform_parent = gui->transforms.GetComponent(ref_parent);
-
-			XMMATRIX world_parent = XMLoadFloat4x4(&transform_parent.world);
-			XMMATRIX world_parent_inv = XMMatrixInverse(nullptr, world_parent);
-			XMStoreFloat4x4(&transform.world_parent_bind, world_parent_inv);
-
-			transform.parent_ref = ref_parent;
-		}
+		UpdateTransform((TransformComponent*)container);
 	}
 }
 void wiWidget::RenderTooltip(wiGUI* gui)
@@ -118,7 +89,7 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
 		}
 		static const float _border = 2;
-		float fontWidth = (float)tooltipFont.textWidth() + _border* 2;
+		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
 		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
 		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(255, 234, 165)), wiImageEffects(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), gui->GetGraphicsThread());
 		tooltipFont.SetText(tooltip);
@@ -138,7 +109,7 @@ wiHashString wiWidget::GetName()
 }
 void wiWidget::SetName(const std::string& value)
 {
-	if (value.empty())
+	if (value.length() <= 0)
 	{
 		static unsigned long widgetID = 0;
 		stringstream ss("");
@@ -149,6 +120,7 @@ void wiWidget::SetName(const std::string& value)
 	{
 		fastName = wiHashString(value);
 	}
+
 }
 string wiWidget::GetText()
 {
@@ -168,30 +140,36 @@ void wiWidget::SetScriptTip(const std::string& value)
 }
 void wiWidget::SetPos(const XMFLOAT2& value)
 {
-	hitBox.pos = value;
+	TransformComponent::dirty = true;
+	TransformComponent::translation_local.x = value.x;
+	TransformComponent::translation_local.y = value.y;
+	TransformComponent::UpdateTransform();
 }
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
-	hitBox.siz = value;
+	TransformComponent::dirty = true;
+	TransformComponent::scale_local.x = value.x;
+	TransformComponent::scale_local.y = value.y;
+	TransformComponent::UpdateTransform();
 }
 wiWidget::WIDGETSTATE wiWidget::GetState()
 {
 	return state;
 }
-void wiWidget::SetEnabled(bool val) 
-{ 
-	enabled = val; 
+void wiWidget::SetEnabled(bool val)
+{
+	enabled = val;
 }
-bool wiWidget::IsEnabled() 
-{ 
-	return enabled && visible; 
+bool wiWidget::IsEnabled()
+{
+	return enabled && visible;
 }
 void wiWidget::SetVisible(bool val)
-{ 
+{
 	visible = val;
 }
-bool wiWidget::IsVisible() 
-{ 
+bool wiWidget::IsVisible()
+{
 	return visible;
 }
 void wiWidget::Activate()
@@ -227,7 +205,7 @@ wiColor wiWidget::GetColor()
 void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 {
 	scissorRect = rect;
-	if(scissorRect.bottom>0)
+	if (scissorRect.bottom>0)
 		scissorRect.bottom -= 1;
 	if (scissorRect.left>0)
 		scissorRect.left += 1;
@@ -271,7 +249,7 @@ wiButton::~wiButton()
 {
 
 }
-void wiButton::Update(wiGUI* gui, float dt )
+void wiButton::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
 
@@ -284,6 +262,11 @@ void wiButton::Update(wiGUI* gui, float dt )
 	{
 		return;
 	}
+
+	hitBox.pos.x = TransformComponent::translation.x;
+	hitBox.pos.y = TransformComponent::translation.y;
+	hitBox.siz.x = TransformComponent::scale.x;
+	hitBox.siz.y = TransformComponent::scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -375,22 +358,22 @@ void wiButton::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
 
-	scissorRect.bottom = (LONG)(hitBox.pos.y + hitBox.siz.y);
-	scissorRect.left = (LONG)(hitBox.pos.x);
-	scissorRect.right = (LONG)(hitBox.pos.x + hitBox.siz.x);
-	scissorRect.top = (LONG)(hitBox.pos.y);
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)(hitBox.pos.x + hitBox.siz.x*0.5f), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1, 
+	wiFont(text, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
 void wiButton::OnClick(function<void(wiEventArgs args)> func)
 {
-	onClick = std::move(func);
+	onClick = move(func);
 }
 void wiButton::OnDragStart(function<void(wiEventArgs args)> func)
 {
@@ -418,7 +401,7 @@ wiLabel::~wiLabel()
 {
 
 }
-void wiLabel::Update(wiGUI* gui, float dt )
+void wiLabel::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
 
@@ -446,15 +429,15 @@ void wiLabel::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
-	scissorRect.bottom = (LONG)(hitBox.pos.y + hitBox.siz.y);
-	scissorRect.left = (LONG)(hitBox.pos.x);
-	scissorRect.right = (LONG)(hitBox.pos.x + hitBox.siz.x);
-	scissorRect.top = (LONG)(hitBox.pos.y);
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)hitBox.pos.x + 2, (int)hitBox.pos.y + 2, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, 
+	wiFont(text, wiFontProps((int)translation.x + 2, (int)translation.y + 2, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -507,6 +490,11 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 	{
 		return;
 	}
+
+	hitBox.pos.x = TransformComponent::translation.x;
+	hitBox.pos.y = TransformComponent::translation.y;
+	hitBox.siz.x = TransformComponent::scale.x;
+	hitBox.siz.y = TransformComponent::scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 	bool intersectsPointer = pointerHitbox.intersects(hitBox);
@@ -597,14 +585,14 @@ void wiTextInputField::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
 
-	scissorRect.bottom = (LONG)(hitBox.pos.y + hitBox.siz.y);
-	scissorRect.left = (LONG)(hitBox.pos.x);
-	scissorRect.right = (LONG)(hitBox.pos.x + hitBox.siz.x);
-	scissorRect.top = (LONG)(hitBox.pos.y);
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 
 	string activeText = text;
@@ -616,7 +604,7 @@ void wiTextInputField::Render(wiGUI* gui)
 	{
 		activeText = value;
 	}
-	wiFont(activeText, wiFontProps((int)(hitBox.pos.x + 2), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
+	wiFont(activeText, wiFontProps((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -641,7 +629,7 @@ void wiTextInputField::DeleteFromInput()
 
 
 wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) :wiWidget()
-	,start(start), end(end), value(defaultValue), step(max(step, 1))
+, start(start), end(end), value(defaultValue), step(max(step, 1))
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -649,8 +637,8 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 	SetSize(XMFLOAT2(200, 40));
 
 	valueInputField = new wiTextInputField(name + "_endInputField");
-	valueInputField->SetSize(XMFLOAT2(hitBox.siz.y * 2, hitBox.siz.y));
-	valueInputField->SetPos(XMFLOAT2(hitBox.siz.x + 20, 0));
+	valueInputField->SetSize(XMFLOAT2(scale.y * 2, scale.y));
+	valueInputField->SetPos(XMFLOAT2(scale.x + 20, 0));
 	valueInputField->SetValue(end);
 	valueInputField->OnInputAccepted([&](wiEventArgs args) {
 		this->value = args.fValue;
@@ -659,6 +647,7 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		onSlide(args);
 	});
 	valueInputField->container = this;
+	valueInputField->AttachTo(this);
 }
 wiSlider::~wiSlider()
 {
@@ -672,7 +661,7 @@ float wiSlider::GetValue()
 {
 	return value;
 }
-void wiSlider::Update(wiGUI* gui, float dt )
+void wiSlider::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
 
@@ -721,10 +710,12 @@ void wiSlider::Update(wiGUI* gui, float dt )
 		}
 	}
 
-	float headWidth = hitBox.siz.x*0.05f;
+	float headWidth = scale.x*0.05f;
 
-	hitBox.pos.x -= headWidth*0.5f;
-	hitBox.siz.x += headWidth;
+	hitBox.pos.x = TransformComponent::translation.x - headWidth * 0.5f;
+	hitBox.pos.y = TransformComponent::translation.y;
+	hitBox.siz.x = TransformComponent::scale.x + headWidth;
+	hitBox.siz.y = TransformComponent::scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -752,7 +743,7 @@ void wiSlider::Update(wiGUI* gui, float dt )
 	{
 		wiEventArgs args;
 		args.clickPos = pointerHitbox.pos;
-		value = wiMath::InverseLerp(hitBox.pos.x, hitBox.pos.x + hitBox.siz.x, args.clickPos.x);
+		value = wiMath::InverseLerp(translation.x, translation.x + scale.x, args.clickPos.x);
 		value = wiMath::Clamp(value, 0, 1);
 		value *= step;
 		value = floorf(value);
@@ -777,30 +768,30 @@ void wiSlider::Render(wiGUI* gui)
 
 	wiColor color = GetColor();
 
-	float headWidth = hitBox.siz.x*0.05f;
+	float headWidth = scale.x*0.05f;
 
 	gui->ResetScissor();
 
 	// trail
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x - headWidth*0.5f, hitBox.pos.y + hitBox.siz.y * 0.5f - hitBox.siz.y*0.1f, hitBox.siz.x + headWidth, hitBox.siz.y * 0.2f), gui->GetGraphicsThread());
+		, wiImageEffects(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), gui->GetGraphicsThread());
 	// head
-	float headPosX = wiMath::Lerp(hitBox.pos.x, hitBox.pos.x + hitBox.siz.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
+	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(headPosX - headWidth * 0.5f, hitBox.pos.y, headWidth, hitBox.siz.y), gui->GetGraphicsThread());
+		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
-	//if (parent != nullptr)
-	//{
-	//	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	//}
+	if (container != nullptr)
+	{
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	}
 	// text
-	wiFont(text, wiFontProps((int)(hitBox.pos.x - headWidth * 0.5f), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
-		textColor, textShadowColor )).Draw(gui->GetGraphicsThread());
+	wiFont(text, wiFontProps((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
+		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 	//// value
 	//stringstream ss("");
 	//ss << value;
-	//wiFont(ss.str(), wiFontProps((int)(hitBox.pos.x + hitBox.siz.x + headWidth), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
+	//wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 2, 1,
 	//	textColor, textShadowColor )).Draw(gui->GetGraphicsThread(), parent != nullptr);
 
 
@@ -817,18 +808,18 @@ void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 
 
 wiCheckBox::wiCheckBox(const std::string& name) :wiWidget()
-	,checked(false)
+, checked(false)
 {
 	SetName(name);
 	SetText(fastName.GetString());
 	OnClick([](wiEventArgs args) {});
-	SetSize(XMFLOAT2(20,20));
+	SetSize(XMFLOAT2(20, 20));
 }
 wiCheckBox::~wiCheckBox()
 {
 
 }
-void wiCheckBox::Update(wiGUI* gui, float dt )
+void wiCheckBox::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
 
@@ -854,6 +845,11 @@ void wiCheckBox::Update(wiGUI* gui, float dt )
 	{
 		gui->DeactivateWidget(this);
 	}
+
+	hitBox.pos.x = TransformComponent::translation.x;
+	hitBox.pos.y = TransformComponent::translation.y;
+	hitBox.siz.x = TransformComponent::scale.x;
+	hitBox.siz.y = TransformComponent::scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -911,22 +907,22 @@ void wiCheckBox::Render(wiGUI* gui)
 
 	// control
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 	// check
 	if (GetCheck())
 	{
 		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor::lerp(color, wiColor::White, 0.8f))
-			, wiImageEffects(hitBox.pos.x + hitBox.siz.x*0.25f, hitBox.pos.y + hitBox.siz.y*0.25f, hitBox.siz.x*0.5f, hitBox.siz.y*0.5f)
+			, wiImageEffects(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
 			, gui->GetGraphicsThread());
 	}
 
-	//if (parent != nullptr)
-	//{
-	//	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	//}
-	wiFont(text, wiFontProps((int)(hitBox.pos.x), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
-		textColor, textShadowColor )).Draw(gui->GetGraphicsThread());
+	if (container != nullptr)
+	{
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	}
+	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
+		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
 void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
@@ -963,9 +959,9 @@ wiComboBox::~wiComboBox()
 const float wiComboBox::_GetItemOffset(int index) const
 {
 	index = max(firstItemVisible, index) - firstItemVisible;
-	return hitBox.siz.y * (index + 1) + 1;
+	return scale.y * (index + 1) + 1;
 }
-void wiComboBox::Update(wiGUI* gui, float dt )
+void wiComboBox::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
 
@@ -992,7 +988,10 @@ void wiComboBox::Update(wiGUI* gui, float dt )
 		gui->DeactivateWidget(this);
 	}
 
-	hitBox.siz.x += hitBox.siz.y + 1; // + drop-down indicator arrow + little offset
+	hitBox.pos.x = TransformComponent::translation.x;
+	hitBox.pos.y = TransformComponent::translation.y;
+	hitBox.siz.x = TransformComponent::scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
+	hitBox.siz.y = TransformComponent::scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -1054,8 +1053,10 @@ void wiComboBox::Update(wiGUI* gui, float dt )
 				}
 
 				Hitbox2D itembox;
-				itembox.pos.y = hitBox.pos.y + _GetItemOffset((int)i);
-
+				itembox.pos.x = TransformComponent::translation.x;
+				itembox.pos.y = TransformComponent::translation.y + _GetItemOffset((int)i);
+				itembox.siz.x = TransformComponent::scale.x;
+				itembox.siz.y = TransformComponent::scale.y;
 				if (pointerHitbox.intersects(itembox))
 				{
 					hovered = (int)i;
@@ -1096,24 +1097,24 @@ void wiComboBox::Render(wiGUI* gui)
 
 	// control-base
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
+		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	// control-arrow
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-		, wiImageEffects(hitBox.pos.x+hitBox.siz.x+1, hitBox.pos.y, hitBox.siz.y, hitBox.siz.y), gui->GetGraphicsThread());
-	wiFont("V", wiFontProps((int)(hitBox.pos.x+hitBox.siz.x+hitBox.siz.y*0.5f), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
+		, wiImageEffects(translation.x + scale.x + 1, translation.y, scale.y, scale.y), gui->GetGraphicsThread());
+	wiFont("V", wiFontProps((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 
-	//if (parent != nullptr)
-	//{
-	//	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	//}
-	wiFont(text, wiFontProps((int)(hitBox.pos.x), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
+	if (container != nullptr)
+	{
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
+	}
+	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_RIGHT, WIFALIGN_CENTER, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 	if (selected >= 0)
 	{
-		wiFont(items[selected], wiFontProps((int)(hitBox.pos.x + hitBox.siz.x*0.5f), (int)(hitBox.pos.y + hitBox.siz.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
+		wiFont(items[selected], wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
 			textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 	}
 
@@ -1145,8 +1146,8 @@ void wiComboBox::Render(wiGUI* gui)
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getInstance()->getColor(col)
-				, wiImageEffects(hitBox.pos.x, hitBox.pos.y + _GetItemOffset(i), hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
-			wiFont(x, wiFontProps((int)(hitBox.pos.x + hitBox.siz.x*0.5f), (int)(hitBox.pos.y + hitBox.siz.y*0.5f +_GetItemOffset(i)), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
+				, wiImageEffects(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), gui->GetGraphicsThread());
+			wiFont(x, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 2, 1,
 				textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 			i++;
 		}
@@ -1246,10 +1247,10 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	// Add a grabber onto the title bar
 	moveDragger = new wiButton(name + "_move_dragger");
 	moveDragger->SetText("");
-	moveDragger->SetSize(XMFLOAT2(hitBox.siz.x - windowcontrolSize * 3, windowcontrolSize));
+	moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
 	moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
 	moveDragger->OnDrag([this](wiEventArgs args) {
-		//this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 	});
 	AddWidget(moveDragger);
 
@@ -1257,7 +1258,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	closeButton = new wiButton(name + "_close_button");
 	closeButton->SetText("x");
 	closeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	closeButton->SetPos(XMFLOAT2(hitBox.pos.x + hitBox.siz.x - windowcontrolSize, hitBox.pos.y));
+	closeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y));
 	closeButton->OnClick([this](wiEventArgs args) {
 		this->SetVisible(false);
 	});
@@ -1268,7 +1269,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	minimizeButton = new wiButton(name + "_minimize_button");
 	minimizeButton->SetText("-");
 	minimizeButton->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	minimizeButton->SetPos(XMFLOAT2(hitBox.pos.x + hitBox.siz.x - windowcontrolSize *2, hitBox.pos.y));
+	minimizeButton->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize * 2, translation.y));
 	minimizeButton->OnClick([this](wiEventArgs args) {
 		this->SetMinimized(!this->IsMinimized());
 	});
@@ -1282,10 +1283,10 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
 	resizeDragger_UpperLeft->OnDrag([this](wiEventArgs args) {
 		XMFLOAT2 scaleDiff;
-		scaleDiff.x = (hitBox.siz.x - args.deltaPos.x) / hitBox.siz.x;
-		scaleDiff.y = (hitBox.siz.y - args.deltaPos.y) / hitBox.siz.y;
-		//this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-		//this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+		scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
+		scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
+		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 	});
 	AddWidget(resizeDragger_UpperLeft);
 
@@ -1293,12 +1294,12 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	resizeDragger_BottomRight = new wiButton(name + "_resize_dragger_bottom_right");
 	resizeDragger_BottomRight->SetText("");
 	resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
-	resizeDragger_BottomRight->SetPos(XMFLOAT2(hitBox.pos.x + hitBox.siz.x - windowcontrolSize, hitBox.pos.y + hitBox.siz.y - windowcontrolSize));
+	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
 	resizeDragger_BottomRight->OnDrag([this](wiEventArgs args) {
 		XMFLOAT2 scaleDiff;
-		scaleDiff.x = (hitBox.siz.x + args.deltaPos.x) / hitBox.siz.x;
-		scaleDiff.y = (hitBox.siz.y + args.deltaPos.y) / hitBox.siz.y;
-		//this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+		scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
+		scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
+		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 	});
 	AddWidget(resizeDragger_BottomRight);
 
@@ -1318,7 +1319,7 @@ void wiWindow::AddWidget(wiWidget* widget)
 	widget->SetEnabled(this->IsEnabled());
 	widget->SetVisible(this->IsVisible());
 	gui->AddWidget(widget);
-	//widget->attachTo(this);
+	widget->AttachTo(this);
 	widget->container = this;
 
 	childrenWidgets.push_back(widget);
@@ -1348,9 +1349,35 @@ void wiWindow::RemoveWidgets(bool alsoDelete)
 
 	childrenWidgets.clear();
 }
-void wiWindow::Update(wiGUI* gui, float dt )
+void wiWindow::Update(wiGUI* gui, float dt)
 {
 	wiWidget::Update(gui, dt);
+
+	//// TODO: Override window controls for nicer alignment:
+	//if (moveDragger != nullptr)
+	//{
+	//	moveDragger->scale.y = windowcontrolSize;
+	//}
+	//if (resizeDragger_UpperLeft != nullptr)
+	//{
+	//	resizeDragger_UpperLeft->scale.x = windowcontrolSize;
+	//	resizeDragger_UpperLeft->scale.y = windowcontrolSize;
+	//}
+	//if (resizeDragger_BottomRight != nullptr)
+	//{
+	//	resizeDragger_BottomRight->scale.x = windowcontrolSize;
+	//	resizeDragger_BottomRight->scale.y = windowcontrolSize;
+	//}
+	//if (closeButton != nullptr)
+	//{
+	//	closeButton->scale.x = windowcontrolSize;
+	//	closeButton->scale.y = windowcontrolSize;
+	//}
+	//if (minimizeButton != nullptr)
+	//{
+	//	minimizeButton->scale.x = windowcontrolSize;
+	//	minimizeButton->scale.y = windowcontrolSize;
+	//}
 
 
 	if (!IsEnabled())
@@ -1386,7 +1413,7 @@ void wiWindow::Render(wiGUI* gui)
 	if (!IsMinimized())
 	{
 		wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
-			, wiImageEffects(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y), gui->GetGraphicsThread());
+			, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	}
 
 	for (auto& x : childrenWidgets)
@@ -1398,12 +1425,12 @@ void wiWindow::Render(wiGUI* gui)
 		}
 	}
 
-	scissorRect.bottom = (LONG)(hitBox.pos.y + hitBox.siz.y);
-	scissorRect.left = (LONG)(hitBox.pos.x);
-	scissorRect.right = (LONG)(hitBox.pos.x + hitBox.siz.x);
-	scissorRect.top = (LONG)(hitBox.pos.y);
+	scissorRect.bottom = (LONG)(translation.y + scale.y);
+	scissorRect.left = (LONG)(translation.x);
+	scissorRect.right = (LONG)(translation.x + scale.x);
+	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)(hitBox.pos.x + resizeDragger_UpperLeft->hitBox.siz.x + 2), (int)(hitBox.pos.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1,
+	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y), -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -1482,7 +1509,7 @@ static const float __colorpicker_center = 120;
 static const float __colorpicker_radius_triangle = 75;
 static const float __colorpicker_radius = 80;
 static const float __colorpicker_width = 16;
-void wiColorPicker::Update(wiGUI* gui, float dt )
+void wiColorPicker::Update(wiGUI* gui, float dt)
 {
 	wiWindow::Update(gui, dt);
 
@@ -1501,7 +1528,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt )
 		state = IDLE;
 	}
 
-	XMFLOAT2 center = XMFLOAT2(hitBox.pos.x + __colorpicker_center, hitBox.pos.y + __colorpicker_center);
+	XMFLOAT2 center = XMFLOAT2(translation.x + __colorpicker_center, translation.y + __colorpicker_center);
 	XMFLOAT2 pointer = gui->GetPointerPos();
 	float distance = wiMath::Distance(center, pointer);
 	bool hover_hue = (distance > __colorpicker_radius) && (distance < __colorpicker_radius + __colorpicker_width);
@@ -1520,7 +1547,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt )
 	XMVECTOR D = XMVectorSet(0, 0, 1, 0);
 	bool hover_saturation = TriangleTests::Intersects(O, D, _A, _B, _C, distTri);
 
-	if (hover_hue && state==IDLE)
+	if (hover_hue && state == IDLE)
 	{
 		state = FOCUS;
 		huefocus = true;
@@ -1570,14 +1597,14 @@ void wiColorPicker::Update(wiGUI* gui, float dt )
 		wiMath::GetBarycentric(O, _A, _B, _C, saturation_picker_barycentric.x, saturation_picker_barycentric.y, saturation_picker_barycentric.z, true);
 		gui->ActivateWidget(this);
 	}
-	else if(state != IDLE)
+	else if (state != IDLE)
 	{
 		gui->DeactivateWidget(this);
 	}
 
-	float r = __colorpicker_radius + __colorpicker_width*0.5f;
-	hue_picker = XMFLOAT2(center.x + r*cos(angle), center.y + r*-sin(angle));
-	XMStoreFloat2(&saturation_picker, _A*saturation_picker_barycentric.x + _B*saturation_picker_barycentric.y + _C*saturation_picker_barycentric.z);
+	float r = __colorpicker_radius + __colorpicker_width * 0.5f;
+	hue_picker = XMFLOAT2(center.x + r * cos(angle), center.y + r * -sin(angle));
+	XMStoreFloat2(&saturation_picker, _A*saturation_picker_barycentric.x + _B * saturation_picker_barycentric.y + _C * saturation_picker_barycentric.z);
 	XMStoreFloat4(&final_color, XMLoadFloat4(&hue_color)*saturation_picker_barycentric.x + XMVectorSet(1, 1, 1, 1)*saturation_picker_barycentric.y + XMVectorSet(0, 0, 0, 1)*saturation_picker_barycentric.z);
 
 	if (dragged)
@@ -1731,7 +1758,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 		cb.mTransform = XMMatrixTranspose(
 			XMMatrixRotationZ(-angle) *
-			XMMatrixTranslation(hitBox.pos.x + __colorpicker_center, hitBox.pos.y + __colorpicker_center, 0) *
+			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
 			__cam
 		);
 		cb.mColor = XMFLOAT4(1, 1, 1, 1);
@@ -1749,7 +1776,7 @@ void wiColorPicker::Render(wiGUI* gui)
 	// render hue circle
 	{
 		cb.mTransform = XMMatrixTranspose(
-			XMMatrixTranslation(hitBox.pos.x + __colorpicker_center, hitBox.pos.y + __colorpicker_center, 0) *
+			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
 			__cam
 		);
 		cb.mColor = XMFLOAT4(1, 1, 1, 1);
@@ -1803,7 +1830,7 @@ void wiColorPicker::Render(wiGUI* gui)
 	// render preview
 	{
 		cb.mTransform = XMMatrixTranspose(
-			XMMatrixTranslation(hitBox.pos.x + 260, hitBox.pos.y + 40, 0) *
+			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
 			__cam
 		);
 		cb.mColor = GetPickColor();
@@ -1823,9 +1850,9 @@ void wiColorPicker::Render(wiGUI* gui)
 	_rgb << "R: " << (int)(final_color.x * 255) << endl;
 	_rgb << "G: " << (int)(final_color.y * 255) << endl;
 	_rgb << "B: " << (int)(final_color.z * 255) << endl;
-	wiFont(_rgb.str(), wiFontProps((int)(hitBox.pos.x + 200), (int)(hitBox.pos.y + 200), -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1,
+	wiFont(_rgb.str(), wiFontProps((int)(translation.x + 200), (int)(translation.y + 200), -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1,
 		textColor, textShadowColor)).Draw(threadID);
-	
+
 }
 XMFLOAT4 wiColorPicker::GetPickColor()
 {

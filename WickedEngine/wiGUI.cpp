@@ -23,48 +23,6 @@ void wiGUI::Update(float dt)
 		return;
 	}
 
-	for (size_t i = 0; i < transforms.GetCount(); ++i)
-	{
-		auto& transform = transforms[i];
-
-		const bool parented = transforms.IsValid(transform.parent_ref);
-
-		//if (transform.dirty || parented)
-		{
-			transform.dirty = false;
-
-			XMVECTOR scale_local = XMLoadFloat3(&transform.scale_local);
-			XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
-			XMVECTOR translation_local = XMLoadFloat3(&transform.translation_local);
-			XMMATRIX world =
-				XMMatrixScalingFromVector(scale_local) *
-				XMMatrixRotationQuaternion(rotation_local) *
-				XMMatrixTranslationFromVector(translation_local);
-
-			if (parented)
-			{
-				auto& parent = transforms.GetComponent(transform.parent_ref);
-				XMMATRIX world_parent = XMLoadFloat4x4(&parent.world);
-				XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
-				world = world * bindMatrix * world_parent;
-			}
-			else
-			{
-				transform.translation_local.x += 0.1f;
-			}
-
-			XMVECTOR S, R, T;
-			XMMatrixDecompose(&S, &R, &T, world);
-			XMStoreFloat3(&transform.scale, S);
-			XMStoreFloat4(&transform.rotation, R);
-			XMStoreFloat3(&transform.translation, T);
-
-			transform.world_prev = transform.world;
-			XMStoreFloat4x4(&transform.world, world);
-		}
-
-	}
-
 	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
 	pointerpos.x = _p.x;
 	pointerpos.y = _p.y;

@@ -8,6 +8,49 @@ using namespace wiGraphicsTypes;
 namespace wiSceneSystem
 {
 
+	void TransformComponent::AttachTo(const TransformComponent* const parent)
+	{
+		dirty = true;
+		XMMATRIX parent_world_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
+		XMStoreFloat4x4(&world_parent_bind, parent_world_inverse);
+	}
+	void TransformComponent::UpdateTransform(const TransformComponent* const parent)
+	{
+		if (dirty || parent != nullptr)
+		{
+			dirty = false;
+
+			XMVECTOR S_local = XMLoadFloat3(&scale_local);
+			XMVECTOR R_local = XMLoadFloat4(&rotation_local);
+			XMVECTOR T_local = XMLoadFloat3(&translation_local);
+			XMMATRIX W =
+				XMMatrixScalingFromVector(S_local) *
+				XMMatrixRotationQuaternion(R_local) *
+				XMMatrixTranslationFromVector(T_local);
+
+			if (parent != nullptr)
+			{
+				XMMATRIX W_parent = XMLoadFloat4x4(&parent->world);
+				XMMATRIX B = XMLoadFloat4x4(&world_parent_bind);
+				W = W * B * W_parent;
+
+				XMVECTOR S, R, T;
+				XMMatrixDecompose(&S, &R, &T, W);
+				XMStoreFloat3(&scale, S);
+				XMStoreFloat4(&rotation, R);
+				XMStoreFloat3(&translation, T);
+			}
+			else
+			{
+				scale = scale_local;
+				rotation = rotation_local;
+				translation = translation_local;
+			}
+
+			world_prev = world;
+			XMStoreFloat4x4(&world, W);
+		}
+	}
 	void TransformComponent::ClearTransform()
 	{
 		dirty = true;
@@ -151,36 +194,39 @@ namespace wiSceneSystem
 			auto& transform = transforms[i];
 
 			const bool parented = transforms.IsValid(transform.parent_ref);
+			const TransformComponent* parent = parented ? &transforms.GetComponent(transform.parent_ref) : nullptr;
 
-			if (transform.dirty || parented)
-			{
-				transform.dirty = false;
+			transform.UpdateTransform(parent);
 
-				XMVECTOR scale_local = XMLoadFloat3(&transform.scale_local);
-				XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
-				XMVECTOR translation_local = XMLoadFloat3(&transform.translation_local);
-				XMMATRIX world =
-					XMMatrixScalingFromVector(scale_local) *
-					XMMatrixRotationQuaternion(rotation_local) *
-					XMMatrixTranslationFromVector(translation_local);
+			//if (transform.dirty || parented)
+			//{
+			//	transform.dirty = false;
 
-				if (parented)
-				{
-					auto& parent = transforms.GetComponent(transform.parent_ref);
-					XMMATRIX world_parent = XMLoadFloat4x4(&parent.world);
-					XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
-					world = world * bindMatrix * world_parent;
-				}
+			//	XMVECTOR scale_local = XMLoadFloat3(&transform.scale_local);
+			//	XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
+			//	XMVECTOR translation_local = XMLoadFloat3(&transform.translation_local);
+			//	XMMATRIX world =
+			//		XMMatrixScalingFromVector(scale_local) *
+			//		XMMatrixRotationQuaternion(rotation_local) *
+			//		XMMatrixTranslationFromVector(translation_local);
 
-				XMVECTOR S, R, T;
-				XMMatrixDecompose(&S, &R, &T, world);
-				XMStoreFloat3(&transform.scale, S);
-				XMStoreFloat4(&transform.rotation, R);
-				XMStoreFloat3(&transform.translation, T);
+			//	if (parented)
+			//	{
+			//		auto& parent = transforms.GetComponent(transform.parent_ref);
+			//		XMMATRIX world_parent = XMLoadFloat4x4(&parent.world);
+			//		XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
+			//		world = world * bindMatrix * world_parent;
+			//	}
 
-				transform.world_prev = transform.world;
-				XMStoreFloat4x4(&transform.world, world);
-			}
+			//	XMVECTOR S, R, T;
+			//	XMMatrixDecompose(&S, &R, &T, world);
+			//	XMStoreFloat3(&transform.scale, S);
+			//	XMStoreFloat4(&transform.rotation, R);
+			//	XMStoreFloat3(&transform.translation, T);
+
+			//	transform.world_prev = transform.world;
+			//	XMStoreFloat4x4(&transform.world, world);
+			//}
 
 		}
 

@@ -4,6 +4,7 @@
 #include "wiColor.h"
 #include "wiGraphicsAPI.h"
 #include "wiIntersectables.h"
+#include "wiSceneSystem.h"
 
 #include <string>
 #include <list>
@@ -24,7 +25,7 @@ struct wiEventArgs
 	std::string sValue;
 };
 
-class wiWidget
+class wiWidget : public wiSceneSystem::TransformComponent
 {
 	friend class wiGUI;
 public:

@@ -40,6 +40,8 @@ namespace wiSceneSystem
 		XMFLOAT4X4 world_prev;
 		XMFLOAT4X4 world_parent_bind;
 
+		void AttachTo(const TransformComponent* const parent);
+		void UpdateTransform(const TransformComponent* const parent = nullptr);
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
 		void RotateRollPitchYaw(const XMFLOAT3& value);
