@@ -23,11 +23,11 @@ void wiGUI::Update(float dt)
 		return;
 	}
 
-	for (size_t i = 0; i < transforms.GetCount(); ++i)
+	for (size_t i = 0; i < wiWidget::transforms.GetCount(); ++i)
 	{
-		auto& transform = transforms[i];
+		auto& transform = wiWidget::transforms[i];
 
-		const bool parented = transforms.IsValid(transform.parent_ref);
+		const bool parented = wiWidget::transforms.IsValid(transform.parent_ref);
 
 		if (transform.dirty || parented)
 		{
@@ -43,7 +43,7 @@ void wiGUI::Update(float dt)
 
 			if (parented)
 			{
-				auto& parent = transforms.GetComponent(transform.parent_ref);
+				auto& parent = wiWidget::transforms.GetComponent(transform.parent_ref);
 				XMMATRIX world_parent = XMLoadFloat4x4(&parent.world);
 				XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
 				world = world * bindMatrix * world_parent;
@@ -133,13 +133,6 @@ void wiGUI::ResetScissor()
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
-	auto ref = transforms.Create((wiECS::Entity)widget->fastName.GetHash());
-	auto& transform = transforms.GetComponent(ref);
-	transform.translation_local.x = widget->hitBox.pos.x;
-	transform.translation_local.y = widget->hitBox.pos.y;
-	transform.scale_local.x = widget->hitBox.siz.x;
-	transform.scale_local.y = widget->hitBox.siz.y;
-
 	widgets.push_back(widget);
 }
 

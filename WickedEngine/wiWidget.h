@@ -4,6 +4,7 @@
 #include "wiColor.h"
 #include "wiGraphicsAPI.h"
 #include "wiIntersectables.h"
+#include "wiSceneSystem.h"
 
 #include <string>
 #include <list>
@@ -92,6 +93,10 @@ public:
 	wiWidget* container;
 
 	static void LoadShaders();
+
+	static wiECS::ComponentManager<wiSceneSystem::TransformComponent> transforms;
+	wiECS::ComponentManager<wiSceneSystem::TransformComponent>::ref transform_ref;
+	wiSceneSystem::TransformComponent& GetTransform();
 };
 
 // Clickable, draggable box

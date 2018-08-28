@@ -15,6 +15,8 @@ using namespace std;
 using namespace wiGraphicsTypes;
 
 
+wiECS::ComponentManager<wiSceneSystem::TransformComponent> wiWidget::transforms(100);
+
 static GraphicsPSO* PSO_colorpicker = nullptr;
 
 
@@ -35,6 +37,10 @@ wiWidget::wiWidget()
 	tooltipTimer = 0;
 	textColor = wiColor(255, 255, 255, 255);
 	textShadowColor = wiColor(0, 0, 0, 255);
+
+	static wiECS::Entity entityID = 0;
+	transform_ref = transforms.Create(++entityID);
+	auto& transform = wiWidget::transforms.GetComponent(transform_ref);
 }
 wiWidget::~wiWidget()
 {
@@ -53,10 +59,10 @@ void wiWidget::Update(wiGUI* gui, float dt )
 	}
 
 	wiECS::Entity entityID = (wiECS::Entity)fastName.GetHash();
-	auto ref = gui->transforms.Find(entityID);
-	if (gui->transforms.IsValid(ref, entityID))
+	auto ref = transforms.Find(entityID);
+	if (transforms.IsValid(ref, entityID))
 	{
-		const auto& transform = gui->transforms.GetComponent(ref);
+		const auto& transform = transforms.GetComponent(ref);
 		hitBox.pos.x = transform.translation.x;
 		hitBox.pos.y = transform.translation.y;
 		hitBox.siz.x = transform.scale.x;
@@ -138,13 +144,21 @@ void wiWidget::SetScriptTip(const std::string& value)
 }
 void wiWidget::SetPos(const XMFLOAT2& value)
 {
-	hitBox.pos.x = value.x;
-	hitBox.pos.y = value.y;
+	auto& transform = GetTransform();
+	transform.translation_local.x = value.x;
+	transform.translation_local.y = value.y;
+	transform.dirty = true;
+
+	hitBox.pos = value;
 }
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
-	hitBox.siz.x = value.x;
-	hitBox.siz.y = value.y;
+	auto& transform = GetTransform();
+	transform.scale_local.x = value.x;
+	transform.scale_local.y = value.y;
+	transform.dirty = true;
+
+	hitBox.siz = value;
 }
 wiWidget::WIDGETSTATE wiWidget::GetState()
 {
@@ -226,6 +240,10 @@ void wiWidget::LoadShaders()
 		HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
 		assert(SUCCEEDED(hr));
 	}
+}
+wiSceneSystem::TransformComponent& wiWidget::GetTransform()
+{
+	return wiWidget::transforms.GetComponent(transform_ref);
 }
 
 
@@ -630,7 +648,8 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		this->end = max(this->end, args.fValue);
 		onSlide(args);
 	});
-	//valueInputField->attachTo(this);
+	valueInputField->GetTransform().parent_ref = this->transform_ref;
+
 }
 wiSlider::~wiSlider()
 {

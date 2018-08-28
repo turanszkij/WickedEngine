@@ -48,6 +48,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	main.Initialize(); // initialize engine systems (mandatory)
 	main.infoDisplay.active = true; // just show some basic info...
 
+	Renderable2DComponent component;
+	main.activateComponent(&component);
+
+	wiButton* button = new wiButton("ASD");
+	button->SetPos(XMFLOAT2(100, 100));
+	button->SetSize(XMFLOAT2(200, 100));
+	component.GetGUI().AddWidget(button);
+
+	wiSlider* slider = new wiSlider(0,1,0,1000,"asaskfas");
+	slider->SetPos(XMFLOAT2(230, 200));
+	slider->SetSize(XMFLOAT2(200, 30));
+	component.GetGUI().AddWidget(slider);
+
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)
@@ -189,7 +202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case VK_BACK:
 			if (wiBackLog::isActive())
 				wiBackLog::deletefromInput();
-			//wiTextInputField::DeleteFromInput();
+			wiTextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
 			if (wiBackLog::isActive())
@@ -202,7 +215,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				wiBackLog::input(c);
 			}
-			//wiTextInputField::AddInput(c);
+			wiTextInputField::AddInput(c);
 		}
 		break;
 		}
