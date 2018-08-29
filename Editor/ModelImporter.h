@@ -1,12 +1,9 @@
 #pragma once
+#include "wiECS.h"
+
 #include <string>
 
-namespace wiSceneComponents
-{
-	struct Model;
-}
-
-wiSceneComponents::Model* ImportModel_WIO(const std::string& fileName);
-wiSceneComponents::Model* ImportModel_OBJ(const std::string& fileName);
-wiSceneComponents::Model* ImportModel_GLTF(const std::string& fileName);
+wiECS::Entity ImportModel_WIO(const std::string& fileName);
+wiECS::Entity ImportModel_OBJ(const std::string& fileName);
+wiECS::Entity ImportModel_GLTF(const std::string& fileName);
 

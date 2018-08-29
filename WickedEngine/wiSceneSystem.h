@@ -26,7 +26,7 @@ namespace wiSceneSystem
 	
 	struct TransformComponent
 	{
-		wiECS::ComponentManager<TransformComponent>::ref parent_ref;
+		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
@@ -42,11 +42,14 @@ namespace wiSceneSystem
 
 		void AttachTo(const TransformComponent* const parent);
 		void UpdateTransform(const TransformComponent* const parent = nullptr);
+		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
 		void RotateRollPitchYaw(const XMFLOAT3& value);
 		void Rotate(const XMFLOAT4& quaternion);
 		void Scale(const XMFLOAT3& value);
+		void MatrixTransform(const XMFLOAT4X4& matrix);
+		void MatrixTransform(const XMMATRIX& matrix);
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 	};
@@ -434,6 +437,9 @@ namespace wiSceneSystem
 		Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
+
+		void UpdateProjection();
+		void BakeMatrices();
 
 		inline XMVECTOR GetEye() const { return XMLoadFloat3(&Eye); }
 		inline XMVECTOR GetAt() const { return XMLoadFloat3(&At); }

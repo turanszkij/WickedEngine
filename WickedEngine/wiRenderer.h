@@ -482,7 +482,7 @@ public:
 
 	struct RayIntersectWorldResult
 	{
-		wiECS::ComponentManager<wiSceneSystem::ObjectComponent>::ref object_ref;
+		wiECS::Entity entity;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float distance = FLT_MAX;

@@ -1,10 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Object;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -19,9 +14,8 @@ public:
 	ObjectWindow(wiGUI* gui);
 	~ObjectWindow();
 
-	void SetObject(wiSceneComponents::Object* obj);
-
-	wiSceneComponents::Object* object;
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
 
 	wiGUI* GUI;
 

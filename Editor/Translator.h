@@ -1,13 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
 
-namespace wiSceneComponents
-{
-	struct Camera;
-}
-
-class Translator : public wiSceneComponents::Transform
+class Translator : public wiSceneSystem::TransformComponent
 {
 private:
 	XMFLOAT4 prevPointer;
@@ -20,7 +15,7 @@ public:
 	~Translator();
 
 	void Update();
-	void Draw(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	void Draw(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
 
 	bool enabled;
 

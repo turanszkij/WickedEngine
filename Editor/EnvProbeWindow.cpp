@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "EnvProbeWindow.h"
 
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 {
-	probe = nullptr;
-
 	assert(GUI && "Invalid GUI!");
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -19,58 +18,60 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 
 	float x = 250, y = 0, step = 45;
 
-	realTimeCheckBox = new wiCheckBox("RealTime: ");
-	realTimeCheckBox->SetPos(XMFLOAT2(x, y += step));
-	realTimeCheckBox->SetEnabled(false);
-	realTimeCheckBox->OnClick([&](wiEventArgs args) {
-		if (probe != nullptr)
-		{
-			probe->realTime = args.bValue;
-			probe->isUpToDate = false;
-		}
-	});
-	envProbeWindow->AddWidget(realTimeCheckBox);
+	//realTimeCheckBox = new wiCheckBox("RealTime: ");
+	//realTimeCheckBox->SetPos(XMFLOAT2(x, y += step));
+	//realTimeCheckBox->SetEnabled(false);
+	//realTimeCheckBox->OnClick([&](wiEventArgs args) {
+	//	if (probe != nullptr)
+	//	{
+	//		probe->realTime = args.bValue;
+	//		probe->isUpToDate = false;
+	//	}
+	//});
+	//envProbeWindow->AddWidget(realTimeCheckBox);
 
-	generateButton = new wiButton("Put");
-	generateButton->SetPos(XMFLOAT2(x, y += step));
-	generateButton->OnClick([](wiEventArgs args) {
-		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, XMVectorAdd(wiRenderer::getCamera()->GetEye(), wiRenderer::getCamera()->GetAt() * 4));
-		wiRenderer::PutEnvProbe(pos);
-	});
-	envProbeWindow->AddWidget(generateButton);
+	//generateButton = new wiButton("Put");
+	//generateButton->SetPos(XMFLOAT2(x, y += step));
+	//generateButton->OnClick([](wiEventArgs args) {
+	//	XMFLOAT3 pos;
+	//	XMStoreFloat3(&pos, XMVectorAdd(wiRenderer::getCamera()->GetEye(), wiRenderer::getCamera()->GetAt() * 4));
+	//	wiRenderer::PutEnvProbe(pos);
+	//});
+	//envProbeWindow->AddWidget(generateButton);
 
-	refreshButton = new wiButton("Refresh");
-	refreshButton->SetPos(XMFLOAT2(x, y += step));
-	refreshButton->SetEnabled(false);
-	refreshButton->OnClick([&](wiEventArgs args) {
-		if (probe != nullptr)
-		{
-			probe->isUpToDate = false;
-		}
-	});
-	envProbeWindow->AddWidget(refreshButton);
+	//refreshButton = new wiButton("Refresh");
+	//refreshButton->SetPos(XMFLOAT2(x, y += step));
+	//refreshButton->SetEnabled(false);
+	//refreshButton->OnClick([&](wiEventArgs args) {
+	//	if (probe != nullptr)
+	//	{
+	//		probe->isUpToDate = false;
+	//	}
+	//});
+	//envProbeWindow->AddWidget(refreshButton);
 
-	refreshAllButton = new wiButton("Refresh All");
-	refreshAllButton->SetPos(XMFLOAT2(x, y += step));
-	refreshAllButton->SetEnabled(true);
-	refreshAllButton->OnClick([&](wiEventArgs args) {
-		const Scene& scene = wiRenderer::GetScene();
-		for (Model* x : scene.models)
-		{
-			for (EnvironmentProbe* probe : x->environmentProbes)
-			{
-				probe->isUpToDate = false;
-			}
-		}
-	});
-	envProbeWindow->AddWidget(refreshAllButton);
+	//refreshAllButton = new wiButton("Refresh All");
+	//refreshAllButton->SetPos(XMFLOAT2(x, y += step));
+	//refreshAllButton->SetEnabled(true);
+	//refreshAllButton->OnClick([&](wiEventArgs args) {
+	//	const Scene& scene = wiRenderer::GetScene();
+	//	for (Model* x : scene.models)
+	//	{
+	//		for (EnvironmentProbe* probe : x->environmentProbes)
+	//		{
+	//			probe->isUpToDate = false;
+	//		}
+	//	}
+	//});
+	//envProbeWindow->AddWidget(refreshAllButton);
 
 
 
 
 	envProbeWindow->Translate(XMFLOAT3(30, 30, 0));
 	envProbeWindow->SetVisible(false);
+
+	SetEntity(INVALID_ENTITY);
 }
 
 
@@ -81,19 +82,21 @@ EnvProbeWindow::~EnvProbeWindow()
 	SAFE_DELETE(envProbeWindow);
 }
 
-void EnvProbeWindow::SetProbe(EnvironmentProbe* value)
+void EnvProbeWindow::SetEntity(Entity entity)
 {
-	probe = value;
-	if (probe == nullptr)
-	{
-		realTimeCheckBox->SetEnabled(false);
-		refreshButton->SetEnabled(false);
-	}
-	else
-	{
-		realTimeCheckBox->SetCheck(probe->realTime);
-		realTimeCheckBox->SetEnabled(true);
-		refreshButton->SetEnabled(true);
-	}
+	this->entity = entity;
+
+	//probe = value;
+	//if (probe == nullptr)
+	//{
+	//	realTimeCheckBox->SetEnabled(false);
+	//	refreshButton->SetEnabled(false);
+	//}
+	//else
+	//{
+	//	realTimeCheckBox->SetCheck(probe->realTime);
+	//	realTimeCheckBox->SetEnabled(true);
+	//	refreshButton->SetEnabled(true);
+	//}
 }
 

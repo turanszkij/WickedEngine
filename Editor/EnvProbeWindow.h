@@ -1,10 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct EnvironmentProbe;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -19,8 +14,8 @@ public:
 
 	wiGUI* GUI;
 
-	wiSceneComponents::EnvironmentProbe* probe;
-	void SetProbe(wiSceneComponents::EnvironmentProbe* value);
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
 
 	wiWindow*	envProbeWindow;
 

@@ -1,11 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Camera;
-	struct Transform;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -21,10 +15,12 @@ public:
 
 	void ResetCam();
 
-	wiSceneComponents::Camera* proxy = nullptr;
-	void SetProxy(wiSceneComponents::Camera* camera);
 
-	wiSceneComponents::Transform* orbitalCamTarget;
+	wiECS::Entity entity = wiECS::INVALID_ENTITY;
+	void SetEntity(wiECS::Entity entity);
+
+	wiECS::Entity target = wiECS::INVALID_ENTITY;
+	void SetTargetEntity(wiECS::Entity target);
 
 	wiGUI* GUI;
 

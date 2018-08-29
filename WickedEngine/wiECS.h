@@ -10,6 +10,11 @@ namespace wiECS
 {
 	typedef uint64_t Entity;
 	static const Entity INVALID_ENTITY = 0;
+	inline Entity CreateEntity()
+	{
+		static Entity id = 0;
+		return ++id;
+	}
 
 	template<typename T>
 	class ComponentManager
@@ -37,6 +42,7 @@ namespace wiECS
 			inline ref operator++(int v) { ref temp = *this; ++*this; return temp; }
 			inline ref& operator--() { value--; return *this; }
 			inline ref operator--(int v) { ref temp = *this; --*this; return temp; }
+			inline operator bool() const { return value != ~0; }
 		};
 
 		// Clear the whole container, invalidate all refs
@@ -174,6 +180,17 @@ namespace wiECS
 			return ref();
 		}
 
+		// Retrieve a component specified by an entity (if it exists, otherwise nullptr):
+		inline T* GetComponent(Entity entity)
+		{
+			ref it = Find(entity);
+			if (it)
+			{
+				return &components[indices[it.value]];
+			}
+			return nullptr;
+		}
+
 		// Retrieve a component specified by an ref (ref is safe but uses indirection):
 		inline T& GetComponent(ref it)
 		{
@@ -189,14 +206,6 @@ namespace wiECS
 
 		// Retrieve the number of existing entries:
 		inline size_t GetCount() const { return components.size(); }
-
-		// Directly index a specific component without indirection:
-		//	0 <= index < GetCount()
-		inline T& GetComponent(size_t index) { return components[index]; }
-
-		// Directly index a specific component without indirection:
-		//	0 <= index < GetCount()
-		inline const T& GetComponent(size_t index) const { return components[index]; }
 
 		// Directly index a specific component without indirection:
 		//	0 <= index < GetCount()

@@ -1,10 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Material;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -21,11 +16,10 @@ public:
 	MaterialWindow(wiGUI* gui);
 	~MaterialWindow();
 
-	void SetMaterial(wiSceneComponents::Material* mat);
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
 
 	wiGUI* GUI;
-
-	wiSceneComponents::Material* material;
 
 	wiWindow*	materialWindow;
 	wiTextInputField*	materialNameField;

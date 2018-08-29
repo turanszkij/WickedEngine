@@ -1,12 +1,25 @@
 #include "stdafx.h"
 #include "CameraWindow.h"
 
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 void CameraWindow::ResetCam()
 {
-	wiRenderer::getCamera()->ClearTransform();
-	wiRenderer::getCamera()->Translate(XMFLOAT3(0, 2, -10));
+	Scene& scene = wiRenderer::GetScene();
+
+	TransformComponent* camera = scene.transforms.GetComponent(entity);
+	if (camera != nullptr)
+	{
+		camera->ClearTransform();
+		camera->Translate(XMFLOAT3(0, 2, -10));
+	}
+
+	TransformComponent* camera_target = scene.transforms.GetComponent(target);
+	if (camera_target != nullptr)
+	{
+		camera_target->ClearTransform();
+	}
 }
 
 CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
@@ -15,8 +28,6 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
-	orbitalCamTarget = new Transform;
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(600, 420));
@@ -69,7 +80,6 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	resetButton->SetSize(XMFLOAT2(140, 30));
 	resetButton->SetPos(XMFLOAT2(x, y += inc));
 	resetButton->OnClick([&](wiEventArgs args) {
-		orbitalCamTarget->ClearTransform();
 		ResetCam();
 	});
 	cameraWindow->AddWidget(resetButton);
@@ -86,12 +96,22 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyButton->SetSize(XMFLOAT2(140, 30));
 	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
 	proxyButton->OnClick([&](wiEventArgs args) {
-		Camera* cam = new Camera(*wiRenderer::getCamera());
-		cam->name = "cam";
 
-		wiRenderer::Add(cam);
+		Scene& scene = wiRenderer::GetScene();
 
-		//SetProxy(cam);
+		Entity proxy = CreateEntity();
+
+		auto node_ref = scene.nodes.Create(proxy);
+		auto transform_ref = scene.transforms.Create(proxy);
+		auto camera_ref = scene.cameras.Create(proxy);
+
+		auto& node = scene.nodes.GetComponent(node_ref);
+		auto& transform = scene.transforms.GetComponent(transform_ref);
+		auto& camera = scene.cameras.GetComponent(camera_ref);
+
+		node.name = "cam";
+		camera = *wiRenderer::getCamera();
+		transform.MatrixTransform(camera.InvView);
 	});
 	cameraWindow->AddWidget(proxyButton);
 
@@ -99,9 +119,11 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyNameField->SetSize(XMFLOAT2(140, 30));
 	proxyNameField->SetPos(XMFLOAT2(x + 200, y));
 	proxyNameField->OnInputAccepted([&](wiEventArgs args) {
-		if (proxy != nullptr)
+		Scene& scene = wiRenderer::GetScene();
+		NodeComponent* camera = scene.nodes.GetComponent(entity);
+		if (camera != nullptr)
 		{
-			proxy->name = args.sValue;
+			camera->name = args.sValue;
 		}
 	});
 	cameraWindow->AddWidget(proxyNameField);
@@ -118,7 +140,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	cameraWindow->AddWidget(followSlider);
 
 
-	SetProxy(nullptr);
+	SetEntity(INVALID_ENTITY);
 
 
 	cameraWindow->Translate(XMFLOAT3(800, 500, 0));
@@ -128,24 +150,26 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 CameraWindow::~CameraWindow()
 {
-
-	SAFE_DELETE(orbitalCamTarget);
-
 	cameraWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(cameraWindow);
 	SAFE_DELETE(cameraWindow);
 }
 
-void CameraWindow::SetProxy(Camera* camera)
+void CameraWindow::SetEntity(Entity entity)
 {
-	proxy = camera;
+	this->entity = entity;
 
+	Scene& scene = wiRenderer::GetScene();
 
-	if (proxy != nullptr)
+	if (scene.cameras.Find(entity))
 	{
 		followCheckBox->SetEnabled(true);
 		followSlider->SetEnabled(true);
-		proxyNameField->SetValue(proxy->name);
+		NodeComponent* camera = scene.nodes.GetComponent(entity);
+		if (camera != nullptr)
+		{
+			proxyNameField->SetValue(camera->name);
+		}
 	}
 	else
 	{

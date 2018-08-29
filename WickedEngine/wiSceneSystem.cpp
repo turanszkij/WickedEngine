@@ -51,6 +51,14 @@ namespace wiSceneSystem
 			XMStoreFloat4x4(&world, W);
 		}
 	}
+	void TransformComponent::ApplyTransform()
+	{
+		dirty = true;
+
+		scale_local = scale;
+		rotation_local = rotation;
+		translation_local = translation;
+	}
 	void TransformComponent::ClearTransform()
 	{
 		dirty = true;
@@ -94,9 +102,32 @@ namespace wiSceneSystem
 	{
 		dirty = true;
 
-		scale_local.x += value.x;
-		scale_local.y += value.y;
-		scale_local.z += value.z;
+		scale_local.x *= value.x;
+		scale_local.y *= value.y;
+		scale_local.z *= value.z;
+	}
+	void TransformComponent::MatrixTransform(const XMFLOAT4X4& matrix)
+	{
+		MatrixTransform(XMLoadFloat4x4(&matrix));
+	}
+	void TransformComponent::MatrixTransform(const XMMATRIX& matrix)
+	{
+		dirty = true;
+
+		XMVECTOR S_local = XMLoadFloat3(&scale_local);
+		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
+		XMVECTOR T_local = XMLoadFloat3(&translation_local);
+		XMMATRIX W =
+			XMMatrixScalingFromVector(S_local) *
+			XMMatrixRotationQuaternion(R_local) *
+			XMMatrixTranslationFromVector(T_local);
+
+		W = W * matrix;
+
+		XMMatrixDecompose(&S_local, &R_local, &T_local, W);
+		XMStoreFloat3(&scale_local, S_local);
+		XMStoreFloat4(&rotation_local, R_local);
+		XMStoreFloat3(&translation_local, T_local);
 	}
 	void TransformComponent::Lerp(const TransformComponent& a, const TransformComponent& b, float t)
 	{
@@ -186,6 +217,26 @@ namespace wiSceneSystem
 		return wiTextureHelper::getInstance()->getWhite();
 	}
 
+	void CameraComponent::UpdateProjection()
+	{
+		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
+		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP));
+		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
+		XMStoreFloat4x4(&Projection, P);
+		XMStoreFloat4x4(&InvProjection, InvP);
+	}
+	void CameraComponent::BakeMatrices()
+	{
+		XMMATRIX V = XMLoadFloat4x4(&View);
+		XMMATRIX P = XMLoadFloat4x4(&Projection);
+		XMMATRIX VP = XMMatrixMultiply(V, P);
+		XMStoreFloat4x4(&this->VP, VP);
+		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, V));
+		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, VP));
+		XMStoreFloat4x4(&Projection, P);
+		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, P));
+	}
+
 	void Scene::Update(float dt)
 	{
 		// Update Transform components:
@@ -193,9 +244,7 @@ namespace wiSceneSystem
 		{
 			auto& transform = transforms[i];
 
-			const bool parented = transforms.IsValid(transform.parent_ref);
-			const TransformComponent* parent = parented ? &transforms.GetComponent(transform.parent_ref) : nullptr;
-
+			const TransformComponent* parent = transform.parentID != INVALID_ENTITY ? transforms.GetComponent(transform.parentID) : nullptr;
 			transform.UpdateTransform(parent);
 
 			//if (transform.dirty || parented)

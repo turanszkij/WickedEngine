@@ -1,10 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Armature;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -19,8 +14,9 @@ public:
 	~AnimationWindow();
 
 	wiGUI* GUI;
-	wiSceneComponents::Armature* armature;
-	void SetArmature(wiSceneComponents::Armature* armature);
+	
+	wiECS::Entity entity = wiECS::INVALID_ENTITY;
+	void SetEntity(wiECS::Entity entity);
 
 	wiWindow*	animWindow;
 	wiComboBox*	actionsComboBox;

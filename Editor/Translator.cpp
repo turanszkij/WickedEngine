@@ -5,7 +5,7 @@
 #include "wiMath.h"
 
 using namespace wiGraphicsTypes;
-using namespace wiSceneComponents;
+using namespace wiSceneSystem;
 
 GraphicsPSO* pso_solidpart = nullptr;
 GraphicsPSO* pso_wirepart = nullptr;
@@ -17,7 +17,7 @@ int vertexCount_Plane = 0;
 int vertexCount_Origin = 0;
 
 
-Translator::Translator() :Transform()
+Translator::Translator() :TransformComponent()
 {
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
@@ -191,7 +191,7 @@ void Translator::Update()
 	dragEnded = false;
 
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
-	Camera* cam = wiRenderer::getCamera();
+	CameraComponent* cam = wiRenderer::getCamera();
 	XMVECTOR pos = XMLoadFloat3(&translation);
 
 	if (enabled)
@@ -203,7 +203,7 @@ void Translator::Update()
 			XMMATRIX V = cam->GetView();
 			XMMATRIX W = XMMatrixIdentity();
 
-			dist = wiMath::Distance(translation, cam->translation) * 0.05f;
+			dist = wiMath::Distance(translation, cam->Eye) * 0.05f;
 
 			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
@@ -378,9 +378,9 @@ void Translator::Update()
 				transf *= XMMatrixScaling((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
 			}
 
-			Transform::transform(transf);
+			TransformComponent::MatrixTransform(transf);
 
-			Transform::applyTransform();
+			//TransformComponent::ApplyTransform();
 
 			if (!dragging)
 			{
@@ -399,7 +399,7 @@ void Translator::Update()
 				dragEnd = world;
 			}
 			dragging = false;
-			Transform::UpdateTransform();
+			TransformComponent::UpdateTransform();
 		}
 
 	}
@@ -411,12 +411,12 @@ void Translator::Update()
 			dragEnd = world;
 		}
 		dragging = false;
-		Transform::UpdateTransform();
+		TransformComponent::UpdateTransform();
 	}
 
 	prevPointer = pointer;
 }
-void Translator::Draw(Camera* camera, GRAPHICSTHREAD threadID)
+void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
