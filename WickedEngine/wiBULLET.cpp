@@ -121,15 +121,13 @@ void wiBULLET::setWind(const XMFLOAT3& wind){
 }
 
 
-void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent)
+void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent, MeshComponent& mesh)
 {
 	if (!softBodyPhysicsEnabled)
 		return;
 
 	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
 	btSoftBody* softBody = btSoftBody::upcast(obj);
-
-	MeshComponent& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
 
 	if(softBody){
 		btVector3 min, max;
@@ -156,23 +154,25 @@ void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent)
 		}
 	}
 }
-void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent){
+void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent, MeshComponent& mesh)
+{
 	if (!softBodyPhysicsEnabled)
 		return;
 
-	if(!firstRunWorld){
+	if (!firstRunWorld)
+	{
 		btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
 		btSoftBody* softBody = btSoftBody::upcast(obj);
 
-		MeshComponent& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
-
-		if(softBody){
+		if (softBody) {
 			btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
-		
+
 			int gvg = physicscomponent.goalVG;
-			if(gvg>=0){
-				int j=0;
-				for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it) {
+			if (gvg >= 0)
+			{
+				int j = 0;
+				for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it)
+				{
 					int vi = (*it).first;
 					int index = physicscomponent.physicalmapGP[vi];
 					float weight = (*it).second;
@@ -183,7 +183,8 @@ void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent){
 		}
 	}
 }
-void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI){
+void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI)
+{
 	if (objectI < 0)
 	{
 		return;
@@ -191,16 +192,18 @@ void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objec
 
 	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[objectI];
 	btRigidBody* rigidBody = btRigidBody::upcast(obj);
-	if(rigidBody){
+	if (rigidBody)
+	{
 		btTransform transform;
 		transform.setIdentity();
-		transform.setRotation(btQuaternion(rot.x,rot.y,rot.z,rot.w));
-		transform.setOrigin(btVector3(pos.x,pos.y,pos.z));
+		transform.setRotation(btQuaternion(rot.x, rot.y, rot.z, rot.w));
+		transform.setOrigin(btVector3(pos.x, pos.y, pos.z));
 		rigidBody->getMotionState()->setWorldTransform(transform);
 	}
 }
 
-PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
+PHYSICS::PhysicsTransform* wiBULLET::getObject(int index)
+{
 	
 	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[index];
 	btTransform trans;
@@ -224,11 +227,8 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index){
 	return transforms[index];
 }
 
-void wiBULLET::registerObject(PhysicsComponent& physicscomponent)
+void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent& mesh, TransformComponent& transform)
 {
-	MeshComponent& mesh = wiRenderer::GetScene().meshes.GetComponent(physicscomponent.mesh_ref);
-	TransformComponent& transform = wiRenderer::GetScene().transforms.GetComponent(physicscomponent.transform_ref);
-
 	btVector3 S = btVector3(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
 	btQuaternion R = btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.z);
 	btVector3 T = btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z);
@@ -649,18 +649,20 @@ void wiBULLET::removeObject(PhysicsComponent& physicscomponent)
 	physicscomponent.physicsObjectID = -1;
 }
 
-void wiBULLET::Update(float dt){
+void wiBULLET::Update(float dt)
+{
 	if (rigidBodyPhysicsEnabled || softBodyPhysicsEnabled)
 		bulletPhysics->dynamicsWorld->stepSimulation(dt, 6);
 }
-void wiBULLET::ClearWorld(){
-	for(int i= bulletPhysics->dynamicsWorld->getNumCollisionObjects()-1;i>=0;i--)
+void wiBULLET::ClearWorld()
+{
+	for (int i = bulletPhysics->dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
 	{
 		deleteObject(i);
 	}
 
 	//delete collision shapes
-	for (int j=0;j<bulletPhysics->collisionShapes.size();j++)
+	for (int j = 0; j < bulletPhysics->collisionShapes.size(); j++)
 	{
 		btCollisionShape* shape = bulletPhysics->collisionShapes[j];
 		bulletPhysics->collisionShapes[j] = 0;
@@ -668,13 +670,14 @@ void wiBULLET::ClearWorld(){
 	}
 
 	//delete transfom interface
-	for (unsigned int i = 0; i<transforms.size(); ++i)
+	for (unsigned int i = 0; i < transforms.size(); ++i)
 		delete transforms[i];
 	transforms.clear();
-	registeredObjects=-1;
+	registeredObjects = -1;
 }
-void wiBULLET::CleanUp(){
-	for (unsigned int i = 0; i<transforms.size(); ++i)
+void wiBULLET::CleanUp()
+{
+	for (unsigned int i = 0; i < transforms.size(); ++i)
 		delete transforms[i];
 	transforms.clear();
 }

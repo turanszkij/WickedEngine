@@ -217,73 +217,102 @@ namespace wiSceneSystem
 		return wiTextureHelper::getInstance()->getWhite();
 	}
 
+	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
+	{
+		zNearP = newNear;
+		zFarP = newFar;
+		width = newWidth;
+		height = newHeight;
+		fov = newFOV;
+		Eye = XMFLOAT3(0, 0, 0);
+		At = XMFLOAT3(0, 0, 1);
+		Up = XMFLOAT3(0, 1, 0);
+
+		UpdateProjection();
+		UpdateCamera();
+	}
 	void CameraComponent::UpdateProjection()
 	{
-		XMMATRIX P = XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP); // reverse zbuffer!
-		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP));
-		XMMATRIX InvP = XMMatrixInverse(nullptr, P);
-		XMStoreFloat4x4(&Projection, P);
-		XMStoreFloat4x4(&InvProjection, InvP);
+		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
+		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP)); // normal zbuffer!
 	}
-	void CameraComponent::BakeMatrices()
+	void CameraComponent::UpdateCamera(const TransformComponent* transform)
 	{
-		XMMATRIX V = XMLoadFloat4x4(&View);
-		XMMATRIX P = XMLoadFloat4x4(&Projection);
-		XMMATRIX VP = XMMatrixMultiply(V, P);
-		XMStoreFloat4x4(&this->VP, VP);
-		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, V));
-		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, VP));
-		XMStoreFloat4x4(&Projection, P);
-		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, P));
+		XMVECTOR _Eye;
+		XMVECTOR _At;
+		XMVECTOR _Up;
+
+		if (transform != nullptr)
+		{
+			_Eye = XMLoadFloat3(&transform->translation);
+			_At = XMVectorSet(0, 0, 1, 0);
+			_Up = XMVectorSet(0, 1, 0, 0);
+
+			XMMATRIX _Rot = XMMatrixRotationQuaternion(XMLoadFloat4(&transform->rotation));
+			_At = XMVector3TransformNormal(_At, _Rot);
+			_Up = XMVector3TransformNormal(_Up, _Rot);
+		}
+		else
+		{
+			_Eye = XMLoadFloat3(&Eye);
+			_At = XMLoadFloat3(&At);
+			_Up = XMLoadFloat3(&Up);
+		}
+
+		XMMATRIX _P = XMLoadFloat4x4(&Projection);
+		XMMATRIX _InvP = XMMatrixInverse(nullptr, _P);
+		XMStoreFloat4x4(&InvProjection, _InvP);
+
+		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
+		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
+		XMStoreFloat4x4(&VP, _VP);
+		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, _V));
+		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, _VP));
+		XMStoreFloat4x4(&Projection, _P);
+		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
+
+		XMStoreFloat3(&Eye, _Eye);
+		XMStoreFloat3(&At, _At);
+		XMStoreFloat3(&Up, _Up);
+
+		frustum.ConstructFrustum(zFarP, realProjection, View);
 	}
+	void CameraComponent::Reflect(const XMFLOAT4& plane)
+	{
+		XMVECTOR _Eye = XMLoadFloat3(&Eye);
+		XMVECTOR _At = XMLoadFloat3(&At);
+		XMVECTOR _Up = XMLoadFloat3(&Up);
+		XMMATRIX _Ref = XMMatrixReflect(XMLoadFloat4(&plane));
+
+		_Eye = XMVector3Transform(_Eye, _Ref);
+		_At = XMVector3TransformNormal(_At, _Ref);
+		_Up = XMVector3TransformNormal(_Up, _Ref);
+
+		XMStoreFloat3(&Eye, _Eye);
+		XMStoreFloat3(&At, _At);
+		XMStoreFloat3(&Up, _Up);
+
+		UpdateCamera();
+	}
+
 
 	void Scene::Update(float dt)
 	{
 		// Update Transform components:
 		for (size_t i = 0; i < transforms.GetCount(); ++i)
 		{
-			auto& transform = transforms[i];
+			TransformComponent& transform = transforms[i];
 
 			const TransformComponent* parent = transform.parentID != INVALID_ENTITY ? transforms.GetComponent(transform.parentID) : nullptr;
 			transform.UpdateTransform(parent);
-
-			//if (transform.dirty || parented)
-			//{
-			//	transform.dirty = false;
-
-			//	XMVECTOR scale_local = XMLoadFloat3(&transform.scale_local);
-			//	XMVECTOR rotation_local = XMLoadFloat4(&transform.rotation_local);
-			//	XMVECTOR translation_local = XMLoadFloat3(&transform.translation_local);
-			//	XMMATRIX world =
-			//		XMMatrixScalingFromVector(scale_local) *
-			//		XMMatrixRotationQuaternion(rotation_local) *
-			//		XMMatrixTranslationFromVector(translation_local);
-
-			//	if (parented)
-			//	{
-			//		auto& parent = transforms.GetComponent(transform.parent_ref);
-			//		XMMATRIX world_parent = XMLoadFloat4x4(&parent.world);
-			//		XMMATRIX bindMatrix = XMLoadFloat4x4(&transform.world_parent_bind);
-			//		world = world * bindMatrix * world_parent;
-			//	}
-
-			//	XMVECTOR S, R, T;
-			//	XMMatrixDecompose(&S, &R, &T, world);
-			//	XMStoreFloat3(&transform.scale, S);
-			//	XMStoreFloat4(&transform.rotation, R);
-			//	XMStoreFloat3(&transform.translation, T);
-
-			//	transform.world_prev = transform.world;
-			//	XMStoreFloat4x4(&transform.world, world);
-			//}
-
 		}
 
 		// Update Bone components:
 		for (size_t i = 0; i < bones.GetCount(); ++i)
 		{
-			auto& bone = bones[i];
-			auto& transform = transforms.GetComponent(bone.transform_ref);
+			BoneComponent& bone = bones[i];
+			Entity entity = bones.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			XMMATRIX inverseBindPoseMatrix = XMLoadFloat4x4(&bone.inverseBindPoseMatrix);
 			XMMATRIX world = XMLoadFloat4x4(&transform.world);
@@ -295,7 +324,8 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < lights.GetCount(); ++i)
 		{
 			auto& light = lights[i];
-			auto& transform = transforms.GetComponent(light.transform_ref);
+			Entity entity = bones.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			XMMATRIX world = XMLoadFloat4x4(&transform.world);
 

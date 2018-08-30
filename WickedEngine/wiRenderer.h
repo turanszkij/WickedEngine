@@ -474,9 +474,9 @@ public:
 	static std::deque<wiSprite*> waterRipples;
 	static void ClearWorld();
 	
-	static wiSceneSystem::CameraComponent* cam, *refCam, *prevFrameCam;
-	static wiSceneSystem::CameraComponent* getCamera(){ return cam; }
-	static wiSceneSystem::CameraComponent* getRefCamera(){ return refCam; }
+	static wiSceneSystem::CameraComponent* getCamera();
+	static wiSceneSystem::CameraComponent* getPrevCamera();
+	static wiSceneSystem::CameraComponent* getRefCamera();
 
 	static RAY getPickRay(long cursorX, long cursorY);
 

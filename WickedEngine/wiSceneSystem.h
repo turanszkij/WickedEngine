@@ -56,8 +56,6 @@ namespace wiSceneSystem
 
 	struct MaterialComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-
 		bool dirty = true;
 
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
@@ -275,7 +273,7 @@ namespace wiSceneSystem
 
 		AABB aabb;
 
-		wiECS::ComponentManager<ArmatureComponent>::ref armature_ref;
+		wiECS::Entity armatureID;
 
 		struct VertexGroup 
 		{
@@ -292,7 +290,7 @@ namespace wiSceneSystem
 		float tessellationFactor;
 
 		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() { return indexFormat; }
-		inline bool IsSkinned() { return armature_ref != wiECS::ComponentManager<ArmatureComponent>::ref(); }
+		inline bool IsSkinned() { return armatureID != wiECS::INVALID_ENTITY; }
 	};
 
 	struct CullableComponent
@@ -302,11 +300,6 @@ namespace wiSceneSystem
 
 	struct ObjectComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-		wiECS::ComponentManager<MeshComponent>::ref mesh_ref;
-		wiECS::ComponentManager<CullableComponent>::ref cullable_ref;
-
 		bool renderable = true;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
@@ -319,10 +312,6 @@ namespace wiSceneSystem
 
 	struct PhysicsComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-		wiECS::ComponentManager<MeshComponent>::ref mesh_ref;
-
 		std::string collisionShape;
 		std::string physicsType;
 
@@ -348,19 +337,13 @@ namespace wiSceneSystem
 
 	struct BoneComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-
 		XMFLOAT4X4 inverseBindPoseMatrix;
 		XMFLOAT4X4 skinningMatrix;
 	};
 
 	struct ArmatureComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-
-		std::vector<wiECS::ComponentManager<BoneComponent>::ref> bone_refs;
+		std::vector<wiECS::ComponentManager<BoneComponent>::ref> boneCollection;
 
 		GFX_STRUCT ShaderBoneType
 		{
@@ -387,10 +370,6 @@ namespace wiSceneSystem
 
 	struct LightComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-		wiECS::ComponentManager<CullableComponent>::ref cullable_ref;
-
 		enum LightType {
 			DIRECTIONAL			= ENTITY_TYPE_DIRECTIONALLIGHT,
 			POINT				= ENTITY_TYPE_POINTLIGHT,
@@ -426,9 +405,6 @@ namespace wiSceneSystem
 
 	struct CameraComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-
 		float width = 0.0f, height = 0.0f;
 		float zNearP = 0.001f, zFarP = 800.0f;
 		float fov = XM_PI / 3.0f;
@@ -438,8 +414,10 @@ namespace wiSceneSystem
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
 
+		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateProjection();
-		void BakeMatrices();
+		void UpdateCamera(const TransformComponent* transform = nullptr);
+		void Reflect(const XMFLOAT4& plane = XMFLOAT4(0, 1, 0, 0));
 
 		inline XMVECTOR GetEye() const { return XMLoadFloat3(&Eye); }
 		inline XMVECTOR GetAt() const { return XMLoadFloat3(&At); }

@@ -201,10 +201,10 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	/////////////////////////////////////////////////////
 
 
-	//animWindow->Translate(XMFLOAT3(100, 50, 0));
-	//animWindow->SetVisible(false);
+	animWindow->Translate(XMFLOAT3(100, 50, 0));
+	animWindow->SetVisible(false);
 
-	//SetArmature(nullptr);
+	SetEntity(INVALID_ENTITY);
 }
 
 
