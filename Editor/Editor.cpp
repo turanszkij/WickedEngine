@@ -407,6 +407,10 @@ void EditorComponent::Load()
 
 	float step = 105, x = -step;
 
+	Scene& scene = wiRenderer::GetScene();
+
+	cameraEntity = (Entity)wiHashString("__editorCameraTransform").GetHash();
+	scene.transforms.Create(cameraEntity);
 
 	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
 	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
@@ -981,15 +985,19 @@ void EditorComponent::FixedUpdate()
 void EditorComponent::Update(float dt)
 {
 	Scene& scene = wiRenderer::GetScene();
-	CameraComponent* cam = wiRenderer::getCamera();
-	//cam->hasChanged = false;
+	CameraComponent* camera = wiRenderer::getCamera();
+	TransformComponent* camera_transform = scene.transforms.GetComponent(cameraEntity);
+	assert(camera_transform != nullptr);
 
 	// Follow camera proxy:
 	//	Outside of the next if, because we want to animate while hovering on GUI... (just better user experience)
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
 	{
-		//cam->detach();
-		//cam->Lerp(cam, cameraWnd->proxy, 1.0f - cameraWnd->followSlider->GetValue());
+		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->entity);
+		if (proxy != nullptr)
+		{
+			camera_transform->Lerp(*camera_transform, *proxy, 1.0f - cameraWnd->followSlider->GetValue());
+		}
 	}
 
 	// Exit cinema mode:
@@ -1048,67 +1056,71 @@ void EditorComponent::Update(float dt)
 		yDif *= cameraWnd->rotationspeedSlider->GetValue();
 
 
-		//if (cameraWnd->fpsCheckBox->GetCheck())
-		//{
-		//	// FPS Camera
-		//	//cam->detach();
+		if (cameraWnd->fpsCheckBox->GetCheck())
+		{
+			// FPS Camera
+			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-		//	const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
-
-		//	const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
-		//	static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
-		//	XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
+			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
+			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
+			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
 
-		//	if (!wiInputManager::GetInstance()->down(VK_CONTROL))
-		//	{
-		//		// Only move camera if control not pressed
-		//		if (wiInputManager::GetInstance()->down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-		//		if (wiInputManager::GetInstance()->down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
-		//		if (wiInputManager::GetInstance()->down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
-		//		if (wiInputManager::GetInstance()->down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
-		//		if (wiInputManager::GetInstance()->down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
-		//		if (wiInputManager::GetInstance()->down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
-		//		moveNew = XMVector3Normalize(moveNew) * speed;
-		//	}
+			if (!wiInputManager::GetInstance()->down(VK_CONTROL))
+			{
+				// Only move camera if control not pressed
+				if (wiInputManager::GetInstance()->down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wiInputManager::GetInstance()->down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (wiInputManager::GetInstance()->down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (wiInputManager::GetInstance()->down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wiInputManager::GetInstance()->down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (wiInputManager::GetInstance()->down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				moveNew = XMVector3Normalize(moveNew) * speed;
+			}
 
-		//	move = XMVectorLerp(move, moveNew, 0.18f * clampedDT / 0.0166f); // smooth the movement a bit
-		//	float moveLength = XMVectorGetX(XMVector3Length(move));
+			move = XMVectorLerp(move, moveNew, 0.18f * clampedDT / 0.0166f); // smooth the movement a bit
+			float moveLength = XMVectorGetX(XMVector3Length(move));
 
-		//	if (moveLength < 0.0001f)
-		//	{
-		//		move = XMVectorSet(0, 0, 0, 0);
-		//	}
-		//	
-		//	if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.0001f)
-		//	{
-		//		cam->Move(move);
-		//		cam->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
-		//	}
-		//}
-		//else
-		//{
-		//	// Orbital Camera
-		//	if (cam->parent == nullptr)
-		//	{
-		//		cam->attachTo(cameraWnd->orbitalCamTarget);
-		//	}
-		//	if (wiInputManager::GetInstance()->down(VK_LSHIFT))
-		//	{
-		//		XMVECTOR V = XMVectorAdd(cam->GetRight() * xDif, cam->GetUp() * yDif) * 10;
-		//		XMFLOAT3 vec;
-		//		XMStoreFloat3(&vec, V);
-		//		cameraWnd->orbitalCamTarget->Translate(vec);
-		//	}
-		//	else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
-		//	{
-		//		cam->Translate(XMFLOAT3(0, 0, yDif * 4));
-		//	}
-		//	else if(abs(xDif) + abs(yDif) > 0)
-		//	{
-		//		cameraWnd->orbitalCamTarget->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
-		//	}
-		//}
+			if (moveLength < 0.0001f)
+			{
+				move = XMVectorSet(0, 0, 0, 0);
+			}
+			
+			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.0001f)
+			{
+				XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera_transform->rotation_local));
+				XMVECTOR move_rot = XMVector3TransformNormal(move, camRot);
+				XMFLOAT3 _move;
+				XMStoreFloat3(&_move, move_rot);
+				camera_transform->Translate(_move);
+				camera_transform->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+			}
+		}
+		else
+		{
+			//// Orbital Camera
+			//if (camera_transform->parentID == INVALID_ENTITY)
+			//{
+			//	cam->attachTo(cameraWnd->orbitalCamTarget);
+			//}
+			//if (wiInputManager::GetInstance()->down(VK_LSHIFT))
+			//{
+			//	XMVECTOR V = XMVectorAdd(cam->GetRight() * xDif, cam->GetUp() * yDif) * 10;
+			//	XMFLOAT3 vec;
+			//	XMStoreFloat3(&vec, V);
+			//	cameraWnd->orbitalCamTarget->Translate(vec);
+			//}
+			//else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
+			//{
+			//	cam->Translate(XMFLOAT3(0, 0, yDif * 4));
+			//}
+			//else if(abs(xDif) + abs(yDif) > 0)
+			//{
+			//	cameraWnd->orbitalCamTarget->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
+			//}
+		}
+		camera_transform->UpdateTransform();
+		camera->UpdateCamera(camera_transform);
 
 		// Begin picking:
 		UINT pickMask = rendererWnd->GetPickType();

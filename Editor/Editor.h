@@ -50,7 +50,9 @@ public:
 
 	Editor*					main;
 
-	wiCheckBox* cinemaModeCheckBox;
+	wiCheckBox*				cinemaModeCheckBox;
+
+	wiECS::Entity			cameraEntity = wiECS::INVALID_ENTITY;
 
 	EditorLoadingScreen*	loader;
 	Renderable3DComponent*	renderPath;

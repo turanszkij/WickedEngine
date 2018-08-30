@@ -3053,23 +3053,23 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	//}
 	//wiProfiler::GetInstance().EndRange(); // SPTree Update
 
-	//// Update Voxelization parameters:
+	// Update Voxelization parameters:
 	//if (spTree != nullptr)
-	//{
-	//	// We don't update it if the scene is empty, this even makes it easier to debug
-	//	const float f = 0.05f / voxelSceneData.voxelsize;
-	//	XMFLOAT3 center = XMFLOAT3(floorf(cam->translation.x * f) / f, floorf(cam->translation.y * f) / f, floorf(cam->translation.z * f) / f);
-	//	if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
-	//	{
-	//		voxelSceneData.centerChangedThisFrame = true;
-	//	}
-	//	else
-	//	{
-	//		voxelSceneData.centerChangedThisFrame = false;
-	//	}
-	//	voxelSceneData.center = center;
-	//	voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
-	//}
+	{
+		// We don't update it if the scene is empty, this even makes it easier to debug
+		const float f = 0.05f / voxelSceneData.voxelsize;
+		XMFLOAT3 center = XMFLOAT3(floorf(getCamera()->Eye.x * f) / f, floorf(getCamera()->Eye.y * f) / f, floorf(getCamera()->Eye.z * f) / f);
+		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
+		{
+			voxelSceneData.centerChangedThisFrame = true;
+		}
+		else
+		{
+			voxelSceneData.centerChangedThisFrame = false;
+		}
+		voxelSceneData.center = center;
+		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+	}
 
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
@@ -3239,6 +3239,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = XMFLOAT2(0, 0);
 	}
 
+	getCamera()->UpdateCamera();
 	*getRefCamera() = *getCamera();
 	getRefCamera()->Reflect(waterPlane);
 
