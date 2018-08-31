@@ -378,6 +378,15 @@ namespace wiSceneSystem
 			}
 		}
 
+		// Update camera components:
+		for (size_t i = 0; i < cameras.GetCount(); ++i)
+		{
+			CameraComponent& camera = cameras[i];
+			Entity entity = cameras.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			camera.UpdateCamera(transform);
+		}
+
 		// Update Light components:
 		for (size_t i = 0; i < lights.GetCount(); ++i)
 		{
@@ -400,7 +409,7 @@ namespace wiSceneSystem
 				if (light.shadow)
 				{
 					XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-					CameraComponent* camera = wiRenderer::getCamera();
+					CameraComponent* camera = cameras.GetComponent(wiRenderer::getCameraID());
 					float nearPlane = camera->zNearP;
 					float farPlane = camera->zFarP;
 					XMMATRIX view = camera->GetView();
@@ -503,10 +512,10 @@ namespace wiSceneSystem
 						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), 0.1f, 1000.0f, XM_PIDIV2)); //+z
 						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), 0.1f, 1000.0f, XM_PIDIV2)); //-z
 					}
-					for (unsigned int i = 0; i < light.shadowCam_pointLight.size(); ++i) {
-						light.shadowCam_pointLight[i].Update(translation);
-						light.shadowCam_pointLight[i].farplane = max(1.0f, light.range);
-						light.shadowCam_pointLight[i].Create_Perspective(XM_PIDIV2);
+					for (auto& x : light.shadowCam_pointLight) {
+						x.Update(translation);
+						x.farplane = max(1.0f, light.range);
+						x.Create_Perspective(XM_PIDIV2);
 					}
 				}
 
@@ -516,31 +525,13 @@ namespace wiSceneSystem
 				}
 				else
 				{
-					// area lights have no bounds like directional lights
+					// area lights have no bounds, just like directional lights (maybe todo)
 					cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
 				}
 			}
 			break;
 			}
 
-		}
-
-		// Update Cullable components:
-		for (size_t i = 0; i < cullables.GetCount(); ++i)
-		{
-			CullableComponent& cullable = cullables[i];
-			Entity entity = bones.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-
-		}
-
-		// Update camera components:
-		for (size_t i = 0; i < cameras.GetCount(); ++i)
-		{
-			CameraComponent& camera = cameras[i];
-			Entity entity = cameras.GetEntity(i);
-			const TransformComponent* transform = transforms.GetComponent(entity);
-			camera.UpdateCamera(transform);
 		}
 
 	}

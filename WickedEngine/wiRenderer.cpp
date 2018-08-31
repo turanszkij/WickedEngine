@@ -4243,6 +4243,12 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		for(size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
 			CameraComponent& cam = scene.cameras[i];
+			Entity entity = scene.cameras.GetEntity(i);
+
+			if (entity == getCameraID()) // avoid drawing the main camera...
+			{
+				continue;
+			}
 
 			sb.mTransform = XMMatrixTranspose(cam.GetInvView()*camera->GetViewProjection());
 
