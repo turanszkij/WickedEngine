@@ -91,6 +91,8 @@ public:
 	Hitbox2D hitBox;
 
 	wiWidget* container;
+	XMFLOAT4X4 world_parent_bind;
+	void AttachTo(wiWidget* parent);
 
 	static void LoadShaders();
 };

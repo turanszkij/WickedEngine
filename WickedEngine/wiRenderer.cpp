@@ -77,6 +77,8 @@ UINT wiRenderer::entityArrayOffset_Decals = 0, wiRenderer::entityArrayCount_Deca
 UINT wiRenderer::entityArrayOffset_ForceFields = 0, wiRenderer::entityArrayCount_ForceFields = 0;
 UINT wiRenderer::entityArrayOffset_EnvProbes = 0, wiRenderer::entityArrayCount_EnvProbes = 0;
 
+Entity wiRenderer::cameraID = INVALID_ENTITY;
+
 Texture2D* wiRenderer::enviroMap = nullptr;
 float wiRenderer::GameSpeed=1;
 bool wiRenderer::debugLightCulling = false;
@@ -304,8 +306,7 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(customsamplers[i]);
 	}
 
-	getCamera()->CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
-	
+	cameraID = (Entity)wiHashString("__mainCamera").GetHash();
 
 	wireRender=false;
 	debugSpheres=false;
@@ -3028,6 +3029,12 @@ void wiRenderer::FixedUpdate()
 }
 void wiRenderer::UpdatePerFrameData(float dt)
 {
+	GetScene().Update(dt);
+
+	// Update cached main camera:
+	*getCamera() = *scene->cameras.GetComponent(cameraID);
+
+
 	//// update the space partitioning trees:
 	//wiProfiler::GetInstance().BeginRange("SPTree Update", wiProfiler::DOMAIN_CPU);
 	//if (GetGameSpeed() > 0)
@@ -7438,7 +7445,8 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 	{
 		const DecalComponent& decal = scene.decals[i];
-		const MaterialComponent& material = scene.materials.GetComponent(decal.material_ref);
+		Entity entity = scene.decals.GetEntity(i);
+		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 		if (material.baseColorMap != nullptr)
 		{
@@ -7517,7 +7525,8 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 	{
 		DecalComponent& decal = scene.decals[i];
-		const MaterialComponent& material = scene.materials.GetComponent(decal.material_ref);
+		Entity entity = scene.decals.GetEntity(i);
+		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 		if (material.baseColorMap != nullptr)
 		{
@@ -8056,6 +8065,10 @@ Scene& wiRenderer::GetScene()
 	if (scene == nullptr)
 	{
 		scene = new Scene;
+
+		auto transform_ref = scene->transforms.Create(cameraID);
+		auto camera_ref = scene->cameras.Create(cameraID);
+		scene->cameras.GetComponent(camera_ref).CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 	}
 	return *scene;
 }

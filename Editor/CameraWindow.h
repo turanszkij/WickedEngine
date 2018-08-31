@@ -15,12 +15,11 @@ public:
 
 	void ResetCam();
 
-
-	wiECS::Entity entity = wiECS::INVALID_ENTITY;
-	void SetEntity(wiECS::Entity entity);
-
 	wiECS::Entity target = wiECS::INVALID_ENTITY;
-	void SetTargetEntity(wiECS::Entity target);
+
+	wiECS::Entity proxy = wiECS::INVALID_ENTITY;
+	void SetProxy(wiECS::Entity entity);
+
 
 	wiGUI* GUI;
 

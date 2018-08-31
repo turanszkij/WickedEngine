@@ -8,17 +8,17 @@ void CameraWindow::ResetCam()
 {
 	Scene& scene = wiRenderer::GetScene();
 
-	TransformComponent* camera = scene.transforms.GetComponent(entity);
-	if (camera != nullptr)
+	TransformComponent* transform = scene.transforms.GetComponent(wiRenderer::getCameraID());
+	if (transform != nullptr)
 	{
-		camera->ClearTransform();
-		camera->Translate(XMFLOAT3(0, 2, -10));
+		transform->ClearTransform();
+		transform->Translate(XMFLOAT3(0, 2, -10));
 	}
 
-	TransformComponent* camera_target = scene.transforms.GetComponent(target);
-	if (camera_target != nullptr)
+	TransformComponent* target_transform = scene.transforms.GetComponent(target);
+	if (target_transform != nullptr)
 	{
-		camera_target->ClearTransform();
+		target_transform->ClearTransform();
 	}
 }
 
@@ -28,6 +28,11 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
+
+	target = (Entity)wiHashString("__editorCameraTarget").GetHash();
+
+	Scene& scene = wiRenderer::GetScene();
+	scene.transforms.Create(target);
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(600, 420));
@@ -101,15 +106,15 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 		Entity proxy = CreateEntity();
 
-		auto node_ref = scene.nodes.Create(proxy);
+		auto name_ref = scene.names.Create(proxy);
 		auto transform_ref = scene.transforms.Create(proxy);
 		auto camera_ref = scene.cameras.Create(proxy);
 
-		auto& node = scene.nodes.GetComponent(node_ref);
+		auto& name = scene.names.GetComponent(name_ref);
 		auto& transform = scene.transforms.GetComponent(transform_ref);
 		auto& camera = scene.cameras.GetComponent(camera_ref);
 
-		node.name = "cam";
+		name = "cam";
 		camera = *wiRenderer::getCamera();
 		transform.MatrixTransform(camera.InvView);
 	});
@@ -120,10 +125,10 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyNameField->SetPos(XMFLOAT2(x + 200, y));
 	proxyNameField->OnInputAccepted([&](wiEventArgs args) {
 		Scene& scene = wiRenderer::GetScene();
-		NodeComponent* camera = scene.nodes.GetComponent(entity);
+		NameComponent* camera = scene.names.GetComponent(proxy);
 		if (camera != nullptr)
 		{
-			camera->name = args.sValue;
+			*camera = args.sValue;
 		}
 	});
 	cameraWindow->AddWidget(proxyNameField);
@@ -140,7 +145,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	cameraWindow->AddWidget(followSlider);
 
 
-	SetEntity(INVALID_ENTITY);
+	SetProxy(INVALID_ENTITY);
 
 
 	cameraWindow->Translate(XMFLOAT3(800, 500, 0));
@@ -155,9 +160,9 @@ CameraWindow::~CameraWindow()
 	SAFE_DELETE(cameraWindow);
 }
 
-void CameraWindow::SetEntity(Entity entity)
+void CameraWindow::SetProxy(Entity entity)
 {
-	this->entity = entity;
+	proxy = entity;
 
 	Scene& scene = wiRenderer::GetScene();
 
@@ -165,7 +170,7 @@ void CameraWindow::SetEntity(Entity entity)
 	{
 		followCheckBox->SetEnabled(true);
 		followSlider->SetEnabled(true);
-		NodeComponent* camera = scene.nodes.GetComponent(entity);
+		NameComponent* camera = scene.names.GetComponent(entity);
 		if (camera != nullptr)
 		{
 			proxyNameField->SetValue(camera->name);

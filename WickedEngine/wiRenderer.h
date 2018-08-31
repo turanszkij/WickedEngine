@@ -474,6 +474,8 @@ public:
 	static std::deque<wiSprite*> waterRipples;
 	static void ClearWorld();
 	
+	static wiECS::Entity cameraID;
+	static wiECS::Entity getCameraID() { return cameraID; }
 	static wiSceneSystem::CameraComponent* getCamera();
 	static wiSceneSystem::CameraComponent* getPrevCamera();
 	static wiSceneSystem::CameraComponent* getRefCamera();

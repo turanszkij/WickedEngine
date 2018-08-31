@@ -3,8 +3,10 @@
 
 namespace wiSceneSystem
 {
-	struct NodeComponent;
+	struct NameComponent;
+	struct LayerComponent;
 	struct TransformComponent;
+	struct ParentComponent;
 	struct MaterialComponent;
 	struct MeshComponent;
 	struct ObjectComponent;

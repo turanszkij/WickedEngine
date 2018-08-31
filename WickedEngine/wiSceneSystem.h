@@ -18,30 +18,33 @@
 namespace wiSceneSystem
 {
 
-	struct NodeComponent
+	struct NameComponent
+	{
+		char name[32];
+
+		inline void operator=(const std::string& str) { strcpy_s(name, str.c_str()); }
+	};
+
+	struct LayerComponent
 	{
 		uint32_t layerMask = ~0;
-		std::string name;
 	};
 	
 	struct TransformComponent
 	{
-		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
+		bool dirty = true;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
-		bool dirty = true;
 		XMFLOAT3 scale;
 		XMFLOAT4 rotation;
 		XMFLOAT3 translation;
 		XMFLOAT4X4 world;
 		XMFLOAT4X4 world_prev;
-		XMFLOAT4X4 world_parent_bind;
 
-		void AttachTo(const TransformComponent* const parent);
-		void UpdateTransform(const TransformComponent* const parent = nullptr);
+		void UpdateTransform();
 		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
@@ -52,6 +55,12 @@ namespace wiSceneSystem
 		void MatrixTransform(const XMMATRIX& matrix);
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
+	};
+
+	struct ParentComponent
+	{
+		wiECS::Entity parentID;
+		XMFLOAT4X4 world_parent_bind;
 	};
 
 	struct MaterialComponent
@@ -434,8 +443,6 @@ namespace wiSceneSystem
 
 	struct EnvironmentProbeComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 		int textureIndex = -1;
 		bool realTime = false;
 		bool isUpToDate = false;
@@ -443,9 +450,6 @@ namespace wiSceneSystem
 
 	struct ForceFieldComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-
 		int type = ENTITY_TYPE_FORCEFIELD_POINT;
 		float gravity = 0.0f; // negative = deflector, positive = attractor
 		float range = 0.0f; // affection range
@@ -453,17 +457,11 @@ namespace wiSceneSystem
 
 	struct DecalComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
-		wiECS::ComponentManager<MaterialComponent>::ref material_ref;
-
 		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 	};
 
 	struct ModelComponent
 	{
-		wiECS::ComponentManager<NodeComponent>::ref node_ref;
-		wiECS::ComponentManager<TransformComponent>::ref transform_ref;
 
 		std::vector<wiECS::ComponentManager<MaterialComponent>::ref> material_refs;
 		std::vector<wiECS::ComponentManager<MeshComponent>::ref> mesh_refs;
@@ -483,8 +481,10 @@ namespace wiSceneSystem
 	{
 		std::unordered_set<wiECS::Entity> owned_entities;
 
-		wiECS::ComponentManager<NodeComponent> nodes;
+		wiECS::ComponentManager<NameComponent> names;
+		wiECS::ComponentManager<LayerComponent> layers;
 		wiECS::ComponentManager<TransformComponent> transforms;
+		wiECS::ComponentManager<ParentComponent> parents;
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
 		wiECS::ComponentManager<ObjectComponent> objects;
@@ -517,6 +517,10 @@ namespace wiSceneSystem
 		void Update(float dt);
 		void Remove(wiECS::Entity entity);
 		void Clear();
+
+		wiECS::Entity Component_FindName(const std::string& name);
+		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent);
+		void Component_Detach(wiECS::Entity entity);
 	};
 
 }

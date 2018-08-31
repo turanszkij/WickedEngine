@@ -198,12 +198,7 @@ void BeginTranslate()
 		translator->Translate(center);
 		for (auto& x : selected)
 		{
-			TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(x->entity);
-			if (transform != nullptr)
-			{
-				//transform->detach();
-				transform->AttachTo(translator); // TODO
-			}
+			wiRenderer::GetScene().Component_Attach(x->entity, translator->entityID);
 		}
 	}
 }
@@ -214,19 +209,11 @@ void EndTranslate()
 
 	for (auto& x : selected)
 	{
-		TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(x->entity);
-		if (transform != nullptr)
+		//transform->detach();
+		auto it = savedParents.find(x->entity);
+		if (it != savedParents.end())
 		{
-			//transform->detach();
-			auto it = savedParents.find(x->entity);
-			if (it != savedParents.end())
-			{
-				TransformComponent* other = wiRenderer::GetScene().transforms.GetComponent(it->second);
-				if (other != nullptr)
-				{
-					transform->AttachTo(other);
-				}
-			}
+			wiRenderer::GetScene().Component_Attach(x->entity, it->second);
 		}
 	}
 
@@ -255,10 +242,10 @@ void AddSelected(Picked* picked, bool deselectIfAlreadySelected = false)
 	if (it == selected.end())
 	{
 		selected.push_back(picked);
-		TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(picked->entity);
-		if (transform != nullptr)
+		ParentComponent* parent = wiRenderer::GetScene().parents.GetComponent(picked->entity);
+		if (parent != nullptr)
 		{
-			savedParents.insert(make_pair(picked->entity, transform->parentID));
+			savedParents.insert(make_pair(picked->entity, parent->parentID));
 		}
 	}
 	else if (deselectIfAlreadySelected)
@@ -269,13 +256,7 @@ void AddSelected(Picked* picked, bool deselectIfAlreadySelected = false)
 			if (it != savedParents.end())
 			{
 				//picked->transform->attachTo(it->second);
-
-				TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(picked->entity);
-				TransformComponent* other = wiRenderer::GetScene().transforms.GetComponent(it->second);
-				if (transform != nullptr && other != nullptr)
-				{
-					transform->AttachTo(other);
-				}
+				wiRenderer::GetScene().Component_Attach(picked->entity, it->second);
 			}
 		}
 
@@ -408,9 +389,6 @@ void EditorComponent::Load()
 	float step = 105, x = -step;
 
 	Scene& scene = wiRenderer::GetScene();
-
-	cameraEntity = (Entity)wiHashString("__editorCameraTransform").GetHash();
-	scene.transforms.Create(cameraEntity);
 
 	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
 	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
@@ -891,7 +869,7 @@ void EditorComponent::Load()
 		materialWnd->SetEntity(INVALID_ENTITY);
 		emitterWnd->SetEntity(INVALID_ENTITY);
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
-		cameraWnd->SetEntity(INVALID_ENTITY);
+		cameraWnd->SetProxy(INVALID_ENTITY);
 	});
 	GetGUI().AddWidget(clearButton);
 
@@ -986,14 +964,14 @@ void EditorComponent::Update(float dt)
 {
 	Scene& scene = wiRenderer::GetScene();
 	CameraComponent* camera = wiRenderer::getCamera();
-	TransformComponent* camera_transform = scene.transforms.GetComponent(cameraEntity);
+	TransformComponent* camera_transform = scene.transforms.GetComponent(wiRenderer::getCameraID());
 	assert(camera_transform != nullptr);
 
 	// Follow camera proxy:
 	//	Outside of the next if, because we want to animate while hovering on GUI... (just better user experience)
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
 	{
-		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->entity);
+		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->proxy);
 		if (proxy != nullptr)
 		{
 			camera_transform->Lerp(*camera_transform, *proxy, 1.0f - cameraWnd->followSlider->GetValue());
@@ -1098,29 +1076,32 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			//// Orbital Camera
-			//if (camera_transform->parentID == INVALID_ENTITY)
-			//{
-			//	cam->attachTo(cameraWnd->orbitalCamTarget);
-			//}
-			//if (wiInputManager::GetInstance()->down(VK_LSHIFT))
-			//{
-			//	XMVECTOR V = XMVectorAdd(cam->GetRight() * xDif, cam->GetUp() * yDif) * 10;
-			//	XMFLOAT3 vec;
-			//	XMStoreFloat3(&vec, V);
-			//	cameraWnd->orbitalCamTarget->Translate(vec);
-			//}
-			//else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
-			//{
-			//	cam->Translate(XMFLOAT3(0, 0, yDif * 4));
-			//}
-			//else if(abs(xDif) + abs(yDif) > 0)
-			//{
-			//	cameraWnd->orbitalCamTarget->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
-			//}
+			// Orbital Camera
+			auto parented = scene.parents.Find(wiRenderer::getCameraID());
+
+			TransformComponent* target_transform = scene.transforms.GetComponent(cameraWnd->target);
+
+			if (!parented)
+			{
+				//cam->attachTo(cameraWnd->orbitalCamTarget);
+				scene.Component_Attach(wiRenderer::getCameraID(), cameraWnd->target);
+			}
+			if (wiInputManager::GetInstance()->down(VK_LSHIFT))
+			{
+				XMVECTOR V = XMVectorAdd(camera->GetRight() * xDif, camera->GetUp() * yDif) * 10;
+				XMFLOAT3 vec;
+				XMStoreFloat3(&vec, V);
+				target_transform->Translate(vec);
+			}
+			else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
+			{
+				camera_transform->Translate(XMFLOAT3(0, 0, yDif * 4));
+			}
+			else if(abs(xDif) + abs(yDif) > 0)
+			{
+				target_transform->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
+			}
 		}
-		camera_transform->UpdateTransform();
-		camera->UpdateCamera(camera_transform);
 
 		// Begin picking:
 		UINT pickMask = rendererWnd->GetPickType();

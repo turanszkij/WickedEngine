@@ -53,16 +53,38 @@ void wiWidget::Update(wiGUI* gui, float dt)
 		tooltipTimer = 0;
 	}
 
-	// Only do the updatetransform if it has no parent because if it has, its transform
-	// will be updated down the chain anyway
-	if (container == nullptr)
+	UpdateTransform();
+
+	if (container != nullptr)
 	{
-		UpdateTransform();
+		XMVECTOR S_local = XMLoadFloat3(&scale_local);
+		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
+		XMVECTOR T_local = XMLoadFloat3(&translation_local);
+		XMMATRIX W =
+			XMMatrixScalingFromVector(S_local) *
+			XMMatrixRotationQuaternion(R_local) *
+			XMMatrixTranslationFromVector(T_local);
+
+		XMMATRIX W_parent = XMLoadFloat4x4(&container->world);
+		XMMATRIX B = XMLoadFloat4x4(&world_parent_bind);
+		W = W * B * W_parent;
+
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, W);
+		XMStoreFloat3(&scale, S);
+		XMStoreFloat4(&rotation, R);
+		XMStoreFloat3(&translation, T);
+
+		world_prev = world;
+		XMStoreFloat4x4(&world, W);
 	}
-	else
-	{
-		UpdateTransform((TransformComponent*)container);
-	}
+}
+void wiWidget::AttachTo(wiWidget* parent)
+{
+	container = parent;
+
+	parent->UpdateTransform();
+	XMStoreFloat4x4(&world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world)));
 }
 void wiWidget::RenderTooltip(wiGUI* gui)
 {

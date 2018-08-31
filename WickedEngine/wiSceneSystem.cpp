@@ -8,15 +8,9 @@ using namespace wiGraphicsTypes;
 namespace wiSceneSystem
 {
 
-	void TransformComponent::AttachTo(const TransformComponent* const parent)
+	void TransformComponent::UpdateTransform()
 	{
-		dirty = true;
-		XMMATRIX parent_world_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
-		XMStoreFloat4x4(&world_parent_bind, parent_world_inverse);
-	}
-	void TransformComponent::UpdateTransform(const TransformComponent* const parent)
-	{
-		if (dirty || parent != nullptr)
+		if (dirty)
 		{
 			dirty = false;
 
@@ -28,24 +22,9 @@ namespace wiSceneSystem
 				XMMatrixRotationQuaternion(R_local) *
 				XMMatrixTranslationFromVector(T_local);
 
-			if (parent != nullptr)
-			{
-				XMMATRIX W_parent = XMLoadFloat4x4(&parent->world);
-				XMMATRIX B = XMLoadFloat4x4(&world_parent_bind);
-				W = W * B * W_parent;
-
-				XMVECTOR S, R, T;
-				XMMatrixDecompose(&S, &R, &T, W);
-				XMStoreFloat3(&scale, S);
-				XMStoreFloat4(&rotation, R);
-				XMStoreFloat3(&translation, T);
-			}
-			else
-			{
-				scale = scale_local;
-				rotation = rotation_local;
-				translation = translation_local;
-			}
+			scale = scale_local;
+			rotation = rotation_local;
+			translation = translation_local;
 
 			world_prev = world;
 			XMStoreFloat4x4(&world, W);
@@ -302,9 +281,40 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < transforms.GetCount(); ++i)
 		{
 			TransformComponent& transform = transforms[i];
+			transform.UpdateTransform();
+		}
 
-			const TransformComponent* parent = transform.parentID != INVALID_ENTITY ? transforms.GetComponent(transform.parentID) : nullptr;
-			transform.UpdateTransform(parent);
+		// Update Transform hierarchy:
+		for (size_t i = 0; i < parents.GetCount(); ++i)
+		{
+			ParentComponent& parentcomponent = parents[i];
+
+			Entity entity = parents.GetEntity(i);
+			TransformComponent* transform_child = transforms.GetComponent(entity);
+			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
+			assert(transform_child != nullptr);
+			assert(transform_parent != nullptr);
+
+			XMVECTOR S_local = XMLoadFloat3(&transform_child->scale_local);
+			XMVECTOR R_local = XMLoadFloat4(&transform_child->rotation_local);
+			XMVECTOR T_local = XMLoadFloat3(&transform_child->translation_local);
+			XMMATRIX W =
+				XMMatrixScalingFromVector(S_local) *
+				XMMatrixRotationQuaternion(R_local) *
+				XMMatrixTranslationFromVector(T_local);
+
+			XMMATRIX W_parent = XMLoadFloat4x4(&transform_parent->world);
+			XMMATRIX B = XMLoadFloat4x4(&parentcomponent.world_parent_bind);
+			W = W * B * W_parent;
+
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, W);
+			XMStoreFloat3(&transform_child->scale, S);
+			XMStoreFloat4(&transform_child->rotation, R);
+			XMStoreFloat3(&transform_child->translation, T);
+
+			transform_child->world_prev = transform_child->world;
+			XMStoreFloat4x4(&transform_child->world, W);
 		}
 
 		// Update Bone components:
@@ -336,13 +346,24 @@ namespace wiSceneSystem
 			}
 		}
 
+		// Update camera components:
+		for (size_t i = 0; i < cameras.GetCount(); ++i)
+		{
+			CameraComponent& camera = cameras[i];
+			Entity entity = cameras.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			camera.UpdateCamera(transform);
+		}
+
 	}
 	void Scene::Remove(Entity entity)
 	{
 		owned_entities.erase(entity);
 
-		nodes.Remove(entity);
+		names.Remove(entity);
+		layers.Remove(entity);
 		transforms.Remove(entity);
+		parents.Remove(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		objects.Remove(entity);
@@ -365,5 +386,38 @@ namespace wiSceneSystem
 		}
 	}
 
+	Entity Scene::Component_FindName(const std::string& name)
+	{
+		for (size_t i = 0; i < names.GetCount(); ++i)
+		{
+			if (strcmp(names[i].name, name.c_str()) == 0)
+			{
+				return names.GetEntity(i);
+			}
+		}
+		return INVALID_ENTITY;
+	}
+	void Scene::Component_Attach(Entity entity, Entity parent)
+	{
+		assert(entity != parent);
+
+		auto it = parents.Find(entity);
+
+		if (!it)
+		{
+			it = parents.Create(entity);
+		}
+
+		ParentComponent& parentcomponent = parents.GetComponent(it);
+		TransformComponent* transformcomponent = transforms.GetComponent(parent);
+		assert(transformcomponent != nullptr);
+
+		parentcomponent.parentID = parent;
+		XMStoreFloat4x4(&parentcomponent.world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transformcomponent->world)));
+	}
+	void Scene::Component_Detach(wiECS::Entity entity)
+	{
+		parents.Remove(entity);
+	}
 
 }
