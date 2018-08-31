@@ -3031,9 +3031,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 {
 	GetScene().Update(dt);
 
-	// Update cached main camera:
 	*getCamera() = *scene->cameras.GetComponent(cameraID);
-
 
 	//// update the space partitioning trees:
 	//wiProfiler::GetInstance().BeginRange("SPTree Update", wiProfiler::DOMAIN_CPU);
@@ -3229,6 +3227,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	//	x->Update(dt*GetGameSpeed());
 	//}
 
+
 	if (GetTemporalAAEnabled())
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 256);
@@ -3238,7 +3237,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetInternalResolution().y;
 		getCamera()->Projection.m[2][0] = temporalAAJitter.x;
 		getCamera()->Projection.m[2][1] = temporalAAJitter.y;
-		getCamera()->UpdateProjection();
+		getCamera()->UpdateCamera();
 	}
 	else
 	{
@@ -3246,7 +3245,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = XMFLOAT2(0, 0);
 	}
 
-	getCamera()->UpdateCamera();
 	*getRefCamera() = *getCamera();
 	getRefCamera()->Reflect(waterPlane);
 
