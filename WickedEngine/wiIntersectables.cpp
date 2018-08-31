@@ -23,7 +23,7 @@ void AABB::create(const XMFLOAT3& min, const XMFLOAT3& max) {
 	corners[6] = max;
 	corners[7] = XMFLOAT3(max.x, min.y, max.z);
 }
-AABB AABB::get(const XMMATRIX& mat) {
+AABB AABB::get(const XMMATRIX& mat) const {
 	AABB ret;
 	XMFLOAT3 min, max;
 	for (int i = 0; i<8; ++i) {
@@ -48,7 +48,7 @@ AABB AABB::get(const XMMATRIX& mat) {
 
 	return ret;
 }
-AABB AABB::get(const XMFLOAT4X4& mat) {
+AABB AABB::get(const XMFLOAT4X4& mat) const {
 	return get(XMLoadFloat4x4(&mat));
 }
 XMFLOAT3 AABB::getMin()const { return corners[0]; }

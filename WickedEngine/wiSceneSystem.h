@@ -86,7 +86,11 @@ namespace wiSceneSystem
 
 		bool cast_shadow = true;
 		bool planar_reflections = false;
-		bool water = false;
+		bool water = false; 
+		
+		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
+		float texAnimFrameRate = 0.0f;
+		float texAnimSleep = 0.0f;
 
 		std::string baseColorMapName;
 		wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
@@ -309,6 +313,7 @@ namespace wiSceneSystem
 
 	struct ObjectComponent
 	{
+		wiECS::Entity mesh = wiECS::INVALID_ENTITY;
 		bool renderable = true;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
@@ -393,6 +398,7 @@ namespace wiSceneSystem
 		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 		float energy = 1.0f;
 		float range = 10.0f;
+		float fov = XM_PIDIV4;
 		bool volumetrics = false;
 		bool visualizer = false;
 		bool shadow = false;
@@ -402,14 +408,104 @@ namespace wiSceneSystem
 		int shadowMap_index = -1;
 		int entityArray_index = -1;
 
-		std::vector<XMFLOAT4X4> shadowMatrices;
-
 		float shadowBias = 0.0001f;
 
 		// area light props:
 		float radius = 1.0f;
 		float width = 1.0f;
 		float height = 1.0f;
+
+
+		struct SHCAM 
+		{
+			XMFLOAT4X4 View, Projection;
+			XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
+			XMFLOAT3 Eye, At, Up;
+			float nearplane, farplane, size;
+
+			SHCAM() {
+				nearplane = 0.1f; farplane = 200, size = 0;
+				Init(XMQuaternionIdentity());
+				Create_Perspective(XM_PI / 2.0f);
+			}
+			//orthographic
+			SHCAM(float size, const XMVECTOR& dir, float nearP, float farP) {
+				nearplane = nearP;
+				farplane = farP;
+				Init(dir);
+				Create_Ortho(size);
+			};
+			//perspective
+			SHCAM(const XMFLOAT4& dir, float newNear, float newFar, float newFov) {
+				size = 0;
+				nearplane = newNear;
+				farplane = newFar;
+				Init(XMLoadFloat4(&dir));
+				Create_Perspective(newFov);
+			};
+			void Init(const XMVECTOR& dir) {
+				XMMATRIX rot = XMMatrixRotationQuaternion(dir);
+				XMVECTOR rEye = XMVectorSet(0, 0, 0, 0);
+				XMVECTOR rAt = XMVector3Transform(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), rot);
+				XMVECTOR rUp = XMVector3Transform(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
+				XMMATRIX rView = XMMatrixLookAtLH(rEye, rAt, rUp);
+
+				XMStoreFloat3(&Eye, rEye);
+				XMStoreFloat3(&At, rAt);
+				XMStoreFloat3(&Up, rUp);
+				XMStoreFloat4x4(&View, rView);
+			}
+			void Create_Ortho(float size) {
+				XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size * 0.5f, size*0.5f, -size * 0.5f, size*0.5f, farplane, nearplane);
+				XMStoreFloat4x4(&Projection, rProjection);
+				rProjection = XMMatrixOrthographicOffCenterLH(-size * 0.5f, size*0.5f, -size * 0.5f, size*0.5f, nearplane, farplane);
+				XMStoreFloat4x4(&realProjection, rProjection);
+				this->size = size;
+			}
+			void Create_Perspective(float fov) {
+				XMMATRIX rProjection = XMMatrixPerspectiveFovLH(fov, 1, farplane, nearplane);
+				XMStoreFloat4x4(&Projection, rProjection);
+				rProjection = XMMatrixPerspectiveFovLH(fov, 1, nearplane, farplane);
+				XMStoreFloat4x4(&realProjection, rProjection);
+			}
+			void Update(const XMVECTOR& pos) {
+				XMStoreFloat4x4(&View, XMMatrixTranslationFromVector(-pos)
+					* XMMatrixLookAtLH(XMLoadFloat3(&Eye), XMLoadFloat3(&At), XMLoadFloat3(&Up))
+				);
+			}
+			void Update(const XMMATRIX& mat) {
+				XMVECTOR sca, rot, tra;
+				XMMatrixDecompose(&sca, &rot, &tra, mat);
+
+				XMMATRIX mRot = XMMatrixRotationQuaternion(rot);
+
+				XMVECTOR rEye = XMVectorAdd(XMLoadFloat3(&Eye), tra);
+				XMVECTOR rAt = XMVectorAdd(XMVector3Transform(XMLoadFloat3(&At), mRot), tra);
+				XMVECTOR rUp = XMVector3Transform(XMLoadFloat3(&Up), mRot);
+
+				XMStoreFloat4x4(&View,
+					XMMatrixLookAtLH(rEye, rAt, rUp)
+				);
+			}
+			void Update(const XMMATRIX& rot, const XMVECTOR& tra)
+			{
+				XMVECTOR rEye = XMVectorAdd(XMLoadFloat3(&Eye), tra);
+				XMVECTOR rAt = XMVectorAdd(XMVector3Transform(XMLoadFloat3(&At), rot), tra);
+				XMVECTOR rUp = XMVector3Transform(XMLoadFloat3(&Up), rot);
+
+				XMStoreFloat4x4(&View,
+					XMMatrixLookAtLH(rEye, rAt, rUp)
+				);
+			}
+			XMMATRIX getVP() {
+				return XMMatrixTranspose(XMLoadFloat4x4(&View)*XMLoadFloat4x4(&Projection));
+			}
+		};
+
+		std::vector<SHCAM> shadowCam_pointLight;
+		std::vector<SHCAM> shadowCam_dirLight;
+		std::vector<SHCAM> shadowCam_spotLight;
+
 	};
 
 	struct CameraComponent

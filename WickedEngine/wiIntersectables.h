@@ -21,8 +21,8 @@ struct AABB {
 	AABB(const XMFLOAT3& min, const XMFLOAT3& max);
 	void create(const XMFLOAT3& min, const XMFLOAT3& max);
 	void createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth);
-	AABB get(const XMMATRIX& mat);
-	AABB get(const XMFLOAT4X4& mat);
+	AABB get(const XMMATRIX& mat) const;
+	AABB get(const XMFLOAT4X4& mat) const;
 	XMFLOAT3 getMin() const;
 	XMFLOAT3 getMax() const;
 	XMFLOAT3 getCenter() const;

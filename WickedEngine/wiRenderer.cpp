@@ -3029,7 +3029,7 @@ void wiRenderer::FixedUpdate()
 }
 void wiRenderer::UpdatePerFrameData(float dt)
 {
-	GetScene().Update(dt);
+	GetScene().Update(dt * GetGameSpeed());
 
 	*getCamera() = *scene->cameras.GetComponent(cameraID);
 
