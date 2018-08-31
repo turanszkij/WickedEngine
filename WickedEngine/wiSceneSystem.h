@@ -395,6 +395,9 @@ namespace wiSceneSystem
 			LIGHTTYPE_COUNT,
 		} type = POINT;
 
+		inline void SetType(LightType val) { type = val; }
+		inline LightType GetType() const { return type; }
+
 		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 		float energy = 1.0f;
 		float range = 10.0f;

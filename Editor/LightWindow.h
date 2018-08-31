@@ -24,7 +24,7 @@ public:
 
 	wiWindow*	lightWindow;
 	wiSlider*	energySlider;
-	wiSlider*	distanceSlider;
+	wiSlider*	rangeSlider;
 	wiSlider*	radiusSlider;
 	wiSlider*	widthSlider;
 	wiSlider*	heightSlider;

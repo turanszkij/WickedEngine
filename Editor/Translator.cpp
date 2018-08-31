@@ -3,8 +3,10 @@
 #include "wiRenderer.h"
 #include "wiInputManager.h"
 #include "wiMath.h"
+#include "wiSceneComponents_BindLua.h"
 
 using namespace wiGraphicsTypes;
+using namespace wiECS;
 using namespace wiSceneSystem;
 
 GraphicsPSO* pso_solidpart = nullptr;
@@ -17,8 +19,13 @@ int vertexCount_Plane = 0;
 int vertexCount_Origin = 0;
 
 
-Translator::Translator() :TransformComponent()
+Translator::Translator()
 {
+	Scene& scene = wiRenderer::GetScene();
+
+	entityID = CreateEntity();
+	scene.transforms.Create(entityID);
+
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
 	XMStoreFloat4x4(&dragStart, XMMatrixIdentity());
@@ -34,7 +41,9 @@ Translator::Translator() :TransformComponent()
 
 	dist = 1;
 
-	isTranslator = true; isScalator = false; isRotator = false;
+	isTranslator = true; 
+	isScalator = false; 
+	isRotator = false;
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -187,12 +196,15 @@ Translator::~Translator()
 
 void Translator::Update()
 {
+	Scene& scene = wiRenderer::GetScene();
+	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
+
 	dragStarted = false;
 	dragEnded = false;
 
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
 	CameraComponent* cam = wiRenderer::getCamera();
-	XMVECTOR pos = XMLoadFloat3(&translation);
+	XMVECTOR pos = XMLoadFloat3(&transform.translation);
 
 	if (enabled)
 	{
@@ -203,7 +215,7 @@ void Translator::Update()
 			XMMATRIX V = cam->GetView();
 			XMMATRIX W = XMMatrixIdentity();
 
-			dist = wiMath::Distance(translation, cam->Eye) * 0.05f;
+			dist = wiMath::Distance(transform.translation, cam->Eye) * 0.05f;
 
 			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
@@ -375,17 +387,15 @@ void Translator::Update()
 			}
 			if (isScalator)
 			{
-				transf *= XMMatrixScaling((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
+				transf *= XMMatrixScaling((1.0f / transform.scale.x) * (transform.scale.x + delta.x), (1.0f / transform.scale.y) * (transform.scale.y + delta.y), (1.0f / transform.scale.z) * (transform.scale.z + delta.z));
 			}
 
-			TransformComponent::MatrixTransform(transf);
-
-			//TransformComponent::ApplyTransform();
+			transform.MatrixTransform(transf);
 
 			if (!dragging)
 			{
 				dragStarted = true;
-				dragStart = world;
+				dragStart = transform.world;
 			}
 
 			dragging = true;
@@ -396,10 +406,9 @@ void Translator::Update()
 			if (dragging)
 			{
 				dragEnded = true;
-				dragEnd = world;
+				dragEnd = transform.world;
 			}
 			dragging = false;
-			TransformComponent::UpdateTransform();
 		}
 
 	}
@@ -408,10 +417,9 @@ void Translator::Update()
 		if (dragging)
 		{
 			dragEnded = true;
-			dragEnd = world;
+			dragEnd = transform.world;
 		}
 		dragging = false;
-		TransformComponent::UpdateTransform();
 	}
 
 	prevPointer = pointer;
@@ -422,11 +430,14 @@ void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
 
 	device->EventBegin("Editor - Translator", threadID);
 
+	Scene& scene = wiRenderer::GetScene();
+	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
+
 	XMMATRIX VP = camera->GetViewProjection();
 
 	wiRenderer::MiscCB sb;
 
-	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslation(translation.x, translation.y, translation.z) * VP;
+	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z) * VP;
 	XMMATRIX matX = XMMatrixTranspose(mat);
 	XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
 	XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
@@ -502,7 +513,7 @@ void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		sb.mTransform = XMMatrixTranspose(mat);
-		sb.mColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
+		sb.mColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
 		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
 		device->Draw(vertexCount_Origin, 0, threadID);
 	}

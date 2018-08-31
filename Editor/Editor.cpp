@@ -171,7 +171,8 @@ Picked hovered;
 void BeginTranslate()
 {
 	translator_active = true;
-	translator->ClearTransform();
+
+	wiRenderer::GetScene().transforms.GetComponent(translator->entityID)->ClearTransform();
 
 	set<Entity> uniqueTransforms;
 	for (auto& x : selected)
@@ -195,7 +196,7 @@ void BeginTranslate()
 		centerV /= count;
 		XMFLOAT3 center;
 		XMStoreFloat3(&center, centerV);
-		translator->Translate(center);
+		wiRenderer::GetScene().transforms.GetComponent(translator->entityID)->Translate(center);
 		for (auto& x : selected)
 		{
 			wiRenderer::GetScene().Component_Attach(x->entity, translator->entityID);

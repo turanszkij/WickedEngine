@@ -306,7 +306,7 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(customsamplers[i]);
 	}
 
-	cameraID = (Entity)wiHashString("__mainCamera").GetHash();
+	cameraID = CreateEntity();
 
 	wireRender=false;
 	debugSpheres=false;
@@ -4454,116 +4454,118 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 }
 void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
-	//const FrameCulling& culling = frameCullings[camera];
-	//const CulledList& culledLights = culling.culledLights;
+	Scene& scene = GetScene();
 
-	//if(!culledLights.empty())
-	//{
-	//	GetDevice()->EventBegin("Light Visualizer Render", threadID);
+	GetDevice()->EventBegin("Light Visualizer Render", threadID);
 
-	//	GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-	//	GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+	GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+	GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+
+	XMMATRIX camrot = XMMatrixRotationQuaternion(XMLoadFloat4(&scene.transforms.GetComponent(getCameraID())->rotation));
 
 
-	//	for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
-	//	{
-	//		GetDevice()->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
+	for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+	{
+		GetDevice()->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
 
-	//		for (Cullable* c : culledLights) 
-	//		{
-	//			Light* l = (Light*)c;
-	//			if (l->GetType() == type && l->noHalo == false) {
+		for (size_t i = 0; i < scene.lights.GetCount(); ++i) 
+		{
+			LightComponent& light = scene.lights[i];
+			Entity entity = scene.lights.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//				VolumeLightCB lcb;
-	//				lcb.col = l->color;
-	//				lcb.enerdis = l->enerDis;
+			if (light.GetType() == type && light.visualizer) 
+			{
 
-	//				if (type == LightComponent::POINT) 
-	//				{
-	//					lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.01f; // scale
-	//					lcb.world = XMMatrixTranspose(
-	//						XMMatrixScaling(lcb.enerdis.w, lcb.enerdis.w, lcb.enerdis.w)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&camera->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
-	//					);
+				VolumeLightCB lcb;
+				lcb.col = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
+				lcb.enerdis = XMFLOAT4(light.energy, light.range, light.fov, light.energy);
 
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+				if (type == LightComponent::POINT) 
+				{
+					lcb.enerdis.w = light.range*light.energy*0.01f; // scale
+					lcb.world = XMMatrixTranspose(
+						XMMatrixScaling(lcb.enerdis.w, lcb.enerdis.w, lcb.enerdis.w)*
+						camrot*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))
+					);
 
-	//					GetDevice()->Draw(108, 0, threadID); // circle
-	//				}
-	//				else if(type == LightComponent::SPOT)
-	//				{
-	//					float coneS = (float)(l->enerDis.z / 0.7853981852531433);
-	//					lcb.enerdis.w = l->enerDis.y*l->enerDis.x*0.03f; // scale
-	//					lcb.world = XMMatrixTranspose(
-	//						XMMatrixScaling(coneS*lcb.enerdis.w, lcb.enerdis.w, coneS*lcb.enerdis.w)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))
-	//					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+					GetDevice()->Draw(108, 0, threadID); // circle
+				}
+				else if(type == LightComponent::SPOT)
+				{
+					float coneS = (float)(light.fov / 0.7853981852531433);
+					lcb.enerdis.w = light.range*light.energy*0.03f; // scale
+					lcb.world = XMMatrixTranspose(
+						XMMatrixScaling(coneS*lcb.enerdis.w, lcb.enerdis.w, coneS*lcb.enerdis.w)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))
+					);
 
-	//					GetDevice()->Draw(192, 0, threadID); // cone
-	//				}
-	//				else if (type == LightComponent::SPHERE)
-	//				{
-	//					lcb.world = XMMatrixTranspose(
-	//						XMMatrixScaling(l->radius, l->radius, l->radius)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-	//						camera->GetViewProjection()
-	//					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+					GetDevice()->Draw(192, 0, threadID); // cone
+				}
+				else if (type == LightComponent::SPHERE)
+				{
+					lcb.world = XMMatrixTranspose(
+						XMMatrixScaling(light.radius, light.radius, light.radius)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						camera->GetViewProjection()
+					);
 
-	//					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-	//				}
-	//				else if (type == LightComponent::DISC)
-	//				{
-	//					lcb.world = XMMatrixTranspose(
-	//						XMMatrixScaling(l->radius, l->radius, l->radius)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-	//						camera->GetViewProjection()
-	//					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+				}
+				else if (type == LightComponent::DISC)
+				{
+					lcb.world = XMMatrixTranspose(
+						XMMatrixScaling(light.radius, light.radius, light.radius)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						camera->GetViewProjection()
+					);
 
-	//					GetDevice()->Draw(108, 0, threadID); // circle
-	//				}
-	//				else if (type == LightComponent::RECTANGLE)
-	//				{
-	//					lcb.world = XMMatrixTranspose(
-	//						XMMatrixScaling(l->width * 0.5f, l->height * 0.5f, 0.5f)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-	//						camera->GetViewProjection()
-	//					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+					GetDevice()->Draw(108, 0, threadID); // circle
+				}
+				else if (type == LightComponent::RECTANGLE)
+				{
+					lcb.world = XMMatrixTranspose(
+						XMMatrixScaling(light.width * 0.5f, light.height * 0.5f, 0.5f)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						camera->GetViewProjection()
+					);
 
-	//					GetDevice()->Draw(6, 0, threadID); // quad
-	//				}
-	//				else if (type == LightComponent::TUBE)
-	//				{
-	//					lcb.world = XMMatrixTranspose(
-	//						XMMatrixScaling(max(l->width * 0.5f, l->radius), l->radius, l->radius)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation))*
-	//						camera->GetViewProjection()
-	//					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+					GetDevice()->Draw(6, 0, threadID); // quad
+				}
+				else if (type == LightComponent::TUBE)
+				{
+					lcb.world = XMMatrixTranspose(
+						XMMatrixScaling(max(light.width * 0.5f, light.radius), light.radius, light.radius)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						camera->GetViewProjection()
+					);
 
-	//					GetDevice()->Draw(384, 0, threadID); // cylinder
-	//				}
-	//			}
-	//		}
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-	//	}
+					GetDevice()->Draw(384, 0, threadID); // cylinder
+				}
+			}
+		}
 
-	//	GetDevice()->EventEnd(threadID);
-	//}
+	}
+
+	GetDevice()->EventEnd(threadID);
 
 
 }

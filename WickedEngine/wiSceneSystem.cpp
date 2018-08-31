@@ -244,6 +244,7 @@ namespace wiSceneSystem
 
 		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
 		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
+		XMStoreFloat4x4(&View, _V);
 		XMStoreFloat4x4(&VP, _VP);
 		XMStoreFloat4x4(&InvView, XMMatrixInverse(nullptr, _V));
 		XMStoreFloat4x4(&InvVP, XMMatrixInverse(nullptr, _VP));
@@ -391,7 +392,7 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < lights.GetCount(); ++i)
 		{
 			LightComponent& light = lights[i];
-			Entity entity = bones.GetEntity(i);
+			Entity entity = lights.GetEntity(i);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			CullableComponent& cullable = *cullables.GetComponent(entity);
 
