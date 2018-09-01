@@ -357,7 +357,7 @@ namespace wiSceneSystem
 
 	struct ArmatureComponent
 	{
-		std::vector<wiECS::ComponentManager<BoneComponent>::ref> boneCollection;
+		std::vector<wiECS::Entity> boneCollection;
 
 		GFX_STRUCT ShaderBoneType
 		{
@@ -563,19 +563,7 @@ namespace wiSceneSystem
 
 	struct ModelComponent
 	{
-
-		std::vector<wiECS::ComponentManager<MaterialComponent>::ref> material_refs;
-		std::vector<wiECS::ComponentManager<MeshComponent>::ref> mesh_refs;
-		std::vector<wiECS::ComponentManager<ObjectComponent>::ref> object_refs;
-		std::vector<wiECS::ComponentManager<PhysicsComponent>::ref> physicscomponent_refs;
-		std::vector<wiECS::ComponentManager<CullableComponent>::ref> cullable_refs;
-		std::vector<wiECS::ComponentManager<BoneComponent>::ref> bone_refs;
-		std::vector<wiECS::ComponentManager<ArmatureComponent>::ref> armature_refs;
-		std::vector<wiECS::ComponentManager<LightComponent>::ref> light_refs;
-		std::vector<wiECS::ComponentManager<EnvironmentProbeComponent>::ref> probe_refs;
-		std::vector<wiECS::ComponentManager<ForceFieldComponent>::ref> force_refs;
-		std::vector<wiECS::ComponentManager<DecalComponent>::ref> decal_refs;
-		std::vector<wiECS::ComponentManager<CameraComponent>::ref> camera_refs;
+		std::unordered_set<wiECS::Entity> entities;
 	};
 
 	struct Scene

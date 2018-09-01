@@ -1082,11 +1082,10 @@ void EditorComponent::Update(float dt)
 		else
 		{
 			// Orbital Camera
-			auto parented = scene.parents.Find(wiRenderer::getCameraID());
-
+			ParentComponent* parented = scene.parents.GetComponent(wiRenderer::getCameraID());
 			TransformComponent* target_transform = scene.transforms.GetComponent(cameraWnd->target);
 
-			if (!parented)
+			if (parented == nullptr)
 			{
 				//cam->attachTo(cameraWnd->orbitalCamTarget);
 				scene.Component_Attach(wiRenderer::getCameraID(), cameraWnd->target);

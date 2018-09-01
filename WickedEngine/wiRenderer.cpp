@@ -7969,7 +7969,7 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 	return result;
 }
 
-ComponentManager<ModelComponent>::ref wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
+Entity wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
 {
 	//Model* model = nullptr;
 
@@ -7991,7 +7991,7 @@ ComponentManager<ModelComponent>::ref wiRenderer::LoadModel(const std::string& f
 
 	//return model;
 
-	return ComponentManager<ModelComponent>::ref();
+	return INVALID_ENTITY;
 }
 void wiRenderer::LoadWorldInfo(const std::string& fileName)
 {
@@ -8072,9 +8072,8 @@ Scene& wiRenderer::GetScene()
 	{
 		scene = new Scene;
 
-		auto transform_ref = scene->transforms.Create(cameraID);
-		auto camera_ref = scene->cameras.Create(cameraID);
-		scene->cameras.GetComponent(camera_ref).CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+		scene->transforms.Create(cameraID);
+		scene->cameras.Create(cameraID).CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 	}
 	return *scene;
 }
@@ -8165,7 +8164,7 @@ void wiRenderer::PutEnvProbe(const XMFLOAT3& position)
 	//GetScene().GetWorldNode()->environmentProbes.push_back(probe);
 }
 
-void wiRenderer::CreateImpostor(ComponentManager<MeshComponent>::ref mesh_ref, GRAPHICSTHREAD threadID)
+void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 {
 	//MeshComponent& mesh = GetScene().meshes.GetComponent(mesh_ref);
 

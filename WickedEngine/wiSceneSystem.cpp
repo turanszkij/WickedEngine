@@ -591,19 +591,18 @@ namespace wiSceneSystem
 	{
 		assert(entity != parent);
 
-		auto it = parents.Find(entity);
+		ParentComponent* parentcomponent = parents.GetComponent(entity);
 
-		if (!it)
+		if (parentcomponent == nullptr)
 		{
-			it = parents.Create(entity);
+			parentcomponent = &parents.Create(entity);
 		}
 
-		ParentComponent& parentcomponent = parents.GetComponent(it);
 		TransformComponent* transformcomponent = transforms.GetComponent(parent);
 		assert(transformcomponent != nullptr);
 
-		parentcomponent.parentID = parent;
-		XMStoreFloat4x4(&parentcomponent.world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transformcomponent->world)));
+		parentcomponent->parentID = parent;
+		XMStoreFloat4x4(&parentcomponent->world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transformcomponent->world)));
 	}
 	void Scene::Component_Detach(wiECS::Entity entity)
 	{

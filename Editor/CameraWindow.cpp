@@ -106,13 +106,9 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 		Entity proxy = CreateEntity();
 
-		auto name_ref = scene.names.Create(proxy);
-		auto transform_ref = scene.transforms.Create(proxy);
-		auto camera_ref = scene.cameras.Create(proxy);
-
-		auto& name = scene.names.GetComponent(name_ref);
-		auto& transform = scene.transforms.GetComponent(transform_ref);
-		auto& camera = scene.cameras.GetComponent(camera_ref);
+		auto& name = scene.names.Create(proxy);
+		auto& transform = scene.transforms.Create(proxy);
+		auto& camera = scene.cameras.Create(proxy);
 
 		name = "cam";
 		camera = *wiRenderer::getCamera();
@@ -166,7 +162,7 @@ void CameraWindow::SetEntity(Entity entity)
 
 	Scene& scene = wiRenderer::GetScene();
 
-	if (scene.cameras.Find(entity))
+	if (scene.cameras.GetComponent(entity) != nullptr)
 	{
 		followCheckBox->SetEnabled(true);
 		followSlider->SetEnabled(true);

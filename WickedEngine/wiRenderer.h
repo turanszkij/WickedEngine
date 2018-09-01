@@ -500,12 +500,12 @@ public:
 	static void SetOceanEnabled(bool enabled, const wiOceanParameter& params);
 	static wiOcean* GetOcean() { return ocean; }
 
-	static wiECS::ComponentManager<wiSceneSystem::ModelComponent>::ref LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
+	static wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
 	static void LoadWorldInfo(const std::string& fileName);
 
 	static void PutEnvProbe(const XMFLOAT3& position);
 
-	static void CreateImpostor(wiECS::ComponentManager<wiSceneSystem::MeshComponent>::ref mesh_ref, GRAPHICSTHREAD threadID);
+	static void CreateImpostor(wiECS::Entity, GRAPHICSTHREAD threadID);
 
 	static std::vector<std::pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;
 	// Add box to render in next frame

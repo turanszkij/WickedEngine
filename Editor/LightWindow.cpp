@@ -168,16 +168,14 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 
 		scene.owned_entities.insert(newEntity);
 
-		auto ref_light = scene.lights.Create(newEntity);
-		LightComponent& light = scene.lights.GetComponent(ref_light);
+		LightComponent& light = scene.lights.Create(newEntity);
 		light.energy = 2;
 		light.range = 60;
 		light.fov = XM_PIDIV4;
 		light.color = XMFLOAT3(1, 1, 1);
 		light.SetType(LightComponent::POINT);
 
-		auto ref_transform = scene.transforms.Create(newEntity);
-		TransformComponent& transform = scene.transforms.GetComponent(ref_transform);
+		TransformComponent& transform = scene.transforms.Create(newEntity);
 		transform.Translate(XMFLOAT3(0, 3, 0));
 
 		scene.cullables.Create(newEntity);
