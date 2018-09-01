@@ -71,7 +71,6 @@ namespace wiECS
 
 				// Remove the corresponding entry from the lookup table:
 				const Entity entity = entities[index];
-				lookup.erase(entity);
 
 				if (components.size() > 1)
 				{
@@ -86,6 +85,7 @@ namespace wiECS
 				// Shrink the container:
 				components.pop_back();
 				entities.pop_back();
+				lookup.erase(entity);
 			}
 		}
 

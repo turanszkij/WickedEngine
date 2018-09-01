@@ -20,27 +20,29 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 	float x = 200;
 	float y = 0;
 
-	//opacitySlider = new wiSlider(0, 1, 1, 100000, "Opacity: ");
-	//opacitySlider->SetSize(XMFLOAT2(100, 30));
-	//opacitySlider->SetPos(XMFLOAT2(x, y += 30));
-	//opacitySlider->OnSlide([&](wiEventArgs args) {
-	//	if (decal != nullptr)
-	//	{
-	//		decal->color.w = args.fValue;
-	//	}
-	//});
-	//decalWindow->AddWidget(opacitySlider);
+	opacitySlider = new wiSlider(0, 1, 1, 100000, "Opacity: ");
+	opacitySlider->SetSize(XMFLOAT2(100, 30));
+	opacitySlider->SetPos(XMFLOAT2(x, y += 30));
+	opacitySlider->OnSlide([&](wiEventArgs args) {
+		DecalComponent* decal = wiRenderer::GetScene().decals.GetComponent(entity);
+		if (decal != nullptr)
+		{
+			decal->color.w = args.fValue;
+		}
+	});
+	decalWindow->AddWidget(opacitySlider);
 
-	//emissiveSlider = new wiSlider(0, 100, 0, 100000, "Emissive: ");
-	//emissiveSlider->SetSize(XMFLOAT2(100, 30));
-	//emissiveSlider->SetPos(XMFLOAT2(x, y += 30));
-	//emissiveSlider->OnSlide([&](wiEventArgs args) {
-	//	if (decal != nullptr)
-	//	{
-	//		decal->emissive = args.fValue;
-	//	}
-	//});
-	//decalWindow->AddWidget(emissiveSlider);
+	emissiveSlider = new wiSlider(0, 100, 0, 100000, "Emissive: ");
+	emissiveSlider->SetSize(XMFLOAT2(100, 30));
+	emissiveSlider->SetPos(XMFLOAT2(x, y += 30));
+	emissiveSlider->OnSlide([&](wiEventArgs args) {
+		DecalComponent* decal = wiRenderer::GetScene().decals.GetComponent(entity);
+		if (decal != nullptr)
+		{
+			decal->emissive = args.fValue;
+		}
+	});
+	decalWindow->AddWidget(emissiveSlider);
 
 
 	decalWindow->Translate(XMFLOAT3(30, 30, 0));
@@ -59,20 +61,21 @@ DecalWindow::~DecalWindow()
 
 void DecalWindow::SetEntity(Entity entity)
 {
+	if (this->entity == entity)
+		return;
+
 	this->entity = entity;
 
-	//if (this->decal == decal)
-	//	return;
+	const DecalComponent* decal = wiRenderer::GetScene().decals.GetComponent(entity);
 
-	//this->decal = decal;
-	//if (decal != nullptr)
-	//{
-	//	opacitySlider->SetValue(decal->color.w);
-	//	emissiveSlider->SetValue(decal->emissive);
-	//	decalWindow->SetEnabled(true);
-	//}
-	//else
-	//{
-	//	decalWindow->SetEnabled(false);
-	//}
+	if (decal != nullptr)
+	{
+		opacitySlider->SetValue(decal->color.w);
+		emissiveSlider->SetValue(decal->emissive);
+		decalWindow->SetEnabled(true);
+	}
+	else
+	{
+		decalWindow->SetEnabled(false);
+	}
 }

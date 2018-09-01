@@ -1,6 +1,7 @@
 #include "wiSceneSystem.h"
 #include "wiMath.h"
 #include "wiTextureHelper.h"
+#include "wiResourceManager.h"
 
 using namespace wiECS;
 using namespace wiGraphicsTypes;
@@ -396,6 +397,9 @@ namespace wiSceneSystem
 			Entity entity = decals.GetEntity(i);
 			const TransformComponent* transform = transforms.GetComponent(entity);
 			decal.world = transform->world;
+			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
+			front = XMVector3TransformNormal(front, XMLoadFloat4x4(&decal.world));
+			XMStoreFloat3(&decal.front, front);
 		}
 
 		// Update Light components:
@@ -545,8 +549,43 @@ namespace wiSceneSystem
 
 		}
 
+		// Iterate all cullables and recompute scene bounds:
+		bounds.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+		for (size_t i = 0; i < cullables.GetCount(); ++i)
+		{
+			const CullableComponent& cullable = cullables[i];
+
+			bounds = AABB::Merge(bounds, cullable.aabb);
+		}
+
 	}
-	void Scene::Remove(Entity entity)
+	void Scene::Clear()
+	{
+		for (Entity entity : owned_entities)
+		{
+			names.Remove(entity);
+			layers.Remove(entity);
+			transforms.Remove(entity);
+			parents.Remove(entity);
+			materials.Remove(entity);
+			meshes.Remove(entity);
+			objects.Remove(entity);
+			physicscomponents.Remove(entity);
+			cullables.Remove(entity);
+			bones.Remove(entity);
+			armatures.Remove(entity);
+			lights.Remove(entity);
+			cameras.Remove(entity);
+			probes.Remove(entity);
+			forces.Remove(entity);
+			decals.Remove(entity);
+			models.Remove(entity);
+		}
+
+		owned_entities.clear();
+	}
+
+	void Scene::Entity_Remove(Entity entity)
 	{
 		owned_entities.erase(entity);
 
@@ -568,15 +607,7 @@ namespace wiSceneSystem
 		decals.Remove(entity);
 		models.Remove(entity);
 	}
-	void Scene::Clear()
-	{
-		for (auto& x : owned_entities)
-		{
-			Remove(x);
-		}
-	}
-
-	Entity Scene::Component_FindName(const std::string& name)
+	Entity Scene::Entity_FindByName(const std::string& name)
 	{
 		for (size_t i = 0; i < names.GetCount(); ++i)
 		{
@@ -587,6 +618,97 @@ namespace wiSceneSystem
 		}
 		return INVALID_ENTITY;
 	}
+	Entity Scene::Entity_CreateLight(
+		const std::string& name,
+		const XMFLOAT3& position,
+		const XMFLOAT3& color,
+		float energy,
+		float range)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		transforms.Create(entity).Translate(position);
+
+		cullables.Create(entity).aabb.createFromHalfWidth(position, XMFLOAT3(range, range, range));
+
+		LightComponent& light = lights.Create(entity);
+		light.energy = energy;
+		light.range = range;
+		light.fov = XM_PIDIV4;
+		light.color = color;
+		light.SetType(LightComponent::POINT);
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateForce(
+		const std::string& name,
+		const XMFLOAT3& position
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		transforms.Create(entity).Translate(position);
+
+		ForceFieldComponent& force = forces.Create(entity);
+		force.gravity = 0;
+		force.range = 0;
+		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateEnvironmentProbe(
+		const std::string& name,
+		const XMFLOAT3& position
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		transforms.Create(entity).Translate(position);
+
+		EnvironmentProbeComponent& probe = probes.Create(entity);
+		probe.isUpToDate = false;
+		probe.realTime = false;
+		probe.textureIndex = -1;
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateDecal(
+		const std::string& name,
+		const std::string& textureName,
+		const std::string& normalMapName
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		transforms.Create(entity);
+
+		cullables.Create(entity);
+
+		DecalComponent& decal = decals.Create(entity);
+		decal.textureName = textureName;
+		decal.texture = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.textureName);
+		decal.normalMapName = normalMapName;
+		decal.normal = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.normalMapName);
+
+		return entity;
+	}
+
 	void Scene::Component_Attach(Entity entity, Entity parent)
 	{
 		assert(entity != parent);

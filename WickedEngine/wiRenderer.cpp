@@ -4020,18 +4020,20 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		{
 			EnvironmentProbeComponent& probe = scene.probes[i];
 
-			if (probe.textureIndex < 0)
-			{
-				continue;
-			}
-
 			Entity entity = scene.probes.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 			sb.mTransform = XMMatrixTranspose(XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z));
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-			device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + probe.textureIndex);
+			if (probe.textureIndex < 0)
+			{
+				device->BindResource(PS, wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ONDEMAND0, threadID);
+			}
+			else
+			{
+				device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + probe.textureIndex);
+			}
 
 			device->Draw(2880, 0, threadID); // uv-sphere
 		}
@@ -5563,60 +5565,62 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 
 void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
-	//GraphicsDevice* device = GetDevice();
+	GraphicsDevice* device = GetDevice();
+	Scene& scene = GetScene();
 
-	//bool boundCB = false;
-	//for (Model* model : GetScene().models)
-	//{
-	//	if (model->decals.empty())
-	//		continue;
+	bool boundCB = false;
+	if(scene.decals.GetCount() > 0)
+	{
+		device->EventBegin("Decals", threadID);
 
-	//	device->EventBegin("Decals", threadID);
+		if (!boundCB)
+		{
+			boundCB = true;
+			device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+		}
 
-	//	if (!boundCB)
-	//	{
-	//		boundCB = true;
-	//		device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
-	//	}
+		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
 
-	//	device->BindStencilRef(STENCILREF_DEFAULT, threadID);
+		device->BindGraphicsPSO(PSO_decal, threadID);
 
-	//	device->BindGraphicsPSO(PSO_decal, threadID);
+		for (size_t i = 0; i < scene.decals.GetCount(); ++i) 
+		{
+			DecalComponent& decal = scene.decals[i];
+			Entity entity = scene.decals.GetEntity(i);
+			const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
 
-	//	for (Decal* decal : model->decals) 
-	//	{
+			if ((decal.texture != nullptr || decal.normal != nullptr) && camera->frustum.CheckBox(cullable.aabb)) 
+			{
 
-	//		if ((decal->texture || decal->normal) && camera->frustum.CheckBox(decal->bounds)) {
+				device->BindResource(PS, decal.texture, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(PS, decal.normal, TEXSLOT_ONDEMAND1, threadID);
 
-	//			device->BindResource(PS, decal->texture, TEXSLOT_ONDEMAND0, threadID);
-	//			device->BindResource(PS, decal->normal, TEXSLOT_ONDEMAND1, threadID);
+				XMMATRIX decalWorld = XMLoadFloat4x4(&decal.world);
 
-	//			XMMATRIX decalWorld = XMLoadFloat4x4(&decal->world);
+				MiscCB dcbvs;
+				dcbvs.mTransform = XMMatrixTranspose(decalWorld*camera->GetViewProjection());
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
-	//			MiscCB dcbvs;
-	//			dcbvs.mTransform =XMMatrixTranspose(decalWorld*camera->GetViewProjection());
-	//			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
+				DecalCB dcbps;
+				dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld)); // todo: cache the inverse!
+				dcbps.hasTexNor = 0;
+				if (decal.texture != nullptr)
+					dcbps.hasTexNor |= 0x0000001;
+				if (decal.normal != nullptr)
+					dcbps.hasTexNor |= 0x0000010;
+				XMStoreFloat3(&dcbps.eye, camera->GetEye());
+				dcbps.opacity = decal.GetOpacity();
+				dcbps.front = decal.front;
+				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
-	//			DecalCB dcbps;
-	//			dcbps.mDecalVP = XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld));
-	//			dcbps.hasTexNor = 0;
-	//			if (decal->texture != nullptr)
-	//				dcbps.hasTexNor |= 0x0000001;
-	//			if (decal->normal != nullptr)
-	//				dcbps.hasTexNor |= 0x0000010;
-	//			XMStoreFloat3(&dcbps.eye, camera->GetEye());
-	//			dcbps.opacity = decal->GetOpacity();
-	//			dcbps.front = decal->front;
-	//			device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
+				device->Draw(14, 0, threadID);
 
-	//			device->Draw(14, 0, threadID);
+			}
 
-	//		}
+		}
 
-	//	}
-
-	//	device->EventEnd(threadID);
-	//}
+		device->EventEnd(threadID);
+	}
 }
 
 void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
@@ -7451,16 +7455,14 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 	{
 		const DecalComponent& decal = scene.decals[i];
-		Entity entity = scene.decals.GetEntity(i);
-		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-		if (material.baseColorMap != nullptr)
+		if (decal.texture != nullptr)
 		{
-			if (storedTextures.find(material.baseColorMap) == storedTextures.end())
+			if (storedTextures.find(decal.texture) == storedTextures.end())
 			{
 				// we need to pack this decal texture into the atlas
-				rect_xywhf newRect = rect_xywhf(0, 0, material.baseColorMap->GetDesc().Width + atlasClampBorder * 2, material.baseColorMap->GetDesc().Height + atlasClampBorder * 2);
-				storedTextures[material.baseColorMap] = newRect;
+				rect_xywhf newRect = rect_xywhf(0, 0, decal.texture->GetDesc().Width + atlasClampBorder * 2, decal.texture->GetDesc().Height + atlasClampBorder * 2);
+				storedTextures[decal.texture] = newRect;
 
 				repackAtlas = true;
 			}
@@ -7531,14 +7533,12 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
 	{
 		DecalComponent& decal = scene.decals[i];
-		Entity entity = scene.decals.GetEntity(i);
-		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-		if (material.baseColorMap != nullptr)
+		if (decal.texture != nullptr)
 		{
 			const TextureDesc& desc = atlasTexture->GetDesc();
 
-			rect_xywhf rect = storedTextures[material.baseColorMap];
+			rect_xywhf rect = storedTextures[decal.texture];
 
 			// eliminate border expansion:
 			rect.x += atlasClampBorder;
@@ -7578,7 +7578,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 	value.mAmbient = scene.ambient;
 	value.mCloudiness = scene.cloudiness;
 	value.mCloudScale = scene.cloudScale;
-	value.mFog = scene.fogSEH;
+	value.mFog = XMFLOAT3(scene.fogStart, scene.fogEnd, scene.fogHeight);
 	value.mHorizon = scene.horizon;
 	value.mZenith = scene.zenith;
 	value.mSpecularAA = SPECULARAA;
@@ -8055,9 +8055,7 @@ void wiRenderer::LoadWorldInfo(const std::string& fileName)
 			break;
 			case 'm':
 			{
-				float s, e, h;
-				file >> s >> e >> h;
-				scene.fogSEH = XMFLOAT3(s, e, h);
+				file >> scene.fogStart >> scene.fogEnd >> scene.fogHeight;
 			}
 			break;
 			default:break;
@@ -8154,14 +8152,6 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 
 	//	physicsEngine->NextRunWorld();
 	//}
-}
-
-void wiRenderer::PutEnvProbe(const XMFLOAT3& position)
-{
-	//EnvironmentProbe* probe = new EnvironmentProbe;
-	//probe->transform(position);
-
-	//GetScene().GetWorldNode()->environmentProbes.push_back(probe);
 }
 
 void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)

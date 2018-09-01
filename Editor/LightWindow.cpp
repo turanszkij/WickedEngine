@@ -162,25 +162,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(150, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
-		Scene& scene = wiRenderer::GetScene();
-
-		Entity newEntity = CreateEntity();
-
-		scene.owned_entities.insert(newEntity);
-
-		LightComponent& light = scene.lights.Create(newEntity);
-		light.energy = 2;
-		light.range = 60;
-		light.fov = XM_PIDIV4;
-		light.color = XMFLOAT3(1, 1, 1);
-		light.SetType(LightComponent::POINT);
-
-		TransformComponent& transform = scene.transforms.Create(newEntity);
-		transform.Translate(XMFLOAT3(0, 3, 0));
-
-		scene.cullables.Create(newEntity);
-
-		SetEntity(newEntity);
+		wiRenderer::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 	});
 	addLightButton->SetTooltip("Add a light to the scene.");
 	lightWindow->AddWidget(addLightButton);
@@ -244,7 +226,7 @@ void LightWindow::SetEntity(Entity entity)
 
 	this->entity = entity;
 
-	LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
+	const LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 
 	if (light != nullptr)
 	{

@@ -503,8 +503,6 @@ public:
 	static wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transform = XMMatrixIdentity());
 	static void LoadWorldInfo(const std::string& fileName);
 
-	static void PutEnvProbe(const XMFLOAT3& position);
-
 	static void CreateImpostor(wiECS::Entity, GRAPHICSTHREAD threadID);
 
 	static std::vector<std::pair<XMFLOAT4X4,XMFLOAT4>> renderableBoxes;

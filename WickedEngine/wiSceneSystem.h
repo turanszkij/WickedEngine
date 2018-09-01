@@ -557,8 +557,20 @@ namespace wiSceneSystem
 
 	struct DecalComponent
 	{
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT4X4 world;
+		XMFLOAT3 front;
+
+		float emissive = 0;
+
+		std::string textureName;
+		wiGraphicsTypes::Texture2D* texture = nullptr;
+
+		std::string normalMapName;
+		wiGraphicsTypes::Texture2D* normal = nullptr;
+
+		inline float GetOpacity() const { return color.w; }
 	};
 
 	struct ModelComponent
@@ -594,8 +606,10 @@ namespace wiSceneSystem
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.00f, 0.00f, 0.0f);
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
-		XMFLOAT3 fogSEH = XMFLOAT3(100, 1000, 0);
-		XMFLOAT4 water = XMFLOAT4(0, 0, 0, 0);
+		float fogStart = 100;
+		float fogEnd = 1000;
+		float fogHeight = 0;
+		XMFLOAT4 waterPlane = XMFLOAT4(0, 0, 0, 0);
 		float cloudiness = 0.0f;
 		float cloudScale = 0.0003f;
 		float cloudSpeed = 0.1f;
@@ -603,13 +617,45 @@ namespace wiSceneSystem
 		float windRandomness = 5;
 		float windWaveSize = 1;
 
+		// Update all components by a given timestep (in milliseconds):
 		void Update(float dt);
-		void Remove(wiECS::Entity entity);
+		// Remove everything from the scene that it owns:
 		void Clear();
 
-		wiECS::Entity Component_FindName(const std::string& name);
+		// Removes a specific entity from the scene (if it exists):
+		void Entity_Remove(wiECS::Entity entity);
+		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
+		wiECS::Entity Entity_FindByName(const std::string& name);
+		// Helper function to create a light entity:
+		wiECS::Entity Entity_CreateLight(
+			const std::string& name, 
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
+			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
+			float energy = 1, 
+			float range = 10
+		);
+		// Helper function to create a force entity:
+		wiECS::Entity Entity_CreateForce(
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
+		);
+		// Helper function to create an environment capture probe entity:
+		wiECS::Entity Entity_CreateEnvironmentProbe(
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
+		);
+		// Helper function to create a decal entity:
+		wiECS::Entity Entity_CreateDecal(
+			const std::string& name,
+			const std::string& textureName,
+			const std::string& normalMapName = ""
+		);
+
+		// Attaches an entity to a parent:
 		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent);
+		// Detaches the entity from its parent (if it is attached):
 		void Component_Detach(wiECS::Entity entity);
+		// Detaches all children from an entity (if there are any):
 		void Component_DetachChildren(wiECS::Entity parent);
 	};
 

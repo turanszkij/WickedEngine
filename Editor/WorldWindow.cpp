@@ -29,7 +29,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
 	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().fogSEH.x = args.fValue;
+		wiRenderer::GetScene().fogStart = args.fValue;
 	});
 	worldWindow->AddWidget(fogStartSlider);
 
@@ -37,7 +37,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogEndSlider->SetSize(XMFLOAT2(100, 30));
 	fogEndSlider->SetPos(XMFLOAT2(x, y += step));
 	fogEndSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().fogSEH.y = args.fValue;
+		wiRenderer::GetScene().fogEnd = args.fValue;
 	});
 	worldWindow->AddWidget(fogEndSlider);
 
@@ -45,7 +45,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogHeightSlider->SetSize(XMFLOAT2(100, 30));
 	fogHeightSlider->SetPos(XMFLOAT2(x, y += step));
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().fogSEH.z = args.fValue;
+		wiRenderer::GetScene().fogHeight = args.fValue;
 	});
 	worldWindow->AddWidget(fogHeightSlider);
 
@@ -133,14 +133,17 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	preset1Button->SetPos(XMFLOAT2(x - 100, y += step * 2));
 	preset1Button->OnClick([=](wiEventArgs args) {
 
-		wiRenderer::GetScene().ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		wiRenderer::GetScene().horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
-		wiRenderer::GetScene().zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
-		wiRenderer::GetScene().cloudiness = 0.4f;
-		wiRenderer::GetScene().fogSEH = XMFLOAT3(100, 1000, 0);
+		Scene& scene = wiRenderer::GetScene();
+
+		scene.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		scene.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
+		scene.zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
+		scene.cloudiness = 0.4f;
+		scene.fogStart = 100;
+		scene.fogEnd = 1000;
+		scene.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
-		Scene& scene = wiRenderer::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			scene.probes[i].isUpToDate = false;
@@ -155,14 +158,17 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	preset2Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset2Button->OnClick([=](wiEventArgs args) {
 
-		wiRenderer::GetScene().ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
-		wiRenderer::GetScene().horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
-		wiRenderer::GetScene().zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
-		wiRenderer::GetScene().cloudiness = 0.36f;
-		wiRenderer::GetScene().fogSEH = XMFLOAT3(50, 600, 0);
+		Scene& scene = wiRenderer::GetScene();
+
+		scene.ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
+		scene.horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
+		scene.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
+		scene.cloudiness = 0.36f;
+		scene.fogStart = 50;
+		scene.fogEnd = 600;
+		scene.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
-		Scene& scene = wiRenderer::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			scene.probes[i].isUpToDate = false;
@@ -177,14 +183,17 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	preset3Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset3Button->OnClick([=](wiEventArgs args) {
 
-		wiRenderer::GetScene().ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		wiRenderer::GetScene().horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
-		wiRenderer::GetScene().zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
-		wiRenderer::GetScene().cloudiness = 0.75f;
-		wiRenderer::GetScene().fogSEH = XMFLOAT3(0, 500, 0);
+		Scene& scene = wiRenderer::GetScene();
+
+		scene.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		scene.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
+		scene.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
+		scene.cloudiness = 0.75f;
+		scene.fogStart = 0;
+		scene.fogEnd = 500;
+		scene.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
-		Scene& scene = wiRenderer::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			scene.probes[i].isUpToDate = false;
@@ -199,14 +208,17 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	preset4Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset4Button->OnClick([=](wiEventArgs args) {
 
-		wiRenderer::GetScene().ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
-		wiRenderer::GetScene().horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
-		wiRenderer::GetScene().zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
-		wiRenderer::GetScene().cloudiness = 0.28f;
-		wiRenderer::GetScene().fogSEH = XMFLOAT3(10, 400, 0);
+		Scene& scene = wiRenderer::GetScene();
+
+		scene.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
+		scene.horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
+		scene.zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
+		scene.cloudiness = 0.28f;
+		scene.fogStart = 10;
+		scene.fogEnd = 400;
+		scene.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
-		Scene& scene = wiRenderer::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			scene.probes[i].isUpToDate = false;
@@ -337,7 +349,7 @@ void WorldWindow::UpdateFromRenderer()
 {
 	auto& w = wiRenderer::GetScene();
 
-	fogStartSlider->SetValue(w.fogSEH.x);
-	fogEndSlider->SetValue(w.fogSEH.y);
-	fogHeightSlider->SetValue(w.fogSEH.z);
+	fogStartSlider->SetValue(w.fogStart);
+	fogEndSlider->SetValue(w.fogEnd);
+	fogHeightSlider->SetValue(w.fogHeight);
 }
