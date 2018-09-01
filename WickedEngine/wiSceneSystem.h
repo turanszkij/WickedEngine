@@ -264,7 +264,7 @@ namespace wiSceneSystem
 
 		struct MeshSubset
 		{
-			wiECS::ComponentManager<MaterialComponent>::ref material_ref;
+			wiECS::Entity materialID;
 			UINT indexBufferOffset = 0;
 
 			std::vector<uint32_t> subsetIndices;
@@ -313,7 +313,7 @@ namespace wiSceneSystem
 
 	struct ObjectComponent
 	{
-		wiECS::Entity mesh = wiECS::INVALID_ENTITY;
+		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 		bool renderable = true;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
@@ -516,8 +516,9 @@ namespace wiSceneSystem
 		float width = 0.0f, height = 0.0f;
 		float zNearP = 0.001f, zFarP = 800.0f;
 		float fov = XM_PI / 3.0f;
-		XMFLOAT4X4 View, Projection, VP;
 		XMFLOAT3 Eye, At, Up;
+		XMFLOAT3X3 rotationMatrix;
+		XMFLOAT4X4 View, Projection, VP;
 		Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
@@ -557,6 +558,7 @@ namespace wiSceneSystem
 	struct DecalComponent
 	{
 		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+		XMFLOAT4X4 world;
 	};
 
 	struct ModelComponent
@@ -620,6 +622,7 @@ namespace wiSceneSystem
 		wiECS::Entity Component_FindName(const std::string& name);
 		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent);
 		void Component_Detach(wiECS::Entity entity);
+		void Component_DetachChildren(wiECS::Entity parent);
 	};
 
 }

@@ -18,7 +18,7 @@ public:
 	wiECS::Entity target = wiECS::INVALID_ENTITY;
 
 	wiECS::Entity proxy = wiECS::INVALID_ENTITY;
-	void SetProxy(wiECS::Entity entity);
+	void SetEntity(wiECS::Entity entity);
 
 
 	wiGUI* GUI;

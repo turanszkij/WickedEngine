@@ -116,7 +116,7 @@ namespace wiECS
 		inline void Remove(Entity entity)
 		{
 			ref it = Find(entity);
-			if (IsValid(it))
+			if (IsValid(it, entity))
 			{
 				Remove(it);
 			}
@@ -184,7 +184,7 @@ namespace wiECS
 		inline T* GetComponent(Entity entity)
 		{
 			ref it = Find(entity);
-			if (it)
+			if (IsValid(it, entity))
 			{
 				return &components[indices[it.value]];
 			}

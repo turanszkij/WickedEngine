@@ -230,6 +230,7 @@ namespace wiSceneSystem
 			XMMATRIX _Rot = XMMatrixRotationQuaternion(XMLoadFloat4(&transform->rotation));
 			_At = XMVector3TransformNormal(_At, _Rot);
 			_Up = XMVector3TransformNormal(_Up, _Rot);
+			XMStoreFloat3x3(&rotationMatrix, _Rot);
 		}
 		else
 		{
@@ -367,10 +368,10 @@ namespace wiSceneSystem
 
 			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
 
-			if (object.mesh != INVALID_ENTITY)
+			if (object.meshID != INVALID_ENTITY)
 			{
 				const TransformComponent* transform = transforms.GetComponent(entity);
-				const MeshComponent* mesh = meshes.GetComponent(object.mesh);
+				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
 				if (mesh != nullptr && transform != nullptr)
 				{
@@ -379,13 +380,22 @@ namespace wiSceneSystem
 			}
 		}
 
-		// Update camera components:
+		// Update Camera components:
 		for (size_t i = 0; i < cameras.GetCount(); ++i)
 		{
 			CameraComponent& camera = cameras[i];
 			Entity entity = cameras.GetEntity(i);
 			const TransformComponent* transform = transforms.GetComponent(entity);
 			camera.UpdateCamera(transform);
+		}
+
+		// Update Decal components:
+		for (size_t i = 0; i < decals.GetCount(); ++i)
+		{
+			DecalComponent& decal = decals[i];
+			Entity entity = decals.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			decal.world = transform->world;
 		}
 
 		// Update Light components:
@@ -597,7 +607,27 @@ namespace wiSceneSystem
 	}
 	void Scene::Component_Detach(wiECS::Entity entity)
 	{
+		TransformComponent* transform = transforms.GetComponent(entity);
+		if (transform != nullptr) 
+		{
+			transform->ApplyTransform();
+		}
 		parents.Remove(entity);
+	}
+	void Scene::Component_DetachChildren(wiECS::Entity parent)
+	{
+		for (size_t i = 0; i < parents.GetCount(); )
+		{
+			if (parents[i].parentID == parent)
+			{
+				Entity entity = parents.GetEntity(i);
+				Component_Detach(entity);
+			}
+			else
+			{
+				++i;
+			}
+		}
 	}
 
 }

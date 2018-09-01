@@ -172,7 +172,8 @@ void BeginTranslate()
 {
 	translator_active = true;
 
-	wiRenderer::GetScene().transforms.GetComponent(translator->entityID)->ClearTransform();
+	TransformComponent* translator_transform = wiRenderer::GetScene().transforms.GetComponent(translator->entityID);
+	translator_transform->ClearTransform();
 
 	set<Entity> uniqueTransforms;
 	for (auto& x : selected)
@@ -196,7 +197,8 @@ void BeginTranslate()
 		centerV /= count;
 		XMFLOAT3 center;
 		XMStoreFloat3(&center, centerV);
-		wiRenderer::GetScene().transforms.GetComponent(translator->entityID)->Translate(center);
+		translator_transform->Translate(center);
+		translator_transform->UpdateTransform();
 		for (auto& x : selected)
 		{
 			wiRenderer::GetScene().Component_Attach(x->entity, translator->entityID);
@@ -207,6 +209,7 @@ void EndTranslate()
 {
 	translator_active = false;
 	//translator->detach();
+	wiRenderer::GetScene().Component_DetachChildren(translator->entityID);
 
 	for (auto& x : selected)
 	{
@@ -253,6 +256,8 @@ void AddSelected(Picked* picked, bool deselectIfAlreadySelected = false)
 	{
 		{
 			//picked->transform->detach();
+			wiRenderer::GetScene().Component_Detach(picked->entity);
+
 			auto it = savedParents.find(picked->entity);
 			if (it != savedParents.end())
 			{
@@ -870,7 +875,7 @@ void EditorComponent::Load()
 		materialWnd->SetEntity(INVALID_ENTITY);
 		emitterWnd->SetEntity(INVALID_ENTITY);
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
-		cameraWnd->SetProxy(INVALID_ENTITY);
+		cameraWnd->SetEntity(INVALID_ENTITY);
 	});
 	GetGUI().AddWidget(clearButton);
 
@@ -969,7 +974,6 @@ void EditorComponent::Update(float dt)
 	assert(camera_transform != nullptr);
 
 	// Follow camera proxy:
-	//	Outside of the next if, because we want to animate while hovering on GUI... (just better user experience)
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
 	{
 		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->proxy);
@@ -1123,121 +1127,138 @@ void EditorComponent::Update(float dt)
 			}
 
 			//for (auto& model : wiRenderer::GetScene().models)
-			//{
-			//	if (pickMask & PICK_LIGHT)
-			//	{
-			//		for (auto& light : model->lights)
-			//		{
-			//			XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&light->translation));
-			//			float dis = XMVectorGetX(disV);
-			//			if (dis < wiMath::Distance(light->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//			{
-			//				hovered.Clear();
-			//				hovered.transform = light;
-			//				hovered.light = light;
-			//				hovered.distance = dis;
-			//			}
-			//		}
-			//	}
-			//	if (pickMask & PICK_DECAL)
-			//	{
-			//		for (auto& decal : model->decals)
-			//		{
-			//			XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&decal->translation));
-			//			float dis = XMVectorGetX(disV);
-			//			if (dis < wiMath::Distance(decal->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//			{
-			//				hovered.Clear();
-			//				hovered.transform = decal;
-			//				hovered.decal = decal;
-			//				hovered.distance = dis;
-			//			}
-			//		}
-			//	}
-			//	if (pickMask & PICK_FORCEFIELD)
-			//	{
-			//		for (auto& force : model->forces)
-			//		{
-			//			XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&force->translation));
-			//			float dis = XMVectorGetX(disV);
-			//			if (dis < wiMath::Distance(force->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//			{
-			//				hovered.Clear();
-			//				hovered.transform = force;
-			//				hovered.forceField = force;
-			//				hovered.distance = dis;
-			//			}
-			//		}
-			//	}
-			//	if (pickMask & PICK_EMITTER)
-			//	{
-			//		for (auto& object : model->objects)
-			//		{
-			//			if (object->eParticleSystems.empty())
-			//			{
-			//				continue;
-			//			}
+			{
+				if (pickMask & PICK_LIGHT)
+				{
+					for (size_t i = 0; i < scene.lights.GetCount(); ++i)
+					{
+						Entity entity = scene.lights.GetEntity(i);
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			//			XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&object->translation));
-			//			float dis = XMVectorGetX(disV);
-			//			if (dis < wiMath::Distance(object->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//			{
-			//				hovered.Clear();
-			//				hovered.transform = object;
-			//				hovered.object = object;
-			//				hovered.distance = dis;
-			//			}
-			//		}
-			//	}
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_DECAL)
+				{
+					for (size_t i = 0; i < scene.decals.GetCount(); ++i)
+					{
+						Entity entity = scene.decals.GetEntity(i);
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			//	if (pickMask & PICK_ENVPROBE)
-			//	{
-			//		for (auto& x : model->environmentProbes)
-			//		{
-			//			if (SPHERE(x->translation, 1).intersects(pickRay))
-			//			{
-			//				float dis = wiMath::Distance(x->translation, pickRay.origin);
-			//				if (dis < hovered.distance)
-			//				{
-			//					hovered.Clear();
-			//					hovered.transform = x;
-			//					hovered.envProbe = x;
-			//					hovered.distance = dis;
-			//				}
-			//			}
-			//		}
-			//	}
-			//	if (pickMask & PICK_CAMERA)
-			//	{
-			//		for (auto& camera : model->cameras)
-			//		{
-			//			XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&camera->translation));
-			//			float dis = XMVectorGetX(disV);
-			//			if (dis < wiMath::Distance(camera->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//			{
-			//				hovered.Clear();
-			//				hovered.transform = camera;
-			//				hovered.camera = camera;
-			//				hovered.distance = dis;
-			//			}
-			//		}
-			//	}
-			//	if (pickMask & PICK_ARMATURE)
-			//	{
-			//		for (auto& armature : model->armatures)
-			//		{
-			//			XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&armature->translation));
-			//			float dis = XMVectorGetX(disV);
-			//			if (dis < wiMath::Distance(armature->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//			{
-			//				hovered.Clear();
-			//				hovered.transform = armature;
-			//				hovered.armature = armature;
-			//				hovered.distance = dis;
-			//			}
-			//		}
-			//	}
-			//}
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_FORCEFIELD)
+				{
+					for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+					{
+						Entity entity = scene.forces.GetEntity(i);
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
+					}
+				}
+				//if (pickMask & PICK_EMITTER)
+				//{
+				//	for (auto& object : model->objects)
+				//	{
+				//		if (object->eParticleSystems.empty())
+				//		{
+				//			continue;
+				//		}
+
+				//		XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&object->translation));
+				//		float dis = XMVectorGetX(disV);
+				//		if (dis < wiMath::Distance(object->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+				//		{
+				//			hovered.Clear();
+				//			hovered.transform = object;
+				//			hovered.object = object;
+				//			hovered.distance = dis;
+				//		}
+				//	}
+				//}
+
+				if (pickMask & PICK_ENVPROBE)
+				{
+					for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+					{
+						Entity entity = scene.probes.GetEntity(i);
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+						if (SPHERE(transform.translation, 1).intersects(pickRay))
+						{
+							float dis = wiMath::Distance(transform.translation, pickRay.origin);
+							if (dis < hovered.distance)
+							{
+								hovered.Clear();
+								hovered.entity = entity;
+								hovered.distance = dis;
+							}
+						}
+					}
+				}
+				if (pickMask & PICK_CAMERA)
+				{
+					for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+					{
+						Entity entity = scene.cameras.GetEntity(i);
+						if (entity == wiRenderer::getCameraID())
+						{
+							continue;
+						}
+
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
+					}
+				}
+				if (pickMask & PICK_ARMATURE)
+				{
+					for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+					{
+						Entity entity = scene.armatures.GetEntity(i);
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+						float dis = XMVectorGetX(disV);
+						if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+						{
+							hovered.Clear();
+							hovered.entity = entity;
+							hovered.distance = dis;
+						}
+					}
+				}
+			}
 
 		}
 
@@ -1269,231 +1290,188 @@ void EditorComponent::Update(float dt)
 		//	}
 		//}
 
-		//// Select...
-		//static bool selectAll = false;
-		//if (wiInputManager::GetInstance()->press(VK_RBUTTON) || selectAll)
-		//{
+		// Select...
+		static bool selectAll = false;
+		if (wiInputManager::GetInstance()->press(VK_RBUTTON) || selectAll)
+		{
 
-		//	wiArchive* archive = AdvanceHistory();
-		//	*archive << HISTORYOP_SELECTION;
-		//	// record PREVIOUS selection state...
-		//	*archive << selected.size();
-		//	for (auto& x : selected)
-		//	{
-		//		*archive << x->transform->GetID();
-		//		*archive << x->position;
-		//		*archive << x->normal;
-		//		*archive << x->subsetIndex;
-		//		*archive << x->distance;
-		//	}
-		//	*archive << savedParents.size();
-		//	for (auto& x : savedParents)
-		//	{
-		//		*archive << x.first->GetID();
-		//		if (x.second == nullptr)
-		//		{
-		//			*archive << Transform::INVALID_ID;
-		//		}
-		//		else
-		//		{
-		//			*archive << x.second->GetID();
-		//		}
-		//	}
+			wiArchive* archive = AdvanceHistory();
+			*archive << HISTORYOP_SELECTION;
+			// record PREVIOUS selection state...
+			*archive << selected.size();
+			for (auto& x : selected)
+			{
+				*archive << x->entity;
+				*archive << x->position;
+				*archive << x->normal;
+				*archive << x->subsetIndex;
+				*archive << x->distance;
+			}
+			*archive << savedParents.size();
+			for (auto& x : savedParents)
+			{
+				*archive << x.first;
+				*archive << x.second;
+			}
 
-		//	if (selectAll)
-		//	{
-		//		// Add everything to selection:
-		//		selectAll = false;
+			if (selectAll)
+			{
+				// Add everything to selection:
+				selectAll = false;
 
-		//		EndTranslate();
-		//		ClearSelected();
+				EndTranslate();
+				ClearSelected();
 
-		//		for (Model* model : wiRenderer::GetScene().models)
-		//		{
-		//			for (auto& x : model->objects)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->object = x;
-		//				picked->transform = x;
+				for (Entity entity : scene.owned_entities)
+				{
+					Picked* picked = new Picked;
+					picked->entity = entity;
+					AddSelected(picked);
+				}
 
-		//				AddSelected(picked);
-		//			}
-		//			for (auto& x : model->lights)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->light = x;
-		//				picked->transform = x;
+				BeginTranslate();
+			}
+			else if (hovered.entity != INVALID_ENTITY)
+			{
+				// Add the hovered item to the selection:
+				Picked* picked = new Picked(hovered);
+				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
+				{
+					AddSelected(picked, true);
+				}
+				else
+				{
+					EndTranslate();
+					ClearSelected();
+					selected.push_back(picked);
 
-		//				AddSelected(picked);
-		//			}
-		//			for (auto& x : model->forces)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->forceField = x;
-		//				picked->transform = x;
+					ParentComponent* parent = scene.parents.GetComponent(picked->entity);
+					if (parent != nullptr)
+					{
+						savedParents.insert(make_pair(picked->entity, parent->parentID));
+					}
+				}
 
-		//				AddSelected(picked);
-		//			}
-		//			for (auto& x : model->armatures)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->armature = x;
-		//				picked->transform = x;
+				EndTranslate();
+				BeginTranslate();
+			}
+			else
+			{
+				// Clear selection:
+				EndTranslate();
+				ClearSelected();
+			}
 
-		//				AddSelected(picked);
-		//			}
-		//			for (auto& x : model->cameras)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->camera = x;
-		//				picked->transform = x;
+			// record NEW selection state...
+			*archive << selected.size();
+			for (auto& x : selected)
+			{
+				*archive << x->entity;
+				*archive << x->position;
+				*archive << x->normal;
+				*archive << x->subsetIndex;
+				*archive << x->distance;
+			}
+			*archive << savedParents.size();
+			for (auto& x : savedParents)
+			{
+				*archive << x.first;
+				*archive << x.second;
+			}
+		}
 
-		//				AddSelected(picked);
-		//			}
-		//			for (auto& x : model->environmentProbes)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->envProbe = x;
-		//				picked->transform = x;
+		// Update window data bindings...
+		if (selected.empty())
+		{
+			objectWnd->SetEntity(INVALID_ENTITY);
+			emitterWnd->SetEntity(INVALID_ENTITY);
+			meshWnd->SetEntity(INVALID_ENTITY);
+			materialWnd->SetEntity(INVALID_ENTITY);
+			lightWnd->SetEntity(INVALID_ENTITY);
+			decalWnd->SetEntity(INVALID_ENTITY);
+			envProbeWnd->SetEntity(INVALID_ENTITY);
+			animWnd->SetEntity(INVALID_ENTITY);
+			forceFieldWnd->SetEntity(INVALID_ENTITY);
+			cameraWnd->SetEntity(INVALID_ENTITY);
+		}
+		else
+		{
+			Picked* picked = selected.back();
 
-		//				AddSelected(picked);
-		//			}
-		//			for (auto& x : model->decals)
-		//			{
-		//				Picked* picked = new Picked;
-		//				picked->decal = x;
-		//				picked->transform = x;
+			assert(picked->entity != INVALID_ENTITY);
 
-		//				AddSelected(picked);
-		//			}
-		//		}
 
-		//		BeginTranslate();
-		//	}
-		//	else if (hovered.transform != nullptr)
-		//	{
-		//		// Add the hovered item to the selection:
-		//		Picked* picked = new Picked(hovered);
-		//		if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
-		//		{
-		//			AddSelected(picked, true);
-		//		}
-		//		else
-		//		{
-		//			EndTranslate();
-		//			ClearSelected();
-		//			selected.push_back(picked);
-		//			savedParents.insert(pair<Transform*, Transform*>(picked->transform, picked->transform->parent));
-		//		}
+			if (picked->subsetIndex >= 0)
+			{
+				const ObjectComponent* object = scene.objects.GetComponent(picked->entity);
+				meshWnd->SetEntity(object->meshID);
 
-		//		EndTranslate();
-		//		BeginTranslate();
-		//	}
-		//	else
-		//	{
-		//		// Clear selection:
-		//		EndTranslate();
-		//		ClearSelected();
-		//	}
+				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+				materialWnd->SetEntity(mesh->subsets[picked->subsetIndex].materialID);
+			}
 
-		//	// record NEW selection state...
-		//	*archive << selected.size();
-		//	for (auto& x : selected)
-		//	{
-		//		*archive << x->transform->GetID();
-		//		*archive << x->position;
-		//		*archive << x->normal;
-		//		*archive << x->subsetIndex;
-		//		*archive << x->distance;
-		//	}
-		//	*archive << savedParents.size();
-		//	for (auto& x : savedParents)
-		//	{
-		//		*archive << x.first->GetID();
-		//		if (x.second == nullptr)
-		//		{
-		//			*archive << Transform::INVALID_ID;
-		//		}
-		//		else
-		//		{
-		//			*archive << x.second->GetID();
-		//		}
-		//	}
-		//}
+			objectWnd->SetEntity(picked->entity);
+			emitterWnd->SetEntity(picked->entity);
+			lightWnd->SetEntity(picked->entity);
+			decalWnd->SetEntity(picked->entity);
+			envProbeWnd->SetEntity(picked->entity);
+			animWnd->SetEntity(picked->entity);
+			forceFieldWnd->SetEntity(picked->entity);
+			cameraWnd->SetEntity(picked->entity);
 
-		//// Update window data bindings...
-		//if (selected.empty())
-		//{
-		//	objectWnd->SetObject(nullptr);
-		//	emitterWnd->SetObject(nullptr);
-		//	meshWnd->SetMesh(nullptr);
-		//	materialWnd->SetMaterial(nullptr);
-		//	lightWnd->SetLight(nullptr);
-		//	decalWnd->SetDecal(nullptr);
-		//	envProbeWnd->SetProbe(nullptr);
-		//	animWnd->SetArmature(nullptr);
-		//	forceFieldWnd->SetForceField(nullptr);
-		//	cameraWnd->SetProxy(nullptr);
-		//}
-		//else
-		//{
-		//	Picked* picked = selected.back();
+			//if (picked->object != nullptr)
+			//{
+			//	meshWnd->SetMesh(picked->object->mesh);
+			//	if (picked->subsetIndex >= 0 && picked->subsetIndex < (int)picked->object->mesh->subsets.size())
+			//	{
+			//		Material* material = picked->object->mesh->subsets[picked->subsetIndex].material;
 
-		//	assert(picked->transform != nullptr);
+			//		materialWnd->SetMaterial(material);
 
-		//	if (picked->object != nullptr)
-		//	{
-		//		meshWnd->SetMesh(picked->object->mesh);
-		//		if (picked->subsetIndex >= 0 && picked->subsetIndex < (int)picked->object->mesh->subsets.size())
-		//		{
-		//			Material* material = picked->object->mesh->subsets[picked->subsetIndex].material;
+			//		material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
+			//	}
+			//	//if (picked->object->isArmatureDeformed())
+			//	//{
+			//	//	animWnd->SetArmature(picked->object->mesh->armature);
+			//	//}
+			//}
+			//else
+			//{
+			//	meshWnd->SetMesh(nullptr);
+			//	materialWnd->SetMaterial(nullptr);
+			//	//animWnd->SetArmature(nullptr);
+			//}
 
-		//			materialWnd->SetMaterial(material);
+			//if (picked->light != nullptr)
+			//{
+			//}
+			//lightWnd->SetLight(picked->light);
+			//if (picked->decal != nullptr)
+			//{
+			//}
+			//decalWnd->SetDecal(picked->decal);
+			//if (picked->envProbe != nullptr)
+			//{
+			//}
+			//envProbeWnd->SetProbe(picked->envProbe);
+			//forceFieldWnd->SetForceField(picked->forceField);
+			//if (picked->camera != nullptr)
+			//{
+			//	cameraWnd->SetProxy(picked->camera);
+			//}
 
-		//			material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
-		//		}
-		//		//if (picked->object->isArmatureDeformed())
-		//		//{
-		//		//	animWnd->SetArmature(picked->object->mesh->armature);
-		//		//}
-		//	}
-		//	else
-		//	{
-		//		meshWnd->SetMesh(nullptr);
-		//		materialWnd->SetMaterial(nullptr);
-		//		//animWnd->SetArmature(nullptr);
-		//	}
+			//if (picked->armature != nullptr)
+			//{
+			//	animWnd->SetArmature(picked->armature);
+			//}
+			//else
+			//{
+			//	animWnd->SetArmature(nullptr);
+			//}
 
-		//	if (picked->light != nullptr)
-		//	{
-		//	}
-		//	lightWnd->SetLight(picked->light);
-		//	if (picked->decal != nullptr)
-		//	{
-		//	}
-		//	decalWnd->SetDecal(picked->decal);
-		//	if (picked->envProbe != nullptr)
-		//	{
-		//	}
-		//	envProbeWnd->SetProbe(picked->envProbe);
-		//	forceFieldWnd->SetForceField(picked->forceField);
-		//	if (picked->camera != nullptr)
-		//	{
-		//		cameraWnd->SetProxy(picked->camera);
-		//	}
-
-		//	if (picked->armature != nullptr)
-		//	{
-		//		animWnd->SetArmature(picked->armature);
-		//	}
-		//	else
-		//	{
-		//		animWnd->SetArmature(nullptr);
-		//	}
-
-		//	objectWnd->SetObject(picked->object);
-		//	emitterWnd->SetObject(picked->object);
-		//}
+			//objectWnd->SetObject(picked->object);
+			//emitterWnd->SetObject(picked->object);
+		}
 
 		//// Delete
 		//if (wiInputManager::GetInstance()->press(VK_DELETE))
@@ -1590,113 +1568,114 @@ void EditorComponent::Update(float dt)
 		//	}
 		//	ClearSelected();
 		//}
-		//// Control operations...
-		//if (wiInputManager::GetInstance()->down(VK_CONTROL))
-		//{
-		//	// Select All
-		//	if (wiInputManager::GetInstance()->press('A'))
-		//	{
-		//		selectAll = true;
-		//	}
-		//	// Copy
-		//	if (wiInputManager::GetInstance()->press('C'))
-		//	{
-		//		SAFE_DELETE(clipboard);
-		//		clipboard = new wiArchive();
-		//		*clipboard << CLIPBOARD_MODEL;
-		//		Model* model = new Model;
-		//		for (auto& x : selected)
-		//		{
-		//			model->Add(x->object);
-		//			model->Add(x->light);
-		//			model->Add(x->decal);
-		//			model->Add(x->forceField);
-		//			model->Add(x->camera);
-		//		}
-		//		model->Serialize(*clipboard);
 
-		//		model->objects.clear();
-		//		model->lights.clear();
-		//		model->decals.clear();
-		//		model->meshes.clear();
-		//		model->materials.clear();
-		//		model->forces.clear();
-		//		model->armatures.clear();
-		//		model->cameras.clear();
-		//		SAFE_DELETE(model);
-		//	}
-		//	// Paste
-		//	if (wiInputManager::GetInstance()->press('V'))
-		//	{
-		//		clipboard->SetReadModeAndResetPos(true);
-		//		int tmp;
-		//		*clipboard >> tmp;
-		//		ClipboardItemType type = (ClipboardItemType)tmp;
-		//		switch (type)
-		//		{
-		//		case CLIPBOARD_MODEL:
-		//		{
-		//			Model* model = new Model;
-		//			model->Serialize(*clipboard);
-		//			wiRenderer::AddModel(model);
-		//		}
-		//		break;
-		//		case CLIPBOARD_EMPTY:
-		//			break;
-		//		default:
-		//			break;
-		//		}
-		//	}
-		//	// Duplicate Instances
-		//	if (wiInputManager::GetInstance()->press('D'))
-		//	{
-		//		EndTranslate();
+		// Control operations...
+		if (wiInputManager::GetInstance()->down(VK_CONTROL))
+		{
+			// Select All
+			if (wiInputManager::GetInstance()->press('A'))
+			{
+				selectAll = true;
+			}
+			//// Copy
+			//if (wiInputManager::GetInstance()->press('C'))
+			//{
+			//	SAFE_DELETE(clipboard);
+			//	clipboard = new wiArchive();
+			//	*clipboard << CLIPBOARD_MODEL;
+			//	Model* model = new Model;
+			//	for (auto& x : selected)
+			//	{
+			//		model->Add(x->object);
+			//		model->Add(x->light);
+			//		model->Add(x->decal);
+			//		model->Add(x->forceField);
+			//		model->Add(x->camera);
+			//	}
+			//	model->Serialize(*clipboard);
 
-		//		for (auto& x : selected)
-		//		{
-		//			if (x->object != nullptr)
-		//			{
-		//				Object* o = new Object(*x->object);
-		//				wiRenderer::Add(o);
-		//				x->transform = o;
-		//				x->object = o;
-		//			}
-		//			if (x->light != nullptr)
-		//			{
-		//				Light* l = new Light(*x->light);
-		//				wiRenderer::Add(l);
-		//				x->transform = l;
-		//				x->light = l;
-		//			}
-		//			if (x->forceField != nullptr)
-		//			{
-		//				ForceField* l = new ForceField(*x->forceField);
-		//				wiRenderer::Add(l);
-		//				x->transform = l;
-		//				x->forceField = l;
-		//			}
-		//			if (x->camera != nullptr)
-		//			{
-		//				Camera* l = new Camera(*x->camera);
-		//				wiRenderer::Add(l);
-		//				x->transform = l;
-		//				x->camera = l;
-		//			}
-		//		}
+			//	model->objects.clear();
+			//	model->lights.clear();
+			//	model->decals.clear();
+			//	model->meshes.clear();
+			//	model->materials.clear();
+			//	model->forces.clear();
+			//	model->armatures.clear();
+			//	model->cameras.clear();
+			//	SAFE_DELETE(model);
+			//}
+			//// Paste
+			//if (wiInputManager::GetInstance()->press('V'))
+			//{
+			//	clipboard->SetReadModeAndResetPos(true);
+			//	int tmp;
+			//	*clipboard >> tmp;
+			//	ClipboardItemType type = (ClipboardItemType)tmp;
+			//	switch (type)
+			//	{
+			//	case CLIPBOARD_MODEL:
+			//	{
+			//		Model* model = new Model;
+			//		model->Serialize(*clipboard);
+			//		wiRenderer::AddModel(model);
+			//	}
+			//	break;
+			//	case CLIPBOARD_EMPTY:
+			//		break;
+			//	default:
+			//		break;
+			//	}
+			//}
+			//// Duplicate Instances
+			//if (wiInputManager::GetInstance()->press('D'))
+			//{
+			//	EndTranslate();
 
-		//		BeginTranslate();
-		//	}
-		//	// Undo
-		//	if (wiInputManager::GetInstance()->press('Z'))
-		//	{
-		//		ConsumeHistoryOperation(true);
-		//	}
-		//	// Redo
-		//	if (wiInputManager::GetInstance()->press('Y'))
-		//	{
-		//		ConsumeHistoryOperation(false);
-		//	}
-		//}
+			//	for (auto& x : selected)
+			//	{
+			//		if (x->object != nullptr)
+			//		{
+			//			Object* o = new Object(*x->object);
+			//			wiRenderer::Add(o);
+			//			x->transform = o;
+			//			x->object = o;
+			//		}
+			//		if (x->light != nullptr)
+			//		{
+			//			Light* l = new Light(*x->light);
+			//			wiRenderer::Add(l);
+			//			x->transform = l;
+			//			x->light = l;
+			//		}
+			//		if (x->forceField != nullptr)
+			//		{
+			//			ForceField* l = new ForceField(*x->forceField);
+			//			wiRenderer::Add(l);
+			//			x->transform = l;
+			//			x->forceField = l;
+			//		}
+			//		if (x->camera != nullptr)
+			//		{
+			//			Camera* l = new Camera(*x->camera);
+			//			wiRenderer::Add(l);
+			//			x->transform = l;
+			//			x->camera = l;
+			//		}
+			//	}
+
+			//	BeginTranslate();
+			//}
+			// Undo
+			if (wiInputManager::GetInstance()->press('Z'))
+			{
+				ConsumeHistoryOperation(true);
+			}
+			// Redo
+			if (wiInputManager::GetInstance()->press('Y'))
+			{
+				ConsumeHistoryOperation(false);
+			}
+		}
 
 	}
 
@@ -1718,55 +1697,69 @@ void EditorComponent::Update(float dt)
 }
 void EditorComponent::Render()
 {
-	//// hover box
-	//if (!cinemaModeCheckBox->GetCheck())
-	//{
-	//	if (hovered.object != nullptr)
-	//	{
-	//		XMFLOAT4X4 hoverBox;
-	//		XMStoreFloat4x4(&hoverBox, hovered.object->bounds.getAsBoxMatrix());
-	//		wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
-	//	}
-	//	if (hovered.light != nullptr)
-	//	{
-	//		XMFLOAT4X4 hoverBox;
-	//		XMStoreFloat4x4(&hoverBox, hovered.light->bounds.getAsBoxMatrix());
-	//		wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
-	//	}
-	//	if (hovered.decal != nullptr)
-	//	{
-	//		wiRenderer::AddRenderableBox(hovered.decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
-	//	}
+	Scene& scene = wiRenderer::GetScene();
 
-	//}
+	// hover box
+	if (!cinemaModeCheckBox->GetCheck())
+	{
+		if (hovered.entity != INVALID_ENTITY)
+		{
+			const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
+			if (object != nullptr)
+			{
+				const CullableComponent* cullable = scene.cullables.GetComponent(hovered.entity);
 
-	//if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
-	//{
-	//	AABB selectedAABB = AABB(XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX),XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
-	//	for (auto& picked : selected)
-	//	{
-	//		if (picked->object != nullptr)
-	//		{
-	//			selectedAABB = AABB::Merge(selectedAABB, picked->object->bounds);
-	//		}
-	//		if (picked->light != nullptr)
-	//		{
-	//			selectedAABB = AABB::Merge(selectedAABB, picked->light->bounds);
-	//		}
-	//		if (picked->decal != nullptr)
-	//		{
-	//			selectedAABB = AABB::Merge(selectedAABB, picked->decal->bounds);
+				XMFLOAT4X4 hoverBox;
+				XMStoreFloat4x4(&hoverBox, cullable->aabb.getAsBoxMatrix());
+				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
+			}
 
-	//			XMFLOAT4X4 selectionBox;
-	//			selectionBox = picked->decal->world;
-	//			wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
-	//		}
-	//	}
+			const LightComponent* light = scene.lights.GetComponent(hovered.entity);
+			if (light != nullptr)
+			{
+				const CullableComponent* cullable = scene.cullables.GetComponent(hovered.entity);
 
-	//	XMFLOAT4X4 selectionBox;
-	//	XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
-	//	wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
-	//}
+				XMFLOAT4X4 hoverBox;
+				XMStoreFloat4x4(&hoverBox, cullable->aabb.getAsBoxMatrix());
+				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
+			}
+
+			const DecalComponent* decal = scene.decals.GetComponent(hovered.entity);
+			if (decal != nullptr)
+			{
+				wiRenderer::AddRenderableBox(decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
+			}
+		}
+
+	}
+
+	if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
+	{
+		AABB selectedAABB = AABB(XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX),XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
+		for (auto& picked : selected)
+		{
+			if (picked->entity != INVALID_ENTITY)
+			{
+				const CullableComponent* cullable = scene.cullables.GetComponent(hovered.entity);
+				if (cullable != nullptr)
+				{
+					selectedAABB = AABB::Merge(selectedAABB, cullable->aabb);
+				}
+
+				const DecalComponent* decal = scene.decals.GetComponent(hovered.entity);
+				if (decal != nullptr)
+				{
+					XMFLOAT4X4 selectionBox;
+					selectionBox = decal->world;
+					wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
+				}
+			}
+		}
+
+		XMFLOAT4X4 selectionBox;
+		XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
+		wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
+	}
 
 	renderPath->Render();
 
@@ -1784,215 +1777,238 @@ void EditorComponent::Compose()
 
 	CameraComponent* camera = wiRenderer::getCamera();
 
+	Scene& scene = wiRenderer::GetScene();
+
 	//for (auto& x : wiRenderer::GetScene().models)
-	//{
-	//	if (rendererWnd->GetPickType() & PICK_LIGHT)
-	//	{
-	//		for (auto& y : x->lights)
-	//		{
-	//			float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
+	{
+		if (rendererWnd->GetPickType() & PICK_LIGHT)
+		{
+			for (size_t i = 0; i < scene.lights.GetCount(); ++i)
+			{
+				const LightComponent& light = scene.lights[i];
+				Entity entity = scene.lights.GetEntity(i);
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//			wiImageEffects fx;
-	//			fx.pos = y->translation;
-	//			fx.siz = XMFLOAT2(dist, dist);
-	//			fx.typeFlag = ImageType::WORLD;
-	//			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+				float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
 
-	//			if (hovered.light == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 1, 1);
-	//			}
-	//			for (auto& picked : selected)
-	//			{
-	//				if (picked->light == y)
-	//				{
-	//					fx.col = XMFLOAT4(1, 1, 0, 1);
-	//					break;
-	//				}
-	//			}
+				wiImageEffects fx;
+				fx.pos = transform.translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
 
-	//			switch (y->GetType())
-	//			{
-	//			case Light::POINT:
-	//				wiImage::Draw(&pointLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//				break;
-	//			case Light::SPOT:
-	//				wiImage::Draw(&spotLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//				break;
-	//			case Light::DIRECTIONAL:
-	//				wiImage::Draw(&dirLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//				break;
-	//			default:
-	//				wiImage::Draw(&areaLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//				break;
-	//			}
-	//		}
-	//	}
+				if (hovered.entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->entity == entity)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
 
-
-	//	if (rendererWnd->GetPickType() & PICK_DECAL)
-	//	{
-	//		for (auto& y : x->decals)
-	//		{
-	//			float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
-
-	//			wiImageEffects fx;
-	//			fx.pos = y->translation;
-	//			fx.siz = XMFLOAT2(dist, dist);
-	//			fx.typeFlag = ImageType::WORLD;
-	//			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
-
-	//			if (hovered.decal == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 1, 1);
-	//			}
-	//			for (auto& picked : selected)
-	//			{
-	//				if (picked->decal == y)
-	//				{
-	//					fx.col = XMFLOAT4(1, 1, 0, 1);
-	//					break;
-	//				}
-	//			}
+				switch (light.GetType())
+				{
+				case LightComponent::POINT:
+					wiImage::Draw(&pointLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+					break;
+				case LightComponent::SPOT:
+					wiImage::Draw(&spotLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+					break;
+				case LightComponent::DIRECTIONAL:
+					wiImage::Draw(&dirLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+					break;
+				default:
+					wiImage::Draw(&areaLightTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+					break;
+				}
+			}
+		}
 
 
-	//			wiImage::Draw(&decalTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+		if (rendererWnd->GetPickType() & PICK_DECAL)
+		{
+			for (size_t i = 0; i < scene.decals.GetCount(); ++i)
+			{
+				Entity entity = scene.decals.GetEntity(i);
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//		}
-	//	}
+				float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
 
-	//	if (rendererWnd->GetPickType() & PICK_FORCEFIELD)
-	//	{
-	//		for (auto& y : x->forces)
-	//		{
-	//			float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
+				wiImageEffects fx;
+				fx.pos = transform.translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
 
-	//			wiImageEffects fx;
-	//			fx.pos = y->translation;
-	//			fx.siz = XMFLOAT2(dist, dist);
-	//			fx.typeFlag = ImageType::WORLD;
-	//			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
-
-	//			if (hovered.forceField == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 1, 1);
-	//			}
-	//			for (auto& picked : selected)
-	//			{
-	//				if (picked->forceField == y)
-	//				{
-	//					fx.col = XMFLOAT4(1, 1, 0, 1);
-	//					break;
-	//				}
-	//			}
+				if (hovered.entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->entity == entity)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
 
 
-	//			wiImage::Draw(&forceFieldTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//		}
-	//	}
+				wiImage::Draw(&decalTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 
-	//	if (rendererWnd->GetPickType() & PICK_CAMERA)
-	//	{
-	//		for (auto& y : x->cameras)
-	//		{
-	//			float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
+			}
+		}
 
-	//			wiImageEffects fx;
-	//			fx.pos = y->translation;
-	//			fx.siz = XMFLOAT2(dist, dist);
-	//			fx.typeFlag = ImageType::WORLD;
-	//			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+		if (rendererWnd->GetPickType() & PICK_FORCEFIELD)
+		{
+			for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+			{
+				Entity entity = scene.forces.GetEntity(i);
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//			if (hovered.camera == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 1, 1);
-	//			}
-	//			for (auto& picked : selected)
-	//			{
-	//				if (picked->camera == y)
-	//				{
-	//					fx.col = XMFLOAT4(1, 1, 0, 1);
-	//					break;
-	//				}
-	//			}
+				float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
 
+				wiImageEffects fx;
+				fx.pos = transform.translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
 
-	//			wiImage::Draw(&cameraTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//		}
-	//	}
-
-	//	if (rendererWnd->GetPickType() & PICK_ARMATURE)
-	//	{
-	//		for (auto& y : x->armatures)
-	//		{
-	//			float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
-
-	//			wiImageEffects fx;
-	//			fx.pos = y->translation;
-	//			fx.siz = XMFLOAT2(dist, dist);
-	//			fx.typeFlag = ImageType::WORLD;
-	//			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
-
-	//			if (hovered.armature == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 1, 1);
-	//			}
-	//			for (auto& picked : selected)
-	//			{
-	//				if (picked->armature == y)
-	//				{
-	//					fx.col = XMFLOAT4(1, 1, 0, 1);
-	//					break;
-	//				}
-	//			}
+				if (hovered.entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->entity == entity)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
 
 
-	//			wiImage::Draw(&armatureTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//		}
-	//	}
+				wiImage::Draw(&forceFieldTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			}
+		}
 
-	//	if (rendererWnd->GetPickType() & PICK_EMITTER)
-	//	{
-	//		for (auto& y : x->objects)
-	//		{
-	//			if (y->eParticleSystems.empty())
-	//			{
-	//				continue;
-	//			}
+		if (rendererWnd->GetPickType() & PICK_CAMERA)
+		{
+			for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+			{
+				Entity entity = scene.cameras.GetEntity(i);
+				if (entity == wiRenderer::getCameraID())
+				{
+					continue;
+				}
 
-	//			float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//			wiImageEffects fx;
-	//			fx.pos = y->translation;
-	//			fx.siz = XMFLOAT2(dist, dist);
-	//			fx.typeFlag = ImageType::WORLD;
-	//			fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+				float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
 
-	//			if (hovered.object == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 1, 1);
-	//			}
-	//			for (auto& picked : selected)
-	//			{
-	//				if (picked->object == y)
-	//				{
-	//					fx.col = XMFLOAT4(1, 1, 0, 1);
-	//					break;
-	//				}
-	//			}
+				wiImageEffects fx;
+				fx.pos = transform.translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->entity == entity)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
 
 
-	//			wiImage::Draw(&emitterTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//		}
-	//	}
+				wiImage::Draw(&cameraTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			}
+		}
 
-	//}
+		if (rendererWnd->GetPickType() & PICK_ARMATURE)
+		{
+			for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+			{
+				Entity entity = scene.armatures.GetEntity(i);
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+				float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+
+				wiImageEffects fx;
+				fx.pos = transform.translation;
+				fx.siz = XMFLOAT2(dist, dist);
+				fx.typeFlag = ImageType::WORLD;
+				fx.pivot = XMFLOAT2(0.5f, 0.5f);
+				fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+				if (hovered.entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 1, 1);
+				}
+				for (auto& picked : selected)
+				{
+					if (picked->entity == entity)
+					{
+						fx.col = XMFLOAT4(1, 1, 0, 1);
+						break;
+					}
+				}
+
+
+				wiImage::Draw(&armatureTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			}
+		}
+
+		//if (rendererWnd->GetPickType() & PICK_EMITTER)
+		//{
+		//	for (auto& y : x->objects)
+		//	{
+		//		if (y->eParticleSystems.empty())
+		//		{
+		//			continue;
+		//		}
+
+		//		float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
+
+		//		wiImageEffects fx;
+		//		fx.pos = y->translation;
+		//		fx.siz = XMFLOAT2(dist, dist);
+		//		fx.typeFlag = ImageType::WORLD;
+		//		fx.pivot = XMFLOAT2(0.5f, 0.5f);
+		//		fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+		//		if (hovered.object == y)
+		//		{
+		//			fx.col = XMFLOAT4(1, 1, 1, 1);
+		//		}
+		//		for (auto& picked : selected)
+		//		{
+		//			if (picked->object == y)
+		//			{
+		//				fx.col = XMFLOAT4(1, 1, 0, 1);
+		//				break;
+		//			}
+		//		}
+
+
+		//		wiImage::Draw(&emitterTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+		//	}
+		//}
+
+	}
 
 
 	if (translator_active && translator->enabled)

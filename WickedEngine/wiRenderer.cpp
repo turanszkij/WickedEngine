@@ -4461,7 +4461,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 	GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 	GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
-	XMMATRIX camrot = XMMatrixRotationQuaternion(XMLoadFloat4(&scene.transforms.GetComponent(getCameraID())->rotation));
+	XMMATRIX camrot = XMLoadFloat3x3(&camera->rotationMatrix);
 
 
 	for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)

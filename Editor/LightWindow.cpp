@@ -166,6 +166,8 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 
 		Entity newEntity = CreateEntity();
 
+		scene.owned_entities.insert(newEntity);
+
 		auto ref_light = scene.lights.Create(newEntity);
 		LightComponent& light = scene.lights.GetComponent(ref_light);
 		light.energy = 2;

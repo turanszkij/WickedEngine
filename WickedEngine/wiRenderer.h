@@ -484,7 +484,7 @@ public:
 
 	struct RayIntersectWorldResult
 	{
-		wiECS::Entity entity;
+		wiECS::Entity entity = wiECS::INVALID_ENTITY;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float distance = FLT_MAX;

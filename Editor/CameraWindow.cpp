@@ -145,7 +145,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	cameraWindow->AddWidget(followSlider);
 
 
-	SetProxy(INVALID_ENTITY);
+	SetEntity(INVALID_ENTITY);
 
 
 	cameraWindow->Translate(XMFLOAT3(800, 500, 0));
@@ -160,7 +160,7 @@ CameraWindow::~CameraWindow()
 	SAFE_DELETE(cameraWindow);
 }
 
-void CameraWindow::SetProxy(Entity entity)
+void CameraWindow::SetEntity(Entity entity)
 {
 	proxy = entity;
 
