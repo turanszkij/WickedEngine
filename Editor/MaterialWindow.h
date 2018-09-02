@@ -35,8 +35,9 @@ public:
 	wiSlider*	emissiveSlider;
 	wiSlider*	sssSlider;
 	wiSlider*	pomSlider;
-	wiSlider*	movingTexSliderU;
-	wiSlider*	movingTexSliderV;
+	wiSlider*	texAnimFrameRateSlider;
+	wiSlider*	texAnimDirectionSliderU;
+	wiSlider*	texAnimDirectionSliderV;
 	wiSlider*	texMulSliderX;
 	wiSlider*	texMulSliderY;
 	wiColorPicker* colorPicker;

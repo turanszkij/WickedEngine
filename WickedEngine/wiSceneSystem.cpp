@@ -578,6 +578,13 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < physicscomponents.GetCount(); ++i)
 		{
 			PhysicsComponent& physicscomponent = physicscomponents[i];
+			Entity entity = physicscomponents.GetEntity(i);
+
+			if (physicscomponent.softBody)
+			{
+				MeshComponent& mesh = *meshes.GetComponent(entity);
+				mesh.dynamicVB = true;
+			}
 		}
 
 		// Update Material components:
@@ -585,17 +592,14 @@ namespace wiSceneSystem
 		{
 			MaterialComponent& material = materials[i];
 
-			if (material.texAnimFrameRate > 0)
-			{
-				material.dirty = true; // will trigger contant buffer update!
-			}
-
 			material.texAnimSleep -= dt * material.texAnimFrameRate;
 			if (material.texAnimSleep <= 0)
 			{
 				material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
 				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
 				material.texAnimSleep = 1.0f;
+
+				material.dirty = true; // will trigger constant buffer update!
 			}
 
 			material.engineStencilRef = STENCILREF_DEFAULT;
@@ -614,6 +618,8 @@ namespace wiSceneSystem
 			CullableComponent& cullable = *cullables.GetComponent(entity);
 
 			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
+			object.rendertypeMask = 0;
+			object.dynamic = false;
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -623,6 +629,33 @@ namespace wiSceneSystem
 				if (mesh != nullptr && transform != nullptr)
 				{
 					cullable.aabb = mesh->aabb.get(transform->world);
+
+					if (mesh->IsSkinned() || mesh->IsDynamicVB())
+					{
+						object.dynamic = true;
+					}
+
+					for (auto& subset : mesh->subsets)
+					{
+						const MaterialComponent* material = materials.GetComponent(subset.materialID);
+
+						if (material != nullptr)
+						{
+							if (material->IsTransparent())
+							{
+								object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
+							}
+							else
+							{
+								object.rendertypeMask |= RENDERTYPE_OPAQUE;
+							}
+
+							if (material->IsWater())
+							{
+								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+							}
+						}
+					}
 				}
 			}
 		}

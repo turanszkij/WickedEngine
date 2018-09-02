@@ -3119,40 +3119,13 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					const ObjectComponent* object = scene.objects.GetComponent(entity);
 					if (object != nullptr)
 					{
-						const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-						if (mesh != nullptr)
+						if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
 						{
-							UINT renderTypes = 0;
-							for (auto& subset : mesh->subsets)
-							{
-								const MaterialComponent* material = scene.materials.GetComponent(subset.materialID);
-								if (material != nullptr)
-								{
-									if (material->IsTransparent())
-									{
-										renderTypes |= RENDERTYPE_TRANSPARENT;
-									}
-									else
-									{
-										renderTypes |= RENDERTYPE_OPAQUE;
-									}
-
-									if (material->IsWater())
-									{
-										renderTypes |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
-									}
-								}
-							}
-
-							if (renderTypes & RENDERTYPE_OPAQUE)
-							{
-								culling.culledRenderer_opaque[object->meshID].push_back(entity);
-							}
-							if (renderTypes & RENDERTYPE_TRANSPARENT)
-							{
-								culling.culledRenderer_transparent[object->meshID].push_back(entity);
-							}
-
+							culling.culledRenderer_opaque[object->meshID].push_back(entity);
+						}
+						if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT)
+						{
+							culling.culledRenderer_transparent[object->meshID].push_back(entity);
 						}
 					}
 
@@ -5141,7 +5114,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 
 		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-		XMFLOAT4X4 tempMat;
 
 		struct InstBuf
 		{
@@ -5211,6 +5183,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 						const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
 
+						XMFLOAT4X4 tempMat;
 						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
 
 						if (advancedVBRequest)
@@ -5309,13 +5282,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				continue;
 			}
 
-			bool softbody = false;
-
-			const PhysicsComponent* physicscomponent = scene.physicscomponents.GetComponent(meshEntity);
-			if (physicscomponent != nullptr)
-			{
-				softbody = physicscomponent->softBody;
-			}
+			const bool dynamicVB = mesh.IsDynamicVB();
 
 			const auto& visibleInstances = iter->second;
 
@@ -5366,24 +5333,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
 
-					if (softbody)
-						tempMat = __identityMat;
-					else
-						tempMat = transform.world;
-
 					if (advancedVBRequest || tessellatorRequested)
 					{
-						((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color);
-
-						if (softbody)
-							tempMat = __identityMat;
-						else
-							tempMat = transform.world_prev;
-						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+						((volatile InstBuf*)instances)[k].instance.Create(dynamicVB ? __identityMat : transform.world, instance.color);
+						((volatile InstBuf*)instances)[k].instancePrev.Create(dynamicVB ? __identityMat : transform.world_prev);
 					}
 					else
 					{
-						((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
+						((volatile Instance*)instances)[k].Create(dynamicVB ? __identityMat : transform.world, instance.color, dither);
 					}
 
 					++k;
@@ -5489,7 +5446,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::POSITION:
 					{
 						GPUBuffer* vbs[] = {
-							softbody ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS),
+							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS),
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
@@ -5497,7 +5454,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(Instance)
 						};
 						UINT offsets[] = {
-							softbody ? mesh.bufferOffset_POS : 0,
+							dynamicVB ? mesh.bufferOffset_POS : 0,
 							instancesOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
@@ -5506,7 +5463,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 					{
 						GPUBuffer* vbs[] = {
-							softbody ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS),
+							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS),
 							mesh.vertexBuffer_TEX,
 							dynamicVertexBufferPool
 						};
@@ -5516,7 +5473,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(Instance)
 						};
 						UINT offsets[] = {
-							softbody ? mesh.bufferOffset_POS : 0,
+							dynamicVB ? mesh.bufferOffset_POS : 0,
 							0,
 							instancesOffset
 						};
@@ -5526,9 +5483,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 					{
 						GPUBuffer* vbs[] = {
-							softbody ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS),
+							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS),
 							mesh.vertexBuffer_TEX,
-							softbody ? dynamicVertexBufferPool : (mesh.streamoutBuffer_PRE != nullptr ? mesh.streamoutBuffer_PRE : mesh.vertexBuffer_POS),
+							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_PRE != nullptr ? mesh.streamoutBuffer_PRE : mesh.vertexBuffer_POS),
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
@@ -5538,9 +5495,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(InstBuf)
 						};
 						UINT offsets[] = {
-							softbody ? mesh.bufferOffset_POS : 0,
+							dynamicVB ? mesh.bufferOffset_POS : 0,
 							0,
-							softbody ? mesh.bufferOffset_PRE : 0,
+							dynamicVB ? mesh.bufferOffset_PRE : 0,
 							instancesOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
@@ -7989,112 +7946,129 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY) {
 
 wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask, bool dynamicObjects, bool onlyVisible)
 {
+	Scene& scene = GetScene();
+
 	RayIntersectWorldResult result;
 
 	//if (spTree != nullptr)
-	//{
-	//	CulledList culledObjects;
-	//	spTree->getVisible(ray, culledObjects);
+	{
+		//CulledList culledObjects;
+		//spTree->getVisible(ray, culledObjects);
 
-	//	if (culledObjects.empty())
-	//	{
-	//		return result;
-	//	}
+		//if (culledObjects.empty())
+		//{
+		//	return result;
+		//}
 
-	//	const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
-	//	const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
+		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
-	//	// pre allocate helper vector array:
-	//	static size_t _arraySize = 10000;
-	//	static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
+		// pre allocate helper vector array:
+		static size_t _arraySize = 10000;
+		static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 
-	//	for (Cullable* culled : culledObjects)
-	//	{
-	//		Object* object = (Object*)culled;
+		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		{
+			Entity entity = scene.objects.GetEntity(i);
+			const LayerComponent& layer = *scene.layers.GetComponent(entity);
 
-	//		const uint32_t objectLayerMask = object->GetLayerMask();
-	//		if (objectLayerMask & layerMask)
-	//		{
+			const uint32_t objectLayerMask = layer.GetLayerMask();
+			if (objectLayerMask & layerMask)
+			{
+				const ObjectComponent& object = scene.objects[i];
 
-	//			if (!(renderTypeMask & object->GetRenderTypes()))
-	//			{
-	//				continue;
-	//			}
-	//			if (!dynamicObjects && object->isDynamic())
-	//			{
-	//				continue;
-	//			}
-	//			if (onlyVisible && object->IsOccluded() && GetOcclusionCullingEnabled())
-	//			{
-	//				continue;
-	//			}
+				if (object.meshID == INVALID_ENTITY)
+				{
+					continue;
+				}
+				if (!(renderTypeMask & object.GetRenderTypes()))
+				{
+					continue;
+				}
+				if (!dynamicObjects && object.IsDynamic())
+				{
+					continue;
+				}
+				if (onlyVisible && object.IsOccluded() && GetOcclusionCullingEnabled())
+				{
+					continue;
+				}
 
-	//			Mesh* mesh = object->mesh;
-	//			if (mesh->vertices_POS.size() >= _arraySize)
-	//			{
-	//				// grow preallocated vector helper array
-	//				_mm_free(_vertices);
-	//				_arraySize = (mesh->vertices_POS.size() + 1) * 2;
-	//				_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
-	//			}
+				const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
+				if (!ray.intersects(cullable.aabb))
+				{
+					continue;
+				}
 
-	//			const XMMATRIX objectMat = object->getMatrix();
-	//			const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				if (mesh.vertices_POS.size() >= _arraySize)
+				{
+					// grow preallocated vector helper array
+					_mm_free(_vertices);
+					_arraySize = (mesh.vertices_POS.size() + 1) * 2;
+					_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
+				}
 
-	//			const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
-	//			const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//			MeshComponent::Vertex_FULL _tmpvert;
+				const XMMATRIX objectMat = XMLoadFloat4x4(&transform.world);
+				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
-	//			if (object->isArmatureDeformed() && !object->mesh->armature->boneCollection.empty())
-	//			{
-	//				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
-	//				{
-	//					_tmpvert = mesh->TransformVertex((int)i);
-	//					_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
-	//				}
-	//			}
-	//			else if (mesh->hasDynamicVB())
-	//			{
-	//				for (size_t i = 0; i < mesh->vertices_Transformed_POS.size(); ++i)
-	//				{
-	//					_vertices[i] = mesh->vertices_Transformed_POS[i].LoadPOS();
-	//				}
-	//			}
-	//			else
-	//			{
-	//				for (size_t i = 0; i < mesh->vertices_POS.size(); ++i)
-	//				{
-	//					_vertices[i] = mesh->vertices_POS[i].LoadPOS();
-	//				}
-	//			}
+				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-	//			for (size_t i = 0; i < mesh->indices.size(); i += 3)
-	//			{
-	//				int i0 = mesh->indices[i], i1 = mesh->indices[i + 1], i2 = mesh->indices[i + 2];
-	//				float distance;
-	//				if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
-	//				{
-	//					XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
-	//					distance = wiMath::Distance(pos, rayOrigin);
+				MeshComponent::Vertex_FULL _tmpvert;
 
-	//					if (distance < result.distance)
-	//					{
-	//						XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
+				if (mesh.IsSkinned())
+				{
+					//for (size_t i = 0; i < mesh.vertices_POS.size(); ++i)
+					//{
+					//	_tmpvert = mesh.TransformVertex((int)i);
+					//	_vertices[i] = XMLoadFloat4(&_tmpvert.pos);
+					//}
+					assert(0); // todo
+				}
+				else if (mesh.IsDynamicVB())
+				{
+					for (size_t i = 0; i < mesh.vertices_Transformed_POS.size(); ++i)
+					{
+						_vertices[i] = mesh.vertices_Transformed_POS[i].LoadPOS();
+					}
+				}
+				else
+				{
+					for (size_t i = 0; i < mesh.vertices_POS.size(); ++i)
+					{
+						_vertices[i] = mesh.vertices_POS[i].LoadPOS();
+					}
+				}
 
-	//						result.object = object;
-	//						XMStoreFloat3(&result.position, pos);
-	//						XMStoreFloat3(&result.normal, nor);
-	//						result.distance = distance;
-	//						result.subsetIndex = (int)mesh->vertices_POS[i0].GetMaterialIndex();
-	//					}
-	//				}
-	//			}
+				for (size_t i = 0; i < mesh.indices.size(); i += 3)
+				{
+					int i0 = mesh.indices[i], i1 = mesh.indices[i + 1], i2 = mesh.indices[i + 2];
+					float distance;
+					if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+					{
+						XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+						distance = wiMath::Distance(pos, rayOrigin);
 
-	//		}
+						if (distance < result.distance)
+						{
+							XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
 
-	//	}
-	//}
+							result.entity = entity;
+							XMStoreFloat3(&result.position, pos);
+							XMStoreFloat3(&result.normal, nor);
+							result.distance = distance;
+							result.subsetIndex = (int)mesh.vertices_POS[i0].GetMaterialIndex();
+						}
+					}
+				}
+
+			}
+
+		}
+	}
 
 	return result;
 }

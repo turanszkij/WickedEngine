@@ -68,7 +68,7 @@ namespace wiSceneSystem
 
 	struct MaterialComponent
 	{
-		bool dirty = true;
+		bool dirty = true; // can trigger constant buffer update
 
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
@@ -124,11 +124,25 @@ namespace wiSceneSystem
 		wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
 		wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
 
-		inline bool IsTransparent() const { return baseColor.w < 1.0f; }
+		inline float GetOpacity() const { return baseColor.w; }
+
+		inline bool IsTransparent() const { return GetOpacity() < 1.0f; }
 		inline bool IsWater() const { return water; }
 		inline bool HasPlanarReflection() const { return planar_reflections || IsWater(); }
 		inline bool IsCastingShadow() const { return cast_shadow; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
+
+		inline void SetBaseColor(const XMFLOAT4& value) { dirty = true; baseColor = value; }
+		inline void SetRoughness(float value) { dirty = true; roughness = value; }
+		inline void SetReflectance(float value) { dirty = true; reflectance = value; }
+		inline void SetMetalness(float value) { dirty = true; metalness = value; }
+		inline void SetEmissive(float value) { dirty = true; emissive = value; }
+		inline void SetRefractionIndex(float value) { dirty = true; refractionIndex = value; }
+		inline void SetSubsurfaceScattering(float value) { dirty = true; subsurfaceScattering = value; }
+		inline void SetNormalMapStrength(float value) { dirty = true; normalMapStrength = value; }
+		inline void SetParallaxOcclusionMapping(float value) { dirty = true; parallaxOcclusionMapping = value; }
+		inline void SetOpacity(float value) { dirty = true;  baseColor.w = value; }
+		inline void SetAlphaRef(float value) { alphaRef = value; }
 	};
 
 	struct MeshComponent
@@ -282,6 +296,7 @@ namespace wiSceneSystem
 		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_PRE = nullptr;
 
 		// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
+		bool dynamicVB = false;
 		UINT bufferOffset_POS;
 		UINT bufferOffset_PRE;
 
@@ -308,8 +323,9 @@ namespace wiSceneSystem
 
 		bool HasImpostor() const { return impostorTarget.IsInitialized(); }
 		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() { return indexFormat; }
-		inline bool IsSkinned() { return armatureID != wiECS::INVALID_ENTITY; }
+		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
+		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
+		inline bool IsDynamicVB() const { return dynamicVB; }
 
 		void CreateRenderData();
 	};
@@ -323,8 +339,11 @@ namespace wiSceneSystem
 	{
 		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 		bool renderable = true;
+		bool dynamic = false;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+
+		uint32_t rendertypeMask = 0;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
@@ -339,7 +358,9 @@ namespace wiSceneSystem
 			// If it pops up for a frame after occluded, it is visible again for some frames
 			return ((occlusionQueryID >= 0) && (occlusionHistory & 0xFFFFFFFF) == 0);
 		}
+		inline bool IsDynamic() const { return dynamic; }
 		inline float GetTransparency() const { return 1 - color.w; }
+		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
 	};
 
 	struct PhysicsComponent

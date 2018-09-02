@@ -30,19 +30,16 @@ Entity ImportModel_OBJ(const std::string& fileName)
 
 	if (success)
 	{
-		//Model* model = new Model;
-		//model->name = name;
-
 		Entity modelEntity = scene.Entity_CreateModel(name);
 		ModelComponent& model = *scene.models.GetComponent(modelEntity);
+		TransformComponent& model_transform = *scene.transforms.GetComponent(modelEntity);
 
+		model_transform.UpdateTransform(); // everything will be attached to this, so values need to be up to date
 
 		// Load material library:
 		vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
 		{
-			//Material* material = new Material(obj_material.name);
-
 			Entity materialEntity = scene.Entity_CreateMaterial(obj_material.name);
 			MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 
@@ -54,17 +51,11 @@ Entity ImportModel_OBJ(const std::string& fileName)
 				material.displacementMapName = obj_material.bump_texname;
 			}
 			material.emissive = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
-			//obj_material.emissive_texname;
 			material.refractionIndex = obj_material.ior;
 			material.metalness = obj_material.metallic;
-			//obj_material.metallic_texname;
 			material.normalMapName = obj_material.normal_texname;
 			material.surfaceMapName = obj_material.reflection_texname;
 			material.roughness = obj_material.roughness;
-			//obj_material.roughness_texname;
-			//material.specular_power = (int)obj_material.shininess;
-			//material.specular = XMFLOAT4(obj_material.specular[0], obj_material.specular[1], obj_material.specular[2], 1);
-			//material.specularMapName = obj_material.specular_texname;
 
 			if (!material.surfaceMapName.empty())
 			{
@@ -86,17 +77,9 @@ Entity ImportModel_OBJ(const std::string& fileName)
 				material.displacementMapName = directory + material.displacementMapName;
 				material.displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.displacementMapName);
 			}
-			//if (!material.specularMapName.empty())
-			//{
-			//	material.specularMapName = directory + material.specularMapName;
-			//	material.specularMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.specularMapName);
-			//}
-
-			//material.ConvertToPhysicallyBasedMaterial();
 
 			materialLibrary.push_back(materialEntity); // for subset-indexing...
 			model.materials.insert(materialEntity);
-			//model->materials.insert(make_pair(material.name, material));
 		}
 
 		if (materialLibrary.empty())
@@ -106,23 +89,17 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 			materialLibrary.push_back(materialEntity); // for subset-indexing...
 			model.materials.insert(materialEntity);
-			//Material* material = new Material("OBJImport_defaultMaterial");
-			//materialLibrary.push_back(material);
-			//model->materials.insert(make_pair(material.name, material));
 		}
 
 		// Load objects, meshes:
 		for (auto& shape : obj_shapes)
 		{
-			//Object* object = new Object(shape.name);
-			//Mesh* mesh = new Mesh(shape.name + "_mesh");
-
 			Entity objectEntity = scene.Entity_CreateObject(shape.name);
 			Entity meshEntity = scene.Entity_CreateMesh(shape.name + "_mesh");
 			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
 			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
-			//scene.Component_Attach(objectEntity, modelEntity);
+			scene.Component_Attach(objectEntity, modelEntity);
 
 			object.meshID = meshEntity;
 			mesh.renderable = true;
@@ -184,9 +161,7 @@ Entity ImportModel_OBJ(const std::string& fileName)
 					{
 						registered_materialIndices[materialIndex] = (int)mesh.subsets.size();
 						mesh.subsets.push_back(MeshComponent::MeshSubset());
-						//MaterialComponent* material = materialLibrary[materialIndex];
 						mesh.subsets.back().materialID = materialLibrary[materialIndex];
-						//mesh.materialNames.push_back(material.name);
 					}
 					vert.tex.z = (float)registered_materialIndices[materialIndex]; // this indexes a mesh subset
 
@@ -221,29 +196,9 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			mesh.aabb.create(min, max);
 			mesh.CreateRenderData();
 
-			//// We need to eliminate colliding mesh names, because objects can reference them by names:
-			////	Note: in engine, object is decoupled from mesh, for instancing support. OBJ file have only meshes and names can collide there.
-			//string meshName = mesh->name;
-			//uint32_t unique_counter = 0;
-			//bool meshNameCollision = model->meshes.count(meshName) != 0;
-			//while (meshNameCollision)
-			//{
-			//	meshName = mesh->name + to_string(unique_counter);
-			//	meshNameCollision = model->meshes.count(meshName) != 0;
-			//	unique_counter++;
-			//}
-			//mesh->name = meshName;
-
-			//object->meshName = mesh->name;
-
 			model.objects.insert(objectEntity);
 			model.meshes.insert(meshEntity);
-
-			//model->objects.insert(object);
-			//model->meshes.insert(make_pair(mesh->name, mesh));
 		}
-
-		//model->FinishLoading();
 
 		return modelEntity;
 	}
