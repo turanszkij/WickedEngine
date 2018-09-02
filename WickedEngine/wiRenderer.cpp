@@ -3096,7 +3096,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
-	wiProfiler::GetInstance().BeginRange("SPTree Culling", wiProfiler::DOMAIN_CPU);
+	wiProfiler::GetInstance().BeginRange("Frustum Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
 		{
@@ -3128,8 +3128,14 @@ void wiRenderer::UpdatePerFrameData(float dt)
 							culling.culledRenderer_transparent[object->meshID].push_back(entity);
 						}
 					}
-
-					// todo: lights, decals....
+					else if(camera == getCamera()) // the following cullings will be only for the main camera:
+					{
+						const LightComponent* light = scene.lights.GetComponent(entity);
+						if (light != nullptr)
+						{
+							culling.culledLights.push_back(entity);
+						}
+					}
 
 				}
 			}
@@ -3202,56 +3208,54 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			//	// We sort lights so that closer lights will have more priority for shadows!
 			//	spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
 
-			//	int i = 0;
-			//	int shadowCounter_2D = 0;
-			//	int shadowCounter_Cube = 0;
-			//	for (auto& c : culling.culledLights)
-			//	{
-			//		Light* l = (Light*)c;
-			//		l->entityArray_index = i;
+				int i = 0;
+				int shadowCounter_2D = 0;
+				int shadowCounter_Cube = 0;
+				for (Entity entity : culling.culledLights)
+				{
+					LightComponent& light = *scene.lights.GetComponent(entity);
+					light.entityArray_index = i;
 
-			//		l->UpdateLight();
+					// Link shadowmaps to lights till there are free slots
 
-			//		// Link shadowmaps to lights till there are free slots
+					light.shadowMap_index = -1;
 
-			//		l->shadowMap_index = -1;
+					if (light.shadow)
+					{
+						switch (light.GetType())
+						{
+						case LightComponent::DIRECTIONAL:
+							if (!light.shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
+							{
+								light.shadowMap_index = shadowCounter_2D;
+								shadowCounter_2D += 3;
+							}
+							break;
+						case LightComponent::SPOT:
+							if (!light.shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
+							{
+								light.shadowMap_index = shadowCounter_2D;
+								shadowCounter_2D++;
+							}
+							break;
+						case LightComponent::POINT:
+						case LightComponent::SPHERE:
+						case LightComponent::DISC:
+						case LightComponent::RECTANGLE:
+						case LightComponent::TUBE:
+							if (!light.shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
+							{
+								light.shadowMap_index = shadowCounter_Cube;
+								shadowCounter_Cube++;
+							}
+							break;
+						default:
+							break;
+						}
+					}
 
-			//		if (l->shadow)
-			//		{
-			//			switch (l->GetType())
-			//			{
-			//			case LightComponent::DIRECTIONAL:
-			//				if (!l->shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
-			//				{
-			//					l->shadowMap_index = shadowCounter_2D;
-			//					shadowCounter_2D += 3;
-			//				}
-			//				break;
-			//			case LightComponent::SPOT:
-			//				if (!l->shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
-			//				{
-			//					l->shadowMap_index = shadowCounter_2D;
-			//					shadowCounter_2D++;
-			//				}
-			//				break;
-			//			case LightComponent::POINT:
-			//			case LightComponent::SPHERE:
-			//			case LightComponent::DISC:
-			//			case LightComponent::RECTANGLE:
-			//			case LightComponent::TUBE:
-			//				if (!l->shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
-			//				{
-			//					l->shadowMap_index = shadowCounter_Cube;
-			//					shadowCounter_Cube++;
-			//				}
-			//				break;
-			//			default:
-			//				break;
-			//			}
-			//		}
-
-			//		i++;
-			//	}
+					i++;
+				}
 			//}
 
 
@@ -3353,208 +3357,213 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
 
-	//// Fill Light Array with lights + envprobes + decals in the frustum:
-	//{
-	//	const CulledList& culledLights = mainCameraCulling.culledLights;
+	// Fill Light Array with lights + envprobes + decals in the frustum:
+	{
+		const auto& culledLights = mainCameraCulling.culledLights;
 
-	//	static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
-	//	static XMMATRIX* matrixArray = (XMMATRIX*)_mm_malloc(sizeof(XMMATRIX)*MATRIXARRAY_COUNT, 16);
+		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
+		static XMMATRIX* matrixArray = (XMMATRIX*)_mm_malloc(sizeof(XMMATRIX)*MATRIXARRAY_COUNT, 16);
 
-	//	const XMMATRIX viewMatrix = cam->GetView();
+		const XMMATRIX viewMatrix = getCamera()->GetView();
 
-	//	UINT entityCounter = 0;
-	//	UINT matrixCounter = 0;
+		UINT entityCounter = 0;
+		UINT matrixCounter = 0;
 
-	//	entityArrayOffset_Lights = 0;
-	//	entityArrayCount_Lights = 0;
-	//	entityArrayOffset_Decals = 0;
-	//	entityArrayCount_Decals = 0;
-	//	entityArrayOffset_ForceFields = 0;
-	//	entityArrayCount_ForceFields = 0;
-	//	entityArrayOffset_EnvProbes = 0;
-	//	entityArrayCount_EnvProbes = 0;
+		entityArrayOffset_Lights = 0;
+		entityArrayCount_Lights = 0;
+		entityArrayOffset_Decals = 0;
+		entityArrayCount_Decals = 0;
+		entityArrayOffset_ForceFields = 0;
+		entityArrayCount_ForceFields = 0;
+		entityArrayOffset_EnvProbes = 0;
+		entityArrayCount_EnvProbes = 0;
 
-	//	entityArrayOffset_Lights = entityCounter;
-	//	for (Cullable* c : culledLights)
-	//	{
-	//		if (entityCounter == MAX_SHADER_ENTITY_COUNT)
-	//		{
-	//			assert(0); // too many entities!
-	//			entityCounter--;
-	//			break;
-	//		}
+		entityArrayOffset_Lights = entityCounter;
+		for (Entity entity : culledLights)
+		{
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
 
-	//		Light* l = (Light*)c;
-	//		if (!l->IsActive())
-	//		{
-	//			continue;
-	//		}
+			const LightComponent& light = *scene.lights.GetComponent(entity);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//		const int shadowIndex = l->shadowMap_index;
+			const int shadowIndex = light.shadowMap_index;
 
-	//		entityArray[entityCounter].type = l->GetType();
-	//		entityArray[entityCounter].positionWS = l->translation;
-	//		XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
-	//		entityArray[entityCounter].range = l->enerDis.y;
-	//		entityArray[entityCounter].color = wiMath::CompressColor(l->color);
-	//		entityArray[entityCounter].energy = l->enerDis.x;
-	//		entityArray[entityCounter].shadowBias = l->shadowBias;
-	//		entityArray[entityCounter].additionalData_index = shadowIndex;
-	//		switch (l->GetType())
-	//		{
-	//		case LightComponent::DIRECTIONAL:
-	//		{
-	//			entityArray[entityCounter].directionWS = l->GetDirection();
-	//			entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+			entityArray[entityCounter].type = light.GetType();
+			entityArray[entityCounter].positionWS = transform.translation;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
+			entityArray[entityCounter].range = light.range;
+			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
+			entityArray[entityCounter].energy = light.energy;
+			entityArray[entityCounter].shadowBias = light.shadowBias;
+			entityArray[entityCounter].additionalData_index = shadowIndex;
+			switch (light.GetType())
+			{
+			case LightComponent::DIRECTIONAL:
+			{
+				entityArray[entityCounter].directionWS = light.direction;
+				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-	//			if (l->shadow && shadowIndex >= 0 && !l->shadowCam_dirLight.empty())
-	//			{
-	//				matrixArray[shadowIndex + 0] = l->shadowCam_dirLight[0].getVP();
-	//				matrixArray[shadowIndex + 1] = l->shadowCam_dirLight[1].getVP();
-	//				matrixArray[shadowIndex + 2] = l->shadowCam_dirLight[2].getVP();
-	//				matrixCounter = max(matrixCounter, (UINT)shadowIndex + 3);
-	//			}
-	//		}
-	//		break;
-	//		case LightComponent::SPOT:
-	//		{
-	//			entityArray[entityCounter].coneAngleCos = cosf(l->enerDis.z * 0.5f);
-	//			entityArray[entityCounter].directionWS = l->GetDirection();
-	//			XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
-	//			entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
+				if (light.shadow && shadowIndex >= 0 && !light.shadowCam_dirLight.empty())
+				{
+					matrixArray[shadowIndex + 0] = light.shadowCam_dirLight[0].getVP();
+					matrixArray[shadowIndex + 1] = light.shadowCam_dirLight[1].getVP();
+					matrixArray[shadowIndex + 2] = light.shadowCam_dirLight[2].getVP();
+					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 3);
+				}
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				entityArray[entityCounter].coneAngleCos = cosf(light.fov * 0.5f);
+				entityArray[entityCounter].directionWS = light.direction;
+				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
+				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-	//			if (l->shadow && shadowIndex >= 0 && !l->shadowCam_spotLight.empty())
-	//			{
-	//				matrixArray[shadowIndex + 0] = l->shadowCam_spotLight[0].getVP();
-	//				matrixCounter = max(matrixCounter, (UINT)shadowIndex + 1);
-	//			}
-	//		}
-	//		break;
-	//		case LightComponent::POINT:
-	//		{
-	//			entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
-	//		}
-	//		break;
-	//		case LightComponent::SPHERE:
-	//		case LightComponent::DISC:
-	//		case LightComponent::RECTANGLE:
-	//		case LightComponent::TUBE:
-	//		{
-	//			XMMATRIX lightMat = XMLoadFloat4x4(&l->world);
-	//			// Note: area lights are facing back by default
-	//			XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // right dir
-	//			XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
-	//			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
-	//			entityArray[entityCounter].texMulAdd = XMFLOAT4(l->radius, l->width, l->height, 0);
-	//		}
-	//		break;
-	//		}
+				if (light.shadow && shadowIndex >= 0 && !light.shadowCam_spotLight.empty())
+				{
+					matrixArray[shadowIndex + 0] = light.shadowCam_spotLight[0].getVP();
+					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 1);
+				}
+			}
+			break;
+			case LightComponent::POINT:
+			{
+				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_CUBE;
+			}
+			break;
+			case LightComponent::SPHERE:
+			case LightComponent::DISC:
+			case LightComponent::RECTANGLE:
+			case LightComponent::TUBE:
+			{
+				XMMATRIX lightMat = XMLoadFloat4x4(&transform.world);
+				// Note: area lights are facing back by default
+				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // right dir
+				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
+				XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
+				entityArray[entityCounter].texMulAdd = XMFLOAT4(light.radius, light.width, light.height, 0);
+			}
+			break;
+			}
 
-	//		entityCounter++;
-	//	}
-	//	entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
+			entityCounter++;
+		}
+		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
 
-	//	entityArrayOffset_EnvProbes = entityCounter;
-	//	for (EnvironmentProbe* probe : mainCameraCulling.culledEnvProbes)
-	//	{
-	//		if (probe->textureIndex < 0)
-	//		{
-	//			continue;
-	//		}
-	//		if (entityCounter == MAX_SHADER_ENTITY_COUNT)
-	//		{
-	//			assert(0); // too many entities!
-	//			entityCounter--;
-	//			break;
-	//		}
-	//		if (matrixCounter >= MATRIXARRAY_COUNT)
-	//		{
-	//			assert(0); // too many probes, can't upload the rest to matrixarray!
-	//			matrixCounter--;
-	//			break;
-	//		}
+		entityArrayOffset_EnvProbes = entityCounter;
+		for (Entity entity : mainCameraCulling.culledEnvProbes)
+		{
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				assert(0); // too many probes, can't upload the rest to matrixarray!
+				matrixCounter--;
+				break;
+			}
 
-	//		entityArray[entityCounter].type = ENTITY_TYPE_ENVMAP;
-	//		entityArray[entityCounter].positionWS = probe->translation;
-	//		XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe->translation), viewMatrix));
-	//		entityArray[entityCounter].range = max(probe->scale.x, max(probe->scale.y, probe->scale.z)) * 2;
-	//		entityArray[entityCounter].shadowBias = (float)probe->textureIndex;
+			EnvironmentProbeComponent& probe = *scene.probes.GetComponent(entity);
+			if (probe.textureIndex < 0)
+			{
+				continue;
+			}
 
-	//		entityArray[entityCounter].additionalData_index = matrixCounter;
-	//		matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&probe->world)));
-	//		matrixCounter++;
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//		entityCounter++;
-	//	}
-	//	entityArrayCount_EnvProbes = entityCounter - entityArrayOffset_EnvProbes;
+			entityArray[entityCounter].type = ENTITY_TYPE_ENVMAP;
+			entityArray[entityCounter].positionWS = transform.translation;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&transform.translation), viewMatrix));
+			entityArray[entityCounter].range = max(transform.scale.x, max(transform.scale.y, transform.scale.z)) * 2;
+			entityArray[entityCounter].shadowBias = (float)probe.textureIndex;
 
-	//	entityArrayOffset_Decals = entityCounter;
-	//	for (Decal* decal : mainCameraCulling.culledDecals)
-	//	{
-	//		if (entityCounter == MAX_SHADER_ENTITY_COUNT)
-	//		{
-	//			assert(0); // too many entities!
-	//			entityCounter--;
-	//			break;
-	//		}
-	//		if (matrixCounter >= MATRIXARRAY_COUNT)
-	//		{
-	//			assert(0); // too many decals, can't upload the rest to matrixarray!
-	//			matrixCounter--;
-	//			break;
-	//		}
-	//		entityArray[entityCounter].type = ENTITY_TYPE_DECAL;
-	//		entityArray[entityCounter].positionWS = decal->translation;
-	//		XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal->translation), viewMatrix));
-	//		entityArray[entityCounter].range = max(decal->scale.x, max(decal->scale.y, decal->scale.z)) * 2;
-	//		entityArray[entityCounter].texMulAdd = decal->atlasMulAdd;
-	//		entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal->color.x, decal->color.y, decal->color.z, decal->GetOpacity()));
-	//		entityArray[entityCounter].energy = decal->emissive;
+			entityArray[entityCounter].additionalData_index = matrixCounter;
+			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world)));
+			matrixCounter++;
 
-	//		entityArray[entityCounter].additionalData_index = matrixCounter;
-	//		matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal->world)));
-	//		matrixCounter++;
+			entityCounter++;
+		}
+		entityArrayCount_EnvProbes = entityCounter - entityArrayOffset_EnvProbes;
 
-	//		entityCounter++;
-	//	}
-	//	entityArrayCount_Decals = entityCounter - entityArrayOffset_Decals;
+		entityArrayOffset_Decals = entityCounter;
+		for (Entity entity : mainCameraCulling.culledDecals)
+		{
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				assert(0); // too many decals, can't upload the rest to matrixarray!
+				matrixCounter--;
+				break;
+			}
+			const DecalComponent& decal = *scene.decals.GetComponent(entity);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//	entityArrayOffset_ForceFields = entityCounter;
-	//	for (auto& model : GetScene().models)
-	//	{
-	//		for (ForceField* force : model->forces)
-	//		{
-	//			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
-	//			{
-	//				assert(0); // too many entities!
-	//				entityCounter--;
-	//				break;
-	//			}
+			entityArray[entityCounter].type = ENTITY_TYPE_DECAL;
+			entityArray[entityCounter].positionWS = transform.translation;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&transform.translation), viewMatrix));
+			entityArray[entityCounter].range = max(transform.scale.x, max(transform.scale.y, transform.scale.z)) * 2;
+			entityArray[entityCounter].texMulAdd = decal.atlasMulAdd;
+			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
+			entityArray[entityCounter].energy = decal.emissive;
 
-	//			entityArray[entityCounter].type = force->type;
-	//			entityArray[entityCounter].positionWS = force->translation;
-	//			entityArray[entityCounter].energy = force->gravity;
-	//			entityArray[entityCounter].range = 1.0f / max(0.0001f, force->range); // avoid division in shader
-	//			entityArray[entityCounter].coneAngleCos = force->range; // this will be the real range in the less common shaders...
-	//			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-	//			XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&force->world))));
+			entityArray[entityCounter].additionalData_index = matrixCounter;
+			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world)));
+			matrixCounter++;
 
-	//			entityCounter++;
-	//		}
-	//	}
-	//	entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
+			entityCounter++;
+		}
+		entityArrayCount_Decals = entityCounter - entityArrayOffset_Decals;
 
-	//	GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
-	//	GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
+		entityArrayOffset_ForceFields = entityCounter;
+		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+		{
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
 
-	//	GPUResource* resources[] = {
-	//		resourceBuffers[RBTYPE_ENTITYARRAY],
-	//		resourceBuffers[RBTYPE_MATRIXARRAY],
-	//	};
-	//	GetDevice()->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-	//	GetDevice()->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-	//	GetDevice()->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-	//}
+			const ForceFieldComponent& force = scene.forces[i];
+			Entity entity = scene.forces.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+			entityArray[entityCounter].type = force.type;
+			entityArray[entityCounter].positionWS = transform.translation;
+			entityArray[entityCounter].energy = force.gravity;
+			entityArray[entityCounter].range = 1.0f / max(0.0001f, force.range); // avoid division in shader
+			entityArray[entityCounter].coneAngleCos = force.range; // this will be the real range in the less common shaders...
+			// The default planar force field is facing upwards, and thus the pull direction is downwards:
+			XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&transform.world))));
+
+			entityCounter++;
+		}
+		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
+
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
+		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
+
+		GPUResource* resources[] = {
+			resourceBuffers[RBTYPE_ENTITYARRAY],
+			resourceBuffers[RBTYPE_MATRIXARRAY],
+		};
+		GetDevice()->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		GetDevice()->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		GetDevice()->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+	}
 
 
 	UpdateWorldCB(threadID); // only commits when parameters are changed
@@ -4463,78 +4472,82 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 }
 void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
-	//const FrameCulling& culling = frameCullings[camera];
-	//const CulledList& culledLights = culling.culledLights;
+	const FrameCulling& culling = frameCullings[camera];
+	const auto& culledLights = culling.culledLights;
 
-	//GetDevice()->EventBegin("Light Render", threadID);
-	//wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
+	Scene& scene = GetScene();
 
-	//// Environmental light (envmap + voxelGI) is always drawn
-	//{
-	//	GetDevice()->BindGraphicsPSO(PSO_enviromentallight, threadID);
-	//	GetDevice()->Draw(3, 0, threadID); // full screen triangle
-	//}
+	GetDevice()->EventBegin("Light Render", threadID);
+	wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
-	//for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
-	//{
-	//	GetDevice()->BindGraphicsPSO(PSO_deferredlight[type], threadID);
+	// Environmental light (envmap + voxelGI) is always drawn
+	{
+		GetDevice()->BindGraphicsPSO(PSO_enviromentallight, threadID);
+		GetDevice()->Draw(3, 0, threadID); // full screen triangle
+	}
 
-	//	for (Cullable* c : culledLights)
-	//	{
-	//		Light* l = (Light*)c;
-	//		if (l->GetType() != type || !l->IsActive())
-	//			continue;
+	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+	{
+		GetDevice()->BindGraphicsPSO(PSO_deferredlight[type], threadID);
 
-	//		switch (type)
-	//		{
-	//		case LightComponent::DIRECTIONAL:
-	//		case LightComponent::SPHERE:
-	//		case LightComponent::DISC:
-	//		case LightComponent::RECTANGLE:
-	//		case LightComponent::TUBE:
-	//			{
-	//				MiscCB miscCb;
-	//				miscCb.mColor.x = (float)l->entityArray_index;
-	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+		for (Entity entity : culledLights)
+		{
+			const LightComponent& light = *scene.lights.GetComponent(entity);
+			if (light.GetType() != type)
+				continue;
 
-	//				GetDevice()->Draw(3, 0, threadID); // full screen triangle
-	//			}
-	//			break;
-	//		case LightComponent::POINT:
-	//			{
-	//				MiscCB miscCb;
-	//				miscCb.mColor.x = (float)l->entityArray_index;
-	//				float sca = l->enerDis.y + 1;
-	//				miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
-	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//				GetDevice()->Draw(240, 0, threadID); // icosphere
-	//			}
-	//			break;
-	//		case LightComponent::SPOT:
-	//			{
-	//				MiscCB miscCb;
-	//				miscCb.mColor.x = (float)l->entityArray_index;
-	//				const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
-	//				miscCb.mTransform = XMMatrixTranspose(
-	//					XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
-	//					XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//					XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) *
-	//					camera->GetViewProjection()
-	//				);
-	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+			switch (type)
+			{
+			case LightComponent::DIRECTIONAL:
+			case LightComponent::SPHERE:
+			case LightComponent::DISC:
+			case LightComponent::RECTANGLE:
+			case LightComponent::TUBE:
+				{
+					MiscCB miscCb;
+					miscCb.mColor.x = (float)light.entityArray_index;
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-	//				GetDevice()->Draw(192, 0, threadID); // cone
-	//			}
-	//			break;
-	//		}
-	//	}
+					GetDevice()->Draw(3, 0, threadID); // full screen triangle
+				}
+				break;
+			case LightComponent::POINT:
+				{
+					MiscCB miscCb;
+					miscCb.mColor.x = (float)light.entityArray_index;
+					float sca = light.range + 1;
+					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z) * camera->GetViewProjection());
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+					GetDevice()->Draw(240, 0, threadID); // icosphere
+				}
+				break;
+			case LightComponent::SPOT:
+				{
+					MiscCB miscCb;
+					miscCb.mColor.x = (float)light.entityArray_index;
+					const float coneS = (const float)(light.fov / XM_PIDIV4);
+					miscCb.mTransform = XMMatrixTranspose(
+						XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation)) *
+						camera->GetViewProjection()
+					);
+					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+					GetDevice()->Draw(192, 0, threadID); // cone
+				}
+				break;
+			}
+		}
 
 
-	//}
+	}
 
-	//wiProfiler::GetInstance().EndRange(threadID);
-	//GetDevice()->EventEnd(threadID);
+	wiProfiler::GetInstance().EndRange(threadID);
+	GetDevice()->EventEnd(threadID);
 }
 void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
@@ -4655,117 +4668,124 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 }
 void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
-	//const FrameCulling& culling = frameCullings[camera];
-	//const CulledList& culledLights = culling.culledLights;
+	const FrameCulling& culling = frameCullings[camera];
+	const auto& culledLights = culling.culledLights;
 
-	//if (!culledLights.empty())
-	//{
-	//	GetDevice()->EventBegin("Volumetric Light Render", threadID);
+	if (!culledLights.empty())
+	{
+		GetDevice()->EventBegin("Volumetric Light Render", threadID);
 
+		Scene& scene = GetScene();
 
-	//	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
-	//	{
-	//		GraphicsPSO* pso = PSO_volumetriclight[type];
+		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+		{
+			GraphicsPSO* pso = PSO_volumetriclight[type];
 
-	//		if (pso == nullptr)
-	//		{
-	//			continue;
-	//		}
+			if (pso == nullptr)
+			{
+				continue;
+			}
 
-	//		GetDevice()->BindGraphicsPSO(pso, threadID);
+			GetDevice()->BindGraphicsPSO(pso, threadID);
 
-	//		for (Cullable* c : culledLights)
-	//		{
-	//			Light* l = (Light*)c;
-	//			if (l->GetType() == type && l->volumetrics)
-	//			{
+			for (Entity entity : culledLights)
+			{
+				const LightComponent& light = *scene.lights.GetComponent(entity);
+				if (light.GetType() == type && light.volumetrics)
+				{
 
-	//				switch (type)
-	//				{
-	//				case LightComponent::DIRECTIONAL:
-	//				case LightComponent::SPHERE:
-	//				case LightComponent::DISC:
-	//				case LightComponent::RECTANGLE:
-	//				case LightComponent::TUBE:
-	//				{
-	//					MiscCB miscCb;
-	//					miscCb.mColor.x = (float)l->entityArray_index;
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//					GetDevice()->Draw(3, 0, threadID); // full screen triangle
-	//				}
-	//				break;
-	//				case LightComponent::POINT:
-	//				{
-	//					MiscCB miscCb;
-	//					miscCb.mColor.x = (float)l->entityArray_index;
-	//					float sca = l->enerDis.y + 1;
-	//					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(l->translation.x, l->translation.y, l->translation.z) * camera->GetViewProjection());
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					switch (type)
+					{
+					case LightComponent::DIRECTIONAL:
+					case LightComponent::SPHERE:
+					case LightComponent::DISC:
+					case LightComponent::RECTANGLE:
+					case LightComponent::TUBE:
+					{
+						MiscCB miscCb;
+						miscCb.mColor.x = (float)light.entityArray_index;
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-	//					GetDevice()->Draw(240, 0, threadID); // icosphere
-	//				}
-	//				break;
-	//				case LightComponent::SPOT:
-	//				{
-	//					MiscCB miscCb;
-	//					miscCb.mColor.x = (float)l->entityArray_index;
-	//					const float coneS = (const float)(l->enerDis.z / XM_PIDIV4);
-	//					miscCb.mTransform = XMMatrixTranspose(
-	//						XMMatrixScaling(coneS*l->enerDis.y, l->enerDis.y, coneS*l->enerDis.y)*
-	//						XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation))*
-	//						XMMatrixTranslationFromVector(XMLoadFloat3(&l->translation)) *
-	//						camera->GetViewProjection()
-	//					);
-	//					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						GetDevice()->Draw(3, 0, threadID); // full screen triangle
+					}
+					break;
+					case LightComponent::POINT:
+					{
+						MiscCB miscCb;
+						miscCb.mColor.x = (float)light.entityArray_index;
+						float sca = light.range + 1;
+						miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z) * camera->GetViewProjection());
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-	//					GetDevice()->Draw(192, 0, threadID); // cone
-	//				}
-	//				break;
-	//				}
+						GetDevice()->Draw(240, 0, threadID); // icosphere
+					}
+					break;
+					case LightComponent::SPOT:
+					{
+						MiscCB miscCb;
+						miscCb.mColor.x = (float)light.entityArray_index;
+						const float coneS = (const float)(light.fov / XM_PIDIV4);
+						miscCb.mTransform = XMMatrixTranspose(
+							XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation)) *
+							camera->GetViewProjection()
+						);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-	//			}
-	//		}
+						GetDevice()->Draw(192, 0, threadID); // cone
+					}
+					break;
+					}
 
-	//	}
+				}
+			}
 
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		}
+
+		GetDevice()->EventEnd(threadID);
+	}
 
 
 }
 void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 {
-	//const FrameCulling& culling = frameCullings[getCamera()];
-	//const CulledList& culledLights = culling.culledLights;
+	const FrameCulling& culling = frameCullings[getCamera()];
+	const auto& culledLights = culling.culledLights;
 
-	//for(Cullable* c: culledLights)
-	//{
-	//	Light* l = (Light*)c;
+	Scene& scene = GetScene();
 
-	//	if(!l->lensFlareRimTextures.empty())
-	//	{
+	for(Entity entity : culledLights)
+	{
+		const LightComponent& light = *scene.lights.GetComponent(entity);
 
-	//		XMVECTOR POS;
+		if(!light.lensFlareRimTextures.empty())
+		{
 
-	//		if(l->GetType() ==LightComponent::POINT || l->GetType() ==LightComponent::SPOT){
-	//			POS = XMLoadFloat3(&l->translation);
-	//		}
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//		else{
-	//			POS = XMVector3Normalize(
-	//				-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&l->rotation)))
-	//			) * 100000;
-	//		}
-	//		
-	//		XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.0f,1.0f,getCamera()->GetRealProjection(),getCamera()->GetView(),XMMatrixIdentity());
+			XMVECTOR POS;
 
-	//		if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
-	//			wiLensFlare::Draw(threadID,flarePos,l->lensFlareRimTextures);
+			if(light.GetType() ==LightComponent::POINT || light.GetType() ==LightComponent::SPOT){
+				POS = XMLoadFloat3(&transform.translation);
+			}
 
-	//	}
+			else{
+				POS = XMVector3Normalize(
+					-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation)))
+				) * 100000;
+			}
+			
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.0f,1.0f,getCamera()->GetRealProjection(),getCamera()->GetView(),XMMatrixIdentity());
 
-	//}
+			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
+				wiLensFlare::Draw(threadID,flarePos,light.lensFlareRimTextures);
+
+		}
+
+	}
 }
 
 void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuality)
@@ -4829,274 +4849,295 @@ void wiRenderer::SetShadowPropsCube(int resolution, int count)
 }
 void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 {
-	//if (wireRender)
-	//	return;
+	if (wireRender)
+		return;
 
-	//// We need to render shadows even if the gamespeed is 0 for these reasons:
-	//// 1.) Shadow cascades is updated every time according to camera
-	//// 2.) We can move any other light, or object, too
+	// We need to render shadows even if the gamespeed is 0 for these reasons:
+	// 1.) Shadow cascades is updated every time according to camera
+	// 2.) We can move any other light, or object, too
 
-	////if (GetGameSpeed() > 0) 
-	//{
-	//	GetDevice()->EventBegin("ShadowMap Render", threadID);
-	//	wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
+	//if (GetGameSpeed() > 0) 
+	{
+		GetDevice()->EventBegin("ShadowMap Render", threadID);
+		wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
-	//	const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
+		const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
 
-	//	const FrameCulling& culling = frameCullings[getCamera()];
-	//	const CulledList& culledLights = culling.culledLights;
+		const FrameCulling& culling = frameCullings[getCamera()];
+		const auto& culledLights = culling.culledLights;
 
-	//	ViewPort vp;
+		ViewPort vp;
 
-	//	// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
-	//	const float transparentShadowClearColor[] = { 1,1,1,0 };
+		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
+		const float transparentShadowClearColor[] = { 1,1,1,0 };
 
-	//	if (!culledLights.empty())
-	//	{
-	//		GetDevice()->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+		if (!culledLights.empty())
+		{
+			Scene& scene = GetScene();
 
-	//		int shadowCounter_2D = 0;
-	//		int shadowCounter_Cube = 0;
-	//		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
-	//		{
-	//			switch (type)
-	//			{
-	//			case LightComponent::DIRECTIONAL:
-	//			case LightComponent::SPOT:
-	//			{
-	//				vp.TopLeftX = 0;
-	//				vp.TopLeftY = 0;
-	//				vp.Width = (float)SHADOWRES_2D;
-	//				vp.Height = (float)SHADOWRES_2D;
-	//				vp.MinDepth = 0.0f;
-	//				vp.MaxDepth = 1.0f;
-	//				GetDevice()->BindViewports(1, &vp, threadID);
-	//				break;
-	//			}
-	//			break;
-	//			case LightComponent::POINT:
-	//			case LightComponent::SPHERE:
-	//			case LightComponent::DISC:
-	//			case LightComponent::RECTANGLE:
-	//			case LightComponent::TUBE:
-	//			{
-	//				vp.TopLeftX = 0;
-	//				vp.TopLeftY = 0;
-	//				vp.Width = (float)SHADOWRES_CUBE;
-	//				vp.Height = (float)SHADOWRES_CUBE;
-	//				vp.MinDepth = 0.0f;
-	//				vp.MaxDepth = 1.0f;
-	//				GetDevice()->BindViewports(1, &vp, threadID);
+			GetDevice()->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
-	//				GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
-	//				break;
-	//			}
-	//			break;
-	//			default:
-	//				break;
-	//			}
+			int shadowCounter_2D = 0;
+			int shadowCounter_Cube = 0;
+			for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+			{
+				switch (type)
+				{
+				case LightComponent::DIRECTIONAL:
+				case LightComponent::SPOT:
+				{
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SHADOWRES_2D;
+					vp.Height = (float)SHADOWRES_2D;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					GetDevice()->BindViewports(1, &vp, threadID);
+					break;
+				}
+				break;
+				case LightComponent::POINT:
+				case LightComponent::SPHERE:
+				case LightComponent::DISC:
+				case LightComponent::RECTANGLE:
+				case LightComponent::TUBE:
+				{
+					vp.TopLeftX = 0;
+					vp.TopLeftY = 0;
+					vp.Width = (float)SHADOWRES_CUBE;
+					vp.Height = (float)SHADOWRES_CUBE;
+					vp.MinDepth = 0.0f;
+					vp.MaxDepth = 1.0f;
+					GetDevice()->BindViewports(1, &vp, threadID);
 
-	//			for (Cullable* c : culledLights)
-	//			{
-	//				Light* l = (Light*)c;
-	//				if (l->GetType() != type || !l->shadow || !l->IsActive())
-	//				{
-	//					continue;
-	//				}
+					GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+					break;
+				}
+				break;
+				default:
+					break;
+				}
 
-	//				switch (type)
-	//				{
-	//				case LightComponent::DIRECTIONAL:
-	//				{
-	//					if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || l->shadowMap_index < 0 || l->shadowCam_dirLight.empty())
-	//						break;
-	//					shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
+				for (Entity entity : culledLights)
+				{
+					const LightComponent& light = *scene.lights.GetComponent(entity);
+					if (light.GetType() != type || !light.shadow)
+					{
+						continue;
+					}
 
-	//					for (int cascade = 0; cascade < 3; ++cascade)
-	//					{
-	//						const float siz = l->shadowCam_dirLight[cascade].size * 0.5f;
-	//						const float f = l->shadowCam_dirLight[cascade].farplane * 0.5f;
-	//						AABB boundingbox;
-	//						boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
-	//						if (spTree != nullptr)
-	//						{
-	//							CulledList culledObjects;
-	//							CulledCollection culledRenderer;
-	//							spTree->getVisible(boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&l->shadowCam_dirLight[cascade].View))), culledObjects);
-	//							bool transparentShadowsRequested = false;
-	//							for (Cullable* x : culledObjects)
-	//							{
-	//								Object* object = (Object*)x;
-	//								if (cascade < object->cascadeMask)
-	//								{
-	//									continue;
-	//								}
-	//								if (all_layers || (layerMask & object->GetLayerMask()))
-	//								{
-	//									if (object->IsCastingShadow())
-	//									{
-	//										culledRenderer[object->mesh].push_front(object);
+					switch (type)
+					{
+					case LightComponent::DIRECTIONAL:
+					{
+						if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_dirLight.empty())
+							break;
+						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-	//										if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
-	//										{
-	//											transparentShadowsRequested = true;
-	//										}
-	//									}
-	//								}
-	//							}
-	//							if (!culledRenderer.empty())
-	//							{
-	//								CameraCB cb;
-	//								cb.mVP = l->shadowCam_dirLight[cascade].getVP();
-	//								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+						for (int cascade = 0; cascade < 3; ++cascade)
+						{
+							const float siz = light.shadowCam_dirLight[cascade].size * 0.5f;
+							const float f = light.shadowCam_dirLight[cascade].farplane * 0.5f;
+							AABB boundingbox;
+							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
 
-	//								GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index + cascade);
+							CulledCollection culledRenderer;
+							bool transparentShadowsRequested = false;
+							for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+							{
+								const CullableComponent& cullable = scene.cullables[i];
+								Entity cullable_entity = scene.cullables.GetEntity(i);
+								if (cullable_entity != entity && boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(cullable.aabb))
+								{
+									const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
+									if (object != nullptr)
+									{
+										if (cascade < object->cascadeMask)
+										{
+											continue;
+										}
 
-	//								// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-	//								GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index + cascade);
+										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+										if (all_layers || (layerMask & layer.GetLayerMask()))
+										{
+											if (object->IsCastingShadow())
+											{
+												culledRenderer[object->meshID].push_back(cullable_entity);
 
-	//								// render opaque shadowmap:
-	//								GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, l->shadowMap_index + cascade);
-	//								RenderMeshes(l->shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+												if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+												{
+													transparentShadowsRequested = true;
+												}
+											}
+										}
+									}
+								}
+							}
+							if (!culledRenderer.empty())
+							{
+								CameraCB cb;
+								cb.mVP = light.shadowCam_dirLight[cascade].getVP();
+								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-	//								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
-	//								{
-	//									// render transparent shadowmap:
-	//									Texture2D* rts[] = {
-	//										shadowMapArray_Transparent
-	//									};
-	//									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, l->shadowMap_index + cascade);
-	//									RenderMeshes(l->shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
-	//								}
-	//							}
-	//						}
-	//					}
-	//				}
-	//				break;
-	//				case LightComponent::SPOT:
-	//				{
-	//					if (shadowCounter_2D >= SHADOWCOUNT_2D || l->shadowMap_index < 0 || l->shadowCam_spotLight.empty())
-	//						break;
-	//					shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
+								GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
 
-	//					Frustum frustum;
-	//					frustum.ConstructFrustum(l->shadowCam_spotLight[0].farplane, l->shadowCam_spotLight[0].realProjection, l->shadowCam_spotLight[0].View);
-	//					if (spTree != nullptr)
-	//					{
-	//						CulledList culledObjects;
-	//						CulledCollection culledRenderer;
-	//						spTree->getVisible(frustum, culledObjects);
-	//						bool transparentShadowsRequested = false;
-	//						for (Cullable* x : culledObjects)
-	//						{
-	//							Object* object = (Object*)x;
-	//							if (all_layers || (layerMask & object->GetLayerMask()))
-	//							{
-	//								if (object->IsCastingShadow())
-	//								{
-	//									culledRenderer[object->mesh].push_front(object);
+								// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+								GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
 
-	//									if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
-	//									{
-	//										transparentShadowsRequested = true;
-	//									}
-	//								}
-	//							}
-	//						}
-	//						if (!culledRenderer.empty())
-	//						{
-	//							CameraCB cb;
-	//							cb.mVP = l->shadowCam_spotLight[0].getVP();
-	//							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+								// render opaque shadowmap:
+								GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
+								RenderMeshes(light.shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
-	//							GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
+								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+								{
+									// render transparent shadowmap:
+									Texture2D* rts[] = {
+										shadowMapArray_Transparent
+									};
+									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
+									RenderMeshes(light.shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								}
+							}
 
-	//							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-	//							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, l->shadowMap_index);
+						}
+					}
+					break;
+					case LightComponent::SPOT:
+					{
+						if (shadowCounter_2D >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_spotLight.empty())
+							break;
+						shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-	//							// render opaque shadowmap:
-	//							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, l->shadowMap_index);
-	//							RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+						Frustum frustum;
+						frustum.ConstructFrustum(light.shadowCam_spotLight[0].farplane, light.shadowCam_spotLight[0].realProjection, light.shadowCam_spotLight[0].View);
 
-	//							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
-	//							{
-	//								// render transparent shadowmap:
-	//								Texture2D* rts[] = {
-	//									shadowMapArray_Transparent
-	//								};
-	//								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, l->shadowMap_index);
-	//								RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
-	//							}
-	//						}
-	//					}
-	//				}
-	//				break;
-	//				case LightComponent::POINT:
-	//				case LightComponent::SPHERE:
-	//				case LightComponent::DISC:
-	//				case LightComponent::RECTANGLE:
-	//				case LightComponent::TUBE:
-	//				{
-	//					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || l->shadowMap_index < 0 || l->shadowCam_pointLight.empty())
-	//						break;
-	//					shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
+						CulledCollection culledRenderer;
+						bool transparentShadowsRequested = false;
+						for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+						{
+							const CullableComponent& cullable = scene.cullables[i];
+							Entity cullable_entity = scene.cullables.GetEntity(i);
+							if (cullable_entity != entity && frustum.CheckBox(cullable.aabb))
+							{
+								const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
+								if (object != nullptr)
+								{
+									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+									if (all_layers || (layerMask & layer.GetLayerMask()))
+									{
+										if (object->IsCastingShadow())
+										{
+											culledRenderer[object->meshID].push_back(cullable_entity);
 
-	//					if (spTree != nullptr)
-	//					{
-	//						CulledList culledObjects;
-	//						CulledCollection culledRenderer;
-	//						spTree->getVisible(l->bounds, culledObjects);
-	//						for (Cullable* x : culledObjects)
-	//						{
-	//							Object* object = (Object*)x;
+											if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
+											{
+												transparentShadowsRequested = true;
+											}
+										}
+									}
+								}
+							}
+						}
+						if (!culledRenderer.empty())
+						{
+							CameraCB cb;
+							cb.mVP = light.shadowCam_spotLight[0].getVP();
+							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-	//							if (all_layers || (layerMask & object->GetLayerMask()))
-	//							{
-	//								if (object->IsCastingShadow())
-	//								{
-	//									culledRenderer[object->mesh].push_front(object);
-	//								}
-	//							}
-	//						}
-	//						if (!culledRenderer.empty())
-	//						{
-	//							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube, threadID, l->shadowMap_index);
-	//							GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, l->shadowMap_index);
+							GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
-	//							MiscCB miscCb;
-	//							miscCb.mColor = XMFLOAT4(l->translation.x, l->translation.y, l->translation.z, 1.0f / l->GetRange()); // reciprocal range, to avoid division in shader
-	//							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index);
 
-	//							CubeMapRenderCB cb;
-	//							for (unsigned int shcam = 0; shcam < l->shadowCam_pointLight.size(); ++shcam)
-	//								cb.mViewProjection[shcam] = l->shadowCam_pointLight[shcam].getVP();
+							// render opaque shadowmap:
+							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index);
+							RenderMeshes(frustum.getCamPos(), culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
-	//							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+							{
+								// render transparent shadowmap:
+								Texture2D* rts[] = {
+									shadowMapArray_Transparent
+								};
+								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index);
+								RenderMeshes(frustum.getCamPos(), culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+							}
+						}
 
-	//							RenderMeshes(l->translation, culledRenderer, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
-	//						}
-	//					}
-	//				}
-	//				break;
-	//				} // terminate switch
-	//			}
+					}
+					break;
+					case LightComponent::POINT:
+					case LightComponent::SPHERE:
+					case LightComponent::DISC:
+					case LightComponent::RECTANGLE:
+					case LightComponent::TUBE:
+					{
+						if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || light.shadowMap_index < 0 || light.shadowCam_pointLight.empty())
+							break;
+						shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-	//		}
+						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	//	}
+						CulledCollection culledRenderer;
+						for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+						{
+							const CullableComponent& cullable = scene.cullables[i];
+							Entity cullable_entity = scene.cullables.GetEntity(i);
+							if (cullable_entity != entity && SPHERE(transform.translation, light.range).intersects(cullable.aabb))
+							{
+								const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
+								if (object != nullptr)
+								{
+									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+									if (all_layers || (layerMask & layer.GetLayerMask()))
+									{
+										if (object->IsCastingShadow() && object->GetRenderTypes() == RENDERTYPE_OPAQUE)
+										{
+											culledRenderer[object->meshID].push_back(cullable_entity);
+										}
+									}
+								}
+							}
+						}
+						if (!culledRenderer.empty())
+						{
+							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube, threadID, light.shadowMap_index);
+							GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+
+							MiscCB miscCb;
+							miscCb.mColor = XMFLOAT4(transform.translation.x, transform.translation.y, transform.translation.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
+							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+							CubeMapRenderCB cb;
+							for (unsigned int shcam = 0; shcam < light.shadowCam_pointLight.size(); ++shcam)
+								cb.mViewProjection[shcam] = light.shadowCam_pointLight[shcam].getVP();
+
+							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+
+							RenderMeshes(transform.translation, culledRenderer, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+						}
+
+					}
+					break;
+					} // terminate switch
+				}
+
+			}
+
+			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+		}
 
 
-	//	wiProfiler::GetInstance().EndRange(); // Shadow Rendering
-	//	GetDevice()->EventEnd(threadID);
-	//}
+		wiProfiler::GetInstance().EndRange(); // Shadow Rendering
+		GetDevice()->EventEnd(threadID);
+	}
 
-	//GetDevice()->BindResource(PS, shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-	//GetDevice()->BindResource(PS, shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
-	//if (GetTransparentShadowsEnabled())
-	//{
-	//	GetDevice()->BindResource(PS, shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
-	//}
+	GetDevice()->BindResource(PS, shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+	GetDevice()->BindResource(PS, shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	if (GetTransparentShadowsEnabled())
+	{
+		GetDevice()->BindResource(PS, shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+	}
 }
 
 void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
@@ -6103,197 +6144,197 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 {
-	//wiProfiler::GetInstance().BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
-	//GraphicsDevice* device = wiRenderer::GetDevice();
+	wiProfiler::GetInstance().BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	//int _width = GetInternalResolution().x;
-	//int _height = GetInternalResolution().y;
+	int _width = GetInternalResolution().x;
+	int _height = GetInternalResolution().y;
 
-	//const XMUINT3 tileCount = GetEntityCullingTileCount();
+	const XMUINT3 tileCount = GetEntityCullingTileCount();
 
-	//static int _savedWidth = 0;
-	//static int _savedHeight = 0;
-	//bool _resolutionChanged = GetDevice()->ResolutionChanged();
-	//if (_savedWidth != _width || _savedHeight != _height)
-	//{
-	//	_resolutionChanged = true;
-	//	_savedWidth = _width;
-	//	_savedHeight = _height;
-	//}
+	static int _savedWidth = 0;
+	static int _savedHeight = 0;
+	bool _resolutionChanged = GetDevice()->ResolutionChanged();
+	if (_savedWidth != _width || _savedHeight != _height)
+	{
+		_resolutionChanged = true;
+		_savedWidth = _width;
+		_savedHeight = _height;
+	}
 
-	//static GPUBuffer* frustumBuffer = nullptr;
-	//if (frustumBuffer == nullptr || _resolutionChanged)
-	//{
-	//	SAFE_DELETE(frustumBuffer);
+	static GPUBuffer* frustumBuffer = nullptr;
+	if (frustumBuffer == nullptr || _resolutionChanged)
+	{
+		SAFE_DELETE(frustumBuffer);
 
-	//	frustumBuffer = new GPUBuffer;
+		frustumBuffer = new GPUBuffer;
 
-	//	UINT _stride = sizeof(XMFLOAT4) * 4;
+		UINT _stride = sizeof(XMFLOAT4) * 4;
 
-	//	GPUBufferDesc bd;
-	//	ZeroMemory(&bd, sizeof(bd));
-	//	bd.ByteWidth = _stride * tileCount.x * tileCount.y * tileCount.z; // storing 4 planes for every tile
-	//	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	bd.Usage = USAGE_DEFAULT;
-	//	bd.CPUAccessFlags = 0;
-	//	bd.StructureByteStride = _stride;
-	//	device->CreateBuffer(&bd, nullptr, frustumBuffer);
-	//}
-	//if (_resolutionChanged)
-	//{
-	//	SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
-	//	SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
-	//	resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE] = new GPUBuffer;
-	//	resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT] = new GPUBuffer;
+		GPUBufferDesc bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = _stride * tileCount.x * tileCount.y * tileCount.z; // storing 4 planes for every tile
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Usage = USAGE_DEFAULT;
+		bd.CPUAccessFlags = 0;
+		bd.StructureByteStride = _stride;
+		device->CreateBuffer(&bd, nullptr, frustumBuffer);
+	}
+	if (_resolutionChanged)
+	{
+		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
+		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
+		resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE] = new GPUBuffer;
+		resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT] = new GPUBuffer;
 
-	//	GPUBufferDesc bd;
-	//	ZeroMemory(&bd, sizeof(bd));
-	//	bd.ByteWidth = sizeof(UINT) * tileCount.x * tileCount.y * tileCount.z * MAX_SHADER_ENTITY_COUNT_PER_TILE;
-	//	bd.Usage = USAGE_DEFAULT;
-	//	bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	bd.CPUAccessFlags = 0;
-	//	bd.StructureByteStride = sizeof(UINT);
-	//	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
-	//	device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
-	//}
-	//if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
-	//{
-	//	TextureDesc desc;
-	//	ZeroMemory(&desc, sizeof(desc));
-	//	desc.ArraySize = 1;
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = RTFormat_deferred_lightbuffer;
-	//	desc.Width = (UINT)_width;
-	//	desc.Height = (UINT)_height;
-	//	desc.MipLevels = 1;
-	//	desc.MiscFlags = 0;
-	//	desc.SampleDesc.Count = 1;
-	//	desc.SampleDesc.Quality = 0;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]);
-	//	device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]);
-	//}
+		GPUBufferDesc bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = sizeof(UINT) * tileCount.x * tileCount.y * tileCount.z * MAX_SHADER_ENTITY_COUNT_PER_TILE;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		bd.CPUAccessFlags = 0;
+		bd.StructureByteStride = sizeof(UINT);
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
+	}
+	if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
+	{
+		TextureDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.ArraySize = 1;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.Format = RTFormat_deferred_lightbuffer;
+		desc.Width = (UINT)_width;
+		desc.Height = (UINT)_height;
+		desc.MipLevels = 1;
+		desc.MiscFlags = 0;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]);
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]);
+	}
 
-	//// calculate the per-tile frustums once:
-	//static bool frustumsComplete = false;
-	//static XMFLOAT4X4 _savedProjection;
-	//if (memcmp(&_savedProjection, &getCamera()->Projection, sizeof(XMFLOAT4X4)) != 0)
-	//{
-	//	_savedProjection = getCamera()->Projection;
-	//	frustumsComplete = false;
-	//}
-	//if(!frustumsComplete || _resolutionChanged)
-	//{
-	//	frustumsComplete = true;
+	// calculate the per-tile frustums once:
+	static bool frustumsComplete = false;
+	static XMFLOAT4X4 _savedProjection;
+	if (memcmp(&_savedProjection, &getCamera()->Projection, sizeof(XMFLOAT4X4)) != 0)
+	{
+		_savedProjection = getCamera()->Projection;
+		frustumsComplete = false;
+	}
+	if(!frustumsComplete || _resolutionChanged)
+	{
+		frustumsComplete = true;
 
-	//	GPUResource* uavs[] = { frustumBuffer };
+		GPUResource* uavs[] = { frustumBuffer };
 
-	//	device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
-	//	device->BindComputePSO(CPSO[CSTYPE_TILEFRUSTUMS], threadID);
+		device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
+		device->BindComputePSO(CPSO[CSTYPE_TILEFRUSTUMS], threadID);
 
-	//	DispatchParamsCB dispatchParams;
-	//	dispatchParams.numThreads[0] = tileCount.x;
-	//	dispatchParams.numThreads[1] = tileCount.y;
-	//	dispatchParams.numThreads[2] = 1;
-	//	dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)TILED_CULLING_BLOCKSIZE);
-	//	dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
-	//	dispatchParams.numThreadGroups[2] = 1;
-	//	device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-	//	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		DispatchParamsCB dispatchParams;
+		dispatchParams.numThreads[0] = tileCount.x;
+		dispatchParams.numThreads[1] = tileCount.y;
+		dispatchParams.numThreads[2] = 1;
+		dispatchParams.numThreadGroups[0] = (UINT)ceilf(dispatchParams.numThreads[0] / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.numThreadGroups[1] = (UINT)ceilf(dispatchParams.numThreads[1] / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.numThreadGroups[2] = 1;
+		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
-	//	device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
-	//	device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, threadID);
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//}
+		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
+		device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+	}
 
-	//if (textures[TEXTYPE_2D_DEBUGUAV] == nullptr || _resolutionChanged)
-	//{
-	//	SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
+	if (textures[TEXTYPE_2D_DEBUGUAV] == nullptr || _resolutionChanged)
+	{
+		SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
 
-	//	TextureDesc desc;
-	//	ZeroMemory(&desc, sizeof(desc));
-	//	desc.Width = (UINT)_width;
-	//	desc.Height = (UINT)_height;
-	//	desc.MipLevels = 1;
-	//	desc.ArraySize = 1;
-	//	desc.Format = FORMAT_R8G8B8A8_UNORM;
-	//	desc.SampleDesc.Count = 1;
-	//	desc.SampleDesc.Quality = 0;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.MiscFlags = 0;
+		TextureDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = (UINT)_width;
+		desc.Height = (UINT)_height;
+		desc.MipLevels = 1;
+		desc.ArraySize = 1;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
 
-	//	device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_DEBUGUAV]);
-	//}
+		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_DEBUGUAV]);
+	}
 
-	//// Perform the culling
-	//{
-	//	device->EventBegin("Entity Culling", threadID);
+	// Perform the culling
+	{
+		device->EventBegin("Entity Culling", threadID);
 
-	//	device->UnbindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
+		device->UnbindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
 
-	//	device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
+		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 
-	//	device->BindComputePSO(CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
+		device->BindComputePSO(CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
 
-	//	if (GetDebugLightCulling())
-	//	{
-	//		device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
-	//	}
-
-
-	//	const FrameCulling& frameCulling = frameCullings[getCamera()];
+		if (GetDebugLightCulling())
+		{
+			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+		}
 
 
-	//	DispatchParamsCB dispatchParams;
-	//	dispatchParams.numThreadGroups[0] = tileCount.x;
-	//	dispatchParams.numThreadGroups[1] = tileCount.y;
-	//	dispatchParams.numThreadGroups[2] = 1;
-	//	dispatchParams.numThreads[0] = dispatchParams.numThreadGroups[0] * TILED_CULLING_BLOCKSIZE;
-	//	dispatchParams.numThreads[1] = dispatchParams.numThreadGroups[1] * TILED_CULLING_BLOCKSIZE;
-	//	dispatchParams.numThreads[2] = 1;
-	//	dispatchParams.value0 = (UINT)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
-	//	device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-	//	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		const FrameCulling& frameCulling = frameCullings[getCamera()];
 
-	//	if (deferred)
-	//	{
-	//		GPUResource* uavs[] = {
-	//			textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV],
-	//			resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
-	//			textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV],
-	//		};
-	//		device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
-	//		GetDevice()->BindResource(CS, shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-	//		GetDevice()->BindResource(CS, shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
-	//		GetDevice()->BindResource(CS, shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+		DispatchParamsCB dispatchParams;
+		dispatchParams.numThreadGroups[0] = tileCount.x;
+		dispatchParams.numThreadGroups[1] = tileCount.y;
+		dispatchParams.numThreadGroups[2] = 1;
+		dispatchParams.numThreads[0] = dispatchParams.numThreadGroups[0] * TILED_CULLING_BLOCKSIZE;
+		dispatchParams.numThreads[1] = dispatchParams.numThreadGroups[1] * TILED_CULLING_BLOCKSIZE;
+		dispatchParams.numThreads[2] = 1;
+		dispatchParams.value0 = (UINT)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
+		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
-	//		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
-	//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	}
-	//	else
-	//	{
-	//		GPUResource* uavs[] = {
-	//			resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE],
-	//			resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
-	//		};
-	//		device->BindUAVs(CS, uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
+		if (deferred)
+		{
+			GPUResource* uavs[] = {
+				textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV],
+				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
+				textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV],
+			};
+			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
-	//		device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
-	//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	}
+			GetDevice()->BindResource(CS, shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+			GetDevice()->BindResource(CS, shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+			GetDevice()->BindResource(CS, shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 
-	//	device->UnbindUAVs(0, 8, threadID); // this unbinds pretty much every uav
+			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		}
+		else
+		{
+			GPUResource* uavs[] = {
+				resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE],
+				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
+			};
+			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
 
-	//	device->EventEnd(threadID);
-	//}
+			device->Dispatch(dispatchParams.numThreadGroups[0], dispatchParams.numThreadGroups[1], dispatchParams.numThreadGroups[2], threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		}
 
-	//wiProfiler::GetInstance().EndRange(threadID);
+		device->UnbindUAVs(0, 8, threadID); // this unbinds pretty much every uav
+
+		device->EventEnd(threadID);
+	}
+
+	wiProfiler::GetInstance().EndRange(threadID);
 }
 void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {

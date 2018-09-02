@@ -53,6 +53,7 @@ namespace wiMath
 	const XMFLOAT4& GetHaltonSequence(int idx);
 
 	uint32_t CompressNormal(const XMFLOAT3& normal);
+	uint32_t CompressColor(const XMFLOAT3& color);
 	uint32_t CompressColor(const XMFLOAT4& color);
 };
 

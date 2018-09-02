@@ -27,7 +27,7 @@ void wiLensFlare::CleanUp(){
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(samplercmp);
 }
-void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<Texture2D*>& rims){
+void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<Texture2D*>& rims){
 
 	if(!rims.empty())
 	{

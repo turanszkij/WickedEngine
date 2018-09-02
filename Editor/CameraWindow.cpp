@@ -32,7 +32,10 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	target = (Entity)wiHashString("__editorCameraTarget").GetHash();
 
 	Scene& scene = wiRenderer::GetScene();
-	scene.transforms.Create(target);
+	if (scene.transforms.GetComponent(target) == nullptr)
+	{
+		scene.transforms.Create(target);
+	}
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(600, 420));

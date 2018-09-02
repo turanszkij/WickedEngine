@@ -340,6 +340,7 @@ namespace wiSceneSystem
 		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 		bool renderable = true;
 		bool dynamic = false;
+		bool cast_shadow = false;
 		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 
@@ -359,6 +360,7 @@ namespace wiSceneSystem
 			return ((occlusionQueryID >= 0) && (occlusionHistory & 0xFFFFFFFF) == 0);
 		}
 		inline bool IsDynamic() const { return dynamic; }
+		inline bool IsCastingShadow() const { return cast_shadow; }
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
 	};
@@ -447,6 +449,8 @@ namespace wiSceneSystem
 		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 		std::vector<std::string> lensFlareNames;
 
+		XMFLOAT3 direction;
+
 		int shadowMap_index = -1;
 		int entityArray_index = -1;
 
@@ -457,6 +461,7 @@ namespace wiSceneSystem
 		float width = 1.0f;
 		float height = 1.0f;
 
+		inline float GetRange() const { return range; }
 
 		struct SHCAM 
 		{
@@ -539,7 +544,7 @@ namespace wiSceneSystem
 					XMMatrixLookAtLH(rEye, rAt, rUp)
 				);
 			}
-			XMMATRIX getVP() {
+			XMMATRIX getVP() const {
 				return XMMatrixTranspose(XMLoadFloat4x4(&View)*XMLoadFloat4x4(&Projection));
 			}
 		};

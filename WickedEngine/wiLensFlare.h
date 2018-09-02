@@ -31,7 +31,7 @@ private:
 public:
 	static void Initialize();
 	static void CleanUp();
-	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<wiGraphicsTypes::Texture2D*>& rims);
+	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<wiGraphicsTypes::Texture2D*>& rims);
 };
 
 #endif

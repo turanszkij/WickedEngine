@@ -620,6 +620,7 @@ namespace wiSceneSystem
 			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
 			object.rendertypeMask = 0;
 			object.dynamic = false;
+			object.cast_shadow = false;
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -654,6 +655,8 @@ namespace wiSceneSystem
 							{
 								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
 							}
+
+							object.cast_shadow |= material->cast_shadow;
 						}
 					}
 				}
@@ -693,11 +696,13 @@ namespace wiSceneSystem
 			XMVECTOR translation = XMLoadFloat3(&transform.translation);
 			XMVECTOR rotation = XMLoadFloat4(&transform.rotation);
 
+			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 1), world));
+
 			switch (light.type)
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				XMStoreFloat3(&sunDirection, -XMVector3TransformNormal(XMVectorSet(0, -1, 0, 1), world));
+				sunDirection = light.direction;
 				sunColor = light.color;
 
 				if (light.shadow)
