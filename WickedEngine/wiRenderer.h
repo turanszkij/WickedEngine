@@ -24,8 +24,7 @@ class  wiRenderTarget;
 class  wiOcean;
 struct wiOceanParameter;
 
-struct FrameCulling;
-struct CulledCollection;
+typedef std::unordered_map<wiECS::Entity, std::vector<wiECS::Entity>> CulledCollection;
 
 struct RAY;
 
@@ -367,30 +366,6 @@ public:
 
 	static void ReloadShaders(const std::string& path = "");
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
-
-	//struct FrameCulling
-	//{
-	//	Frustum frustum;
-	//	CulledCollection culledRenderer;
-	//	CulledCollection culledRenderer_opaque;
-	//	CulledCollection culledRenderer_transparent;
-	//	std::vector<wiHairParticle*> culledHairParticleSystems;
-	//	CulledList culledLights;
-	//	std::list<wiSceneSystem::Decal*> culledDecals;
-	//	std::list<wiSceneSystem::EnvironmentProbe*> culledEnvProbes;
-
-	//	void Clear()
-	//	{
-	//		culledRenderer.clear();
-	//		culledRenderer_opaque.clear();
-	//		culledRenderer_transparent.clear();
-	//		culledHairParticleSystems.clear();
-	//		culledLights.clear();
-	//		culledDecals.clear();
-	//		culledEnvProbes.clear();
-	//	}
-	//};
-	static std::unordered_map<wiSceneSystem::CameraComponent*, FrameCulling*> frameCullings;
 
 	inline static XMUINT3 GetEntityCullingTileCount()
 	{

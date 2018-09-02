@@ -731,54 +731,38 @@ void EditorComponent::Load()
 			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 			if (GetOpenFileNameA(&ofn) == TRUE) 
 			{
-				//string fileName = ofn.lpstrFile;
+				string fileName = ofn.lpstrFile;
 
-				//loader->addLoadingFunction([=] {
-				//	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
+				loader->addLoadingFunction([=] {
+					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
-				//	if (!extension.compare("WIMF")) // serializer (.wimf)
-				//	{
-				//		wiRenderer::LoadModel(fileName);
-				//	}
-				//	else if (!extension.compare("WIO")) // blender-exporter
-				//	{
-				//		Model* model = ImportModel_WIO(fileName);
-				//		if (model != nullptr)
-				//		{
-				//			wiRenderer::AddModel(model);
-				//		}
-				//	}
-				//	else if (!extension.compare("OBJ")) // wavefront-obj
-				//	{
-				//		Model* model = ImportModel_OBJ(fileName);
-				//		if (model != nullptr)
-				//		{
-				//			wiRenderer::AddModel(model);
-				//		}
-				//	}
-				//	else if (!extension.compare("GLTF")) // text-based gltf
-				//	{
-				//		Model* model = ImportModel_GLTF(fileName);
-				//		if (model != nullptr)
-				//		{
-				//			wiRenderer::AddModel(model);
-				//		}
-				//	}
-				//	else if (!extension.compare("GLB")) // binary gltf
-				//	{
-				//		Model* model = ImportModel_GLTF(fileName);
-				//		if (model != nullptr)
-				//		{
-				//			wiRenderer::AddModel(model);
-				//		}
-				//	}
-				//});
-				//loader->onFinished([=] {
-				//	main->activateComponent(this, 10, wiColor::Black);
-				//	worldWnd->UpdateFromRenderer();
-				//});
-				//main->activateComponent(loader,10,wiColor::Black);
-				//ResetHistory();
+					if (!extension.compare("WIMF")) // serializer (.wimf)
+					{
+						wiRenderer::LoadModel(fileName);
+					}
+					else if (!extension.compare("WIO")) // blender-exporter
+					{
+						ImportModel_WIO(fileName);
+					}
+					else if (!extension.compare("OBJ")) // wavefront-obj
+					{
+						ImportModel_OBJ(fileName);
+					}
+					else if (!extension.compare("GLTF")) // text-based gltf
+					{
+						ImportModel_GLTF(fileName);
+					}
+					else if (!extension.compare("GLB")) // binary gltf
+					{
+						ImportModel_GLTF(fileName);
+					}
+				});
+				loader->onFinished([=] {
+					main->activateComponent(this, 10, wiColor::Black);
+					worldWnd->UpdateFromRenderer();
+				});
+				main->activateComponent(loader,10,wiColor::Black);
+				ResetHistory();
 			}
 		}).detach();
 	});

@@ -162,7 +162,6 @@ namespace wiSceneSystem
 		XMStoreFloat3(&scale_local, S);
 	}
 
-
 	Texture2D* MaterialComponent::GetBaseColorMap() const
 	{
 		if (baseColorMap != nullptr)
@@ -195,6 +194,239 @@ namespace wiSceneSystem
 			return displacementMap;
 		}
 		return wiTextureHelper::getInstance()->getWhite();
+	}
+
+	void MeshComponent::CreateRenderData()
+	{
+		// First, assemble vertex, index arrays:
+
+		// In case of recreate, delete data first:
+		vertices_POS.clear();
+		vertices_TEX.clear();
+		vertices_BON.clear();
+
+		// De-interleave vertex arrays:
+		vertices_POS.resize(vertices_FULL.size());
+		vertices_TEX.resize(vertices_FULL.size());
+		// do not resize vertices_BON just yet, not every mesh will need bone vertex data!
+		for (size_t i = 0; i < vertices_FULL.size(); ++i)
+		{
+			// Normalize normals:
+			float alpha = vertices_FULL[i].nor.w;
+			XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
+			nor = XMVector3Normalize(nor);
+			XMStoreFloat4(&vertices_FULL[i].nor, nor);
+			vertices_FULL[i].nor.w = alpha;
+
+			// Normalize bone weights:
+			XMFLOAT4& wei = vertices_FULL[i].wei;
+			float len = wei.x + wei.y + wei.z + wei.w;
+			if (len > 0)
+			{
+				wei.x /= len;
+				wei.y /= len;
+				wei.z /= len;
+				wei.w /= len;
+
+				if (vertices_BON.empty())
+				{
+					// Allocate full bone vertex data when we find a correct bone weight.
+					vertices_BON.resize(vertices_FULL.size());
+				}
+				vertices_BON[i].FromFULL(vertices_FULL[i]);
+			}
+
+			// Split and type conversion:
+			vertices_POS[i].FromFULL(vertices_FULL[i]);
+			vertices_TEX[i].FromFULL(vertices_FULL[i]);
+		}
+
+		// Save original vertices. This will be input for CPU skinning / soft bodies
+		vertices_Transformed_POS = vertices_POS;
+		vertices_Transformed_PRE = vertices_POS; // pre <- pos!! (previous positions will have the current positions initially)
+
+												 // Map subset indices:
+		for (auto& subset : subsets)
+		{
+			subset.subsetIndices.clear();
+		}
+		for (size_t i = 0; i < indices.size(); ++i)
+		{
+			uint32_t index = indices[i];
+			const XMFLOAT4& tex = vertices_FULL[index].tex;
+			unsigned int materialIndex = (unsigned int)floor(tex.z);
+
+			assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
+
+			MeshSubset& subset = subsets[materialIndex];
+			subset.subsetIndices.push_back(index);
+
+			if (index >= 65536)
+			{
+				indexFormat = INDEXFORMAT_32BIT;
+			}
+		}
+
+
+		//// Goal positions, normals are controlling blending between animation and physics states for soft body rendering:
+		//goalPositions.clear();
+		//goalNormals.clear();
+		//if (goalVG >= 0)
+		//{
+		//	goalPositions.resize(vertexGroups[goalVG].vertices.size());
+		//	goalNormals.resize(vertexGroups[goalVG].vertices.size());
+		//}
+
+
+		//// Mapping render vertices to physics vertex representation:
+		////	the physics vertices contain unique position, not duplicated by texcoord or normals
+		////	this way we can map several renderable vertices to one physics vertex
+		////	but the mapping function will actually be indexed by renderable vertex index for efficient retrieval.
+		//if (!physicsverts.empty() && physicalmapGP.empty())
+		//{
+		//	for (size_t i = 0; i < vertices_POS.size(); ++i)
+		//	{
+		//		for (size_t j = 0; j < physicsverts.size(); ++j)
+		//		{
+		//			if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
+		//				&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
+		//				&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
+		//				)
+		//			{
+		//				physicalmapGP.push_back(static_cast<int>(j));
+		//				break;
+		//			}
+		//		}
+		//	}
+		//}
+
+
+
+		// Create actual GPU data:
+
+		SAFE_DELETE(indexBuffer);
+		SAFE_DELETE(vertexBuffer_POS);
+		SAFE_DELETE(vertexBuffer_TEX);
+		SAFE_DELETE(vertexBuffer_BON);
+		SAFE_DELETE(streamoutBuffer_POS);
+		SAFE_DELETE(streamoutBuffer_PRE);
+
+		GPUBufferDesc bd;
+		SubresourceData InitData;
+
+		//if (!hasDynamicVB())
+		{
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			ZeroMemory(&InitData, sizeof(InitData));
+
+			InitData.pSysMem = vertices_POS.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			vertexBuffer_POS = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS);
+		}
+
+		if (!vertices_BON.empty())
+		{
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
+			bd.CPUAccessFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+			InitData.pSysMem = vertices_BON.data();
+			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
+			vertexBuffer_BON = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON);
+
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_DEFAULT;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
+			bd.CPUAccessFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			streamoutBuffer_POS = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS);
+
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			streamoutBuffer_PRE = new GPUBuffer;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE);
+		}
+
+		// texture coordinate buffers are always static:
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+		bd.MiscFlags = 0;
+		bd.StructureByteStride = sizeof(Vertex_TEX);
+		bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices_TEX.size());
+		bd.Format = Vertex_TEX::FORMAT;
+		InitData.pSysMem = vertices_TEX.data();
+		vertexBuffer_TEX = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX);
+
+
+		// Remap index buffer to be continuous across subsets and create gpu buffer data:
+		uint32_t counter = 0;
+		uint8_t stride;
+		void* gpuIndexData;
+		if (GetIndexFormat() == INDEXFORMAT_16BIT)
+		{
+			gpuIndexData = new uint16_t[indices.size()];
+			stride = sizeof(uint16_t);
+		}
+		else
+		{
+			gpuIndexData = new uint32_t[indices.size()];
+			stride = sizeof(uint32_t);
+		}
+
+		for (MeshSubset& subset : subsets)
+		{
+			if (subset.subsetIndices.empty())
+			{
+				continue;
+			}
+			subset.indexBufferOffset = counter;
+
+			switch (GetIndexFormat())
+			{
+			case INDEXFORMAT_16BIT:
+				for (auto& x : subset.subsetIndices)
+				{
+					static_cast<uint16_t*>(gpuIndexData)[counter] = static_cast<uint16_t>(x);
+					counter++;
+				}
+				break;
+			default:
+				for (auto& x : subset.subsetIndices)
+				{
+					static_cast<uint32_t*>(gpuIndexData)[counter] = static_cast<uint32_t>(x);
+					counter++;
+				}
+				break;
+			}
+		}
+
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.CPUAccessFlags = 0;
+		bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		bd.MiscFlags = 0;
+		bd.StructureByteStride = stride;
+		bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
+		InitData.pSysMem = gpuIndexData;
+		bd.ByteWidth = (UINT)(stride * indices.size());
+		indexBuffer = new GPUBuffer;
+		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer);
+
+		SAFE_DELETE_ARRAY(gpuIndexData);
+
 	}
 
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
@@ -287,37 +519,46 @@ namespace wiSceneSystem
 			transform.UpdateTransform();
 		}
 
-		// Update Transform hierarchy:
+		// Update Hierarchy:
 		for (size_t i = 0; i < parents.GetCount(); ++i)
 		{
 			ParentComponent& parentcomponent = parents[i];
-
 			Entity entity = parents.GetEntity(i);
+
 			TransformComponent* transform_child = transforms.GetComponent(entity);
 			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
-			assert(transform_child != nullptr);
-			assert(transform_parent != nullptr);
+			if (transform_child != nullptr && transform_parent != nullptr)
+			{
+				XMVECTOR S_local = XMLoadFloat3(&transform_child->scale_local);
+				XMVECTOR R_local = XMLoadFloat4(&transform_child->rotation_local);
+				XMVECTOR T_local = XMLoadFloat3(&transform_child->translation_local);
+				XMMATRIX W =
+					XMMatrixScalingFromVector(S_local) *
+					XMMatrixRotationQuaternion(R_local) *
+					XMMatrixTranslationFromVector(T_local);
 
-			XMVECTOR S_local = XMLoadFloat3(&transform_child->scale_local);
-			XMVECTOR R_local = XMLoadFloat4(&transform_child->rotation_local);
-			XMVECTOR T_local = XMLoadFloat3(&transform_child->translation_local);
-			XMMATRIX W =
-				XMMatrixScalingFromVector(S_local) *
-				XMMatrixRotationQuaternion(R_local) *
-				XMMatrixTranslationFromVector(T_local);
+				XMMATRIX W_parent = XMLoadFloat4x4(&transform_parent->world);
+				XMMATRIX B = XMLoadFloat4x4(&parentcomponent.world_parent_inverse_bind);
+				W = W * B * W_parent;
 
-			XMMATRIX W_parent = XMLoadFloat4x4(&transform_parent->world);
-			XMMATRIX B = XMLoadFloat4x4(&parentcomponent.world_parent_bind);
-			W = W * B * W_parent;
+				XMVECTOR S, R, T;
+				XMMatrixDecompose(&S, &R, &T, W);
+				XMStoreFloat3(&transform_child->scale, S);
+				XMStoreFloat4(&transform_child->rotation, R);
+				XMStoreFloat3(&transform_child->translation, T);
 
-			XMVECTOR S, R, T;
-			XMMatrixDecompose(&S, &R, &T, W);
-			XMStoreFloat3(&transform_child->scale, S);
-			XMStoreFloat4(&transform_child->rotation, R);
-			XMStoreFloat3(&transform_child->translation, T);
+				transform_child->world_prev = transform_child->world;
+				XMStoreFloat4x4(&transform_child->world, W);
+			}
 
-			transform_child->world_prev = transform_child->world;
-			XMStoreFloat4x4(&transform_child->world, W);
+
+			LayerComponent* layer_child = layers.GetComponent(entity);
+			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
+			if (layer_child != nullptr && layer_parent != nullptr)
+			{
+				layer_child->layerMask = parentcomponent.layerMask_bind & layer_parent->GetLayerMask();
+			}
+
 		}
 
 		// Update Bone components:
@@ -343,6 +584,11 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < materials.GetCount(); ++i)
 		{
 			MaterialComponent& material = materials[i];
+
+			if (material.texAnimFrameRate > 0)
+			{
+				material.dirty = true; // will trigger contant buffer update!
+			}
 
 			material.texAnimSleep -= dt * material.texAnimFrameRate;
 			if (material.texAnimSleep <= 0)
@@ -618,6 +864,72 @@ namespace wiSceneSystem
 		}
 		return INVALID_ENTITY;
 	}
+	wiECS::Entity Scene::Entity_CreateModel(
+		const std::string& name
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		models.Create(entity);
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateMaterial(
+		const std::string& name
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		materials.Create(entity);
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateObject(
+		const std::string& name
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		cullables.Create(entity);
+
+		objects.Create(entity);
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateMesh(
+		const std::string& name
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		meshes.Create(entity);
+
+		return entity;
+	}
 	Entity Scene::Entity_CreateLight(
 		const std::string& name,
 		const XMFLOAT3& position,
@@ -630,6 +942,8 @@ namespace wiSceneSystem
 		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
+
+		layers.Create(entity);
 
 		transforms.Create(entity).Translate(position);
 
@@ -655,6 +969,8 @@ namespace wiSceneSystem
 
 		names.Create(entity) = name;
 
+		layers.Create(entity);
+
 		transforms.Create(entity).Translate(position);
 
 		ForceFieldComponent& force = forces.Create(entity);
@@ -674,6 +990,8 @@ namespace wiSceneSystem
 		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
+
+		layers.Create(entity);
 
 		transforms.Create(entity).Translate(position);
 
@@ -695,6 +1013,8 @@ namespace wiSceneSystem
 		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
+
+		layers.Create(entity);
 
 		transforms.Create(entity);
 
@@ -720,20 +1040,41 @@ namespace wiSceneSystem
 			parentcomponent = &parents.Create(entity);
 		}
 
-		TransformComponent* transformcomponent = transforms.GetComponent(parent);
-		assert(transformcomponent != nullptr);
+		TransformComponent* transform_parent = transforms.GetComponent(parent);
+		if (transform_parent != nullptr)
+		{
+			// Save the parent's inverse worldmatrix:
+			parentcomponent->parentID = parent;
+			XMStoreFloat4x4(&parentcomponent->world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
+		}
 
-		parentcomponent->parentID = parent;
-		XMStoreFloat4x4(&parentcomponent->world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transformcomponent->world)));
+		LayerComponent* layer_child = layers.GetComponent(entity);
+		if (layer_child != nullptr)
+		{
+			// Save the initial layermask of the child so that it can be restored if detached:
+			parentcomponent->layerMask_bind = layer_child->GetLayerMask();
+		}
 	}
 	void Scene::Component_Detach(wiECS::Entity entity)
 	{
-		TransformComponent* transform = transforms.GetComponent(entity);
-		if (transform != nullptr) 
+		const ParentComponent* parent = parents.GetComponent(entity);
+
+		if (parent != nullptr)
 		{
-			transform->ApplyTransform();
+			TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				transform->ApplyTransform();
+			}
+
+			LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				layer->layerMask = parent->layerMask_bind;
+			}
+
+			parents.Remove(entity);
 		}
-		parents.Remove(entity);
 	}
 	void Scene::Component_DetachChildren(wiECS::Entity parent)
 	{

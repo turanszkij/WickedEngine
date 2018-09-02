@@ -28,6 +28,8 @@ namespace wiSceneSystem
 	struct LayerComponent
 	{
 		uint32_t layerMask = ~0;
+
+		inline uint32_t GetLayerMask() const { return layerMask; }
 	};
 	
 	struct TransformComponent
@@ -60,7 +62,8 @@ namespace wiSceneSystem
 	struct ParentComponent
 	{
 		wiECS::Entity parentID;
-		XMFLOAT4X4 world_parent_bind;
+		uint32_t layerMask_bind; // saved child layermask at the time of binding
+		XMFLOAT4X4 world_parent_inverse_bind; // saved parent inverse worldmatrix at the time of binding
 	};
 
 	struct MaterialComponent
@@ -111,7 +114,7 @@ namespace wiSceneSystem
 			assert(value < 128);
 			userStencilRef = value & 0x0F;
 		}
-		inline UINT GetStencilRef()
+		inline UINT GetStencilRef() const
 		{
 			return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 		}
@@ -278,11 +281,14 @@ namespace wiSceneSystem
 		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_POS = nullptr;
 		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_PRE = nullptr;
 
+		// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
+		UINT bufferOffset_POS;
+		UINT bufferOffset_PRE;
+
 		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
 
 		bool renderable = true;
 		bool doubleSided = false;
-		bool renderDataComplete = false;
 
 		AABB aabb;
 
@@ -297,13 +303,15 @@ namespace wiSceneSystem
 
 		wiRenderTarget	impostorTarget;
 		float impostorDistance = 100.0f;
-		static wiGraphicsTypes::GPUBuffer impostorVB_POS;
-		static wiGraphicsTypes::GPUBuffer impostorVB_TEX;
 
 		float tessellationFactor;
 
+		bool HasImpostor() const { return impostorTarget.IsInitialized(); }
+		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() { return indexFormat; }
 		inline bool IsSkinned() { return armatureID != wiECS::INVALID_ENTITY; }
+
+		void CreateRenderData();
 	};
 
 	struct CullableComponent
@@ -322,6 +330,16 @@ namespace wiSceneSystem
 		uint32_t occlusionHistory = ~0;
 		// occlusion query pool index
 		int occlusionQueryID = -1;
+
+		inline bool IsOccluded() const
+		{
+			// Perform a conservative occlusion test:
+			// If it is visible in any frames in the history, it is determined visible in this frame
+			// But if all queries failed in the history, it is occluded.
+			// If it pops up for a frame after occluded, it is visible again for some frames
+			return ((occlusionQueryID >= 0) && (occlusionHistory & 0xFFFFFFFF) == 0);
+		}
+		inline float GetTransparency() const { return 1 - color.w; }
 	};
 
 	struct PhysicsComponent
@@ -575,7 +593,15 @@ namespace wiSceneSystem
 
 	struct ModelComponent
 	{
-		std::unordered_set<wiECS::Entity> entities;
+		std::unordered_set<wiECS::Entity> materials;
+		std::unordered_set<wiECS::Entity> objects;
+		std::unordered_set<wiECS::Entity> meshes;
+		std::unordered_set<wiECS::Entity> armatures;
+		std::unordered_set<wiECS::Entity> lights;
+		std::unordered_set<wiECS::Entity> cameras;
+		std::unordered_set<wiECS::Entity> probes;
+		std::unordered_set<wiECS::Entity> forces;
+		std::unordered_set<wiECS::Entity> decals;
 	};
 
 	struct Scene
@@ -609,7 +635,7 @@ namespace wiSceneSystem
 		float fogStart = 100;
 		float fogEnd = 1000;
 		float fogHeight = 0;
-		XMFLOAT4 waterPlane = XMFLOAT4(0, 0, 0, 0);
+		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 		float cloudiness = 0.0f;
 		float cloudScale = 0.0003f;
 		float cloudSpeed = 0.1f;
@@ -626,6 +652,22 @@ namespace wiSceneSystem
 		void Entity_Remove(wiECS::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wiECS::Entity Entity_FindByName(const std::string& name);
+		// Helper function to create a model entity:
+		wiECS::Entity Entity_CreateModel(
+			const std::string& name
+		);
+		// Helper function to create a material entity:
+		wiECS::Entity Entity_CreateMaterial(
+			const std::string& name
+		);
+		// Helper function to create a model entity:
+		wiECS::Entity Entity_CreateObject(
+			const std::string& name
+		);
+		// Helper function to create a model entity:
+		wiECS::Entity Entity_CreateMesh(
+			const std::string& name
+		);
 		// Helper function to create a light entity:
 		wiECS::Entity Entity_CreateLight(
 			const std::string& name, 
