@@ -3010,6 +3010,10 @@ void wiRenderer::UpdatePerFrameData(float dt)
 						{
 							culling.culledRenderer_transparent[object->meshID].push_back(entity);
 						}
+						if (object->GetRenderTypes() & RENDERTYPE_WATER)
+						{
+							requestReflectionRendering = true;
+						}
 					}
 					else if (camera == getCamera()) // the following cullings will be only for the main camera:
 					{
@@ -3092,6 +3096,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	wiProfiler::GetInstance().EndRange(); // SPTree Culling
 
 	// Ocean will override any current reflectors
+	waterPlane = scene.waterPlane;
 	if (ocean != nullptr)
 	{
 		requestReflectionRendering = true; 
@@ -6875,7 +6880,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
 }
 
-void wiRenderer::DrawTracedScene(CameraComponent* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawTracedScene(CameraComponent* camera, Texture2D* result, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	Scene& scene = GetScene();

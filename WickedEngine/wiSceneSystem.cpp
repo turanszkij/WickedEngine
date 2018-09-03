@@ -520,7 +520,7 @@ namespace wiSceneSystem
 		// Update Hierarchy:
 		for (size_t i = 0; i < parents.GetCount(); ++i)
 		{
-			ParentComponent& parentcomponent = parents[i];
+			const ParentComponent& parentcomponent = parents[i];
 			Entity entity = parents.GetEntity(i);
 
 			TransformComponent* transform_child = transforms.GetComponent(entity);
@@ -652,6 +652,9 @@ namespace wiSceneSystem
 							if (material->IsWater())
 							{
 								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+
+								XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&transform->translation), XMVectorSet(0, 1, 0, 0));
+								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 
 							object.cast_shadow |= material->cast_shadow;

@@ -1270,10 +1270,6 @@ void EditorComponent::Update(float dt)
 						transform.Translate(hovered.position);
 						transform.Scale(XMFLOAT3(4, 4, 4));
 						transform.MatrixTransform(XMLoadFloat3x3(&wiRenderer::getCamera()->rotationMatrix));
-						//Decal* decal = new Decal(hovered.position, XMFLOAT3(4, 4, 4), wiRenderer::getCamera()->rotation,
-						//	wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
-						//decal->attachTo(hovered.object);
-						//wiRenderer::PutDecal(decal);
 					}
 				}
 			}
