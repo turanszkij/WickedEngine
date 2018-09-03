@@ -653,117 +653,6 @@ void wiRenderer::ClearWorld()
 }
 float wiRenderer::GetGameSpeed() { return GameSpeed; }
 
-//void wiRenderer::SetUpBoneLines()
-//{
-//	boneLines.clear();
-//	for (Model* model : GetScene().models)
-//	{
-//		//for (unsigned int i = 0; i < model->armatures.size(); i++) {
-//		//	for (unsigned int j = 0; j < model->armatures[i]->boneCollection.size(); j++) {
-//		//		boneLines.push_back(new Lines(model->armatures[i]->boneCollection[j]->length, XMFLOAT4A(1, 1, 1, 1), i, j));
-//		//	}
-//		//}
-//		int i = 0;
-//		for (auto& a : model->armatures)
-//		{
-//			int j = 0;
-//			for (auto& b : a->boneCollection)
-//			{
-//				boneLines.push_back(new Lines(b->length, XMFLOAT4A(1, 1, 1, 1), i, j));
-//				j++;
-//			}
-//			i++;
-//		}
-//	}
-//}
-//void wiRenderer::UpdateBoneLines()
-//{
-//	if (debugBoneLines)
-//	{
-//		for (unsigned int i = 0; i < boneLines.size(); i++) {
-//			int armatureI = boneLines[i]->parentArmature;
-//			int boneI = boneLines[i]->parentBone;
-//
-//			int arm = 0;
-//			for (Model* model : GetScene().models)
-//			{
-//				for (Armature* armature : model->armatures)
-//				{
-//					if (arm == armatureI)
-//					{
-//						int bonI = 0;
-//						for (Bone* b : armature->boneCollection)
-//						{
-//							if (boneI == bonI)
-//							{
-//								boneLines[i]->Transform(b->world);
-//							}
-//							bonI++;
-//						}
-//					}
-//					arm++;
-//				}
-//			}
-//		}
-//	}
-//}
-//void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col);
-//void iterateSPTree(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
-//	if(!n) return;
-//	if(n->count){
-//		for (unsigned int i = 0; i<n->children.size(); ++i)
-//			iterateSPTree(n->children[i],cubes,col);
-//	}
-//	if(!n->objects.empty()){
-//		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
-//		for(Cullable* object:n->objects){
-//			cubes.push_back(Cube(object->bounds.getCenter(),object->bounds.getHalfWidth(),XMFLOAT4A(1,0,0,1)));
-//			//Object* o = (Object*)object;
-//			//for(wiHairParticle& hps : o->hParticleSystems)
-//			//	iterateSPTree2(hps.spTree->root,cubes,XMFLOAT4A(0,1,0,1));
-//		}
-//	}
-//}
-//void iterateSPTree2(wiSPTree::Node* n, std::vector<Cube>& cubes, const XMFLOAT4A& col){
-//	if(!n) return;
-//	if(n->count){
-//		for (unsigned int i = 0; i<n->children.size(); ++i)
-//			iterateSPTree2(n->children[i],cubes,col);
-//	}
-//	if(!n->objects.empty()){
-//		cubes.push_back(Cube(n->box.getCenter(),n->box.getHalfWidth(),col));
-//	}
-//}
-//void wiRenderer::SetUpCubes(){
-//	/*if(debugBoxes){
-//		cubes.resize(0);
-//		iterateSPTree(spTree->root,cubes);
-//		for(Object* object:objects)
-//			cubes.push_back(Cube(XMFLOAT3(0,0,0),XMFLOAT3(1,1,1),XMFLOAT4A(1,0,0,1)));
-//	}*/
-//	cubes.clear();
-//}
-//void wiRenderer::UpdateCubes(){
-//	if(debugPartitionTree && spTree && spTree->root){
-//		/*int num=0;
-//		iterateSPTreeUpdate(spTree->root,cubes,num);
-//		for(Object* object:objects){
-//			AABB b=object->frameBB;
-//			XMFLOAT3 c = b.getCenter();
-//			XMFLOAT3 hw = b.getHalfWidth();
-//			cubes[num].Transform( XMMatrixScaling(hw.x,hw.y,hw.z) * XMMatrixTranslation(c.x,c.y,c.z) );
-//			num+=1;
-//		}*/
-//		cubes.clear();
-//		if(spTree) iterateSPTree(spTree->root,cubes,XMFLOAT4A(1,1,0,1));
-//		if(spTree_lights) iterateSPTree(spTree_lights->root,cubes,XMFLOAT4A(1,1,1,1));
-//	}
-//	//if(debugBoxes){
-//	//	for(Decal* decal : decals){
-//	//		cubes.push_back(Cube(decal->bounds.getCenter(),decal->bounds.getHalfWidth(),XMFLOAT4A(1,0,1,1)));
-//	//	}
-//	//}
-//}
 
 bool wiRenderer::ResolutionChanged()
 {
@@ -6684,849 +6573,850 @@ static GPUBuffer* clusterAABBBuffer = nullptr;
 static GPUBuffer* clusterConeBuffer = nullptr;
 void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 {
-	//GraphicsDevice* device = GetDevice();
+	GraphicsDevice* device = GetDevice();
+	Scene& scene = GetScene();
 
-	//// Pre-gather scene properties:
-	//uint32_t totalTriangles = 0;
-	//for (auto& model : GetScene().models)
-	//{
-	//	for (auto& iter : model->objects)
-	//	{
-	//		Object* object = iter;
-	//		Mesh* mesh = object->mesh;
+	// Pre-gather scene properties:
+	uint totalTriangles = 0;
+	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	{
+		const MeshComponent& mesh = scene.meshes[i];
 
-	//		totalTriangles += (uint)mesh->indices.size() / 3;
-	//	}
-	//}
+		totalTriangles += (uint)mesh.indices.size() / 3;
+	}
 
-	//static uint maxTriangleCount = 0;
-	//static uint maxClusterCount = 0;
+	static uint maxTriangleCount = 0;
+	static uint maxClusterCount = 0;
 
-	//if (totalTriangles > maxTriangleCount)
-	//{
-	//	maxTriangleCount = totalTriangles;
-	//	maxClusterCount = maxTriangleCount; // todo: cluster / triangle capacity
+	if (totalTriangles > maxTriangleCount)
+	{
+		maxTriangleCount = totalTriangles;
+		maxClusterCount = maxTriangleCount; // todo: cluster / triangle capacity
 
-	//	GPUBufferDesc desc;
-	//	HRESULT hr;
+		GPUBufferDesc desc;
+		HRESULT hr;
 
-	//	SAFE_DELETE(bvhNodeBuffer);
-	//	SAFE_DELETE(bvhAABBBuffer);
-	//	SAFE_DELETE(bvhFlagBuffer);
-	//	SAFE_DELETE(triangleBuffer);
-	//	SAFE_DELETE(clusterCounterBuffer);
-	//	SAFE_DELETE(clusterIndexBuffer);
-	//	SAFE_DELETE(clusterMortonBuffer);
-	//	SAFE_DELETE(clusterSortedMortonBuffer);
-	//	SAFE_DELETE(clusterOffsetBuffer);
-	//	SAFE_DELETE(clusterAABBBuffer);
-	//	SAFE_DELETE(clusterConeBuffer);
-	//	bvhNodeBuffer = new GPUBuffer;
-	//	bvhAABBBuffer = new GPUBuffer;
-	//	bvhFlagBuffer = new GPUBuffer;
-	//	triangleBuffer = new GPUBuffer;
-	//	clusterCounterBuffer = new GPUBuffer;
-	//	clusterIndexBuffer = new GPUBuffer;
-	//	clusterMortonBuffer = new GPUBuffer;
-	//	clusterSortedMortonBuffer = new GPUBuffer;
-	//	clusterOffsetBuffer = new GPUBuffer;
-	//	clusterAABBBuffer = new GPUBuffer;
-	//	clusterConeBuffer = new GPUBuffer;
+		SAFE_DELETE(bvhNodeBuffer);
+		SAFE_DELETE(bvhAABBBuffer);
+		SAFE_DELETE(bvhFlagBuffer);
+		SAFE_DELETE(triangleBuffer);
+		SAFE_DELETE(clusterCounterBuffer);
+		SAFE_DELETE(clusterIndexBuffer);
+		SAFE_DELETE(clusterMortonBuffer);
+		SAFE_DELETE(clusterSortedMortonBuffer);
+		SAFE_DELETE(clusterOffsetBuffer);
+		SAFE_DELETE(clusterAABBBuffer);
+		SAFE_DELETE(clusterConeBuffer);
+		bvhNodeBuffer = new GPUBuffer;
+		bvhAABBBuffer = new GPUBuffer;
+		bvhFlagBuffer = new GPUBuffer;
+		triangleBuffer = new GPUBuffer;
+		clusterCounterBuffer = new GPUBuffer;
+		clusterIndexBuffer = new GPUBuffer;
+		clusterMortonBuffer = new GPUBuffer;
+		clusterSortedMortonBuffer = new GPUBuffer;
+		clusterOffsetBuffer = new GPUBuffer;
+		clusterAABBBuffer = new GPUBuffer;
+		clusterConeBuffer = new GPUBuffer;
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(BVHNode);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, bvhNodeBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(bvhNodeBuffer, "BVHNodeBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHNode);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhNodeBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(bvhNodeBuffer, "BVHNodeBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(BVHAABB);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, bvhAABBBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(bvhAABBBuffer, "BVHAABBBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhAABBBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(bvhAABBBuffer, "BVHAABBBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(uint);
-	//	desc.ByteWidth = desc.StructureByteStride * (maxClusterCount - 1); // only for internal nodes
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, bvhFlagBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(bvhFlagBuffer, "BVHFlagBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * (maxClusterCount - 1); // only for internal nodes
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, bvhFlagBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(bvhFlagBuffer, "BVHFlagBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(BVHMeshTriangle);
-	//	desc.ByteWidth = desc.StructureByteStride * maxTriangleCount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(triangleBuffer, "BVHTriangleBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHMeshTriangle);
+		desc.ByteWidth = desc.StructureByteStride * maxTriangleCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, triangleBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(triangleBuffer, "BVHTriangleBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(uint);
-	//	desc.ByteWidth = desc.StructureByteStride;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(clusterCounterBuffer, "BVHClusterCounterBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterCounterBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(clusterCounterBuffer, "BVHClusterCounterBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(uint);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(clusterIndexBuffer, "BVHClusterIndexBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterIndexBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(clusterIndexBuffer, "BVHClusterIndexBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(uint);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(clusterMortonBuffer, "BVHClusterMortonBuffer");
-	//	device->SetName(clusterSortedMortonBuffer, "BVHSortedClusterMortonBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterMortonBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, clusterSortedMortonBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(clusterMortonBuffer, "BVHClusterMortonBuffer");
+		device->SetName(clusterSortedMortonBuffer, "BVHSortedClusterMortonBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(uint2);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(clusterOffsetBuffer, "BVHClusterOffsetBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint2);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterOffsetBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(clusterOffsetBuffer, "BVHClusterOffsetBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(BVHAABB);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(clusterAABBBuffer, "BVHClusterAABBBuffer");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(BVHAABB);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterAABBBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(clusterAABBBuffer, "BVHClusterAABBBuffer");
 
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(ClusterCone);
-	//	desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
-	//	assert(SUCCEEDED(hr));
-	//	device->SetName(clusterConeBuffer, "BVHClusterConeBuffer");
-	//}
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(ClusterCone);
+		desc.ByteWidth = desc.StructureByteStride * maxClusterCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, clusterConeBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(clusterConeBuffer, "BVHClusterConeBuffer");
+	}
 
-	//static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
-	//if (indirectBuffer == nullptr)
-	//{
-	//	GPUBufferDesc desc;
-	//	HRESULT hr;
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	if (indirectBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
 
-	//	SAFE_DELETE(indirectBuffer);
-	//	indirectBuffer = new GPUBuffer;
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
 
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
-	//	desc.ByteWidth = desc.StructureByteStride;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
-	//	assert(SUCCEEDED(hr));
-	//}
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+	}
 
 
-	//wiProfiler::GetInstance().BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::GetInstance().BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
 
-	//device->EventBegin("BVH - Reset", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_BVH_RESET], threadID);
+	device->EventBegin("BVH - Reset", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_RESET], threadID);
 
-	//	GPUResource* uavs[] = {
-	//		clusterCounterBuffer,
-	//		bvhNodeBuffer,
-	//		bvhAABBBuffer,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		GPUResource* uavs[] = {
+			clusterCounterBuffer,
+			bvhNodeBuffer,
+			bvhAABBBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
-	//	device->Dispatch(1, 1, 1, threadID);
-	//}
-	//device->EventEnd(threadID);
-
-
-	//uint32_t triangleCount = 0;
-	//uint32_t materialCount = 0;
-
-	//device->EventBegin("BVH - Classification", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_BVH_CLASSIFICATION], threadID);
-	//	GPUResource* uavs[] = {
-	//		triangleBuffer,
-	//		clusterCounterBuffer,
-	//		clusterIndexBuffer,
-	//		clusterMortonBuffer,
-	//		clusterOffsetBuffer,
-	//		clusterAABBBuffer,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	//	for (auto& model : GetScene().models)
-	//	{
-	//		for (auto& iter : model->objects)
-	//		{
-	//			Object* object = iter;
-	//			Mesh* mesh = object->mesh;
-
-	//			BVHCB cb;
-	//			cb.xTraceBVHWorld = object->world;
-	//			cb.xTraceBVHMaterialOffset = materialCount;
-	//			cb.xTraceBVHMeshTriangleOffset = triangleCount;
-	//			cb.xTraceBVHMeshTriangleCount = (uint)mesh->indices.size() / 3;
-	//			cb.xTraceBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
-
-	//			device->UpdateBuffer(constantBuffers[CBTYPE_BVH], &cb, threadID);
-
-	//			triangleCount += cb.xTraceBVHMeshTriangleCount;
-
-	//			device->BindConstantBuffer(CS, constantBuffers[CBTYPE_BVH], CB_GETBINDSLOT(BVHCB), threadID);
-
-	//			GPUResource* res[] = {
-	//				mesh->indexBuffer,
-	//				mesh->vertexBuffer_POS,
-	//				mesh->vertexBuffer_TEX,
-	//			};
-	//			device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-	//			device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
-
-	//			for (auto& subset : mesh->subsets)
-	//			{
-	//				materialCount++;
-	//			}
-	//		}
-	//	}
-
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//}
-	//device->EventEnd(threadID);
+		device->Dispatch(1, 1, 1, threadID);
+	}
+	device->EventEnd(threadID);
 
 
-	//device->EventBegin("BVH - Sort Cluster Mortons", threadID);
-	//wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
-	//device->EventEnd(threadID);
+	uint32_t triangleCount = 0;
+	uint32_t materialCount = 0;
 
-	//device->EventBegin("BVH - Kick Jobs", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_BVH_KICKJOBS], threadID);
-	//	GPUResource* uavs[] = {
-	//		indirectBuffer,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+	device->EventBegin("BVH - Classification", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLASSIFICATION], threadID);
+		GPUResource* uavs[] = {
+			triangleBuffer,
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
-	//	GPUResource* res[] = {
-	//		clusterCounterBuffer,
-	//	};
-	//	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		{
+			const ObjectComponent& object = scene.objects[i];
 
-	//	device->Dispatch(1, 1, 1, threadID);
+			if (object.meshID != INVALID_ENTITY)
+			{
+				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				Entity entity = scene.objects.GetEntity(i);
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//}
-	//device->EventEnd(threadID);
+				BVHCB cb;
+				cb.xTraceBVHWorld = transform.world;
+				cb.xTraceBVHMaterialOffset = materialCount;
+				cb.xTraceBVHMeshTriangleOffset = triangleCount;
+				cb.xTraceBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
+				cb.xTraceBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
 
-	//device->EventBegin("BVH - Cluster Processor", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_BVH_CLUSTERPROCESSOR], threadID);
-	//	GPUResource* uavs[] = {
-	//		clusterSortedMortonBuffer,
-	//		clusterConeBuffer,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_BVH], &cb, threadID);
 
-	//	GPUResource* res[] = {
-	//		clusterCounterBuffer,
-	//		clusterIndexBuffer,
-	//		clusterMortonBuffer,
-	//		clusterOffsetBuffer,
-	//		clusterAABBBuffer,
-	//		triangleBuffer,
-	//	};
-	//	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				triangleCount += cb.xTraceBVHMeshTriangleCount;
 
-	//	device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_BVH], CB_GETBINDSLOT(BVHCB), threadID);
 
+				GPUResource* res[] = {
+					mesh.indexBuffer,
+					mesh.vertexBuffer_POS,
+					mesh.vertexBuffer_TEX,
+				};
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//}
-	//device->EventEnd(threadID);
+				device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)BVH_CLASSIFICATION_GROUPSIZE), 1, 1, threadID);
 
-	//device->EventBegin("BVH - Build Hierarchy", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_BVH_HIERARCHY], threadID);
-	//	GPUResource* uavs[] = {
-	//		bvhNodeBuffer,
-	//		bvhFlagBuffer,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+				for (auto& subset : mesh.subsets)
+				{
+					materialCount++;
+				}
+			}
+		}
 
-	//	GPUResource* res[] = {
-	//		clusterCounterBuffer,
-	//		clusterSortedMortonBuffer,
-	//	};
-	//	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-	//	device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
 
 
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//}
-	//device->EventEnd(threadID);
+	device->EventBegin("BVH - Sort Cluster Mortons", threadID);
+	wiGPUSortLib::Sort(maxClusterCount, clusterMortonBuffer, clusterCounterBuffer, 0, clusterIndexBuffer, threadID);
+	device->EventEnd(threadID);
 
-	//device->EventBegin("BVH - Propagate AABB", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
-	//	GPUResource* uavs[] = {
-	//		bvhAABBBuffer,
-	//		bvhFlagBuffer,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+	device->EventBegin("BVH - Kick Jobs", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_KICKJOBS], threadID);
+		GPUResource* uavs[] = {
+			indirectBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
-	//	GPUResource* res[] = {
-	//		clusterCounterBuffer,
-	//		clusterIndexBuffer,
-	//		clusterAABBBuffer,
-	//		bvhNodeBuffer,
-	//	};
-	//	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-	//	device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
+		device->Dispatch(1, 1, 1, threadID);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Cluster Processor", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_CLUSTERPROCESSOR], threadID);
+		GPUResource* uavs[] = {
+			clusterSortedMortonBuffer,
+			clusterConeBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterMortonBuffer,
+			clusterOffsetBuffer,
+			clusterAABBBuffer,
+			triangleBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
 
 
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//}
-	//device->EventEnd(threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
 
-	//wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
+	device->EventBegin("BVH - Build Hierarchy", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_HIERARCHY], threadID);
+		GPUResource* uavs[] = {
+			bvhNodeBuffer,
+			bvhFlagBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterSortedMortonBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_HIERARCHY, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("BVH - Propagate AABB", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
+		GPUResource* uavs[] = {
+			bvhAABBBuffer,
+			bvhFlagBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		GPUResource* res[] = {
+			clusterCounterBuffer,
+			clusterIndexBuffer,
+			clusterAABBBuffer,
+			bvhNodeBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		device->DispatchIndirect(indirectBuffer, ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR, threadID);
+
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
 }
 
 void wiRenderer::DrawTracedScene(CameraComponent* camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID)
 {
-	//GraphicsDevice* device = wiRenderer::GetDevice();
-
-	//device->EventBegin("DrawTracedScene", threadID);
-
-	//uint _width = GetInternalResolution().x;
-	//uint _height = GetInternalResolution().y;
-
-	//// Ray storage buffer:
-	//static GPUBuffer* rayBuffer[2] = {};
-	//static uint RayCountPrev = 0;
-	//const uint _raycount = _width * _height;
-
-	//if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
-	//{
-	//	GPUBufferDesc desc;
-	//	HRESULT hr;
-
-	//	SAFE_DELETE(rayBuffer[0]);
-	//	SAFE_DELETE(rayBuffer[1]);
-	//	rayBuffer[0] = new GPUBuffer;
-	//	rayBuffer[1] = new GPUBuffer;
-
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
-	//	desc.ByteWidth = desc.StructureByteStride * _raycount;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
-	//	hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
-	//	assert(SUCCEEDED(hr));
-
-	//	RayCountPrev = _raycount;
-	//}
-
-	//// Misc buffers:
-	//static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
-	//static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
-
-	//if (indirectBuffer == nullptr || counterBuffer == nullptr)
-	//{
-	//	GPUBufferDesc desc;
-	//	HRESULT hr;
-
-	//	SAFE_DELETE(indirectBuffer);
-	//	indirectBuffer = new GPUBuffer;
-
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(IndirectDispatchArgs);
-	//	desc.ByteWidth = desc.StructureByteStride;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
-	//	assert(SUCCEEDED(hr));
-
-
-	//	SAFE_DELETE(counterBuffer[0]);
-	//	SAFE_DELETE(counterBuffer[1]);
-	//	counterBuffer[0] = new GPUBuffer;
-	//	counterBuffer[1] = new GPUBuffer;
-
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//	desc.StructureByteStride = sizeof(uint);
-	//	desc.ByteWidth = desc.StructureByteStride;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
-	//	hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
-	//	assert(SUCCEEDED(hr));
-	//}
-
-	//// Traced Scene Texture Atlas:
-	//static Texture2D* atlasTexture = nullptr;
-	//using namespace wiRectPacker;
-	//static unordered_set<Texture2D*> sceneTextures;
-	//if (sceneTextures.empty())
-	//{
-	//	sceneTextures.insert(wiTextureHelper::getInstance()->getWhite());
-	//	sceneTextures.insert(wiTextureHelper::getInstance()->getNormalMapDefault());
-	//}
-
-	//for (Model* model : GetScene().models)
-	//{
-	//	for (auto& iter : model->objects)
-	//	{
-	//		Object* object = iter;
-	//		Mesh* mesh = object->mesh;
-
-	//		for (auto& subset : mesh->subsets)
-	//		{
-	//			Material* mat = subset.material;
-
-	//			if (mat != nullptr)
-	//			{
-	//				sceneTextures.insert(mat->GetBaseColorMap());
-	//				sceneTextures.insert(mat->GetSurfaceMap());
-	//				sceneTextures.insert(mat->GetNormalMap());
-	//			}
-	//		}
-
-	//	}
-
-	//}
-
-	//bool repackAtlas = false;
-	//static unordered_map<Texture2D*, rect_xywhf> storedTextures;
-	//const int atlasWrapBorder = 1;
-	//for (Texture2D* tex : sceneTextures)
-	//{
-	//	if (tex == nullptr)
-	//	{
-	//		continue;
-	//	}
-
-	//	if (storedTextures.find(tex) == storedTextures.end())
-	//	{
-	//		// we need to pack this texture into the atlas
-	//		rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
-	//		storedTextures[tex] = newRect;
-
-	//		repackAtlas = true;
-	//	}
-
-	//}
-
-	//if (repackAtlas)
-	//{
-	//	rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
-	//	int i = 0;
-	//	for (auto& it : storedTextures)
-	//	{
-	//		out_rects[i] = &it.second;
-	//		i++;
-	//	}
-
-	//	std::vector<bin> bins;
-	//	if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
-	//	{
-	//		assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-	//		SAFE_DELETE(atlasTexture);
-
-	//		TextureDesc desc;
-	//		ZeroMemory(&desc, sizeof(desc));
-	//		desc.Width = (UINT)bins[0].size.w;
-	//		desc.Height = (UINT)bins[0].size.h;
-	//		desc.MipLevels = 1;
-	//		desc.ArraySize = 1;
-	//		desc.Format = FORMAT_R8G8B8A8_UNORM;
-	//		desc.SampleDesc.Count = 1;
-	//		desc.SampleDesc.Quality = 0;
-	//		desc.Usage = USAGE_DEFAULT;
-	//		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	//		desc.CPUAccessFlags = 0;
-	//		desc.MiscFlags = 0;
-
-	//		device->CreateTexture2D(&desc, nullptr, &atlasTexture);
-
-	//		for (auto& it : storedTextures)
-	//		{
-	//			CopyTexture2D(atlasTexture, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
-	//		}
-	//	}
-	//	else
-	//	{
-	//		wiBackLog::post("Tracing atlas packing failed!");
-	//	}
-
-	//	SAFE_DELETE_ARRAY(out_rects);
-	//}
-
-	//static TracedRenderingMaterial materialArray[1000] = {}; // todo realloc!
-	//static GPUBuffer* materialBuffer = nullptr;
-
-	//if (materialBuffer == nullptr)
-	//{
-	//	GPUBufferDesc desc;
-	//	HRESULT hr;
-
-	//	SAFE_DELETE(materialBuffer);
-	//	materialBuffer = new GPUBuffer;
-
-	//	desc.BindFlags = BIND_SHADER_RESOURCE;
-	//	desc.StructureByteStride = sizeof(TracedRenderingMaterial);
-	//	desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_UNKNOWN;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
-	//	assert(SUCCEEDED(hr));
-	//}
-
-	//// Pre-gather scene properties:
-	//uint32_t totalTriangles = 0;
-	//uint32_t totalMaterials = 0;
-	//for (auto& model : GetScene().models)
-	//{
-	//	for (auto& iter : model->objects)
-	//	{
-	//		Object* object = iter;
-	//		Mesh* mesh = object->mesh;
-
-	//		totalTriangles += (uint)mesh->indices.size() / 3;
-
-	//		for (auto& subset : mesh->subsets)
-	//		{
-	//			MaterialCB mat;
-	//			mat.Create(*subset.material);
-
-	//			// Copy base params:
-	//			materialArray[totalMaterials].baseColor = mat.baseColor;
-	//			materialArray[totalMaterials].texMulAdd = mat.texMulAdd;
-	//			materialArray[totalMaterials].roughness = mat.roughness;
-	//			materialArray[totalMaterials].reflectance = mat.reflectance;
-	//			materialArray[totalMaterials].metalness = mat.metalness;
-	//			materialArray[totalMaterials].emissive = mat.emissive;
-	//			materialArray[totalMaterials].refractionIndex = mat.refractionIndex;
-	//			materialArray[totalMaterials].subsurfaceScattering = mat.subsurfaceScattering;
-	//			materialArray[totalMaterials].normalMapStrength = mat.normalMapStrength;
-	//			materialArray[totalMaterials].parallaxOcclusionMapping = mat.normalMapStrength;
-
-	//			// Add extended properties:
-	//			const TextureDesc& desc = atlasTexture->GetDesc();
-	//			rect_xywhf rect;
-
-
-	//			if (subset.material->GetBaseColorMap() != nullptr)
-	//			{
-	//				rect = storedTextures[subset.material->GetBaseColorMap()];
-	//			}
-	//			else
-	//			{
-	//				rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
-	//			}
-	//			// eliminate border expansion:
-	//			rect.x += atlasWrapBorder;
-	//			rect.y += atlasWrapBorder;
-	//			rect.w -= atlasWrapBorder * 2;
-	//			rect.h -= atlasWrapBorder * 2;
-	//			materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-	//				(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-
-	//			if (subset.material->GetSurfaceMap() != nullptr)
-	//			{
-	//				rect = storedTextures[subset.material->GetSurfaceMap()];
-	//			}
-	//			else
-	//			{
-	//				rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
-	//			}
-	//			// eliminate border expansion:
-	//			rect.x += atlasWrapBorder;
-	//			rect.y += atlasWrapBorder;
-	//			rect.w -= atlasWrapBorder * 2;
-	//			rect.h -= atlasWrapBorder * 2;
-	//			materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-	//				(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-
-	//			if (subset.material->GetNormalMap() != nullptr)
-	//			{
-	//				rect = storedTextures[subset.material->GetNormalMap()];
-	//			}
-	//			else
-	//			{
-
-	//				rect = storedTextures[wiTextureHelper::getInstance()->getNormalMapDefault()];
-	//			}
-	//			// eliminate border expansion:
-	//			rect.x += atlasWrapBorder;
-	//			rect.y += atlasWrapBorder;
-	//			rect.w -= atlasWrapBorder * 2;
-	//			rect.h -= atlasWrapBorder * 2;
-	//			materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-	//				(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-	//			totalMaterials++;
-	//		}
-	//	}
-	//}
-	//device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(TracedRenderingMaterial) * totalMaterials);
-
-
-	//// Begin raytrace
-
-	//wiProfiler::GetInstance().BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
-
-	//const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
-	//TracedRenderingCB cb;
-	//cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-	//cb.xTraceRandomSeed = renderTime;
-	//cb.xTraceMeshTriangleCount = totalTriangles;
-
-	//device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-
-	//device->EventBegin("Clear", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
-
-	//	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-
-	//	GPUResource* uavs[] = {
-	//		result,
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	//	device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, threadID);
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//}
-	//device->EventEnd(threadID);
-
-	//device->EventBegin("Launch Rays", threadID);
-	//{
-	//	device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LAUNCH], threadID);
-
-	//	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-
-	//	GPUResource* uavs[] = {
-	//		rayBuffer[0],
-	//	};
-	//	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	//	device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, threadID);
-	//	device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-
-	//	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-
-	//	// just write initial ray count:
-	//	device->UpdateBuffer(counterBuffer[0], &_raycount, threadID);
-	//}
-	//device->EventEnd(threadID);
-
-
-
-	//// Set up tracing resources:
-	//GPUResource* res[] = {
-	//	materialBuffer,
-	//	triangleBuffer,
-	//	clusterCounterBuffer,
-	//	clusterIndexBuffer,
-	//	clusterOffsetBuffer,
-	//	clusterConeBuffer,
-	//	bvhNodeBuffer,
-	//	bvhAABBBuffer,
-	//};
-	//device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-	//if (atlasTexture != nullptr)
-	//{
-	//	device->BindResource(CS, atlasTexture, TEXSLOT_ONDEMAND8, threadID);
-	//}
-	//else
-	//{
-	//	device->BindResource(CS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
-	//}
-
-	//for (int bounce = 0; bounce < 8; ++bounce)
-	//{
-	//	const int __readBufferID = bounce % 2;
-	//	const int __writeBufferID = (bounce + 1) % 2;
-
-	//	cb.xTraceRandomSeed = renderTime + (float)bounce;
-	//	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-	//	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-
-
-	//	// 1.) Kick off raytracing jobs for this bounce
-	//	device->EventBegin("Kick Raytrace Jobs", threadID);
-	//	{
-	//		// Prepare indirect dispatch based on counter buffer value:
-	//		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
-
-	//		GPUResource* res[] = {
-	//			counterBuffer[__readBufferID],
-	//		};
-	//		device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
-	//		GPUResource* uavs[] = {
-	//			counterBuffer[__writeBufferID],
-	//			indirectBuffer,
-	//		};
-	//		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	//		device->Dispatch(1, 1, 1, threadID);
-
-	//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//	}
-	//	device->EventEnd(threadID);
-
-	//	if (bounce > 0)
-	//	{
-	//		if (bounce == 1)
-	//		{
-	//			wiProfiler::GetInstance().BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
-	//		}
-
-	//		// 2.) Light sampling (any hit) <- only after first bounce has occured
-	//		device->EventBegin("Light Sampling Rays", threadID);
-	//		{
-	//			// Indirect dispatch on active rays:
-	//			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
-
-	//			GPUResource* res[] = {
-	//				counterBuffer[__readBufferID],
-	//				rayBuffer[__readBufferID],
-	//			};
-	//			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
-	//			GPUResource* uavs[] = {
-	//				result,
-	//			};
-	//			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	//			device->DispatchIndirect(indirectBuffer, 0, threadID);
-
-	//			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//		}
-	//		device->EventEnd(threadID);
-
-	//		if (bounce == 1)
-	//		{
-	//			wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Light Sampling
-	//		}
-	//	}
-
-	//	if (bounce == 0)
-	//	{
-	//		wiProfiler::GetInstance().BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
-	//	}
-
-	//	// 3.) Compute Primary Trace (closest hit)
-	//	device->EventBegin("Primary Rays Bounce", threadID);
-	//	{
-	//		// Indirect dispatch on active rays:
-	//		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
-
-	//		GPUResource* res[] = {
-	//			counterBuffer[__readBufferID],
-	//			rayBuffer[__readBufferID],
-	//		};
-	//		device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
-	//		GPUResource* uavs[] = {
-	//			counterBuffer[__writeBufferID],
-	//			rayBuffer[__writeBufferID],
-	//			result,
-	//		};
-	//		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-	//		device->DispatchIndirect(indirectBuffer, 0, threadID);
-
-	//		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-	//		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	//	}
-	//	device->EventEnd(threadID);
-
-	//	if (bounce == 0)
-	//	{
-	//		wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Bounce
-	//	}
-
-	//}
-
-	//wiProfiler::GetInstance().EndRange(threadID); // RayTrace - ALL
-
-
-
-
-	//device->EventEnd(threadID); // DrawTracedScene
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	Scene& scene = GetScene();
+
+	device->EventBegin("DrawTracedScene", threadID);
+
+	uint _width = GetInternalResolution().x;
+	uint _height = GetInternalResolution().y;
+
+	// Ray storage buffer:
+	static GPUBuffer* rayBuffer[2] = {};
+	static uint RayCountPrev = 0;
+	const uint _raycount = _width * _height;
+
+	if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(rayBuffer[0]);
+		SAFE_DELETE(rayBuffer[1]);
+		rayBuffer[0] = new GPUBuffer;
+		rayBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
+		desc.ByteWidth = desc.StructureByteStride * _raycount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
+		assert(SUCCEEDED(hr));
+
+		RayCountPrev = _raycount;
+	}
+
+	// Misc buffers:
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
+
+	if (indirectBuffer == nullptr || counterBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+
+
+		SAFE_DELETE(counterBuffer[0]);
+		SAFE_DELETE(counterBuffer[1]);
+		counterBuffer[0] = new GPUBuffer;
+		counterBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
+		assert(SUCCEEDED(hr));
+	}
+
+	// Traced Scene Texture Atlas:
+	static Texture2D* atlasTexture = nullptr;
+	using namespace wiRectPacker;
+	static unordered_set<Texture2D*> sceneTextures;
+	if (sceneTextures.empty())
+	{
+		sceneTextures.insert(wiTextureHelper::getInstance()->getWhite());
+		sceneTextures.insert(wiTextureHelper::getInstance()->getNormalMapDefault());
+	}
+
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+				sceneTextures.insert(material.GetBaseColorMap());
+				sceneTextures.insert(material.GetSurfaceMap());
+				sceneTextures.insert(material.GetNormalMap());
+			}
+		}
+
+	}
+
+	bool repackAtlas = false;
+	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
+	const int atlasWrapBorder = 1;
+	for (Texture2D* tex : sceneTextures)
+	{
+		if (tex == nullptr)
+		{
+			continue;
+		}
+
+		if (storedTextures.find(tex) == storedTextures.end())
+		{
+			// we need to pack this texture into the atlas
+			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
+			storedTextures[tex] = newRect;
+
+			repackAtlas = true;
+		}
+
+	}
+
+	if (repackAtlas)
+	{
+		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		int i = 0;
+		for (auto& it : storedTextures)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+			SAFE_DELETE(atlasTexture);
+
+			TextureDesc desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+
+			for (auto& it : storedTextures)
+			{
+				CopyTexture2D(atlasTexture, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
+			}
+		}
+		else
+		{
+			wiBackLog::post("Tracing atlas packing failed!");
+		}
+
+		SAFE_DELETE_ARRAY(out_rects);
+	}
+
+	static TracedRenderingMaterial materialArray[1000] = {}; // todo realloc!
+	static GPUBuffer* materialBuffer = nullptr;
+
+	if (materialBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(materialBuffer);
+		materialBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
+		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+		assert(SUCCEEDED(hr));
+	}
+
+	// Pre-gather scene properties:
+	uint32_t totalTriangles = 0;
+	uint32_t totalMaterials = 0;
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			totalTriangles += (uint)mesh.indices.size() / 3;
+
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+				MaterialCB mat;
+				mat.Create(material);
+
+				// Copy base params:
+				materialArray[totalMaterials].baseColor = mat.baseColor;
+				materialArray[totalMaterials].texMulAdd = mat.texMulAdd;
+				materialArray[totalMaterials].roughness = mat.roughness;
+				materialArray[totalMaterials].reflectance = mat.reflectance;
+				materialArray[totalMaterials].metalness = mat.metalness;
+				materialArray[totalMaterials].emissive = mat.emissive;
+				materialArray[totalMaterials].refractionIndex = mat.refractionIndex;
+				materialArray[totalMaterials].subsurfaceScattering = mat.subsurfaceScattering;
+				materialArray[totalMaterials].normalMapStrength = mat.normalMapStrength;
+				materialArray[totalMaterials].parallaxOcclusionMapping = mat.normalMapStrength;
+
+				// Add extended properties:
+				const TextureDesc& desc = atlasTexture->GetDesc();
+				rect_xywhf rect;
+
+
+				if (material.GetBaseColorMap() != nullptr)
+				{
+					rect = storedTextures[material.GetBaseColorMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (material.GetSurfaceMap() != nullptr)
+				{
+					rect = storedTextures[material.GetSurfaceMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (material.GetNormalMap() != nullptr)
+				{
+					rect = storedTextures[material.GetNormalMap()];
+				}
+				else
+				{
+
+					rect = storedTextures[wiTextureHelper::getInstance()->getNormalMapDefault()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+				totalMaterials++;
+			}
+		}
+	}
+	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(TracedRenderingMaterial) * totalMaterials);
+
+
+	// Begin raytrace
+
+	wiProfiler::GetInstance().BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
+
+	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
+	TracedRenderingCB cb;
+	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
+	cb.xTraceRandomSeed = renderTime;
+	cb.xTraceMeshTriangleCount = totalTriangles;
+
+	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+
+	device->EventBegin("Clear", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
+
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+		GPUResource* uavs[] = {
+			result,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+	}
+	device->EventEnd(threadID);
+
+	device->EventBegin("Launch Rays", threadID);
+	{
+		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LAUNCH], threadID);
+
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+		GPUResource* uavs[] = {
+			rayBuffer[0],
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+
+		// just write initial ray count:
+		device->UpdateBuffer(counterBuffer[0], &_raycount, threadID);
+	}
+	device->EventEnd(threadID);
+
+
+
+	// Set up tracing resources:
+	GPUResource* res[] = {
+		materialBuffer,
+		triangleBuffer,
+		clusterCounterBuffer,
+		clusterIndexBuffer,
+		clusterOffsetBuffer,
+		clusterConeBuffer,
+		bvhNodeBuffer,
+		bvhAABBBuffer,
+	};
+	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+	if (atlasTexture != nullptr)
+	{
+		device->BindResource(CS, atlasTexture, TEXSLOT_ONDEMAND8, threadID);
+	}
+	else
+	{
+		device->BindResource(CS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
+	}
+
+	for (int bounce = 0; bounce < 8; ++bounce)
+	{
+		const int __readBufferID = bounce % 2;
+		const int __writeBufferID = (bounce + 1) % 2;
+
+		cb.xTraceRandomSeed = renderTime + (float)bounce;
+		device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
+
+		// 1.) Kick off raytracing jobs for this bounce
+		device->EventBegin("Kick Raytrace Jobs", threadID);
+		{
+			// Prepare indirect dispatch based on counter buffer value:
+			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
+
+			GPUResource* res[] = {
+				counterBuffer[__readBufferID],
+			};
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+			GPUResource* uavs[] = {
+				counterBuffer[__writeBufferID],
+				indirectBuffer,
+			};
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+			device->Dispatch(1, 1, 1, threadID);
+
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		}
+		device->EventEnd(threadID);
+
+		if (bounce > 0)
+		{
+			if (bounce == 1)
+			{
+				wiProfiler::GetInstance().BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+			}
+
+			// 2.) Light sampling (any hit) <- only after first bounce has occured
+			device->EventBegin("Light Sampling Rays", threadID);
+			{
+				// Indirect dispatch on active rays:
+				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
+
+				GPUResource* res[] = {
+					counterBuffer[__readBufferID],
+					rayBuffer[__readBufferID],
+				};
+				device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+				GPUResource* uavs[] = {
+					result,
+				};
+				device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+				device->DispatchIndirect(indirectBuffer, 0, threadID);
+
+				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+				device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+			}
+			device->EventEnd(threadID);
+
+			if (bounce == 1)
+			{
+				wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Light Sampling
+			}
+		}
+
+		if (bounce == 0)
+		{
+			wiProfiler::GetInstance().BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
+		}
+
+		// 3.) Compute Primary Trace (closest hit)
+		device->EventBegin("Primary Rays Bounce", threadID);
+		{
+			// Indirect dispatch on active rays:
+			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
+
+			GPUResource* res[] = {
+				counterBuffer[__readBufferID],
+				rayBuffer[__readBufferID],
+			};
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+			GPUResource* uavs[] = {
+				counterBuffer[__writeBufferID],
+				rayBuffer[__writeBufferID],
+				result,
+			};
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+			device->DispatchIndirect(indirectBuffer, 0, threadID);
+
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		}
+		device->EventEnd(threadID);
+
+		if (bounce == 0)
+		{
+			wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Bounce
+		}
+
+	}
+
+	wiProfiler::GetInstance().EndRange(threadID); // RayTrace - ALL
+
+
+
+
+	device->EventEnd(threadID); // DrawTracedScene
 }
 
 void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
