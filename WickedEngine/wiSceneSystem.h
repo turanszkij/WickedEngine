@@ -590,6 +590,7 @@ namespace wiSceneSystem
 		int textureIndex = -1;
 		bool realTime = false;
 		bool isUpToDate = false;
+		XMFLOAT3 position;
 	};
 
 	struct ForceFieldComponent

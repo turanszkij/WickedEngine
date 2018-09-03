@@ -675,11 +675,29 @@ namespace wiSceneSystem
 		{
 			DecalComponent& decal = decals[i];
 			Entity entity = decals.GetEntity(i);
-			const TransformComponent* transform = transforms.GetComponent(entity);
-			decal.world = transform->world;
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			decal.world = transform.world;
 			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
 			front = XMVector3TransformNormal(front, XMLoadFloat4x4(&decal.world));
 			XMStoreFloat3(&decal.front, front);
+
+			CullableComponent& cullable = *cullables.GetComponent(entity);
+			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+			cullable.aabb = cullable.aabb.get(transform.world);
+		}
+
+		// Update Probe components:
+		for (size_t i = 0; i < probes.GetCount(); ++i)
+		{
+			EnvironmentProbeComponent& probe = probes[i];
+			Entity entity = probes.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+
+			probe.position = transform.translation;
+
+			CullableComponent& cullable = *cullables.GetComponent(entity);
+			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+			cullable.aabb = cullable.aabb.get(transform.world);
 		}
 
 		// Update Light components:
@@ -1031,6 +1049,8 @@ namespace wiSceneSystem
 
 		transforms.Create(entity).Translate(position);
 
+		cullables.Create(entity);
+
 		EnvironmentProbeComponent& probe = probes.Create(entity);
 		probe.isUpToDate = false;
 		probe.realTime = false;
@@ -1058,9 +1078,16 @@ namespace wiSceneSystem
 
 		DecalComponent& decal = decals.Create(entity);
 		decal.textureName = textureName;
-		decal.texture = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.textureName);
 		decal.normalMapName = normalMapName;
-		decal.normal = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.normalMapName);
+
+		if (!decal.textureName.empty())
+		{
+			decal.texture = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.textureName);
+		}
+		if (!decal.normalMapName.empty())
+		{
+			decal.normal = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.normalMapName);
+		}
 
 		return entity;
 	}

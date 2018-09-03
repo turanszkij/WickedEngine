@@ -120,6 +120,7 @@ struct FrameCulling
 	Frustum frustum;
 	CulledCollection culledRenderer_opaque;
 	CulledCollection culledRenderer_transparent;
+	vector<Entity> culledObjects;
 	vector<Entity> culledHairParticleSystems;
 	vector<Entity> culledEmitters;
 	vector<Entity> culledLights;
@@ -130,6 +131,7 @@ struct FrameCulling
 	{
 		culledRenderer_opaque.clear();
 		culledRenderer_transparent.clear();
+		culledObjects.clear();
 		culledHairParticleSystems.clear();
 		culledEmitters.clear();
 		culledLights.clear();
@@ -219,8 +221,6 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 	float normalMapStrength;
 	float parallaxOcclusionMapping;
 
-	MaterialCB() {};
-	MaterialCB(const MaterialComponent& mat) { Create(mat); };
 	void Create(const MaterialComponent& mat)
 	{
 		baseColor = mat.baseColor;
@@ -2924,13 +2924,6 @@ void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
 
 void wiRenderer::FixedUpdate()
 {
-	//cam->UpdateTransform();
-
-	//objectsWithTrails.clear();
-	//emitterSystems.clear();
-
-	//GetScene().Update();
-
 }
 void wiRenderer::UpdatePerFrameData(float dt)
 {
@@ -3008,6 +3001,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					const ObjectComponent* object = scene.objects.GetComponent(entity);
 					if (object != nullptr)
 					{
+						culling.culledObjects.push_back(entity);
 						if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
 						{
 							culling.culledRenderer_opaque[object->meshID].push_back(entity);
@@ -3017,136 +3011,81 @@ void wiRenderer::UpdatePerFrameData(float dt)
 							culling.culledRenderer_transparent[object->meshID].push_back(entity);
 						}
 					}
-					else if(camera == getCamera()) // the following cullings will be only for the main camera:
+					else if (camera == getCamera()) // the following cullings will be only for the main camera:
 					{
 						const LightComponent* light = scene.lights.GetComponent(entity);
 						if (light != nullptr)
 						{
 							culling.culledLights.push_back(entity);
+							continue;
+						}
+						
+						const DecalComponent* decal = scene.decals.GetComponent(entity);
+						if (decal != nullptr)
+						{
+							culling.culledDecals.push_back(entity);
+							continue;
+						}
+
+						const EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
+						if (probe != nullptr)
+						{
+							culling.culledEnvProbes.push_back(entity);
+							continue;
 						}
 					}
 
 				}
 			}
 
-			//if (spTree != nullptr)
-			//{
-			//	CulledList culledObjects;
-			//	spTree->getVisible(culling.frustum, culledObjects, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-			//	for (Cullable* x : culledObjects)
-			//	{
-			//		Object* object = (Object*)x;
-			//		culling.culledRenderer[object->mesh].push_front(object);
-			//		for (wiHairParticle* hair : object->hParticleSystems)
-			//		{
-			//			culling.culledHairParticleSystems.push_back(hair);
-			//		}
-			//		if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
-			//		{
-			//			culling.culledRenderer_opaque[object->mesh].push_front(object);
-			//		}
-			//		if (!requestReflectionRendering && camera == getCamera() && object->IsReflector())
-			//		{
-			//			// If it is the main camera's culling, then obtain the reflectors:
-			//			XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object->/*bounds.getCenter()*/translation), XMVectorSet(0, 1, 0, 0));
-			//			XMStoreFloat4(&waterPlane, _refPlane);
-			//			requestReflectionRendering = true;
-			//		}
-			//	}
-			//	wiSPTree::Sort(camera->translation, culledObjects, wiSPTree::SortType::SP_TREE_SORT_BACK_TO_FRONT);
-			//	for (Cullable* x : culledObjects)
-			//	{
-			//		Object* object = (Object*)x;
-			//		if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
-			//		{
-			//			culling.culledRenderer_transparent[object->mesh].push_front(object);
-			//		}
-			//	}
-			//}
-			//if (camera==getCamera() && spTree_lights != nullptr) // only the main camera can render lights and write light array properties (yet)!
-			//{
-			//	for (Model* model : GetScene().models)
-			//	{
-			//		for (Decal* decal : model->decals)
-			//		{
-			//			if ((decal->texture || decal->normal) && culling.frustum.CheckBox(decal->bounds))
-			//			{
-			//				x.second.culledDecals.push_back(decal);
-			//			}
-			//		}
+			int i = 0;
+			int shadowCounter_2D = 0;
+			int shadowCounter_Cube = 0;
+			for (Entity entity : culling.culledLights)
+			{
+				LightComponent& light = *scene.lights.GetComponent(entity);
+				light.entityArray_index = i;
 
-			//		for (EnvironmentProbe* probe : model->environmentProbes)
-			//		{
-			//			if (probe->textureIndex >= 0 && culling.frustum.CheckBox(probe->bounds))
-			//			{
-			//				x.second.culledEnvProbes.push_back(probe);
-			//			}
-			//		}
-			//	}
+				// Link shadowmaps to lights till there are free slots
 
-			//	spTree_lights->getVisible(culling.frustum, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
+				light.shadowMap_index = -1;
 
-			//	if (GetVoxelRadianceEnabled())
-			//	{
-			//		// Inject lights which are inside the voxel grid too
-			//		AABB box;
-			//		box.createFromHalfWidth(voxelSceneData.center, voxelSceneData.extents);
-			//		spTree_lights->getVisible(box, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_NONE);
-			//	}
-
-			//	// We sort lights so that closer lights will have more priority for shadows!
-			//	spTree_lights->Sort(camera->translation, culling.culledLights, wiSPTree::SortType::SP_TREE_SORT_FRONT_TO_BACK);
-
-				int i = 0;
-				int shadowCounter_2D = 0;
-				int shadowCounter_Cube = 0;
-				for (Entity entity : culling.culledLights)
+				if (light.shadow)
 				{
-					LightComponent& light = *scene.lights.GetComponent(entity);
-					light.entityArray_index = i;
-
-					// Link shadowmaps to lights till there are free slots
-
-					light.shadowMap_index = -1;
-
-					if (light.shadow)
+					switch (light.GetType())
 					{
-						switch (light.GetType())
+					case LightComponent::DIRECTIONAL:
+						if (!light.shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
 						{
-						case LightComponent::DIRECTIONAL:
-							if (!light.shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
-							{
-								light.shadowMap_index = shadowCounter_2D;
-								shadowCounter_2D += 3;
-							}
-							break;
-						case LightComponent::SPOT:
-							if (!light.shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
-							{
-								light.shadowMap_index = shadowCounter_2D;
-								shadowCounter_2D++;
-							}
-							break;
-						case LightComponent::POINT:
-						case LightComponent::SPHERE:
-						case LightComponent::DISC:
-						case LightComponent::RECTANGLE:
-						case LightComponent::TUBE:
-							if (!light.shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
-							{
-								light.shadowMap_index = shadowCounter_Cube;
-								shadowCounter_Cube++;
-							}
-							break;
-						default:
-							break;
+							light.shadowMap_index = shadowCounter_2D;
+							shadowCounter_2D += 3;
 						}
+						break;
+					case LightComponent::SPOT:
+						if (!light.shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
+						{
+							light.shadowMap_index = shadowCounter_2D;
+							shadowCounter_2D++;
+						}
+						break;
+					case LightComponent::POINT:
+					case LightComponent::SPHERE:
+					case LightComponent::DISC:
+					case LightComponent::RECTANGLE:
+					case LightComponent::TUBE:
+						if (!light.shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
+						{
+							light.shadowMap_index = shadowCounter_Cube;
+							shadowCounter_Cube++;
+						}
+						break;
+					default:
+						break;
 					}
-
-					i++;
 				}
-			//}
 
+				i++;
+			}
 
 		}
 	}
@@ -3616,144 +3555,133 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 }
 void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
-	//if (!GetOcclusionCullingEnabled() || spTree == nullptr || GetFreezeCullingCameraEnabled())
-	//{
-	//	return;
-	//}
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	{
+		return;
+	}
 
-	//const FrameCulling& culling = frameCullings[getCamera()];
-	//const CulledCollection& culledRenderer = culling.culledRenderer;
+	const FrameCulling& culling = frameCullings[getCamera()];
 
-	//wiProfiler::GetInstance().BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::GetInstance().BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
 
-	//int queryID = 0;
+	int queryID = 0;
 
-	//if (!culledRenderer.empty())
-	//{
-	//	GetDevice()->EventBegin("Occlusion Culling Render", threadID);
+	if (!culling.culledObjects.empty())
+	{
+		GetDevice()->EventBegin("Occlusion Culling Render", threadID);
 
-	//	//GetDevice()->BindRasterizerState(rasterizers[RSTYPE_OCCLUDEE], threadID);
-	//	//GetDevice()->BindBlendState(blendStates[BSTYPE_COLORWRITEDISABLE], threadID);
-	//	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEPTHREAD], STENCILREF_DEFAULT, threadID);
-	//	//GetDevice()->BindVertexLayout(nullptr, threadID);
-	//	//GetDevice()->BindVS(vertexShaders[VSTYPE_CUBE], threadID);
-	//	//GetDevice()->BindPS(nullptr, threadID);
+		GetDevice()->BindGraphicsPSO(PSO_occlusionquery, threadID);
 
-	//	GetDevice()->BindGraphicsPSO(PSO_occlusionquery, threadID);
+		Scene& scene = GetScene();
 
-	//	int queryID = 0;
+		int queryID = 0;
 
-	//	for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
-	//	{
-	//		Mesh* mesh = iter->first;
-	//		if (!mesh->renderable)
-	//		{
-	//			continue;
-	//		}
-	//		const CulledObjectList& visibleInstances = iter->second;
+		MiscCB cb;
 
-	//		MiscCB cb;
-	//		for (Object* instance : visibleInstances)
-	//		{
-	//			if(queryID >= ARRAYSIZE(occlusionQueries))
-	//			{
-	//				instance->occlusionQueryID = -1; // assign an invalid id from the pool
-	//				continue;
-	//			}
-	//			
-	//			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
-	//			GPUQuery& query = occlusionQueries[queryID];
-	//			if (!query.IsValid())
-	//			{
-	//				continue;
-	//			}
+		for (Entity entity : culling.culledObjects)
+		{
+			ObjectComponent& object = *scene.objects.GetComponent(entity);
+			if (!object.renderable)
+			{
+				continue;
+			}
 
-	//			if (instance->bounds.intersects(getCamera()->translation) || mesh->softBody) // todo: correct softbody
-	//			{
-	//				// camera is inside the instance, mark it as visible in this frame:
-	//				instance->occlusionHistory |= 1;
-	//			}
-	//			else
-	//			{
-	//				// only query for occlusion if the camera is outside the instance
-	//				instance->occlusionQueryID = queryID; // just assign the id from the pool
-	//				queryID++;
+			if (queryID >= ARRAYSIZE(occlusionQueries))
+			{
+				object.occlusionQueryID = -1; // assign an invalid id from the pool
+				continue;
+			}
 
-	//				// previous frame view*projection because these are drawn against the previous depth buffer:
-	//				cb.mTransform = XMMatrixTranspose(instance->GetOBB()*prevFrameCam->GetViewProjection()); 
-	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
+			GPUQuery& query = occlusionQueries[queryID];
+			if (!query.IsValid())
+			{
+				continue;
+			}
 
-	//				// render bounding box to later read the occlusion status
-	//				GetDevice()->QueryBegin(&query, threadID);
-	//				GetDevice()->Draw(14, 0, threadID);
-	//				GetDevice()->QueryEnd(&query, threadID);
-	//			}
-	//		}
-	//	}
+			const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
 
-	//	GetDevice()->EventEnd(threadID);
-	//}
+			if (cullable.aabb.intersects(getCamera()->Eye))
+			{
+				// camera is inside the instance, mark it as visible in this frame:
+				object.occlusionHistory |= 1;
+			}
+			else
+			{
+				// only query for occlusion if the camera is outside the instance
+				object.occlusionQueryID = queryID; // just assign the id from the pool
+				queryID++;
 
-	//wiProfiler::GetInstance().EndRange(threadID); // Occlusion Culling Render
+				// previous frame view*projection because these are drawn against the previous depth buffer:
+				cb.mTransform = XMMatrixTranspose(cullable.aabb.getAsBoxMatrix()*getPrevCamera()->GetViewProjection()); // todo: obb
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+				// render bounding box to later read the occlusion status
+				GetDevice()->QueryBegin(&query, threadID);
+				GetDevice()->Draw(14, 0, threadID);
+				GetDevice()->QueryEnd(&query, threadID);
+			}
+		}
+
+		GetDevice()->EventEnd(threadID);
+	}
+
+	wiProfiler::GetInstance().EndRange(threadID); // Occlusion Culling Render
 }
 void wiRenderer::OcclusionCulling_Read()
 {
-	//if (!GetOcclusionCullingEnabled() || spTree == nullptr || GetFreezeCullingCameraEnabled())
-	//{
-	//	return;
-	//}
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	{
+		return;
+	}
 
-	//wiProfiler::GetInstance().BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
+	wiProfiler::GetInstance().BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
 
-	//const FrameCulling& culling = frameCullings[getCamera()];
-	//const CulledCollection& culledRenderer = culling.culledRenderer;
+	const FrameCulling& culling = frameCullings[getCamera()];
 
-	//if (!culledRenderer.empty())
-	//{
-	//	GetDevice()->EventBegin("Occlusion Culling Read", GRAPHICSTHREAD_IMMEDIATE);
+	if (!culling.culledObjects.empty())
+	{
+		GetDevice()->EventBegin("Occlusion Culling Read", GRAPHICSTHREAD_IMMEDIATE);
 
-	//	for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
-	//	{
-	//		Mesh* mesh = iter->first;
-	//		if (!mesh->renderable || mesh->softBody) // todo: correct softbody
-	//		{
-	//			continue;
-	//		}
+		Scene& scene = GetScene();
 
-	//		const CulledObjectList& visibleInstances = iter->second;
+		for (Entity entity : culling.culledObjects)
+		{
+			ObjectComponent& object = *scene.objects.GetComponent(entity);
+			if (!object.renderable)
+			{
+				continue;
+			}
 
-	//		for (Object* instance : visibleInstances)
-	//		{
-	//			instance->occlusionHistory <<= 1; // advance history by 1 frame
-	//			if (instance->occlusionQueryID < 0)
-	//			{
-	//				instance->occlusionHistory |= 1; // mark this frame as visible
-	//				continue;
-	//			}
-	//			GPUQuery& query = occlusionQueries[instance->occlusionQueryID];
-	//			if (!query.IsValid())
-	//			{
-	//				instance->occlusionHistory |= 1; // mark this frame as visible
-	//				continue;
-	//			}
+			object.occlusionHistory <<= 1; // advance history by 1 frame
+			if (object.occlusionQueryID < 0)
+			{
+				object.occlusionHistory |= 1; // mark this frame as visible
+				continue;
+			}
+			GPUQuery& query = occlusionQueries[object.occlusionQueryID];
+			if (!query.IsValid())
+			{
+				object.occlusionHistory |= 1; // mark this frame as visible
+				continue;
+			}
 
-	//			while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
+			while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
 
-	//			if (query.result_passed == TRUE)
-	//			{
-	//				instance->occlusionHistory |= 1; // mark this frame as visible
-	//			}
-	//			else
-	//			{
-	//				// leave this frame as occluded
-	//			}
-	//		}
-	//	}
+			if (query.result_passed == TRUE)
+			{
+				object.occlusionHistory |= 1; // mark this frame as visible
+			}
+			else
+			{
+				// leave this frame as occluded
+			}
+		}
 
-	//	GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
-	//}
+		GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	}
 
-	//wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
+	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
 }
 void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
@@ -5642,392 +5570,405 @@ void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
 
 void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 {
-	//GetDevice()->EventBegin("EnvironmentProbe Refresh", threadID);
+	GetDevice()->EventBegin("EnvironmentProbe Refresh", threadID);
 
-	//static const UINT envmapRes = 128;
-	//static const UINT envmapCount = 16;
-	//static const UINT envmapMIPs = 8;
+	Scene& scene = GetScene();
 
-	//if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
-	//{
-	//	TextureDesc desc;
-	//	desc.ArraySize = envmapCount * 6;
-	//	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = RTFormat_hdr;
-	//	desc.Height = envmapRes;
-	//	desc.Width = envmapRes;
-	//	desc.MipLevels = envmapMIPs;
-	//	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE /*| RESOURCE_MISC_GENERATE_MIPS*/;
-	//	desc.Usage = USAGE_DEFAULT;
+	static const UINT envmapRes = 128;
+	static const UINT envmapCount = 16;
+	static const UINT envmapMIPs = 8;
 
-	//	textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
-	//	textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentRenderTargetArraySlices(true);
-	//	textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
-	//	textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourcesForMIPs(true);
-	//	textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-	//	HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-	//	assert(SUCCEEDED(hr));
-	//}
+	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
+	{
+		TextureDesc desc;
+		desc.ArraySize = envmapCount * 6;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
+		desc.CPUAccessFlags = 0;
+		desc.Format = RTFormat_hdr;
+		desc.Height = envmapRes;
+		desc.Width = envmapRes;
+		desc.MipLevels = envmapMIPs;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE /*| RESOURCE_MISC_GENERATE_MIPS*/;
+		desc.Usage = USAGE_DEFAULT;
 
-	//static Texture2D* envrenderingDepthBuffer = nullptr;
-	//if (envrenderingDepthBuffer == nullptr)
-	//{
-	//	TextureDesc desc;
-	//	desc.ArraySize = 6;
-	//	desc.BindFlags = BIND_DEPTH_STENCIL;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.Format = FORMAT_D16_UNORM;
-	//	desc.Height = envmapRes;
-	//	desc.Width = envmapRes;
-	//	desc.MipLevels = 1;
-	//	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-	//	desc.Usage = USAGE_DEFAULT;
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentRenderTargetArraySlices(true);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourcesForMIPs(true);
+		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+		assert(SUCCEEDED(hr));
+	}
 
-	//	HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
-	//	assert(SUCCEEDED(hr));
-	//}
+	static Texture2D* envrenderingDepthBuffer = nullptr;
+	if (envrenderingDepthBuffer == nullptr)
+	{
+		TextureDesc desc;
+		desc.ArraySize = 6;
+		desc.BindFlags = BIND_DEPTH_STENCIL;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_D16_UNORM;
+		desc.Height = envmapRes;
+		desc.Width = envmapRes;
+		desc.MipLevels = 1;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		desc.Usage = USAGE_DEFAULT;
 
-	//ViewPort VP;
-	//VP.Height = envmapRes;
-	//VP.Width = envmapRes;
-	//VP.TopLeftX = 0;
-	//VP.TopLeftY = 0;
-	//VP.MinDepth = 0.0f;
-	//VP.MaxDepth = 1.0f;
-	//GetDevice()->BindViewports(1, &VP, threadID);
+		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
+		assert(SUCCEEDED(hr));
+	}
 
-	//const float zNearP = getCamera()->zNearP;
-	//const float zFarP = getCamera()->zFarP;
+	ViewPort VP;
+	VP.Height = envmapRes;
+	VP.Width = envmapRes;
+	VP.TopLeftX = 0;
+	VP.TopLeftY = 0;
+	VP.MinDepth = 0.0f;
+	VP.MaxDepth = 1.0f;
+	GetDevice()->BindViewports(1, &VP, threadID);
 
+	const float zNearP = getCamera()->zNearP;
+	const float zFarP = getCamera()->zFarP;
 
-	//// reconstruct envmap array status:
-	//bool envmapTaken[envmapCount] = {};
-	//for (Model* model : GetScene().models)
-	//{
-	//	for (EnvironmentProbe* probe : model->environmentProbes)
-	//	{
-	//		if (probe->textureIndex >= 0)
-	//		{
-	//			envmapTaken[probe->textureIndex] = true;
-	//		}
-	//	}
-	//}
+	// reconstruct envmap array status:
+	bool envmapTaken[envmapCount] = {};
+	for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+	{
+		const EnvironmentProbeComponent& probe = scene.probes[i];
+		if (probe.textureIndex >= 0)
+		{
+			envmapTaken[probe.textureIndex] = true;
+		}
+	}
 
-	//for (Model* model : GetScene().models)
-	//{
-	//	for (EnvironmentProbe* probe : model->environmentProbes)
-	//	{
-	//		if (probe->textureIndex < 0)
-	//		{
-	//			// need to take a free envmap texture slot:
-	//			bool found = false;
-	//			for (int i = 0; i < ARRAYSIZE(envmapTaken); ++i)
-	//			{
-	//				if (envmapTaken[i] == false)
-	//				{
-	//					envmapTaken[i] = true;
-	//					probe->textureIndex = i;
-	//					found = true;
-	//					break;
-	//				}
-	//			}
-	//			if (!found)
-	//			{
-	//				// could not find free slot in envmap array, so skip this probe:
-	//				continue;
-	//			}
-	//		}
+	for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+	{
+		EnvironmentProbeComponent& probe = scene.probes[i];
+		Entity entity = scene.probes.GetEntity(i);
 
-	//		if (probe->isUpToDate)
-	//		{
-	//			continue;
-	//		}
-	//		if (!probe->realTime)
-	//		{
-	//			probe->isUpToDate = true;
-	//		}
+		if (probe.textureIndex < 0)
+		{
+			// need to take a free envmap texture slot:
+			bool found = false;
+			for (int i = 0; i < ARRAYSIZE(envmapTaken); ++i)
+			{
+				if (envmapTaken[i] == false)
+				{
+					envmapTaken[i] = true;
+					probe.textureIndex = i;
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				// could not find free slot in envmap array, so skip this probe:
+				continue;
+			}
+		}
 
-	//		GetDevice()->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe->textureIndex);
-	//		const float clearColor[4] = { 0,0,0,1 };
-	//		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe->textureIndex);
-	//		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
+		if (probe.isUpToDate)
+		{
+			continue;
+		}
+		if (!probe.realTime)
+		{
+			probe.isUpToDate = true;
+		}
 
-
-	//		std::vector<SHCAM> cameras;
-	//		{
-	//			cameras.clear();
-
-	//			cameras.push_back(SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
-	//			cameras.push_back(SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
-
-	//			cameras.push_back(SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
-	//			cameras.push_back(SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
-
-	//			cameras.push_back(SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
-	//			cameras.push_back(SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
-	//		}
-
-	//		XMFLOAT3 center = probe->translation;
-	//		XMVECTOR vCenter = XMLoadFloat3(&center);
-
-	//		CubeMapRenderCB cb;
-	//		for (unsigned int i = 0; i < cameras.size(); ++i)
-	//		{
-	//			cameras[i].Update(vCenter);
-	//			cb.mViewProjection[i] = cameras[i].getVP();
-	//		}
-
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-	//		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
+		GetDevice()->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe.textureIndex);
+		const float clearColor[4] = { 0,0,0,1 };
+		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe.textureIndex);
+		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
 
 
-	//		CameraCB camcb;
-	//		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-	//		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
+		std::vector<LightComponent::SHCAM> cameras;
+		{
+			cameras.clear();
+
+			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
+			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
+
+			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
+			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
+
+			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
+			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
+		}
+
+		XMFLOAT3 center = probe.position;
+		XMVECTOR vCenter = XMLoadFloat3(&center);
+
+		CubeMapRenderCB cb;
+		for (unsigned int i = 0; i < cameras.size(); ++i)
+		{
+			cameras[i].Update(vCenter);
+			cb.mViewProjection[i] = cameras[i].getVP();
+		}
+
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubeMapRenderCB), threadID);
 
 
-	//		CulledList culledObjects;
-	//		CulledCollection culledRenderer;
+		CameraCB camcb;
+		camcb.mCamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
 
-	//		SPHERE culler = SPHERE(center, zFarP);
-	//		if (spTree != nullptr)
-	//		{
-	//			spTree->getVisible(culler, culledObjects);
+		const LayerComponent& layer = *scene.layers.GetComponent(entity);
+		const uint32_t layerMask = layer.GetLayerMask();
 
-	//			for (Cullable* object : culledObjects)
-	//			{
-	//				culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
-	//			}
+		SPHERE culler = SPHERE(center, zFarP);
 
-	//			RenderMeshes(center, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE, threadID);
-	//		}
+		CulledCollection culledRenderer;
+		for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+		{
+			const CullableComponent& cullable = scene.cullables[i];
+			Entity cullable_entity = scene.cullables.GetEntity(i);
+			if (cullable_entity != entity && culler.intersects(cullable.aabb))
+			{
+				const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
+				if (object != nullptr)
+				{
+					const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+					if ((layerMask & layer.GetLayerMask()))
+					{
+						culledRenderer[object->meshID].push_back(cullable_entity);
+					}
+				}
+			}
+		}
 
-	//		// sky
-	//		{
+		if (!culledRenderer.empty())
+		{
+			RenderMeshes(center, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
+		}
 
-	//			if (enviroMap != nullptr)
-	//			{
-	//				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
-	//				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
-	//			}
-	//			else
-	//			{
-	//				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
-	//				GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
-	//			}
+		// sky
+		{
 
-	//			GetDevice()->Draw(240, 0, threadID);
-	//		}
+			if (enviroMap != nullptr)
+			{
+				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
+				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
+			}
+			else
+			{
+				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+				GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+			}
 
-	//		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-	//		//GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
-	//		wiRenderer::GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe->textureIndex);
-	//		
-	//		// Filter the enviroment map mip chain according to BRDF:
-	//		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
-	//		//	and we generatethe filtered MIPs from bottom to top.
-	//		GetDevice()->EventBegin("FilterEnvMap", threadID);
-	//		{
-	//			Texture* texture = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY];
-	//			TextureDesc desc = texture->GetDesc();
-	//			int arrayIndex = probe->textureIndex;
+			GetDevice()->Draw(240, 0, threadID);
+		}
 
-	//			GetDevice()->BindComputePSO(CPSO[CSTYPE_FILTERENVMAP], threadID);
+		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+		//GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
+		wiRenderer::GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe.textureIndex);
 
-	//			desc.Width = 1;
-	//			desc.Height = 1;
-	//			for (UINT i = desc.MipLevels - 1; i > 0; --i)
-	//			{
-	//				GetDevice()->BindUAV(CS, texture, 0, threadID, i);
-	//				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, max(0, (int)i - 2));
+		// Filter the enviroment map mip chain according to BRDF:
+		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
+		//	and we generatethe filtered MIPs from bottom to top.
+		GetDevice()->EventBegin("FilterEnvMap", threadID);
+		{
+			Texture* texture = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY];
+			TextureDesc desc = texture->GetDesc();
+			int arrayIndex = probe.textureIndex;
 
-	//				FilterEnvmapCB cb;
-	//				cb.filterResolution.x = desc.Width;
-	//				cb.filterResolution.y = desc.Height;
-	//				cb.filterArrayIndex = arrayIndex;
-	//				cb.filterRoughness = (float)i / (float)desc.MipLevels;
-	//				cb.filterRayCount = 128;
-	//				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
-	//				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
+			GetDevice()->BindComputePSO(CPSO[CSTYPE_FILTERENVMAP], threadID);
 
-	//				GetDevice()->Dispatch(
-	//					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-	//					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-	//					6,
-	//					threadID);
+			desc.Width = 1;
+			desc.Height = 1;
+			for (UINT i = desc.MipLevels - 1; i > 0; --i)
+			{
+				GetDevice()->BindUAV(CS, texture, 0, threadID, i);
+				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, max(0, (int)i - 2));
 
-	//				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				FilterEnvmapCB cb;
+				cb.filterResolution.x = desc.Width;
+				cb.filterResolution.y = desc.Height;
+				cb.filterArrayIndex = arrayIndex;
+				cb.filterRoughness = (float)i / (float)desc.MipLevels;
+				cb.filterRayCount = 128;
+				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
+				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
 
-	//				desc.Width *= 2;
-	//				desc.Height *= 2;
-	//			}
-	//			GetDevice()->UnbindUAVs(0, 1, threadID);
-	//		}
-	//		GetDevice()->EventEnd(threadID);
+				GetDevice()->Dispatch(
+					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					6,
+					threadID);
 
-	//	}
-	//}
+				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
 
-	//GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
-	//GetDevice()->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+				desc.Width *= 2;
+				desc.Height *= 2;
+			}
+			GetDevice()->UnbindUAVs(0, 1, threadID);
+		}
+		GetDevice()->EventEnd(threadID);
 
-	//GetDevice()->EventEnd(threadID); // EnvironmentProbe Refresh
+	}
+
+	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+	GetDevice()->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+
+	GetDevice()->EventEnd(threadID); // EnvironmentProbe Refresh
 }
 
 void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 {
-	//if (!GetVoxelRadianceEnabled())
-	//{
-	//	return;
-	//}
+	if (!GetVoxelRadianceEnabled())
+	{
+		return;
+	}
 
-	//GraphicsDevice* device = GetDevice();
+	GraphicsDevice* device = GetDevice();
 
-	//device->EventBegin("Voxel Radiance", threadID);
-	//wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
+	device->EventBegin("Voxel Radiance", threadID);
+	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
+	Scene& scene = GetScene();
 
-	//if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
-	//{
-	//	TextureDesc desc;
-	//	ZeroMemory(&desc, sizeof(desc));
-	//	desc.Width = voxelSceneData.res;
-	//	desc.Height = voxelSceneData.res;
-	//	desc.Depth = voxelSceneData.res;
-	//	desc.MipLevels = 0;
-	//	desc.Format = RTFormat_voxelradiance;
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	desc.Usage = USAGE_DEFAULT;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.MiscFlags = 0;
+	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
+	{
+		TextureDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = voxelSceneData.res;
+		desc.Height = voxelSceneData.res;
+		desc.Depth = voxelSceneData.res;
+		desc.MipLevels = 0;
+		desc.Format = RTFormat_voxelradiance;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.Usage = USAGE_DEFAULT;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
 
-	//	textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-	//	textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentShaderResourcesForMIPs(true);
-	//	textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-	//	HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
-	//	assert(SUCCEEDED(hr));
-	//}
-	//if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
-	//{
-	//	TextureDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
-	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
-	//	textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-	//	HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
-	//	assert(SUCCEEDED(hr));
-	//}
-	//if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
-	//{
-	//	GPUBufferDesc desc;
-	//	desc.StructureByteStride = sizeof(UINT) * 2;
-	//	desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
-	//	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	//	desc.CPUAccessFlags = 0;
-	//	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	//	desc.Usage = USAGE_DEFAULT;
+		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
+		assert(SUCCEEDED(hr));
+	}
+	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
+	{
+		TextureDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
+		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+		assert(SUCCEEDED(hr));
+	}
+	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
+	{
+		GPUBufferDesc desc;
+		desc.StructureByteStride = sizeof(UINT) * 2;
+		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
 
-	//	resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
-	//	HRESULT hr = device->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
-	//	assert(SUCCEEDED(hr));
-	//}
+		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
+		HRESULT hr = device->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
+		assert(SUCCEEDED(hr));
+	}
 
-	//Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
+	Texture3D* result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE];
 
-	//CulledList culledObjects;
-	//CulledCollection culledRenderer;
-
-	//AABB bbox;
-	//XMFLOAT3 extents = voxelSceneData.extents;
-	//XMFLOAT3 center = voxelSceneData.center;
-	//bbox.createFromHalfWidth(center, extents);
-	//if (spTree != nullptr && extents.x > 0 && extents.y > 0 && extents.z > 0)
-	//{
-	//	spTree->getVisible(bbox, culledObjects);
-
-	//	for (Cullable* object : culledObjects)
-	//	{
-	//		culledRenderer[((Object*)object)->mesh].push_front((Object*)object);
-	//	}
-
-	//	ViewPort VP;
-	//	VP.TopLeftX = 0;
-	//	VP.TopLeftY = 0;
-	//	VP.Width = (float)voxelSceneData.res;
-	//	VP.Height = (float)voxelSceneData.res;
-	//	VP.MinDepth = 0.0f;
-	//	VP.MaxDepth = 1.0f;
-	//	device->BindViewports(1, &VP, threadID);
-
-	//	GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
-	//	//device->BindRenderTargetsUAVs(0, nullptr, nullptr, UAVs, 0, 1, threadID);
-	//	device->BindUAVs(PS, UAVs, 0, 1, threadID);
-
-	//	RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
-
-	//	// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
-	//	device->EventBegin("Voxel Scene Copy - Clear", threadID);
-	//	device->BindRenderTargets(0, nullptr, nullptr, threadID);
-	//	device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-	//	device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
-
-	//	if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-	//	{
-	//		device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
-	//	}
-	//	else
-	//	{
-	//		device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
-	//	}
-	//	device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
-	//	device->EventEnd(threadID);
-
-	//	if (voxelSceneData.secondaryBounceEnabled)
-	//	{
-	//		device->EventBegin("Voxel Radiance Secondary Bounce", threadID);
-	//		device->UnbindUAVs(1, 1, threadID);
-	//		// Pre-integrate the voxel texture by creating blurred mip levels:
-	//		GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
-	//		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
-	//		device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-	//		device->BindResource(CS, resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
-	//		device->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
-	//		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, threadID);
-	//		device->EventEnd(threadID);
-
-	//		device->EventBegin("Voxel Scene Clear Normals", threadID);
-	//		device->UnbindResources(1, 1, threadID);
-	//		device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-	//		device->BindComputePSO(CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
-	//		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
-	//		device->EventEnd(threadID);
-
-	//		result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
-	//	}
-
-	//	device->UnbindUAVs(0, 2, threadID);
+	AABB bbox;
+	XMFLOAT3 extents = voxelSceneData.extents;
+	XMFLOAT3 center = voxelSceneData.center;
+	bbox.createFromHalfWidth(center, extents);
 
 
-	//	// Pre-integrate the voxel texture by creating blurred mip levels:
-	//	//if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
-	//	//{
-	//	//	GenerateMipChain(result, MIPGENFILTER_GAUSSIAN, threadID);
-	//	//}
-	//	//else
-	//	{
-	//		GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
-	//	}
-	//}
+	CulledCollection culledRenderer;
+	for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+	{
+		const CullableComponent& cullable = scene.cullables[i];
+		Entity cullable_entity = scene.cullables.GetEntity(i);
+		if (bbox.intersects(cullable.aabb))
+		{
+			const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
+			if (object != nullptr)
+			{
+				culledRenderer[object->meshID].push_back(cullable_entity);
+			}
+		}
+	}
 
-	//if (voxelHelper)
-	//{
-	//	device->BindResource(VS, result, TEXSLOT_VOXELRADIANCE, threadID);
-	//}
-	//device->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
-	//device->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
+	if (!culledRenderer.empty())
+	{
+		ViewPort VP;
+		VP.TopLeftX = 0;
+		VP.TopLeftY = 0;
+		VP.Width = (float)voxelSceneData.res;
+		VP.Height = (float)voxelSceneData.res;
+		VP.MinDepth = 0.0f;
+		VP.MaxDepth = 1.0f;
+		device->BindViewports(1, &VP, threadID);
 
-	//wiProfiler::GetInstance().EndRange(threadID);
-	//device->EventEnd(threadID);
+		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
+		device->BindUAVs(PS, UAVs, 0, 1, threadID);
+
+		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+
+		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
+		device->EventBegin("Voxel Scene Copy - Clear", threadID);
+		device->BindRenderTargets(0, nullptr, nullptr, threadID);
+		device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+
+		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
+		{
+			device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+		}
+		else
+		{
+			device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+		}
+		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
+		device->EventEnd(threadID);
+
+		if (voxelSceneData.secondaryBounceEnabled)
+		{
+			device->EventBegin("Voxel Radiance Secondary Bounce", threadID);
+			device->UnbindUAVs(1, 1, threadID);
+			// Pre-integrate the voxel texture by creating blurred mip levels:
+			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
+			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
+			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
+			device->BindResource(CS, resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+			device->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
+			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, threadID);
+			device->EventEnd(threadID);
+
+			device->EventBegin("Voxel Scene Clear Normals", threadID);
+			device->UnbindResources(1, 1, threadID);
+			device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+			device->BindComputePSO(CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
+			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
+			device->EventEnd(threadID);
+
+			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
+		}
+
+		device->UnbindUAVs(0, 2, threadID);
+
+
+		// Pre-integrate the voxel texture by creating blurred mip levels:
+		{
+			GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
+		}
+	}
+
+	if (voxelHelper)
+	{
+		device->BindResource(VS, result, TEXSLOT_VOXELRADIANCE, threadID);
+	}
+	device->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
+	device->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
+
+	wiProfiler::GetInstance().EndRange(threadID);
+	device->EventEnd(threadID);
 }
 
 

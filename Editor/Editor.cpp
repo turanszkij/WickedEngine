@@ -1244,31 +1244,41 @@ void EditorComponent::Update(float dt)
 
 
 
-		//// Interact:
-		//if (hovered.object != nullptr && selected.empty())
-		//{
-		//	if (hovered.object->GetRenderTypes() & RENDERTYPE_WATER)
-		//	{
-		//		if (wiInputManager::GetInstance()->down(VK_LBUTTON))
-		//		{
-		//			// if water, then put a water ripple onto it:
-		//			wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
-		//		}
-		//	}
-		//	else
-		//	{
-		//		if (wiInputManager::GetInstance()->press(VK_LBUTTON))
-		//		{
-		//			// if not water, put a decal instead:
-		//			static int decalselector = 0;
-		//			decalselector = (decalselector + 1) % 2;
-		//			Decal* decal = new Decal(hovered.position, XMFLOAT3(4,4,4), wiRenderer::getCamera()->rotation,
-		//				wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
-		//			decal->attachTo(hovered.object);
-		//			wiRenderer::PutDecal(decal);
-		//		}
-		//	}
-		//}
+		// Interact:
+		if (hovered.entity != INVALID_ENTITY && selected.empty())
+		{
+			const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
+			if (object != nullptr)
+			{
+				if (object->GetRenderTypes() & RENDERTYPE_WATER)
+				{
+					if (wiInputManager::GetInstance()->down(VK_LBUTTON))
+					{
+						// if water, then put a water ripple onto it:
+						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
+					}
+				}
+				else
+				{
+					if (wiInputManager::GetInstance()->press(VK_LBUTTON))
+					{
+						// if not water, put a decal instead:
+						static int decalselector = 0;
+						decalselector = (decalselector + 1) % 2;
+						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+						TransformComponent& transform = *scene.transforms.GetComponent(entity);
+						transform.Translate(hovered.position);
+						transform.Scale(XMFLOAT3(4, 4, 4));
+						transform.MatrixTransform(XMLoadFloat3x3(&wiRenderer::getCamera()->rotationMatrix));
+						//Decal* decal = new Decal(hovered.position, XMFLOAT3(4, 4, 4), wiRenderer::getCamera()->rotation,
+						//	wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+						//decal->attachTo(hovered.object);
+						//wiRenderer::PutDecal(decal);
+					}
+				}
+			}
+
+		}
 
 		// Select...
 		static bool selectAll = false;
