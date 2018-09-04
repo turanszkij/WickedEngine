@@ -8137,150 +8137,155 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 
 void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 {
-	//MeshComponent& mesh = GetScene().meshes.GetComponent(mesh_ref);
+	Scene& scene = GetScene();
 
-	//static const int res = 256;
+	MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-	//const AABB& bbox = mesh.aabb;
-	//const XMFLOAT3 extents = bbox.getHalfWidth();
-	//if (!mesh.impostorTarget.IsInitialized())
-	//{
-	//	mesh.impostorTarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
-	//	mesh.impostorTarget.Add(RTFormat_impostor_normal);			// normal, roughness
-	//	mesh.impostorTarget.Add(RTFormat_impostor_surface);		// surface properties
-	//}
+	static const int res = 256;
 
-	//CameraComponent savedCam = *cam;
+	const AABB& bbox = mesh.aabb;
+	const XMFLOAT3 extents = bbox.getHalfWidth();
+	if (!mesh.impostorTarget.IsInitialized())
+	{
+		mesh.impostorTarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
+		mesh.impostorTarget.Add(RTFormat_impostor_normal);		// normal, roughness
+		mesh.impostorTarget.Add(RTFormat_impostor_surface);		// surface properties
+	}
 
-	//BindPersistentState(threadID);
 
-	//const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	//struct InstBuf
-	//{
-	//	Instance instance;
-	//	InstancePrev instancePrev;
-	//};
-	//UINT instancesOffset; 
-	//volatile InstBuf* buff = (volatile InstBuf*)GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
-	//buff->instance.Create(__identity);
-	//buff->instancePrev.Create(__identity);
-	//GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+	CameraComponent camera = *getCamera();
+	TransformComponent camera_transform = *scene.transforms.GetComponent(getCameraID());
 
-	//GPUBuffer* vbs[] = {
-	//	mesh.IsSkinned() ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS,
-	//	mesh.vertexBuffer_TEX,
-	//	mesh.IsSkinned() ? mesh.streamoutBuffer_PRE : mesh.vertexBuffer_POS,
-	//	dynamicVertexBufferPool
-	//};
-	//UINT strides[] = {
-	//	sizeof(MeshComponent::Vertex_POS),
-	//	sizeof(MeshComponent::Vertex_TEX),
-	//	sizeof(MeshComponent::Vertex_POS),
-	//	sizeof(InstBuf)
-	//};
-	//UINT offsets[] = {
-	//	0,
-	//	0,
-	//	0,
-	//	instancesOffset
-	//};
-	//GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	BindPersistentState(threadID);
 
-	//GetDevice()->BindIndexBuffer(mesh.indexBuffer, mesh.GetIndexFormat(), 0, threadID);
+	const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	struct InstBuf
+	{
+		Instance instance;
+		InstancePrev instancePrev;
+	};
+	UINT instancesOffset; 
+	volatile InstBuf* buff = (volatile InstBuf*)GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
+	buff->instance.Create(__identity);
+	buff->instancePrev.Create(__identity);
+	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
-	//GetDevice()->BindGraphicsPSO(PSO_captureimpostor, threadID);
+	GPUBuffer* vbs[] = {
+		mesh.IsSkinned() ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS,
+		mesh.vertexBuffer_TEX,
+		mesh.IsSkinned() ? mesh.streamoutBuffer_PRE : mesh.vertexBuffer_POS,
+		dynamicVertexBufferPool
+	};
+	UINT strides[] = {
+		sizeof(MeshComponent::Vertex_POS),
+		sizeof(MeshComponent::Vertex_TEX),
+		sizeof(MeshComponent::Vertex_POS),
+		sizeof(InstBuf)
+	};
+	UINT offsets[] = {
+		0,
+		0,
+		0,
+		instancesOffset
+	};
+	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
-	//ViewPort savedViewPort = mesh.impostorTarget.viewPort;
-	//mesh.impostorTarget.Activate(threadID, 0, 0, 0, 0);
-	//for (size_t i = 0; i < 6; ++i)
-	//{
-	//	mesh.impostorTarget.viewPort.Height = (float)res;
-	//	mesh.impostorTarget.viewPort.Width = (float)res;
-	//	mesh.impostorTarget.viewPort.TopLeftX = (float)(i*res);
-	//	mesh.impostorTarget.viewPort.TopLeftY = 0.f;
-	//	mesh.impostorTarget.Set(threadID);
+	GetDevice()->BindIndexBuffer(mesh.indexBuffer, mesh.GetIndexFormat(), 0, threadID);
 
-	//	cam->ClearTransform();
-	//	cam->Translate(bbox.getCenter());
-	//	switch (i)
-	//	{
-	//	case 0:
-	//	{
-	//		// front capture
-	//		XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-	//		XMStoreFloat4x4(&cam->Projection, ortho);
-	//	}
-	//	break;
-	//	case 1:
-	//	{
-	//		// right capture
-	//		XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-	//		XMStoreFloat4x4(&cam->Projection, ortho);
-	//		cam->RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
-	//	}
-	//	break;
-	//	case 2:
-	//	{
-	//		// back capture
-	//		XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-	//		XMStoreFloat4x4(&cam->Projection, ortho);
-	//		cam->RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
-	//	}
-	//	break;
-	//	case 3:
-	//	{
-	//		// left capture
-	//		XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-	//		XMStoreFloat4x4(&cam->Projection, ortho);
-	//		cam->RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
-	//	}
-	//	break;
-	//	case 4:
-	//	{
-	//		// bottom capture
-	//		XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-	//		XMStoreFloat4x4(&cam->Projection, ortho);
-	//		cam->RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
-	//	}
-	//	break;
-	//	case 5:
-	//	{
-	//		// top capture
-	//		XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-	//		XMStoreFloat4x4(&cam->Projection, ortho);
-	//		cam->RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-	//	}
-	//	break;
-	//	default:
-	//		break;
-	//	}
-	//	cam->UpdateProps();
-	//	UpdateCameraCB(cam, threadID);
+	GetDevice()->BindGraphicsPSO(PSO_captureimpostor, threadID);
 
-	//	for (MeshComponent::MeshSubset& subset : mesh.subsets)
-	//	{
-	//		if (subset.subsetIndices.empty())
-	//		{
-	//			continue;
-	//		}
-	//		MaterialComponent& material = GetScene().materials.GetComponent(subset.material_ref);
+	ViewPort savedViewPort = mesh.impostorTarget.viewPort;
+	mesh.impostorTarget.Activate(threadID, 0, 0, 0, 0);
+	for (size_t i = 0; i < 6; ++i)
+	{
+		mesh.impostorTarget.viewPort.Height = (float)res;
+		mesh.impostorTarget.viewPort.Width = (float)res;
+		mesh.impostorTarget.viewPort.TopLeftX = (float)(i*res);
+		mesh.impostorTarget.viewPort.TopLeftY = 0.f;
+		mesh.impostorTarget.Set(threadID);
 
-	//		GetDevice()->BindConstantBuffer(PS, material.constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
+		camera_transform.ClearTransform();
+		camera_transform.Translate(bbox.getCenter());
+		switch (i)
+		{
+		case 0:
+		{
+			// front capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+			XMStoreFloat4x4(&camera.Projection, ortho);
+		}
+		break;
+		case 1:
+		{
+			// right capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
+			XMStoreFloat4x4(&camera.Projection, ortho);
+			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
+		}
+		break;
+		case 2:
+		{
+			// back capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+			XMStoreFloat4x4(&camera.Projection, ortho);
+			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
+		}
+		break;
+		case 3:
+		{
+			// left capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
+			XMStoreFloat4x4(&camera.Projection, ortho);
+			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
+		}
+		break;
+		case 4:
+		{
+			// bottom capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
+			XMStoreFloat4x4(&camera.Projection, ortho);
+			camera_transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
+		}
+		break;
+		case 5:
+		{
+			// top capture
+			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
+			XMStoreFloat4x4(&camera.Projection, ortho);
+			camera_transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+		}
+		break;
+		default:
+			break;
+		}
+		camera_transform.UpdateTransform();
+		camera.UpdateCamera(&camera_transform);
+		camera.UpdateProjection();
+		UpdateCameraCB(&camera, threadID);
 
-	//		GetDevice()->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-	//		GetDevice()->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-	//		GetDevice()->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
+		for (MeshComponent::MeshSubset& subset : mesh.subsets)
+		{
+			if (subset.subsetIndices.empty())
+			{
+				continue;
+			}
+			MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
 
-	//		GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), 1, subset.indexBufferOffset, 0, 0, threadID);
+			GetDevice()->BindConstantBuffer(PS, material.constantBuffer, CB_GETBINDSLOT(MaterialCB), threadID);
 
-	//	}
+			GetDevice()->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+			GetDevice()->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+			GetDevice()->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
 
-	//}
-	//wiRenderer::GenerateMipChain(mesh.impostorTarget.GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
+			GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), 1, subset.indexBufferOffset, 0, 0, threadID);
 
-	//mesh.impostorTarget.viewPort = savedViewPort;
-	//*cam = savedCam;
-	//UpdateCameraCB(cam, threadID);
+		}
+
+	}
+	wiRenderer::GenerateMipChain(mesh.impostorTarget.GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
+
+	mesh.impostorTarget.viewPort = savedViewPort;
+	UpdateCameraCB(getCamera(), threadID);
 }
 
 void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)

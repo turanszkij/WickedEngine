@@ -426,6 +426,191 @@ namespace wiSceneSystem
 		SAFE_DELETE_ARRAY(gpuIndexData);
 
 	}
+	void MeshComponent::ComputeNormals(bool smooth)
+	{
+		// Start recalculating normals:
+
+		if (smooth)
+		{
+			// Compute smooth surface normals:
+
+			// 1.) Zero normals, they will be averaged later
+			for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+			{
+				vertices_FULL[i].nor = XMFLOAT4(0, 0, 0, 0);
+			}
+
+			// 2.) Find identical vertices by POSITION, accumulate face normals
+			for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+			{
+				Vertex_FULL& v_search = vertices_FULL[i];
+
+				for (size_t ind = 0; ind < indices.size() / 3; ++ind)
+				{
+					uint32_t i0 = indices[ind * 3 + 0];
+					uint32_t i1 = indices[ind * 3 + 1];
+					uint32_t i2 = indices[ind * 3 + 2];
+
+					Vertex_FULL& v0 = vertices_FULL[i0];
+					Vertex_FULL& v1 = vertices_FULL[i1];
+					Vertex_FULL& v2 = vertices_FULL[i2];
+
+					bool match_pos0 =
+						fabs(v_search.pos.x - v0.pos.x) < FLT_EPSILON &&
+						fabs(v_search.pos.y - v0.pos.y) < FLT_EPSILON &&
+						fabs(v_search.pos.z - v0.pos.z) < FLT_EPSILON;
+
+					bool match_pos1 =
+						fabs(v_search.pos.x - v1.pos.x) < FLT_EPSILON &&
+						fabs(v_search.pos.y - v1.pos.y) < FLT_EPSILON &&
+						fabs(v_search.pos.z - v1.pos.z) < FLT_EPSILON;
+
+					bool match_pos2 =
+						fabs(v_search.pos.x - v2.pos.x) < FLT_EPSILON &&
+						fabs(v_search.pos.y - v2.pos.y) < FLT_EPSILON &&
+						fabs(v_search.pos.z - v2.pos.z) < FLT_EPSILON;
+
+					if (match_pos0 || match_pos1 || match_pos2)
+					{
+						XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+						XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+						XMVECTOR N = XMVector3Cross(U, V);
+						N = XMVector3Normalize(N);
+
+						XMFLOAT3 normal;
+						XMStoreFloat3(&normal, N);
+
+						v_search.nor.x += normal.x;
+						v_search.nor.y += normal.y;
+						v_search.nor.z += normal.z;
+					}
+
+				}
+			}
+
+			// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
+			for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+			{
+				const Vertex_FULL& v0 = vertices_FULL[i];
+
+				for (size_t j = i + 1; j < vertices_FULL.size(); j++)
+				{
+					const Vertex_FULL& v1 = vertices_FULL[j];
+
+					bool unique_pos =
+						fabs(v0.pos.x - v1.pos.x) < FLT_EPSILON &&
+						fabs(v0.pos.y - v1.pos.y) < FLT_EPSILON &&
+						fabs(v0.pos.z - v1.pos.z) < FLT_EPSILON;
+
+					bool unique_tex =
+						fabs(v0.tex.x - v1.tex.x) < FLT_EPSILON &&
+						fabs(v0.tex.y - v1.tex.y) < FLT_EPSILON &&
+						(int)v0.tex.z == (int)v1.tex.z;
+
+					if (unique_pos && unique_tex)
+					{
+						for (size_t ind = 0; ind < indices.size(); ++ind)
+						{
+							if (indices[ind] == j)
+							{
+								indices[ind] = static_cast<uint32_t>(i);
+							}
+							else if (indices[ind] > j && indices[ind] > 0)
+							{
+								indices[ind]--;
+							}
+						}
+
+						vertices_FULL.erase(vertices_FULL.begin() + j);
+					}
+
+				}
+			}
+		}
+		else
+		{
+			// Compute hard surface normals:
+
+			std::vector<uint32_t> newIndexBuffer;
+			std::vector<Vertex_FULL> newVertexBuffer;
+
+			for (size_t face = 0; face < indices.size() / 3; face++)
+			{
+				uint32_t i0 = indices[face * 3 + 0];
+				uint32_t i1 = indices[face * 3 + 1];
+				uint32_t i2 = indices[face * 3 + 2];
+
+				Vertex_FULL& v0 = vertices_FULL[i0];
+				Vertex_FULL& v1 = vertices_FULL[i1];
+				Vertex_FULL& v2 = vertices_FULL[i2];
+
+				XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
+				XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+
+				XMVECTOR N = XMVector3Cross(U, V);
+				N = XMVector3Normalize(N);
+
+				XMFLOAT3 normal;
+				XMStoreFloat3(&normal, N);
+
+				v0.nor.x = normal.x;
+				v0.nor.y = normal.y;
+				v0.nor.z = normal.z;
+
+				v1.nor.x = normal.x;
+				v1.nor.y = normal.y;
+				v1.nor.z = normal.z;
+
+				v2.nor.x = normal.x;
+				v2.nor.y = normal.y;
+				v2.nor.z = normal.z;
+
+				newVertexBuffer.push_back(v0);
+				newVertexBuffer.push_back(v1);
+				newVertexBuffer.push_back(v2);
+
+				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+			}
+
+			// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
+			vertices_FULL = newVertexBuffer;
+			indices = newIndexBuffer;
+		}
+
+		CreateRenderData();
+	}
+	void MeshComponent::FlipCulling()
+	{
+		for (size_t face = 0; face < indices.size() / 3; face++)
+		{
+			uint32_t i0 = indices[face * 3 + 0];
+			uint32_t i1 = indices[face * 3 + 1];
+			uint32_t i2 = indices[face * 3 + 2];
+
+			indices[face * 3 + 0] = i0;
+			indices[face * 3 + 1] = i2;
+			indices[face * 3 + 2] = i1;
+		}
+
+		CreateRenderData();
+	}
+	void MeshComponent::FlipNormals()
+	{
+		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+		{
+			Vertex_FULL& v0 = vertices_FULL[i];
+
+			v0.nor.x *= -1;
+			v0.nor.y *= -1;
+			v0.nor.z *= -1;
+		}
+
+		CreateRenderData();
+	}
+
 
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
 	{
@@ -1091,6 +1276,26 @@ namespace wiSceneSystem
 		{
 			decal.normal = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.normalMapName);
 		}
+
+		return entity;
+	}
+	wiECS::Entity Scene::Entity_CreateCamera(
+		const std::string& name,
+		float width, float height, float nearPlane, float farPlane, float fov
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		layers.Create(entity);
+
+		transforms.Create(entity);
+
+		CameraComponent& camera = cameras.Create(entity);
+		camera.CreatePerspective(width, height, nearPlane, farPlane, fov);
 
 		return entity;
 	}

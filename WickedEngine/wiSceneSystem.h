@@ -20,7 +20,7 @@ namespace wiSceneSystem
 
 	struct NameComponent
 	{
-		char name[32];
+		char name[128];
 
 		inline void operator=(const std::string& str) { strcpy_s(name, str.c_str()); }
 	};
@@ -328,6 +328,9 @@ namespace wiSceneSystem
 		inline bool IsDynamicVB() const { return dynamicVB; }
 
 		void CreateRenderData();
+		void ComputeNormals(bool smooth);
+		void FlipCulling();
+		void FlipNormals();
 	};
 
 	struct CullableComponent
@@ -718,6 +721,11 @@ namespace wiSceneSystem
 			const std::string& name,
 			const std::string& textureName,
 			const std::string& normalMapName = ""
+		);
+		// Helper function to create a camera entity:
+		wiECS::Entity Entity_CreateCamera(
+			const std::string& name,
+			float width, float height, float nearPlane = 0.01f, float farPlane = 1000.0f, float fov = XM_PIDIV4
 		);
 
 		// Attaches an entity to a parent:
