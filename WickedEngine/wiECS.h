@@ -165,6 +165,9 @@ namespace wiECS
 		std::vector<Entity> entities;
 		// This is a lookup table for entities:
 		std::unordered_map<Entity, size_t> lookup;
+
+		// Disallow this to be copied by mistake:
+		ComponentManager(const ComponentManager&) = delete;
 	};
 }
 

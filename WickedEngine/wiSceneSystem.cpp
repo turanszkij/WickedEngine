@@ -701,219 +701,19 @@ namespace wiSceneSystem
 
 		RunBoneUpdateSystem(transforms, bones);
 
-		// Update Physics components:
-		for (size_t i = 0; i < physicscomponents.GetCount(); ++i)
-		{
-			PhysicsComponent& physicscomponent = physicscomponents[i];
-			Entity entity = physicscomponents.GetEntity(i);
-
-			if (physicscomponent.softBody)
-			{
-				MeshComponent& mesh = *meshes.GetComponent(entity);
-				mesh.dynamicVB = true;
-			}
-		}
+		RunPhysicsUpdateSystem(transforms, meshes, objects, physicscomponents);
 
 		RunMaterialUpdateSystem(materials, dt);
 
-		RunObjectUpdateSystem(transforms, meshes, materials, objects, cullables, waterPlane);
+		RunObjectUpdateSystem(transforms, meshes, materials, objects, cullables, bounds, waterPlane);
 
-		// Update Camera components:
-		for (size_t i = 0; i < cameras.GetCount(); ++i)
-		{
-			CameraComponent& camera = cameras[i];
-			Entity entity = cameras.GetEntity(i);
-			const TransformComponent* transform = transforms.GetComponent(entity);
-			camera.UpdateCamera(transform);
-		}
+		RunCameraUpdateSystem(transforms, cameras);
 
-		// Update Decal components:
-		for (size_t i = 0; i < decals.GetCount(); ++i)
-		{
-			DecalComponent& decal = decals[i];
-			Entity entity = decals.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-			decal.world = transform.world;
-			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
-			front = XMVector3TransformNormal(front, XMLoadFloat4x4(&decal.world));
-			XMStoreFloat3(&decal.front, front);
+		RunDecalUpdateSystem(transforms, cullables, decals);
 
-			CullableComponent& cullable = *cullables.GetComponent(entity);
-			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-			cullable.aabb = cullable.aabb.get(transform.world);
-		}
+		RunProbeUpdateSystem(transforms, cullables, probes);
 
-		// Update Probe components:
-		for (size_t i = 0; i < probes.GetCount(); ++i)
-		{
-			EnvironmentProbeComponent& probe = probes[i];
-			Entity entity = probes.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-
-			probe.position = transform.translation;
-
-			CullableComponent& cullable = *cullables.GetComponent(entity);
-			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-			cullable.aabb = cullable.aabb.get(transform.world);
-		}
-
-		// Update Light components:
-		for (size_t i = 0; i < lights.GetCount(); ++i)
-		{
-			LightComponent& light = lights[i];
-			Entity entity = lights.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-			CullableComponent& cullable = *cullables.GetComponent(entity);
-
-			XMMATRIX world = XMLoadFloat4x4(&transform.world);
-			XMVECTOR translation = XMLoadFloat3(&transform.translation);
-			XMVECTOR rotation = XMLoadFloat4(&transform.rotation);
-
-			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 1), world));
-
-			switch (light.type)
-			{
-			case LightComponent::DIRECTIONAL:
-			{
-				sunDirection = light.direction;
-				sunColor = light.color;
-
-				if (light.shadow)
-				{
-					XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-					CameraComponent* camera = cameras.GetComponent(wiRenderer::getCameraID());
-					float nearPlane = camera->zNearP;
-					float farPlane = camera->zFarP;
-					XMMATRIX view = camera->GetView();
-					XMMATRIX projection = camera->GetRealProjection();
-					XMMATRIX world = XMMatrixIdentity();
-
-					// Set up three shadow cascades (far - mid - near):
-					const float referenceFrustumDepth = 800.0f;									// this was the frustum depth used for reference
-					const float currentFrustumDepth = farPlane - nearPlane;						// current frustum depth
-					const float lerp0 = referenceFrustumDepth / currentFrustumDepth * 0.5f;		// third slice distance from cam (percentage)
-					const float lerp1 = referenceFrustumDepth / currentFrustumDepth * 0.12f;	// second slice distance from cam (percentage)
-					const float lerp2 = referenceFrustumDepth / currentFrustumDepth * 0.016f;	// first slice distance from cam (percentage)
-
-					// Create shadow cascades for main camera:
-					if (light.shadowCam_dirLight.empty())
-					{
-						light.shadowCam_dirLight.resize(3);
-					}
-
-					// Place the shadow cascades inside the viewport:
-					if (!light.shadowCam_dirLight.empty())
-					{
-						// frustum top left - near
-						XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum top left - far
-						XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum bottom right - near
-						XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum bottom right - far
-						XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-
-						// calculate cascade projection sizes:
-						float size0 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp0), XMVectorLerp(a0, a1, lerp0))));
-						float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp1), XMVectorLerp(a0, a1, lerp1))));
-						float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp2), XMVectorLerp(a0, a1, lerp2))));
-
-						XMVECTOR rotDefault = XMQuaternionIdentity();
-
-						// create shadow cascade projections:
-						light.shadowCam_dirLight[0] = LightComponent::SHCAM(size0, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
-						light.shadowCam_dirLight[1] = LightComponent::SHCAM(size1, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
-						light.shadowCam_dirLight[2] = LightComponent::SHCAM(size2, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
-
-						// frustum center - near
-						XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum center - far
-						XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-
-						// Avoid shadowmap texel swimming by aligning them to a discrete grid:
-						float f0 = light.shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
-						float f1 = light.shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
-						float f2 = light.shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
-						XMVECTOR e0 = XMVectorFloor(XMVectorLerp(c, d, lerp0) / f0) * f0;
-						XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
-						XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;
-
-						XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation));
-
-						light.shadowCam_dirLight[0].Update(rrr, e0);
-						light.shadowCam_dirLight[1].Update(rrr, e1);
-						light.shadowCam_dirLight[2].Update(rrr, e2);
-					}
-				}
-
-				cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
-			}
-			break;
-			case LightComponent::SPOT:
-			{
-				if (light.shadow)
-				{
-					if (light.shadowCam_spotLight.empty())
-					{
-						light.shadowCam_spotLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, 1), 0.1f, 1000.0f, light.fov));
-					}
-					light.shadowCam_spotLight[0].Update(world);
-					light.shadowCam_spotLight[0].farplane = light.range;
-					light.shadowCam_spotLight[0].Create_Perspective(light.fov);
-				}
-
-				cullable.aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
-			}
-			break;
-			case LightComponent::POINT:
-			case LightComponent::SPHERE:
-			case LightComponent::DISC:
-			case LightComponent::RECTANGLE:
-			case LightComponent::TUBE:
-			{
-				if (light.shadow)
-				{
-					if (light.shadowCam_pointLight.empty())
-					{
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //+x
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //-x
-
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(1, 0, 0, -0), 0.1f, 1000.0f, XM_PIDIV2)); //+y
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, -1), 0.1f, 1000.0f, XM_PIDIV2)); //-y
-
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), 0.1f, 1000.0f, XM_PIDIV2)); //+z
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), 0.1f, 1000.0f, XM_PIDIV2)); //-z
-					}
-					for (auto& x : light.shadowCam_pointLight) {
-						x.Update(translation);
-						x.farplane = max(1.0f, light.range);
-						x.Create_Perspective(XM_PIDIV2);
-					}
-				}
-
-				if (light.type == LightComponent::POINT)
-				{
-					cullable.aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
-				}
-				else
-				{
-					// area lights have no bounds, just like directional lights (maybe todo)
-					cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
-				}
-			}
-			break;
-			}
-
-		}
-
-		// Iterate all cullables and recompute scene bounds:
-		bounds.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
-		for (size_t i = 0; i < cullables.GetCount(); ++i)
-		{
-			const CullableComponent& cullable = cullables[i];
-
-			bounds = AABB::Merge(bounds, cullable.aabb);
-		}
+		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, cullables, lights, sunDirection, sunColor);
 
 	}
 	void Scene::Clear()
@@ -1244,7 +1044,7 @@ namespace wiSceneSystem
 		}
 	}
 	void RunHierarchyUpdateSystem(
-		const ComponentManager<ParentComponent> parents,
+		const ComponentManager<ParentComponent>& parents,
 		ComponentManager<TransformComponent>& transforms,
 		ComponentManager<LayerComponent>& layers
 		)
@@ -1307,6 +1107,25 @@ namespace wiSceneSystem
 			XMStoreFloat4x4(&bone.skinningMatrix, skinningMatrix);
 		}
 	}
+	void RunPhysicsUpdateSystem(
+		ComponentManager<TransformComponent>& transforms,
+		ComponentManager<MeshComponent>& meshes,
+		ComponentManager<ObjectComponent>& objects,
+		ComponentManager<PhysicsComponent>& physicscomponents
+	)
+	{
+		for (size_t i = 0; i < physicscomponents.GetCount(); ++i)
+		{
+			PhysicsComponent& physicscomponent = physicscomponents[i];
+			Entity entity = physicscomponents.GetEntity(i);
+
+			if (physicscomponent.softBody)
+			{
+				MeshComponent& mesh = *meshes.GetComponent(entity);
+				mesh.dynamicVB = true;
+			}
+		}
+	}
 	void RunMaterialUpdateSystem(ComponentManager<MaterialComponent>& materials, float dt)
 	{
 		for (size_t i = 0; i < materials.GetCount(); ++i)
@@ -1337,16 +1156,19 @@ namespace wiSceneSystem
 		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<ObjectComponent>& objects,
 		ComponentManager<CullableComponent>& cullables,
+		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	)
 	{
+		sceneBounds.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+
 		for (size_t i = 0; i < objects.GetCount(); ++i)
 		{
 			ObjectComponent& object = objects[i];
 			Entity entity = objects.GetEntity(i);
 			CullableComponent& cullable = *cullables.GetComponent(entity);
 
-			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
+			cullable.aabb.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 			object.rendertypeMask = 0;
 			object.dynamic = false;
 			object.cast_shadow = false;
@@ -1359,6 +1181,7 @@ namespace wiSceneSystem
 				if (mesh != nullptr && transform != nullptr)
 				{
 					cullable.aabb = mesh->aabb.get(transform->world);
+					sceneBounds = AABB::Merge(sceneBounds, cullable.aabb);
 
 					if (mesh->IsSkinned() || mesh->IsDynamicVB())
 					{
@@ -1393,6 +1216,214 @@ namespace wiSceneSystem
 					}
 				}
 			}
+		}
+	}
+	void RunCameraUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CameraComponent>& cameras
+	)
+	{
+		for (size_t i = 0; i < cameras.GetCount(); ++i)
+		{
+			CameraComponent& camera = cameras[i];
+			Entity entity = cameras.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			camera.UpdateCamera(transform);
+		}
+	}
+	void RunDecalUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<DecalComponent>& decals
+	)
+	{
+		for (size_t i = 0; i < decals.GetCount(); ++i)
+		{
+			DecalComponent& decal = decals[i];
+			Entity entity = decals.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			decal.world = transform.world;
+			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
+			front = XMVector3TransformNormal(front, XMLoadFloat4x4(&decal.world));
+			XMStoreFloat3(&decal.front, front);
+
+			CullableComponent& cullable = *cullables.GetComponent(entity);
+			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+			cullable.aabb = cullable.aabb.get(transform.world);
+		}
+	}
+	void RunProbeUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
+	)
+	{
+		for (size_t i = 0; i < probes.GetCount(); ++i)
+		{
+			EnvironmentProbeComponent& probe = probes[i];
+			Entity entity = probes.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+
+			probe.position = transform.translation;
+
+			CullableComponent& cullable = *cullables.GetComponent(entity);
+			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+			cullable.aabb = cullable.aabb.get(transform.world);
+		}
+	}
+	void RunLightUpdateSystem(
+		const CameraComponent& cascadeCamera,
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<LightComponent>& lights,
+		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
+	)
+	{
+		for (size_t i = 0; i < lights.GetCount(); ++i)
+		{
+			LightComponent& light = lights[i];
+			Entity entity = lights.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			CullableComponent& cullable = *cullables.GetComponent(entity);
+
+			XMMATRIX world = XMLoadFloat4x4(&transform.world);
+			XMVECTOR translation = XMLoadFloat3(&transform.translation);
+			XMVECTOR rotation = XMLoadFloat4(&transform.rotation);
+
+			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 1), world));
+
+			switch (light.type)
+			{
+			case LightComponent::DIRECTIONAL:
+			{
+				sunDirection = light.direction;
+				sunColor = light.color;
+
+				if (light.shadow)
+				{
+					XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+					float nearPlane = cascadeCamera.zNearP;
+					float farPlane = cascadeCamera.zFarP;
+					XMMATRIX view = cascadeCamera.GetView();
+					XMMATRIX projection = cascadeCamera.GetRealProjection();
+					XMMATRIX world = XMMatrixIdentity();
+
+					// Set up three shadow cascades (far - mid - near):
+					const float referenceFrustumDepth = 800.0f;									// this was the frustum depth used for reference
+					const float currentFrustumDepth = farPlane - nearPlane;						// current frustum depth
+					const float lerp0 = referenceFrustumDepth / currentFrustumDepth * 0.5f;		// third slice distance from cam (percentage)
+					const float lerp1 = referenceFrustumDepth / currentFrustumDepth * 0.12f;	// second slice distance from cam (percentage)
+					const float lerp2 = referenceFrustumDepth / currentFrustumDepth * 0.016f;	// first slice distance from cam (percentage)
+
+					// Create shadow cascades for main camera:
+					if (light.shadowCam_dirLight.empty())
+					{
+						light.shadowCam_dirLight.resize(3);
+					}
+
+					// Place the shadow cascades inside the viewport:
+					if (!light.shadowCam_dirLight.empty())
+					{
+						// frustum top left - near
+						XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+						// frustum top left - far
+						XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+						// frustum bottom right - near
+						XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+						// frustum bottom right - far
+						XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+
+						// calculate cascade projection sizes:
+						float size0 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp0), XMVectorLerp(a0, a1, lerp0))));
+						float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp1), XMVectorLerp(a0, a1, lerp1))));
+						float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp2), XMVectorLerp(a0, a1, lerp2))));
+
+						XMVECTOR rotDefault = XMQuaternionIdentity();
+
+						// create shadow cascade projections:
+						light.shadowCam_dirLight[0] = LightComponent::SHCAM(size0, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+						light.shadowCam_dirLight[1] = LightComponent::SHCAM(size1, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+						light.shadowCam_dirLight[2] = LightComponent::SHCAM(size2, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+
+						// frustum center - near
+						XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+						// frustum center - far
+						XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+
+						// Avoid shadowmap texel swimming by aligning them to a discrete grid:
+						float f0 = light.shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
+						float f1 = light.shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
+						float f2 = light.shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
+						XMVECTOR e0 = XMVectorFloor(XMVectorLerp(c, d, lerp0) / f0) * f0;
+						XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
+						XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;
+
+						XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation));
+
+						light.shadowCam_dirLight[0].Update(rrr, e0);
+						light.shadowCam_dirLight[1].Update(rrr, e1);
+						light.shadowCam_dirLight[2].Update(rrr, e2);
+					}
+				}
+
+				cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
+			}
+			break;
+			case LightComponent::SPOT:
+			{
+				if (light.shadow)
+				{
+					if (light.shadowCam_spotLight.empty())
+					{
+						light.shadowCam_spotLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, 1), 0.1f, 1000.0f, light.fov));
+					}
+					light.shadowCam_spotLight[0].Update(world);
+					light.shadowCam_spotLight[0].farplane = light.range;
+					light.shadowCam_spotLight[0].Create_Perspective(light.fov);
+				}
+
+				cullable.aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
+			}
+			break;
+			case LightComponent::POINT:
+			case LightComponent::SPHERE:
+			case LightComponent::DISC:
+			case LightComponent::RECTANGLE:
+			case LightComponent::TUBE:
+			{
+				if (light.shadow)
+				{
+					if (light.shadowCam_pointLight.empty())
+					{
+						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //+x
+						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //-x
+
+						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(1, 0, 0, -0), 0.1f, 1000.0f, XM_PIDIV2)); //+y
+						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, -1), 0.1f, 1000.0f, XM_PIDIV2)); //-y
+
+						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), 0.1f, 1000.0f, XM_PIDIV2)); //+z
+						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), 0.1f, 1000.0f, XM_PIDIV2)); //-z
+					}
+					for (auto& x : light.shadowCam_pointLight) {
+						x.Update(translation);
+						x.farplane = max(1.0f, light.range);
+						x.Create_Perspective(XM_PIDIV2);
+					}
+				}
+
+				if (light.type == LightComponent::POINT)
+				{
+					cullable.aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
+				}
+				else
+				{
+					// area lights have no bounds, just like directional lights (maybe todo)
+					cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
+				}
+			}
+			break;
+			}
+
 		}
 	}
 

@@ -738,9 +738,15 @@ namespace wiSceneSystem
 
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunHierarchyUpdateSystem(
-		const wiECS::ComponentManager<ParentComponent> parents,
+		const wiECS::ComponentManager<ParentComponent>& parents,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<LayerComponent>& layers
+	);
+	void RunPhysicsUpdateSystem(
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<MeshComponent>& meshes,
+		wiECS::ComponentManager<ObjectComponent>& objects,
+		wiECS::ComponentManager<PhysicsComponent>& physicscomponents
 	);
 	void RunBoneUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
@@ -753,7 +759,29 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<MaterialComponent>& materials,
 		wiECS::ComponentManager<ObjectComponent>& objects,
 		wiECS::ComponentManager<CullableComponent>& cullables,
+		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
+	);
+	void RunCameraUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CameraComponent>& cameras
+	);
+	void RunDecalUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<DecalComponent>& decals
+	);
+	void RunProbeUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
+	);
+	void RunLightUpdateSystem(
+		const CameraComponent& cascadeCamera,
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<LightComponent>& lights,
+		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	);
 
 }
