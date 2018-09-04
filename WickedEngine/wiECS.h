@@ -115,10 +115,27 @@ namespace wiECS
 
 		}
 
-		// Retrieve a component specified by an entity (if it exists, otherwise nullptr):
+		// Check if a component exists for a given entity or not:
+		inline bool Contains(Entity entity) const
+		{
+			return lookup.find(entity) != lookup.end();
+		}
+
+		// Retrieve a [read/write] component specified by an entity (if it exists, otherwise nullptr):
 		inline T* GetComponent(Entity entity)
 		{
 			auto it = lookup.find(entity);
+			if (it != lookup.end())
+			{
+				return &components[it->second];
+			}
+			return nullptr;
+		}
+
+		// Retrieve a [read only] component specified by an entity (if it exists, otherwise nullptr):
+		inline const T* GetComponent(Entity entity) const
+		{
+			const auto it = lookup.find(entity);
 			if (it != lookup.end())
 			{
 				return &components[it->second];
@@ -133,11 +150,11 @@ namespace wiECS
 		//	0 <= index < GetCount()
 		inline Entity GetEntity(size_t index) const { return entities[index]; }
 
-		// Directly index a specific component without indirection:
+		// Directly index a specific [read/write] component without indirection:
 		//	0 <= index < GetCount()
 		inline T& operator[](size_t index) { return components[index]; }
 
-		// Directly index a specific component without indirection:
+		// Directly index a specific [read only] component without indirection:
 		//	0 <= index < GetCount()
 		inline const T& operator[](size_t index) const { return components[index]; }
 

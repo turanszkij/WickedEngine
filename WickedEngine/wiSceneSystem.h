@@ -736,5 +736,25 @@ namespace wiSceneSystem
 		void Component_DetachChildren(wiECS::Entity parent);
 	};
 
+	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
+	void RunHierarchyUpdateSystem(
+		const wiECS::ComponentManager<ParentComponent> parents,
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<LayerComponent>& layers
+	);
+	void RunBoneUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<BoneComponent>& bones
+	);
+	void RunMaterialUpdateSystem(wiECS::ComponentManager<MaterialComponent>& materials, float dt);
+	void RunObjectUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		const wiECS::ComponentManager<MeshComponent>& meshes,
+		const wiECS::ComponentManager<MaterialComponent>& materials,
+		wiECS::ComponentManager<ObjectComponent>& objects,
+		wiECS::ComponentManager<CullableComponent>& cullables,
+		XMFLOAT4& waterPlane
+	);
+
 }
 

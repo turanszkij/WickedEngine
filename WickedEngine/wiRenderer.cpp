@@ -3017,22 +3017,19 @@ void wiRenderer::UpdatePerFrameData(float dt)
 					}
 					else if (camera == getCamera()) // the following cullings will be only for the main camera:
 					{
-						const LightComponent* light = scene.lights.GetComponent(entity);
-						if (light != nullptr)
+						if (scene.lights.Contains(entity))
 						{
 							culling.culledLights.push_back(entity);
 							continue;
 						}
 						
-						const DecalComponent* decal = scene.decals.GetComponent(entity);
-						if (decal != nullptr)
+						if (scene.decals.Contains(entity))
 						{
 							culling.culledDecals.push_back(entity);
 							continue;
 						}
 
-						const EnvironmentProbeComponent* probe = scene.probes.GetComponent(entity);
-						if (probe != nullptr)
+						if (scene.probes.Contains(entity))
 						{
 							culling.culledEnvProbes.push_back(entity);
 							continue;

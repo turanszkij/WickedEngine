@@ -695,67 +695,11 @@ namespace wiSceneSystem
 
 	void Scene::Update(float dt)
 	{
-		// Update Transform components:
-		for (size_t i = 0; i < transforms.GetCount(); ++i)
-		{
-			TransformComponent& transform = transforms[i];
-			transform.UpdateTransform();
-		}
+		RunTransformUpdateSystem(transforms);
 
-		// Update Hierarchy:
-		for (size_t i = 0; i < parents.GetCount(); ++i)
-		{
-			const ParentComponent& parentcomponent = parents[i];
-			Entity entity = parents.GetEntity(i);
+		RunHierarchyUpdateSystem(parents, transforms, layers);
 
-			TransformComponent* transform_child = transforms.GetComponent(entity);
-			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
-			if (transform_child != nullptr && transform_parent != nullptr)
-			{
-				XMVECTOR S_local = XMLoadFloat3(&transform_child->scale_local);
-				XMVECTOR R_local = XMLoadFloat4(&transform_child->rotation_local);
-				XMVECTOR T_local = XMLoadFloat3(&transform_child->translation_local);
-				XMMATRIX W =
-					XMMatrixScalingFromVector(S_local) *
-					XMMatrixRotationQuaternion(R_local) *
-					XMMatrixTranslationFromVector(T_local);
-
-				XMMATRIX W_parent = XMLoadFloat4x4(&transform_parent->world);
-				XMMATRIX B = XMLoadFloat4x4(&parentcomponent.world_parent_inverse_bind);
-				W = W * B * W_parent;
-
-				XMVECTOR S, R, T;
-				XMMatrixDecompose(&S, &R, &T, W);
-				XMStoreFloat3(&transform_child->scale, S);
-				XMStoreFloat4(&transform_child->rotation, R);
-				XMStoreFloat3(&transform_child->translation, T);
-
-				transform_child->world_prev = transform_child->world;
-				XMStoreFloat4x4(&transform_child->world, W);
-			}
-
-
-			LayerComponent* layer_child = layers.GetComponent(entity);
-			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
-			if (layer_child != nullptr && layer_parent != nullptr)
-			{
-				layer_child->layerMask = parentcomponent.layerMask_bind & layer_parent->GetLayerMask();
-			}
-
-		}
-
-		// Update Bone components:
-		for (size_t i = 0; i < bones.GetCount(); ++i)
-		{
-			BoneComponent& bone = bones[i];
-			Entity entity = bones.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-
-			XMMATRIX inverseBindPoseMatrix = XMLoadFloat4x4(&bone.inverseBindPoseMatrix);
-			XMMATRIX world = XMLoadFloat4x4(&transform.world);
-			XMMATRIX skinningMatrix = inverseBindPoseMatrix * world;
-			XMStoreFloat4x4(&bone.skinningMatrix, skinningMatrix);
-		}
+		RunBoneUpdateSystem(transforms, bones);
 
 		// Update Physics components:
 		for (size_t i = 0; i < physicscomponents.GetCount(); ++i)
@@ -770,84 +714,9 @@ namespace wiSceneSystem
 			}
 		}
 
-		// Update Material components:
-		for (size_t i = 0; i < materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = materials[i];
+		RunMaterialUpdateSystem(materials, dt);
 
-			material.texAnimSleep -= dt * material.texAnimFrameRate;
-			if (material.texAnimSleep <= 0)
-			{
-				material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
-				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
-				material.texAnimSleep = 1.0f;
-
-				material.dirty = true; // will trigger constant buffer update!
-			}
-
-			material.engineStencilRef = STENCILREF_DEFAULT;
-			if (material.subsurfaceScattering > 0)
-			{
-				material.engineStencilRef = STENCILREF_SKIN;
-			}
-
-		}
-
-		// Update Object components:
-		for (size_t i = 0; i < objects.GetCount(); ++i)
-		{
-			ObjectComponent& object = objects[i];
-			Entity entity = objects.GetEntity(i);
-			CullableComponent& cullable = *cullables.GetComponent(entity);
-
-			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
-			object.rendertypeMask = 0;
-			object.dynamic = false;
-			object.cast_shadow = false;
-
-			if (object.meshID != INVALID_ENTITY)
-			{
-				const TransformComponent* transform = transforms.GetComponent(entity);
-				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
-
-				if (mesh != nullptr && transform != nullptr)
-				{
-					cullable.aabb = mesh->aabb.get(transform->world);
-
-					if (mesh->IsSkinned() || mesh->IsDynamicVB())
-					{
-						object.dynamic = true;
-					}
-
-					for (auto& subset : mesh->subsets)
-					{
-						const MaterialComponent* material = materials.GetComponent(subset.materialID);
-
-						if (material != nullptr)
-						{
-							if (material->IsTransparent())
-							{
-								object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
-							}
-							else
-							{
-								object.rendertypeMask |= RENDERTYPE_OPAQUE;
-							}
-
-							if (material->IsWater())
-							{
-								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
-
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&transform->translation), XMVectorSet(0, 1, 0, 0));
-								XMStoreFloat4(&waterPlane, _refPlane);
-							}
-
-							object.cast_shadow |= material->cast_shadow;
-						}
-					}
-				}
-			}
-		}
+		RunObjectUpdateSystem(transforms, meshes, materials, objects, cullables, waterPlane);
 
 		// Update Camera components:
 		for (size_t i = 0; i < cameras.GetCount(); ++i)
@@ -1106,7 +975,7 @@ namespace wiSceneSystem
 		}
 		return INVALID_ENTITY;
 	}
-	wiECS::Entity Scene::Entity_CreateModel(
+	Entity Scene::Entity_CreateModel(
 		const std::string& name
 	)
 	{
@@ -1124,7 +993,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateMaterial(
+	Entity Scene::Entity_CreateMaterial(
 		const std::string& name
 	)
 	{
@@ -1138,7 +1007,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateObject(
+	Entity Scene::Entity_CreateObject(
 		const std::string& name
 	)
 	{
@@ -1158,7 +1027,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateMesh(
+	Entity Scene::Entity_CreateMesh(
 		const std::string& name
 	)
 	{
@@ -1200,7 +1069,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateForce(
+	Entity Scene::Entity_CreateForce(
 		const std::string& name,
 		const XMFLOAT3& position
 	)
@@ -1222,7 +1091,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateEnvironmentProbe(
+	Entity Scene::Entity_CreateEnvironmentProbe(
 		const std::string& name,
 		const XMFLOAT3& position
 	)
@@ -1246,7 +1115,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateDecal(
+	Entity Scene::Entity_CreateDecal(
 		const std::string& name,
 		const std::string& textureName,
 		const std::string& normalMapName
@@ -1279,7 +1148,7 @@ namespace wiSceneSystem
 
 		return entity;
 	}
-	wiECS::Entity Scene::Entity_CreateCamera(
+	Entity Scene::Entity_CreateCamera(
 		const std::string& name,
 		float width, float height, float nearPlane, float farPlane, float fov
 	)
@@ -1326,7 +1195,7 @@ namespace wiSceneSystem
 			parentcomponent->layerMask_bind = layer_child->GetLayerMask();
 		}
 	}
-	void Scene::Component_Detach(wiECS::Entity entity)
+	void Scene::Component_Detach(Entity entity)
 	{
 		const ParentComponent* parent = parents.GetComponent(entity);
 
@@ -1347,7 +1216,7 @@ namespace wiSceneSystem
 			parents.Remove(entity);
 		}
 	}
-	void Scene::Component_DetachChildren(wiECS::Entity parent)
+	void Scene::Component_DetachChildren(Entity parent)
 	{
 		for (size_t i = 0; i < parents.GetCount(); )
 		{
@@ -1362,5 +1231,170 @@ namespace wiSceneSystem
 			}
 		}
 	}
+
+
+
+
+	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
+	{
+		for (size_t i = 0; i < transforms.GetCount(); ++i)
+		{
+			TransformComponent& transform = transforms[i];
+			transform.UpdateTransform();
+		}
+	}
+	void RunHierarchyUpdateSystem(
+		const ComponentManager<ParentComponent> parents,
+		ComponentManager<TransformComponent>& transforms,
+		ComponentManager<LayerComponent>& layers
+		)
+	{
+		for (size_t i = 0; i < parents.GetCount(); ++i)
+		{
+			const ParentComponent& parentcomponent = parents[i];
+			Entity entity = parents.GetEntity(i);
+
+			TransformComponent* transform_child = transforms.GetComponent(entity);
+			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
+			if (transform_child != nullptr && transform_parent != nullptr)
+			{
+				XMVECTOR S_local = XMLoadFloat3(&transform_child->scale_local);
+				XMVECTOR R_local = XMLoadFloat4(&transform_child->rotation_local);
+				XMVECTOR T_local = XMLoadFloat3(&transform_child->translation_local);
+				XMMATRIX W =
+					XMMatrixScalingFromVector(S_local) *
+					XMMatrixRotationQuaternion(R_local) *
+					XMMatrixTranslationFromVector(T_local);
+
+				XMMATRIX W_parent = XMLoadFloat4x4(&transform_parent->world);
+				XMMATRIX B = XMLoadFloat4x4(&parentcomponent.world_parent_inverse_bind);
+				W = W * B * W_parent;
+
+				XMVECTOR S, R, T;
+				XMMatrixDecompose(&S, &R, &T, W);
+				XMStoreFloat3(&transform_child->scale, S);
+				XMStoreFloat4(&transform_child->rotation, R);
+				XMStoreFloat3(&transform_child->translation, T);
+
+				transform_child->world_prev = transform_child->world;
+				XMStoreFloat4x4(&transform_child->world, W);
+			}
+
+
+			LayerComponent* layer_child = layers.GetComponent(entity);
+			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
+			if (layer_child != nullptr && layer_parent != nullptr)
+			{
+				layer_child->layerMask = parentcomponent.layerMask_bind & layer_parent->GetLayerMask();
+			}
+
+		}
+	}
+	void RunBoneUpdateSystem(
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<BoneComponent>& bones
+	)
+	{
+		for (size_t i = 0; i < bones.GetCount(); ++i)
+		{
+			BoneComponent& bone = bones[i];
+			Entity entity = bones.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+
+			XMMATRIX inverseBindPoseMatrix = XMLoadFloat4x4(&bone.inverseBindPoseMatrix);
+			XMMATRIX world = XMLoadFloat4x4(&transform.world);
+			XMMATRIX skinningMatrix = inverseBindPoseMatrix * world;
+			XMStoreFloat4x4(&bone.skinningMatrix, skinningMatrix);
+		}
+	}
+	void RunMaterialUpdateSystem(ComponentManager<MaterialComponent>& materials, float dt)
+	{
+		for (size_t i = 0; i < materials.GetCount(); ++i)
+		{
+			MaterialComponent& material = materials[i];
+
+			material.texAnimSleep -= dt * material.texAnimFrameRate;
+			if (material.texAnimSleep <= 0)
+			{
+				material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
+				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
+				material.texAnimSleep = 1.0f;
+
+				material.dirty = true; // will trigger constant buffer update!
+			}
+
+			material.engineStencilRef = STENCILREF_DEFAULT;
+			if (material.subsurfaceScattering > 0)
+			{
+				material.engineStencilRef = STENCILREF_SKIN;
+			}
+
+		}
+	}
+	void RunObjectUpdateSystem(
+		const ComponentManager<TransformComponent>& transforms,
+		const ComponentManager<MeshComponent>& meshes,
+		const ComponentManager<MaterialComponent>& materials,
+		ComponentManager<ObjectComponent>& objects,
+		ComponentManager<CullableComponent>& cullables,
+		XMFLOAT4& waterPlane
+	)
+	{
+		for (size_t i = 0; i < objects.GetCount(); ++i)
+		{
+			ObjectComponent& object = objects[i];
+			Entity entity = objects.GetEntity(i);
+			CullableComponent& cullable = *cullables.GetComponent(entity);
+
+			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(0, 0, 0));
+			object.rendertypeMask = 0;
+			object.dynamic = false;
+			object.cast_shadow = false;
+
+			if (object.meshID != INVALID_ENTITY)
+			{
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+
+				if (mesh != nullptr && transform != nullptr)
+				{
+					cullable.aabb = mesh->aabb.get(transform->world);
+
+					if (mesh->IsSkinned() || mesh->IsDynamicVB())
+					{
+						object.dynamic = true;
+					}
+
+					for (auto& subset : mesh->subsets)
+					{
+						const MaterialComponent* material = materials.GetComponent(subset.materialID);
+
+						if (material != nullptr)
+						{
+							if (material->IsTransparent())
+							{
+								object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
+							}
+							else
+							{
+								object.rendertypeMask |= RENDERTYPE_OPAQUE;
+							}
+
+							if (material->IsWater())
+							{
+								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+
+								XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&transform->translation), XMVectorSet(0, 1, 0, 0));
+								XMStoreFloat4(&waterPlane, _refPlane);
+							}
+
+							object.cast_shadow |= material->cast_shadow;
+						}
+					}
+				}
+			}
+		}
+	}
+
 
 }
