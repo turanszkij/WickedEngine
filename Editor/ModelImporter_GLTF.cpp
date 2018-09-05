@@ -144,7 +144,19 @@ void RegisterTexture2D(tinygltf::Image *image)
 	}
 }
 
-void LoadNode(tinygltf::Node* node, Entity parent, Entity modelEntity, tinygltf::Model& gltfModel, const vector<Entity>& materialArray, vector<Entity>& meshArray, vector<Entity>& armatureArray)
+
+struct LoaderState
+{
+	tinygltf::Model gltfModel;
+	Entity modelEntity;
+	unordered_map<const tinygltf::Node*, Entity> entityMap;
+	vector<Entity> materialArray;
+	vector<Entity> meshArray;
+	vector<Entity> armatureArray;
+};
+
+// Recursively loads nodes and resolves hierarchy:
+void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 {
 	if (node == nullptr)
 	{
@@ -153,7 +165,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, Entity modelEntity, tinygltf:
 
 	Scene& scene = wiRenderer::GetScene();
 
-	ModelComponent& model = *scene.models.GetComponent(modelEntity);
+	ModelComponent& model = *scene.models.GetComponent(state.modelEntity);
 
 	Entity entity = INVALID_ENTITY;
 
@@ -162,229 +174,20 @@ void LoadNode(tinygltf::Node* node, Entity parent, Entity modelEntity, tinygltf:
 		entity = scene.Entity_CreateObject(node->name);
 		ObjectComponent& object = *scene.objects.GetComponent(entity);
 
-		if (node->mesh < meshArray.size())
+		if (node->mesh < state.meshArray.size())
 		{
-			object.meshID = meshArray[node->mesh];
+			object.meshID = state.meshArray[node->mesh];
+
+			if (node->skin >= 0)
+			{
+				MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				assert(!mesh.vertices_BON.empty());
+				mesh.armatureID = state.armatureArray[node->skin];
+			}
 		}
 		else
 		{
-			auto& x = gltfModel.meshes[node->mesh];
-			Entity meshEntity = scene.Entity_CreateMesh(x.name);
-			meshArray.push_back(meshEntity);
-
-			object.meshID = meshEntity;
-
-			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-
-			mesh.renderable = true;
-
-			XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-			XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-			for (auto& prim : x.primitives)
-			{
-				assert(prim.indices >= 0);
-
-				// Fill indices:
-				const tinygltf::Accessor& accessor = gltfModel.accessors[prim.indices];
-				const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-				const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
-
-				int stride = accessor.ByteStride(bufferView);
-				size_t count = accessor.count;
-
-				size_t offset = mesh.indices.size();
-				mesh.indices.resize(offset + count);
-
-				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-				if (stride == 1)
-				{
-					for (size_t i = 0; i < count; i += 3)
-					{
-						mesh.indices[offset + i + 0] = data[i + 0];
-						mesh.indices[offset + i + 1] = data[i + 1];
-						mesh.indices[offset + i + 2] = data[i + 2];
-					}
-				}
-				else if (stride == 2)
-				{
-					for (size_t i = 0; i < count; i += 3)
-					{
-						mesh.indices[offset + i + 0] = ((uint16_t*)data)[i + 0];
-						mesh.indices[offset + i + 1] = ((uint16_t*)data)[i + 1];
-						mesh.indices[offset + i + 2] = ((uint16_t*)data)[i + 2];
-					}
-				}
-				else if (stride == 4)
-				{
-					for (size_t i = 0; i < count; i += 3)
-					{
-						mesh.indices[offset + i + 0] = ((uint32_t*)data)[i + 0];
-						mesh.indices[offset + i + 1] = ((uint32_t*)data)[i + 1];
-						mesh.indices[offset + i + 2] = ((uint32_t*)data)[i + 2];
-					}
-				}
-				else
-				{
-					assert(0 && "unsupported index stride!");
-				}
-
-
-				// Create mesh subset:
-				MeshComponent::MeshSubset subset;
-
-				if (prim.material >= 0)
-				{
-					subset.materialID = materialArray[prim.material];
-				}
-				else
-				{
-					assert(0);
-				}
-
-				mesh.subsets.push_back(subset);
-			}
-
-			bool hasBoneWeights = false;
-			bool hasBoneIndices = false;
-
-			int matIndex = -1;
-			for (auto& prim : x.primitives)
-			{
-				matIndex++;
-				size_t offset = mesh.vertices_FULL.size();
-
-				for (auto& attr : prim.attributes)
-				{
-					const string& attr_name = attr.first;
-					int attr_data = attr.second;
-
-					const tinygltf::Accessor& accessor = gltfModel.accessors[attr_data];
-					const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-					const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
-
-					int stride = accessor.ByteStride(bufferView);
-					size_t count = accessor.count;
-
-					if (mesh.vertices_FULL.size() == offset)
-					{
-						mesh.vertices_FULL.resize(offset + count);
-					}
-
-					const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-					if (!attr_name.compare("POSITION"))
-					{
-						assert(stride == 12);
-						for (size_t i = 0; i < count; ++i)
-						{
-							XMFLOAT3 pos = ((XMFLOAT3*)data)[i];
-
-							if (transform_to_LH)
-							{
-								pos.z = -pos.z;
-							}
-
-							mesh.vertices_FULL[offset + i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
-
-							min = wiMath::Min(min, pos);
-							max = wiMath::Max(max, pos);
-						}
-					}
-					else if (!attr_name.compare("NORMAL"))
-					{
-						assert(stride == 12);
-						for (size_t i = 0; i < count; ++i)
-						{
-							const XMFLOAT3& nor = ((XMFLOAT3*)data)[i];
-
-							mesh.vertices_FULL[offset + i].nor.x = nor.x;
-							mesh.vertices_FULL[offset + i].nor.y = nor.y;
-							mesh.vertices_FULL[offset + i].nor.z = -nor.z;
-						}
-					}
-					else if (!attr_name.compare("TEXCOORD_0"))
-					{
-						assert(stride == 8);
-						for (size_t i = 0; i < count; ++i)
-						{
-							const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
-
-							mesh.vertices_FULL[offset + i].tex.x = tex.x;
-							mesh.vertices_FULL[offset + i].tex.y = tex.y;
-							mesh.vertices_FULL[offset + i].tex.z = (float)matIndex /*prim.material*/;
-						}
-					}
-					else if (!attr_name.compare("JOINTS_0"))
-					{
-						if (stride == 4)
-						{
-							hasBoneIndices = true;
-							struct JointTmp
-							{
-								uint8_t ind[4];
-							};
-
-							for (size_t i = 0; i < count; ++i)
-							{
-								const JointTmp& joint = ((JointTmp*)data)[i];
-
-								mesh.vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
-								mesh.vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
-								mesh.vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
-								mesh.vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
-							}
-						}
-						else if (stride == 8)
-						{
-							hasBoneIndices = true;
-							struct JointTmp
-							{
-								uint16_t ind[4];
-							};
-
-							for (size_t i = 0; i < count; ++i)
-							{
-								const JointTmp& joint = ((JointTmp*)data)[i];
-
-								mesh.vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
-								mesh.vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
-								mesh.vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
-								mesh.vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
-							}
-						}
-						else
-						{
-							assert(0);
-						}
-					}
-					else if (!attr_name.compare("WEIGHTS_0"))
-					{
-						hasBoneWeights = true;
-						assert(stride == 16);
-						for (size_t i = 0; i < count; ++i)
-						{
-							mesh.vertices_FULL[offset + i].wei = ((XMFLOAT4*)data)[i];
-						}
-					}
-
-				}
-
-			}
-
-			mesh.aabb.create(min, max);
-			mesh.CreateRenderData();
-
-			model.meshes.insert(meshEntity);
-
-
-			//if (!armatureArray.empty() && hasBoneIndices && hasBoneWeights)
-			//{
-			//	mesh->armature = armatureArray[0]; // How to resolve?
-			//	mesh->armatureName = mesh->armature->name;
-			//}
-
+			assert(0);
 		}
 	}
 	else if (node->camera >= 0)
@@ -404,9 +207,11 @@ void LoadNode(tinygltf::Node* node, Entity parent, Entity modelEntity, tinygltf:
 	if (entity == INVALID_ENTITY)
 	{
 		entity = CreateEntity();
+		scene.owned_entities.insert(entity);
 		scene.transforms.Create(entity);
 	}
 
+	state.entityMap[node] = entity;
 
 	TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	if (!node->scale.empty())
@@ -433,7 +238,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, Entity modelEntity, tinygltf:
 	{
 		for (int child : node->children)
 		{
-			LoadNode(&gltfModel.nodes[child], entity, modelEntity, gltfModel, materialArray, meshArray, armatureArray);
+			LoadNode(&state.gltfModel.nodes[child], entity, state);
 		}
 	}
 }
@@ -446,45 +251,45 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	wiHelper::RemoveExtensionFromFileName(name);
 
 
-	tinygltf::Model gltfModel;
 	tinygltf::TinyGLTF loader;
 	std::string err;
 	std::string warn;
 
 	loader.SetImageLoader(tinygltf::LoadImageData, nullptr);
 	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
+	
+	LoaderState state;
 
 	bool ret;
 	if (!extension.compare("GLTF"))
 	{
-		ret = loader.LoadASCIIFromFile(&gltfModel, &err, &warn, fileName);
+		ret = loader.LoadASCIIFromFile(&state.gltfModel, &err, &warn, fileName);
 	}
 	else
 	{
-		ret = loader.LoadBinaryFromFile(&gltfModel, &err, &warn, fileName); // for binary glTF(.glb) 
+		ret = loader.LoadBinaryFromFile(&state.gltfModel, &err, &warn, fileName); // for binary glTF(.glb) 
 	}
 	if (!ret) {
 		wiHelper::messageBox(err, "GLTF error!");
 		return INVALID_ENTITY;
 	}
 
-	vector<Entity> materialArray;
-	vector<Entity> armatureArray;
-	vector<Entity> meshArray;
-
 	Scene& scene = wiRenderer::GetScene();
 
-	Entity modelEntity = scene.Entity_CreateModel(name);
-	ModelComponent& model = *scene.models.GetComponent(modelEntity);
-	TransformComponent& model_transform = *scene.transforms.GetComponent(modelEntity);
+	state.modelEntity = scene.Entity_CreateModel(name);
+	ModelComponent& model = *scene.models.GetComponent(state.modelEntity);
+	TransformComponent& model_transform = *scene.transforms.GetComponent(state.modelEntity);
 
 	model_transform.UpdateTransform(); // everything will be attached to this, so values need to be up to date
 
-
-	for (auto& x : gltfModel.materials)
+	// Create materials:
+	for (auto& x : state.gltfModel.materials)
 	{
 		Entity materialEntity = scene.Entity_CreateMaterial(x.name);
-		materialArray.push_back(materialEntity);
+
+		model.materials.insert(materialEntity);
+		state.materialArray.push_back(materialEntity);
+
 		MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 
 		material.baseColor = XMFLOAT4(1, 1, 1, 1);
@@ -507,18 +312,18 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 		if (baseColorTexture != x.values.end())
 		{
-			auto& tex = gltfModel.textures[baseColorTexture->second.TextureIndex()];
-			auto& img = gltfModel.images[tex.source];
+			auto& tex = state.gltfModel.textures[baseColorTexture->second.TextureIndex()];
+			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img);
 			material.baseColorMapName = img.name;
 		}
-		else if(!gltfModel.images.empty())
+		else if(!state.gltfModel.images.empty())
 		{
 			// For some reason, we don't have diffuse texture, but have other textures
 			//	I have a problem, because one model viewer displays textures on a model which has no basecolor set in its material...
 			//	This is probably not how it should be (todo)
-			RegisterTexture2D(&gltfModel.images[0]);
-			material.baseColorMapName = gltfModel.images[0].name;
+			RegisterTexture2D(&state.gltfModel.images[0]);
+			material.baseColorMapName = state.gltfModel.images[0].name;
 		}
 
 		tinygltf::Image* img_nor = nullptr;
@@ -527,18 +332,18 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 		if (normalTexture != x.additionalValues.end())
 		{
-			auto& tex = gltfModel.textures[normalTexture->second.TextureIndex()];
-			img_nor = &gltfModel.images[tex.source];
+			auto& tex = state.gltfModel.textures[normalTexture->second.TextureIndex()];
+			img_nor = &state.gltfModel.images[tex.source];
 		}
 		if (metallicRoughnessTexture != x.values.end())
 		{
-			auto& tex = gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
-			img_met_rough = &gltfModel.images[tex.source];
+			auto& tex = state.gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
+			img_met_rough = &state.gltfModel.images[tex.source];
 		}
 		if (emissiveTexture != x.additionalValues.end())
 		{
-			auto& tex = gltfModel.textures[emissiveTexture->second.TextureIndex()];
-			img_emissive = &gltfModel.images[tex.source];
+			auto& tex = state.gltfModel.textures[emissiveTexture->second.TextureIndex()];
+			img_emissive = &state.gltfModel.images[tex.source];
 		}
 
 		// Now we will begin interleaving texture data to match engine layout:
@@ -699,270 +504,397 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 	}
 
-	//for(auto& skin : gltfModel.skins)
-	//{
-	//	Armature* armature = new Armature(skin.name);
-	//	model->armatures.insert(armature);
-
-	//	armatureArray.push_back(armature);
-
-	//	const tinygltf::Node& skeleton_node = gltfModel.nodes[skin.skeleton];
-
-	//	const size_t jointCount = skin.joints.size();
-
-	//	armature->boneCollection.resize(jointCount);
-
-	//	// Create bone collection:
-	//	for (size_t i = 0; i < jointCount; ++i)
-	//	{
-	//		int jointIndex = skin.joints[i];
-	//		const tinygltf::Node& joint_node = gltfModel.nodes[jointIndex];
-
-	//		Bone* bone = new Bone(joint_node.name);
-	//		if (bone->name.empty())
-	//		{
-	//			// GLTF might not contain bone names...
-	//			stringstream ss("");
-	//			ss << "Bone_" << i;
-	//			bone->name = ss.str();
-	//		}
-
-	//		armature->boneCollection[i] = bone;
-
-	//		if (!joint_node.scale.empty())
-	//		{
-	//			bone->scale_rest = XMFLOAT3((float)joint_node.scale[0], (float)joint_node.scale[1], (float)joint_node.scale[2]);
-	//		}
-	//		if (!joint_node.rotation.empty())
-	//		{
-	//			bone->rotation_rest = XMFLOAT4((float)joint_node.rotation[0], (float)joint_node.rotation[1], (float)joint_node.rotation[2], (float)joint_node.rotation[3]);
-	//		}
-	//		if (!joint_node.translation.empty())
-	//		{
-	//			bone->translation_rest = XMFLOAT3((float)joint_node.translation[0], (float)joint_node.translation[1], (float)joint_node.translation[2]);
-	//		}
-
-	//		XMVECTOR s = XMLoadFloat3(&bone->scale_rest);
-	//		XMVECTOR r = XMLoadFloat4(&bone->rotation_rest);
-	//		XMVECTOR t = XMLoadFloat3(&bone->translation_rest);
-	//		XMMATRIX w =
-	//			XMMatrixScalingFromVector(s)*
-	//			XMMatrixRotationQuaternion(r)*
-	//			XMMatrixTranslationFromVector(t)
-	//			;
-	//		XMStoreFloat4x4(&bone->world_rest, w);
-	//	}
-
-	//	// Create bone name hierarchy:
-	//	for (size_t i = 0; i < jointCount; ++i)
-	//	{
-	//		int jointIndex = skin.joints[i];
-	//		const tinygltf::Node& joint_node = gltfModel.nodes[jointIndex];
-
-	//		for (int childJointIndex : joint_node.children)
-	//		{
-	//			for (size_t j = 0; j < jointCount; ++j)
-	//			{
-	//				if (skin.joints[j] == childJointIndex)
-	//				{
-	//					armature->boneCollection[j]->parentName = armature->boneCollection[i]->name;
-	//					break;
-	//				}
-	//			}
-	//		}
-	//	}
-
-	//	if (transform_to_LH)
-	//	{
-	//		XMStoreFloat4x4(&armature->skinningRemap, XMMatrixScaling(1, 1, -1));
-	//	}
-
-	//	// Final hierarchy and extra matrices created here:
-	//	armature->CreateFamily();
-
-	//}
-
-	const tinygltf::Scene &gltfScene = gltfModel.scenes[gltfModel.defaultScene];
-	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
+	// Create meshes:
+	for (auto& x : state.gltfModel.meshes)
 	{
-		LoadNode(&gltfModel.nodes[gltfScene.nodes[i]], INVALID_ENTITY, modelEntity, gltfModel, materialArray, meshArray, armatureArray);
+		Entity meshEntity = scene.Entity_CreateMesh(x.name);
+
+		model.meshes.insert(meshEntity);
+		state.meshArray.push_back(meshEntity);
+
+		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
+
+		mesh.renderable = true;
+
+		XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+		XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+		for (auto& prim : x.primitives)
+		{
+			assert(prim.indices >= 0);
+
+			// Fill indices:
+			const tinygltf::Accessor& accessor = state.gltfModel.accessors[prim.indices];
+			const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+			const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+			int stride = accessor.ByteStride(bufferView);
+			size_t count = accessor.count;
+
+			size_t offset = mesh.indices.size();
+			mesh.indices.resize(offset + count);
+
+			const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+			if (stride == 1)
+			{
+				for (size_t i = 0; i < count; i += 3)
+				{
+					mesh.indices[offset + i + 0] = data[i + 0];
+					mesh.indices[offset + i + 1] = data[i + 1];
+					mesh.indices[offset + i + 2] = data[i + 2];
+				}
+			}
+			else if (stride == 2)
+			{
+				for (size_t i = 0; i < count; i += 3)
+				{
+					mesh.indices[offset + i + 0] = ((uint16_t*)data)[i + 0];
+					mesh.indices[offset + i + 1] = ((uint16_t*)data)[i + 1];
+					mesh.indices[offset + i + 2] = ((uint16_t*)data)[i + 2];
+				}
+			}
+			else if (stride == 4)
+			{
+				for (size_t i = 0; i < count; i += 3)
+				{
+					mesh.indices[offset + i + 0] = ((uint32_t*)data)[i + 0];
+					mesh.indices[offset + i + 1] = ((uint32_t*)data)[i + 1];
+					mesh.indices[offset + i + 2] = ((uint32_t*)data)[i + 2];
+				}
+			}
+			else
+			{
+				assert(0 && "unsupported index stride!");
+			}
+
+
+			// Create mesh subset:
+			MeshComponent::MeshSubset subset;
+
+			if (prim.material >= 0)
+			{
+				subset.materialID = state.materialArray[prim.material];
+			}
+			else
+			{
+				assert(0);
+			}
+
+			mesh.subsets.push_back(subset);
+		}
+
+		bool hasBoneWeights = false;
+		bool hasBoneIndices = false;
+
+		int matIndex = -1;
+		for (auto& prim : x.primitives)
+		{
+			matIndex++;
+			size_t offset = mesh.vertices_FULL.size();
+
+			for (auto& attr : prim.attributes)
+			{
+				const string& attr_name = attr.first;
+				int attr_data = attr.second;
+
+				const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
+				const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+				const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+				int stride = accessor.ByteStride(bufferView);
+				size_t count = accessor.count;
+
+				if (mesh.vertices_FULL.size() == offset)
+				{
+					mesh.vertices_FULL.resize(offset + count);
+				}
+
+				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+				if (!attr_name.compare("POSITION"))
+				{
+					assert(stride == 12);
+					for (size_t i = 0; i < count; ++i)
+					{
+						XMFLOAT3 pos = ((XMFLOAT3*)data)[i];
+
+						if (transform_to_LH)
+						{
+							pos.z = -pos.z;
+						}
+
+						mesh.vertices_FULL[offset + i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
+
+						min = wiMath::Min(min, pos);
+						max = wiMath::Max(max, pos);
+					}
+				}
+				else if (!attr_name.compare("NORMAL"))
+				{
+					assert(stride == 12);
+					for (size_t i = 0; i < count; ++i)
+					{
+						const XMFLOAT3& nor = ((XMFLOAT3*)data)[i];
+
+						mesh.vertices_FULL[offset + i].nor.x = nor.x;
+						mesh.vertices_FULL[offset + i].nor.y = nor.y;
+						mesh.vertices_FULL[offset + i].nor.z = -nor.z;
+					}
+				}
+				else if (!attr_name.compare("TEXCOORD_0"))
+				{
+					assert(stride == 8);
+					for (size_t i = 0; i < count; ++i)
+					{
+						const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
+
+						mesh.vertices_FULL[offset + i].tex.x = tex.x;
+						mesh.vertices_FULL[offset + i].tex.y = tex.y;
+						mesh.vertices_FULL[offset + i].tex.z = (float)matIndex /*prim.material*/;
+					}
+				}
+				else if (!attr_name.compare("JOINTS_0"))
+				{
+					if (stride == 4)
+					{
+						hasBoneIndices = true;
+						struct JointTmp
+						{
+							uint8_t ind[4];
+						};
+
+						for (size_t i = 0; i < count; ++i)
+						{
+							const JointTmp& joint = ((JointTmp*)data)[i];
+
+							mesh.vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
+							mesh.vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
+							mesh.vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
+							mesh.vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+						}
+					}
+					else if (stride == 8)
+					{
+						hasBoneIndices = true;
+						struct JointTmp
+						{
+							uint16_t ind[4];
+						};
+
+						for (size_t i = 0; i < count; ++i)
+						{
+							const JointTmp& joint = ((JointTmp*)data)[i];
+
+							mesh.vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
+							mesh.vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
+							mesh.vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
+							mesh.vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+						}
+					}
+					else
+					{
+						assert(0);
+					}
+				}
+				else if (!attr_name.compare("WEIGHTS_0"))
+				{
+					hasBoneWeights = true;
+					assert(stride == 16);
+					for (size_t i = 0; i < count; ++i)
+					{
+						mesh.vertices_FULL[offset + i].wei = ((XMFLOAT4*)data)[i];
+					}
+				}
+
+			}
+
+		}
+
+		mesh.aabb.create(min, max);
+		mesh.CreateRenderData();
+
+		model.meshes.insert(meshEntity);
 	}
 
-	//int animID = 0;
-	//for (auto& anim : gltfModel.animations)
-	//{
-	//	if (armatureArray.empty())
-	//	{
-	//		break;
-	//	}
-	//	Armature* armature = armatureArray[0];
+	// Create armatures:
+	for (auto& skin : state.gltfModel.skins)
+	{
+		Entity armatureEntity = CreateEntity();
+		scene.owned_entities.insert(armatureEntity);
+		scene.names.Create(armatureEntity) = skin.name;
+		scene.layers.Create(armatureEntity);
+		TransformComponent& transform = scene.transforms.Create(armatureEntity);
+		ArmatureComponent& armature = scene.armatures.Create(armatureEntity);
 
-	//	for (Bone* bone : armature->boneCollection)
-	//	{
-	//		bone->actionFrames.push_back(ActionFrames());
-	//	}
+		model.armatures.insert(armatureEntity);
 
-	//	Action action;
-	//	action.name = anim.name;
-	//	if (action.name.empty())
-	//	{
-	//		stringstream ss("");
-	//		ss << "Action_" << animID++;
-	//		action.name = ss.str();
-	//	}
+		state.armatureArray.push_back(armatureEntity);
 
-	//	for (auto& channel : anim.channels)
-	//	{
-	//		const tinygltf::Node& target_node = gltfModel.nodes[channel.target_node];
-	//		const tinygltf::AnimationSampler& sam = anim.samplers[channel.sampler];
+		if (transform_to_LH)
+		{
+			XMStoreFloat4x4(&armature.skinningRemap, XMMatrixScaling(1, 1, -1));
+		}
+	}
 
-	//		Bone* bone = nullptr;
+	// Create transform hierarchy, assign objects, meshes, armatures, cameras:
+	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[state.gltfModel.defaultScene];
+	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
+	{
+		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], INVALID_ENTITY, state);
+	}
 
-	//		// Search for the armature + bone this animation belongs to:
-	//		{
-	//			const auto& skin = gltfModel.skins[0];
+	// Create bone components (transforms for them are already in place):
+	int i = 0;
+	for (auto& skin : state.gltfModel.skins)
+	{
+		Entity entity = state.armatureArray[i++];
+		ArmatureComponent& armature = *scene.armatures.GetComponent(entity);
 
-	//			const size_t jointCount = skin.joints.size();
-	//			assert(armature->boneCollection.size() == jointCount);
+		const size_t jointCount = skin.joints.size();
 
-	//			for (size_t i = 0; i < jointCount; ++i)
-	//			{
-	//				int jointIndex = skin.joints[i];
+		// Create bone collection:
+		for (size_t i = 0; i < jointCount; ++i)
+		{
+			int jointIndex = skin.joints[i];
+			const tinygltf::Node& joint_node = state.gltfModel.nodes[jointIndex];
 
-	//				if (jointIndex == channel.target_node)
-	//				{
-	//					bone = armature->boneCollection[i];
-	//					break;
-	//				}
-	//			}
-	//		}
+			Entity boneEntity = state.entityMap[&joint_node];
+			BoneComponent& bone = scene.bones.Create(boneEntity);
 
-	//		if (bone == nullptr)
-	//		{
-	//			assert(0 && "Corresponding bone not found!");
-	//			continue;
-	//		}
+			armature.boneCollection.push_back(boneEntity);
+
+			TransformComponent& bone_transform = *scene.transforms.GetComponent(boneEntity);
+			XMMATRIX bind = XMLoadFloat4x4(&bone_transform.world);
+			bind = XMMatrixInverse(nullptr, bind);
+			XMStoreFloat4x4(&bone.inverseBindPoseMatrix, bind);
+		}
+	}
+
+	int animID = 0;
+	for (auto& anim : state.gltfModel.animations)
+	{
+		Entity entity = CreateEntity();
+		scene.owned_entities.insert(entity);
+		scene.names.Create(entity) = anim.name;
+		AnimationComponent& animationcomponent = scene.animations.Create(entity);
+
+		for (auto& channel : anim.channels)
+		{
+			const tinygltf::AnimationSampler& sam = anim.samplers[channel.sampler];
+
+			animationcomponent.channels.push_back(AnimationComponent::AnimationChannel());
+			animationcomponent.channels.back().target = state.entityMap[&state.gltfModel.nodes[channel.target_node]];
+
+			// AnimationSampler input = keyframe times
+			{
+				const tinygltf::Accessor& accessor = state.gltfModel.accessors[sam.input];
+				const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+				const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+				assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+
+				int stride = accessor.ByteStride(bufferView);
+				size_t count = accessor.count;
+
+				animationcomponent.channels.back().keyframe_times.resize(count);
+
+				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+				assert(stride == 4);
+				for (size_t i = 0; i < count; ++i)
+				{
+					animationcomponent.channels.back().keyframe_times[i] = ((float*)data)[i];
+				}
+
+			}
+
+			// AnimationSampler output = keyframe data
+			{
+				const tinygltf::Accessor& accessor = state.gltfModel.accessors[sam.output];
+				const tinygltf::BufferView& bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+				const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
+
+				int stride = accessor.ByteStride(bufferView);
+				size_t count = accessor.count;
+
+				//// Unfortunately, GLTF stores absolute values for animation nodes, but the engine needs relative
+				////	Absolute = animation * rest (so the rest matrix is baked into animation, this can't be blended like we do now)
+				////	Relative = animation (so we can blend all animation tracks however we want, then post multiply with the rest matrix after blending)
+				//const XMMATRIX invRest = XMMatrixInverse(nullptr, XMLoadFloat4x4(&bone->world_rest));
+
+				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
+
+				if (!channel.target_path.compare("scale"))
+				{
+					animationcomponent.channels.back().type = AnimationComponent::AnimationChannel::Type::SCALE;
+					animationcomponent.channels.back().keyframe_data.resize(count * 3);
+
+					assert(stride == sizeof(XMFLOAT3));
+					for (size_t i = 0; i < count; ++i)
+					{
+						const XMFLOAT3& sca = ((XMFLOAT3*)data)[i];
+						((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i] = sca;
+
+						//// Remove rest matrix from animation track:
+						//XMMATRIX mat = XMMatrixScalingFromVector(XMLoadFloat3(&sca));
+						//mat = mat * invRest;
+						//XMVECTOR s, r, t;
+						//XMMatrixDecompose(&s, &r, &t, mat);
+
+						//XMStoreFloat3(&((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i], s);
+					}
+				}
+				else if (!channel.target_path.compare("rotation"))
+				{
+					animationcomponent.channels.back().type = AnimationComponent::AnimationChannel::Type::ROTATION;
+					animationcomponent.channels.back().keyframe_data.resize(count * 4);
+
+					assert(stride == sizeof(XMFLOAT4));
+					for (size_t i = 0; i < count; ++i)
+					{
+						const XMFLOAT4& rot = ((XMFLOAT4*)data)[i];
+						((XMFLOAT4*)animationcomponent.channels.back().keyframe_data.data())[i] = rot;
+
+						//// Remove rest matrix from animation track:
+						//XMMATRIX mat = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
+						//mat = mat * invRest;
+						//XMVECTOR s, r, t;
+						//XMMatrixDecompose(&s, &r, &t, mat);
+
+						//XMStoreFloat4(&((XMFLOAT4*)animationcomponent.channels.back().keyframe_data.data())[i], r);
+					}
+				}
+				else if (!channel.target_path.compare("translation"))
+				{
+					animationcomponent.channels.back().type = AnimationComponent::AnimationChannel::Type::TRANSLATION;
+					animationcomponent.channels.back().keyframe_data.resize(count * 3);
+
+					assert(stride == sizeof(XMFLOAT3));
+					for (size_t i = 0; i < count; ++i)
+					{
+						const XMFLOAT3& tra = ((XMFLOAT3*)data)[i];
+						((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i] = tra;
+
+						//// Remove rest matrix from animation track:
+						//XMMATRIX mat = XMMatrixTranslationFromVector(XMLoadFloat3(&tra));
+						//mat = mat * invRest;
+						//XMVECTOR s, r, t;
+						//XMMatrixDecompose(&s, &r, &t, mat);
+
+						//XMStoreFloat3(&((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i], t);
+					}
+				}
+				else
+				{
+					assert(0);
+				}
+			}
 
 
-	//		vector<KeyFrame> keyframes;
+		}
 
-	//		// AnimationSampler input = keyframe times
-	//		{
-	//			const tinygltf::Accessor& accessor = gltfModel.accessors[sam.input];
-	//			const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-	//			const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
+	}
 
-	//			assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-
-	//			int stride = accessor.ByteStride(bufferView);
-	//			size_t count = accessor.count;
-
-	//			keyframes.resize(count);
-
-	//			const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-	//			int firstFrame = INT_MAX;
-
-	//			assert(stride == 4);
-	//			for (size_t i = 0; i < count; ++i)
-	//			{
-	//				keyframes[i].frameI = (int)(((float*)data)[i] * 60); // !!! converting from time-base to frame-based !!!
-
-	//				action.frameCount = max(action.frameCount, keyframes[i].frameI);
-	//				firstFrame = min(firstFrame, keyframes[i].frameI);
-	//			}
-
-	//			// Cut out the empty part of the animation at the beginning:
-	//			firstFrame = min(firstFrame, action.frameCount);
-	//			for (size_t i = 0; i < count; ++i)
-	//			{
-	//				keyframes[i].frameI -= firstFrame;
-	//			}
-	//			action.frameCount -= firstFrame;
-
-	//		}
-
-	//		// AnimationSampler output = keyframe data
-	//		{
-	//			const tinygltf::Accessor& accessor = gltfModel.accessors[sam.output];
-	//			const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
-	//			const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
-
-	//			int stride = accessor.ByteStride(bufferView);
-	//			size_t count = accessor.count;
-
-	//			// Unfortunately, GLTF stores absolute values for animation nodes, but the engine needs relative
-	//			//	Absolute = animation * rest (so the rest matrix is baked into animation, this can't be blended like we do now)
-	//			//	Relative = animation (so we can blend all animation tracks however we want, then post multiply with the rest matrix after blending)
-	//			const XMMATRIX invRest = XMMatrixInverse(nullptr, XMLoadFloat4x4(&bone->world_rest));
-
-	//			const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
-
-	//			if (!channel.target_path.compare("scale"))
-	//			{
-	//				assert(stride == sizeof(XMFLOAT3));
-	//				for (size_t i = 0; i < count; ++i)
-	//				{
-	//					const XMFLOAT3& sca = ((XMFLOAT3*)data)[i];
-	//					//keyframes[i].data = XMFLOAT4(sca.x, sca.y, sca.z, 0);
-
-	//					// Remove rest matrix from animation track:
-	//					XMMATRIX mat = XMMatrixScalingFromVector(XMLoadFloat3(&sca));
-	//					mat = mat * invRest;
-	//					XMVECTOR s, r, t;
-	//					XMMatrixDecompose(&s, &r, &t, mat);
-	//					XMStoreFloat4(&keyframes[i].data, s);
-	//				}
-	//				bone->actionFrames.back().keyframesSca.insert(bone->actionFrames.back().keyframesSca.end(), keyframes.begin(), keyframes.end());
-	//			}
-	//			else if (!channel.target_path.compare("rotation"))
-	//			{
-	//				assert(stride == sizeof(XMFLOAT4));
-	//				for (size_t i = 0; i < count; ++i)
-	//				{
-	//					const XMFLOAT4& rot = ((XMFLOAT4*)data)[i];
-	//					//keyframes[i].data = rot;
-
-	//					// Remove rest matrix from animation track:
-	//					XMMATRIX mat = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
-	//					mat = mat * invRest;
-	//					XMVECTOR s, r, t;
-	//					XMMatrixDecompose(&s, &r, &t, mat);
-	//					XMStoreFloat4(&keyframes[i].data, r);
-	//				}
-	//				bone->actionFrames.back().keyframesRot.insert(bone->actionFrames.back().keyframesRot.end(), keyframes.begin(), keyframes.end());
-	//			}
-	//			else if (!channel.target_path.compare("translation"))
-	//			{
-	//				assert(stride == sizeof(XMFLOAT3));
-	//				for (size_t i = 0; i < count; ++i)
-	//				{
-	//					const XMFLOAT3& tra = ((XMFLOAT3*)data)[i];
-	//					//keyframes[i].data = XMFLOAT4(tra.x, tra.y, tra.z, 1);
-
-	//					// Remove rest matrix from animation track:
-	//					XMMATRIX mat = XMMatrixTranslationFromVector(XMLoadFloat3(&tra));
-	//					mat = mat * invRest;
-	//					XMVECTOR s, r, t;
-	//					XMMatrixDecompose(&s, &r, &t, mat);
-	//					XMStoreFloat4(&keyframes[i].data, t);
-	//				}
-	//				bone->actionFrames.back().keyframesPos.insert(bone->actionFrames.back().keyframesPos.end(), keyframes.begin(), keyframes.end());
-	//			}
-	//			else
-	//			{
-	//				assert(0);
-	//			}
-	//		}
-
-
-	//	}
-
-	//	armature->actions.push_back(action);
-
-	//}
-
-	//model->FinishLoading();
-
-	return modelEntity;
+	return state.modelEntity;
 }

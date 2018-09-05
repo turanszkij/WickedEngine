@@ -47,6 +47,7 @@ namespace wiSceneSystem
 		XMFLOAT4X4 world_prev;
 
 		void UpdateTransform();
+		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix);
 		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
@@ -107,7 +108,7 @@ namespace wiSceneSystem
 		std::string displacementMapName;
 		wiGraphicsTypes::Texture2D* displacementMap = nullptr;
 
-		wiGraphicsTypes::GPUBuffer* constantBuffer = nullptr;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 
 		inline void SetUserStencilRef(uint8_t value)
 		{
@@ -288,12 +289,12 @@ namespace wiSceneSystem
 		};
 		std::vector<MeshSubset>		subsets;
 
-		wiGraphicsTypes::GPUBuffer*	indexBuffer = nullptr;
-		wiGraphicsTypes::GPUBuffer*	vertexBuffer_POS = nullptr;
-		wiGraphicsTypes::GPUBuffer*	vertexBuffer_TEX = nullptr;
-		wiGraphicsTypes::GPUBuffer*	vertexBuffer_BON = nullptr;
-		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_POS = nullptr;
-		wiGraphicsTypes::GPUBuffer*	streamoutBuffer_PRE = nullptr;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	indexBuffer;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_POS;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_TEX;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
 
 		// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
 		bool dynamicVB = false;
@@ -396,12 +397,12 @@ namespace wiSceneSystem
 	struct BoneComponent
 	{
 		XMFLOAT4X4 inverseBindPoseMatrix;
-		XMFLOAT4X4 skinningMatrix;
 	};
 
 	struct ArmatureComponent
 	{
 		std::vector<wiECS::Entity> boneCollection;
+		std::vector<XMFLOAT4X4> skinningMatrices;
 
 		GFX_STRUCT ShaderBoneType
 		{
@@ -419,7 +420,7 @@ namespace wiSceneSystem
 			ALIGN_16
 		};
 		std::vector<ShaderBoneType> boneData;
-		wiGraphicsTypes::GPUBuffer boneBuffer;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer> boneBuffer;
 
 		// This will be used to eg. mirror the whole skin, without modifying the armature transform itself
 		//	It will affect the skin only, so the mesh vertices should be mirrored as well to work correctly!
@@ -439,7 +440,24 @@ namespace wiSceneSystem
 			LIGHTTYPE_COUNT,
 		} type = POINT;
 
-		inline void SetType(LightType val) { type = val; }
+		inline void SetType(LightType val) { 
+			type = val;
+			switch (type)
+			{
+			case DIRECTIONAL:
+			case SPOT:
+				shadowBias = 0.0001f;
+				break;
+			case POINT:
+			case SPHERE:
+			case DISC:
+			case RECTANGLE:
+			case TUBE:
+			case LIGHTTYPE_COUNT:
+				shadowBias = 0.1f;
+				break;
+			}
+		}
 		inline LightType GetType() const { return type; }
 
 		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
@@ -621,6 +639,29 @@ namespace wiSceneSystem
 		inline float GetOpacity() const { return color.w; }
 	};
 
+	struct AnimationComponent
+	{
+		struct AnimationChannel
+		{
+			wiECS::Entity target = wiECS::INVALID_ENTITY;
+			enum class Type
+			{
+				TRANSLATION,
+				ROTATION,
+				SCALE
+			} type = Type::TRANSLATION;
+			enum class Mode
+			{
+				LINEAR,
+				STEP,
+			} mode = Mode::LINEAR;
+			std::vector<float> keyframe_times;
+			std::vector<float> keyframe_data;
+		};
+
+		std::vector<AnimationChannel> channels;
+	};
+
 	struct ModelComponent
 	{
 		std::unordered_set<wiECS::Entity> materials;
@@ -654,6 +695,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<EnvironmentProbeComponent> probes;
 		wiECS::ComponentManager<ForceFieldComponent> forces;
 		wiECS::ComponentManager<DecalComponent> decals;
+		wiECS::ComponentManager<AnimationComponent> animations;
 		wiECS::ComponentManager<ModelComponent> models;
 
 		AABB bounds;
@@ -748,9 +790,10 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<ObjectComponent>& objects,
 		wiECS::ComponentManager<PhysicsComponent>& physicscomponents
 	);
-	void RunBoneUpdateSystem(
+	void RunArmatureUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<BoneComponent>& bones
+		const wiECS::ComponentManager<BoneComponent>& bones,
+		wiECS::ComponentManager<ArmatureComponent>& armatures
 	);
 	void RunMaterialUpdateSystem(wiECS::ComponentManager<MaterialComponent>& materials, float dt);
 	void RunObjectUpdateSystem(

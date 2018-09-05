@@ -31,6 +31,29 @@ namespace wiSceneSystem
 			XMStoreFloat4x4(&world, W);
 		}
 	}
+	void TransformComponent::UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
+	{
+		XMVECTOR S_local = XMLoadFloat3(&scale_local);
+		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
+		XMVECTOR T_local = XMLoadFloat3(&translation_local);
+		XMMATRIX W =
+			XMMatrixScalingFromVector(S_local) *
+			XMMatrixRotationQuaternion(R_local) *
+			XMMatrixTranslationFromVector(T_local);
+
+		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
+		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
+		W = W * B * W_parent;
+
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, W);
+		XMStoreFloat3(&scale, S);
+		XMStoreFloat4(&rotation, R);
+		XMStoreFloat3(&translation, T);
+
+		world_prev = world;
+		XMStoreFloat4x4(&world, W);
+	}
 	void TransformComponent::ApplyTransform()
 	{
 		dirty = true;
@@ -302,17 +325,12 @@ namespace wiSceneSystem
 
 		// Create actual GPU data:
 
-		SAFE_DELETE(indexBuffer);
-		SAFE_DELETE(vertexBuffer_POS);
-		SAFE_DELETE(vertexBuffer_TEX);
-		SAFE_DELETE(vertexBuffer_BON);
-		SAFE_DELETE(streamoutBuffer_POS);
-		SAFE_DELETE(streamoutBuffer_PRE);
-
 		GPUBufferDesc bd;
 		SubresourceData InitData;
 
-		//if (!hasDynamicVB())
+		HRESULT hr;
+
+		//if (!IsDynamicVB())
 		{
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
@@ -323,8 +341,9 @@ namespace wiSceneSystem
 
 			InitData.pSysMem = vertices_POS.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			vertexBuffer_POS = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS);
+			vertexBuffer_POS.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS.get());
+			assert(SUCCEEDED(hr));
 		}
 
 		if (!vertices_BON.empty())
@@ -337,8 +356,9 @@ namespace wiSceneSystem
 
 			InitData.pSysMem = vertices_BON.data();
 			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
-			vertexBuffer_BON = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON);
+			vertexBuffer_BON.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON.get());
+			assert(SUCCEEDED(hr));
 
 			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
@@ -347,12 +367,14 @@ namespace wiSceneSystem
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			streamoutBuffer_POS = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS);
+			streamoutBuffer_POS.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS.get());
+			assert(SUCCEEDED(hr));
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
-			streamoutBuffer_PRE = new GPUBuffer;
-			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE);
+			streamoutBuffer_PRE.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE.get());
+			assert(SUCCEEDED(hr));
 		}
 
 		// texture coordinate buffers are always static:
@@ -365,8 +387,9 @@ namespace wiSceneSystem
 		bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices_TEX.size());
 		bd.Format = Vertex_TEX::FORMAT;
 		InitData.pSysMem = vertices_TEX.data();
-		vertexBuffer_TEX = new GPUBuffer;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX);
+		vertexBuffer_TEX.reset(new GPUBuffer);
+		hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX.get());
+		assert(SUCCEEDED(hr));
 
 
 		// Remap index buffer to be continuous across subsets and create gpu buffer data:
@@ -420,8 +443,9 @@ namespace wiSceneSystem
 		bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
 		InitData.pSysMem = gpuIndexData;
 		bd.ByteWidth = (UINT)(stride * indices.size());
-		indexBuffer = new GPUBuffer;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer);
+		indexBuffer.reset(new GPUBuffer);
+		hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer.get());
+		assert(SUCCEEDED(hr));
 
 		SAFE_DELETE_ARRAY(gpuIndexData);
 
@@ -612,6 +636,7 @@ namespace wiSceneSystem
 	}
 
 
+
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
 	{
 		zNearP = newNear;
@@ -699,7 +724,7 @@ namespace wiSceneSystem
 
 		RunHierarchyUpdateSystem(parents, transforms, layers);
 
-		RunBoneUpdateSystem(transforms, bones);
+		RunArmatureUpdateSystem(transforms, bones, armatures);
 
 		RunPhysicsUpdateSystem(transforms, meshes, objects, physicscomponents);
 
@@ -988,6 +1013,12 @@ namespace wiSceneSystem
 			XMStoreFloat4x4(&parentcomponent->world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
 		}
 
+		TransformComponent* transform_child = transforms.GetComponent(entity);
+		if (transform_child != nullptr)
+		{
+			transform_child->UpdateParentedTransform(*transform_parent, parentcomponent->world_parent_inverse_bind);
+		}
+
 		LayerComponent* layer_child = layers.GetComponent(entity);
 		if (layer_child != nullptr)
 		{
@@ -1058,26 +1089,7 @@ namespace wiSceneSystem
 			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
 			if (transform_child != nullptr && transform_parent != nullptr)
 			{
-				XMVECTOR S_local = XMLoadFloat3(&transform_child->scale_local);
-				XMVECTOR R_local = XMLoadFloat4(&transform_child->rotation_local);
-				XMVECTOR T_local = XMLoadFloat3(&transform_child->translation_local);
-				XMMATRIX W =
-					XMMatrixScalingFromVector(S_local) *
-					XMMatrixRotationQuaternion(R_local) *
-					XMMatrixTranslationFromVector(T_local);
-
-				XMMATRIX W_parent = XMLoadFloat4x4(&transform_parent->world);
-				XMMATRIX B = XMLoadFloat4x4(&parentcomponent.world_parent_inverse_bind);
-				W = W * B * W_parent;
-
-				XMVECTOR S, R, T;
-				XMMatrixDecompose(&S, &R, &T, W);
-				XMStoreFloat3(&transform_child->scale, S);
-				XMStoreFloat4(&transform_child->rotation, R);
-				XMStoreFloat3(&transform_child->translation, T);
-
-				transform_child->world_prev = transform_child->world;
-				XMStoreFloat4x4(&transform_child->world, W);
+				transform_child->UpdateParentedTransform(*transform_parent, parentcomponent.world_parent_inverse_bind);
 			}
 
 
@@ -1090,21 +1102,37 @@ namespace wiSceneSystem
 
 		}
 	}
-	void RunBoneUpdateSystem(
+	void RunArmatureUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<BoneComponent>& bones
+		const ComponentManager<BoneComponent>& bones,
+		ComponentManager<ArmatureComponent>& armatures
 	)
 	{
-		for (size_t i = 0; i < bones.GetCount(); ++i)
+		for (size_t i = 0; i < armatures.GetCount(); ++i)
 		{
-			BoneComponent& bone = bones[i];
-			Entity entity = bones.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
+			ArmatureComponent& armature = armatures[i];
+			Entity entity = armatures.GetEntity(i);
 
-			XMMATRIX inverseBindPoseMatrix = XMLoadFloat4x4(&bone.inverseBindPoseMatrix);
-			XMMATRIX world = XMLoadFloat4x4(&transform.world);
-			XMMATRIX skinningMatrix = inverseBindPoseMatrix * world;
-			XMStoreFloat4x4(&bone.skinningMatrix, skinningMatrix);
+			XMMATRIX R = XMLoadFloat4x4(&armature.skinningRemap);
+
+			if (armature.skinningMatrices.size() != armature.boneCollection.size())
+			{
+				armature.skinningMatrices.resize(armature.boneCollection.size());
+			}
+
+			int boneIndex = 0;
+			for (Entity boneEntity : armature.boneCollection)
+			{
+				const BoneComponent& bone = *bones.GetComponent(boneEntity);
+				const TransformComponent& bone_transform = *transforms.GetComponent(boneEntity);
+
+				XMMATRIX B = XMLoadFloat4x4(&bone.inverseBindPoseMatrix);
+				XMMATRIX W = XMLoadFloat4x4(&bone_transform.world);
+				XMMATRIX M = W * B * R;
+
+				XMStoreFloat4x4(&armature.skinningMatrices[boneIndex++], M);
+			}
+
 		}
 	}
 	void RunPhysicsUpdateSystem(
