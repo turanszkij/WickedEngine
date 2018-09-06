@@ -43,7 +43,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	});
 	animWindow->AddWidget(loopedCheckBox);
 
-	playButton = new wiButton("Play: ");
+	playButton = new wiButton("Play");
 	playButton->SetTooltip("Play/Pause animation.");
 	playButton->SetPos(XMFLOAT2(200, y));
 	playButton->OnClick([&](wiEventArgs args) {
@@ -62,7 +62,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	});
 	animWindow->AddWidget(playButton);
 
-	stopButton = new wiButton("Stop: ");
+	stopButton = new wiButton("Stop");
 	stopButton->SetTooltip("Stop animation.");
 	stopButton->SetPos(XMFLOAT2(310, y));
 	stopButton->OnClick([&](wiEventArgs args) {

@@ -1209,6 +1209,8 @@ namespace wiSceneSystem
 			{
 				animation.timer = 0.0f;
 			}
+
+			animation.timer = min(animation.timer, animation.length);
 		}
 	}
 	void RunHierarchyUpdateSystem(
