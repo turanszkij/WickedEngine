@@ -33,19 +33,20 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
 	{
-		XMVECTOR S_local = XMLoadFloat3(&scale_local);
-		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
-		XMVECTOR T_local = XMLoadFloat3(&translation_local);
+		dirty = true;
+
+		XMVECTOR S = XMLoadFloat3(&scale);
+		XMVECTOR R = XMLoadFloat4(&rotation);
+		XMVECTOR T = XMLoadFloat3(&translation);
 		XMMATRIX W =
-			XMMatrixScalingFromVector(S_local) *
-			XMMatrixRotationQuaternion(R_local) *
-			XMMatrixTranslationFromVector(T_local);
+			XMMatrixScalingFromVector(S) *
+			XMMatrixRotationQuaternion(R) *
+			XMMatrixTranslationFromVector(T);
 
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
 		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
 		W = W * B * W_parent;
 
-		XMVECTOR S, R, T;
 		XMMatrixDecompose(&S, &R, &T, W);
 		XMStoreFloat3(&scale, S);
 		XMStoreFloat4(&rotation, R);
@@ -721,13 +722,13 @@ namespace wiSceneSystem
 	void Scene::Update(float dt)
 	{
 
-		RunAnimationUpdateSystem(animations, transforms, dt);
-
 		RunTransformUpdateSystem(transforms);
+
+		RunAnimationUpdateSystem(animations, transforms, dt);
 
 		RunHierarchyUpdateSystem(parents, transforms, layers);
 
-		RunArmatureUpdateSystem(transforms, bones, armatures);
+		RunArmatureUpdateSystem(transforms, armatures);
 
 		RunPhysicsUpdateSystem(transforms, meshes, objects, physicscomponents);
 
@@ -757,7 +758,6 @@ namespace wiSceneSystem
 			objects.Remove(entity);
 			physicscomponents.Remove(entity);
 			cullables.Remove(entity);
-			bones.Remove(entity);
 			armatures.Remove(entity);
 			lights.Remove(entity);
 			cameras.Remove(entity);
@@ -778,13 +778,12 @@ namespace wiSceneSystem
 		names.Remove(entity);
 		layers.Remove(entity);
 		transforms.Remove(entity);
-		parents.Remove(entity);
+		parents.Remove_KeepSorted(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		objects.Remove(entity);
 		physicscomponents.Remove(entity);
 		cullables.Remove(entity);
-		bones.Remove(entity);
 		armatures.Remove(entity);
 		lights.Remove(entity);
 		cameras.Remove(entity);
@@ -1050,7 +1049,7 @@ namespace wiSceneSystem
 				layer->layerMask = parent->layerMask_bind;
 			}
 
-			parents.Remove(entity);
+			parents.Remove_KeepSorted(entity);
 		}
 	}
 	void Scene::Component_DetachChildren(Entity parent)
@@ -1072,6 +1071,14 @@ namespace wiSceneSystem
 
 
 
+	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
+	{
+		for (size_t i = 0; i < transforms.GetCount(); ++i)
+		{
+			TransformComponent& transform = transforms[i];
+			transform.UpdateTransform();
+		}
+	}
 	void RunAnimationUpdateSystem(
 		wiECS::ComponentManager<AnimationComponent>& animations,
 		wiECS::ComponentManager<TransformComponent>& transforms,
@@ -1081,6 +1088,10 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
 			AnimationComponent& animation = animations[i];
+			if (!animation.playing && animation.timer == 0.0f)
+			{
+				continue;
+			}
 
 			for (auto& channel : animation.channels)
 			{
@@ -1113,24 +1124,27 @@ namespace wiSceneSystem
 
 				TransformComponent& transform = *transforms.GetComponent(channel.target);
 
-				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
+				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || (keyLeft == 0 && keyRight == 0))
 				{
 					// Nearest neighbor method (snap to left):
 					switch (channel.type)
 					{
 					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
 					{
-						transform.translation_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft * 3];
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
+						transform.translation = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::ROTATION:
 					{
-						transform.rotation_local = ((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft * 4];
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
+						transform.rotation = ((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft];
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::SCALE:
 					{
-						transform.scale_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft * 3];
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
+						transform.scale = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
 					}
 					break;
 					}
@@ -1145,35 +1159,43 @@ namespace wiSceneSystem
 					{
 					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
 					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
 						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3]);
-						XMVECTOR vMiddle = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.translation_local, vMiddle);
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&transform.translation, vAnim);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::ROTATION:
 					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
 						const XMFLOAT4* data = (const XMFLOAT4*)channel.keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 4]);
-						XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 4]);
-						XMVECTOR vMiddle = XMQuaternionSlerp(vLeft, vRight, t);
-						vMiddle = XMQuaternionNormalize(vMiddle);
-						XMStoreFloat4(&transform.rotation_local, vMiddle);
+						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
+						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
+						vAnim = XMQuaternionNormalize(vAnim);
+						XMStoreFloat4(&transform.rotation, vAnim);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::SCALE:
 					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
 						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3]);
-						XMVECTOR vMiddle = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.scale_local, vMiddle);
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&transform.scale, vAnim);
 					}
 					break;
 					}
 				}
 
+				XMVECTOR S = XMLoadFloat3(&transform.scale);
+				XMVECTOR R = XMLoadFloat4(&transform.rotation);
+				XMVECTOR T = XMLoadFloat3(&transform.translation);
+				XMMATRIX W = XMMatrixScalingFromVector(S) * XMMatrixRotationQuaternion(R) * XMMatrixTranslationFromVector(T);
+				XMStoreFloat4x4(&transform.world, W);
 				transform.dirty = true;
 
 			}
@@ -1187,14 +1209,6 @@ namespace wiSceneSystem
 			{
 				animation.timer = 0.0f;
 			}
-		}
-	}
-	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
-	{
-		for (size_t i = 0; i < transforms.GetCount(); ++i)
-		{
-			TransformComponent& transform = transforms[i];
-			transform.UpdateTransform();
 		}
 	}
 	void RunHierarchyUpdateSystem(
@@ -1227,7 +1241,6 @@ namespace wiSceneSystem
 	}
 	void RunArmatureUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
-		const ComponentManager<BoneComponent>& bones,
 		ComponentManager<ArmatureComponent>& armatures
 	)
 	{
@@ -1236,22 +1249,21 @@ namespace wiSceneSystem
 			ArmatureComponent& armature = armatures[i];
 			Entity entity = armatures.GetEntity(i);
 
-			XMMATRIX R = XMLoadFloat4x4(&armature.skinningRemap);
-
 			if (armature.skinningMatrices.size() != armature.boneCollection.size())
 			{
 				armature.skinningMatrices.resize(armature.boneCollection.size());
 			}
 
+			XMMATRIX R = XMLoadFloat4x4(&armature.remapMatrix);
+
 			int boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
 			{
-				const BoneComponent& bone = *bones.GetComponent(boneEntity);
-				const TransformComponent& bone_transform = *transforms.GetComponent(boneEntity);
+				const TransformComponent& bone = *transforms.GetComponent(boneEntity);
 
-				XMMATRIX B = XMLoadFloat4x4(&bone.inverseBindPoseMatrix);
-				XMMATRIX W = XMLoadFloat4x4(&bone_transform.world);
-				XMMATRIX M = W * B * R;
+				XMMATRIX B = XMLoadFloat4x4(&armature.inverseBindMatrices[boneIndex]);
+				XMMATRIX W = XMLoadFloat4x4(&bone.world);
+				XMMATRIX M = B * W * R;
 
 				XMStoreFloat4x4(&armature.skinningMatrices[boneIndex++], M);
 			}

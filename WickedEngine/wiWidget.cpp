@@ -57,26 +57,7 @@ void wiWidget::Update(wiGUI* gui, float dt)
 
 	if (container != nullptr)
 	{
-		XMVECTOR S_local = XMLoadFloat3(&scale_local);
-		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
-		XMVECTOR T_local = XMLoadFloat3(&translation_local);
-		XMMATRIX W =
-			XMMatrixScalingFromVector(S_local) *
-			XMMatrixRotationQuaternion(R_local) *
-			XMMatrixTranslationFromVector(T_local);
-
-		XMMATRIX W_parent = XMLoadFloat4x4(&container->world);
-		XMMATRIX B = XMLoadFloat4x4(&world_parent_bind);
-		W = W * B * W_parent;
-
-		XMVECTOR S, R, T;
-		XMMatrixDecompose(&S, &R, &T, W);
-		XMStoreFloat3(&scale, S);
-		XMStoreFloat4(&rotation, R);
-		XMStoreFloat3(&translation, T);
-
-		world_prev = world;
-		XMStoreFloat4x4(&world, W);
+		this->UpdateParentedTransform(*container, world_parent_bind);
 	}
 }
 void wiWidget::AttachTo(wiWidget* parent)
@@ -682,6 +663,12 @@ void wiSlider::SetValue(float value)
 float wiSlider::GetValue()
 {
 	return value;
+}
+void wiSlider::SetRange(float start, float end)
+{
+	this->start = start;
+	this->end = end;
+	this->value = wiMath::Clamp(this->value, start, end);
 }
 void wiSlider::Update(wiGUI* gui, float dt)
 {

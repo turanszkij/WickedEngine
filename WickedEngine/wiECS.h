@@ -68,11 +68,9 @@ namespace wiECS
 			{
 				// Directly index into components and entities array:
 				const size_t index = it->second;
-
-				// Remove the corresponding entry from the lookup table:
 				const Entity entity = entities[index];
 
-				if (components.size() > 1)
+				if (index < components.size() - 1)
 				{
 					// Swap out the dead element with the last one:
 					components[index] = std::move(components.back()); // try to use move instead of copy
@@ -80,6 +78,38 @@ namespace wiECS
 
 					// Update the lookup table:
 					lookup[entities[index]] = index;
+				}
+
+				// Shrink the container:
+				components.pop_back();
+				entities.pop_back();
+				lookup.erase(entity);
+			}
+		}
+
+		// Remove a component of a certain entity if it exists while keeping the current ordering:
+		inline void Remove_KeepSorted(Entity entity)
+		{
+			auto it = lookup.find(entity);
+			if (it != lookup.end())
+			{
+				// Directly index into components and entities array:
+				const size_t index = it->second;
+				const Entity entity = entities[index];
+
+				if (index < components.size() - 1)
+				{
+					// Move every component left by one that is after this element:
+					for (size_t i = index + 1; i < components.size(); ++i)
+					{
+						components[i - 1] = std::move(components[i]);
+					}
+					// Move every entity left by one that is after this element and update lut:
+					for (size_t i = index + 1; i < entities.size(); ++i)
+					{
+						entities[i - 1] = entities[i];
+						lookup[entities[i - 1]] = i - 1;
+					}
 				}
 
 				// Shrink the container:

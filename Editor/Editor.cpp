@@ -967,6 +967,8 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
+	animWnd->Update();
+
 	// Exit cinema mode:
 	if (wiInputManager::GetInstance()->down(VK_ESCAPE))
 	{
@@ -1270,6 +1272,7 @@ void EditorComponent::Update(float dt)
 						transform.Translate(hovered.position);
 						transform.Scale(XMFLOAT3(4, 4, 4));
 						transform.MatrixTransform(XMLoadFloat3x3(&wiRenderer::getCamera()->rotationMatrix));
+						scene.Component_Attach(entity, hovered.entity);
 					}
 				}
 			}
@@ -1376,7 +1379,6 @@ void EditorComponent::Update(float dt)
 			lightWnd->SetEntity(INVALID_ENTITY);
 			decalWnd->SetEntity(INVALID_ENTITY);
 			envProbeWnd->SetEntity(INVALID_ENTITY);
-			animWnd->SetEntity(INVALID_ENTITY);
 			forceFieldWnd->SetEntity(INVALID_ENTITY);
 			cameraWnd->SetEntity(INVALID_ENTITY);
 		}
@@ -1401,7 +1403,6 @@ void EditorComponent::Update(float dt)
 			lightWnd->SetEntity(picked->entity);
 			decalWnd->SetEntity(picked->entity);
 			envProbeWnd->SetEntity(picked->entity);
-			animWnd->SetEntity(picked->entity);
 			forceFieldWnd->SetEntity(picked->entity);
 			cameraWnd->SetEntity(picked->entity);
 

@@ -6,6 +6,7 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiComboBox;
+class wiButton;
 
 class AnimationWindow
 {
@@ -16,23 +17,14 @@ public:
 	wiGUI* GUI;
 	
 	wiECS::Entity entity = wiECS::INVALID_ENTITY;
-	void SetEntity(wiECS::Entity entity);
 
 	wiWindow*	animWindow;
-	wiComboBox*	actionsComboBox;
-	wiSlider*	blendSlider;
+	wiComboBox*	animationsComboBox;
 	wiCheckBox* loopedCheckBox;
+	wiButton*	playButton;
+	wiButton*	stopButton;
+	wiSlider*	timerSlider;
 
-	// TODO: nicer way to control arbitrary amount of animation layers....
-
-	wiComboBox*	actionsComboBox1;
-	wiSlider*	blendSlider1;
-	wiSlider*	weightSlider1;
-	wiCheckBox* loopedCheckBox1;
-
-	wiComboBox*	actionsComboBox2;
-	wiSlider*	blendSlider2;
-	wiSlider*	weightSlider2;
-	wiCheckBox* loopedCheckBox2;
+	void Update();
 };
 

@@ -226,8 +226,10 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 	{
 		transform.translation_local = XMFLOAT3((float)node->translation[0], (float)node->translation[1], (float)node->translation[2]);
 	}
-	transform.UpdateTransform();
 
+	// Important:
+	//	Do NOT call UpdateTransform, because Attach will query parent world matrix, and invert it for bind matrix
+	//	But here we load everything in bind space already, so it must be IDENTITY!
 
 	if (parent != INVALID_ENTITY)
 	{
@@ -279,8 +281,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	state.modelEntity = scene.Entity_CreateModel(name);
 	ModelComponent& model = *scene.models.GetComponent(state.modelEntity);
 	TransformComponent& model_transform = *scene.transforms.GetComponent(state.modelEntity);
-
-	model_transform.UpdateTransform(); // everything will be attached to this, so values need to be up to date
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
@@ -619,11 +619,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 					{
 						XMFLOAT3 pos = ((XMFLOAT3*)data)[i];
 
-						if (transform_to_LH)
-						{
-							pos.z = -pos.z;
-						}
-
 						mesh.vertices_FULL[offset + i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
 
 						min = wiMath::Min(min, pos);
@@ -635,11 +630,11 @@ Entity ImportModel_GLTF(const std::string& fileName)
 					assert(stride == 12);
 					for (size_t i = 0; i < count; ++i)
 					{
-						const XMFLOAT3& nor = ((XMFLOAT3*)data)[i];
+						XMFLOAT3 nor = ((XMFLOAT3*)data)[i];
 
 						mesh.vertices_FULL[offset + i].nor.x = nor.x;
 						mesh.vertices_FULL[offset + i].nor.y = nor.y;
-						mesh.vertices_FULL[offset + i].nor.z = -nor.z;
+						mesh.vertices_FULL[offset + i].nor.z = nor.z;
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
@@ -733,7 +728,20 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 		if (transform_to_LH)
 		{
-			XMStoreFloat4x4(&armature.skinningRemap, XMMatrixScaling(1, 1, -1));
+			XMStoreFloat4x4(&armature.remapMatrix, XMMatrixScaling(1, 1, -1));
+		}
+
+		if (skin.inverseBindMatrices >= 0)
+		{
+			const tinygltf::Accessor &accessor = state.gltfModel.accessors[skin.inverseBindMatrices];
+			const tinygltf::BufferView &bufferView = state.gltfModel.bufferViews[accessor.bufferView];
+			const tinygltf::Buffer &buffer = state.gltfModel.buffers[bufferView.buffer];
+			armature.inverseBindMatrices.resize(accessor.count);
+			memcpy(armature.inverseBindMatrices.data(), &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(XMFLOAT4X4));
+		}
+		else
+		{
+			assert(0);
 		}
 	}
 
@@ -741,17 +749,19 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[state.gltfModel.defaultScene];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
-		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], INVALID_ENTITY, state);
+		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], state.modelEntity, state);
 	}
 
-	// Create bone components (transforms for them are already in place):
-	int i = 0;
+	// Create armature-bone mappings:
+	int armatureIndex = 0;
 	for (auto& skin : state.gltfModel.skins)
 	{
-		Entity entity = state.armatureArray[i++];
+		Entity entity = state.armatureArray[armatureIndex++];
 		ArmatureComponent& armature = *scene.armatures.GetComponent(entity);
 
 		const size_t jointCount = skin.joints.size();
+
+		armature.boneCollection.resize(jointCount);
 
 		// Create bone collection:
 		for (size_t i = 0; i < jointCount; ++i)
@@ -760,18 +770,12 @@ Entity ImportModel_GLTF(const std::string& fileName)
 			const tinygltf::Node& joint_node = state.gltfModel.nodes[jointIndex];
 
 			Entity boneEntity = state.entityMap[&joint_node];
-			BoneComponent& bone = scene.bones.Create(boneEntity);
 
-			armature.boneCollection.push_back(boneEntity);
-
-			TransformComponent& bone_transform = *scene.transforms.GetComponent(boneEntity);
-			XMMATRIX bind = XMLoadFloat4x4(&bone_transform.world);
-			bind = XMMatrixInverse(nullptr, bind);
-			XMStoreFloat4x4(&bone.inverseBindPoseMatrix, bind);
+			armature.boneCollection[i] = boneEntity;
 		}
 	}
 
-	int animID = 0;
+	// Create animations:
 	for (auto& anim : state.gltfModel.animations)
 	{
 		Entity entity = CreateEntity();
@@ -803,12 +807,21 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 				assert(stride == 4);
 
-				animationcomponent.length = 0.0f;
+				float start = FLT_MAX;
+				float end = 0.0f;
 				for (size_t i = 0; i < count; ++i)
 				{
 					float time = ((float*)data)[i];
 					animationcomponent.channels.back().keyframe_times[i] = time;
-					animationcomponent.length = max(animationcomponent.length, time);
+					start = min(start, time);
+					end = max(end, time);
+				}
+
+				// Cut empty animation from beginning:
+				animationcomponent.length = end - start;
+				for (auto& time : animationcomponent.channels.back().keyframe_times)
+				{
+					time -= start;
 				}
 
 			}
@@ -822,11 +835,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				int stride = accessor.ByteStride(bufferView);
 				size_t count = accessor.count;
 
-				//// Unfortunately, GLTF stores absolute values for animation nodes, but the engine needs relative
-				////	Absolute = animation * rest (so the rest matrix is baked into animation, this can't be blended like we do now)
-				////	Relative = animation (so we can blend all animation tracks however we want, then post multiply with the rest matrix after blending)
-				//const XMMATRIX invRest = XMMatrixInverse(nullptr, XMLoadFloat4x4(&bone->world_rest));
-
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 				if (!channel.target_path.compare("scale"))
@@ -837,16 +845,8 @@ Entity ImportModel_GLTF(const std::string& fileName)
 					assert(stride == sizeof(XMFLOAT3));
 					for (size_t i = 0; i < count; ++i)
 					{
-						const XMFLOAT3& sca = ((XMFLOAT3*)data)[i];
+						XMFLOAT3 sca = ((XMFLOAT3*)data)[i];
 						((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i] = sca;
-
-						//// Remove rest matrix from animation track:
-						//XMMATRIX mat = XMMatrixScalingFromVector(XMLoadFloat3(&sca));
-						//mat = mat * invRest;
-						//XMVECTOR s, r, t;
-						//XMMatrixDecompose(&s, &r, &t, mat);
-
-						//XMStoreFloat3(&((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i], s);
 					}
 				}
 				else if (!channel.target_path.compare("rotation"))
@@ -859,14 +859,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 					{
 						const XMFLOAT4& rot = ((XMFLOAT4*)data)[i];
 						((XMFLOAT4*)animationcomponent.channels.back().keyframe_data.data())[i] = rot;
-
-						//// Remove rest matrix from animation track:
-						//XMMATRIX mat = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
-						//mat = mat * invRest;
-						//XMVECTOR s, r, t;
-						//XMMatrixDecompose(&s, &r, &t, mat);
-
-						//XMStoreFloat4(&((XMFLOAT4*)animationcomponent.channels.back().keyframe_data.data())[i], r);
 					}
 				}
 				else if (!channel.target_path.compare("translation"))
@@ -879,14 +871,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 					{
 						const XMFLOAT3& tra = ((XMFLOAT3*)data)[i];
 						((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i] = tra;
-
-						//// Remove rest matrix from animation track:
-						//XMMATRIX mat = XMMatrixTranslationFromVector(XMLoadFloat3(&tra));
-						//mat = mat * invRest;
-						//XMVECTOR s, r, t;
-						//XMMatrixDecompose(&s, &r, &t, mat);
-
-						//XMStoreFloat3(&((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i], t);
 					}
 				}
 				else
@@ -899,6 +883,13 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 		}
 
+	}
+
+	if (transform_to_LH)
+	{
+		TransformComponent& transform = *scene.transforms.GetComponent(state.modelEntity);
+		transform.scale_local.z = -transform.scale_local.z;
+		transform.dirty = true;
 	}
 
 	return state.modelEntity;

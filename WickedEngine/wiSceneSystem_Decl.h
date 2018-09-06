@@ -12,7 +12,6 @@ namespace wiSceneSystem
 	struct ObjectComponent;
 	struct PhysicsComponent;
 	struct CullableComponent;
-	struct BoneComponent;
 	struct ArmatureComponent;
 	struct LightComponent;
 	struct CameraComponent;

@@ -17,6 +17,7 @@
 
 namespace wiSceneSystem
 {
+	static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
 	struct NameComponent
 	{
@@ -40,11 +41,11 @@ namespace wiSceneSystem
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
-		XMFLOAT3 scale;
-		XMFLOAT4 rotation;
-		XMFLOAT3 translation;
-		XMFLOAT4X4 world;
-		XMFLOAT4X4 world_prev;
+		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
+		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
+		XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
+		XMFLOAT4X4 world = IDENTITYMATRIX;
+		XMFLOAT4X4 world_prev = IDENTITYMATRIX;
 
 		void UpdateTransform();
 		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix);
@@ -394,14 +395,10 @@ namespace wiSceneSystem
 		std::vector<int>	  physicalmapGP;
 	};
 
-	struct BoneComponent
-	{
-		XMFLOAT4X4 inverseBindPoseMatrix;
-	};
-
 	struct ArmatureComponent
 	{
 		std::vector<wiECS::Entity> boneCollection;
+		std::vector<XMFLOAT4X4> inverseBindMatrices;
 		std::vector<XMFLOAT4X4> skinningMatrices;
 
 		GFX_STRUCT ShaderBoneType
@@ -422,9 +419,8 @@ namespace wiSceneSystem
 		std::vector<ShaderBoneType> boneData;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> boneBuffer;
 
-		// This will be used to eg. mirror the whole skin, without modifying the armature transform itself
-		//	It will affect the skin only, so the mesh vertices should be mirrored as well to work correctly!
-		XMFLOAT4X4 skinningRemap = XMFLOAT4X4(1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1);
+		// Use this to eg. mirror the armature:
+		XMFLOAT4X4 remapMatrix = IDENTITYMATRIX;
 	};
 
 	struct LightComponent
@@ -641,6 +637,11 @@ namespace wiSceneSystem
 
 	struct AnimationComponent
 	{
+		bool playing = false;
+		bool looped = true;
+		float timer = 0.0f;
+		float length = 0.0f;
+
 		struct AnimationChannel
 		{
 			wiECS::Entity target = wiECS::INVALID_ENTITY;
@@ -660,14 +661,13 @@ namespace wiSceneSystem
 		};
 
 		std::vector<AnimationChannel> channels;
-		float timer = 0.0f;
-		float length = 0.0f;
-		bool looped = false;
-		bool playing = true;
 
+		inline bool IsPlaying() const { return playing; }
+		inline bool IsLooped() const { return looped; }
+
+		inline void Play() { playing = true; }
 		inline void Pause() { playing = false; }
 		inline void Stop() { playing = false; timer = 0.0f; }
-		inline void Play() { playing = true; }
 	};
 
 	struct ModelComponent
@@ -696,7 +696,6 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<ObjectComponent> objects;
 		wiECS::ComponentManager<PhysicsComponent> physicscomponents;
 		wiECS::ComponentManager<CullableComponent> cullables;
-		wiECS::ComponentManager<BoneComponent> bones;
 		wiECS::ComponentManager<ArmatureComponent> armatures;
 		wiECS::ComponentManager<LightComponent> lights;
 		wiECS::ComponentManager<CameraComponent> cameras;
@@ -723,7 +722,7 @@ namespace wiSceneSystem
 		float windRandomness = 5;
 		float windWaveSize = 1;
 
-		// Update all components by a given timestep (in milliseconds):
+		// Update all components by a given timestep (in seconds):
 		void Update(float dt);
 		// Remove everything from the scene that it owns:
 		void Clear();
@@ -786,12 +785,12 @@ namespace wiSceneSystem
 		void Component_DetachChildren(wiECS::Entity parent);
 	};
 
+	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunAnimationUpdateSystem(
 		wiECS::ComponentManager<AnimationComponent>& animations,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		float dt
 	);
-	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunHierarchyUpdateSystem(
 		const wiECS::ComponentManager<ParentComponent>& parents,
 		wiECS::ComponentManager<TransformComponent>& transforms,
@@ -805,7 +804,6 @@ namespace wiSceneSystem
 	);
 	void RunArmatureUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
-		const wiECS::ComponentManager<BoneComponent>& bones,
 		wiECS::ComponentManager<ArmatureComponent>& armatures
 	);
 	void RunMaterialUpdateSystem(wiECS::ComponentManager<MaterialComponent>& materials, float dt);

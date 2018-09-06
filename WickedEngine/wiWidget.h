@@ -179,6 +179,7 @@ public:
 
 	void SetValue(float value);
 	float GetValue();
+	void SetRange(float start, float end);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
