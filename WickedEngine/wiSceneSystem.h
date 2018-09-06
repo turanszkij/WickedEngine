@@ -660,6 +660,14 @@ namespace wiSceneSystem
 		};
 
 		std::vector<AnimationChannel> channels;
+		float timer = 0.0f;
+		float length = 0.0f;
+		bool looped = false;
+		bool playing = true;
+
+		inline void Pause() { playing = false; }
+		inline void Stop() { playing = false; timer = 0.0f; }
+		inline void Play() { playing = true; }
 	};
 
 	struct ModelComponent
@@ -778,6 +786,11 @@ namespace wiSceneSystem
 		void Component_DetachChildren(wiECS::Entity parent);
 	};
 
+	void RunAnimationUpdateSystem(
+		wiECS::ComponentManager<AnimationComponent>& animations,
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		float dt
+	);
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunHierarchyUpdateSystem(
 		const wiECS::ComponentManager<ParentComponent>& parents,

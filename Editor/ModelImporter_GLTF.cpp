@@ -802,9 +802,13 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 				assert(stride == 4);
+
+				animationcomponent.length = 0.0f;
 				for (size_t i = 0; i < count; ++i)
 				{
-					animationcomponent.channels.back().keyframe_times[i] = ((float*)data)[i];
+					float time = ((float*)data)[i];
+					animationcomponent.channels.back().keyframe_times[i] = time;
+					animationcomponent.length = max(animationcomponent.length, time);
 				}
 
 			}
@@ -887,7 +891,8 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else
 				{
-					assert(0);
+					// Not implemented:
+					animationcomponent.channels.pop_back();
 				}
 			}
 

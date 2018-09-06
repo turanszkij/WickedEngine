@@ -720,6 +720,9 @@ namespace wiSceneSystem
 
 	void Scene::Update(float dt)
 	{
+
+		RunAnimationUpdateSystem(animations, transforms, dt);
+
 		RunTransformUpdateSystem(transforms);
 
 		RunHierarchyUpdateSystem(parents, transforms, layers);
@@ -761,6 +764,7 @@ namespace wiSceneSystem
 			probes.Remove(entity);
 			forces.Remove(entity);
 			decals.Remove(entity);
+			animations.Remove(entity);
 			models.Remove(entity);
 		}
 
@@ -787,6 +791,7 @@ namespace wiSceneSystem
 		probes.Remove(entity);
 		forces.Remove(entity);
 		decals.Remove(entity);
+		animations.Remove(entity);
 		models.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
@@ -1016,6 +1021,7 @@ namespace wiSceneSystem
 		TransformComponent* transform_child = transforms.GetComponent(entity);
 		if (transform_child != nullptr)
 		{
+			// Child updated immediately, to that it can be immediately attached to afterwards:
 			transform_child->UpdateParentedTransform(*transform_parent, parentcomponent->world_parent_inverse_bind);
 		}
 
@@ -1066,6 +1072,123 @@ namespace wiSceneSystem
 
 
 
+	void RunAnimationUpdateSystem(
+		wiECS::ComponentManager<AnimationComponent>& animations,
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		float dt
+	)
+	{
+		for (size_t i = 0; i < animations.GetCount(); ++i)
+		{
+			AnimationComponent& animation = animations[i];
+
+			for (auto& channel : animation.channels)
+			{
+				if (channel.keyframe_times.empty())
+				{
+					// No keyframes!
+					assert(0);
+					continue;
+				}
+
+				int keyLeft = 0;
+				int keyRight = 0;
+
+				if (channel.keyframe_times.back() < animation.timer)
+				{
+					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
+					keyLeft = keyRight = (int)channel.keyframe_times.size() - 1;
+				}
+				else
+				{
+					// Search for the right keyframe (greater/equal to anim time):
+					while (channel.keyframe_times[keyRight++] < animation.timer) {}
+					keyRight--;
+
+					// Left keyframe is just near right:
+					keyLeft = max(0, keyRight - 1);
+				}
+
+				float left = channel.keyframe_times[keyLeft];
+
+				TransformComponent& transform = *transforms.GetComponent(channel.target);
+
+				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
+				{
+					// Nearest neighbor method (snap to left):
+					switch (channel.type)
+					{
+					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
+					{
+						transform.translation_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft * 3];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::ROTATION:
+					{
+						transform.rotation_local = ((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft * 4];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::SCALE:
+					{
+						transform.scale_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft * 3];
+					}
+					break;
+					}
+				}
+				else
+				{
+					// Linear interpolation method:
+					float right = channel.keyframe_times[keyRight];
+					float t = (animation.timer - left) / (right - left);
+
+					switch (channel.type)
+					{
+					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
+					{
+						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3]);
+						XMVECTOR vMiddle = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&transform.translation_local, vMiddle);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::ROTATION:
+					{
+						const XMFLOAT4* data = (const XMFLOAT4*)channel.keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft * 4]);
+						XMVECTOR vRight = XMLoadFloat4(&data[keyRight * 4]);
+						XMVECTOR vMiddle = XMQuaternionSlerp(vLeft, vRight, t);
+						vMiddle = XMQuaternionNormalize(vMiddle);
+						XMStoreFloat4(&transform.rotation_local, vMiddle);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::SCALE:
+					{
+						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft * 3]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight * 3]);
+						XMVECTOR vMiddle = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&transform.scale_local, vMiddle);
+					}
+					break;
+					}
+				}
+
+				transform.dirty = true;
+
+			}
+
+			if (animation.playing)
+			{
+				animation.timer += dt;
+			}
+
+			if (animation.looped && animation.timer > animation.length)
+			{
+				animation.timer = 0.0f;
+			}
+		}
+	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
 	{
 		for (size_t i = 0; i < transforms.GetCount(); ++i)

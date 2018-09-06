@@ -7891,6 +7891,10 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+				if (!DirectX::Internal::XMVector3IsUnit(rayDirection_local))
+				{
+					continue;
+				}
 
 				MeshComponent::Vertex_FULL _tmpvert;
 
