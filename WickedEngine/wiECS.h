@@ -16,7 +16,7 @@ namespace wiECS
 		return ++id;
 	}
 
-	template<typename T>
+	template<typename Component>
 	class ComponentManager
 	{
 	public:
@@ -39,7 +39,7 @@ namespace wiECS
 		}
 
 		// Create a new component and retrieve a reference to it:
-		inline T& Create(Entity entity)
+		inline Component& Create(Entity entity)
 		{
 			// Only one of this component type per entity is allowed!
 			assert(lookup.find(entity) == lookup.end());
@@ -52,7 +52,7 @@ namespace wiECS
 			lookup[entity] = components.size();
 
 			// New components are always pushed to the end:
-			components.push_back(T());
+			components.push_back(Component());
 
 			// Also push corresponding entity:
 			entities.push_back(entity);
@@ -131,7 +131,7 @@ namespace wiECS
 				const size_t index_b = it_b->second;
 
 				const Entity entity_tmp = entities[index_a];
-				const T component_tmp = std::move(components[index_a]);
+				const Component component_tmp = std::move(components[index_a]);
 
 				entities[index_a] = entities[index_b];
 				components[index_a] = std::move(components[index_b]);
@@ -145,6 +145,37 @@ namespace wiECS
 
 		}
 
+		// Place the last added entity-component to the specified index position while keeping the ordering intact:
+		inline void MoveLastTo(size_t index)
+		{
+			// No operation if less than two components, or the target index is already the last index:
+			if (GetCount() < 2 || index == GetCount() - 1)
+			{
+				return;
+			}
+
+			// Save the last component and entity:
+			Component component = std::move(components.back());
+			Entity entity = entities.back();
+
+			// Each component gets moved to the right by one after the index:
+			for (size_t i = components.size() - 1; i > index; --i)
+			{
+				components[i] = std::move(components[i - 1]);
+			}
+			// Each entity gets moved to the right by one after the index and lut is updated:
+			for (size_t i = entities.size() - 1; i > index; --i)
+			{
+				entities[i] = entities[i - 1];
+				lookup[entities[i]] = i;
+			}
+
+			// Saved entity-component moved to the required position:
+			components[index] = std::move(component);
+			entities[index] = entity;
+			lookup[entity] = index;
+		}
+
 		// Check if a component exists for a given entity or not:
 		inline bool Contains(Entity entity) const
 		{
@@ -152,7 +183,7 @@ namespace wiECS
 		}
 
 		// Retrieve a [read/write] component specified by an entity (if it exists, otherwise nullptr):
-		inline T* GetComponent(Entity entity)
+		inline Component* GetComponent(Entity entity)
 		{
 			auto it = lookup.find(entity);
 			if (it != lookup.end())
@@ -163,7 +194,7 @@ namespace wiECS
 		}
 
 		// Retrieve a [read only] component specified by an entity (if it exists, otherwise nullptr):
-		inline const T* GetComponent(Entity entity) const
+		inline const Component* GetComponent(Entity entity) const
 		{
 			const auto it = lookup.find(entity);
 			if (it != lookup.end())
@@ -182,15 +213,15 @@ namespace wiECS
 
 		// Directly index a specific [read/write] component without indirection:
 		//	0 <= index < GetCount()
-		inline T& operator[](size_t index) { return components[index]; }
+		inline Component& operator[](size_t index) { return components[index]; }
 
 		// Directly index a specific [read only] component without indirection:
 		//	0 <= index < GetCount()
-		inline const T& operator[](size_t index) const { return components[index]; }
+		inline const Component& operator[](size_t index) const { return components[index]; }
 
 	private:
 		// This is a linear array of alive components:
-		std::vector<T> components;
+		std::vector<Component> components;
 		// This is a linear array of entities corresponding to each alive component:
 		std::vector<Entity> entities;
 		// This is a lookup table for entities:

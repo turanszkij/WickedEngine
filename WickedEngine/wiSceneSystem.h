@@ -45,7 +45,6 @@ namespace wiSceneSystem
 		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
 		XMFLOAT4X4 world = IDENTITYMATRIX;
-		XMFLOAT4X4 world_prev = IDENTITYMATRIX;
 
 		void UpdateTransform();
 		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix);
@@ -61,9 +60,14 @@ namespace wiSceneSystem
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 	};
 
+	struct PreviousFrameTransformComponent
+	{
+		XMFLOAT4X4 world_prev;
+	};
+
 	struct ParentComponent
 	{
-		wiECS::Entity parentID;
+		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
 		XMFLOAT4X4 world_parent_inverse_bind; // saved parent inverse worldmatrix at the time of binding
 	};
@@ -690,6 +694,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<NameComponent> names;
 		wiECS::ComponentManager<LayerComponent> layers;
 		wiECS::ComponentManager<TransformComponent> transforms;
+		wiECS::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
 		wiECS::ComponentManager<ParentComponent> parents;
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
@@ -785,6 +790,10 @@ namespace wiSceneSystem
 		void Component_DetachChildren(wiECS::Entity parent);
 	};
 
+	void RunPreviousFrameTransformUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms
+	);
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunAnimationUpdateSystem(
 		wiECS::ComponentManager<AnimationComponent>& animations,

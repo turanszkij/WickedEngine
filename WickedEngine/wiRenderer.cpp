@@ -256,8 +256,6 @@ void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToS
 
 	OcclusionCulling_Read();
 
-	*getPrevCamera() = *getCamera();
-
 	wiFrameRate::Frame();
 
 }
@@ -2931,6 +2929,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 	scene.Update(dt * GetGameSpeed());
 
+	*getPrevCamera() = *getCamera();
 	*getCamera() = *scene.cameras.GetComponent(cameraID);
 
 	//// update the space partitioning trees:
@@ -3129,11 +3128,11 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 	for (auto& x : waterRipples)
 	{
-		x->Update(dt * 60 * GameSpeed);
+		x->Update(dt * 60 * GetGameSpeed());
 	}
 
 	renderTime_Prev = renderTime;
-	renderTime += dt * GameSpeed;
+	renderTime += dt * GetGameSpeed();
 	deltaTime = dt;
 }
 void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
@@ -5051,7 +5050,8 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 						{
 							((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
 
-							XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world_prev));
+							const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+							XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
 							((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
 						}
 						else
@@ -5197,7 +5197,16 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					if (advancedVBRequest || tessellatorRequested)
 					{
 						((volatile InstBuf*)instances)[k].instance.Create(dynamicVB ? __identityMat : transform.world, instance.color);
-						((volatile InstBuf*)instances)[k].instancePrev.Create(dynamicVB ? __identityMat : transform.world_prev);
+
+						if (dynamicVB)
+						{
+							((volatile InstBuf*)instances)[k].instancePrev.Create(__identityMat);
+						}
+						else
+						{
+							const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+							((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
+						}
 					}
 					else
 					{

@@ -27,7 +27,6 @@ namespace wiSceneSystem
 			rotation = rotation_local;
 			translation = translation_local;
 
-			world_prev = world;
 			XMStoreFloat4x4(&world, W);
 		}
 	}
@@ -35,30 +34,23 @@ namespace wiSceneSystem
 	{
 		dirty = true;
 
-		XMVECTOR S = XMLoadFloat3(&scale);
-		XMVECTOR R = XMLoadFloat4(&rotation);
-		XMVECTOR T = XMLoadFloat3(&translation);
-		XMMATRIX W =
-			XMMatrixScalingFromVector(S) *
-			XMMatrixRotationQuaternion(R) *
-			XMMatrixTranslationFromVector(T);
+		XMMATRIX W = XMLoadFloat4x4(&world);
 
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
 		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
 		W = W * B * W_parent;
 
+		XMVECTOR S, R, T;
 		XMMatrixDecompose(&S, &R, &T, W);
 		XMStoreFloat3(&scale, S);
 		XMStoreFloat4(&rotation, R);
 		XMStoreFloat3(&translation, T);
 
-		world_prev = world;
 		XMStoreFloat4x4(&world, W);
 	}
 	void TransformComponent::ApplyTransform()
 	{
 		dirty = true;
-
 		scale_local = scale;
 		rotation_local = rotation;
 		translation_local = translation;
@@ -97,7 +89,6 @@ namespace wiSceneSystem
 	void TransformComponent::Rotate(const XMFLOAT4& quaternion)
 	{
 		dirty = true;
-
 		XMVECTOR result = XMQuaternionMultiply(XMLoadFloat4(&rotation_local), XMLoadFloat4(&quaternion));
 		result = XMQuaternionNormalize(result);
 		XMStoreFloat4(&rotation_local, result);
@@ -105,7 +96,6 @@ namespace wiSceneSystem
 	void TransformComponent::Scale(const XMFLOAT3& value)
 	{
 		dirty = true;
-
 		scale_local.x *= value.x;
 		scale_local.y *= value.y;
 		scale_local.z *= value.z;
@@ -722,6 +712,8 @@ namespace wiSceneSystem
 	void Scene::Update(float dt)
 	{
 
+		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
+
 		RunTransformUpdateSystem(transforms);
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
@@ -752,6 +744,7 @@ namespace wiSceneSystem
 			names.Remove(entity);
 			layers.Remove(entity);
 			transforms.Remove(entity);
+			prev_transforms.Remove(entity);
 			parents.Remove(entity);
 			materials.Remove(entity);
 			meshes.Remove(entity);
@@ -778,6 +771,7 @@ namespace wiSceneSystem
 		names.Remove(entity);
 		layers.Remove(entity);
 		transforms.Remove(entity);
+		prev_transforms.Remove(entity);
 		parents.Remove_KeepSorted(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
@@ -850,6 +844,8 @@ namespace wiSceneSystem
 
 		transforms.Create(entity);
 
+		prev_transforms.Create(entity);
+
 		cullables.Create(entity);
 
 		objects.Create(entity);
@@ -886,6 +882,7 @@ namespace wiSceneSystem
 		layers.Create(entity);
 
 		transforms.Create(entity).Translate(position);
+		transforms.GetComponent(entity)->UpdateTransform();
 
 		cullables.Create(entity).aabb.createFromHalfWidth(position, XMFLOAT3(range, range, range));
 
@@ -912,6 +909,7 @@ namespace wiSceneSystem
 		layers.Create(entity);
 
 		transforms.Create(entity).Translate(position);
+		transforms.GetComponent(entity)->UpdateTransform();
 
 		ForceFieldComponent& force = forces.Create(entity);
 		force.gravity = 0;
@@ -934,6 +932,7 @@ namespace wiSceneSystem
 		layers.Create(entity);
 
 		transforms.Create(entity).Translate(position);
+		transforms.GetComponent(entity)->UpdateTransform();
 
 		cullables.Create(entity);
 
@@ -1002,33 +1001,48 @@ namespace wiSceneSystem
 	{
 		assert(entity != parent);
 
-		ParentComponent* parentcomponent = parents.GetComponent(entity);
-
-		if (parentcomponent == nullptr)
+		if (parents.Contains(entity))
 		{
-			parentcomponent = &parents.Create(entity);
+			Component_Detach(entity);
 		}
+
+		// Add a new hierarchy node to the end of container:
+		parents.Create(entity).parentID = parent;
+
+		// If this entity was already a part of a tree however, we must move it before children:
+		for (size_t i = 0; i < parents.GetCount(); ++i)
+		{
+			const ParentComponent& parent = parents[i];
+			
+			if (parent.parentID == entity)
+			{
+				parents.MoveLastTo(i);
+				break;
+			}
+		}
+
+		// Re-query parent after potential MoveLastTo(), because it invalidates references:
+		ParentComponent& parentcomponent = *parents.GetComponent(entity);
 
 		TransformComponent* transform_parent = transforms.GetComponent(parent);
 		if (transform_parent != nullptr)
 		{
 			// Save the parent's inverse worldmatrix:
-			parentcomponent->parentID = parent;
-			XMStoreFloat4x4(&parentcomponent->world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
+			XMStoreFloat4x4(&parentcomponent.world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
 		}
 
 		TransformComponent* transform_child = transforms.GetComponent(entity);
 		if (transform_child != nullptr)
 		{
 			// Child updated immediately, to that it can be immediately attached to afterwards:
-			transform_child->UpdateParentedTransform(*transform_parent, parentcomponent->world_parent_inverse_bind);
+			transform_child->UpdateParentedTransform(*transform_parent, parentcomponent.world_parent_inverse_bind);
 		}
 
 		LayerComponent* layer_child = layers.GetComponent(entity);
 		if (layer_child != nullptr)
 		{
 			// Save the initial layermask of the child so that it can be restored if detached:
-			parentcomponent->layerMask_bind = layer_child->GetLayerMask();
+			parentcomponent.layerMask_bind = layer_child->GetLayerMask();
 		}
 	}
 	void Scene::Component_Detach(Entity entity)
@@ -1071,6 +1085,20 @@ namespace wiSceneSystem
 
 
 
+	void RunPreviousFrameTransformUpdateSystem(
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<PreviousFrameTransformComponent>& prev_transforms
+	)
+	{
+		for (size_t i = 0; i < prev_transforms.GetCount(); ++i)
+		{
+			PreviousFrameTransformComponent& prev_transform = prev_transforms[i];
+			Entity entity = prev_transforms.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+
+			prev_transform.world_prev = transform.world;
+		}
+	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
 	{
 		for (size_t i = 0; i < transforms.GetCount(); ++i)
@@ -1080,8 +1108,8 @@ namespace wiSceneSystem
 		}
 	}
 	void RunAnimationUpdateSystem(
-		wiECS::ComponentManager<AnimationComponent>& animations,
-		wiECS::ComponentManager<TransformComponent>& transforms,
+		ComponentManager<AnimationComponent>& animations,
+		ComponentManager<TransformComponent>& transforms,
 		float dt
 	)
 	{
@@ -1384,8 +1412,8 @@ namespace wiSceneSystem
 		}
 	}
 	void RunCameraUpdateSystem(
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CameraComponent>& cameras
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<CameraComponent>& cameras
 	)
 	{
 		for (size_t i = 0; i < cameras.GetCount(); ++i)
@@ -1397,9 +1425,9 @@ namespace wiSceneSystem
 		}
 	}
 	void RunDecalUpdateSystem(
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CullableComponent>& cullables,
-		wiECS::ComponentManager<DecalComponent>& decals
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<CullableComponent>& cullables,
+		ComponentManager<DecalComponent>& decals
 	)
 	{
 		for (size_t i = 0; i < decals.GetCount(); ++i)
@@ -1418,9 +1446,9 @@ namespace wiSceneSystem
 		}
 	}
 	void RunProbeUpdateSystem(
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CullableComponent>& cullables,
-		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<CullableComponent>& cullables,
+		ComponentManager<EnvironmentProbeComponent>& probes
 	)
 	{
 		for (size_t i = 0; i < probes.GetCount(); ++i)
@@ -1438,9 +1466,9 @@ namespace wiSceneSystem
 	}
 	void RunLightUpdateSystem(
 		const CameraComponent& cascadeCamera,
-		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CullableComponent>& cullables,
-		wiECS::ComponentManager<LightComponent>& lights,
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<CullableComponent>& cullables,
+		ComponentManager<LightComponent>& lights,
 		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	)
 	{

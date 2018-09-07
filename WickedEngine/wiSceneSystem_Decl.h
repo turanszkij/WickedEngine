@@ -6,6 +6,7 @@ namespace wiSceneSystem
 	struct NameComponent;
 	struct LayerComponent;
 	struct TransformComponent;
+	struct PreviousFrameTransformComponent;
 	struct ParentComponent;
 	struct MaterialComponent;
 	struct MeshComponent;
