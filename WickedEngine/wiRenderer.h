@@ -465,7 +465,7 @@ public:
 		float distance = FLT_MAX;
 		int subsetIndex = -1;
 	};
-	static RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = 0xFFFFFFFF, bool dynamicObjects = true, bool onlyVisible = false);
+	static RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);
 
 
 	static PHYSICS* physicsEngine;

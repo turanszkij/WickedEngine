@@ -123,36 +123,37 @@ void wiBULLET::setWind(const XMFLOAT3& wind){
 
 void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent, MeshComponent& mesh)
 {
-	if (!softBodyPhysicsEnabled)
-		return;
+	//if (!softBodyPhysicsEnabled)
+	//	return;
 
-	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
-	btSoftBody* softBody = btSoftBody::upcast(obj);
+	//btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
+	//btSoftBody* softBody = btSoftBody::upcast(obj);
 
-	if(softBody){
-		btVector3 min, max;
-		softBody->getAabb(min, max);
-		mesh.aabb.create(XMFLOAT3(min.x(), min.y(), min.z()), XMFLOAT3(max.x(), max.y(), max.z()));
+	//if (softBody)
+	//{
+	//	btVector3 min, max;
+	//	softBody->getAabb(min, max);
+	//	mesh.aabb.create(XMFLOAT3(min.x(), min.y(), min.z()), XMFLOAT3(max.x(), max.y(), max.z()));
 
-		softBody->setWindVelocity(bulletPhysics->wind);
+	//	softBody->setWindVelocity(bulletPhysics->wind);
 
-		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
-		
-		int gvg = physicscomponent.goalVG;
-		for (unsigned int i = 0; i<mesh.vertices_POS.size(); ++i)
-		{
-			int indexP = physicscomponent.physicalmapGP[i];
-			float weight = mesh.vertexGroups[gvg].vertex_weights[indexP];
+	//	btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 
-			MeshComponent::Vertex_POS& vert = mesh.vertices_Transformed_POS[i];
+	//	int gvg = physicscomponent.goalVG;
+	//	for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+	//	{
+	//		int indexP = physicscomponent.physicalmapGP[i];
+	//		float weight = mesh.vertexGroups[gvg].vertex_weights[indexP];
 
-			mesh.vertices_Transformed_PRE[i] = vert;
-			vert.pos.x = nodes[indexP].m_x.getX();
-			vert.pos.y = nodes[indexP].m_x.getY();
-			vert.pos.z = nodes[indexP].m_x.getZ();
-			mesh.vertices_Transformed_POS[i].MakeFromParams(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ())/*, vert.GetWind(), vert.GetMaterialIndex()*/);
-		}
-	}
+	//		MeshComponent::Vertex_POS& vert = mesh.vertices_Transformed_POS[i];
+
+	//		mesh.vertices_Transformed_PRE[i] = vert;
+	//		vert.pos.x = nodes[indexP].m_x.getX();
+	//		vert.pos.y = nodes[indexP].m_x.getY();
+	//		vert.pos.z = nodes[indexP].m_x.getZ();
+	//		mesh.vertices_Transformed_POS[i].MakeFromParams(XMFLOAT3(-nodes[indexP].m_n.getX(), -nodes[indexP].m_n.getY(), -nodes[indexP].m_n.getZ())/*, vert.GetWind(), vert.GetMaterialIndex()*/);
+	//	}
+	//}
 }
 void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent, MeshComponent& mesh)
 {
@@ -388,9 +389,9 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 		if(!physicscomponent.collisionShape.compare("CONVEX_HULL"))
 		{
 			btCollisionShape* shape = new btConvexHullShape();
-			for (auto& x : mesh.vertices_POS)
+			for (auto& pos : mesh.vertex_positions)
 			{
-				((btConvexHullShape*)shape)->addPoint(btVector3(x.pos.x, x.pos.y, x.pos.z));
+				((btConvexHullShape*)shape)->addPoint(btVector3(pos.x, pos.y, pos.z));
 			}
 			shape->setLocalScaling(S);
 			shape->setMargin(btScalar(0.05));
@@ -443,14 +444,14 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 		}
 		if(!physicscomponent.collisionShape.compare("MESH"))
 		{
-			int totalVerts = (int)mesh.vertices_POS.size();
+			int totalVerts = (int)mesh.vertex_positions.size();
 			int totalTriangles = (int)mesh.indices.size() / 3;
 
 			btVector3* btVerts = new btVector3[totalVerts];
 			size_t i = 0;
-			for (auto& x : mesh.vertices_POS)
+			for (auto& pos : mesh.vertex_positions)
 			{
-				btVerts[i++] = btVector3(x.pos.x, x.pos.y, x.pos.z);
+				btVerts[i++] = btVector3(pos.x, pos.y, pos.z);
 			}
 
 			int* btInd = new int[mesh.indices.size()];

@@ -210,236 +210,196 @@ namespace wiSceneSystem
 
 	void MeshComponent::CreateRenderData()
 	{
-		// First, assemble vertex, index arrays:
-
-		// In case of recreate, delete data first:
-		vertices_POS.clear();
-		vertices_TEX.clear();
-		vertices_BON.clear();
-
-		// De-interleave vertex arrays:
-		vertices_POS.resize(vertices_FULL.size());
-		vertices_TEX.resize(vertices_FULL.size());
-		// do not resize vertices_BON just yet, not every mesh will need bone vertex data!
-		for (size_t i = 0; i < vertices_FULL.size(); ++i)
-		{
-			// Normalize normals:
-			float alpha = vertices_FULL[i].nor.w;
-			XMVECTOR nor = XMLoadFloat4(&vertices_FULL[i].nor);
-			nor = XMVector3Normalize(nor);
-			XMStoreFloat4(&vertices_FULL[i].nor, nor);
-			vertices_FULL[i].nor.w = alpha;
-
-			// Normalize bone weights:
-			XMFLOAT4& wei = vertices_FULL[i].wei;
-			float len = wei.x + wei.y + wei.z + wei.w;
-			if (len > 0)
-			{
-				wei.x /= len;
-				wei.y /= len;
-				wei.z /= len;
-				wei.w /= len;
-
-				if (vertices_BON.empty())
-				{
-					// Allocate full bone vertex data when we find a correct bone weight.
-					vertices_BON.resize(vertices_FULL.size());
-				}
-				vertices_BON[i].FromFULL(vertices_FULL[i]);
-			}
-
-			// Split and type conversion:
-			vertices_POS[i].FromFULL(vertices_FULL[i]);
-			vertices_TEX[i].FromFULL(vertices_FULL[i]);
-		}
-
-		// Save original vertices. This will be input for CPU skinning / soft bodies
-		vertices_Transformed_POS = vertices_POS;
-		vertices_Transformed_PRE = vertices_POS; // pre <- pos!! (previous positions will have the current positions initially)
-
-												 // Map subset indices:
-		for (auto& subset : subsets)
-		{
-			subset.subsetIndices.clear();
-		}
-		for (size_t i = 0; i < indices.size(); ++i)
-		{
-			uint32_t index = indices[i];
-			const XMFLOAT4& tex = vertices_FULL[index].tex;
-			unsigned int materialIndex = (unsigned int)floor(tex.z);
-
-			assert((materialIndex < (unsigned int)subsets.size()) && "Bad subset index!");
-
-			MeshSubset& subset = subsets[materialIndex];
-			subset.subsetIndices.push_back(index);
-
-			if (index >= 65536)
-			{
-				indexFormat = INDEXFORMAT_32BIT;
-			}
-		}
-
-
-		//// Goal positions, normals are controlling blending between animation and physics states for soft body rendering:
-		//goalPositions.clear();
-		//goalNormals.clear();
-		//if (goalVG >= 0)
-		//{
-		//	goalPositions.resize(vertexGroups[goalVG].vertices.size());
-		//	goalNormals.resize(vertexGroups[goalVG].vertices.size());
-		//}
-
-
-		//// Mapping render vertices to physics vertex representation:
-		////	the physics vertices contain unique position, not duplicated by texcoord or normals
-		////	this way we can map several renderable vertices to one physics vertex
-		////	but the mapping function will actually be indexed by renderable vertex index for efficient retrieval.
-		//if (!physicsverts.empty() && physicalmapGP.empty())
-		//{
-		//	for (size_t i = 0; i < vertices_POS.size(); ++i)
-		//	{
-		//		for (size_t j = 0; j < physicsverts.size(); ++j)
-		//		{
-		//			if (fabs(vertices_POS[i].pos.x - physicsverts[j].x) < FLT_EPSILON
-		//				&&	fabs(vertices_POS[i].pos.y - physicsverts[j].y) < FLT_EPSILON
-		//				&&	fabs(vertices_POS[i].pos.z - physicsverts[j].z) < FLT_EPSILON
-		//				)
-		//			{
-		//				physicalmapGP.push_back(static_cast<int>(j));
-		//				break;
-		//			}
-		//		}
-		//	}
-		//}
-
-
-
-		// Create actual GPU data:
-
-		GPUBufferDesc bd;
-		SubresourceData InitData;
-
 		HRESULT hr;
 
-		//if (!IsDynamicVB())
+		// Create index buffer GPU data:
 		{
-			ZeroMemory(&bd, sizeof(bd));
+			uint32_t counter = 0;
+			uint8_t stride;
+			void* gpuIndexData;
+			if (vertex_positions.size() > 65535)
+			{
+				indexFormat = INDEXFORMAT_32BIT;
+				gpuIndexData = new uint32_t[indices.size()];
+				stride = sizeof(uint32_t);
+
+				for (auto& x : indices)
+				{
+					static_cast<uint32_t*>(gpuIndexData)[counter++] = static_cast<uint32_t>(x);
+				}
+
+			}
+			else
+			{
+				indexFormat = INDEXFORMAT_16BIT;
+				gpuIndexData = new uint16_t[indices.size()];
+				stride = sizeof(uint16_t);
+
+				for (auto& x : indices)
+				{
+					static_cast<uint16_t*>(gpuIndexData)[counter++] = static_cast<uint16_t>(x);
+				}
+
+			}
+
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = 0;
+			bd.StructureByteStride = stride;
+			bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
+
+			SubresourceData InitData;
+			InitData.pSysMem = gpuIndexData;
+			bd.ByteWidth = (UINT)(stride * indices.size());
+			indexBuffer.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer.get());
+			assert(SUCCEEDED(hr));
+
+			SAFE_DELETE_ARRAY(gpuIndexData);
+		}
+
+
+		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+
+		// vertexBuffer - POSITION + NORMAL + SUBSETINDEX:
+		{
+
+			std::unordered_map<uint32_t, uint32_t> subsetIndicesLUT;
+			uint32_t subsetCounter = 0;
+			for (auto& subset : subsets)
+			{
+				for (uint32_t i = 0; i < subset.indexCount; ++i)
+				{
+					uint32_t index = indices[subset.indexOffset + i];
+					subsetIndicesLUT[index] = subsetCounter;
+				}
+				subsetCounter++;
+			}
+
+			std::vector<Vertex_POS> vertices(vertex_positions.size());
+			for (size_t i = 0; i < vertices.size(); ++i)
+			{
+				const XMFLOAT3& pos = vertex_positions[i];
+				const XMFLOAT3& nor = vertex_normals[i];
+				uint32_t subsetIndex = subsetIndicesLUT[(uint32_t)i];
+				vertices[i].FromFULL(pos, nor, subsetIndex);
+
+				_min = wiMath::Min(_min, pos);
+				_max = wiMath::Max(_max, pos);
+			}
+
+			GPUBufferDesc bd;
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-			ZeroMemory(&InitData, sizeof(InitData));
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices.size());
 
-			InitData.pSysMem = vertices_POS.data();
-			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
 			vertexBuffer_POS.reset(new GPUBuffer);
 			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS.get());
 			assert(SUCCEEDED(hr));
 		}
 
-		if (!vertices_BON.empty())
+		aabb.create(_min, _max);
+
+		// skinning buffers:
+		if (!vertex_boneindices.empty())
 		{
-			ZeroMemory(&bd, sizeof(bd));
+			std::vector<Vertex_BON> vertices(vertex_boneindices.size());
+			for (size_t i = 0; i < vertices.size(); ++i)
+			{
+				XMFLOAT4& wei = vertex_boneweights[i];
+				// normalize bone weights
+				float len = wei.x + wei.y + wei.z + wei.w;
+				if (len > 0)
+				{
+					wei.x /= len;
+					wei.y /= len;
+					wei.z /= len;
+					wei.w /= len;
+				}
+				vertices[i].FromFULL(vertex_boneindices[i], wei);
+			}
+
+			GPUBufferDesc bd;
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices.size());
 
-			InitData.pSysMem = vertices_BON.data();
-			bd.ByteWidth = (UINT)(sizeof(Vertex_BON) * vertices_BON.size());
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
 			vertexBuffer_BON.reset(new GPUBuffer);
 			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON.get());
 			assert(SUCCEEDED(hr));
 
-			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
-			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertex_positions.size());
 			streamoutBuffer_POS.reset(new GPUBuffer);
 			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS.get());
 			assert(SUCCEEDED(hr));
 
-			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertices_POS.size());
+			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertex_positions.size());
 			streamoutBuffer_PRE.reset(new GPUBuffer);
 			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE.get());
 			assert(SUCCEEDED(hr));
 		}
 
-		// texture coordinate buffers are always static:
-		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.CPUAccessFlags = 0;
-		bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-		bd.MiscFlags = 0;
-		bd.StructureByteStride = sizeof(Vertex_TEX);
-		bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices_TEX.size());
-		bd.Format = Vertex_TEX::FORMAT;
-		InitData.pSysMem = vertices_TEX.data();
-		vertexBuffer_TEX.reset(new GPUBuffer);
-		hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX.get());
-		assert(SUCCEEDED(hr));
-
-
-		// Remap index buffer to be continuous across subsets and create gpu buffer data:
-		uint32_t counter = 0;
-		uint8_t stride;
-		void* gpuIndexData;
-		if (GetIndexFormat() == INDEXFORMAT_16BIT)
+		// texture coordinate buffers:
 		{
-			gpuIndexData = new uint16_t[indices.size()];
-			stride = sizeof(uint16_t);
-		}
-		else
-		{
-			gpuIndexData = new uint32_t[indices.size()];
-			stride = sizeof(uint32_t);
-		}
-
-		for (MeshSubset& subset : subsets)
-		{
-			if (subset.subsetIndices.empty())
+			std::vector<Vertex_TEX> vertices(vertex_texcoords.size());
+			for (size_t i = 0; i < vertices.size(); ++i)
 			{
-				continue;
+				vertices[i].FromFULL(vertex_texcoords[i]);
 			}
-			subset.indexBufferOffset = counter;
 
-			switch (GetIndexFormat())
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = 0;
+			bd.StructureByteStride = sizeof(Vertex_TEX);
+			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices.size());
+			bd.Format = Vertex_TEX::FORMAT;
+
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
+			vertexBuffer_TEX.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX.get());
+			assert(SUCCEEDED(hr));
+		}
+
+	}
+	void MeshComponent::RemoveVertex(size_t index)
+	{
+		for (size_t ind = 0; ind < indices.size(); ++ind)
+		{
+			if (indices[ind] == index)
 			{
-			case INDEXFORMAT_16BIT:
-				for (auto& x : subset.subsetIndices)
-				{
-					static_cast<uint16_t*>(gpuIndexData)[counter] = static_cast<uint16_t>(x);
-					counter++;
-				}
-				break;
-			default:
-				for (auto& x : subset.subsetIndices)
-				{
-					static_cast<uint32_t*>(gpuIndexData)[counter] = static_cast<uint32_t>(x);
-					counter++;
-				}
-				break;
+				indices[ind] = static_cast<uint32_t>(index);
+			}
+			else if (indices[ind] > index && indices[ind] > 0)
+			{
+				indices[ind]--;
 			}
 		}
 
-		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.CPUAccessFlags = 0;
-		bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-		bd.MiscFlags = 0;
-		bd.StructureByteStride = stride;
-		bd.Format = GetIndexFormat() == INDEXFORMAT_16BIT ? FORMAT_R16_UINT : FORMAT_R32_UINT;
-		InitData.pSysMem = gpuIndexData;
-		bd.ByteWidth = (UINT)(stride * indices.size());
-		indexBuffer.reset(new GPUBuffer);
-		hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer.get());
-		assert(SUCCEEDED(hr));
-
-		SAFE_DELETE_ARRAY(gpuIndexData);
-
+		vertex_positions.erase(vertex_positions.begin() + index);
+		vertex_normals.erase(vertex_normals.begin() + index);
+		vertex_texcoords.erase(vertex_texcoords.begin() + index);
+		vertex_boneindices.erase(vertex_boneindices.begin() + index);
+		vertex_boneweights.erase(vertex_boneweights.begin() + index);
 	}
 	void MeshComponent::ComputeNormals(bool smooth)
 	{
@@ -450,15 +410,16 @@ namespace wiSceneSystem
 			// Compute smooth surface normals:
 
 			// 1.) Zero normals, they will be averaged later
-			for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+			for (size_t i = 0; i < vertex_normals.size() - 1; i++)
 			{
-				vertices_FULL[i].nor = XMFLOAT4(0, 0, 0, 0);
+				vertex_normals[i] = XMFLOAT3(0, 0, 0);
 			}
 
 			// 2.) Find identical vertices by POSITION, accumulate face normals
-			for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+			for (size_t i = 0; i < vertex_positions.size() - 1; i++)
 			{
-				Vertex_FULL& v_search = vertices_FULL[i];
+				XMFLOAT3& v_search = vertex_positions[i];
+				XMFLOAT3& v_search_nor = vertex_normals[i];
 
 				for (size_t ind = 0; ind < indices.size() / 3; ++ind)
 				{
@@ -466,29 +427,29 @@ namespace wiSceneSystem
 					uint32_t i1 = indices[ind * 3 + 1];
 					uint32_t i2 = indices[ind * 3 + 2];
 
-					Vertex_FULL& v0 = vertices_FULL[i0];
-					Vertex_FULL& v1 = vertices_FULL[i1];
-					Vertex_FULL& v2 = vertices_FULL[i2];
+					XMFLOAT3& v0 = vertex_positions[i0];
+					XMFLOAT3& v1 = vertex_positions[i1];
+					XMFLOAT3& v2 = vertex_positions[i2];
 
 					bool match_pos0 =
-						fabs(v_search.pos.x - v0.pos.x) < FLT_EPSILON &&
-						fabs(v_search.pos.y - v0.pos.y) < FLT_EPSILON &&
-						fabs(v_search.pos.z - v0.pos.z) < FLT_EPSILON;
+						fabs(v_search.x - v0.x) < FLT_EPSILON &&
+						fabs(v_search.y - v0.y) < FLT_EPSILON &&
+						fabs(v_search.z - v0.z) < FLT_EPSILON;
 
 					bool match_pos1 =
-						fabs(v_search.pos.x - v1.pos.x) < FLT_EPSILON &&
-						fabs(v_search.pos.y - v1.pos.y) < FLT_EPSILON &&
-						fabs(v_search.pos.z - v1.pos.z) < FLT_EPSILON;
+						fabs(v_search.x - v1.x) < FLT_EPSILON &&
+						fabs(v_search.y - v1.y) < FLT_EPSILON &&
+						fabs(v_search.z - v1.z) < FLT_EPSILON;
 
 					bool match_pos2 =
-						fabs(v_search.pos.x - v2.pos.x) < FLT_EPSILON &&
-						fabs(v_search.pos.y - v2.pos.y) < FLT_EPSILON &&
-						fabs(v_search.pos.z - v2.pos.z) < FLT_EPSILON;
+						fabs(v_search.x - v2.x) < FLT_EPSILON &&
+						fabs(v_search.y - v2.y) < FLT_EPSILON &&
+						fabs(v_search.z - v2.z) < FLT_EPSILON;
 
 					if (match_pos0 || match_pos1 || match_pos2)
 					{
-						XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
-						XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+						XMVECTOR U = XMLoadFloat3(&v2) - XMLoadFloat3(&v0);
+						XMVECTOR V = XMLoadFloat3(&v1) - XMLoadFloat3(&v0);
 
 						XMVECTOR N = XMVector3Cross(U, V);
 						N = XMVector3Normalize(N);
@@ -496,48 +457,54 @@ namespace wiSceneSystem
 						XMFLOAT3 normal;
 						XMStoreFloat3(&normal, N);
 
-						v_search.nor.x += normal.x;
-						v_search.nor.y += normal.y;
-						v_search.nor.z += normal.z;
+						v_search_nor.x += normal.x;
+						v_search_nor.y += normal.y;
+						v_search_nor.z += normal.z;
 					}
 
 				}
 			}
 
-			// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
-			for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+			std::unordered_map<uint32_t, uint32_t> subsetIndicesLUT;
+			uint32_t subsetCounter = 0;
+			for (auto& subset : subsets)
 			{
-				const Vertex_FULL& v0 = vertices_FULL[i];
-
-				for (size_t j = i + 1; j < vertices_FULL.size(); j++)
+				for (uint32_t i = 0; i < subset.indexCount; ++i)
 				{
-					const Vertex_FULL& v1 = vertices_FULL[j];
+					uint32_t index = indices[subset.indexOffset + i];
+					subsetIndicesLUT[index] = subsetCounter;
+				}
+				subsetCounter++;
+			}
+
+			// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
+			for (size_t i = 0; i < vertex_positions.size() - 1; i++)
+			{
+				const XMFLOAT3& p0 = vertex_positions[i];
+				const XMFLOAT3& n0 = vertex_normals[i];
+				const XMFLOAT2& t0 = vertex_texcoords[i];
+				const uint32_t s0 = subsetIndicesLUT[(uint32_t)i];
+
+				for (size_t j = i + 1; j < vertex_positions.size(); j++)
+				{
+					const XMFLOAT3& p1 = vertex_positions[j];
+					const XMFLOAT3& n1 = vertex_normals[j];
+					const XMFLOAT2& t1 = vertex_texcoords[j];
+					const uint32_t s1 = subsetIndicesLUT[(uint32_t)j];
 
 					bool unique_pos =
-						fabs(v0.pos.x - v1.pos.x) < FLT_EPSILON &&
-						fabs(v0.pos.y - v1.pos.y) < FLT_EPSILON &&
-						fabs(v0.pos.z - v1.pos.z) < FLT_EPSILON;
+						fabs(p0.x - p1.x) < FLT_EPSILON &&
+						fabs(p0.y - p1.y) < FLT_EPSILON &&
+						fabs(p0.z - p1.z) < FLT_EPSILON;
 
 					bool unique_tex =
-						fabs(v0.tex.x - v1.tex.x) < FLT_EPSILON &&
-						fabs(v0.tex.y - v1.tex.y) < FLT_EPSILON &&
-						(int)v0.tex.z == (int)v1.tex.z;
+						fabs(t0.x - t1.x) < FLT_EPSILON &&
+						fabs(t0.y - t1.y) < FLT_EPSILON &&
+						s0 == s1;
 
 					if (unique_pos && unique_tex)
 					{
-						for (size_t ind = 0; ind < indices.size(); ++ind)
-						{
-							if (indices[ind] == j)
-							{
-								indices[ind] = static_cast<uint32_t>(i);
-							}
-							else if (indices[ind] > j && indices[ind] > 0)
-							{
-								indices[ind]--;
-							}
-						}
-
-						vertices_FULL.erase(vertices_FULL.begin() + j);
+						RemoveVertex(j);
 					}
 
 				}
@@ -548,7 +515,7 @@ namespace wiSceneSystem
 			// Compute hard surface normals:
 
 			std::vector<uint32_t> newIndexBuffer;
-			std::vector<Vertex_FULL> newVertexBuffer;
+			std::vector<XMFLOAT3> newVertexBuffer;
 
 			for (size_t face = 0; face < indices.size() / 3; face++)
 			{
@@ -556,12 +523,12 @@ namespace wiSceneSystem
 				uint32_t i1 = indices[face * 3 + 1];
 				uint32_t i2 = indices[face * 3 + 2];
 
-				Vertex_FULL& v0 = vertices_FULL[i0];
-				Vertex_FULL& v1 = vertices_FULL[i1];
-				Vertex_FULL& v2 = vertices_FULL[i2];
+				XMFLOAT3& p0 = vertex_positions[i0];
+				XMFLOAT3& p1 = vertex_positions[i1];
+				XMFLOAT3& p2 = vertex_positions[i2];
 
-				XMVECTOR U = XMLoadFloat4(&v2.pos) - XMLoadFloat4(&v0.pos);
-				XMVECTOR V = XMLoadFloat4(&v1.pos) - XMLoadFloat4(&v0.pos);
+				XMVECTOR U = XMLoadFloat3(&p2) - XMLoadFloat3(&p0);
+				XMVECTOR V = XMLoadFloat3(&p1) - XMLoadFloat3(&p0);
 
 				XMVECTOR N = XMVector3Cross(U, V);
 				N = XMVector3Normalize(N);
@@ -569,21 +536,9 @@ namespace wiSceneSystem
 				XMFLOAT3 normal;
 				XMStoreFloat3(&normal, N);
 
-				v0.nor.x = normal.x;
-				v0.nor.y = normal.y;
-				v0.nor.z = normal.z;
-
-				v1.nor.x = normal.x;
-				v1.nor.y = normal.y;
-				v1.nor.z = normal.z;
-
-				v2.nor.x = normal.x;
-				v2.nor.y = normal.y;
-				v2.nor.z = normal.z;
-
-				newVertexBuffer.push_back(v0);
-				newVertexBuffer.push_back(v1);
-				newVertexBuffer.push_back(v2);
+				newVertexBuffer.push_back(normal);
+				newVertexBuffer.push_back(normal);
+				newVertexBuffer.push_back(normal);
 
 				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
 				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
@@ -591,7 +546,7 @@ namespace wiSceneSystem
 			}
 
 			// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
-			vertices_FULL = newVertexBuffer;
+			vertex_normals = newVertexBuffer;
 			indices = newIndexBuffer;
 		}
 
@@ -614,13 +569,11 @@ namespace wiSceneSystem
 	}
 	void MeshComponent::FlipNormals()
 	{
-		for (size_t i = 0; i < vertices_FULL.size() - 1; i++)
+		for (auto& normal : vertex_normals)
 		{
-			Vertex_FULL& v0 = vertices_FULL[i];
-
-			v0.nor.x *= -1;
-			v0.nor.y *= -1;
-			v0.nor.z *= -1;
+			normal.x *= -1;
+			normal.y *= -1;
+			normal.z *= -1;
 		}
 
 		CreateRenderData();

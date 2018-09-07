@@ -153,25 +153,17 @@ namespace wiSceneSystem
 
 	struct MeshComponent
 	{
-		struct Vertex_FULL
-		{
-			XMFLOAT4 pos = XMFLOAT4(0, 0, 0, 0); //pos, wind
-			XMFLOAT4 nor = XMFLOAT4(0, 0, 0, 1); //normal, unused
-			XMFLOAT4 tex = XMFLOAT4(0, 0, 0, 0); //tex, matIndex, unused
-			XMFLOAT4 ind = XMFLOAT4(0, 0, 0, 0); //bone indices
-			XMFLOAT4 wei = XMFLOAT4(0, 0, 0, 0); //bone weights
-		};
 		struct Vertex_POS
 		{
 			XMFLOAT3 pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
-			uint32_t normal_wind_matID = 0;
+			uint32_t normal_subsetIndex = 0;
 
-			void FromFULL(const Vertex_FULL& vert)
+			void FromFULL(const XMFLOAT3& _pos, const XMFLOAT3& _nor, uint32_t subsetIndex)
 			{
-				pos.x = vert.pos.x;
-				pos.y = vert.pos.y;
-				pos.z = vert.pos.z;
-				MakeFromParams(XMFLOAT3(vert.nor.x, vert.nor.y, vert.nor.z), vert.pos.w, static_cast<uint32_t>(vert.tex.z));
+				pos.x = _pos.x;
+				pos.y = _pos.y;
+				pos.z = _pos.z;
+				MakeFromParams(_nor, subsetIndex);
 			}
 			inline XMVECTOR LoadPOS() const
 			{
@@ -183,41 +175,36 @@ namespace wiSceneSystem
 			}
 			inline void MakeFromParams(const XMFLOAT3& normal)
 			{
-				normal_wind_matID = normal_wind_matID & 0xFF000000; // reset only the normals
+				normal_subsetIndex = normal_subsetIndex & 0xFF000000; // reset only the normals
 
-				normal_wind_matID |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-				normal_wind_matID |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-				normal_wind_matID |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+				normal_subsetIndex |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+				normal_subsetIndex |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+				normal_subsetIndex |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
 			}
-			inline void MakeFromParams(const XMFLOAT3& normal, float wind, uint32_t materialIndex)
+			inline void MakeFromParams(const XMFLOAT3& normal, uint32_t subsetIndex)
 			{
-				assert(materialIndex < 16); // subset materialIndex is packed onto 4 bits
+				assert(subsetIndex < 256); // subsetIndex is packed onto 8 bits
 
-				normal_wind_matID = 0;
+				normal_subsetIndex = 0;
 
-				normal_wind_matID |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-				normal_wind_matID |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-				normal_wind_matID |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
-				normal_wind_matID |= ((uint32_t)(wind * 15.0f) & 0x0000000F) << 24;
-				normal_wind_matID |= (materialIndex & 0x0000000F) << 28;
+				normal_subsetIndex |= (uint32_t)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
+				normal_subsetIndex |= (uint32_t)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
+				normal_subsetIndex |= (uint32_t)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
+				normal_subsetIndex |= (subsetIndex & 0x000000FF) << 24;
 			}
 			inline XMFLOAT3 GetNor_FULL() const
 			{
 				XMFLOAT3 nor_FULL(0, 0, 0);
 
-				nor_FULL.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-				nor_FULL.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-				nor_FULL.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor_FULL.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor_FULL.y = (float)((normal_subsetIndex >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+				nor_FULL.z = (float)((normal_subsetIndex >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 
 				return nor_FULL;
 			}
-			inline float GetWind() const
-			{
-				return (float)((normal_wind_matID >> 24) & 0x0000000F) / 15.0f;
-			}
 			inline uint32_t GetMaterialIndex() const
 			{
-				return (normal_wind_matID >> 28) & 0x0000000F;
+				return (normal_subsetIndex >> 24) & 0x000000FF;
 			}
 
 			static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
@@ -226,9 +213,9 @@ namespace wiSceneSystem
 		{
 			XMHALF2 tex = XMHALF2(0.0f, 0.0f);
 
-			void FromFULL(const Vertex_FULL& vert)
+			void FromFULL(const XMFLOAT2& texcoords)
 			{
-				tex = XMHALF2(vert.tex.x, vert.tex.y);
+				tex = XMHALF2(texcoords.x, texcoords.y);
 			}
 
 			static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16_FLOAT;
@@ -238,29 +225,29 @@ namespace wiSceneSystem
 			uint64_t ind = 0;
 			uint64_t wei = 0;
 
-			void FromFULL(const Vertex_FULL& vert)
+			void FromFULL(const XMUINT4& boneIndices, const XMFLOAT4& boneWeights)
 			{
 				ind = 0;
 				wei = 0;
 
-				ind |= (uint64_t)vert.ind.x << 0;
-				ind |= (uint64_t)vert.ind.y << 16;
-				ind |= (uint64_t)vert.ind.z << 32;
-				ind |= (uint64_t)vert.ind.w << 48;
+				ind |= (uint64_t)boneIndices.x << 0;
+				ind |= (uint64_t)boneIndices.y << 16;
+				ind |= (uint64_t)boneIndices.z << 32;
+				ind |= (uint64_t)boneIndices.w << 48;
 
-				wei |= (uint64_t)(vert.wei.x * 65535.0f) << 0;
-				wei |= (uint64_t)(vert.wei.y * 65535.0f) << 16;
-				wei |= (uint64_t)(vert.wei.z * 65535.0f) << 32;
-				wei |= (uint64_t)(vert.wei.w * 65535.0f) << 48;
+				wei |= (uint64_t)(boneWeights.x * 65535.0f) << 0;
+				wei |= (uint64_t)(boneWeights.y * 65535.0f) << 16;
+				wei |= (uint64_t)(boneWeights.z * 65535.0f) << 32;
+				wei |= (uint64_t)(boneWeights.w * 65535.0f) << 48;
 			}
-			inline XMFLOAT4 GetInd_FULL() const
+			inline XMUINT4 GetInd_FULL() const
 			{
-				XMFLOAT4 ind_FULL(0, 0, 0, 0);
+				XMUINT4 ind_FULL(0, 0, 0, 0);
 
-				ind_FULL.x = (float)((ind >> 0) & 0x0000FFFF);
-				ind_FULL.y = (float)((ind >> 16) & 0x0000FFFF);
-				ind_FULL.z = (float)((ind >> 32) & 0x0000FFFF);
-				ind_FULL.w = (float)((ind >> 48) & 0x0000FFFF);
+				ind_FULL.x = ((ind >> 0) & 0x0000FFFF);
+				ind_FULL.y = ((ind >> 16) & 0x0000FFFF);
+				ind_FULL.z = ((ind >> 32) & 0x0000FFFF);
+				ind_FULL.w = ((ind >> 48) & 0x0000FFFF);
 
 				return ind_FULL;
 			}
@@ -277,20 +264,18 @@ namespace wiSceneSystem
 			}
 		};
 
-		std::vector<Vertex_FULL>	vertices_FULL;
-		std::vector<Vertex_POS>		vertices_POS; // position(xyz), normal+wind(w as uint)
-		std::vector<Vertex_TEX>		vertices_TEX; // texcoords
-		std::vector<Vertex_BON>		vertices_BON; // bone indices, bone weights
-		std::vector<Vertex_POS>		vertices_Transformed_POS; // for soft body simulation
-		std::vector<Vertex_POS>		vertices_Transformed_PRE; // for soft body simulation
+		std::vector<XMFLOAT3>		vertex_positions;
+		std::vector<XMFLOAT3>		vertex_normals;
+		std::vector<XMFLOAT2>		vertex_texcoords;
+		std::vector<XMUINT4>		vertex_boneindices;
+		std::vector<XMFLOAT4>		vertex_boneweights;
 		std::vector<uint32_t>		indices;
 
 		struct MeshSubset
 		{
-			wiECS::Entity materialID;
-			UINT indexBufferOffset = 0;
-
-			std::vector<uint32_t> subsetIndices;
+			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
+			uint32_t indexOffset = 0;
+			uint32_t indexCount = 0;
 		};
 		std::vector<MeshSubset>		subsets;
 
@@ -303,8 +288,8 @@ namespace wiSceneSystem
 
 		// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
 		bool dynamicVB = false;
-		UINT bufferOffset_POS;
-		UINT bufferOffset_PRE;
+		uint32_t bufferOffset_POS;
+		uint32_t bufferOffset_PRE;
 
 		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
 
@@ -334,6 +319,7 @@ namespace wiSceneSystem
 		inline bool IsDynamicVB() const { return dynamicVB; }
 
 		void CreateRenderData();
+		void RemoveVertex(size_t index);
 		void ComputeNormals(bool smooth);
 		void FlipCulling();
 		void FlipNormals();
@@ -395,6 +381,7 @@ namespace wiSceneSystem
 		std::vector<XMFLOAT3> goalNormals;
 
 		std::vector<XMFLOAT3> physicsverts;
+		std::vector<XMFLOAT3> physicsverts_prev;
 		std::vector<uint32_t> physicsindices;
 		std::vector<int>	  physicalmapGP;
 	};

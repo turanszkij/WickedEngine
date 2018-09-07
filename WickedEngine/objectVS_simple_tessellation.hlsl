@@ -22,8 +22,6 @@ HullInputType main(Input_Object_ALL input)
 	surface.position = mul(surface.position, WORLD);
 	surface.normal = normalize(mul(surface.normal, (float3x3)WORLD));
 
-	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
-
 	Out.pos = surface.position.xyz;
 	Out.tex = surface.uv.xyxy;
 

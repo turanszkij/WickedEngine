@@ -11,6 +11,9 @@ using namespace wiGraphicsTypes;
 using namespace wiSceneSystem;
 using namespace wiECS;
 
+// Transform the data from OBJ space to engine-space:
+static const bool transform_to_LH = true;
+
 Entity ImportModel_OBJ(const std::string& fileName)
 {
 	string directory, name;
@@ -104,9 +107,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			object.meshID = meshEntity;
 			mesh.renderable = true;
 
-			XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-			XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
 			unordered_map<int, int> registered_materialIndices = {};
 			unordered_map<size_t, uint32_t> uniqueVertices = {};
 
@@ -128,31 +128,30 @@ Entity ImportModel_OBJ(const std::string& fileName)
 
 				for (auto& index : reordered_indices)
 				{
-					MeshComponent::Vertex_FULL vert;
+					XMFLOAT3 pos;
 
-					vert.pos = XMFLOAT4(
+					pos = XMFLOAT3(
 						obj_attrib.vertices[index.vertex_index * 3 + 0],
 						obj_attrib.vertices[index.vertex_index * 3 + 1],
-						obj_attrib.vertices[index.vertex_index * 3 + 2],
-						0
+						obj_attrib.vertices[index.vertex_index * 3 + 2]
 					);
 
+					XMFLOAT3 nor = XMFLOAT3(0, 0, 0);
 					if (!obj_attrib.normals.empty())
 					{
-						vert.nor = XMFLOAT4(
+						nor = XMFLOAT3(
 							obj_attrib.normals[index.normal_index * 3 + 0],
 							obj_attrib.normals[index.normal_index * 3 + 1],
-							obj_attrib.normals[index.normal_index * 3 + 2],
-							0
+							obj_attrib.normals[index.normal_index * 3 + 2]
 						);
 					}
 
+					XMFLOAT2 tex = XMFLOAT2(0, 0);
 					if (index.texcoord_index >= 0 && !obj_attrib.texcoords.empty())
 					{
-						vert.tex = XMFLOAT4(
+						tex = XMFLOAT2(
 							obj_attrib.texcoords[index.texcoord_index * 2 + 0],
-							1 - obj_attrib.texcoords[index.texcoord_index * 2 + 1],
-							0, 0
+							1 - obj_attrib.texcoords[index.texcoord_index * 2 + 1]
 						);
 					}
 
@@ -162,15 +161,13 @@ Entity ImportModel_OBJ(const std::string& fileName)
 						registered_materialIndices[materialIndex] = (int)mesh.subsets.size();
 						mesh.subsets.push_back(MeshComponent::MeshSubset());
 						mesh.subsets.back().materialID = materialLibrary[materialIndex];
+						mesh.subsets.back().indexOffset = (uint32_t)mesh.indices.size();
 					}
-					vert.tex.z = (float)registered_materialIndices[materialIndex]; // this indexes a mesh subset
 
-					// todo: option parameter would be better
-					const bool flipZ = true;
-					if (flipZ)
+					if (transform_to_LH)
 					{
-						vert.pos.z *= -1;
-						vert.nor.z *= -1;
+						pos.z *= -1;
+						nor.z *= -1;
 					}
 
 					// eliminate duplicate vertices by means of hashing:
@@ -184,16 +181,15 @@ Entity ImportModel_OBJ(const std::string& fileName)
 
 					if (uniqueVertices.count(vertexHash) == 0)
 					{
-						uniqueVertices[vertexHash] = (uint32_t)mesh.vertices_FULL.size();
-						mesh.vertices_FULL.push_back(vert);
+						uniqueVertices[vertexHash] = (uint32_t)mesh.vertex_positions.size();
+						mesh.vertex_positions.push_back(pos);
+						mesh.vertex_normals.push_back(nor);
+						mesh.vertex_texcoords.push_back(tex);
 					}
 					mesh.indices.push_back(uniqueVertices[vertexHash]);
-
-					min = wiMath::Min(min, XMFLOAT3(vert.pos.x, vert.pos.y, vert.pos.z));
-					max = wiMath::Max(max, XMFLOAT3(vert.pos.x, vert.pos.y, vert.pos.z));
+					mesh.subsets.back().indexCount++;
 				}
 			}
-			mesh.aabb.create(min, max);
 			mesh.CreateRenderData();
 
 			model.objects.insert(objectEntity);

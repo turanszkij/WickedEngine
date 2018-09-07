@@ -362,167 +362,171 @@ void wiRenderer::SetUpStaticComponents()
 		}
 		if (!impostorVB_POS.IsValid())
 		{
-			MeshComponent::Vertex_FULL impostorVertices[6 * 6];
+			const int count = 6 * 6;
+
+			XMFLOAT3 impostorVertices_pos[count];
+			XMFLOAT3 impostorVertices_nor[count];
+			XMFLOAT2 impostorVertices_tex[count];
 
 			float stepX = 1.f / 6.f;
 
 			// front
-			impostorVertices[0].pos = XMFLOAT4(-1, 1, 0, 0);
-			impostorVertices[0].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[0].tex = XMFLOAT4(0, 0, 0, 0);
+			impostorVertices_pos[0] = XMFLOAT3(-1, 1, 0);
+			impostorVertices_nor[0] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[0] = XMFLOAT2(0, 0);
 
-			impostorVertices[1].pos = XMFLOAT4(-1, -1, 0, 0);
-			impostorVertices[1].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[1].tex = XMFLOAT4(0, 1, 0, 0);
+			impostorVertices_pos[1] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[1] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[1] = XMFLOAT2(0, 1);
 
-			impostorVertices[2].pos = XMFLOAT4(1, 1, 0, 0);
-			impostorVertices[2].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[2].tex = XMFLOAT4(stepX, 0, 0, 0);
+			impostorVertices_pos[2] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[2] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[2] = XMFLOAT2(stepX, 0);
 
-			impostorVertices[3].pos = XMFLOAT4(-1, -1, 0, 0);
-			impostorVertices[3].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[3].tex = XMFLOAT4(0, 1, 0, 0);
+			impostorVertices_pos[3] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[3] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[3] = XMFLOAT2(0, 1);
 
-			impostorVertices[4].pos = XMFLOAT4(1, -1, 0, 0);
-			impostorVertices[4].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[4].tex = XMFLOAT4(stepX, 1, 0, 0);
+			impostorVertices_pos[4] = XMFLOAT3(1, -1, 0);
+			impostorVertices_nor[4] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[4] = XMFLOAT2(stepX, 1);
 
-			impostorVertices[5].pos = XMFLOAT4(1, 1, 0, 0);
-			impostorVertices[5].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[5].tex = XMFLOAT4(stepX, 0, 0, 0);
+			impostorVertices_pos[5] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[5] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[5] = XMFLOAT2(stepX, 0);
 
 			// right
-			impostorVertices[6].pos = XMFLOAT4(0, 1, -1, 0);
-			impostorVertices[6].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[6].tex = XMFLOAT4(stepX, 0, 0, 0);
+			impostorVertices_pos[6] = XMFLOAT3(0, 1, -1);
+			impostorVertices_nor[6] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[6] = XMFLOAT2(stepX, 0);
 
-			impostorVertices[7].pos = XMFLOAT4(0, -1, -1, 0);
-			impostorVertices[7].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[7].tex = XMFLOAT4(stepX, 1, 0, 0);
+			impostorVertices_pos[7] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[7] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[7] = XMFLOAT2(stepX, 1);
 
-			impostorVertices[8].pos = XMFLOAT4(0, 1, 1, 0);
-			impostorVertices[8].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[8].tex = XMFLOAT4(stepX * 2, 0, 0, 0);
+			impostorVertices_pos[8] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[8] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[8] = XMFLOAT2(stepX * 2, 0);
 
-			impostorVertices[9].pos = XMFLOAT4(0, -1, -1, 0);
-			impostorVertices[9].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[9].tex = XMFLOAT4(stepX, 1, 0, 0);
+			impostorVertices_pos[9] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[9] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[9] = XMFLOAT2(stepX, 1);
 
-			impostorVertices[10].pos = XMFLOAT4(0, -1, 1, 0);
-			impostorVertices[10].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[10].tex = XMFLOAT4(stepX * 2, 1, 0, 0);
+			impostorVertices_pos[10] = XMFLOAT3(0, -1, 1);
+			impostorVertices_nor[10] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[10] = XMFLOAT2(stepX * 2, 1);
 
-			impostorVertices[11].pos = XMFLOAT4(0, 1, 1, 0);
-			impostorVertices[11].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[11].tex = XMFLOAT4(stepX * 2, 0, 0, 0);
+			impostorVertices_pos[11] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[11] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[11] = XMFLOAT2(stepX * 2, 0);
 
 			// back
-			impostorVertices[12].pos = XMFLOAT4(-1, 1, 0, 0);
-			impostorVertices[12].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[12].tex = XMFLOAT4(stepX * 3, 0, 0, 0);
+			impostorVertices_pos[12] = XMFLOAT3(-1, 1, 0);
+			impostorVertices_nor[12] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[12] = XMFLOAT2(stepX * 3, 0);
 
-			impostorVertices[13].pos = XMFLOAT4(1, 1, 0, 0);
-			impostorVertices[13].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[13].tex = XMFLOAT4(stepX * 2, 0, 0, 0);
+			impostorVertices_pos[13] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[13] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[13] = XMFLOAT2(stepX * 2, 0);
 
-			impostorVertices[14].pos = XMFLOAT4(-1, -1, 0, 0);
-			impostorVertices[14].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[14].tex = XMFLOAT4(stepX * 3, 1, 0, 0);
+			impostorVertices_pos[14] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[14] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[14] = XMFLOAT2(stepX * 3, 1);
 
-			impostorVertices[15].pos = XMFLOAT4(-1, -1, 0, 0);
-			impostorVertices[15].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[15].tex = XMFLOAT4(stepX * 3, 1, 0, 0);
+			impostorVertices_pos[15] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[15] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[15] = XMFLOAT2(stepX * 3, 1);
 
-			impostorVertices[16].pos = XMFLOAT4(1, 1, 0, 0);
-			impostorVertices[16].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[16].tex = XMFLOAT4(stepX * 2, 0, 0, 0);
+			impostorVertices_pos[16] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[16] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[16] = XMFLOAT2(stepX * 2, 0);
 
-			impostorVertices[17].pos = XMFLOAT4(1, -1, 0, 0);
-			impostorVertices[17].nor = XMFLOAT4(0, 0, -1, 1);
-			impostorVertices[17].tex = XMFLOAT4(stepX * 2, 1, 0, 0);
+			impostorVertices_pos[17] = XMFLOAT3(1, -1, 0);
+			impostorVertices_nor[17] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[17] = XMFLOAT2(stepX * 2, 1);
 
 			// left
-			impostorVertices[18].pos = XMFLOAT4(0, 1, -1, 0);
-			impostorVertices[18].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[18].tex = XMFLOAT4(stepX * 4, 0, 0, 0);
+			impostorVertices_pos[18] = XMFLOAT3(0, 1, -1);
+			impostorVertices_nor[18] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[18] = XMFLOAT2(stepX * 4, 0);
 
-			impostorVertices[19].pos = XMFLOAT4(0, 1, 1, 0);
-			impostorVertices[19].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[19].tex = XMFLOAT4(stepX * 3, 0, 0, 0);
+			impostorVertices_pos[19] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[19] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[19] = XMFLOAT2(stepX * 3, 0);
 
-			impostorVertices[20].pos = XMFLOAT4(0, -1, -1, 0);
-			impostorVertices[20].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[20].tex = XMFLOAT4(stepX * 4, 1, 0, 0);
+			impostorVertices_pos[20] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[20] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[20] = XMFLOAT2(stepX * 4, 1);
 
-			impostorVertices[21].pos = XMFLOAT4(0, -1, -1, 0);
-			impostorVertices[21].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[21].tex = XMFLOAT4(stepX * 4, 1, 0, 0);
+			impostorVertices_pos[21] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[21] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[21] = XMFLOAT2(stepX * 4, 1);
 
-			impostorVertices[22].pos = XMFLOAT4(0, 1, 1, 0);
-			impostorVertices[22].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[22].tex = XMFLOAT4(stepX * 3, 0, 0, 0);
+			impostorVertices_pos[22] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[22] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[22] = XMFLOAT2(stepX * 3, 0);
 
-			impostorVertices[23].pos = XMFLOAT4(0, -1, 1, 0);
-			impostorVertices[23].nor = XMFLOAT4(1, 0, 0, 1);
-			impostorVertices[23].tex = XMFLOAT4(stepX * 3, 1, 0, 0);
+			impostorVertices_pos[23] = XMFLOAT3(0, -1, 1);
+			impostorVertices_nor[23] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[23] = XMFLOAT2(stepX * 3, 1);
 
 			// bottom
-			impostorVertices[24].pos = XMFLOAT4(-1, 0, 1, 0);
-			impostorVertices[24].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[24].tex = XMFLOAT4(stepX * 4, 0, 0, 0);
+			impostorVertices_pos[24] = XMFLOAT3(-1, 0, 1);
+			impostorVertices_nor[24] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[24] = XMFLOAT2(stepX * 4, 0);
 
-			impostorVertices[25].pos = XMFLOAT4(1, 0, 1, 0);
-			impostorVertices[25].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[25].tex = XMFLOAT4(stepX * 5, 0, 0, 0);
+			impostorVertices_pos[25] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[25] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[25] = XMFLOAT2(stepX * 5, 0);
 
-			impostorVertices[26].pos = XMFLOAT4(-1, 0, -1, 0);
-			impostorVertices[26].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[26].tex = XMFLOAT4(stepX * 4, 1, 0, 0);
+			impostorVertices_pos[26] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[26] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[26] = XMFLOAT2(stepX * 4, 1);
 
-			impostorVertices[27].pos = XMFLOAT4(-1, 0, -1, 0);
-			impostorVertices[27].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[27].tex = XMFLOAT4(stepX * 4, 1, 0, 0);
+			impostorVertices_pos[27] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[27] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[27] = XMFLOAT2(stepX * 4, 1);
 
-			impostorVertices[28].pos = XMFLOAT4(1, 0, 1, 0);
-			impostorVertices[28].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[28].tex = XMFLOAT4(stepX * 5, 0, 0, 0);
+			impostorVertices_pos[28] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[28] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[28] = XMFLOAT2(stepX * 5, 0);
 
-			impostorVertices[29].pos = XMFLOAT4(1, 0, -1, 0);
-			impostorVertices[29].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[29].tex = XMFLOAT4(stepX * 5, 1, 0, 0);
+			impostorVertices_pos[29] = XMFLOAT3(1, 0, -1);
+			impostorVertices_nor[29] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[29] = XMFLOAT2(stepX * 5, 1);
 
 			// top
-			impostorVertices[30].pos = XMFLOAT4(-1, 0, 1, 0);
-			impostorVertices[30].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[30].tex = XMFLOAT4(stepX * 5, 0, 0, 0);
+			impostorVertices_pos[30] = XMFLOAT3(-1, 0, 1);
+			impostorVertices_nor[30] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[30] = XMFLOAT2(stepX * 5, 0);
 
-			impostorVertices[31].pos = XMFLOAT4(-1, 0, -1, 0);
-			impostorVertices[31].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[31].tex = XMFLOAT4(stepX * 5, 1, 0, 0);
+			impostorVertices_pos[31] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[31] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[31] = XMFLOAT2(stepX * 5, 1);
 
-			impostorVertices[32].pos = XMFLOAT4(1, 0, 1, 0);
-			impostorVertices[32].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[32].tex = XMFLOAT4(stepX * 6, 0, 0, 0);
+			impostorVertices_pos[32] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[32] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[32] = XMFLOAT2(stepX * 6, 0);
 
-			impostorVertices[33].pos = XMFLOAT4(-1, 0, -1, 0);
-			impostorVertices[33].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[33].tex = XMFLOAT4(stepX * 5, 1, 0, 0);
+			impostorVertices_pos[33] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[33] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[33] = XMFLOAT2(stepX * 5, 1);
 
-			impostorVertices[34].pos = XMFLOAT4(1, 0, -1, 0);
-			impostorVertices[34].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[34].tex = XMFLOAT4(stepX * 6, 1, 0, 0);
+			impostorVertices_pos[34] = XMFLOAT3(1, 0, -1);
+			impostorVertices_nor[34] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[34] = XMFLOAT2(stepX * 6, 1);
 
-			impostorVertices[35].pos = XMFLOAT4(1, 0, 1, 0);
-			impostorVertices[35].nor = XMFLOAT4(0, 1, 0, 1);
-			impostorVertices[35].tex = XMFLOAT4(stepX * 6, 0, 0, 0);
+			impostorVertices_pos[35] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[35] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[35] = XMFLOAT2(stepX * 6, 0);
 
 
-			MeshComponent::Vertex_POS impostorVertices_POS[ARRAYSIZE(impostorVertices)];
-			MeshComponent::Vertex_TEX impostorVertices_TEX[ARRAYSIZE(impostorVertices)];
-			for (int i = 0; i < ARRAYSIZE(impostorVertices); ++i)
+			MeshComponent::Vertex_POS impostorVertices_POS[count];
+			MeshComponent::Vertex_TEX impostorVertices_TEX[count];
+			for (int i = 0; i < count; ++i)
 			{
-				impostorVertices_POS[i].FromFULL(impostorVertices[i]);
-				impostorVertices_TEX[i].FromFULL(impostorVertices[i]);
+				impostorVertices_POS[i].FromFULL(impostorVertices_pos[i], impostorVertices_nor[i], 0);
+				impostorVertices_TEX[i].FromFULL(impostorVertices_tex[i]);
 			}
 
 
@@ -1374,7 +1378,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND_MATID",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_OBJECT_DEBUG] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_DEBUG]->code.data, vertexShaders[VSTYPE_OBJECT_DEBUG]->code.size, vertexLayouts[VLTYPE_OBJECT_DEBUG]);
@@ -1382,9 +1386,9 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND_MATID",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",					0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",					0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1401,7 +1405,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND_MATID",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1415,8 +1419,8 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND_MATID",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",					0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1430,7 +1434,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND_MATID",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -1444,7 +1448,7 @@ void wiRenderer::LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_WIND_MATID",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
 			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
@@ -3482,23 +3486,23 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				GetDevice()->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
 				GetDevice()->BindUAVs(CS, sos, 0, ARRAYSIZE(sos), threadID);
 
-				GetDevice()->Dispatch((UINT)ceilf((float)mesh.vertices_POS.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
+				GetDevice()->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
 				GetDevice()->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
 				//GetDevice()->TransitionBarrier(sos, ARRAYSIZE(sos), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, threadID);
 			}
-			else if (mesh.IsDynamicVB())
-			{
-				// Upload CPU skinned vertex buffer (Soft body VB)
-				size_t size_pos = sizeof(MeshComponent::Vertex_POS) * mesh.vertices_Transformed_POS.size();
-				size_t size_pre = sizeof(MeshComponent::Vertex_POS) * mesh.vertices_Transformed_PRE.size();
-				UINT offset;
-				void* vertexData = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, size_pos + size_pre, offset, threadID);
-				mesh.bufferOffset_POS = offset;
-				mesh.bufferOffset_PRE = offset + (UINT)size_pos;
-				memcpy(vertexData, mesh.vertices_Transformed_POS.data(), size_pos);
-				memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos), mesh.vertices_Transformed_PRE.data(), size_pre);
-				GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-			}
+			//else if (mesh.IsDynamicVB())
+			//{
+			//	// Upload CPU skinned vertex buffer (Soft body VB)
+			//	size_t size_pos = sizeof(MeshComponent::Vertex_POS) * mesh.vertices_Transformed_POS.size();
+			//	size_t size_pre = sizeof(MeshComponent::Vertex_POS) * mesh.vertices_Transformed_PRE.size();
+			//	UINT offset;
+			//	void* vertexData = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, size_pos + size_pre, offset, threadID);
+			//	mesh.bufferOffset_POS = offset;
+			//	mesh.bufferOffset_PRE = offset + (UINT)size_pos;
+			//	memcpy(vertexData, mesh.vertices_Transformed_POS.data(), size_pos);
+			//	memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos), mesh.vertices_Transformed_PRE.data(), size_pre);
+			//	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+			//}
 
 		}
 
@@ -5235,7 +5239,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 			for (MeshComponent::MeshSubset& subset : mesh.subsets)
 			{
-				if (subset.subsetIndices.empty())
+				if (subset.indexCount == 0)
 				{
 					continue;
 				}
@@ -5396,7 +5400,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				SetAlphaRef(material.alphaRef, threadID);
 
-				device->DrawIndexedInstanced((int)subset.subsetIndices.size(), k, subset.indexBufferOffset, 0, 0, threadID);
+				device->DrawIndexedInstanced((int)subset.indexCount, k, subset.indexOffset, 0, 0, threadID);
 			}
 
 		}
@@ -7828,22 +7832,14 @@ RAY wiRenderer::getPickRay(long cursorX, long cursorY) {
 	return RAY(lineStart, rayDirection);
 }
 
-wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask, bool dynamicObjects, bool onlyVisible)
+wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask)
 {
 	Scene& scene = GetScene();
 
 	RayIntersectWorldResult result;
 
-	//if (spTree != nullptr)
+	if (scene.objects.GetCount() > 0)
 	{
-		//CulledList culledObjects;
-		//spTree->getVisible(ray, culledObjects);
-
-		//if (culledObjects.empty())
-		//{
-		//	return result;
-		//}
-
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
@@ -7869,14 +7865,6 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 				{
 					continue;
 				}
-				if (!dynamicObjects && object.IsDynamic())
-				{
-					continue;
-				}
-				if (onlyVisible && object.IsOccluded() && GetOcclusionCullingEnabled())
-				{
-					continue;
-				}
 
 				const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
 				if (!ray.intersects(cullable.aabb))
@@ -7885,11 +7873,11 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 				}
 
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-				if (mesh.vertices_POS.size() >= _arraySize)
+				if (mesh.vertex_positions.size() >= _arraySize)
 				{
 					// grow preallocated vector helper array
 					_mm_free(_vertices);
-					_arraySize = (mesh.vertices_POS.size() + 1) * 2;
+					_arraySize = (mesh.vertex_positions.size() + 1) * 2;
 					_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
 				}
 
@@ -7901,62 +7889,68 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-				MeshComponent::Vertex_FULL _tmpvert;
-
 				if (mesh.IsSkinned())
 				{
 					const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
-					for (size_t vertexI = 0; vertexI < mesh.vertices_POS.size(); ++vertexI)
+					for (size_t vertexI = 0; vertexI < mesh.vertex_positions.size(); ++vertexI)
 					{
-						XMVECTOR pos = mesh.vertices_POS[vertexI].LoadPOS();
+						XMVECTOR pos = XMLoadFloat3(&mesh.vertex_positions[vertexI]);
 
-						const XMFLOAT4& ind = mesh.vertices_BON[vertexI].GetInd_FULL();
-						const XMFLOAT4& wei = mesh.vertices_BON[vertexI].GetWei_FULL();
+						const XMUINT4& ind = mesh.vertex_boneindices[vertexI];
+						const XMFLOAT4& wei = mesh.vertex_boneweights[vertexI];
 
-						XMMATRIX sump = XMLoadFloat4x4(&armature.skinningMatrices[(int)ind.x]) * wei.x;
-						sump += XMLoadFloat4x4(&armature.skinningMatrices[(int)ind.y]) * wei.y;
-						sump += XMLoadFloat4x4(&armature.skinningMatrices[(int)ind.z]) * wei.z;
-						sump += XMLoadFloat4x4(&armature.skinningMatrices[(int)ind.w]) * wei.w;
+						XMMATRIX sump = XMLoadFloat4x4(&armature.skinningMatrices[ind.x]) * wei.x;
+						sump += XMLoadFloat4x4(&armature.skinningMatrices[ind.y]) * wei.y;
+						sump += XMLoadFloat4x4(&armature.skinningMatrices[ind.z]) * wei.z;
+						sump += XMLoadFloat4x4(&armature.skinningMatrices[ind.w]) * wei.w;
 
 						_vertices[i] = XMVector3Transform(pos, sump);
 					}
 				}
 				else if (mesh.IsDynamicVB())
 				{
-					for (size_t i = 0; i < mesh.vertices_Transformed_POS.size(); ++i)
-					{
-						_vertices[i] = mesh.vertices_Transformed_POS[i].LoadPOS();
-					}
+					//for (size_t i = 0; i < mesh.vertices_Transformed_POS.size(); ++i)
+					//{
+					//	_vertices[i] = mesh.vertices_Transformed_POS[i].LoadPOS();
+					//}
+					assert(0);
 				}
 				else
 				{
-					for (size_t i = 0; i < mesh.vertices_POS.size(); ++i)
+					for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 					{
-						_vertices[i] = mesh.vertices_POS[i].LoadPOS();
+						_vertices[i] = XMLoadFloat3(&mesh.vertex_positions[i]);
 					}
 				}
 
-				for (size_t i = 0; i < mesh.indices.size(); i += 3)
+				int subsetCounter = 0;
+				for (auto& subset : mesh.subsets)
 				{
-					int i0 = mesh.indices[i], i1 = mesh.indices[i + 1], i2 = mesh.indices[i + 2];
-					float distance;
-					if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
-						XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
-						distance = wiMath::Distance(pos, rayOrigin);
-
-						if (distance < result.distance)
+						uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
+						uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
+						uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+						float distance;
+						if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
 						{
-							XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
+							XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+							distance = wiMath::Distance(pos, rayOrigin);
 
-							result.entity = entity;
-							XMStoreFloat3(&result.position, pos);
-							XMStoreFloat3(&result.normal, nor);
-							result.distance = distance;
-							result.subsetIndex = (int)mesh.vertices_POS[i0].GetMaterialIndex();
+							if (distance < result.distance)
+							{
+								XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
+
+								result.entity = entity;
+								XMStoreFloat3(&result.position, pos);
+								XMStoreFloat3(&result.normal, nor);
+								result.distance = distance;
+								result.subsetIndex = subsetCounter;
+							}
 						}
 					}
+					subsetCounter++;
 				}
 
 			}
@@ -8282,7 +8276,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 
 		for (MeshComponent::MeshSubset& subset : mesh.subsets)
 		{
-			if (subset.subsetIndices.empty())
+			if (subset.indexCount == 0)
 			{
 				continue;
 			}
@@ -8294,7 +8288,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 			GetDevice()->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
 			GetDevice()->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
 
-			GetDevice()->DrawIndexedInstanced((int)subset.subsetIndices.size(), 1, subset.indexBufferOffset, 0, 0, threadID);
+			GetDevice()->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
 
 		}
 

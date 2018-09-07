@@ -67,9 +67,6 @@
     <None Include="volumeLightHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="windHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="imageHF.hlsli">
       <Filter>HF</Filter>
     </None>

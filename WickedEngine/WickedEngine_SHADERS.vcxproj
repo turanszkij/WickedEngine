@@ -45,7 +45,6 @@
     <None Include="volumeLightHF.hlsli" />
     <None Include="voxelConeTracingHF.hlsli" />
     <None Include="voxelHF.hlsli" />
-    <None Include="windHF.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="bloomSeparatePS.hlsl">

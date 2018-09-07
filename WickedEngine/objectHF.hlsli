@@ -18,7 +18,6 @@
 
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
-#include "windHF.hlsli"
 #include "ditherHF.hlsli"
 #include "tangentComputeHF.hlsli"
 #include "depthConvertHF.hlsli"

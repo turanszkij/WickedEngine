@@ -195,7 +195,7 @@ void MeshWindow::SetEntity(Entity entity)
 
 		stringstream ss("");
 		ss << "Mesh name: " << name.name << endl;
-		ss << "Vertex count: " << mesh->vertices_POS.size() << endl;
+		ss << "Vertex count: " << mesh->vertex_positions.size() << endl;
 		ss << "Index count: " << mesh->indices.size() << endl;
 		ss << "Subset count: " << mesh->subsets.size() << endl;
 		meshInfoLabel->SetText(ss.str());

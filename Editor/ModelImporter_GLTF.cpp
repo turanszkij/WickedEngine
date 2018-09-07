@@ -18,7 +18,7 @@ using namespace wiECS;
 
 
 // Transform the data from glTF space to engine-space:
-const bool transform_to_LH = true;
+static const bool transform_to_LH = true;
 
 
 namespace tinygltf
@@ -181,7 +181,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 			if (node->skin >= 0)
 			{
 				MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-				assert(!mesh.vertices_BON.empty());
+				assert(!mesh.vertex_boneindices.empty());
 				mesh.armatureID = state.armatureArray[node->skin];
 			}
 		}
@@ -229,7 +229,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 
 	// Important:
 	//	Do NOT call UpdateTransform, because Attach will query parent world matrix, and invert it for bind matrix
-	//	But here we load everything in bind space already, so it must be IDENTITY!
+	//	But here we load everything in bind space (relative to parent) already, so it must be IDENTITY!
 
 	if (parent != INVALID_ENTITY)
 	{
@@ -516,11 +516,11 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 		mesh.renderable = true;
 
-		XMFLOAT3 min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-		XMFLOAT3 max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
+		int matIndex = -1;
 		for (auto& prim : x.primitives)
 		{
+			matIndex++;
+
 			assert(prim.indices >= 0);
 
 			// Fill indices:
@@ -530,9 +530,15 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 			int stride = accessor.ByteStride(bufferView);
 			size_t count = accessor.count;
-
 			size_t offset = mesh.indices.size();
 			mesh.indices.resize(offset + count);
+
+			assert(prim.material >= 0);
+
+			mesh.subsets.push_back(MeshComponent::MeshSubset());
+			mesh.subsets.back().materialID = state.materialArray[prim.material];
+			mesh.subsets.back().indexOffset = (uint32_t)offset;
+			mesh.subsets.back().indexCount = (uint32_t)count;
 
 			const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
@@ -569,29 +575,8 @@ Entity ImportModel_GLTF(const std::string& fileName)
 			}
 
 
-			// Create mesh subset:
-			MeshComponent::MeshSubset subset;
-
-			if (prim.material >= 0)
-			{
-				subset.materialID = state.materialArray[prim.material];
-			}
-			else
-			{
-				assert(0);
-			}
-
-			mesh.subsets.push_back(subset);
-		}
-
-		bool hasBoneWeights = false;
-		bool hasBoneIndices = false;
-
-		int matIndex = -1;
-		for (auto& prim : x.primitives)
-		{
-			matIndex++;
-			size_t offset = mesh.vertices_FULL.size();
+			bool hasBoneWeights = false;
+			bool hasBoneIndices = false;
 
 			for (auto& attr : prim.attributes)
 			{
@@ -605,52 +590,41 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				int stride = accessor.ByteStride(bufferView);
 				size_t count = accessor.count;
 
-				if (mesh.vertices_FULL.size() == offset)
-				{
-					mesh.vertices_FULL.resize(offset + count);
-				}
-
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 				if (!attr_name.compare("POSITION"))
 				{
+					mesh.vertex_positions.resize(mesh.vertex_positions.size() + count);
 					assert(stride == 12);
 					for (size_t i = 0; i < count; ++i)
 					{
-						XMFLOAT3 pos = ((XMFLOAT3*)data)[i];
-
-						mesh.vertices_FULL[offset + i].pos = XMFLOAT4(pos.x, pos.y, pos.z, 0);
-
-						min = wiMath::Min(min, pos);
-						max = wiMath::Max(max, pos);
+						mesh.vertex_positions[offset + i] = ((XMFLOAT3*)data)[i];
 					}
 				}
 				else if (!attr_name.compare("NORMAL"))
 				{
+					mesh.vertex_normals.resize(mesh.vertex_normals.size() + count);
 					assert(stride == 12);
 					for (size_t i = 0; i < count; ++i)
 					{
-						XMFLOAT3 nor = ((XMFLOAT3*)data)[i];
-
-						mesh.vertices_FULL[offset + i].nor.x = nor.x;
-						mesh.vertices_FULL[offset + i].nor.y = nor.y;
-						mesh.vertices_FULL[offset + i].nor.z = nor.z;
+						mesh.vertex_normals[offset + i] = ((XMFLOAT3*)data)[i];
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
 				{
+					mesh.vertex_texcoords.resize(mesh.vertex_texcoords.size() + count);
 					assert(stride == 8);
 					for (size_t i = 0; i < count; ++i)
 					{
 						const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
 
-						mesh.vertices_FULL[offset + i].tex.x = tex.x;
-						mesh.vertices_FULL[offset + i].tex.y = tex.y;
-						mesh.vertices_FULL[offset + i].tex.z = (float)matIndex /*prim.material*/;
+						mesh.vertex_texcoords[offset + i].x = tex.x;
+						mesh.vertex_texcoords[offset + i].y = tex.y;
 					}
 				}
 				else if (!attr_name.compare("JOINTS_0"))
 				{
+					mesh.vertex_boneindices.resize(mesh.vertex_boneindices.size() + count);
 					if (stride == 4)
 					{
 						hasBoneIndices = true;
@@ -663,10 +637,10 @@ Entity ImportModel_GLTF(const std::string& fileName)
 						{
 							const JointTmp& joint = ((JointTmp*)data)[i];
 
-							mesh.vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
-							mesh.vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
-							mesh.vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
-							mesh.vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+							mesh.vertex_boneindices[offset + i].x = joint.ind[0];
+							mesh.vertex_boneindices[offset + i].y = joint.ind[1];
+							mesh.vertex_boneindices[offset + i].z = joint.ind[2];
+							mesh.vertex_boneindices[offset + i].w = joint.ind[3];
 						}
 					}
 					else if (stride == 8)
@@ -681,10 +655,10 @@ Entity ImportModel_GLTF(const std::string& fileName)
 						{
 							const JointTmp& joint = ((JointTmp*)data)[i];
 
-							mesh.vertices_FULL[offset + i].ind.x = (float)joint.ind[0];
-							mesh.vertices_FULL[offset + i].ind.y = (float)joint.ind[1];
-							mesh.vertices_FULL[offset + i].ind.z = (float)joint.ind[2];
-							mesh.vertices_FULL[offset + i].ind.w = (float)joint.ind[3];
+							mesh.vertex_boneindices[offset + i].x = joint.ind[0];
+							mesh.vertex_boneindices[offset + i].y = joint.ind[1];
+							mesh.vertex_boneindices[offset + i].z = joint.ind[2];
+							mesh.vertex_boneindices[offset + i].w = joint.ind[3];
 						}
 					}
 					else
@@ -694,11 +668,12 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else if (!attr_name.compare("WEIGHTS_0"))
 				{
+					mesh.vertex_boneweights.resize(mesh.vertex_boneweights.size() + count);
 					hasBoneWeights = true;
 					assert(stride == 16);
 					for (size_t i = 0; i < count; ++i)
 					{
-						mesh.vertices_FULL[offset + i].wei = ((XMFLOAT4*)data)[i];
+						mesh.vertex_boneweights[offset + i] = ((XMFLOAT4*)data)[i];
 					}
 				}
 
@@ -706,7 +681,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 		}
 
-		mesh.aabb.create(min, max);
 		mesh.CreateRenderData();
 
 		model.meshes.insert(meshEntity);
