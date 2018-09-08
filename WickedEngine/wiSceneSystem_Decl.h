@@ -11,7 +11,8 @@ namespace wiSceneSystem
 	struct MaterialComponent;
 	struct MeshComponent;
 	struct ObjectComponent;
-	struct PhysicsComponent;
+	struct RigidBodyPhysicsComponent;
+	struct SoftBodyPhysicsComponent;
 	struct CullableComponent;
 	struct ArmatureComponent;
 	struct LightComponent;

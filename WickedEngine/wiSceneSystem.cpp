@@ -284,7 +284,8 @@ namespace wiSceneSystem
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
-				const XMFLOAT3& nor = vertex_normals[i];
+				XMFLOAT3& nor = vertex_normals[i];
+				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 				uint32_t subsetIndex = subsetIndicesLUT[(uint32_t)i];
 				vertices[i].FromFULL(pos, nor, subsetIndex);
 
@@ -356,7 +357,7 @@ namespace wiSceneSystem
 			assert(SUCCEEDED(hr));
 		}
 
-		// texture coordinate buffers:
+		// vertexBuffer - TEXCOORDS
 		{
 			std::vector<Vertex_TEX> vertices(vertex_texcoords.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
@@ -381,176 +382,232 @@ namespace wiSceneSystem
 		}
 
 	}
-	void MeshComponent::RemoveVertex(size_t index)
-	{
-		for (size_t ind = 0; ind < indices.size(); ++ind)
-		{
-			if (indices[ind] == index)
-			{
-				indices[ind] = static_cast<uint32_t>(index);
-			}
-			else if (indices[ind] > index && indices[ind] > 0)
-			{
-				indices[ind]--;
-			}
-		}
-
-		vertex_positions.erase(vertex_positions.begin() + index);
-		vertex_normals.erase(vertex_normals.begin() + index);
-		vertex_texcoords.erase(vertex_texcoords.begin() + index);
-		vertex_boneindices.erase(vertex_boneindices.begin() + index);
-		vertex_boneweights.erase(vertex_boneweights.begin() + index);
-	}
 	void MeshComponent::ComputeNormals(bool smooth)
 	{
-		// Start recalculating normals:
+		assert(0); // todo: fix
 
-		if (smooth)
-		{
-			// Compute smooth surface normals:
+		//std::vector<uint32_t> vertex_subsetindices(vertex_positions.size());
+		//uint32_t subsetCounter = 0;
+		//for (auto& subset : subsets)
+		//{
+		//	for (uint32_t i = 0; i < subset.indexCount; ++i)
+		//	{
+		//		uint32_t index = indices[subset.indexOffset + i];
+		//		vertex_subsetindices[index] = subsetCounter;
+		//	}
+		//	subsetCounter++;
+		//}
 
-			// 1.) Zero normals, they will be averaged later
-			for (size_t i = 0; i < vertex_normals.size() - 1; i++)
-			{
-				vertex_normals[i] = XMFLOAT3(0, 0, 0);
-			}
+		//// Start recalculating normals:
 
-			// 2.) Find identical vertices by POSITION, accumulate face normals
-			for (size_t i = 0; i < vertex_positions.size() - 1; i++)
-			{
-				XMFLOAT3& v_search = vertex_positions[i];
-				XMFLOAT3& v_search_nor = vertex_normals[i];
+		//if (smooth)
+		//{
+		//	// Compute smooth surface normals:
 
-				for (size_t ind = 0; ind < indices.size() / 3; ++ind)
-				{
-					uint32_t i0 = indices[ind * 3 + 0];
-					uint32_t i1 = indices[ind * 3 + 1];
-					uint32_t i2 = indices[ind * 3 + 2];
+		//	// 1.) Zero normals, they will be averaged later
+		//	for (size_t i = 0; i < vertex_normals.size(); i++)
+		//	{
+		//		vertex_normals[i] = XMFLOAT3(0, 0, 0);
+		//	}
 
-					XMFLOAT3& v0 = vertex_positions[i0];
-					XMFLOAT3& v1 = vertex_positions[i1];
-					XMFLOAT3& v2 = vertex_positions[i2];
+		//	// 2.) Find identical vertices by POSITION, accumulate face normals
+		//	for (size_t i = 0; i < vertex_positions.size(); i++)
+		//	{
+		//		XMFLOAT3& v_search_pos = vertex_positions[i];
 
-					bool match_pos0 =
-						fabs(v_search.x - v0.x) < FLT_EPSILON &&
-						fabs(v_search.y - v0.y) < FLT_EPSILON &&
-						fabs(v_search.z - v0.z) < FLT_EPSILON;
+		//		for (size_t ind = 0; ind < indices.size() / 3; ++ind)
+		//		{
+		//			uint32_t i0 = indices[ind * 3 + 0];
+		//			uint32_t i1 = indices[ind * 3 + 1];
+		//			uint32_t i2 = indices[ind * 3 + 2];
 
-					bool match_pos1 =
-						fabs(v_search.x - v1.x) < FLT_EPSILON &&
-						fabs(v_search.y - v1.y) < FLT_EPSILON &&
-						fabs(v_search.z - v1.z) < FLT_EPSILON;
+		//			XMFLOAT3& v0 = vertex_positions[i0];
+		//			XMFLOAT3& v1 = vertex_positions[i1];
+		//			XMFLOAT3& v2 = vertex_positions[i2];
 
-					bool match_pos2 =
-						fabs(v_search.x - v2.x) < FLT_EPSILON &&
-						fabs(v_search.y - v2.y) < FLT_EPSILON &&
-						fabs(v_search.z - v2.z) < FLT_EPSILON;
+		//			bool match_pos0 =
+		//				fabs(v_search_pos.x - v0.x) < FLT_EPSILON &&
+		//				fabs(v_search_pos.y - v0.y) < FLT_EPSILON &&
+		//				fabs(v_search_pos.z - v0.z) < FLT_EPSILON;
 
-					if (match_pos0 || match_pos1 || match_pos2)
-					{
-						XMVECTOR U = XMLoadFloat3(&v2) - XMLoadFloat3(&v0);
-						XMVECTOR V = XMLoadFloat3(&v1) - XMLoadFloat3(&v0);
+		//			bool match_pos1 =
+		//				fabs(v_search_pos.x - v1.x) < FLT_EPSILON &&
+		//				fabs(v_search_pos.y - v1.y) < FLT_EPSILON &&
+		//				fabs(v_search_pos.z - v1.z) < FLT_EPSILON;
 
-						XMVECTOR N = XMVector3Cross(U, V);
-						N = XMVector3Normalize(N);
+		//			bool match_pos2 =
+		//				fabs(v_search_pos.x - v2.x) < FLT_EPSILON &&
+		//				fabs(v_search_pos.y - v2.y) < FLT_EPSILON &&
+		//				fabs(v_search_pos.z - v2.z) < FLT_EPSILON;
 
-						XMFLOAT3 normal;
-						XMStoreFloat3(&normal, N);
+		//			if (match_pos0 || match_pos1 || match_pos2)
+		//			{
+		//				XMVECTOR U = XMLoadFloat3(&v2) - XMLoadFloat3(&v0);
+		//				XMVECTOR V = XMLoadFloat3(&v1) - XMLoadFloat3(&v0);
 
-						v_search_nor.x += normal.x;
-						v_search_nor.y += normal.y;
-						v_search_nor.z += normal.z;
-					}
+		//				XMVECTOR N = XMVector3Cross(U, V);
+		//				N = XMVector3Normalize(N);
 
-				}
-			}
+		//				XMFLOAT3 normal;
+		//				XMStoreFloat3(&normal, N);
 
-			std::unordered_map<uint32_t, uint32_t> subsetIndicesLUT;
-			uint32_t subsetCounter = 0;
-			for (auto& subset : subsets)
-			{
-				for (uint32_t i = 0; i < subset.indexCount; ++i)
-				{
-					uint32_t index = indices[subset.indexOffset + i];
-					subsetIndicesLUT[index] = subsetCounter;
-				}
-				subsetCounter++;
-			}
+		//				vertex_normals[i].x += normal.x;
+		//				vertex_normals[i].y += normal.y;
+		//				vertex_normals[i].z += normal.z;
+		//			}
 
-			// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
-			for (size_t i = 0; i < vertex_positions.size() - 1; i++)
-			{
-				const XMFLOAT3& p0 = vertex_positions[i];
-				const XMFLOAT3& n0 = vertex_normals[i];
-				const XMFLOAT2& t0 = vertex_texcoords[i];
-				const uint32_t s0 = subsetIndicesLUT[(uint32_t)i];
+		//		}
+		//	}
 
-				for (size_t j = i + 1; j < vertex_positions.size(); j++)
-				{
-					const XMFLOAT3& p1 = vertex_positions[j];
-					const XMFLOAT3& n1 = vertex_normals[j];
-					const XMFLOAT2& t1 = vertex_texcoords[j];
-					const uint32_t s1 = subsetIndicesLUT[(uint32_t)j];
+		//	// 3.) Find unique vertices by POSITION and TEXCOORD and MATERIAL and remove duplicates
+		//	for (size_t i = 0; i < vertex_positions.size() - 1; i++)
+		//	{
+		//		const XMFLOAT3& p0 = vertex_positions[i];
+		//		const XMFLOAT3& n0 = vertex_normals[i];
+		//		const XMFLOAT2& t0 = vertex_texcoords[i];
+		//		const uint32_t  s0 = vertex_subsetindices[i];
 
-					bool unique_pos =
-						fabs(p0.x - p1.x) < FLT_EPSILON &&
-						fabs(p0.y - p1.y) < FLT_EPSILON &&
-						fabs(p0.z - p1.z) < FLT_EPSILON;
+		//		for (size_t j = i + 1; j < vertex_positions.size(); j++)
+		//		{
+		//			const XMFLOAT3& p1 = vertex_positions[j];
+		//			const XMFLOAT3& n1 = vertex_normals[j];
+		//			const XMFLOAT2& t1 = vertex_texcoords[j];
+		//			const uint32_t  s1 = vertex_subsetindices[j];
 
-					bool unique_tex =
-						fabs(t0.x - t1.x) < FLT_EPSILON &&
-						fabs(t0.y - t1.y) < FLT_EPSILON &&
-						s0 == s1;
+		//			bool unique_pos =
+		//				fabs(p0.x - p1.x) < FLT_EPSILON &&
+		//				fabs(p0.y - p1.y) < FLT_EPSILON &&
+		//				fabs(p0.z - p1.z) < FLT_EPSILON;
 
-					if (unique_pos && unique_tex)
-					{
-						RemoveVertex(j);
-					}
+		//			bool unique_tex =
+		//				fabs(t0.x - t1.x) < FLT_EPSILON &&
+		//				fabs(t0.y - t1.y) < FLT_EPSILON &&
+		//				s0 == s1;
 
-				}
-			}
-		}
-		else
-		{
-			// Compute hard surface normals:
+		//			if (unique_pos && unique_tex)
+		//			{
+		//				for (size_t ind = 0; ind < indices.size(); ++ind)
+		//				{
+		//					if (indices[ind] == j)
+		//					{
+		//						indices[ind] = static_cast<uint32_t>(i);
+		//					}
+		//					else if (indices[ind] > j && indices[ind] > 0)
+		//					{
+		//						indices[ind]--;
+		//					}
+		//				}
 
-			std::vector<uint32_t> newIndexBuffer;
-			std::vector<XMFLOAT3> newVertexBuffer;
+		//				if (j < vertex_subsetindices.size())
+		//				{
+		//					vertex_subsetindices.erase(vertex_subsetindices.begin() + j);
+		//				}
 
-			for (size_t face = 0; face < indices.size() / 3; face++)
-			{
-				uint32_t i0 = indices[face * 3 + 0];
-				uint32_t i1 = indices[face * 3 + 1];
-				uint32_t i2 = indices[face * 3 + 2];
+		//				if (j < vertex_positions.size())
+		//				{
+		//					vertex_positions.erase(vertex_positions.begin() + j);
+		//				}
+		//				if (j < vertex_normals.size())
+		//				{
+		//					vertex_normals.erase(vertex_normals.begin() + j);
+		//				}
+		//				if (j < vertex_texcoords.size())
+		//				{
+		//					vertex_texcoords.erase(vertex_texcoords.begin() + j);
+		//				}
+		//				if (j < vertex_boneindices.size())
+		//				{
+		//					vertex_boneindices.erase(vertex_boneindices.begin() + j);
+		//				}
+		//				if (j < vertex_boneweights.size())
+		//				{
+		//					vertex_boneweights.erase(vertex_boneweights.begin() + j);
+		//				}
+		//			}
 
-				XMFLOAT3& p0 = vertex_positions[i0];
-				XMFLOAT3& p1 = vertex_positions[i1];
-				XMFLOAT3& p2 = vertex_positions[i2];
+		//		}
+		//	}
+		//}
+		//else
+		//{
+		//	// Compute hard surface normals:
 
-				XMVECTOR U = XMLoadFloat3(&p2) - XMLoadFloat3(&p0);
-				XMVECTOR V = XMLoadFloat3(&p1) - XMLoadFloat3(&p0);
+		//	std::vector<uint32_t> newIndexBuffer;
+		//	std::vector<XMFLOAT3> newPositionsBuffer;
+		//	std::vector<XMFLOAT3> newNormalsBuffer;
+		//	std::vector<XMFLOAT2> newTexcoordsBuffer;
+		//	std::vector<uint32_t> newSubsetIndexBuffer;
 
-				XMVECTOR N = XMVector3Cross(U, V);
-				N = XMVector3Normalize(N);
+		//	for (size_t face = 0; face < indices.size() / 3; face++)
+		//	{
+		//		uint32_t i0 = indices[face * 3 + 0];
+		//		uint32_t i1 = indices[face * 3 + 1];
+		//		uint32_t i2 = indices[face * 3 + 2];
 
-				XMFLOAT3 normal;
-				XMStoreFloat3(&normal, N);
+		//		XMFLOAT3& p0 = vertex_positions[i0];
+		//		XMFLOAT3& p1 = vertex_positions[i1];
+		//		XMFLOAT3& p2 = vertex_positions[i2];
 
-				newVertexBuffer.push_back(normal);
-				newVertexBuffer.push_back(normal);
-				newVertexBuffer.push_back(normal);
+		//		XMVECTOR U = XMLoadFloat3(&p2) - XMLoadFloat3(&p0);
+		//		XMVECTOR V = XMLoadFloat3(&p1) - XMLoadFloat3(&p0);
 
-				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
-				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
-				newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
-			}
+		//		XMVECTOR N = XMVector3Cross(U, V);
+		//		N = XMVector3Normalize(N);
 
-			// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
-			vertex_normals = newVertexBuffer;
-			indices = newIndexBuffer;
-		}
+		//		XMFLOAT3 normal;
+		//		XMStoreFloat3(&normal, N);
 
-		CreateRenderData();
+		//		newPositionsBuffer.push_back(p0);
+		//		newPositionsBuffer.push_back(p0);
+		//		newPositionsBuffer.push_back(p0);
+
+		//		newNormalsBuffer.push_back(normal);
+		//		newNormalsBuffer.push_back(normal);
+		//		newNormalsBuffer.push_back(normal);
+
+		//		newTexcoordsBuffer.push_back(vertex_texcoords[i0]);
+		//		newTexcoordsBuffer.push_back(vertex_texcoords[i0]);
+		//		newTexcoordsBuffer.push_back(vertex_texcoords[i0]);
+
+		//		newSubsetIndexBuffer.push_back(vertex_subsetindices[i0]);
+		//		newSubsetIndexBuffer.push_back(vertex_subsetindices[i0]);
+		//		newSubsetIndexBuffer.push_back(vertex_subsetindices[i0]);
+
+		//		newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+		//		newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+		//		newIndexBuffer.push_back(static_cast<uint32_t>(newIndexBuffer.size()));
+		//	}
+
+		//	// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
+		//	vertex_positions = newPositionsBuffer;
+		//	vertex_normals = newNormalsBuffer;
+		//	vertex_texcoords = newTexcoordsBuffer;
+		//	indices = newIndexBuffer;
+
+		//	for (auto& subset : subsets)
+		//	{
+		//		subset.indexCount = 0;
+		//		subset.indexOffset = 0;
+		//	}
+		//	for (size_t i = 0; i < indices.size(); ++i)
+		//	{
+		//		uint32_t index = indices[i];
+		//		uint32_t subsetIndex = vertex_subsetindices[index];
+		//		subsets[subsetIndex].indexCount++;
+		//	}
+		//	if (subsets.size() > 1)
+		//	{
+		//		for (size_t i = 0; i < subsets.size() - 1; ++i)
+		//		{
+		//			subsets[i + 1].indexOffset = subsets[i].indexOffset + subsets[i].indexCount;
+		//		}
+		//	}
+		//}
+
+		//// Restore subsets:
+
+
+		//CreateRenderData();
 	}
 	void MeshComponent::FlipCulling()
 	{
@@ -675,7 +732,7 @@ namespace wiSceneSystem
 
 		RunArmatureUpdateSystem(transforms, armatures);
 
-		RunPhysicsUpdateSystem(transforms, meshes, objects, physicscomponents);
+		RunPhysicsUpdateSystem(transforms, meshes, objects, rigidbodies, softbodies);
 
 		RunMaterialUpdateSystem(materials, dt);
 
@@ -702,7 +759,8 @@ namespace wiSceneSystem
 			materials.Remove(entity);
 			meshes.Remove(entity);
 			objects.Remove(entity);
-			physicscomponents.Remove(entity);
+			rigidbodies.Remove(entity);
+			softbodies.Remove(entity);
 			cullables.Remove(entity);
 			armatures.Remove(entity);
 			lights.Remove(entity);
@@ -729,7 +787,8 @@ namespace wiSceneSystem
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		objects.Remove(entity);
-		physicscomponents.Remove(entity);
+		rigidbodies.Remove(entity);
+		softbodies.Remove(entity);
 		cullables.Remove(entity);
 		armatures.Remove(entity);
 		lights.Remove(entity);
@@ -744,7 +803,7 @@ namespace wiSceneSystem
 	{
 		for (size_t i = 0; i < names.GetCount(); ++i)
 		{
-			if (strcmp(names[i].name, name.c_str()) == 0)
+			if (names[i] == name)
 			{
 				return names.GetEntity(i);
 			}
@@ -1257,19 +1316,24 @@ namespace wiSceneSystem
 		ComponentManager<TransformComponent>& transforms,
 		ComponentManager<MeshComponent>& meshes,
 		ComponentManager<ObjectComponent>& objects,
-		ComponentManager<PhysicsComponent>& physicscomponents
+		ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
+		ComponentManager<SoftBodyPhysicsComponent>& softbodies
 	)
 	{
-		for (size_t i = 0; i < physicscomponents.GetCount(); ++i)
+		for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
 		{
-			PhysicsComponent& physicscomponent = physicscomponents[i];
-			Entity entity = physicscomponents.GetEntity(i);
+			RigidBodyPhysicsComponent& rigidbody = rigidbodies[i];
+			Entity entity = rigidbodies.GetEntity(i);
 
-			if (physicscomponent.softBody)
-			{
-				MeshComponent& mesh = *meshes.GetComponent(entity);
-				mesh.dynamicVB = true;
-			}
+		}
+		for (size_t i = 0; i < softbodies.GetCount(); ++i)
+		{
+			SoftBodyPhysicsComponent& softbody = softbodies[i];
+			Entity entity = softbodies.GetEntity(i);
+
+			MeshComponent& mesh = *meshes.GetComponent(entity);
+			mesh.dynamicVB = true;
+
 		}
 	}
 	void RunMaterialUpdateSystem(ComponentManager<MaterialComponent>& materials, float dt)

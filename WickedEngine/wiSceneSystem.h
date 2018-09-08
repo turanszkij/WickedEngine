@@ -24,6 +24,7 @@ namespace wiSceneSystem
 		char name[128];
 
 		inline void operator=(const std::string& str) { strcpy_s(name, str.c_str()); }
+		inline bool operator==(const std::string& str) const { return strcmp(name, str.c_str()) == 0; }
 	};
 
 	struct LayerComponent
@@ -319,7 +320,6 @@ namespace wiSceneSystem
 		inline bool IsDynamicVB() const { return dynamicVB; }
 
 		void CreateRenderData();
-		void RemoveVertex(size_t index);
 		void ComputeNormals(bool smooth);
 		void FlipCulling();
 		void FlipNormals();
@@ -360,30 +360,32 @@ namespace wiSceneSystem
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
 	};
 
-	struct PhysicsComponent
+	struct RigidBodyPhysicsComponent
 	{
-		std::string collisionShape;
-		std::string physicsType;
-
+		enum class CollisionShape
+		{
+			SPHERE,
+			BOX,
+			CAPSULE,
+			CONVEX_HULL,
+			TRIANGLE_MESH,
+		};
+		CollisionShape shape;
 		int physicsObjectID = -1;
-		bool rigidBody = false;
-		bool softBody = false;
 		bool kinematic = false;
 		float mass = 1.0f;
 		float friction = 1.0f;
 		float restitution = 1.0f;
 		float damping = 1.0f;
+	};
 
-		int massVG; // vertex group ID for masses
-		int goalVG; // vertex group ID for soft body goals (how much the vertex is driven by anim/other than physics systems)
-		int softVG; // vertex group ID for soft body softness (how much to blend in soft body sim to a vertex)
-		std::vector<XMFLOAT3> goalPositions;
-		std::vector<XMFLOAT3> goalNormals;
-
-		std::vector<XMFLOAT3> physicsverts;
-		std::vector<XMFLOAT3> physicsverts_prev;
+	struct SoftBodyPhysicsComponent
+	{
+		int physicsObjectID = -1;
+		float mass = 1.0f;
+		float friction = 1.0f;
+		std::vector<XMFLOAT3> physicsvertices;
 		std::vector<uint32_t> physicsindices;
-		std::vector<int>	  physicalmapGP;
 	};
 
 	struct ArmatureComponent
@@ -686,7 +688,8 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
 		wiECS::ComponentManager<ObjectComponent> objects;
-		wiECS::ComponentManager<PhysicsComponent> physicscomponents;
+		wiECS::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
+		wiECS::ComponentManager<SoftBodyPhysicsComponent> softbodies;
 		wiECS::ComponentManager<CullableComponent> cullables;
 		wiECS::ComponentManager<ArmatureComponent> armatures;
 		wiECS::ComponentManager<LightComponent> lights;
@@ -796,7 +799,8 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<MeshComponent>& meshes,
 		wiECS::ComponentManager<ObjectComponent>& objects,
-		wiECS::ComponentManager<PhysicsComponent>& physicscomponents
+		wiECS::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
+		wiECS::ComponentManager<SoftBodyPhysicsComponent>& softbodies
 	);
 	void RunArmatureUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,

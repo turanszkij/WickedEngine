@@ -37,14 +37,15 @@ public:
 
 	virtual void setWind(const XMFLOAT3& wind)=0;
 	
-	virtual void connectVerticesToSoftBody(wiSceneSystem::PhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh) = 0;
-	virtual void connectSoftBodyToVertices(wiSceneSystem::PhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh) = 0;
+	virtual void connectVerticesToSoftBody(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh) = 0;
+	virtual void connectSoftBodyToVertices(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh) = 0;
 	virtual void transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI) = 0;
 
 	virtual PhysicsTransform* getObject(int index)=0;
 
-	// add object to the simulation
-	virtual void registerObject(wiSceneSystem::PhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh, wiSceneSystem::TransformComponent& transform) = 0;
-	// remove object from simulation
-	virtual void removeObject(wiSceneSystem::PhysicsComponent& physicscomponent) = 0;
+	virtual void addRigidBody(wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh, wiSceneSystem::TransformComponent& transform) = 0;
+	virtual void addSoftBody(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh, wiSceneSystem::TransformComponent& transform) = 0;
+	
+	virtual void removeRigidBody(wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent) = 0;
+	virtual void removeSoftBody(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent) = 0;
 };

@@ -48,7 +48,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	massSlider->SetSize(XMFLOAT2(100, 30));
 	massSlider->SetPos(XMFLOAT2(x, y += step));
 	massSlider->OnSlide([&](wiEventArgs args) {
-		PhysicsComponent* physicscomponent = wiRenderer::GetScene().physicscomponents.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->mass = args.fValue;
@@ -61,7 +61,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	frictionSlider->SetSize(XMFLOAT2(100, 30));
 	frictionSlider->SetPos(XMFLOAT2(x, y += step));
 	frictionSlider->OnSlide([&](wiEventArgs args) {
-		PhysicsComponent* physicscomponent = wiRenderer::GetScene().physicscomponents.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->friction = args.fValue;
@@ -204,7 +204,7 @@ void MeshWindow::SetEntity(Entity entity)
 		impostorDistanceSlider->SetValue(mesh->impostorDistance);
 		tessellationFactorSlider->SetValue(mesh->GetTessellationFactor());
 
-		const PhysicsComponent* physicscomponent = scene.physicscomponents.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			massSlider->SetValue(physicscomponent->mass);

@@ -270,14 +270,14 @@ void ObjectWindow::SetEntity(Entity entity)
 		cascadeMaskSlider->SetValue((float)object->cascadeMask);
 		ditherSlider->SetValue(object->GetTransparency());
 
-		const PhysicsComponent* physicsComponent = scene.physicscomponents.GetComponent(entity);
+		const RigidBodyPhysicsComponent* physicsComponent = scene.rigidbodies.GetComponent(entity);
 
 		if (physicsComponent != nullptr)
 		{
-			if (physicsComponent->rigidBody)
-			{
-				simulationTypeComboBox->SetSelected(1);
-			}
+			//if (physicsComponent->rigidBody)
+			//{
+			//	simulationTypeComboBox->SetSelected(1);
+			//}
 			//else
 			//{
 			//	if (object->mesh != nullptr)
@@ -299,32 +299,32 @@ void ObjectWindow::SetEntity(Entity entity)
 
 			kinematicCheckBox->SetCheck(physicsComponent->kinematic);
 
-			if (!physicsComponent->physicsType.compare("ACTIVE"))
-			{
-				physicsTypeComboBox->SetSelected(0);
-			}
-			else if (!physicsComponent->physicsType.compare("PASSIVE"))
-			{
-				physicsTypeComboBox->SetSelected(1);
-			}
+			//if (!physicsComponent->physicsType.compare("ACTIVE"))
+			//{
+			//	physicsTypeComboBox->SetSelected(0);
+			//}
+			//else if (!physicsComponent->physicsType.compare("PASSIVE"))
+			//{
+			//	physicsTypeComboBox->SetSelected(1);
+			//}
 
-			if (!physicsComponent->collisionShape.compare("BOX"))
+			if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::BOX)
 			{
 				collisionShapeComboBox->SetSelected(0);
 			}
-			else if (!physicsComponent->collisionShape.compare("SPHERE"))
+			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::SPHERE)
 			{
 				collisionShapeComboBox->SetSelected(1);
 			}
-			else if (!physicsComponent->collisionShape.compare("CAPSULE"))
+			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::CAPSULE)
 			{
 				collisionShapeComboBox->SetSelected(2);
 			}
-			else if (!physicsComponent->collisionShape.compare("CONVEX_HULL"))
+			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL)
 			{
 				collisionShapeComboBox->SetSelected(3);
 			}
-			else if (!physicsComponent->collisionShape.compare("MESH"))
+			else if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
 			{
 				collisionShapeComboBox->SetSelected(4);
 			}

@@ -513,14 +513,10 @@ Entity ImportModel_GLTF(const std::string& fileName)
 		state.meshArray.push_back(meshEntity);
 
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-
 		mesh.renderable = true;
 
-		int matIndex = -1;
 		for (auto& prim : x.primitives)
 		{
-			matIndex++;
-
 			assert(prim.indices >= 0);
 
 			// Fill indices:
@@ -574,10 +570,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				assert(0 && "unsupported index stride!");
 			}
 
-
-			bool hasBoneWeights = false;
-			bool hasBoneIndices = false;
-
 			for (auto& attr : prim.attributes)
 			{
 				const string& attr_name = attr.first;
@@ -594,6 +586,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 				if (!attr_name.compare("POSITION"))
 				{
+					size_t offset = mesh.vertex_positions.size();
 					mesh.vertex_positions.resize(mesh.vertex_positions.size() + count);
 					assert(stride == 12);
 					for (size_t i = 0; i < count; ++i)
@@ -603,6 +596,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else if (!attr_name.compare("NORMAL"))
 				{
+					size_t offset = mesh.vertex_normals.size();
 					mesh.vertex_normals.resize(mesh.vertex_normals.size() + count);
 					assert(stride == 12);
 					for (size_t i = 0; i < count; ++i)
@@ -612,6 +606,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
 				{
+					size_t offset = mesh.vertex_texcoords.size();
 					mesh.vertex_texcoords.resize(mesh.vertex_texcoords.size() + count);
 					assert(stride == 8);
 					for (size_t i = 0; i < count; ++i)
@@ -624,10 +619,10 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else if (!attr_name.compare("JOINTS_0"))
 				{
+					size_t offset = mesh.vertex_boneindices.size();
 					mesh.vertex_boneindices.resize(mesh.vertex_boneindices.size() + count);
 					if (stride == 4)
 					{
-						hasBoneIndices = true;
 						struct JointTmp
 						{
 							uint8_t ind[4];
@@ -645,7 +640,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 					}
 					else if (stride == 8)
 					{
-						hasBoneIndices = true;
 						struct JointTmp
 						{
 							uint16_t ind[4];
@@ -668,8 +662,8 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else if (!attr_name.compare("WEIGHTS_0"))
 				{
+					size_t offset = mesh.vertex_boneweights.size();
 					mesh.vertex_boneweights.resize(mesh.vertex_boneweights.size() + count);
-					hasBoneWeights = true;
 					assert(stride == 16);
 					for (size_t i = 0; i < count; ++i)
 					{

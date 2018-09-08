@@ -121,7 +121,7 @@ void wiBULLET::setWind(const XMFLOAT3& wind){
 }
 
 
-void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent, MeshComponent& mesh)
+void wiBULLET::connectVerticesToSoftBody(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh)
 {
 	//if (!softBodyPhysicsEnabled)
 	//	return;
@@ -155,34 +155,34 @@ void wiBULLET::connectVerticesToSoftBody(PhysicsComponent& physicscomponent, Mes
 	//	}
 	//}
 }
-void wiBULLET::connectSoftBodyToVertices(PhysicsComponent& physicscomponent, MeshComponent& mesh)
+void wiBULLET::connectSoftBodyToVertices(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh)
 {
-	if (!softBodyPhysicsEnabled)
-		return;
+	//if (!softBodyPhysicsEnabled)
+	//	return;
 
-	if (!firstRunWorld)
-	{
-		btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
-		btSoftBody* softBody = btSoftBody::upcast(obj);
+	//if (!firstRunWorld)
+	//{
+	//	btCollisionObject* obj = bulletPhysics->dynamicsWorld->getCollisionObjectArray()[physicscomponent.physicsObjectID];
+	//	btSoftBody* softBody = btSoftBody::upcast(obj);
 
-		if (softBody) {
-			btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
+	//	if (softBody) {
+	//		btSoftBody::tNodeArray&   nodes(softBody->m_nodes);
 
-			int gvg = physicscomponent.goalVG;
-			if (gvg >= 0)
-			{
-				int j = 0;
-				for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it)
-				{
-					int vi = (*it).first;
-					int index = physicscomponent.physicalmapGP[vi];
-					float weight = (*it).second;
-					nodes[index].m_x = nodes[index].m_x.lerp(btVector3(physicscomponent.goalPositions[j].x, physicscomponent.goalPositions[j].y, physicscomponent.goalPositions[j].z), weight);
-					++j;
-				}
-			}
-		}
-	}
+	//		int gvg = physicscomponent.goalVG;
+	//		if (gvg >= 0)
+	//		{
+	//			int j = 0;
+	//			for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it)
+	//			{
+	//				int vi = (*it).first;
+	//				int index = physicscomponent.physicalmapGP[vi];
+	//				float weight = (*it).second;
+	//				nodes[index].m_x = nodes[index].m_x.lerp(btVector3(physicscomponent.goalPositions[j].x, physicscomponent.goalPositions[j].y, physicscomponent.goalPositions[j].z), weight);
+	//				++j;
+	//			}
+	//		}
+	//	}
+	//}
 }
 void wiBULLET::transformBody(const XMFLOAT4& rot, const XMFLOAT3& pos, int objectI)
 {
@@ -228,15 +228,20 @@ PHYSICS::PhysicsTransform* wiBULLET::getObject(int index)
 	return transforms[index];
 }
 
-void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent& mesh, TransformComponent& transform)
+void wiBULLET::addRigidBody(wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh, wiSceneSystem::TransformComponent& transform)
 {
+	if (!rigidBodyPhysicsEnabled)
+	{
+		return;
+	}
+
 	btVector3 S = btVector3(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
 	btQuaternion R = btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.z);
 	btVector3 T = btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z);
 
-	if(physicscomponent.rigidBody&& rigidBodyPhysicsEnabled){
-
-		if(!physicscomponent.collisionShape.compare("BOX"))
+	switch(physicscomponent.shape)
+	{
+	case RigidBodyPhysicsComponent::CollisionShape::BOX:
 		{
 			btCollisionShape* shape = new btBoxShape(S);
 			shape->setMargin(btScalar(0.05));
@@ -286,7 +291,9 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 				}
 			}
 		}
-		if(!physicscomponent.collisionShape.compare("SPHERE"))
+		break;
+
+	case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
 		{
 			btCollisionShape* shape = new btSphereShape(btScalar(S.x()));
 			shape->setMargin(btScalar(0.05));
@@ -336,7 +343,9 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 			}
 
 		}
-		if(!physicscomponent.collisionShape.compare("CAPSULE"))
+		break;
+
+	case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
 		{
 			btCollisionShape* shape = new btCapsuleShape(btScalar(S.x()), btScalar(S.y()));
 			shape->setMargin(btScalar(0.05));
@@ -386,7 +395,9 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 				}
 			}
 		}
-		if(!physicscomponent.collisionShape.compare("CONVEX_HULL"))
+		break;
+
+	case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
 		{
 			btCollisionShape* shape = new btConvexHullShape();
 			for (auto& pos : mesh.vertex_positions)
@@ -442,7 +453,9 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 				}
 			}
 		}
-		if(!physicscomponent.collisionShape.compare("MESH"))
+		break;
+
+	case RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH:
 		{
 			int totalVerts = (int)mesh.vertex_positions.size();
 			int totalTriangles = (int)mesh.indices.size() / 3;
@@ -455,9 +468,10 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 			}
 
 			int* btInd = new int[mesh.indices.size()];
-			for (unsigned int i = 0; i < mesh.indices.size(); ++i)
+			i = 0;
+			for (auto& ind : mesh.indices)
 			{
-				btInd[i] = mesh.indices[i];
+				btInd[i++] = ind;
 			}
 
 			int vertStride = sizeof(btVector3);
@@ -526,45 +540,60 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 		}
 	}
 
-	if(physicscomponent.softBody && softBodyPhysicsEnabled)
+	
+
+	physicscomponent.physicsObjectID = ++registeredObjects;
+}
+void wiBULLET::addSoftBody(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, wiSceneSystem::MeshComponent& mesh, wiSceneSystem::TransformComponent& transform)
+{
+	if (!softBodyPhysicsEnabled)
 	{
-		const int vCount = (int)physicscomponent.physicsverts.size();
-		btScalar* btVerts = new btScalar[vCount*3];
-		for(int i=0;i<vCount*3;i+=3){
-			const int vindex = i/3;
-			btVerts[i] = btScalar(physicscomponent.physicsverts[vindex].x);
-			btVerts[i+1] = btScalar(physicscomponent.physicsverts[vindex].y);
-			btVerts[i+2] = btScalar(physicscomponent.physicsverts[vindex].z);
+		return;
+	}
+
+	btVector3 S = btVector3(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
+	btQuaternion R = btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.z);
+	btVector3 T = btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z);
+
+	{
+		const int vCount = (int)physicscomponent.physicsvertices.size();
+		btScalar* btVerts = new btScalar[vCount * 3];
+		for (int i = 0; i<vCount * 3; i += 3) {
+			const int vindex = i / 3;
+			btVerts[i] = btScalar(physicscomponent.physicsvertices[vindex].x);
+			btVerts[i + 1] = btScalar(physicscomponent.physicsvertices[vindex].y);
+			btVerts[i + 2] = btScalar(physicscomponent.physicsvertices[vindex].z);
 		}
 		const int iCount = (int)physicscomponent.physicsindices.size();
-		const int tCount = iCount/3;
+		const int tCount = iCount / 3;
 		int* btInd = new int[iCount];
-		for(int i=0;i<iCount;++i){
+		for (int i = 0; i<iCount; ++i) {
 			btInd[i] = physicscomponent.physicsindices[i];
 		}
 
-		
+
 		btSoftBody* softBody = btSoftBodyHelpers::CreateFromTriMesh(
-				((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo()
-				,&btVerts[0]
-				,&btInd[0]
-				,tCount
-				,false
+			((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo()
+			, &btVerts[0]
+			, &btInd[0]
+			, tCount
+			, false
 		);
 
-		
+
 		delete[] btVerts;
 		delete[] btInd;
-		
-		if(softBody){
-			btSoftBody::Material* pm=softBody->appendMaterial();
+
+		if (softBody) 
+		{
+			btSoftBody::Material* pm = softBody->appendMaterial();
 			pm->m_kLST = 0.5;
 			pm->m_kVST = 0.5;
 			pm->m_kAST = 0.5;
 			pm->m_flags = 0;
-			softBody->generateBendingConstraints(2,pm);
+			softBody->generateBendingConstraints(2, pm);
 			softBody->randomizeConstraints();
-			
+
 			btTransform shapeTransform;
 			shapeTransform.setIdentity();
 			shapeTransform.setOrigin(T);
@@ -573,60 +602,60 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 			softBody->transform(shapeTransform);
 
 
-			softBody->m_cfg.piterations	=	softBodyIterationCount;
-			softBody->m_cfg.aeromodel=btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
+			softBody->m_cfg.piterations = softBodyIterationCount;
+			softBody->m_cfg.aeromodel = btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
 
-			softBody->m_cfg.kAHR		=btScalar(.69); //0.69		Anchor hardness  [0,1]
-			softBody->m_cfg.kCHR		=btScalar(1.0); //1			Rigid contact hardness  [0,1]
-			softBody->m_cfg.kDF			=btScalar(0.2); //0.2		Dynamic friction coefficient  [0,1]
-			softBody->m_cfg.kDG			=btScalar(0.01); //0			Drag coefficient  [0,+inf]
-			softBody->m_cfg.kDP			=btScalar(0.0); //0			Damping coefficient  [0,1]
-			softBody->m_cfg.kKHR		=btScalar(0.1); //0.1		Kinetic contact hardness  [0,1]
-			softBody->m_cfg.kLF			=btScalar(0.1); //0			Lift coefficient  [0,+inf]
-			softBody->m_cfg.kMT			=btScalar(0.0); //0			Pose matching coefficient  [0,1]
-			softBody->m_cfg.kPR			=btScalar(0.0); //0			Pressure coefficient  [-1,1]
-			softBody->m_cfg.kSHR		=btScalar(1.0); //1			Soft contacts hardness  [0,1]
-			softBody->m_cfg.kVC			=btScalar(0.0); //0			Volume conseration coefficient  [0,+inf]
-			softBody->m_cfg.kVCF		=btScalar(1.0); //1			Velocities correction factor (Baumgarte)
+			softBody->m_cfg.kAHR = btScalar(.69); //0.69		Anchor hardness  [0,1]
+			softBody->m_cfg.kCHR = btScalar(1.0); //1			Rigid contact hardness  [0,1]
+			softBody->m_cfg.kDF = btScalar(physicscomponent.friction); //0.2			Dynamic friction coefficient  [0,1]
+			softBody->m_cfg.kDG = btScalar(0.01); //0			Drag coefficient  [0,+inf]
+			softBody->m_cfg.kDP = btScalar(0.0); //0			Damping coefficient  [0,1]
+			softBody->m_cfg.kKHR = btScalar(0.1); //0.1			Kinetic contact hardness  [0,1]
+			softBody->m_cfg.kLF = btScalar(0.1); //0			Lift coefficient  [0,+inf]
+			softBody->m_cfg.kMT = btScalar(0.0); //0			Pose matching coefficient  [0,1]
+			softBody->m_cfg.kPR = btScalar(0.0); //0			Pressure coefficient  [-1,1]
+			softBody->m_cfg.kSHR = btScalar(1.0); //1			Soft contacts hardness  [0,1]
+			softBody->m_cfg.kVC = btScalar(0.0); //0			Volume conseration coefficient  [0,+inf]
+			softBody->m_cfg.kVCF = btScalar(1.0); //1			Velocities correction factor (Baumgarte)
 
-			softBody->m_cfg.kSKHR_CL	=btScalar(1.0); //1			Soft vs. kinetic hardness   [0,1]
-			softBody->m_cfg.kSK_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-			softBody->m_cfg.kSRHR_CL	=btScalar(0.1); //0.1		Soft vs. rigid hardness  [0,1]
-			softBody->m_cfg.kSR_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-			softBody->m_cfg.kSSHR_CL	=btScalar(0.5); //0.5		Soft vs. soft hardness  [0,1]
-			softBody->m_cfg.kSS_SPLT_CL	=btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-			
+			softBody->m_cfg.kSKHR_CL = btScalar(1.0); //1			Soft vs. kinetic hardness   [0,1]
+			softBody->m_cfg.kSK_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			softBody->m_cfg.kSRHR_CL = btScalar(0.1); //0.1			Soft vs. rigid hardness  [0,1]
+			softBody->m_cfg.kSR_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			softBody->m_cfg.kSSHR_CL = btScalar(0.5); //0.5			Soft vs. soft hardness  [0,1]
+			softBody->m_cfg.kSS_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+
 
 			btScalar mass = btScalar(physicscomponent.mass);
 			softBody->setTotalMass(mass);
-			
-			int mvg = physicscomponent.massVG;
-			if(mvg>=0){
-				for(auto it=mesh.vertexGroups[mvg].vertex_weights.begin();it!=mesh.vertexGroups[mvg].vertex_weights.end();++it){
-					int vi = (*it).first;
-					float wei = (*it).second;
-					int index= physicscomponent.physicalmapGP[vi];
-					softBody->setMass(index,softBody->getMass(index)*btScalar(wei));
-				}
-			}
 
-			
-			int gvg = physicscomponent.goalVG;
-			if(gvg>=0){
-				for(auto it=mesh.vertexGroups[gvg].vertex_weights.begin();it!=mesh.vertexGroups[gvg].vertex_weights.end();++it){
-					int vi = (*it).first;
-					int index= physicscomponent.physicalmapGP[vi];
-					float weight = (*it).second;
-					if(weight==1)
-						softBody->setMass(index,0);
-				}
-			}
+			//int mvg = physicscomponent.massVG;
+			//if (mvg >= 0) {
+			//	for (auto it = mesh.vertexGroups[mvg].vertex_weights.begin(); it != mesh.vertexGroups[mvg].vertex_weights.end(); ++it) {
+			//		int vi = (*it).first;
+			//		float wei = (*it).second;
+			//		int index = physicscomponent.physicalmapGP[vi];
+			//		softBody->setMass(index, softBody->getMass(index)*btScalar(wei));
+			//	}
+			//}
+
+
+			//int gvg = physicscomponent.goalVG;
+			//if (gvg >= 0) {
+			//	for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it) {
+			//		int vi = (*it).first;
+			//		int index = physicscomponent.physicalmapGP[vi];
+			//		float weight = (*it).second;
+			//		if (weight == 1)
+			//			softBody->setMass(index, 0);
+			//	}
+			//}
 
 			softBody->getCollisionShape()->setMargin(btScalar(0.2));
 
 			softBody->setWindVelocity(bulletPhysics->wind);
-			
-			softBody->setPose(true,true);
+
+			softBody->setPose(true, true);
 
 			softBody->setActivationState(DISABLE_DEACTIVATION);
 
@@ -638,15 +667,26 @@ void wiBULLET::registerObject(PhysicsComponent& physicscomponent, MeshComponent&
 
 	physicscomponent.physicsObjectID = ++registeredObjects;
 }
-void wiBULLET::removeObject(PhysicsComponent& physicscomponent)
+void wiBULLET::removeRigidBody(wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent)
 {
-
 	if (physicscomponent.physicsObjectID < 0)
 	{
 		return;
 	}
 
 	deleteObject(physicscomponent.physicsObjectID);
+
+	physicscomponent.physicsObjectID = -1;
+}
+void wiBULLET::removeSoftBody(wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent)
+{
+	if (physicscomponent.physicsObjectID < 0)
+	{
+		return;
+	}
+
+	deleteObject(physicscomponent.physicsObjectID);
+
 	physicscomponent.physicsObjectID = -1;
 }
 
