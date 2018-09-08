@@ -504,6 +504,13 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 	}
 
+	if (state.materialArray.empty())
+	{
+		Entity materialEntity = scene.Entity_CreateMaterial("GLTFImport_defaultMaterial");
+		model.materials.insert(materialEntity);
+		state.materialArray.push_back(materialEntity);
+	}
+
 	// Create meshes:
 	for (auto& x : state.gltfModel.meshes)
 	{
@@ -525,44 +532,45 @@ Entity ImportModel_GLTF(const std::string& fileName)
 			const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
 
 			int stride = accessor.ByteStride(bufferView);
-			size_t count = accessor.count;
-			size_t offset = mesh.indices.size();
-			mesh.indices.resize(offset + count);
-
-			assert(prim.material >= 0);
+			size_t indexCount = accessor.count;
+			size_t indexOffset = mesh.indices.size();
+			mesh.indices.resize(indexOffset + indexCount);
 
 			mesh.subsets.push_back(MeshComponent::MeshSubset());
-			mesh.subsets.back().materialID = state.materialArray[prim.material];
-			mesh.subsets.back().indexOffset = (uint32_t)offset;
-			mesh.subsets.back().indexCount = (uint32_t)count;
+			mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
+			mesh.subsets.back().indexCount = (uint32_t)indexCount;
+
+			mesh.subsets.back().materialID = state.materialArray[max(0, prim.material)];
+
+			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
 			const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 			if (stride == 1)
 			{
-				for (size_t i = 0; i < count; i += 3)
+				for (size_t i = 0; i < indexCount; i += 3)
 				{
-					mesh.indices[offset + i + 0] = data[i + 0];
-					mesh.indices[offset + i + 1] = data[i + 1];
-					mesh.indices[offset + i + 2] = data[i + 2];
+					mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + 0];
+					mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + 1];
+					mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + 2];
 				}
 			}
 			else if (stride == 2)
 			{
-				for (size_t i = 0; i < count; i += 3)
+				for (size_t i = 0; i < indexCount; i += 3)
 				{
-					mesh.indices[offset + i + 0] = ((uint16_t*)data)[i + 0];
-					mesh.indices[offset + i + 1] = ((uint16_t*)data)[i + 1];
-					mesh.indices[offset + i + 2] = ((uint16_t*)data)[i + 2];
+					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + 0];
+					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + 1];
+					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + 2];
 				}
 			}
 			else if (stride == 4)
 			{
-				for (size_t i = 0; i < count; i += 3)
+				for (size_t i = 0; i < indexCount; i += 3)
 				{
-					mesh.indices[offset + i + 0] = ((uint32_t*)data)[i + 0];
-					mesh.indices[offset + i + 1] = ((uint32_t*)data)[i + 1];
-					mesh.indices[offset + i + 2] = ((uint32_t*)data)[i + 2];
+					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + 0];
+					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + 1];
+					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + 2];
 				}
 			}
 			else
@@ -580,47 +588,43 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				const tinygltf::Buffer& buffer = state.gltfModel.buffers[bufferView.buffer];
 
 				int stride = accessor.ByteStride(bufferView);
-				size_t count = accessor.count;
+				size_t vertexCount = accessor.count;
 
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 				if (!attr_name.compare("POSITION"))
 				{
-					size_t offset = mesh.vertex_positions.size();
-					mesh.vertex_positions.resize(mesh.vertex_positions.size() + count);
+					mesh.vertex_positions.resize(vertexOffset + vertexCount);
 					assert(stride == 12);
-					for (size_t i = 0; i < count; ++i)
+					for (size_t i = 0; i < vertexCount; ++i)
 					{
-						mesh.vertex_positions[offset + i] = ((XMFLOAT3*)data)[i];
+						mesh.vertex_positions[vertexOffset + i] = ((XMFLOAT3*)data)[i];
 					}
 				}
 				else if (!attr_name.compare("NORMAL"))
 				{
-					size_t offset = mesh.vertex_normals.size();
-					mesh.vertex_normals.resize(mesh.vertex_normals.size() + count);
+					mesh.vertex_normals.resize(vertexOffset + vertexCount);
 					assert(stride == 12);
-					for (size_t i = 0; i < count; ++i)
+					for (size_t i = 0; i < vertexCount; ++i)
 					{
-						mesh.vertex_normals[offset + i] = ((XMFLOAT3*)data)[i];
+						mesh.vertex_normals[vertexOffset + i] = ((XMFLOAT3*)data)[i];
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
 				{
-					size_t offset = mesh.vertex_texcoords.size();
-					mesh.vertex_texcoords.resize(mesh.vertex_texcoords.size() + count);
+					mesh.vertex_texcoords.resize(vertexOffset + vertexCount);
 					assert(stride == 8);
-					for (size_t i = 0; i < count; ++i)
+					for (size_t i = 0; i < vertexCount; ++i)
 					{
 						const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
 
-						mesh.vertex_texcoords[offset + i].x = tex.x;
-						mesh.vertex_texcoords[offset + i].y = tex.y;
+						mesh.vertex_texcoords[vertexOffset + i].x = tex.x;
+						mesh.vertex_texcoords[vertexOffset + i].y = tex.y;
 					}
 				}
 				else if (!attr_name.compare("JOINTS_0"))
 				{
-					size_t offset = mesh.vertex_boneindices.size();
-					mesh.vertex_boneindices.resize(mesh.vertex_boneindices.size() + count);
+					mesh.vertex_boneindices.resize(vertexOffset + vertexCount);
 					if (stride == 4)
 					{
 						struct JointTmp
@@ -628,14 +632,14 @@ Entity ImportModel_GLTF(const std::string& fileName)
 							uint8_t ind[4];
 						};
 
-						for (size_t i = 0; i < count; ++i)
+						for (size_t i = 0; i < vertexCount; ++i)
 						{
 							const JointTmp& joint = ((JointTmp*)data)[i];
 
-							mesh.vertex_boneindices[offset + i].x = joint.ind[0];
-							mesh.vertex_boneindices[offset + i].y = joint.ind[1];
-							mesh.vertex_boneindices[offset + i].z = joint.ind[2];
-							mesh.vertex_boneindices[offset + i].w = joint.ind[3];
+							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
+							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
+							mesh.vertex_boneindices[vertexOffset + i].z = joint.ind[2];
+							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
 						}
 					}
 					else if (stride == 8)
@@ -645,14 +649,14 @@ Entity ImportModel_GLTF(const std::string& fileName)
 							uint16_t ind[4];
 						};
 
-						for (size_t i = 0; i < count; ++i)
+						for (size_t i = 0; i < vertexCount; ++i)
 						{
 							const JointTmp& joint = ((JointTmp*)data)[i];
 
-							mesh.vertex_boneindices[offset + i].x = joint.ind[0];
-							mesh.vertex_boneindices[offset + i].y = joint.ind[1];
-							mesh.vertex_boneindices[offset + i].z = joint.ind[2];
-							mesh.vertex_boneindices[offset + i].w = joint.ind[3];
+							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
+							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
+							mesh.vertex_boneindices[vertexOffset + i].z = joint.ind[2];
+							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
 						}
 					}
 					else
@@ -662,12 +666,11 @@ Entity ImportModel_GLTF(const std::string& fileName)
 				}
 				else if (!attr_name.compare("WEIGHTS_0"))
 				{
-					size_t offset = mesh.vertex_boneweights.size();
-					mesh.vertex_boneweights.resize(mesh.vertex_boneweights.size() + count);
+					mesh.vertex_boneweights.resize(vertexOffset + vertexCount);
 					assert(stride == 16);
-					for (size_t i = 0; i < count; ++i)
+					for (size_t i = 0; i < vertexCount; ++i)
 					{
-						mesh.vertex_boneweights[offset + i] = ((XMFLOAT4*)data)[i];
+						mesh.vertex_boneweights[vertexOffset + i] = ((XMFLOAT4*)data)[i];
 					}
 				}
 
@@ -714,7 +717,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	}
 
 	// Create transform hierarchy, assign objects, meshes, armatures, cameras:
-	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[state.gltfModel.defaultScene];
+	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[max(0, state.gltfModel.defaultScene)];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
 		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], state.modelEntity, state);
@@ -775,21 +778,12 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 				assert(stride == 4);
 
-				float start = FLT_MAX;
-				float end = 0.0f;
+				animationcomponent.length = 0.0f;
 				for (size_t i = 0; i < count; ++i)
 				{
 					float time = ((float*)data)[i];
 					animationcomponent.channels.back().keyframe_times[i] = time;
-					start = min(start, time);
-					end = max(end, time);
-				}
-
-				// Cut empty animation from beginning:
-				animationcomponent.length = end - start;
-				for (auto& time : animationcomponent.channels.back().keyframe_times)
-				{
-					time -= start;
+					animationcomponent.length = max(animationcomponent.length, time);
 				}
 
 			}

@@ -7843,10 +7843,6 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
-		// pre allocate helper vector array:
-		static size_t _arraySize = 10000;
-		static XMVECTOR* _vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
-
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			Entity entity = scene.objects.GetEntity(i);
@@ -7873,13 +7869,6 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 				}
 
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-				if (mesh.vertex_positions.size() >= _arraySize)
-				{
-					// grow preallocated vector helper array
-					_mm_free(_vertices);
-					_arraySize = (mesh.vertex_positions.size() + 1) * 2;
-					_vertices = (XMVECTOR*)_mm_malloc(sizeof(XMVECTOR)*_arraySize, 16);
-				}
 
 				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
@@ -7889,41 +7878,6 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-				if (mesh.IsSkinned())
-				{
-					const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
-					for (size_t vertexI = 0; vertexI < mesh.vertex_positions.size(); ++vertexI)
-					{
-						XMVECTOR pos = XMLoadFloat3(&mesh.vertex_positions[vertexI]);
-
-						const XMUINT4& ind = mesh.vertex_boneindices[vertexI];
-						const XMFLOAT4& wei = mesh.vertex_boneweights[vertexI];
-
-						XMMATRIX sump = XMLoadFloat4x4(&armature.skinningMatrices[ind.x]) * wei.x;
-						sump += XMLoadFloat4x4(&armature.skinningMatrices[ind.y]) * wei.y;
-						sump += XMLoadFloat4x4(&armature.skinningMatrices[ind.z]) * wei.z;
-						sump += XMLoadFloat4x4(&armature.skinningMatrices[ind.w]) * wei.w;
-
-						_vertices[i] = XMVector3Transform(pos, sump);
-					}
-				}
-				else if (mesh.IsDynamicVB())
-				{
-					//for (size_t i = 0; i < mesh.vertices_Transformed_POS.size(); ++i)
-					//{
-					//	_vertices[i] = mesh.vertices_Transformed_POS[i].LoadPOS();
-					//}
-					assert(0);
-				}
-				else
-				{
-					for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
-					{
-						_vertices[i] = XMLoadFloat3(&mesh.vertex_positions[i]);
-					}
-				}
-
 				int subsetCounter = 0;
 				for (auto& subset : mesh.subsets)
 				{
@@ -7932,15 +7886,56 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 						uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
 						uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
 						uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+
+						XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+						XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+						XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+
+						if (mesh.IsSkinned())
+						{
+							const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
+
+							const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
+							const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
+							const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
+
+							const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
+							const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
+							const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
+
+							XMMATRIX sump;
+
+							sump  = XMLoadFloat4x4(&armature.skinningMatrices[ind0.x]) * wei0.x;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind0.y]) * wei0.y;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind0.z]) * wei0.z;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind0.w]) * wei0.w;
+
+							p0 = XMVector3Transform(p0, sump);
+
+							sump  = XMLoadFloat4x4(&armature.skinningMatrices[ind1.x]) * wei1.x;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind1.y]) * wei1.y;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind1.z]) * wei1.z;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind1.w]) * wei1.w;
+
+							p1 = XMVector3Transform(p1, sump);
+
+							sump  = XMLoadFloat4x4(&armature.skinningMatrices[ind2.x]) * wei2.x;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind2.y]) * wei2.y;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind2.z]) * wei2.z;
+							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind2.w]) * wei2.w;
+
+							p2 = XMVector3Transform(p2, sump);
+						}
+
 						float distance;
-						if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, _vertices[i0], _vertices[i1], _vertices[i2], distance))
+						if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance))
 						{
 							XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
 							distance = wiMath::Distance(pos, rayOrigin);
 
 							if (distance < result.distance)
 							{
-								XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(_vertices[i2], _vertices[i1]), XMVectorSubtract(_vertices[i1], _vertices[i0]))), objectMat));
+								XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0))), objectMat));
 
 								result.entity = entity;
 								XMStoreFloat3(&result.position, pos);

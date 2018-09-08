@@ -32,9 +32,30 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
 	{
-		dirty = true;
+		XMMATRIX W;
 
-		XMMATRIX W = XMLoadFloat4x4(&world);
+		// Normally, every transform would be NOT dirty at this point, but...
+
+		if (parent.dirty)
+		{
+			// If parent is dirty, that means it was tagged by animation system...
+			dirty = true;
+
+			W = XMLoadFloat4x4(&world);
+		}
+		else
+		{
+			// If it is not dirty, then we still need to propagate parent's matrix to this, 
+			//	because every transform is marked as NOT dirty at the end of transform update system
+			//	but we look up the local matrix instead, because world matrix might contain 
+			//	results from previous run of the hierarchy system...
+			XMVECTOR S_local = XMLoadFloat3(&scale_local);
+			XMVECTOR R_local = XMLoadFloat4(&rotation_local);
+			XMVECTOR T_local = XMLoadFloat3(&translation_local);
+			W = XMMatrixScalingFromVector(S_local) *
+				XMMatrixRotationQuaternion(R_local) *
+				XMMatrixTranslationFromVector(T_local);
+		}
 
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
 		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
@@ -267,15 +288,15 @@ namespace wiSceneSystem
 
 		// vertexBuffer - POSITION + NORMAL + SUBSETINDEX:
 		{
+			std::vector<uint8_t> vertex_subsetindices(vertex_positions.size());
 
-			std::unordered_map<uint32_t, uint32_t> subsetIndicesLUT;
 			uint32_t subsetCounter = 0;
 			for (auto& subset : subsets)
 			{
 				for (uint32_t i = 0; i < subset.indexCount; ++i)
 				{
 					uint32_t index = indices[subset.indexOffset + i];
-					subsetIndicesLUT[index] = subsetCounter;
+					vertex_subsetindices[index] = subsetCounter;
 				}
 				subsetCounter++;
 			}
@@ -284,9 +305,9 @@ namespace wiSceneSystem
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
-				XMFLOAT3& nor = vertex_normals[i];
+				XMFLOAT3& nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
 				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
-				uint32_t subsetIndex = subsetIndicesLUT[(uint32_t)i];
+				uint32_t subsetIndex = vertex_subsetindices[i];
 				vertices[i].FromFULL(pos, nor, subsetIndex);
 
 				_min = wiMath::Min(_min, pos);
@@ -358,6 +379,7 @@ namespace wiSceneSystem
 		}
 
 		// vertexBuffer - TEXCOORDS
+		if(!vertex_texcoords.empty())
 		{
 			std::vector<Vertex_TEX> vertices(vertex_texcoords.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
@@ -1164,7 +1186,7 @@ namespace wiSceneSystem
 
 				TransformComponent& transform = *transforms.GetComponent(channel.target);
 
-				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || (keyLeft == 0 && keyRight == 0))
+				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
 				{
 					// Nearest neighbor method (snap to left):
 					switch (channel.type)
