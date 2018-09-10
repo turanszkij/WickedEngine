@@ -2,6 +2,7 @@
 #include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
+#include "wiPHYSICS.h"
 
 using namespace wiECS;
 using namespace wiGraphicsTypes;
@@ -740,6 +741,8 @@ namespace wiSceneSystem
 
 		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
 
+		RunPhysicsUpdateSystem(transforms, meshes, objects, rigidbodies, softbodies, dt);
+
 		RunTransformUpdateSystem(transforms);
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
@@ -747,8 +750,6 @@ namespace wiSceneSystem
 		RunHierarchyUpdateSystem(parents, transforms, layers);
 
 		RunArmatureUpdateSystem(transforms, armatures);
-
-		RunPhysicsUpdateSystem(transforms, meshes, objects, rigidbodies, softbodies);
 
 		RunMaterialUpdateSystem(materials, dt);
 
@@ -1127,6 +1128,57 @@ namespace wiSceneSystem
 			prev_transform.world_prev = transform.world;
 		}
 	}
+	void RunPhysicsUpdateSystem(
+		ComponentManager<TransformComponent>& transforms,
+		ComponentManager<MeshComponent>& meshes,
+		ComponentManager<ObjectComponent>& objects,
+		ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
+		ComponentManager<SoftBodyPhysicsComponent>& softbodies,
+		float dt
+	)
+	{
+		PHYSICS* physicsEngine = wiRenderer::physicsEngine;
+
+		if (physicsEngine != nullptr)
+		{
+			physicsEngine->Update(dt);
+
+			// Rigid bodies - Objects:
+			for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
+			{
+				RigidBodyPhysicsComponent& rigidbody = rigidbodies[i];
+				Entity entity = rigidbodies.GetEntity(i);
+				TransformComponent& transform = *transforms.GetComponent(entity);
+
+				if (rigidbody.kinematic)
+				{
+					physicsEngine->transformBody(transform.rotation, transform.translation, rigidbody.physicsObjectID);
+				}
+				else
+				{
+					PHYSICS::PhysicsTransform* pt = physicsEngine->getObject(rigidbody.physicsObjectID);
+					transform.translation_local = pt->position;
+					transform.rotation_local = pt->rotation;
+					transform.dirty = true;
+				}
+
+			}
+
+			// Soft bodies - Meshes:
+			for (size_t i = 0; i < softbodies.GetCount(); ++i)
+			{
+				SoftBodyPhysicsComponent& softbody = softbodies[i];
+				Entity entity = softbodies.GetEntity(i);
+
+				MeshComponent& mesh = *meshes.GetComponent(entity);
+				mesh.dynamicVB = true;
+
+			}
+
+			physicsEngine->NextRunWorld();
+		}
+
+	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
 	{
 		for (size_t i = 0; i < transforms.GetCount(); ++i)
@@ -1325,30 +1377,6 @@ namespace wiSceneSystem
 
 				XMStoreFloat4x4(&armature.skinningMatrices[boneIndex++], M);
 			}
-
-		}
-	}
-	void RunPhysicsUpdateSystem(
-		ComponentManager<TransformComponent>& transforms,
-		ComponentManager<MeshComponent>& meshes,
-		ComponentManager<ObjectComponent>& objects,
-		ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
-		ComponentManager<SoftBodyPhysicsComponent>& softbodies
-	)
-	{
-		for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
-		{
-			RigidBodyPhysicsComponent& rigidbody = rigidbodies[i];
-			Entity entity = rigidbodies.GetEntity(i);
-
-		}
-		for (size_t i = 0; i < softbodies.GetCount(); ++i)
-		{
-			SoftBodyPhysicsComponent& softbody = softbodies[i];
-			Entity entity = softbodies.GetEntity(i);
-
-			MeshComponent& mesh = *meshes.GetComponent(entity);
-			mesh.dynamicVB = true;
 
 		}
 	}

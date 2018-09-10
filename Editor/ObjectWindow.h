@@ -27,9 +27,8 @@ public:
 	wiColorPicker* colorPicker;
 
 	wiLabel*	physicsLabel;
-	wiComboBox*	simulationTypeComboBox;
+	wiCheckBox*	rigidBodyCheckBox;
 	wiCheckBox* kinematicCheckBox;
-	wiComboBox*	physicsTypeComboBox;
 	wiComboBox*	collisionShapeComboBox;
 };
 

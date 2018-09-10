@@ -3386,16 +3386,16 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
 
-		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
-		GetDevice()->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
+		device->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
+		device->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
 		GPUResource* resources[] = {
 			resourceBuffers[RBTYPE_ENTITYARRAY],
 			resourceBuffers[RBTYPE_MATRIXARRAY],
 		};
-		GetDevice()->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-		GetDevice()->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-		GetDevice()->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+		device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
 
 
@@ -3406,7 +3406,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	ManageDecalAtlas(threadID);
 
 	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
-	GetDevice()->EventBegin("Skinning", threadID);
+	device->EventBegin("Skinning", threadID);
 	{
 		bool streamOutSetUp = false;
 		CSTYPES lastCS = CSTYPE_SKINNING_LDS;
@@ -3433,7 +3433,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
 
 					armature.boneBuffer.reset(new GPUBuffer);
-					HRESULT hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
+					HRESULT hr = device->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
 					assert(SUCCEEDED(hr));
 				}
 
@@ -3447,8 +3447,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					const UINT strides[] = {
 						0,0,0,0,0,0,0,0
 					};
-					GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-					GetDevice()->BindComputePSO(CPSO[CSTYPE_SKINNING_LDS], threadID);
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+					device->BindComputePSO(CPSO[CSTYPE_SKINNING_LDS], threadID);
 				}
 
 				CSTYPES targetCS = CSTYPE_SKINNING_LDS;
@@ -3462,7 +3462,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (targetCS != lastCS)
 				{
 					lastCS = targetCS;
-					GetDevice()->BindComputePSO(CPSO[targetCS], threadID);
+					device->BindComputePSO(CPSO[targetCS], threadID);
 				}
 
 				// Upload bones for skinning to shader
@@ -3470,8 +3470,8 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				{
 					armature.boneData[k].Create(armature.skinningMatrices[k]);
 				}
-				GetDevice()->UpdateBuffer(armature.boneBuffer.get(), armature.boneData.data(), threadID, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
-				GetDevice()->BindResource(CS, armature.boneBuffer.get(), SKINNINGSLOT_IN_BONEBUFFER, threadID);
+				device->UpdateBuffer(armature.boneBuffer.get(), armature.boneData.data(), threadID, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
+				device->BindResource(CS, armature.boneBuffer.get(), SKINNINGSLOT_IN_BONEBUFFER, threadID);
 
 				// Do the skinning
 				GPUResource* vbs[] = {
@@ -3483,37 +3483,28 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 					mesh.streamoutBuffer_PRE.get(),
 				};
 
-				GetDevice()->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
-				GetDevice()->BindUAVs(CS, sos, 0, ARRAYSIZE(sos), threadID);
+				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
+				device->BindUAVs(CS, sos, 0, ARRAYSIZE(sos), threadID);
 
-				GetDevice()->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
-				GetDevice()->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
-				//GetDevice()->TransitionBarrier(sos, ARRAYSIZE(sos), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, threadID);
+				device->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
+				device->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
+				//device->TransitionBarrier(sos, ARRAYSIZE(sos), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, threadID);
 			}
-			//else if (mesh.IsDynamicVB())
-			//{
-			//	// Upload CPU skinned vertex buffer (Soft body VB)
-			//	size_t size_pos = sizeof(MeshComponent::Vertex_POS) * mesh.vertices_Transformed_POS.size();
-			//	size_t size_pre = sizeof(MeshComponent::Vertex_POS) * mesh.vertices_Transformed_PRE.size();
-			//	UINT offset;
-			//	void* vertexData = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, size_pos + size_pre, offset, threadID);
-			//	mesh.bufferOffset_POS = offset;
-			//	mesh.bufferOffset_PRE = offset + (UINT)size_pos;
-			//	memcpy(vertexData, mesh.vertices_Transformed_POS.data(), size_pos);
-			//	memcpy(reinterpret_cast<void*>(reinterpret_cast<size_t>(vertexData) + size_pos), mesh.vertices_Transformed_PRE.data(), size_pre);
-			//	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-			//}
+			else if (mesh.IsDynamicVB())
+			{
+				
+			}
 
 		}
 
 		if (streamOutSetUp)
 		{
-			GetDevice()->UnbindUAVs(0, 2, threadID);
-			GetDevice()->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, threadID);
+			device->UnbindUAVs(0, 2, threadID);
+			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, threadID);
 		}
 
 	}
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID); // skinning
 
 	//// Particle system simulation/sorting/culling:
@@ -3548,7 +3539,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			desc.MiscFlags = 0;
 			desc.Usage = USAGE_DEFAULT;
 
-			GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_CLOUDS]);
+			device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_CLOUDS]);
 		}
 
 		float cloudPhase = renderTime * GetScene().cloudSpeed;
@@ -5147,8 +5138,6 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				continue;
 			}
 
-			const bool dynamicVB = mesh.IsDynamicVB();
-
 			const auto& visibleInstances = iter->second;
 
 			const float tessF = mesh.GetTessellationFactor();
@@ -5200,21 +5189,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					if (advancedVBRequest || tessellatorRequested)
 					{
-						((volatile InstBuf*)instances)[k].instance.Create(dynamicVB ? __identityMat : transform.world, instance.color);
+						((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
 
-						if (dynamicVB)
-						{
-							((volatile InstBuf*)instances)[k].instancePrev.Create(__identityMat);
-						}
-						else
-						{
-							const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-							((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
-						}
+						const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+						((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
 					}
 					else
 					{
-						((volatile Instance*)instances)[k].Create(dynamicVB ? __identityMat : transform.world, instance.color, dither);
+						((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
 					}
 
 					++k;
@@ -5320,7 +5302,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::POSITION:
 					{
 						GPUBuffer* vbs[] = {
-							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get()),
+							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
@@ -5328,7 +5310,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(Instance)
 						};
 						UINT offsets[] = {
-							dynamicVB ? mesh.bufferOffset_POS : 0,
+							0,
 							instancesOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
@@ -5337,7 +5319,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 					{
 						GPUBuffer* vbs[] = {
-							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get()),
+							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
 							dynamicVertexBufferPool
 						};
@@ -5347,7 +5329,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(Instance)
 						};
 						UINT offsets[] = {
-							dynamicVB ? mesh.bufferOffset_POS : 0,
+							0,
 							0,
 							instancesOffset
 						};
@@ -5357,9 +5339,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 					{
 						GPUBuffer* vbs[] = {
-							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get()),
+							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
-							dynamicVB ? dynamicVertexBufferPool : (mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get()),
+							mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
 							dynamicVertexBufferPool
 						};
 						UINT strides[] = {
@@ -5369,9 +5351,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 							sizeof(InstBuf)
 						};
 						UINT offsets[] = {
-							dynamicVB ? mesh.bufferOffset_POS : 0,
 							0,
-							dynamicVB ? mesh.bufferOffset_PRE : 0,
+							0,
+							0,
 							instancesOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);

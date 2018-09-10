@@ -287,10 +287,7 @@ namespace wiSceneSystem
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
 
-		// Dynamic vertexbuffers write into a global pool, these will be the offsets into that:
-		bool dynamicVB = false;
-		uint32_t bufferOffset_POS;
-		uint32_t bufferOffset_PRE;
+		bool dynamicVB = false; // soft body will update the vertex buffer from cpu
 
 		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
 
@@ -299,14 +296,7 @@ namespace wiSceneSystem
 
 		AABB aabb;
 
-		wiECS::Entity armatureID;
-
-		struct VertexGroup 
-		{
-			std::string name;
-			std::unordered_map<int, float> vertex_weights; // maps vertex index to weight value...
-		};
-		std::vector<VertexGroup> vertexGroups;
+		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
 
 		wiRenderTarget	impostorTarget;
 		float impostorDistance = 100.0f;
@@ -364,8 +354,8 @@ namespace wiSceneSystem
 	{
 		enum class CollisionShape
 		{
-			SPHERE,
 			BOX,
+			SPHERE,
 			CAPSULE,
 			CONVEX_HULL,
 			TRIANGLE_MESH,
@@ -784,6 +774,14 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms
 	);
+	void RunPhysicsUpdateSystem(
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<MeshComponent>& meshes,
+		wiECS::ComponentManager<ObjectComponent>& objects,
+		wiECS::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
+		wiECS::ComponentManager<SoftBodyPhysicsComponent>& softbodies,
+		float dt
+	);
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunAnimationUpdateSystem(
 		wiECS::ComponentManager<AnimationComponent>& animations,
@@ -794,13 +792,6 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<ParentComponent>& parents,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<LayerComponent>& layers
-	);
-	void RunPhysicsUpdateSystem(
-		wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<MeshComponent>& meshes,
-		wiECS::ComponentManager<ObjectComponent>& objects,
-		wiECS::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
-		wiECS::ComponentManager<SoftBodyPhysicsComponent>& softbodies
 	);
 	void RunArmatureUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,

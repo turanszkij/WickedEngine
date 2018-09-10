@@ -66,8 +66,8 @@ wiBULLET::wiBULLET()
 	bulletPhysics->dynamicsWorld->getSolverInfo().m_splitImpulse=true;
 
 	bulletPhysics->dynamicsWorld->setGravity(btVector3(0,-11,0));
-	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().air_density			=	(btScalar)1.0;
-	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_density		=	0;
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().air_density			=	(btScalar)0.0;
+	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_density			=	0;
 	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_offset			=	0;
 	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().water_normal			=	btVector3(0,0,0);
 	((btSoftRigidDynamicsWorld*)bulletPhysics->dynamicsWorld)->getWorldInfo().m_gravity.setValue(0,-11,0);

@@ -85,113 +85,57 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	physicsLabel->SetSize(XMFLOAT2(150, 20));
 	objectWindow->AddWidget(physicsLabel);
 
-	simulationTypeComboBox = new wiComboBox("Simulation Type:");
-	simulationTypeComboBox->SetSize(XMFLOAT2(100, 20));
-	simulationTypeComboBox->SetPos(XMFLOAT2(x, y += 30));
-	simulationTypeComboBox->AddItem("None");
-	simulationTypeComboBox->AddItem("Rigid Body");
-	//simulationTypeComboBox->AddItem("Soft Body");
-	simulationTypeComboBox->OnSelect([&](wiEventArgs args) {
-		//PhysicsComponent* physicscomponent = wiRenderer::GetScene().physicscomponents.GetComponent(entity);
-		//if (physicscomponent != nullptr)
-		//{
-		//	wiRenderer::physicsEngine->removeObject(*physicscomponent);
 
-		//	switch (args.iValue)
-		//	{
-		//	case 0:
-		//		physicscomponent->rigidBody = false;
-		//		//if (object->mesh != nullptr)
-		//		//{
-		//		//	object->mesh->softBody = false;
-		//		//}
 
-		//		kinematicCheckBox->SetEnabled(false);
-		//		physicsTypeComboBox->SetEnabled(false);
-		//		collisionShapeComboBox->SetEnabled(false);
-		//		break;
-		//	case 1:
-		//		physicscomponent->rigidBody = true;
-		//		//if (object->mesh != nullptr)
-		//		//{
-		//		//	object->mesh->softBody = false;
-		//		//}
+	rigidBodyCheckBox = new wiCheckBox("Rigid Body Physics: ");
+	rigidBodyCheckBox->SetTooltip("Enable rigid body physics simulation.");
+	rigidBodyCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	rigidBodyCheckBox->SetCheck(false);
+	rigidBodyCheckBox->OnClick([&](wiEventArgs args) 
+	{
+		Scene& scene = wiRenderer::GetScene();
+		if (args.bValue)
+		{
+			TransformComponent* transform = scene.transforms.GetComponent(entity);
+			ObjectComponent* object = scene.objects.GetComponent(entity);
+			if (transform != nullptr && object != nullptr)
+			{
+				MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 
-		//		kinematicCheckBox->SetEnabled(true);
-		//		physicsTypeComboBox->SetEnabled(true);
-		//		collisionShapeComboBox->SetEnabled(true);
-		//		break;
-		//	//case 2:
-		//	//	object->rigidBody = false;
-		//	//	if (object->mesh != nullptr)
-		//	//	{
-		//	//		object->mesh->softBody = true;
-		//	//	}
-
-		//	//	kinematicCheckBox->SetEnabled(false);
-		//	//	physicsTypeComboBox->SetEnabled(true);
-		//	//	collisionShapeComboBox->SetEnabled(false);
-		//	//	break;
-		//	default:
-		//		assert(0);
-		//		break;
-		//	}
-
-		//	wiRenderer::physicsEngine->registerObject(*physicscomponent);
-
-		//}
+				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
+				if (physicscomponent == nullptr)
+				{
+					RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
+					rigidbody.kinematic = kinematicCheckBox->GetCheck();
+					rigidbody.shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox->GetSelected();
+					wiRenderer::physicsEngine->addRigidBody(rigidbody, *mesh, *transform);
+				}
+			}
+		}
+		else
+		{
+			RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+			if (physicscomponent != nullptr)
+			{
+				wiRenderer::physicsEngine->removeRigidBody(*physicscomponent);
+				scene.rigidbodies.Remove(entity);
+			}
+		}
 	});
-	simulationTypeComboBox->SetSelected(0);
-	simulationTypeComboBox->SetEnabled(true);
-	simulationTypeComboBox->SetTooltip("Set simulation type.");
-	objectWindow->AddWidget(simulationTypeComboBox);
+	objectWindow->AddWidget(rigidBodyCheckBox);
 
 	kinematicCheckBox = new wiCheckBox("Kinematic: ");
 	kinematicCheckBox->SetTooltip("Toggle kinematic behaviour.");
 	kinematicCheckBox->SetPos(XMFLOAT2(x, y += 30));
 	kinematicCheckBox->SetCheck(false);
 	kinematicCheckBox->OnClick([&](wiEventArgs args) {
-		//PhysicsComponent* physicscomponent = wiRenderer::GetScene().physicscomponents.GetComponent(entity);
-		//if (physicscomponent != nullptr)
-		//{
-		//	wiRenderer::physicsEngine->removeObject(object);
-
-		//	object->kinematic = args.bValue;
-
-		//	wiRenderer::physicsEngine->registerObject(object);
-		//}
+		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			physicscomponent->kinematic = args.bValue;
+		}
 	});
 	objectWindow->AddWidget(kinematicCheckBox);
-
-	physicsTypeComboBox = new wiComboBox("Contribution Type:");
-	physicsTypeComboBox->SetSize(XMFLOAT2(100, 20));
-	physicsTypeComboBox->SetPos(XMFLOAT2(x, y += 30));
-	physicsTypeComboBox->AddItem("Active");
-	physicsTypeComboBox->AddItem("Passive");
-	physicsTypeComboBox->OnSelect([&](wiEventArgs args) {
-		//if (object != nullptr)
-		//{
-		//	wiRenderer::physicsEngine->removeObject(object);
-
-		//	switch (args.iValue)
-		//	{
-		//	case 0:
-		//		object->physicsType = "ACTIVE";
-		//		break;
-		//	case 1:
-		//		object->physicsType = "PASSIVE";
-		//		break;
-		//	default:
-		//		break;
-		//	}
-
-		//	wiRenderer::physicsEngine->registerObject(object);
-		//}
-	});
-	physicsTypeComboBox->SetSelected(0);
-	physicsTypeComboBox->SetEnabled(true);
-	physicsTypeComboBox->SetTooltip("Set physics type.");
-	objectWindow->AddWidget(physicsTypeComboBox);
 
 	collisionShapeComboBox = new wiComboBox("Collision Shape:");
 	collisionShapeComboBox->SetSize(XMFLOAT2(100, 20));
@@ -201,34 +145,32 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	collisionShapeComboBox->AddItem("Capsule");
 	collisionShapeComboBox->AddItem("Convex Hull");
 	collisionShapeComboBox->AddItem("Triangle Mesh");
-	collisionShapeComboBox->OnSelect([&](wiEventArgs args) {
-		//if (object != nullptr)
-		//{
-		//	wiRenderer::physicsEngine->removeObject(object);
-
-		//	switch (args.iValue)
-		//	{
-		//	case 0:
-		//		object->collisionShape = "BOX";
-		//		break;
-		//	case 1:
-		//		object->collisionShape = "SPHERE";
-		//		break;
-		//	case 2:
-		//		object->collisionShape = "CAPSULE";
-		//		break;
-		//	case 3:
-		//		object->collisionShape = "CONVEX_HULL";
-		//		break;
-		//	case 4:
-		//		object->collisionShape = "MESH";
-		//		break;
-		//	default:
-		//		break;
-		//	}
-
-		//	wiRenderer::physicsEngine->registerObject(object);
-		//}
+	collisionShapeComboBox->OnSelect([&](wiEventArgs args) 
+	{
+		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			switch (args.iValue)
+			{
+			case 0:
+				physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::BOX;
+				break;
+			case 1:
+				physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::SPHERE;
+				break;
+			case 2:
+				physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::CAPSULE;
+				break;
+			case 3:
+				physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL;
+				break;
+			case 4:
+				physicscomponent->shape = RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH;
+				break;
+			default:
+				break;
+			}
+		}
 	});
 	collisionShapeComboBox->SetSelected(0);
 	collisionShapeComboBox->SetEnabled(true);
@@ -272,41 +214,11 @@ void ObjectWindow::SetEntity(Entity entity)
 
 		const RigidBodyPhysicsComponent* physicsComponent = scene.rigidbodies.GetComponent(entity);
 
+		rigidBodyCheckBox->SetCheck(physicsComponent != nullptr);
+
 		if (physicsComponent != nullptr)
 		{
-			//if (physicsComponent->rigidBody)
-			//{
-			//	simulationTypeComboBox->SetSelected(1);
-			//}
-			//else
-			//{
-			//	if (object->mesh != nullptr)
-			//	{
-			//		if (object->mesh->softBody)
-			//		{
-			//			simulationTypeComboBox->SetSelected(2);
-			//		}
-			//		else
-			//		{
-			//			simulationTypeComboBox->SetSelected(0);
-			//		}
-			//	}
-			//	else
-			//	{
-			//		simulationTypeComboBox->SetSelected(0);
-			//	}
-			//}
-
 			kinematicCheckBox->SetCheck(physicsComponent->kinematic);
-
-			//if (!physicsComponent->physicsType.compare("ACTIVE"))
-			//{
-			//	physicsTypeComboBox->SetSelected(0);
-			//}
-			//else if (!physicsComponent->physicsType.compare("PASSIVE"))
-			//{
-			//	physicsTypeComboBox->SetSelected(1);
-			//}
 
 			if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::BOX)
 			{
@@ -332,25 +244,6 @@ void ObjectWindow::SetEntity(Entity entity)
 
 		objectWindow->SetEnabled(true);
 
-
-		switch (simulationTypeComboBox->GetSelected())
-		{
-		case 1:
-			kinematicCheckBox->SetEnabled(true);
-			physicsTypeComboBox->SetEnabled(true);
-			collisionShapeComboBox->SetEnabled(true);
-			break;
-		case 2:
-			kinematicCheckBox->SetEnabled(false);
-			physicsTypeComboBox->SetEnabled(true);
-			collisionShapeComboBox->SetEnabled(false);
-			break;
-		default:
-			kinematicCheckBox->SetEnabled(false);
-			physicsTypeComboBox->SetEnabled(false);
-			collisionShapeComboBox->SetEnabled(false);
-			break;
-		}
 	}
 	else
 	{
