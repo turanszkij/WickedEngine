@@ -99,9 +99,6 @@ string wiRenderer::SHADERPATH = "shaders/";
 
 deque<wiSprite*> wiRenderer::waterRipples;
 
-//wiSPTree* wiRenderer::spTree = nullptr;
-//wiSPTree* wiRenderer::spTree_lights = nullptr;
-
 Scene* wiRenderer::scene = nullptr;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
@@ -624,8 +621,6 @@ void wiRenderer::CleanUpStatic()
 void wiRenderer::ClearWorld()
 {
 	GetDevice()->WaitForGPU();
-
-	//emitterSystems.clear();
 	
 	if (physicsEngine)
 		physicsEngine->ClearWorld();
@@ -635,17 +630,6 @@ void wiRenderer::ClearWorld()
 	for (wiSprite* x : waterRipples)
 		x->CleanUp();
 	waterRipples.clear();
-
-	//SAFE_DELETE(spTree);
-	//SAFE_DELETE(spTree_lights);
-
-	//for (auto& x : frameCullings)
-	//{
-	//	FrameCulling& culling = x.second;
-	//	culling.Clear();
-	//}
-
-	//cam->detach();
 
 	GetScene().Clear();
 
@@ -2936,31 +2920,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	*getPrevCamera() = *getCamera();
 	*getCamera() = *scene.cameras.GetComponent(cameraID);
 
-	//// update the space partitioning trees:
-	//wiProfiler::GetInstance().BeginRange("SPTree Update", wiProfiler::DOMAIN_CPU);
-	//if (GetGameSpeed() > 0)
-	//{
-	//	if (spTree != nullptr && spTree->root != nullptr)
-	//	{
-	//		wiSPTree* newTree = spTree->updateTree();
-	//		if (newTree != nullptr)
-	//		{
-	//			SAFE_DELETE(spTree);
-	//			spTree = newTree;
-	//		}
-	//	}
-	//	if (spTree_lights != nullptr && spTree_lights->root != nullptr)
-	//	{
-	//		wiSPTree* newTree = spTree_lights->updateTree();
-	//		if (newTree != nullptr)
-	//		{
-	//			SAFE_DELETE(spTree_lights);
-	//			spTree_lights = newTree;
-	//		}
-	//	}
-	//}
-	//wiProfiler::GetInstance().EndRange(); // SPTree Update
-
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
@@ -2994,106 +2953,125 @@ void wiRenderer::UpdatePerFrameData(float dt)
 				culling.frustum = camera->frustum;
 			}
 
-			for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+			// Cull objects for every camera:
+			for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 			{
-				const CullableComponent& cullable = scene.cullables[i];
-				if (culling.frustum.CheckBox(cullable.aabb))
+				const AABB& aabb = scene.aabb_objects[i];
+
+				if (culling.frustum.CheckBox(aabb))
 				{
-					Entity entity = scene.cullables.GetEntity(i);
+					const ObjectComponent& object = scene.objects[i];
+					Entity entity = scene.objects.GetEntity(i);
 
-					const ObjectComponent* object = scene.objects.GetComponent(entity);
-					if (object != nullptr)
+					culling.culledObjects.push_back(entity);
+					if (object.GetRenderTypes() & RENDERTYPE_OPAQUE)
 					{
-						culling.culledObjects.push_back(entity);
-						if (object->GetRenderTypes() & RENDERTYPE_OPAQUE)
-						{
-							culling.culledRenderer_opaque[object->meshID].push_back(entity);
-						}
-						if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT)
-						{
-							culling.culledRenderer_transparent[object->meshID].push_back(entity);
-						}
-						if (object->GetRenderTypes() & RENDERTYPE_WATER)
-						{
-							requestReflectionRendering = true;
-						}
+						culling.culledRenderer_opaque[object.meshID].push_back(entity);
 					}
-					else if (camera == getCamera()) // the following cullings will be only for the main camera:
+					if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 					{
-						if (scene.lights.Contains(entity))
-						{
-							culling.culledLights.push_back(entity);
-							continue;
-						}
-						
-						if (scene.decals.Contains(entity))
-						{
-							culling.culledDecals.push_back(entity);
-							continue;
-						}
-
-						if (scene.probes.Contains(entity))
-						{
-							culling.culledEnvProbes.push_back(entity);
-							continue;
-						}
+						culling.culledRenderer_transparent[object.meshID].push_back(entity);
 					}
-
+					if (object.GetRenderTypes() & RENDERTYPE_WATER)
+					{
+						requestReflectionRendering = true;
+					}
 				}
 			}
 
-			int i = 0;
-			int shadowCounter_2D = 0;
-			int shadowCounter_Cube = 0;
-			for (Entity entity : culling.culledLights)
+			// the following cullings will be only for the main camera:
+			if (camera == getCamera())
 			{
-				LightComponent& light = *scene.lights.GetComponent(entity);
-				light.entityArray_index = i;
-
-				// Link shadowmaps to lights till there are free slots
-
-				light.shadowMap_index = -1;
-
-				if (light.shadow)
+				// Cull decals:
+				for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
 				{
-					switch (light.GetType())
+					const AABB& aabb = scene.aabb_decals[i];
+
+					if (culling.frustum.CheckBox(aabb))
 					{
-					case LightComponent::DIRECTIONAL:
-						if (!light.shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
-						{
-							light.shadowMap_index = shadowCounter_2D;
-							shadowCounter_2D += 3;
-						}
-						break;
-					case LightComponent::SPOT:
-						if (!light.shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
-						{
-							light.shadowMap_index = shadowCounter_2D;
-							shadowCounter_2D++;
-						}
-						break;
-					case LightComponent::POINT:
-					case LightComponent::SPHERE:
-					case LightComponent::DISC:
-					case LightComponent::RECTANGLE:
-					case LightComponent::TUBE:
-						if (!light.shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
-						{
-							light.shadowMap_index = shadowCounter_Cube;
-							shadowCounter_Cube++;
-						}
-						break;
-					default:
-						break;
+						Entity entity = scene.decals.GetEntity(i);
+						culling.culledDecals.push_back(entity);
 					}
 				}
 
-				i++;
+				// Cull probes:
+				for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
+				{
+					const AABB& aabb = scene.aabb_probes[i];
+
+					if (culling.frustum.CheckBox(aabb))
+					{
+						Entity entity = scene.probes.GetEntity(i);
+						culling.culledEnvProbes.push_back(entity);
+					}
+				}
+
+				// Cull lights:
+				for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
+				{
+					const AABB& aabb = scene.aabb_lights[i];
+
+					if (culling.frustum.CheckBox(aabb))
+					{
+						Entity entity = scene.lights.GetEntity(i);
+						culling.culledLights.push_back(entity);
+					}
+				}
+
+				int i = 0;
+				int shadowCounter_2D = 0;
+				int shadowCounter_Cube = 0;
+				for (Entity entity : culling.culledLights)
+				{
+					LightComponent& light = *scene.lights.GetComponent(entity);
+					light.entityArray_index = i;
+
+					// Link shadowmaps to lights till there are free slots
+
+					light.shadowMap_index = -1;
+
+					if (light.shadow)
+					{
+						switch (light.GetType())
+						{
+						case LightComponent::DIRECTIONAL:
+							if (!light.shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
+							{
+								light.shadowMap_index = shadowCounter_2D;
+								shadowCounter_2D += 3;
+							}
+							break;
+						case LightComponent::SPOT:
+							if (!light.shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
+							{
+								light.shadowMap_index = shadowCounter_2D;
+								shadowCounter_2D++;
+							}
+							break;
+						case LightComponent::POINT:
+						case LightComponent::SPHERE:
+						case LightComponent::DISC:
+						case LightComponent::RECTANGLE:
+						case LightComponent::TUBE:
+							if (!light.shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
+							{
+								light.shadowMap_index = shadowCounter_Cube;
+								shadowCounter_Cube++;
+							}
+							break;
+						default:
+							break;
+						}
+					}
+
+					i++;
+				}
+
 			}
 
 		}
 	}
-	wiProfiler::GetInstance().EndRange(); // SPTree Culling
+	wiProfiler::GetInstance().EndRange(); // Frustum Culling
 
 	// Ocean will override any current reflectors
 	waterPlane = scene.waterPlane;
@@ -3103,11 +3081,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, ocean->waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
 		XMStoreFloat4(&waterPlane, _refPlane);
 	}
-
-	//for (auto& x : emitterSystems)
-	//{
-	//	x->Update(dt*GetGameSpeed());
-	//}
 
 
 	if (GetTemporalAAEnabled())
@@ -3595,9 +3568,9 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
+			const AABB& aabb = *scene.aabb_objects.GetComponent(entity);
 
-			if (cullable.aabb.intersects(getCamera()->Eye))
+			if (aabb.intersects(getCamera()->Eye))
 			{
 				// camera is inside the instance, mark it as visible in this frame:
 				object.occlusionHistory |= 1;
@@ -3609,7 +3582,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 				queryID++;
 
 				// previous frame view*projection because these are drawn against the previous depth buffer:
-				cb.mTransform = XMMatrixTranspose(cullable.aabb.getAsBoxMatrix()*getPrevCamera()->GetViewProjection()); // todo: obb
+				cb.mTransform = XMMatrixTranspose(aabb.getAsBoxMatrix()*getPrevCamera()->GetViewProjection()); // todo: obb
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 				// render bounding box to later read the occlusion status
@@ -3836,50 +3809,6 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 
 		device->EventEnd(threadID);
 	}
-
-	//if (debugPartitionTree && spTree != nullptr)
-	//{
-	//	device->EventBegin("DebugPartitionTree", threadID);
-
-	//	device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
-
-	//	GPUBuffer* vbs[] = {
-	//		&Cube::vertexBuffer,
-	//	};
-	//	const UINT strides[] = {
-	//		sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-	//	};
-	//	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//	device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
-
-	//	MiscCB sb;
-
-
-	//	wiSPTree::Node* nodes[100];
-	//	UINT stackpos = 0;
-
-	//	nodes[stackpos++] = spTree->root;
-
-	//	do
-	//	{
-	//		wiSPTree::Node* node = nodes[--stackpos];
-
-	//		for (auto& child : node->children)
-	//		{
-	//			nodes[stackpos++] = child;
-	//		}
-	//		
-	//		sb.mTransform = XMMatrixTranspose(node->box.getAsBoxMatrix() * camera->GetViewProjection());
-	//		sb.mColor = XMFLOAT4(1, 1, 0, 1);
-
-	//		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-	//		device->DrawIndexed(24, 0, 0, threadID);
-
-	//	} while (stackpos > 0);
-
-	//	device->EventEnd(threadID);
-	//}
 
 	if (!renderableBoxes.empty())
 	{
@@ -4757,31 +4686,23 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 							CulledCollection culledRenderer;
 							bool transparentShadowsRequested = false;
-							for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+							for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 							{
-								const CullableComponent& cullable = scene.cullables[i];
-								Entity cullable_entity = scene.cullables.GetEntity(i);
-								if (cullable_entity != entity && boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(cullable.aabb))
+								const AABB& aabb = scene.aabb_objects[i];
+								if (boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(aabb))
 								{
-									const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
-									if (object != nullptr)
+									const ObjectComponent& object = scene.objects[i];
+									if (cascade >= object.cascadeMask && object.IsCastingShadow())
 									{
-										if (cascade < object->cascadeMask)
-										{
-											continue;
-										}
-
+										Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 										if (all_layers || (layerMask & layer.GetLayerMask()))
 										{
-											if (object->IsCastingShadow())
-											{
-												culledRenderer[object->meshID].push_back(cullable_entity);
+											culledRenderer[object.meshID].push_back(cullable_entity);
 
-												if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
-												{
-													transparentShadowsRequested = true;
-												}
+											if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+											{
+												transparentShadowsRequested = true;
 											}
 										}
 									}
@@ -4827,26 +4748,23 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 						CulledCollection culledRenderer;
 						bool transparentShadowsRequested = false;
-						for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 						{
-							const CullableComponent& cullable = scene.cullables[i];
-							Entity cullable_entity = scene.cullables.GetEntity(i);
-							if (cullable_entity != entity && frustum.CheckBox(cullable.aabb))
+							const AABB& aabb = scene.aabb_objects[i];
+							if (frustum.CheckBox(aabb))
 							{
-								const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
-								if (object != nullptr)
+								const ObjectComponent& object = scene.objects[i];
+								if (object.IsCastingShadow())
 								{
+									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 									if (all_layers || (layerMask & layer.GetLayerMask()))
 									{
-										if (object->IsCastingShadow())
-										{
-											culledRenderer[object->meshID].push_back(cullable_entity);
+										culledRenderer[object.meshID].push_back(cullable_entity);
 
-											if (object->GetRenderTypes() & RENDERTYPE_TRANSPARENT || object->GetRenderTypes() & RENDERTYPE_WATER)
-											{
-												transparentShadowsRequested = true;
-											}
+										if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+										{
+											transparentShadowsRequested = true;
 										}
 									}
 								}
@@ -4893,22 +4811,19 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 						CulledCollection culledRenderer;
-						for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 						{
-							const CullableComponent& cullable = scene.cullables[i];
-							Entity cullable_entity = scene.cullables.GetEntity(i);
-							if (cullable_entity != entity && SPHERE(transform.translation, light.range).intersects(cullable.aabb))
+							const AABB& aabb = scene.aabb_objects[i];
+							if (SPHERE(transform.translation, light.range).intersects(aabb))
 							{
-								const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
-								if (object != nullptr)
+								const ObjectComponent& object = scene.objects[i];
+								if (object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
 								{
+									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 									if (all_layers || (layerMask & layer.GetLayerMask()))
 									{
-										if (object->IsCastingShadow() && object->GetRenderTypes() == RENDERTYPE_OPAQUE)
-										{
-											culledRenderer[object->meshID].push_back(cullable_entity);
-										}
+										culledRenderer[object.meshID].push_back(cullable_entity);
 									}
 								}
 							}
@@ -5025,10 +4940,10 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 					if (all_layers || (layerMask & layer.GetLayerMask()))
 					{
-						const CullableComponent& cullable = *scene.cullables.GetComponent(objectEntity);
+						const AABB& aabb = *scene.aabb_objects.GetComponent(objectEntity);
 
-						const float impostorThreshold = cullable.aabb.getRadius();
-						float dist = wiMath::Distance(eye, cullable.aabb.getCenter());
+						const float impostorThreshold = aabb.getRadius();
+						float dist = wiMath::Distance(eye, aabb.getCenter());
 						float dither = instance.GetTransparency();
 						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
 						if (dither > 1.0f - FLT_EPSILON)
@@ -5169,14 +5084,14 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 
 				if (all_layers || (layerMask & layer.GetLayerMask()))
 				{
-					const CullableComponent& cullable = *scene.cullables.GetComponent(objectEntity);
+					const AABB& aabb = *scene.aabb_objects.GetComponent(objectEntity);
 
 					float dither = instance.GetTransparency();
 					if (impostorRequest != nullptr)
 					{
 						// fade out to impostor...
-						const float impostorThreshold = cullable.aabb.getRadius();
-						float dist = wiMath::Distance(eye, cullable.aabb.getCenter());
+						const float impostorThreshold = aabb.getRadius();
+						float dist = wiMath::Distance(eye, aabb.getCenter());
 						if (mesh.HasImpostor())
 							dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh.impostorDistance) / impostorThreshold, 0, 1));
 					}
@@ -5530,9 +5445,9 @@ void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
 		{
 			DecalComponent& decal = scene.decals[i];
 			Entity entity = scene.decals.GetEntity(i);
-			const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
+			const AABB& aabb = *scene.aabb_decals.GetComponent(entity);
 
-			if ((decal.texture != nullptr || decal.normal != nullptr) && camera->frustum.CheckBox(cullable.aabb)) 
+			if ((decal.texture != nullptr || decal.normal != nullptr) && camera->frustum.CheckBox(aabb)) 
 			{
 
 				device->BindResource(PS, decal.texture, TEXSLOT_ONDEMAND0, threadID);
@@ -5718,20 +5633,17 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		SPHERE culler = SPHERE(center, zFarP);
 
 		CulledCollection culledRenderer;
-		for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 		{
-			const CullableComponent& cullable = scene.cullables[i];
-			Entity cullable_entity = scene.cullables.GetEntity(i);
-			if (cullable_entity != entity && culler.intersects(cullable.aabb))
+			const AABB& aabb = scene.aabb_objects[i];
+			if (culler.intersects(aabb))
 			{
-				const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
-				if (object != nullptr)
+				Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+				const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+				if ((layerMask & layer.GetLayerMask()))
 				{
-					const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-					if ((layerMask & layer.GetLayerMask()))
-					{
-						culledRenderer[object->meshID].push_back(cullable_entity);
-					}
+					const ObjectComponent& object = scene.objects[i];
+					culledRenderer[object.meshID].push_back(cullable_entity);
 				}
 			}
 		}
@@ -5879,17 +5791,14 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 
 
 	CulledCollection culledRenderer;
-	for (size_t i = 0; i < scene.cullables.GetCount(); ++i)
+	for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 	{
-		const CullableComponent& cullable = scene.cullables[i];
-		Entity cullable_entity = scene.cullables.GetEntity(i);
-		if (bbox.intersects(cullable.aabb))
+		const AABB& aabb = scene.aabb_objects[i];
+		if (bbox.intersects(aabb))
 		{
-			const ObjectComponent* object = scene.objects.GetComponent(cullable_entity);
-			if (object != nullptr)
-			{
-				culledRenderer[object->meshID].push_back(cullable_entity);
-			}
+			Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+			const ObjectComponent& object = scene.objects[i];
+			culledRenderer[object.meshID].push_back(cullable_entity);
 		}
 	}
 
@@ -7825,31 +7734,29 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
-		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 		{
-			Entity entity = scene.objects.GetEntity(i);
+			const AABB& aabb = scene.aabb_objects[i];
+			if (!ray.intersects(aabb))
+			{
+				continue;
+			}
+
+			const ObjectComponent& object = scene.objects[i];
+			if (object.meshID == INVALID_ENTITY)
+			{
+				continue;
+			}
+			if (!(renderTypeMask & object.GetRenderTypes()))
+			{
+				continue;
+			}
+
+			Entity entity = scene.aabb_objects.GetEntity(i);
 			const LayerComponent& layer = *scene.layers.GetComponent(entity);
 
-			const uint32_t objectLayerMask = layer.GetLayerMask();
-			if (objectLayerMask & layerMask)
+			if (layer.GetLayerMask() & layerMask)
 			{
-				const ObjectComponent& object = scene.objects[i];
-
-				if (object.meshID == INVALID_ENTITY)
-				{
-					continue;
-				}
-				if (!(renderTypeMask & object.GetRenderTypes()))
-				{
-					continue;
-				}
-
-				const CullableComponent& cullable = *scene.cullables.GetComponent(entity);
-				if (!ray.intersects(cullable.aabb))
-				{
-					continue;
-				}
-
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
 				const TransformComponent& transform = *scene.transforms.GetComponent(entity);

@@ -969,9 +969,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
       <Filter>ENGINE\Network</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -1819,9 +1816,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp">
       <Filter>ENGINE\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp">
-      <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp">
       <Filter>ENGINE\Helpers</Filter>

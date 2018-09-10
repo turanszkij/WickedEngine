@@ -1686,7 +1686,7 @@ void EditorComponent::Render()
 {
 	Scene& scene = wiRenderer::GetScene();
 
-	// hover box
+	// Hovered item boxes:
 	if (!cinemaModeCheckBox->GetCheck())
 	{
 		if (hovered.entity != INVALID_ENTITY)
@@ -1694,20 +1694,20 @@ void EditorComponent::Render()
 			const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 			if (object != nullptr)
 			{
-				const CullableComponent* cullable = scene.cullables.GetComponent(hovered.entity);
+				const AABB& aabb = *scene.aabb_objects.GetComponent(hovered.entity);
 
 				XMFLOAT4X4 hoverBox;
-				XMStoreFloat4x4(&hoverBox, cullable->aabb.getAsBoxMatrix());
+				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
 				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
 
 			const LightComponent* light = scene.lights.GetComponent(hovered.entity);
 			if (light != nullptr)
 			{
-				const CullableComponent* cullable = scene.cullables.GetComponent(hovered.entity);
+				const AABB& aabb = *scene.aabb_lights.GetComponent(hovered.entity);
 
 				XMFLOAT4X4 hoverBox;
-				XMStoreFloat4x4(&hoverBox, cullable->aabb.getAsBoxMatrix());
+				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
 				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
 			}
 
@@ -1720,6 +1720,7 @@ void EditorComponent::Render()
 
 	}
 
+	// Selected items box:
 	if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
 	{
 		AABB selectedAABB = AABB(XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX),XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
@@ -1727,19 +1728,39 @@ void EditorComponent::Render()
 		{
 			if (picked->entity != INVALID_ENTITY)
 			{
-				const CullableComponent* cullable = scene.cullables.GetComponent(picked->entity);
-				if (cullable != nullptr)
+				const ObjectComponent* object = scene.objects.GetComponent(picked->entity);
+				if (object != nullptr)
 				{
-					selectedAABB = AABB::Merge(selectedAABB, cullable->aabb);
+					const AABB& aabb = *scene.aabb_objects.GetComponent(picked->entity);
+					selectedAABB = AABB::Merge(selectedAABB, aabb);
+				}
+
+				const LightComponent* light = scene.lights.GetComponent(picked->entity);
+				if (light != nullptr)
+				{
+					const AABB& aabb = *scene.aabb_lights.GetComponent(picked->entity);
+					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
 				const DecalComponent* decal = scene.decals.GetComponent(picked->entity);
 				if (decal != nullptr)
 				{
+					const AABB& aabb = *scene.aabb_decals.GetComponent(picked->entity);
+					selectedAABB = AABB::Merge(selectedAABB, aabb);
+
+					// also display decal OBB:
 					XMFLOAT4X4 selectionBox;
 					selectionBox = decal->world;
 					wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
 				}
+
+				const EnvironmentProbeComponent* probe = scene.probes.GetComponent(picked->entity);
+				if (probe != nullptr)
+				{
+					const AABB& aabb = *scene.aabb_probes.GetComponent(picked->entity);
+					selectedAABB = AABB::Merge(selectedAABB, aabb);
+				}
+
 			}
 		}
 

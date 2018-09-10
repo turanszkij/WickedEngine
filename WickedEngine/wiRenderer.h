@@ -4,7 +4,6 @@
 #include "wiEnums.h"
 #include "wiGraphicsAPI.h"
 #include "wiWindowRegistration.h"
-#include "wiSPTree.h"
 #include "wiFrustum.h"
 #include "wiSceneSystem_Decl.h"
 #include "wiECS.h"
@@ -439,9 +438,6 @@ public:
 	static void GenerateClouds(wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
 
 	static void ManageDecalAtlas(GRAPHICSTHREAD threadID);
-
-	//static wiSPTree* spTree;
-	//static wiSPTree* spTree_lights;
 
 	// The scene holds all models, and world information
 	static wiSceneSystem::Scene& GetScene();

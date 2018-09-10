@@ -362,7 +362,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSpinLock.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSPTree.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h" />
@@ -698,7 +697,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSPTree.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp" />

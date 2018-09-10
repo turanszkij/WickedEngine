@@ -753,15 +753,15 @@ namespace wiSceneSystem
 
 		RunMaterialUpdateSystem(materials, dt);
 
-		RunObjectUpdateSystem(transforms, meshes, materials, objects, cullables, bounds, waterPlane);
+		RunObjectUpdateSystem(transforms, meshes, materials, objects, aabb_objects, bounds, waterPlane);
 
 		RunCameraUpdateSystem(transforms, cameras);
 
-		RunDecalUpdateSystem(transforms, cullables, decals);
+		RunDecalUpdateSystem(transforms, aabb_decals, decals);
 
-		RunProbeUpdateSystem(transforms, cullables, probes);
+		RunProbeUpdateSystem(transforms, aabb_probes, probes);
 
-		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, cullables, lights, sunDirection, sunColor);
+		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, aabb_lights, lights, sunDirection, sunColor);
 
 	}
 	void Scene::Clear()
@@ -776,15 +776,18 @@ namespace wiSceneSystem
 			materials.Remove(entity);
 			meshes.Remove(entity);
 			objects.Remove(entity);
+			aabb_objects.Remove(entity);
 			rigidbodies.Remove(entity);
 			softbodies.Remove(entity);
-			cullables.Remove(entity);
 			armatures.Remove(entity);
 			lights.Remove(entity);
+			aabb_lights.Remove(entity);
 			cameras.Remove(entity);
 			probes.Remove(entity);
+			aabb_probes.Remove(entity);
 			forces.Remove(entity);
 			decals.Remove(entity);
+			aabb_decals.Remove(entity);
 			animations.Remove(entity);
 			models.Remove(entity);
 		}
@@ -804,15 +807,18 @@ namespace wiSceneSystem
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		objects.Remove(entity);
+		aabb_objects.Remove(entity);
 		rigidbodies.Remove(entity);
 		softbodies.Remove(entity);
-		cullables.Remove(entity);
 		armatures.Remove(entity);
 		lights.Remove(entity);
+		aabb_lights.Remove(entity);
 		cameras.Remove(entity);
 		probes.Remove(entity);
+		aabb_probes.Remove(entity);
 		forces.Remove(entity);
 		decals.Remove(entity);
+		aabb_decals.Remove(entity);
 		animations.Remove(entity);
 		models.Remove(entity);
 	}
@@ -875,7 +881,7 @@ namespace wiSceneSystem
 
 		prev_transforms.Create(entity);
 
-		cullables.Create(entity);
+		aabb_objects.Create(entity);
 
 		objects.Create(entity);
 
@@ -913,7 +919,7 @@ namespace wiSceneSystem
 		transforms.Create(entity).Translate(position);
 		transforms.GetComponent(entity)->UpdateTransform();
 
-		cullables.Create(entity).aabb.createFromHalfWidth(position, XMFLOAT3(range, range, range));
+		aabb_lights.Create(entity).createFromHalfWidth(position, XMFLOAT3(range, range, range));
 
 		LightComponent& light = lights.Create(entity);
 		light.energy = energy;
@@ -963,7 +969,7 @@ namespace wiSceneSystem
 		transforms.Create(entity).Translate(position);
 		transforms.GetComponent(entity)->UpdateTransform();
 
-		cullables.Create(entity);
+		aabb_probes.Create(entity);
 
 		EnvironmentProbeComponent& probe = probes.Create(entity);
 		probe.isUpToDate = false;
@@ -988,7 +994,7 @@ namespace wiSceneSystem
 
 		transforms.Create(entity);
 
-		cullables.Create(entity);
+		aabb_decals.Create(entity);
 
 		DecalComponent& decal = decals.Create(entity);
 		decal.textureName = textureName;
@@ -1409,20 +1415,22 @@ namespace wiSceneSystem
 		const ComponentManager<MeshComponent>& meshes,
 		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<ObjectComponent>& objects,
-		ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_objects,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	)
 	{
+		assert(objects.GetCount() == aabb_objects.GetCount());
+
 		sceneBounds.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 
 		for (size_t i = 0; i < objects.GetCount(); ++i)
 		{
 			ObjectComponent& object = objects[i];
 			Entity entity = objects.GetEntity(i);
-			CullableComponent& cullable = *cullables.GetComponent(entity);
+			AABB& aabb = aabb_objects[i];
 
-			cullable.aabb.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+			aabb.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 			object.rendertypeMask = 0;
 			object.dynamic = false;
 			object.cast_shadow = false;
@@ -1434,8 +1442,8 @@ namespace wiSceneSystem
 
 				if (mesh != nullptr && transform != nullptr)
 				{
-					cullable.aabb = mesh->aabb.get(transform->world);
-					sceneBounds = AABB::Merge(sceneBounds, cullable.aabb);
+					aabb = mesh->aabb.get(transform->world);
+					sceneBounds = AABB::Merge(sceneBounds, aabb);
 
 					if (mesh->IsSkinned() || mesh->IsDynamicVB())
 					{
@@ -1487,10 +1495,12 @@ namespace wiSceneSystem
 	}
 	void RunDecalUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_decals,
 		ComponentManager<DecalComponent>& decals
 	)
 	{
+		assert(decals.GetCount() == aabb_decals.GetCount());
+
 		for (size_t i = 0; i < decals.GetCount(); ++i)
 		{
 			DecalComponent& decal = decals[i];
@@ -1501,17 +1511,19 @@ namespace wiSceneSystem
 			front = XMVector3TransformNormal(front, XMLoadFloat4x4(&decal.world));
 			XMStoreFloat3(&decal.front, front);
 
-			CullableComponent& cullable = *cullables.GetComponent(entity);
-			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-			cullable.aabb = cullable.aabb.get(transform.world);
+			AABB& aabb = aabb_decals[i];
+			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+			aabb = aabb.get(transform.world);
 		}
 	}
 	void RunProbeUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_probes,
 		ComponentManager<EnvironmentProbeComponent>& probes
 	)
 	{
+		assert(probes.GetCount() == aabb_probes.GetCount());
+
 		for (size_t i = 0; i < probes.GetCount(); ++i)
 		{
 			EnvironmentProbeComponent& probe = probes[i];
@@ -1520,25 +1532,27 @@ namespace wiSceneSystem
 
 			probe.position = transform.translation;
 
-			CullableComponent& cullable = *cullables.GetComponent(entity);
-			cullable.aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-			cullable.aabb = cullable.aabb.get(transform.world);
+			AABB& aabb = aabb_probes[i];
+			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
+			aabb = aabb.get(transform.world);
 		}
 	}
 	void RunLightUpdateSystem(
 		const CameraComponent& cascadeCamera,
 		const ComponentManager<TransformComponent>& transforms,
-		ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_lights,
 		ComponentManager<LightComponent>& lights,
 		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	)
 	{
+		assert(lights.GetCount() == aabb_lights.GetCount());
+
 		for (size_t i = 0; i < lights.GetCount(); ++i)
 		{
 			LightComponent& light = lights[i];
 			Entity entity = lights.GetEntity(i);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
-			CullableComponent& cullable = *cullables.GetComponent(entity);
+			AABB& aabb = aabb_lights[i];
 
 			XMMATRIX world = XMLoadFloat4x4(&transform.world);
 			XMVECTOR translation = XMLoadFloat3(&transform.translation);
@@ -1620,7 +1634,7 @@ namespace wiSceneSystem
 					}
 				}
 
-				cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
+				aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
 			}
 			break;
 			case LightComponent::SPOT:
@@ -1636,7 +1650,7 @@ namespace wiSceneSystem
 					light.shadowCam_spotLight[0].Create_Perspective(light.fov);
 				}
 
-				cullable.aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
+				aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
 			}
 			break;
 			case LightComponent::POINT:
@@ -1667,12 +1681,12 @@ namespace wiSceneSystem
 
 				if (light.type == LightComponent::POINT)
 				{
-					cullable.aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
+					aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
 				}
 				else
 				{
 					// area lights have no bounds, just like directional lights (maybe todo)
-					cullable.aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
+					aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
 				}
 			}
 			break;

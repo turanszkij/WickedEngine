@@ -2,7 +2,6 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 #include "ShaderInterop.h"
-#include "wiSPTree.h"
 #include "wiSceneSystem_Decl.h"
 
 class wiArchive;

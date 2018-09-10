@@ -315,11 +315,6 @@ namespace wiSceneSystem
 		void FlipNormals();
 	};
 
-	struct CullableComponent
-	{
-		AABB aabb;
-	};
-
 	struct ObjectComponent
 	{
 		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
@@ -678,15 +673,18 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
 		wiECS::ComponentManager<ObjectComponent> objects;
+		wiECS::ComponentManager<AABB> aabb_objects;
 		wiECS::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
 		wiECS::ComponentManager<SoftBodyPhysicsComponent> softbodies;
-		wiECS::ComponentManager<CullableComponent> cullables;
 		wiECS::ComponentManager<ArmatureComponent> armatures;
 		wiECS::ComponentManager<LightComponent> lights;
+		wiECS::ComponentManager<AABB> aabb_lights;
 		wiECS::ComponentManager<CameraComponent> cameras;
 		wiECS::ComponentManager<EnvironmentProbeComponent> probes;
+		wiECS::ComponentManager<AABB> aabb_probes;
 		wiECS::ComponentManager<ForceFieldComponent> forces;
 		wiECS::ComponentManager<DecalComponent> decals;
+		wiECS::ComponentManager<AABB> aabb_decals;
 		wiECS::ComponentManager<AnimationComponent> animations;
 		wiECS::ComponentManager<ModelComponent> models;
 
@@ -803,7 +801,7 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<MeshComponent>& meshes,
 		const wiECS::ComponentManager<MaterialComponent>& materials,
 		wiECS::ComponentManager<ObjectComponent>& objects,
-		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_objects,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	);
@@ -813,18 +811,18 @@ namespace wiSceneSystem
 	);
 	void RunDecalUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_decals,
 		wiECS::ComponentManager<DecalComponent>& decals
 	);
 	void RunProbeUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_probes,
 		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
 	);
 	void RunLightUpdateSystem(
 		const CameraComponent& cascadeCamera,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<CullableComponent>& cullables,
+		wiECS::ComponentManager<AABB>& aabb_lights,
 		wiECS::ComponentManager<LightComponent>& lights,
 		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	);
