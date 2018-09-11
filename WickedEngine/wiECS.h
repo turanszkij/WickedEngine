@@ -35,7 +35,6 @@ namespace wiECS
 			components.clear();
 			entities.clear();
 			lookup.clear();
-			dead.clear();
 		}
 
 		// Create a new component and retrieve a reference to it:

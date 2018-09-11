@@ -8,8 +8,11 @@ RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWRAWBUFFER(counterBuffer, 4);
 
 TEXTURE2D(randomTex, float4, TEXSLOT_ONDEMAND0);
+
+#ifdef EMIT_FROM_MESH
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
+#endif // EMIT_FROM_MESH
 
 
 [numthreads(THREADCOUNT_EMIT, 1, 1)]
@@ -23,6 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		const float3 randoms = randomTex.SampleLevel(sampler_linear_wrap, float2((float)DTid.x / (float)THREADCOUNT_EMIT, g_xFrame_Time + xEmitterRandomness), 0).rgb;
 		
+#ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
 		uint tri = (uint)(((xEmitterMeshIndexCount - 1) / 3) * randoms.x);
 
@@ -73,6 +77,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float3 nor = nor0 + f * (nor1 - nor0) + g * (nor2 - nor0);
 		pos = mul(xEmitterWorld, float4(pos, 1)).xyz;
 		nor = normalize(mul((float3x3)xEmitterWorld, nor));
+
+#else
+
+		// Just emit from center point:
+		float3 pos = mul(xEmitterWorld, float4(0, 0, 0, 1)).xyz;
+		float3 nor = 0;
+
+#endif // EMIT_FROM_MESH
 
 		float particleStartingSize = xParticleSize + xParticleSize * (randoms.y - 0.5f) * xParticleRandomFactor;
 

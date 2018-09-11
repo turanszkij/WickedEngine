@@ -6,6 +6,8 @@
 #include "ShaderInterop.h"
 #include "wiFrustum.h"
 #include "wiRenderTarget.h"
+#include "wiEmittedParticle.h"
+#include "wiHairParticle.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
@@ -686,6 +688,8 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<DecalComponent> decals;
 		wiECS::ComponentManager<AABB> aabb_decals;
 		wiECS::ComponentManager<AnimationComponent> animations;
+		wiECS::ComponentManager<wiEmittedParticle> emitters;
+		wiECS::ComponentManager<wiHairParticle> hairs;
 		wiECS::ComponentManager<ModelComponent> models;
 
 		AABB bounds;
@@ -714,23 +718,19 @@ namespace wiSceneSystem
 		void Entity_Remove(wiECS::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wiECS::Entity Entity_FindByName(const std::string& name);
-		// Helper function to create a model entity:
+
 		wiECS::Entity Entity_CreateModel(
 			const std::string& name
 		);
-		// Helper function to create a material entity:
 		wiECS::Entity Entity_CreateMaterial(
 			const std::string& name
 		);
-		// Helper function to create a model entity:
 		wiECS::Entity Entity_CreateObject(
 			const std::string& name
 		);
-		// Helper function to create a model entity:
 		wiECS::Entity Entity_CreateMesh(
 			const std::string& name
 		);
-		// Helper function to create a light entity:
 		wiECS::Entity Entity_CreateLight(
 			const std::string& name, 
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
@@ -738,26 +738,26 @@ namespace wiSceneSystem
 			float energy = 1, 
 			float range = 10
 		);
-		// Helper function to create a force entity:
 		wiECS::Entity Entity_CreateForce(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
-		// Helper function to create an environment capture probe entity:
 		wiECS::Entity Entity_CreateEnvironmentProbe(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
-		// Helper function to create a decal entity:
 		wiECS::Entity Entity_CreateDecal(
 			const std::string& name,
 			const std::string& textureName,
 			const std::string& normalMapName = ""
 		);
-		// Helper function to create a camera entity:
 		wiECS::Entity Entity_CreateCamera(
 			const std::string& name,
 			float width, float height, float nearPlane = 0.01f, float farPlane = 1000.0f, float fov = XM_PIDIV4
+		);
+		wiECS::Entity Entity_CreateEmitter(
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
 
 		// Attaches an entity to a parent:
@@ -826,6 +826,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<LightComponent>& lights,
 		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	);
+	void RunEmitterUpdateSystem(wiECS::ComponentManager<wiEmittedParticle>& emitters, float dt);
 
 }
 

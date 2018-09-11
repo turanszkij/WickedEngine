@@ -1,7 +1,5 @@
 #pragma once
 
-class wiEmittedParticle;
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -21,17 +19,17 @@ public:
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
-	void SetMaterialWnd(MaterialWindow* wnd);
 	void UpdateData();
 
-	wiEmittedParticle* GetEmitter();
+	wiSceneSystem::wiEmittedParticle* GetEmitter();
 
 	wiGUI* GUI;
-	MaterialWindow* materialWnd;
 
 	wiWindow*	emitterWindow;
 
-	wiComboBox* emitterComboBox;
+	wiButton* addButton;
+	wiButton* restartButton;
+	wiComboBox*	meshComboBox;
 	wiComboBox* shaderTypeComboBox;
 	wiLabel* infoLabel;
 	wiSlider* maxParticlesSlider;
@@ -55,8 +53,6 @@ public:
 	wiSlider* sph_K_Slider;
 	wiSlider* sph_p0_Slider;
 	wiSlider* sph_e_Slider;
-	wiButton* materialSelectButton;
-	wiButton* restartButton;
 
 };
 

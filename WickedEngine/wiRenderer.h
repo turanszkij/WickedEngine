@@ -11,13 +11,7 @@
 #include <unordered_set>
 #include <deque>
 
-class  Cube;
-class  Translator;
-class  wiParticle;
-class  wiEmittedParticle;
-class  wiHairParticle;
 class  wiSprite;
-class  TaskThread;
 class  PHYSICS;
 class  wiRenderTarget;
 class  wiOcean;

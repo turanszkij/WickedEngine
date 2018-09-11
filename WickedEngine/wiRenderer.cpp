@@ -3460,12 +3460,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				device->BindUAVs(CS, sos, 0, ARRAYSIZE(sos), threadID);
 
 				device->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
-				device->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer
-				//device->TransitionBarrier(sos, ARRAYSIZE(sos), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, threadID);
-			}
-			else if (mesh.IsDynamicVB())
-			{
-				
+				device->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer, to gain from async compute
 			}
 
 		}
@@ -3480,15 +3475,17 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID); // skinning
 
-	//// Particle system simulation/sorting/culling:
-	//for (auto& x : emitterSystems)
-	//{
-	//	x->UpdateRenderData(threadID);
-	//}
-	//for (wiHairParticle* hair : mainCameraCulling.culledHairParticleSystems)
-	//{
-	//	hair->ComputeCulling(getCamera(), threadID);
-	//}
+	// GPU Particle systems simulation/sorting/culling:
+	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	{
+		wiEmittedParticle& emitter = scene.emitters[i];
+		Entity entity = scene.emitters.GetEntity(i);
+		const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		const MaterialComponent& material = *scene.materials.GetComponent(entity);
+		const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
+
+		emitter.UpdateRenderData(transform, material, mesh, threadID);
+	}
 
 	// Compute water simulation:
 	if (ocean != nullptr)
@@ -3994,36 +3991,55 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		device->EventEnd(threadID);
 	}
 
-	//if (debugEmitters || !renderableBoxes.empty())
-	//{
-	//	device->EventBegin("DebugEmitters", threadID);
+	if (debugEmitters)
+	{
+		device->EventBegin("DebugEmitters", threadID);
 
-	//	device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
+		MiscCB sb;
+		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+		{
+			const wiEmittedParticle& emitter = scene.emitters[i];
+			Entity entity = scene.emitters.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
-	//	MiscCB sb;
-	//	for (auto& x : emitterSystems)
-	//	{
-	//		if (x->object != nullptr && x->object->mesh != nullptr)
-	//		{
-	//			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x->object->world)*camera->GetViewProjection());
-	//			sb.mColor = XMFLOAT4(0, 1, 0, 1);
-	//			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera->GetViewProjection());
+			sb.mColor = XMFLOAT4(0, 1, 0, 1);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
-	//			GPUBuffer* vbs[] = {
-	//				x->object->mesh->vertexBuffer_POS,
-	//			};
-	//			const UINT strides[] = {
-	//				sizeof(MeshComponent::Vertex_POS),
-	//			};
-	//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-	//			device->BindIndexBuffer(x->object->mesh->indexBuffer, x->object->mesh->GetIndexFormat(), 0, threadID);
+			if (mesh == nullptr)
+			{
+				// No mesh, just draw a box:
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+				GPUBuffer* vbs[] = {
+					&Cube::vertexBuffer,
+				};
+				const UINT strides[] = {
+					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+				device->DrawIndexed(24, 0, 0, threadID);
+			}
+			else
+			{
+				// Draw mesh wireframe:
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
+				GPUBuffer* vbs[] = {
+					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
+				};
+				const UINT strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, threadID);
 
-	//			device->DrawIndexed((int)x->object->mesh->indices.size(), 0, 0, threadID);
-	//		}
-	//	}
+				device->DrawIndexed((int)mesh->indices.size(), 0, 0, threadID);
+			}
+		}
 
-	//	device->EventEnd(threadID);
-	//}
+		device->EventEnd(threadID);
+	}
 
 
 	if (debugForceFields)
@@ -4101,23 +4117,24 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 
 void wiRenderer::DrawSoftParticles(CameraComponent* camera, bool distortion, GRAPHICSTHREAD threadID)
 {
-	//// todo: remove allocation of vector
-	//vector<wiEmittedParticle*> sortedEmitters(emitterSystems.begin(), emitterSystems.end());
-	//std::sort(sortedEmitters.begin(), sortedEmitters.end(), [&](const wiEmittedParticle* a, const wiEmittedParticle* b) {
-	//	return wiMath::DistanceSquared(camera->translation, a->GetPosition()) > wiMath::DistanceSquared(camera->translation, b->GetPosition());
-	//});
+	Scene& scene = GetScene();
 
-	//for (wiEmittedParticle* e : sortedEmitters)
-	//{
-	//	if (distortion && e->shaderType == wiEmittedParticle::SOFT_DISTORTION)
-	//	{
-	//		e->Draw(threadID);
-	//	}
-	//	else if (!distortion && (e->shaderType == wiEmittedParticle::SOFT || e->shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
-	//	{
-	//		e->Draw(threadID);
-	//	}
-	//}
+	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	{
+		wiEmittedParticle& emitter = scene.emitters[i];
+		Entity entity = scene.emitters.GetEntity(i);
+		const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
+		{
+			emitter.Draw(material, threadID);
+		}
+		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
+		{
+			emitter.Draw(material, threadID);
+		}
+	}
+
 }
 void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 {

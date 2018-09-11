@@ -12,7 +12,9 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
-using namespace wiSceneSystem;
+
+namespace wiSceneSystem
+{
 
 VertexShader *wiHairParticle::vs = nullptr;
 PixelShader *wiHairParticle::ps[];
@@ -23,84 +25,6 @@ BlendState wiHairParticle::bs[2];
 GraphicsPSO wiHairParticle::PSO[SHADERTYPE_COUNT][2];
 GraphicsPSO wiHairParticle::PSO_wire;
 int wiHairParticle::LOD[3];
-
-wiHairParticle::wiHairParticle()
-{
-	cb = nullptr;
-	particleBuffer = nullptr;
-	ib = nullptr;
-	ib_transposed = nullptr;
-	name = "";
-	densityG = "";
-	lenG = "";
-	length = 0;
-	count = 0;
-	//material = nullptr;
-	//object = nullptr;
-	materialName = ""; 
-	particleCount = 0;
-}
-//wiHairParticle::wiHairParticle(const std::string& newName, float newLen, int newCount
-//						   , const std::string& newMat, Object* newObject, const std::string& densityGroup, const std::string& lengthGroup)
-//{
-//	cb = nullptr;
-//	particleBuffer = nullptr;
-//	ib = nullptr;
-//	ib_transposed = nullptr;
-//	drawargs = nullptr;
-//	name=newName;
-//	densityG=densityGroup;
-//	lenG=lengthGroup;
-//	length=newLen;
-//	count=newCount;
-//	material=nullptr;
-//	object = newObject;
-//	materialName = newMat;
-//	particleCount = 0;
-//	for (MeshSubset& subset : object->mesh->subsets)
-//	{
-//		if (!newMat.compare(subset.material->name)) {
-//			material = subset.material;
-//			break;
-//		}
-//	}
-//	
-//	if (material)
-//	{
-//		Generate();
-//	}
-//}
-wiHairParticle::wiHairParticle(const wiHairParticle& other)
-{
-	cb = nullptr;
-	particleBuffer = nullptr;
-	ib = nullptr;
-	ib_transposed = nullptr;
-	drawargs = nullptr;
-	name = other.name + "0";
-	densityG = other.densityG;
-	lenG = other.lenG;
-	length = other.length;
-	count = other.count;
-	//material = other.material;
-	//object = other.object;
-	materialName = other.materialName;
-	particleCount = other.particleCount;
-	//material = other.material;
-
-	//if (material)
-	{
-		Generate();
-	}
-}
-
-void wiHairParticle::CleanUp()
-{
-	SAFE_DELETE(cb);
-	SAFE_DELETE(particleBuffer);
-	SAFE_DELETE(ib);
-	SAFE_DELETE(drawargs);
-}
 
 void wiHairParticle::CleanUpStatic()
 {
@@ -572,33 +496,4 @@ void wiHairParticle::Draw(CameraComponent* camera, SHADERTYPE shaderType, bool t
 	//}
 }
 
-
-void wiHairParticle::Serialize(wiArchive& archive)
-{
-	if (archive.IsReadMode())
-	{
-		archive >> length;
-		archive >> count;
-		archive >> name;
-		archive >> densityG;
-		archive >> lenG;
-		archive >> materialName;
-		if (archive.GetVersion() < 15)
-		{
-			archive >> OriginalMatrix_Inverse;
-		}
-	}
-	else
-	{
-		archive << length;
-		archive << count;
-		archive << name;
-		archive << densityG;
-		archive << lenG;
-		archive << materialName;
-		if (archive.GetVersion() < 15)
-		{
-			archive << OriginalMatrix_Inverse;
-		}
-	}
 }

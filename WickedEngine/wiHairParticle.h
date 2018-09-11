@@ -6,6 +6,9 @@
 
 class wiArchive;
 
+namespace wiSceneSystem
+{
+
 class wiHairParticle
 {
 public:
@@ -26,11 +29,11 @@ private:
 		float __pad1;
 	};
 
-	wiGraphicsTypes::GPUBuffer *cb;
-	wiGraphicsTypes::GPUBuffer *particleBuffer;
-	wiGraphicsTypes::GPUBuffer *ib;
-	wiGraphicsTypes::GPUBuffer *ib_transposed;
-	wiGraphicsTypes::GPUBuffer *drawargs;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> cb;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> ib;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> ib_transposed;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> drawargs;
 
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
@@ -45,12 +48,6 @@ public:
 	static void LoadShaders();
 
 public:
-	wiHairParticle();
-	//wiHairParticle(const std::string& newName, float newLen, int newCount
-	//	, const std::string& newMat, wiSceneComponents::Object* newObject, const std::string& densityGroup, const std::string& lengthGroup);
-	wiHairParticle(const wiHairParticle& other);
-
-	void CleanUp();
 
 	void Generate();
 	void ComputeCulling(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
@@ -60,14 +57,9 @@ public:
 	static void SetUpStatic();
 	static void Settings(int lod0,int lod1,int lod2);
 
-	float length;
-	int count;
-	std::string name, densityG, lenG, materialName;
-	//wiSceneComponents::Material* material;
+	float length = 1.0f;
 	XMFLOAT4X4 OriginalMatrix_Inverse;
-	//wiSceneComponents::Object* object;
-	size_t particleCount;
-
-	void Serialize(wiArchive& archive);
+	size_t particleCount = 0;
 };
 
+}

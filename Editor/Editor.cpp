@@ -335,7 +335,6 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	lightWnd = new LightWindow(&GetGUI());
 	animWnd = new AnimationWindow(&GetGUI());
 	emitterWnd = new EmitterWindow(&GetGUI());
-	emitterWnd->SetMaterialWnd(materialWnd);
 	forceFieldWnd = new ForceFieldWindow(&GetGUI());
 	oceanWnd = new OceanWindow(&GetGUI());
 }
@@ -1162,27 +1161,23 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
-			//if (pickMask & PICK_EMITTER)
-			//{
-			//	for (auto& object : model->objects)
-			//	{
-			//		if (object->eParticleSystems.empty())
-			//		{
-			//			continue;
-			//		}
+			if (pickMask & PICK_EMITTER)
+			{
+				for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+				{
+					Entity entity = scene.emitters.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			//		XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&object->translation));
-			//		float dis = XMVectorGetX(disV);
-			//		if (dis < wiMath::Distance(object->translation, pickRay.origin) * 0.05f && dis < hovered.distance)
-			//		{
-			//			hovered.Clear();
-			//			hovered.transform = object;
-			//			hovered.object = object;
-			//			hovered.distance = dis;
-			//		}
-			//	}
-			//}
-
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					float dis = XMVectorGetX(disV);
+					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered.Clear();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 			if (pickMask & PICK_ENVPROBE)
 			{
 				for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -1405,59 +1400,7 @@ void EditorComponent::Update(float dt)
 			envProbeWnd->SetEntity(picked->entity);
 			forceFieldWnd->SetEntity(picked->entity);
 			cameraWnd->SetEntity(picked->entity);
-
-			//if (picked->object != nullptr)
-			//{
-			//	meshWnd->SetMesh(picked->object->mesh);
-			//	if (picked->subsetIndex >= 0 && picked->subsetIndex < (int)picked->object->mesh->subsets.size())
-			//	{
-			//		Material* material = picked->object->mesh->subsets[picked->subsetIndex].material;
-
-			//		materialWnd->SetMaterial(material);
-
-			//		material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
-			//	}
-			//	//if (picked->object->isArmatureDeformed())
-			//	//{
-			//	//	animWnd->SetArmature(picked->object->mesh->armature);
-			//	//}
-			//}
-			//else
-			//{
-			//	meshWnd->SetMesh(nullptr);
-			//	materialWnd->SetMaterial(nullptr);
-			//	//animWnd->SetArmature(nullptr);
-			//}
-
-			//if (picked->light != nullptr)
-			//{
-			//}
-			//lightWnd->SetLight(picked->light);
-			//if (picked->decal != nullptr)
-			//{
-			//}
-			//decalWnd->SetDecal(picked->decal);
-			//if (picked->envProbe != nullptr)
-			//{
-			//}
-			//envProbeWnd->SetProbe(picked->envProbe);
-			//forceFieldWnd->SetForceField(picked->forceField);
-			//if (picked->camera != nullptr)
-			//{
-			//	cameraWnd->SetProxy(picked->camera);
-			//}
-
-			//if (picked->armature != nullptr)
-			//{
-			//	animWnd->SetArmature(picked->armature);
-			//}
-			//else
-			//{
-			//	animWnd->SetArmature(nullptr);
-			//}
-
-			//objectWnd->SetObject(picked->object);
-			//emitterWnd->SetObject(picked->object);
+			materialWnd->SetEntity(picked->entity);
 		}
 
 		//// Delete
@@ -1978,41 +1921,39 @@ void EditorComponent::Compose()
 		}
 	}
 
-	//if (rendererWnd->GetPickType() & PICK_EMITTER)
-	//{
-	//	for (auto& y : x->objects)
-	//	{
-	//		if (y->eParticleSystems.empty())
-	//		{
-	//			continue;
-	//		}
+	if (rendererWnd->GetPickType() & PICK_EMITTER)
+	{
+		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+		{
+			Entity entity = scene.emitters.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-	//		float dist = wiMath::Distance(y->translation, camera->translation) * 0.08f;
+			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
 
-	//		wiImageEffects fx;
-	//		fx.pos = y->translation;
-	//		fx.siz = XMFLOAT2(dist, dist);
-	//		fx.typeFlag = ImageType::WORLD;
-	//		fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	//		fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+			wiImageEffects fx;
+			fx.pos = transform.translation;
+			fx.siz = XMFLOAT2(dist, dist);
+			fx.typeFlag = ImageType::WORLD;
+			fx.pivot = XMFLOAT2(0.5f, 0.5f);
+			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
 
-	//		if (hovered.object == y)
-	//		{
-	//			fx.col = XMFLOAT4(1, 1, 1, 1);
-	//		}
-	//		for (auto& picked : selected)
-	//		{
-	//			if (picked->object == y)
-	//			{
-	//				fx.col = XMFLOAT4(1, 1, 0, 1);
-	//				break;
-	//			}
-	//		}
+			if (hovered.entity == entity)
+			{
+				fx.col = XMFLOAT4(1, 1, 1, 1);
+			}
+			for (auto& picked : selected)
+			{
+				if (picked->entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 0, 1);
+					break;
+				}
+			}
 
 
-	//		wiImage::Draw(&emitterTex, fx, GRAPHICSTHREAD_IMMEDIATE);
-	//	}
-	//}
+			wiImage::Draw(&emitterTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+		}
+	}
 
 
 	if (translator_active && translator->enabled)

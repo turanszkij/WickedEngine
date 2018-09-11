@@ -11,6 +11,7 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
+using namespace wiSceneSystem;
 
 namespace wiRenderer_BindLua
 {

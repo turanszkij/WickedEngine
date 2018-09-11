@@ -364,7 +364,7 @@ namespace wiSceneSystem
 			assert(SUCCEEDED(hr));
 
 			bd.Usage = USAGE_DEFAULT;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
@@ -763,9 +763,15 @@ namespace wiSceneSystem
 
 		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, aabb_lights, lights, sunDirection, sunColor);
 
+		RunEmitterUpdateSystem(emitters, dt);
+
 	}
 	void Scene::Clear()
 	{
+		// Preferrably, we wouldn't write all of this, just call clear on every container
+		//	But: we want to only delete the owned entities, and there might be others
+		//	Think about it, probably there is a better way...
+
 		for (Entity entity : owned_entities)
 		{
 			names.Remove(entity);
@@ -789,6 +795,8 @@ namespace wiSceneSystem
 			decals.Remove(entity);
 			aabb_decals.Remove(entity);
 			animations.Remove(entity);
+			emitters.Remove(entity);
+			hairs.Remove(entity);
 			models.Remove(entity);
 		}
 
@@ -820,6 +828,8 @@ namespace wiSceneSystem
 		decals.Remove(entity);
 		aabb_decals.Remove(entity);
 		animations.Remove(entity);
+		emitters.Remove(entity);
+		hairs.Remove(entity);
 		models.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
@@ -916,8 +926,9 @@ namespace wiSceneSystem
 
 		layers.Create(entity);
 
-		transforms.Create(entity).Translate(position);
-		transforms.GetComponent(entity)->UpdateTransform();
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Translate(position);
+		transform.UpdateTransform();
 
 		aabb_lights.Create(entity).createFromHalfWidth(position, XMFLOAT3(range, range, range));
 
@@ -943,8 +954,9 @@ namespace wiSceneSystem
 
 		layers.Create(entity);
 
-		transforms.Create(entity).Translate(position);
-		transforms.GetComponent(entity)->UpdateTransform();
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Translate(position);
+		transform.UpdateTransform();
 
 		ForceFieldComponent& force = forces.Create(entity);
 		force.gravity = 0;
@@ -966,8 +978,9 @@ namespace wiSceneSystem
 
 		layers.Create(entity);
 
-		transforms.Create(entity).Translate(position);
-		transforms.GetComponent(entity)->UpdateTransform();
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Translate(position);
+		transform.UpdateTransform();
 
 		aabb_probes.Create(entity);
 
@@ -1028,6 +1041,27 @@ namespace wiSceneSystem
 
 		CameraComponent& camera = cameras.Create(entity);
 		camera.CreatePerspective(width, height, nearPlane, farPlane, fov);
+
+		return entity;
+	}
+	Entity Scene::Entity_CreateEmitter(
+		const std::string& name,
+		const XMFLOAT3& position
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		emitters.Create(entity);
+
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Translate(position);
+		transform.UpdateTransform();
+
+		materials.Create(entity);
 
 		return entity;
 	}
@@ -1694,6 +1728,13 @@ namespace wiSceneSystem
 
 		}
 	}
-
+	void RunEmitterUpdateSystem(ComponentManager<wiEmittedParticle>& emitters, float dt)
+	{
+		for (size_t i = 0; i < emitters.GetCount(); ++i)
+		{
+			wiEmittedParticle& emitter = emitters[i];
+			emitter.Update(dt);
+		}
+	}
 
 }
