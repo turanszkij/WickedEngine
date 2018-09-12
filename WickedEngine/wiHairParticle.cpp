@@ -249,7 +249,7 @@ void wiHairParticle::Generate(const MeshComponent& mesh)
 
 		XMVECTOR P = XMVectorBaryCentric(p0, p1, p2, f, g);
 		XMVECTOR N = XMVectorBaryCentric(n0, n1, n2, f, g);
-		XMVECTOR T = XMVector3Normalize(XMVectorSubtract(i % 2 == 0 ? p0 : p2, p1));
+		XMVECTOR T = XMVector3Normalize(XMVectorSubtract(p0, p1));
 
 		XMStoreFloat4(&points[i].posLen, P);
 		points[i].posLen.w = 1.0f;

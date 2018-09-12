@@ -950,7 +950,7 @@ void EditorComponent::Load()
 	decalTex = *(Texture2D*)Content.add("images/decal.dds");
 	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
 	emitterTex = *(Texture2D*)Content.add("images/emitter.dds");
-	hairTex = *(Texture2D*)Content.add("images/emitter.dds");
+	hairTex = *(Texture2D*)Content.add("images/hair.dds");
 	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
 	armatureTex = *(Texture2D*)Content.add("images/armature.dds");
 }

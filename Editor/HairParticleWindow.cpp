@@ -55,7 +55,7 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	meshComboBox->SetTooltip("Choose an animation clip...");
 	hairWindow->AddWidget(meshComboBox);
 
-	countSlider = new wiSlider(0.1f, 100.0f, 1.0f, 100000, "Particle Count: ");
+	countSlider = new wiSlider(0, 100000, 1000, 100000, "Particle Count: ");
 	countSlider->SetSize(XMFLOAT2(360, 30));
 	countSlider->SetPos(XMFLOAT2(x, y += step * 2));
 	countSlider->OnSlide([&](wiEventArgs args) {
