@@ -85,6 +85,9 @@
     <ClInclude Include="Translator.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="HairParticleWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -148,6 +151,9 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="Translator.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="HairParticleWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

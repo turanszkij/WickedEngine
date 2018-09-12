@@ -3,5 +3,5 @@
 
 float4 main() : SV_TARGET
 {
-	return float4(xColor, 1.0f);
+	return float4(xColor.rgb, 1.0f);
 }

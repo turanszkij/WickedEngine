@@ -44,11 +44,14 @@ namespace wiSceneSystem
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
-		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
-		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
-		XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
 		XMFLOAT4X4 world = IDENTITYMATRIX;
 
+		XMFLOAT3 GetPosition() const;
+		XMFLOAT4 GetRotation() const;
+		XMFLOAT3 GetScale() const;
+		XMVECTOR GetPositionV() const;
+		XMVECTOR GetRotationV() const;
+		XMVECTOR GetScaleV() const;
 		void UpdateTransform();
 		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix);
 		void ApplyTransform();
@@ -446,7 +449,9 @@ namespace wiSceneSystem
 		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 		std::vector<std::string> lensFlareNames;
 
+		XMFLOAT3 position;
 		XMFLOAT3 direction;
+		XMFLOAT4 rotation;
 
 		int shadowMap_index = -1;
 		int entityArray_index = -1;
@@ -457,6 +462,8 @@ namespace wiSceneSystem
 		float radius = 1.0f;
 		float width = 1.0f;
 		float height = 1.0f;
+		XMFLOAT3 front;
+		XMFLOAT3 right;
 
 		inline float GetRange() const { return range; }
 
@@ -588,6 +595,8 @@ namespace wiSceneSystem
 		bool realTime = false;
 		bool isUpToDate = false;
 		XMFLOAT3 position;
+		float range;
+		XMFLOAT4X4 inverseMatrix;
 	};
 
 	struct ForceFieldComponent
@@ -595,6 +604,8 @@ namespace wiSceneSystem
 		int type = ENTITY_TYPE_FORCEFIELD_POINT;
 		float gravity = 0.0f; // negative = deflector, positive = attractor
 		float range = 0.0f; // affection range
+		XMFLOAT3 position;
+		XMFLOAT3 direction;
 	};
 
 	struct DecalComponent
@@ -603,6 +614,8 @@ namespace wiSceneSystem
 		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT4X4 world;
 		XMFLOAT3 front;
+		XMFLOAT3 position;
+		float range;
 
 		float emissive = 0;
 
@@ -759,6 +772,10 @@ namespace wiSceneSystem
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
+		wiECS::Entity Entity_CreateHair(
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
+		);
 
 		// Attaches an entity to a parent:
 		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent);
@@ -819,6 +836,10 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<AABB>& aabb_probes,
 		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
 	);
+	void RunForceUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<ForceFieldComponent>& forces
+	);
 	void RunLightUpdateSystem(
 		const CameraComponent& cascadeCamera,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
@@ -826,7 +847,12 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<LightComponent>& lights,
 		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	);
-	void RunEmitterUpdateSystem(wiECS::ComponentManager<wiEmittedParticle>& emitters, float dt);
+	void RunParticleUpdateSystem(
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<wiEmittedParticle>& emitters,
+		wiECS::ComponentManager<wiHairParticle>& hairs,
+		float dt
+	);
 
 }
 

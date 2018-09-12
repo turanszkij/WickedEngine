@@ -7,6 +7,7 @@ class wiCheckBox;
 class wiSlider;
 class wiComboBox;
 class wiColorPicker;
+class wiButton;
 
 class MaterialWindow;
 

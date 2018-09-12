@@ -510,6 +510,12 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	pickTypeEmitterCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
 
+	pickTypeHairCheckBox = new wiCheckBox("Pick Hairs: ");
+	pickTypeHairCheckBox->SetTooltip("Enable if you want to pick hairs with the pointer");
+	pickTypeHairCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeHairCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeHairCheckBox);
+
 	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
 	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
 	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -573,6 +579,10 @@ UINT RendererWindow::GetPickType()
 	if (pickTypeEmitterCheckBox->GetCheck())
 	{
 		pickType |= PICK_EMITTER;
+	}
+	if (pickTypeHairCheckBox->GetCheck())
+	{
+		pickType |= PICK_HAIR;
 	}
 	if (pickTypeCameraCheckBox->GetCheck())
 	{

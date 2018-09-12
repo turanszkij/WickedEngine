@@ -88,6 +88,9 @@ public:
 	virtual void Render(wiGUI* gui) = 0;
 	void RenderTooltip(wiGUI* gui);
 
+	XMFLOAT3 translation;
+	XMFLOAT3 scale;
+
 	Hitbox2D hitBox;
 
 	wiWidget* container;

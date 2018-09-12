@@ -118,8 +118,6 @@ struct FrameCulling
 	CulledCollection culledRenderer_opaque;
 	CulledCollection culledRenderer_transparent;
 	vector<Entity> culledObjects;
-	vector<Entity> culledHairParticleSystems;
-	vector<Entity> culledEmitters;
 	vector<Entity> culledLights;
 	vector<Entity> culledDecals;
 	vector<Entity> culledEnvProbes;
@@ -129,8 +127,6 @@ struct FrameCulling
 		culledRenderer_opaque.clear();
 		culledRenderer_transparent.clear();
 		culledObjects.clear();
-		culledHairParticleSystems.clear();
-		culledEmitters.clear();
 		culledLights.clear();
 		culledDecals.clear();
 		culledEnvProbes.clear();
@@ -3195,12 +3191,11 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 
 			const LightComponent& light = *scene.lights.GetComponent(entity);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 			const int shadowIndex = light.shadowMap_index;
 
 			entityArray[entityCounter].type = light.GetType();
-			entityArray[entityCounter].positionWS = transform.translation;
+			entityArray[entityCounter].positionWS = light.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
 			entityArray[entityCounter].range = light.range;
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
@@ -3247,11 +3242,10 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 			case LightComponent::RECTANGLE:
 			case LightComponent::TUBE:
 			{
-				XMMATRIX lightMat = XMLoadFloat4x4(&transform.world);
 				// Note: area lights are facing back by default
-				XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), lightMat)); // right dir
-				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), lightMat)); // up dir
-				XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), lightMat)); // front dir
+				entityArray[entityCounter].directionWS = light.right;
+				entityArray[entityCounter].directionVS = light.direction;
+				entityArray[entityCounter].positionVS = light.front;
 				entityArray[entityCounter].texMulAdd = XMFLOAT4(light.radius, light.width, light.height, 0);
 			}
 			break;
@@ -3283,16 +3277,14 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
 			entityArray[entityCounter].type = ENTITY_TYPE_ENVMAP;
-			entityArray[entityCounter].positionWS = transform.translation;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&transform.translation), viewMatrix));
-			entityArray[entityCounter].range = max(transform.scale.x, max(transform.scale.y, transform.scale.z)) * 2;
+			entityArray[entityCounter].positionWS = probe.position;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
+			entityArray[entityCounter].range = probe.range;
 			entityArray[entityCounter].shadowBias = (float)probe.textureIndex;
 
 			entityArray[entityCounter].additionalData_index = matrixCounter;
-			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world)));
+			matrixArray[matrixCounter] = XMMatrixTranspose(XMLoadFloat4x4(&probe.inverseMatrix));
 			matrixCounter++;
 
 			entityCounter++;
@@ -3315,12 +3307,11 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				break;
 			}
 			const DecalComponent& decal = *scene.decals.GetComponent(entity);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 			entityArray[entityCounter].type = ENTITY_TYPE_DECAL;
-			entityArray[entityCounter].positionWS = transform.translation;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&transform.translation), viewMatrix));
-			entityArray[entityCounter].range = max(transform.scale.x, max(transform.scale.y, transform.scale.z)) * 2;
+			entityArray[entityCounter].positionWS = decal.position;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
+			entityArray[entityCounter].range = decal.range;
 			entityArray[entityCounter].texMulAdd = decal.atlasMulAdd;
 			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
 			entityArray[entityCounter].energy = decal.emissive;
@@ -3345,15 +3336,14 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			const ForceFieldComponent& force = scene.forces[i];
 			Entity entity = scene.forces.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 			entityArray[entityCounter].type = force.type;
-			entityArray[entityCounter].positionWS = transform.translation;
+			entityArray[entityCounter].positionWS = force.position;
 			entityArray[entityCounter].energy = force.gravity;
 			entityArray[entityCounter].range = 1.0f / max(0.0001f, force.range); // avoid division in shader
 			entityArray[entityCounter].coneAngleCos = force.range; // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			XMStoreFloat3(&entityArray[entityCounter].directionWS, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&transform.world))));
+			entityArray[entityCounter].directionWS = force.direction;
 
 			entityCounter++;
 		}
@@ -3851,10 +3841,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		{
 			EnvironmentProbeComponent& probe = scene.probes[i];
 
-			Entity entity = scene.probes.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			sb.mTransform = XMMatrixTranspose(XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z));
+			sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position)));
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			if (probe.textureIndex < 0)
@@ -4256,8 +4243,6 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 			if (light.GetType() != type)
 				continue;
 
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
 			switch (type)
 			{
 			case LightComponent::DIRECTIONAL:
@@ -4278,7 +4263,7 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 					MiscCB miscCb;
 					miscCb.mColor.x = (float)light.entityArray_index;
 					float sca = light.range + 1;
-					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z) * camera->GetViewProjection());
+					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera->GetViewProjection());
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					GetDevice()->Draw(240, 0, threadID); // icosphere
@@ -4291,8 +4276,8 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 					const float coneS = (const float)(light.fov / XM_PIDIV4);
 					miscCb.mTransform = XMMatrixTranspose(
 						XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation)) *
+						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 						camera->GetViewProjection()
 					);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
@@ -4328,8 +4313,6 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 		for (size_t i = 0; i < scene.lights.GetCount(); ++i) 
 		{
 			LightComponent& light = scene.lights[i];
-			Entity entity = scene.lights.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
 			if (light.GetType() == type && light.visualizer) 
 			{
@@ -4344,7 +4327,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 					lcb.world = XMMatrixTranspose(
 						XMMatrixScaling(lcb.enerdis.w, lcb.enerdis.w, lcb.enerdis.w)*
 						camrot*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 					);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -4357,8 +4340,8 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 					lcb.enerdis.w = light.range*light.energy*0.03f; // scale
 					lcb.world = XMMatrixTranspose(
 						XMMatrixScaling(coneS*lcb.enerdis.w, lcb.enerdis.w, coneS*lcb.enerdis.w)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))
+						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 					);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -4369,8 +4352,8 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 				{
 					lcb.world = XMMatrixTranspose(
 						XMMatrixScaling(light.radius, light.radius, light.radius)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 						camera->GetViewProjection()
 					);
 
@@ -4382,8 +4365,8 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 				{
 					lcb.world = XMMatrixTranspose(
 						XMMatrixScaling(light.radius, light.radius, light.radius)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 						camera->GetViewProjection()
 					);
 
@@ -4395,8 +4378,8 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 				{
 					lcb.world = XMMatrixTranspose(
 						XMMatrixScaling(light.width * 0.5f, light.height * 0.5f, 0.5f)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 						camera->GetViewProjection()
 					);
 
@@ -4408,8 +4391,8 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 				{
 					lcb.world = XMMatrixTranspose(
 						XMMatrixScaling(max(light.width * 0.5f, light.radius), light.radius, light.radius)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation))*
+						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 						camera->GetViewProjection()
 					);
 
@@ -4454,8 +4437,6 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 				if (light.GetType() == type && light.volumetrics)
 				{
 
-					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
 					switch (type)
 					{
 					case LightComponent::DIRECTIONAL:
@@ -4476,7 +4457,7 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 						MiscCB miscCb;
 						miscCb.mColor.x = (float)light.entityArray_index;
 						float sca = light.range + 1;
-						miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z) * camera->GetViewProjection());
+						miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera->GetViewProjection());
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						GetDevice()->Draw(240, 0, threadID); // icosphere
@@ -4489,8 +4470,8 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 						const float coneS = (const float)(light.fov / XM_PIDIV4);
 						miscCb.mTransform = XMMatrixTranspose(
 							XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
-							XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation))*
-							XMMatrixTranslationFromVector(XMLoadFloat3(&transform.translation)) *
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							camera->GetViewProjection()
 						);
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
@@ -4523,18 +4504,16 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 
 		if(!light.lensFlareRimTextures.empty())
 		{
-
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
 			XMVECTOR POS;
 
-			if(light.GetType() ==LightComponent::POINT || light.GetType() ==LightComponent::SPOT){
-				POS = XMLoadFloat3(&transform.translation);
+			if(light.GetType() ==LightComponent::POINT || light.GetType() ==LightComponent::SPOT)
+			{
+				POS = XMLoadFloat3(&light.position);
 			}
 
 			else{
 				POS = XMVector3Normalize(
-					-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation)))
+					-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))
 				) * 100000;
 			}
 			
@@ -4825,13 +4804,11 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							break;
 						shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
 						CulledCollection culledRenderer;
 						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 						{
 							const AABB& aabb = scene.aabb_objects[i];
-							if (SPHERE(transform.translation, light.range).intersects(aabb))
+							if (SPHERE(light.position, light.range).intersects(aabb))
 							{
 								const ObjectComponent& object = scene.objects[i];
 								if (object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
@@ -4851,7 +4828,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 							MiscCB miscCb;
-							miscCb.mColor = XMFLOAT4(transform.translation.x, transform.translation.y, transform.translation.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
+							miscCb.mColor = XMFLOAT4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
 							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 							CubeMapRenderCB cb;
@@ -4860,7 +4837,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
-							RenderMeshes(transform.translation, culledRenderer, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+							RenderMeshes(light.position, culledRenderer, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
 						}
 
 					}
@@ -5336,20 +5313,27 @@ void wiRenderer::DrawWorld(CameraComponent* camera, bool tessellation, GRAPHICST
 		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
-	//if (grass)
-	//{
-	//	if (GetAlphaCompositionEnabled())
-	//	{
-	//		// cut off most transparent areas
-	//		SetAlphaRef(0.25f, threadID);
-	//	}
-	//	for (wiHairParticle* hair : culling.culledHairParticleSystems)
-	//	{
-	//		hair->Draw(camera, shaderType, false, threadID);
-	//	}
-	//}
+	if (grass)
+	{
+		if (GetAlphaCompositionEnabled())
+		{
+			// cut off most transparent areas
+			SetAlphaRef(0.25f, threadID);
+		}
 
-	if (!culling.culledRenderer_opaque.empty() || (grass && culling.culledHairParticleSystems.empty()))
+		Scene& scene = GetScene();
+
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			const wiHairParticle& hair = scene.hairs[i];
+			Entity entity = scene.hairs.GetEntity(i);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+			hair.Draw(camera, material, shaderType, false, threadID);
+		}
+	}
+
+	if (!culling.culledRenderer_opaque.empty()/* || (grass && culling.culledHairParticleSystems.empty())*/)
 	{
 		RenderMeshes(camera->Eye, culling.culledRenderer_opaque, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
 	}
@@ -5374,14 +5358,20 @@ void wiRenderer::DrawWorldTransparent(CameraComponent* camera, SHADERTYPE shader
 		ocean->Render(camera, renderTime, threadID);
 	}
 
-	//if (grass && GetAlphaCompositionEnabled())
-	//{
-	//	// transparent passes can only render hair when alpha composition is enabled
-	//	for (wiHairParticle* hair : culling.culledHairParticleSystems)
-	//	{
-	//		hair->Draw(camera, shaderType, true, threadID);
-	//	}
-	//}
+	if (grass && GetAlphaCompositionEnabled())
+	{
+		// transparent passes can only render hair when alpha composition is enabled
+		Scene& scene = GetScene();
+
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			const wiHairParticle& hair = scene.hairs[i];
+			Entity entity = scene.hairs.GetEntity(i);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+			hair.Draw(camera, material, shaderType, true, threadID);
+		}
+	}
 
 	if (!culling.culledRenderer_transparent.empty())
 	{

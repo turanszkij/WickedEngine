@@ -13,6 +13,7 @@ class DecalWindow;
 class LightWindow;
 class AnimationWindow;
 class EmitterWindow;
+class HairParticleWindow;
 class ForceFieldWindow;
 class OceanWindow;
 
@@ -31,7 +32,7 @@ class Editor;
 class EditorComponent : public Renderable2DComponent
 {
 private:
-	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, cameraTex, armatureTex;
+	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
 public:
 	MaterialWindow*			materialWnd;
 	PostprocessWindow*		postprocessWnd;
@@ -45,6 +46,7 @@ public:
 	LightWindow*			lightWnd;
 	AnimationWindow*		animWnd;
 	EmitterWindow*			emitterWnd;
+	HairParticleWindow*		hairWnd;
 	ForceFieldWindow*		forceFieldWnd;
 	OceanWindow*			oceanWnd;
 

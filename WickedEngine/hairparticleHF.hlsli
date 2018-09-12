@@ -5,7 +5,7 @@
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 {
 	float4x4 xWorld;
-	float3 xColor; float __pad0;
+	float4 xColor;
 	float LOD0;
 	float LOD1;
 	float LOD2;

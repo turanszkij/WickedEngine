@@ -204,7 +204,7 @@ void Translator::Update()
 
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
 	CameraComponent* cam = wiRenderer::getCamera();
-	XMVECTOR pos = XMLoadFloat3(&transform.translation);
+	XMVECTOR pos = transform.GetPositionV();
 
 	if (enabled)
 	{
@@ -215,7 +215,7 @@ void Translator::Update()
 			XMMATRIX V = cam->GetView();
 			XMMATRIX W = XMMatrixIdentity();
 
-			dist = wiMath::Distance(transform.translation, cam->Eye) * 0.05f;
+			dist = wiMath::Distance(transform.GetPosition(), cam->Eye) * 0.05f;
 
 			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
@@ -387,7 +387,8 @@ void Translator::Update()
 			}
 			if (isScalator)
 			{
-				transf *= XMMatrixScaling((1.0f / transform.scale.x) * (transform.scale.x + delta.x), (1.0f / transform.scale.y) * (transform.scale.y + delta.y), (1.0f / transform.scale.z) * (transform.scale.z + delta.z));
+				XMFLOAT3 scale = transform.GetScale();
+				transf *= XMMatrixScaling((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
 			}
 
 			transform.MatrixTransform(transf);
@@ -437,7 +438,7 @@ void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
 
 	wiRenderer::MiscCB sb;
 
-	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslation(transform.translation.x, transform.translation.y, transform.translation.z) * VP;
+	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslationFromVector(transform.GetPositionV()) * VP;
 	XMMATRIX matX = XMMatrixTranspose(mat);
 	XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
 	XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);

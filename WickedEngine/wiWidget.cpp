@@ -36,6 +36,8 @@ wiWidget::wiWidget() : TransformComponent()
 	tooltipTimer = 0;
 	textColor = wiColor(255, 255, 255, 255);
 	textShadowColor = wiColor(0, 0, 0, 255);
+	translation = XMFLOAT3(0, 0, 0);
+	scale = XMFLOAT3(1, 1, 1);
 }
 wiWidget::~wiWidget()
 {
@@ -59,6 +61,11 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	{
 		this->UpdateParentedTransform(*container, world_parent_bind);
 	}
+
+	XMVECTOR S, R, T;
+	XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
+	XMStoreFloat3(&translation, T);
+	XMStoreFloat3(&scale, S);
 }
 void wiWidget::AttachTo(wiWidget* parent)
 {
@@ -147,6 +154,8 @@ void wiWidget::SetPos(const XMFLOAT2& value)
 	TransformComponent::translation_local.x = value.x;
 	TransformComponent::translation_local.y = value.y;
 	TransformComponent::UpdateTransform();
+
+	translation = translation_local;
 }
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
@@ -154,6 +163,8 @@ void wiWidget::SetSize(const XMFLOAT2& value)
 	TransformComponent::scale_local.x = value.x;
 	TransformComponent::scale_local.y = value.y;
 	TransformComponent::UpdateTransform();
+
+	scale = scale_local;
 }
 wiWidget::WIDGETSTATE wiWidget::GetState()
 {
@@ -219,22 +230,19 @@ void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 }
 void wiWidget::LoadShaders()
 {
-
-	{
-		GraphicsPSODesc desc;
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
-		desc.numRTs = 1;
-		desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
-		desc.pt = TRIANGLESTRIP;
-		RECREATE(PSO_colorpicker);
-		HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
-		assert(SUCCEEDED(hr));
-	}
+	GraphicsPSODesc desc;
+	desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+	desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+	desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+	desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+	desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
+	desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+	desc.numRTs = 1;
+	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
+	desc.pt = TRIANGLESTRIP;
+	RECREATE(PSO_colorpicker);
+	HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
+	assert(SUCCEEDED(hr));
 }
 
 
@@ -266,10 +274,10 @@ void wiButton::Update(wiGUI* gui, float dt)
 		return;
 	}
 
-	hitBox.pos.x = TransformComponent::translation.x;
-	hitBox.pos.y = TransformComponent::translation.y;
-	hitBox.siz.x = TransformComponent::scale.x;
-	hitBox.siz.y = TransformComponent::scale.y;
+	hitBox.pos.x = translation.x;
+	hitBox.pos.y = translation.y;
+	hitBox.siz.x = scale.x;
+	hitBox.siz.y = scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -494,10 +502,10 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		return;
 	}
 
-	hitBox.pos.x = TransformComponent::translation.x;
-	hitBox.pos.y = TransformComponent::translation.y;
-	hitBox.siz.x = TransformComponent::scale.x;
-	hitBox.siz.y = TransformComponent::scale.y;
+	hitBox.pos.x = translation.x;
+	hitBox.pos.y = translation.y;
+	hitBox.siz.x = scale.x;
+	hitBox.siz.y = scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 	bool intersectsPointer = pointerHitbox.intersects(hitBox);
@@ -721,10 +729,10 @@ void wiSlider::Update(wiGUI* gui, float dt)
 
 	float headWidth = scale.x*0.05f;
 
-	hitBox.pos.x = TransformComponent::translation.x - headWidth * 0.5f;
-	hitBox.pos.y = TransformComponent::translation.y;
-	hitBox.siz.x = TransformComponent::scale.x + headWidth;
-	hitBox.siz.y = TransformComponent::scale.y;
+	hitBox.pos.x = translation.x - headWidth * 0.5f;
+	hitBox.pos.y = translation.y;
+	hitBox.siz.x = scale.x + headWidth;
+	hitBox.siz.y = scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -855,10 +863,10 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		gui->DeactivateWidget(this);
 	}
 
-	hitBox.pos.x = TransformComponent::translation.x;
-	hitBox.pos.y = TransformComponent::translation.y;
-	hitBox.siz.x = TransformComponent::scale.x;
-	hitBox.siz.y = TransformComponent::scale.y;
+	hitBox.pos.x = translation.x;
+	hitBox.pos.y = translation.y;
+	hitBox.siz.x = scale.x;
+	hitBox.siz.y = scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -997,10 +1005,10 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		gui->DeactivateWidget(this);
 	}
 
-	hitBox.pos.x = TransformComponent::translation.x;
-	hitBox.pos.y = TransformComponent::translation.y;
-	hitBox.siz.x = TransformComponent::scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
-	hitBox.siz.y = TransformComponent::scale.y;
+	hitBox.pos.x = translation.x;
+	hitBox.pos.y = translation.y;
+	hitBox.siz.x = scale.x + scale.y + 1; // + drop-down indicator arrow + little offset
+	hitBox.siz.y = scale.y;
 
 	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
 
@@ -1062,10 +1070,10 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 				}
 
 				Hitbox2D itembox;
-				itembox.pos.x = TransformComponent::translation.x;
-				itembox.pos.y = TransformComponent::translation.y + _GetItemOffset((int)i);
-				itembox.siz.x = TransformComponent::scale.x;
-				itembox.siz.y = TransformComponent::scale.y;
+				itembox.pos.x = translation.x;
+				itembox.pos.y = translation.y + _GetItemOffset((int)i);
+				itembox.siz.x = scale.x;
+				itembox.siz.y = scale.y;
 				if (pointerHitbox.intersects(itembox))
 				{
 					hovered = (int)i;
@@ -1260,6 +1268,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
 	moveDragger->OnDrag([this](wiEventArgs args) {
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
+		this->UpdateTransform();
 	});
 	AddWidget(moveDragger);
 
@@ -1296,6 +1305,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 		scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+		this->UpdateTransform();
 	});
 	AddWidget(resizeDragger_UpperLeft);
 
@@ -1309,6 +1319,7 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 		scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 		scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
+		this->UpdateTransform();
 	});
 	AddWidget(resizeDragger_BottomRight);
 

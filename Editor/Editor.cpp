@@ -13,6 +13,7 @@
 #include "LightWindow.h"
 #include "AnimationWindow.h"
 #include "EmitterWindow.h"
+#include "HairParticleWindow.h"
 #include "ForceFieldWindow.h"
 #include "OceanWindow.h"
 
@@ -188,7 +189,7 @@ void BeginTranslate()
 		TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(x);
 		if (transform != nullptr)
 		{
-			centerV = XMVectorAdd(centerV, XMLoadFloat3(&transform->translation));
+			centerV = XMVectorAdd(centerV, transform->GetPositionV());
 			count += 1.0f;
 		}
 	}
@@ -335,6 +336,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	lightWnd = new LightWindow(&GetGUI());
 	animWnd = new AnimationWindow(&GetGUI());
 	emitterWnd = new EmitterWindow(&GetGUI());
+	hairWnd = new HairParticleWindow(&GetGUI());
 	forceFieldWnd = new ForceFieldWindow(&GetGUI());
 	oceanWnd = new OceanWindow(&GetGUI());
 }
@@ -352,6 +354,7 @@ void EditorComponent::DeleteWindows()
 	SAFE_DELETE(lightWnd);
 	SAFE_DELETE(animWnd);
 	SAFE_DELETE(emitterWnd);
+	SAFE_DELETE(hairWnd);
 	SAFE_DELETE(forceFieldWnd);
 	SAFE_DELETE(oceanWnd);
 }
@@ -370,6 +373,7 @@ void EditorComponent::Initialize()
 	SAFE_INIT(lightWnd);
 	SAFE_INIT(animWnd);
 	SAFE_INIT(emitterWnd);
+	SAFE_INIT(hairWnd);
 	SAFE_INIT(forceFieldWnd);
 	SAFE_INIT(oceanWnd);
 
@@ -556,6 +560,15 @@ void EditorComponent::Load()
 		emitterWnd->emitterWindow->SetVisible(!emitterWnd->emitterWindow->IsVisible());
 	});
 	GetGUI().AddWidget(emitterWnd_Toggle);
+
+	wiButton* hairWnd_Toggle = new wiButton("HairParticle");
+	hairWnd_Toggle->SetTooltip("Emitter Particle System properties");
+	hairWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	hairWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	hairWnd_Toggle->OnClick([=](wiEventArgs args) {
+		hairWnd->hairWindow->SetVisible(!hairWnd->hairWindow->IsVisible());
+	});
+	GetGUI().AddWidget(hairWnd_Toggle);
 
 	wiButton* forceFieldWnd_Toggle = new wiButton("ForceField");
 	forceFieldWnd_Toggle->SetTooltip("Force Field properties");
@@ -857,6 +870,7 @@ void EditorComponent::Load()
 		envProbeWnd->SetEntity(INVALID_ENTITY);
 		materialWnd->SetEntity(INVALID_ENTITY);
 		emitterWnd->SetEntity(INVALID_ENTITY);
+		hairWnd->SetEntity(INVALID_ENTITY);
 		forceFieldWnd->SetEntity(INVALID_ENTITY);
 		cameraWnd->SetEntity(INVALID_ENTITY);
 	});
@@ -936,6 +950,7 @@ void EditorComponent::Load()
 	decalTex = *(Texture2D*)Content.add("images/decal.dds");
 	forceFieldTex = *(Texture2D*)Content.add("images/forcefield.dds");
 	emitterTex = *(Texture2D*)Content.add("images/emitter.dds");
+	hairTex = *(Texture2D*)Content.add("images/emitter.dds");
 	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
 	armatureTex = *(Texture2D*)Content.add("images/armature.dds");
 }
@@ -1117,9 +1132,9 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.lights.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered.Clear();
 						hovered.entity = entity;
@@ -1134,9 +1149,9 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.decals.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered.Clear();
 						hovered.entity = entity;
@@ -1151,9 +1166,9 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.forces.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered.Clear();
 						hovered.entity = entity;
@@ -1168,9 +1183,26 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.emitters.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered.Clear();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
+			if (pickMask & PICK_HAIR)
+			{
+				for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+				{
+					Entity entity = scene.hairs.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered.Clear();
 						hovered.entity = entity;
@@ -1185,9 +1217,9 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.probes.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					if (SPHERE(transform.translation, 1).intersects(pickRay))
+					if (SPHERE(transform.GetPosition(), 1).intersects(pickRay))
 					{
-						float dis = wiMath::Distance(transform.translation, pickRay.origin);
+						float dis = wiMath::Distance(transform.GetPosition(), pickRay.origin);
 						if (dis < hovered.distance)
 						{
 							hovered.Clear();
@@ -1209,9 +1241,9 @@ void EditorComponent::Update(float dt)
 
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered.Clear();
 						hovered.entity = entity;
@@ -1226,9 +1258,9 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.armatures.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&transform.translation));
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.translation, pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered.Clear();
 						hovered.entity = entity;
@@ -1369,6 +1401,7 @@ void EditorComponent::Update(float dt)
 		{
 			objectWnd->SetEntity(INVALID_ENTITY);
 			emitterWnd->SetEntity(INVALID_ENTITY);
+			hairWnd->SetEntity(INVALID_ENTITY);
 			meshWnd->SetEntity(INVALID_ENTITY);
 			materialWnd->SetEntity(INVALID_ENTITY);
 			lightWnd->SetEntity(INVALID_ENTITY);
@@ -1395,6 +1428,7 @@ void EditorComponent::Update(float dt)
 
 			objectWnd->SetEntity(picked->entity);
 			emitterWnd->SetEntity(picked->entity);
+			hairWnd->SetEntity(picked->entity);
 			lightWnd->SetEntity(picked->entity);
 			decalWnd->SetEntity(picked->entity);
 			envProbeWnd->SetEntity(picked->entity);
@@ -1620,6 +1654,7 @@ void EditorComponent::Update(float dt)
 	}
 
 	emitterWnd->UpdateData();
+	hairWnd->UpdateData();
 
 	__super::Update(dt);
 
@@ -1738,10 +1773,10 @@ void EditorComponent::Compose()
 			Entity entity = scene.lights.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
 
 			wiImageEffects fx;
-			fx.pos = transform.translation;
+			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -1786,10 +1821,10 @@ void EditorComponent::Compose()
 			Entity entity = scene.decals.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
 
 			wiImageEffects fx;
-			fx.pos = transform.translation;
+			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -1821,10 +1856,10 @@ void EditorComponent::Compose()
 			Entity entity = scene.forces.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
 
 			wiImageEffects fx;
-			fx.pos = transform.translation;
+			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -1860,10 +1895,10 @@ void EditorComponent::Compose()
 
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
 
 			wiImageEffects fx;
-			fx.pos = transform.translation;
+			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -1894,10 +1929,10 @@ void EditorComponent::Compose()
 			Entity entity = scene.armatures.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
 
 			wiImageEffects fx;
-			fx.pos = transform.translation;
+			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -1928,10 +1963,10 @@ void EditorComponent::Compose()
 			Entity entity = scene.emitters.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.translation, camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
 
 			wiImageEffects fx;
-			fx.pos = transform.translation;
+			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -1952,6 +1987,40 @@ void EditorComponent::Compose()
 
 
 			wiImage::Draw(&emitterTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+		}
+	}
+
+	if (rendererWnd->GetPickType() & PICK_HAIR)
+	{
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			Entity entity = scene.hairs.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+
+			wiImageEffects fx;
+			fx.pos = transform.GetPosition();
+			fx.siz = XMFLOAT2(dist, dist);
+			fx.typeFlag = ImageType::WORLD;
+			fx.pivot = XMFLOAT2(0.5f, 0.5f);
+			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+			if (hovered.entity == entity)
+			{
+				fx.col = XMFLOAT4(1, 1, 1, 1);
+			}
+			for (auto& picked : selected)
+			{
+				if (picked->entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 0, 1);
+					break;
+				}
+			}
+
+
+			wiImage::Draw(&hairTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 		}
 	}
 

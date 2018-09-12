@@ -10,6 +10,38 @@ using namespace wiGraphicsTypes;
 namespace wiSceneSystem
 {
 
+	XMFLOAT3 TransformComponent::GetPosition() const
+	{
+		return *((XMFLOAT3*)&world._41);
+	}
+	XMFLOAT4 TransformComponent::GetRotation() const
+	{
+		XMFLOAT4 rotation;
+		XMStoreFloat4(&rotation, GetRotationV());
+		return rotation;
+	}
+	XMFLOAT3 TransformComponent::GetScale() const
+	{
+		XMFLOAT3 scale;
+		XMStoreFloat3(&scale, GetScaleV());
+		return scale;
+	}
+	XMVECTOR TransformComponent::GetPositionV() const
+	{
+		return XMLoadFloat3((XMFLOAT3*)&world._41);
+	}
+	XMVECTOR TransformComponent::GetRotationV() const
+	{
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
+		return R;
+	}
+	XMVECTOR TransformComponent::GetScaleV() const
+	{
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
+		return S;
+	}
 	void TransformComponent::UpdateTransform()
 	{
 		if (dirty)
@@ -23,10 +55,6 @@ namespace wiSceneSystem
 				XMMatrixScalingFromVector(S_local) *
 				XMMatrixRotationQuaternion(R_local) *
 				XMMatrixTranslationFromVector(T_local);
-
-			scale = scale_local;
-			rotation = rotation_local;
-			translation = translation_local;
 
 			XMStoreFloat4x4(&world, W);
 		}
@@ -62,20 +90,17 @@ namespace wiSceneSystem
 		XMMATRIX B = XMLoadFloat4x4(&inverseParentBindMatrix);
 		W = W * B * W_parent;
 
-		XMVECTOR S, R, T;
-		XMMatrixDecompose(&S, &R, &T, W);
-		XMStoreFloat3(&scale, S);
-		XMStoreFloat4(&rotation, R);
-		XMStoreFloat3(&translation, T);
-
 		XMStoreFloat4x4(&world, W);
 	}
 	void TransformComponent::ApplyTransform()
 	{
 		dirty = true;
-		scale_local = scale;
-		rotation_local = rotation;
-		translation_local = translation;
+
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
+		XMStoreFloat3(&scale_local, S);
+		XMStoreFloat4(&rotation_local, R);
+		XMStoreFloat3(&translation_local, T);
 	}
 	void TransformComponent::ClearTransform()
 	{
@@ -147,13 +172,11 @@ namespace wiSceneSystem
 	{
 		dirty = true;
 
-		XMVECTOR aS = XMLoadFloat3(&a.scale);
-		XMVECTOR aR = XMLoadFloat4(&a.rotation);
-		XMVECTOR aT = XMLoadFloat3(&a.translation);
+		XMVECTOR aS, aR, aT;
+		XMMatrixDecompose(&aS, &aR, &aT, XMLoadFloat4x4(&a.world));
 
-		XMVECTOR bS = XMLoadFloat3(&b.scale);
-		XMVECTOR bR = XMLoadFloat4(&b.rotation);
-		XMVECTOR bT = XMLoadFloat3(&b.translation);
+		XMVECTOR bS, bR, bT;
+		XMMatrixDecompose(&bS, &bR, &bT, XMLoadFloat4x4(&b.world));
 
 		XMVECTOR S = XMVectorLerp(aS, bS, t);
 		XMVECTOR R = XMQuaternionSlerp(aR, bR, t);
@@ -167,21 +190,17 @@ namespace wiSceneSystem
 	{
 		dirty = true;
 
-		XMVECTOR aS = XMLoadFloat3(&a.scale);
-		XMVECTOR aR = XMLoadFloat4(&a.rotation);
-		XMVECTOR aT = XMLoadFloat3(&a.translation);
+		XMVECTOR aS, aR, aT;
+		XMMatrixDecompose(&aS, &aR, &aT, XMLoadFloat4x4(&a.world));
 
-		XMVECTOR bS = XMLoadFloat3(&b.scale);
-		XMVECTOR bR = XMLoadFloat4(&b.rotation);
-		XMVECTOR bT = XMLoadFloat3(&b.translation);
+		XMVECTOR bS, bR, bT;
+		XMMatrixDecompose(&bS, &bR, &bT, XMLoadFloat4x4(&b.world));
 
-		XMVECTOR cS = XMLoadFloat3(&c.scale);
-		XMVECTOR cR = XMLoadFloat4(&c.rotation);
-		XMVECTOR cT = XMLoadFloat3(&c.translation);
+		XMVECTOR cS, cR, cT;
+		XMMatrixDecompose(&cS, &cR, &cT, XMLoadFloat4x4(&c.world));
 
-		XMVECTOR dS = XMLoadFloat3(&d.scale);
-		XMVECTOR dR = XMLoadFloat4(&d.rotation);
-		XMVECTOR dT = XMLoadFloat3(&d.translation);
+		XMVECTOR dS, dR, dT;
+		XMMatrixDecompose(&dS, &dR, &dT, XMLoadFloat4x4(&d.world));
 
 		XMVECTOR T = XMVectorCatmullRom(aT, bT, cT, dT, t);
 
@@ -652,9 +671,7 @@ namespace wiSceneSystem
 
 		CreateRenderData();
 	}
-
-
-
+	
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
 	{
 		zNearP = newNear;
@@ -682,11 +699,14 @@ namespace wiSceneSystem
 
 		if (transform != nullptr)
 		{
-			_Eye = XMLoadFloat3(&transform->translation);
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&transform->world));
+
+			_Eye = T;
 			_At = XMVectorSet(0, 0, 1, 0);
 			_Up = XMVectorSet(0, 1, 0, 0);
 
-			XMMATRIX _Rot = XMMatrixRotationQuaternion(XMLoadFloat4(&transform->rotation));
+			XMMATRIX _Rot = XMMatrixRotationQuaternion(R);
 			_At = XMVector3TransformNormal(_At, _Rot);
 			_Up = XMVector3TransformNormal(_Up, _Rot);
 			XMStoreFloat3x3(&rotationMatrix, _Rot);
@@ -761,9 +781,11 @@ namespace wiSceneSystem
 
 		RunProbeUpdateSystem(transforms, aabb_probes, probes);
 
+		RunForceUpdateSystem(transforms, forces);
+
 		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, aabb_lights, lights, sunDirection, sunColor);
 
-		RunEmitterUpdateSystem(emitters, dt);
+		RunParticleUpdateSystem(transforms, emitters, hairs, dt);
 
 	}
 	void Scene::Clear()
@@ -1065,6 +1087,27 @@ namespace wiSceneSystem
 
 		return entity;
 	}
+	Entity Scene::Entity_CreateHair(
+		const std::string& name,
+		const XMFLOAT3& position
+	)
+	{
+		Entity entity = CreateEntity();
+
+		owned_entities.insert(entity);
+
+		names.Create(entity) = name;
+
+		hairs.Create(entity);
+
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Translate(position);
+		transform.UpdateTransform();
+
+		materials.Create(entity);
+
+		return entity;
+	}
 
 	void Scene::Component_Attach(Entity entity, Entity parent)
 	{
@@ -1192,7 +1235,7 @@ namespace wiSceneSystem
 
 				if (rigidbody.kinematic)
 				{
-					physicsEngine->transformBody(transform.rotation, transform.translation, rigidbody.physicsObjectID);
+					//physicsEngine->transformBody(transform.rotation, transform.translation, rigidbody.physicsObjectID);
 				}
 				else
 				{
@@ -1272,6 +1315,8 @@ namespace wiSceneSystem
 
 				TransformComponent& transform = *transforms.GetComponent(channel.target);
 
+				XMMATRIX ANIM;
+
 				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
 				{
 					// Nearest neighbor method (snap to left):
@@ -1280,19 +1325,19 @@ namespace wiSceneSystem
 					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
 					{
 						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						transform.translation = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
+						ANIM = XMMatrixTranslationFromVector(XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]));
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::ROTATION:
 					{
 						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
-						transform.rotation = ((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft];
+						ANIM = XMMatrixRotationQuaternion(XMLoadFloat4(&((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft]));
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::SCALE:
 					{
 						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						transform.scale = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
+						ANIM = XMMatrixScalingFromVector(XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]));
 					}
 					break;
 					}
@@ -1312,7 +1357,7 @@ namespace wiSceneSystem
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.translation, vAnim);
+						ANIM = XMMatrixTranslationFromVector(vAnim);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::ROTATION:
@@ -1323,7 +1368,7 @@ namespace wiSceneSystem
 						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
 						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
 						vAnim = XMQuaternionNormalize(vAnim);
-						XMStoreFloat4(&transform.rotation, vAnim);
+						ANIM = XMMatrixRotationQuaternion(vAnim);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::SCALE:
@@ -1333,17 +1378,16 @@ namespace wiSceneSystem
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						XMStoreFloat3(&transform.scale, vAnim);
+						ANIM = XMMatrixScalingFromVector(vAnim);
 					}
 					break;
 					}
 				}
 
-				XMVECTOR S = XMLoadFloat3(&transform.scale);
-				XMVECTOR R = XMLoadFloat4(&transform.rotation);
-				XMVECTOR T = XMLoadFloat3(&transform.translation);
-				XMMATRIX W = XMMatrixScalingFromVector(S) * XMMatrixRotationQuaternion(R) * XMMatrixTranslationFromVector(T);
-				XMStoreFloat4x4(&transform.world, W);
+				XMMATRIX W = XMLoadFloat4x4(&transform.world);
+				XMMATRIX M = W * ANIM;
+
+				XMStoreFloat4x4(&transform.world, M);
 				transform.dirty = true;
 
 			}
@@ -1503,7 +1547,7 @@ namespace wiSceneSystem
 							{
 								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
 
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&transform->translation), XMVectorSet(0, 1, 0, 0));
+								XMVECTOR _refPlane = XMPlaneFromPointNormal(transform->GetPositionV(), XMVectorSet(0, 1, 0, 0));
 								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 
@@ -1541,9 +1585,18 @@ namespace wiSceneSystem
 			Entity entity = decals.GetEntity(i);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
+
+			XMMATRIX W = XMLoadFloat4x4(&decal.world);
 			XMVECTOR front = XMVectorSet(0, 0, 1, 0);
-			front = XMVector3TransformNormal(front, XMLoadFloat4x4(&decal.world));
+			front = XMVector3TransformNormal(front, W);
 			XMStoreFloat3(&decal.front, front);
+
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, W);
+			XMStoreFloat3(&decal.position, T);
+			XMFLOAT3 scale;
+			XMStoreFloat3(&scale, S);
+			decal.range = max(scale.x, max(scale.y, scale.z)) * 2;
 
 			AABB& aabb = aabb_decals[i];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
@@ -1564,11 +1617,34 @@ namespace wiSceneSystem
 			Entity entity = probes.GetEntity(i);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
-			probe.position = transform.translation;
+			probe.position = transform.GetPosition();
+
+			XMMATRIX W = XMLoadFloat4x4(&transform.world);
+			XMStoreFloat4x4(&probe.inverseMatrix, XMMatrixInverse(nullptr, W));
+
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, W);
+			XMFLOAT3 scale;
+			XMStoreFloat3(&scale, S);
+			probe.range = max(scale.x, max(scale.y, scale.z)) * 2;
 
 			AABB& aabb = aabb_probes[i];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.get(transform.world);
+		}
+	}
+	void RunForceUpdateSystem(
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<ForceFieldComponent>& forces
+	)
+	{
+		for (size_t i = 0; i < forces.GetCount(); ++i)
+		{
+			ForceFieldComponent& force = forces[i];
+			Entity entity = forces.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			force.position = transform.GetPosition();
+			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&transform.world))));
 		}
 	}
 	void RunLightUpdateSystem(
@@ -1588,11 +1664,13 @@ namespace wiSceneSystem
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[i];
 
-			XMMATRIX world = XMLoadFloat4x4(&transform.world);
-			XMVECTOR translation = XMLoadFloat3(&transform.translation);
-			XMVECTOR rotation = XMLoadFloat4(&transform.rotation);
+			XMMATRIX W = XMLoadFloat4x4(&transform.world);
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, W);
 
-			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 1), world));
+			XMStoreFloat3(&light.position, T);
+			XMStoreFloat4(&light.rotation, R);
+			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
 			switch (light.type)
 			{
@@ -1660,7 +1738,7 @@ namespace wiSceneSystem
 						XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
 						XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;
 
-						XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&transform.rotation));
+						XMMATRIX rrr = XMMatrixRotationQuaternion(R);
 
 						light.shadowCam_dirLight[0].Update(rrr, e0);
 						light.shadowCam_dirLight[1].Update(rrr, e1);
@@ -1679,12 +1757,12 @@ namespace wiSceneSystem
 					{
 						light.shadowCam_spotLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, 1), 0.1f, 1000.0f, light.fov));
 					}
-					light.shadowCam_spotLight[0].Update(world);
+					light.shadowCam_spotLight[0].Update(W);
 					light.shadowCam_spotLight[0].farplane = light.range;
 					light.shadowCam_spotLight[0].Create_Perspective(light.fov);
 				}
 
-				aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
+				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
 			}
 			break;
 			case LightComponent::POINT:
@@ -1706,8 +1784,9 @@ namespace wiSceneSystem
 						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), 0.1f, 1000.0f, XM_PIDIV2)); //+z
 						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), 0.1f, 1000.0f, XM_PIDIV2)); //-z
 					}
-					for (auto& x : light.shadowCam_pointLight) {
-						x.Update(translation);
+					for (auto& x : light.shadowCam_pointLight) 
+					{
+						x.Update(T);
 						x.farplane = max(1.0f, light.range);
 						x.Create_Perspective(XM_PIDIV2);
 					}
@@ -1715,10 +1794,12 @@ namespace wiSceneSystem
 
 				if (light.type == LightComponent::POINT)
 				{
-					aabb.createFromHalfWidth(transform.translation, XMFLOAT3(light.range, light.range, light.range));
+					aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
 				}
 				else
 				{
+					XMStoreFloat3(&light.right, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), W));
+					XMStoreFloat3(&light.front, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W));
 					// area lights have no bounds, just like directional lights (maybe todo)
 					aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
 				}
@@ -1728,12 +1809,25 @@ namespace wiSceneSystem
 
 		}
 	}
-	void RunEmitterUpdateSystem(ComponentManager<wiEmittedParticle>& emitters, float dt)
+	void RunParticleUpdateSystem(
+		const ComponentManager<TransformComponent>& transforms,
+		ComponentManager<wiEmittedParticle>& emitters,
+		ComponentManager<wiHairParticle>& hairs,
+		float dt
+	)
 	{
 		for (size_t i = 0; i < emitters.GetCount(); ++i)
 		{
 			wiEmittedParticle& emitter = emitters[i];
 			emitter.Update(dt);
+		}
+
+		for (size_t i = 0; i < hairs.GetCount(); ++i)
+		{
+			wiHairParticle& hair = hairs[i];
+			Entity entity = hairs.GetEntity(i);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			hair.world = transform.world;
 		}
 	}
 

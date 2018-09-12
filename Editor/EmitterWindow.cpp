@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "EmitterWindow.h"
-#include "MaterialWindow.h"
 
 #include <sstream>
 

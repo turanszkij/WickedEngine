@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 #include "ShaderInterop.h"
+#include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
 
 class wiArchive;
@@ -22,7 +23,7 @@ private:
 	CBUFFER(ConstantBuffer, CBSLOT_OTHER_HAIRPARTICLE)
 	{
 		XMMATRIX mWorld;
-		XMFLOAT3 color; float __pad0;
+		XMFLOAT4 color;
 		float LOD0;
 		float LOD1;
 		float LOD2;
@@ -31,9 +32,6 @@ private:
 
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> cb;
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> ib;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> ib_transposed;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> drawargs;
 
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
@@ -49,17 +47,17 @@ public:
 
 public:
 
-	void Generate();
-	void ComputeCulling(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
-	void Draw(wiSceneSystem::CameraComponent* camera, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID);
+	void Generate(const MeshComponent& mesh);
+	void Draw(wiSceneSystem::CameraComponent* camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const;
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
 	static void Settings(int lod0,int lod1,int lod2);
 
 	float length = 1.0f;
-	XMFLOAT4X4 OriginalMatrix_Inverse;
 	size_t particleCount = 0;
+	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
+	XMFLOAT4X4 world;
 };
 
 }
