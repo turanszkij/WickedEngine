@@ -789,6 +789,9 @@
     <FxCompile Include="emittedparticle_emitCS_FROMMESH.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="hairparticle_simulateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

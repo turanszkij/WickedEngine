@@ -55,6 +55,20 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	meshComboBox->SetTooltip("Choose an animation clip...");
 	hairWindow->AddWidget(meshComboBox);
 
+	lengthSlider = new wiSlider(0, 4, 1, 100000, "Particle Length: ");
+	lengthSlider->SetSize(XMFLOAT2(360, 30));
+	lengthSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	lengthSlider->OnSlide([&](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->length = args.fValue;
+		}
+	});
+	lengthSlider->SetEnabled(false);
+	lengthSlider->SetTooltip("Set hair strand length");
+	hairWindow->AddWidget(lengthSlider);
+
 	countSlider = new wiSlider(0, 100000, 1000, 100000, "Particle Count: ");
 	countSlider->SetSize(XMFLOAT2(360, 30));
 	countSlider->SetPos(XMFLOAT2(x, y += step * 2));
@@ -62,7 +76,7 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 		auto hair = GetHair();
 		if (hair != nullptr)
 		{
-			hair->particleCount = (size_t)args.iValue;
+			hair->particleCount = (uint32_t)args.iValue;
 		}
 	});
 	countSlider->SetEnabled(false);
@@ -115,6 +129,7 @@ void HairParticleWindow::SetEntity(Entity entity)
 
 	if (hair != nullptr)
 	{
+		lengthSlider->SetValue(hair->length);
 		countSlider->SetValue((float)hair->particleCount);
 	}
 	else

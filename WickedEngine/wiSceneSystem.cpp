@@ -785,7 +785,7 @@ namespace wiSceneSystem
 
 		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, aabb_lights, lights, sunDirection, sunColor);
 
-		RunParticleUpdateSystem(transforms, emitters, hairs, dt);
+		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
 
 	}
 	void Scene::Clear()
@@ -1083,7 +1083,7 @@ namespace wiSceneSystem
 		transform.Translate(position);
 		transform.UpdateTransform();
 
-		materials.Create(entity);
+		materials.Create(entity).blendFlag = BLENDMODE_ALPHA;
 
 		return entity;
 	}
@@ -1811,6 +1811,7 @@ namespace wiSceneSystem
 	}
 	void RunParticleUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
+		const ComponentManager<MeshComponent>& meshes,
 		ComponentManager<wiEmittedParticle>& emitters,
 		ComponentManager<wiHairParticle>& hairs,
 		float dt
@@ -1828,6 +1829,29 @@ namespace wiSceneSystem
 			Entity entity = hairs.GetEntity(i);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			hair.world = transform.world;
+
+			if (hair.meshID != INVALID_ENTITY)
+			{
+				const MeshComponent* mesh = meshes.GetComponent(hair.meshID);
+
+				if (mesh != nullptr)
+				{
+					XMFLOAT3 min = mesh->aabb.getMin();
+					XMFLOAT3 max = mesh->aabb.getMax();
+
+					max.x += hair.length;
+					max.y += hair.length;
+					max.z += hair.length;
+
+					min.x -= hair.length;
+					min.y -= hair.length;
+					min.z -= hair.length;
+
+					hair.aabb.create(min, max);
+					hair.aabb = hair.aabb.get(hair.world);
+				}
+			}
+
 		}
 	}
 

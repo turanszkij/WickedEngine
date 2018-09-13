@@ -30,6 +30,7 @@ public:
 
 	wiButton* addButton;
 	wiComboBox*	meshComboBox;
+	wiSlider* lengthSlider;
 	wiSlider* countSlider;
 	wiButton* generateButton;
 

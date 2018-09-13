@@ -9,6 +9,7 @@
 #include "ShaderInterop.h"
 #include "wiTextureHelper.h"
 #include "wiSceneSystem.h"
+#include "ShaderInterop_HairParticle.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -19,11 +20,13 @@ namespace wiSceneSystem
 VertexShader *wiHairParticle::vs = nullptr;
 PixelShader *wiHairParticle::ps[];
 PixelShader *wiHairParticle::ps_simplest = nullptr;
+ComputeShader *wiHairParticle::cs_simulate = nullptr;
 DepthStencilState wiHairParticle::dss_default, wiHairParticle::dss_equal, wiHairParticle::dss_rejectopaque_keeptransparent;
 RasterizerState wiHairParticle::rs, wiHairParticle::ncrs, wiHairParticle::wirers;
 BlendState wiHairParticle::bs[2]; 
 GraphicsPSO wiHairParticle::PSO[SHADERTYPE_COUNT][2];
 GraphicsPSO wiHairParticle::PSO_wire;
+ComputePSO wiHairParticle::CPSO_simulate;
 int wiHairParticle::LOD[3];
 
 void wiHairParticle::CleanUpStatic()
@@ -33,6 +36,9 @@ void wiHairParticle::CleanUpStatic()
 	{
 		SAFE_DELETE(ps[i]);
 	}
+
+	SAFE_DELETE(ps_simplest);
+	SAFE_DELETE(cs_simulate);
 }
 void wiHairParticle::LoadShaders()
 {
@@ -115,16 +121,27 @@ void wiHairParticle::LoadShaders()
 	SAFE_INIT(ps_simplest);
 	ps_simplest = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
-	GraphicsPSODesc desc;
-	desc.vs = vs;
-	desc.ps = ps_simplest;
-	desc.bs = &bs[0];
-	desc.rs = &wirers;
-	desc.dss = &dss_default;
-	desc.numRTs = 1;
-	desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-	desc.DSFormat = wiRenderer::DSFormat_full;
-	device->CreateGraphicsPSO(&desc, &PSO_wire);
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vs;
+		desc.ps = ps_simplest;
+		desc.bs = &bs[0];
+		desc.rs = &wirers;
+		desc.dss = &dss_default;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+		desc.DSFormat = wiRenderer::DSFormat_full;
+		device->CreateGraphicsPSO(&desc, &PSO_wire);
+	}
+
+	SAFE_INIT(cs_simulate);
+	cs_simulate = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "hairparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
+
+	{
+		ComputePSODesc desc;
+		desc.cs = cs_simulate;
+		device->CreateComputePSO(&desc, &CPSO_simulate);
+	}
 }
 void wiHairParticle::SetUpStatic()
 {
@@ -224,11 +241,20 @@ void wiHairParticle::Settings(int l0,int l1,int l2)
 
 void wiHairParticle::Generate(const MeshComponent& mesh)
 {
+	struct Patch
+	{
+		XMFLOAT4 posLen;
+		UINT normalRand;
+		UINT tangent;
+	};
+	static_assert(sizeof(Patch) == particleBuffer_stride, "Mismatch!");
+
 	std::vector<Patch> points(particleCount);
+	std::vector<uint32_t> targets(particleCount);
 
-	// Now the distribution is completely uniform. TODO: bring back distribution, but make it more intuitive to set up!
+	// Now the distribution is uniform. TODO: bring back weight-based distribution, but make it more intuitive to set up! (vertex colors?)
 
-	for (UINT i = 0; i < particleCount; ++i)
+	for (uint32_t i = 0; i < particleCount; ++i)
 	{
 		int tri = wiRandom::getRandom(0, (int)((mesh.indices.size() - 1) / 3));
 
@@ -246,43 +272,100 @@ void wiHairParticle::Generate(const MeshComponent& mesh)
 
 		float f = wiRandom::getRandom(0, 1000) * 0.001f;
 		float g = wiRandom::getRandom(0, 1000) * 0.001f;
+		if (f + g > 1)
+		{
+			f = 1 - f;
+			g = 1 - g;
+		}
 
 		XMVECTOR P = XMVectorBaryCentric(p0, p1, p2, f, g);
 		XMVECTOR N = XMVectorBaryCentric(n0, n1, n2, f, g);
-		XMVECTOR T = XMVector3Normalize(XMVectorSubtract(p0, p1));
+		XMVECTOR T = XMVector3Normalize(XMVectorSubtract(i % 2 == 0 ? p0 : p2, p1));
 
-		XMStoreFloat4(&points[i].posLen, P);
-		points[i].posLen.w = 1.0f;
-
-		XMFLOAT3 normal, tangent;
+		XMFLOAT3 position, normal, tangent;
+		XMStoreFloat3(&position, P);
 		XMStoreFloat3(&normal, N);
 		XMStoreFloat3(&tangent, T);
 
-		points[i].normalRand = wiMath::CompressNormal(normal);
+		points[i].posLen = XMFLOAT4(position.x, position.y, position.z, 1.0f);
+
+		uint32_t uNormal = wiMath::CompressNormal(normal);
+		points[i].normalRand = uNormal;
+		points[i].normalRand |= ((uint32_t)wiRandom::getRandom(0, 256)) << 24;
+
 		points[i].tangent = wiMath::CompressNormal(tangent);
+
+		targets[i] = uNormal;
 	}
 
 	cb.reset(new GPUBuffer);
 	particleBuffer.reset(new GPUBuffer);
+	targetBuffer.reset(new GPUBuffer);
 
 	GPUBufferDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
-	bd.Usage = USAGE_IMMUTABLE;
-	bd.ByteWidth = (UINT)(sizeof(Patch) * particleCount);
-	bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+	bd.Usage = USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(Patch) * particleCount;
+	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
 	SubresourceData data = {};
 	data.pSysMem = points.data();
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, particleBuffer.get());
 
-	ZeroMemory(&bd, sizeof(bd));
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.ByteWidth = sizeof(uint32_t) * particleCount;
+	data.pSysMem = targets.data();
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, targetBuffer.get());
+
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
+	bd.ByteWidth = sizeof(HairParticleCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.MiscFlags = 0;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
 
+}
+
+void wiHairParticle::UpdateRenderData(const MaterialComponent& material, GRAPHICSTHREAD threadID)
+{
+	if (cb == nullptr)
+	{
+		return;
+	}
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->EventBegin("HairParticle - UpdateRenderData", threadID);
+
+	device->BindComputePSO(&CPSO_simulate, threadID);
+
+	HairParticleCB hcb;
+	hcb.xWorld = world;
+	hcb.xColor = material.baseColor;
+	hcb.xLength = length;
+	hcb.LOD0 = (float)LOD[0];
+	hcb.LOD1 = (float)LOD[1];
+	hcb.LOD2 = (float)LOD[2];
+	device->UpdateBuffer(cb.get(), &hcb, threadID);
+
+	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), threadID);
+
+	GPUResource* res[] = {
+		targetBuffer.get()
+	};
+	device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
+
+	GPUResource* uavs[] = {
+		particleBuffer.get()
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+	device->Dispatch((UINT)ceilf((float)particleCount / (float)THREADCOUNT_SIMULATEHAIR), 1, 1, threadID);
+
+	device->UnbindResources(0, ARRAYSIZE(res), threadID);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+
+	device->EventEnd(threadID);
 }
 
 void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const
@@ -315,15 +398,7 @@ void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& mate
 		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 	}
 
-	ConstantBuffer gcb;
-	gcb.mWorld = XMMatrixTranspose(XMLoadFloat4x4(&world));
-	gcb.color = material.baseColor;
-	gcb.LOD0 = (float)LOD[0];
-	gcb.LOD1 = (float)LOD[1];
-	gcb.LOD2 = (float)LOD[2];
-	device->UpdateBuffer(cb.get(), &gcb, threadID);
-
-	device->BindConstantBuffer(VS, cb.get(), CB_GETBINDSLOT(ConstantBuffer), threadID);
+	device->BindConstantBuffer(VS, cb.get(), CB_GETBINDSLOT(HairParticleCB), threadID);
 
 	device->BindResource(VS, particleBuffer.get(), 0, threadID);
 

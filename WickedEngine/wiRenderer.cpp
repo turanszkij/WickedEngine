@@ -3477,6 +3477,20 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		emitter.UpdateRenderData(transform, material, mesh, threadID);
 	}
 
+	// Hair particle systems simulation:
+	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+	{
+		wiHairParticle& hair = scene.hairs[i];
+
+		if (getCamera()->frustum.CheckBox(hair.aabb))
+		{
+			Entity entity = scene.hairs.GetEntity(i);
+			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+			hair.UpdateRenderData(material, threadID);
+		}
+	}
+
 	// Compute water simulation:
 	if (ocean != nullptr)
 	{
@@ -5326,10 +5340,14 @@ void wiRenderer::DrawWorld(CameraComponent* camera, bool tessellation, GRAPHICST
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
 			const wiHairParticle& hair = scene.hairs[i];
-			Entity entity = scene.hairs.GetEntity(i);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			hair.Draw(camera, material, shaderType, false, threadID);
+			if (camera->frustum.CheckBox(hair.aabb))
+			{
+				Entity entity = scene.hairs.GetEntity(i);
+				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+				hair.Draw(camera, material, shaderType, false, threadID);
+			}
 		}
 	}
 
@@ -5366,10 +5384,14 @@ void wiRenderer::DrawWorldTransparent(CameraComponent* camera, SHADERTYPE shader
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
 			const wiHairParticle& hair = scene.hairs[i];
-			Entity entity = scene.hairs.GetEntity(i);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-			hair.Draw(camera, material, shaderType, true, threadID);
+			if (camera->frustum.CheckBox(hair.aabb))
+			{
+				Entity entity = scene.hairs.GetEntity(i);
+				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+				hair.Draw(camera, material, shaderType, true, threadID);
+			}
 		}
 	}
 

@@ -73,6 +73,14 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	});
 	worldWindow->AddWidget(cloudSpeedSlider);
 
+	windSpeedSlider = new wiSlider(0.001f, 0.2f, 0.1f, 10000, "Wind Speed: ");
+	windSpeedSlider->SetSize(XMFLOAT2(100, 30));
+	windSpeedSlider->SetPos(XMFLOAT2(x, y += step));
+	windSpeedSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::GetScene().windDirection = XMFLOAT3(args.fValue, 0, 0);
+	});
+	worldWindow->AddWidget(windSpeedSlider);
+
 
 	skyButton = new wiButton("Load Sky");
 	skyButton->SetTooltip("Load a skybox cubemap texture...");

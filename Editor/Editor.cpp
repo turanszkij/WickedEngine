@@ -1694,6 +1694,24 @@ void EditorComponent::Render()
 			{
 				wiRenderer::AddRenderableBox(decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
 			}
+
+			const EnvironmentProbeComponent* probe = scene.probes.GetComponent(hovered.entity);
+			if (probe != nullptr)
+			{
+				const AABB& aabb = *scene.aabb_probes.GetComponent(hovered.entity);
+
+				XMFLOAT4X4 hoverBox;
+				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
+				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
+			}
+
+			const wiHairParticle* hair = scene.hairs.GetComponent(hovered.entity);
+			if (hair != nullptr)
+			{
+				XMFLOAT4X4 hoverBox;
+				XMStoreFloat4x4(&hoverBox, hair->aabb.getAsBoxMatrix());
+				wiRenderer::AddRenderableBox(hoverBox, XMFLOAT4(0, 0.5f, 0, 0.5f));
+			}
 		}
 
 	}
@@ -1737,6 +1755,12 @@ void EditorComponent::Render()
 				{
 					const AABB& aabb = *scene.aabb_probes.GetComponent(picked->entity);
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
+				}
+
+				const wiHairParticle* hair = scene.hairs.GetComponent(picked->entity);
+				if (hair != nullptr)
+				{
+					selectedAABB = AABB::Merge(selectedAABB, hair->aabb);
 				}
 
 			}

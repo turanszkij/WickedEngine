@@ -253,7 +253,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitScalingSlider->SetTooltip("Set the scaling of the particles based on their lifetime.");
 	emitterWindow->AddWidget(emitScalingSlider);
 
-	emitLifeSlider = new wiSlider(0.0f, 1000.0f, 1.0f, 100000, "Life span: ");
+	emitLifeSlider = new wiSlider(0.0f, 100.0f, 1.0f, 10000, "Life span: ");
 	emitLifeSlider->SetSize(XMFLOAT2(360, 30));
 	emitLifeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitLifeSlider->OnSlide([&](wiEventArgs args) {
@@ -264,7 +264,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	emitLifeSlider->SetEnabled(false);
-	emitLifeSlider->SetTooltip("Set the lifespan of the emitted particles.");
+	emitLifeSlider->SetTooltip("Set the lifespan of the emitted particles (in seconds).");
 	emitterWindow->AddWidget(emitLifeSlider);
 
 	emitRandomnessSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");

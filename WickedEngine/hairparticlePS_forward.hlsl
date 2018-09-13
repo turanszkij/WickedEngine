@@ -10,6 +10,7 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 #endif
 
 	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex);
+	color.rgb *= input.color;
 	ALPHATEST(color.a)
 	float opacity = 1; // keep edge diffuse shading
 	color.rgb = DEGAMMA(color.rgb);

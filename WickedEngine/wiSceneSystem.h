@@ -849,6 +849,7 @@ namespace wiSceneSystem
 	);
 	void RunParticleUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
+		const wiECS::ComponentManager<MeshComponent>& meshes,
 		wiECS::ComponentManager<wiEmittedParticle>& emitters,
 		wiECS::ComponentManager<wiHairParticle>& hairs,
 		float dt

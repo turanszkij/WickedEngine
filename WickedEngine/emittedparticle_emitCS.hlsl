@@ -24,7 +24,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		// we can emit:
 
-		const float3 randoms = randomTex.SampleLevel(sampler_linear_wrap, float2((float)DTid.x / (float)THREADCOUNT_EMIT, g_xFrame_Time + xEmitterRandomness), 0).rgb;
+		const float global_seed = g_xFrame_Time + xEmitterRandomness;
+		const float thread_seed = (float)((DTid.x + g_xFrame_FrameCount) % THREADCOUNT_EMIT) / (float)THREADCOUNT_EMIT;
+		const float3 randoms = randomTex.SampleLevel(sampler_point_wrap, float2(thread_seed, global_seed), 0).rgb;
 		
 #ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
@@ -63,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 
 		// random barycentric coords:
-		float f = randoms.x;
+		float f = randoms.z;
 		float g = randoms.y;
 		[flatten]
 		if (f + g > 1)

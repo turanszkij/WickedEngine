@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "hairparticleHF.hlsli"
+#include "ShaderInterop_HairParticle.h"
 
 static const float hairPopDistanceThreshold = 0.9f;
 
@@ -20,7 +21,6 @@ static const float3 HAIRPATCH[] = {
 	float3(0, 1, 1),
 };
 
-static const uint particleBuffer_stride = 16 + 4 + 4; // pos, normal, tangent 
 RAWBUFFER(particleBuffer, 0);
 
 VertexToPixel main(uint fakeIndex : SV_VERTEXID)
@@ -39,7 +39,7 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 
 	// convert the raw loaded particle data:
 	float3 pos = posLen.xyz;
-	float len = posLen.w;
+	float len = posLen.w * xLength;
 	float3 normal;
 	uint rand;
 	normal.x = (normalRand >> 0) & 0x000000FF;
@@ -72,16 +72,16 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	float3 windPrev = sin(g_xFrame_TimePrev + (pos.x + pos.y + pos.z))*g_xFrame_WindDirection.xyz * patchPos.y * 0.03f;
 
 	// transform particle by the emitter object matrix:
-	pos.xyz = mul(float4(pos.xyz, 1), xWorld).xyz;
-	normal = mul(normal, (float3x3)xWorld);
-	tangent = mul(tangent, (float3x3)xWorld);
+	pos.xyz = mul(xWorld, float4(pos.xyz, 1)).xyz;
+	normal = mul((float3x3)xWorld, normal);
+	tangent = mul((float3x3)xWorld, tangent);
 
 	// rotate the patch into the tangent space of the emitting triangle:
 	float3x3 TBN = float3x3(tangent, normal, cross(normal, tangent));
 	patchPos = mul(patchPos, TBN);
 
 	// inset to the emitter a bit, to avoid disconnect:
-	pos.xyz -= normal*0.1*len;
+	pos.xyz -= normal * 0.1*len;
 
 
 	// copy to output:
@@ -98,6 +98,8 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	Out.fade = pow(saturate(distance(pos.xyz, g_xCamera_CamPos.xyz) / (LOD2*hairPopDistanceThreshold)), 10);
 	Out.pos2D = Out.pos;
 	Out.pos2DPrev = mul(float4(savedPos + windPrev, 1), g_xFrame_MainCamera_PrevVP);
+
+	Out.color = xColor.rgb;
 
 	return Out;
 }

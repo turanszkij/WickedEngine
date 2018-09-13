@@ -24,6 +24,7 @@ public:
 	wiSlider*		cloudinessSlider;
 	wiSlider*		cloudScaleSlider;
 	wiSlider*		cloudSpeedSlider;
+	wiSlider*		windSpeedSlider;
 	wiButton*		skyButton;
 	wiColorPicker*	ambientColorPicker;
 	wiColorPicker*	horizonColorPicker;
