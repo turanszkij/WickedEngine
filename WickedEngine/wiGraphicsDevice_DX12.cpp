@@ -2038,7 +2038,24 @@ namespace wiGraphicsTypes
 		{
 			SCREENWIDTH = width;
 			SCREENHEIGHT = height;
-			swapChain->ResizeBuffers(2, width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+
+			WaitForGPU();
+
+			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			{
+				SAFE_RELEASE(frames[fr].backBuffer);
+			}
+
+			HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+			assert(SUCCEEDED(hr));
+
+			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			{
+				hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
+				assert(SUCCEEDED(hr));
+				device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, *frames[fr].backBufferRTV);
+			}
+
 			RESOLUTIONCHANGED = true;
 		}
 	}
@@ -3349,7 +3366,6 @@ namespace wiGraphicsTypes
 	{
 		HRESULT result;
 
-
 		// Indicate that the back buffer will now be used to present.
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -3415,7 +3431,6 @@ namespace wiGraphicsTypes
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
 			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
 			GetFrameResources().resourceBuffer[threadID]->clear();
-
 
 			D3D12_RECT pRects[8];
 			for (UINT i = 0; i < 8; ++i)

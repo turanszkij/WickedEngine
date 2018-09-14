@@ -44,5 +44,7 @@ public:
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded();
 	XMFLOAT4X4 GetDragEnd();
+
+	static void LoadShaders();
 };
 

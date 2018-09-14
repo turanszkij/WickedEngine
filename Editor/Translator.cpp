@@ -18,6 +18,43 @@ int vertexCount_Axis = 0;
 int vertexCount_Plane = 0;
 int vertexCount_Origin = 0;
 
+void Translator::LoadShaders()
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	SAFE_DELETE(pso_solidpart);
+	SAFE_DELETE(pso_wirepart);
+
+	{
+		GraphicsPSODesc desc;
+
+		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = wiRenderer::blendStates[BSTYPE_ADDITIVE];
+		desc.pt = TRIANGLELIST;
+
+		pso_solidpart = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, pso_solidpart);
+	}
+
+	{
+		GraphicsPSODesc desc;
+
+		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
+		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
+		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
+		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
+		desc.rs = wiRenderer::rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+		desc.bs = wiRenderer::blendStates[BSTYPE_TRANSPARENT];
+		desc.pt = LINELIST;
+
+		pso_wirepart = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, pso_wirepart);
+	}
+}
 
 Translator::Translator()
 {
@@ -47,38 +84,6 @@ Translator::Translator()
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	if (pso_solidpart == nullptr)
-	{
-		GraphicsPSODesc desc;
-
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = wiRenderer::blendStates[BSTYPE_ADDITIVE];
-		desc.pt = TRIANGLELIST;
-
-		pso_solidpart = new GraphicsPSO;
-		device->CreateGraphicsPSO(&desc, pso_solidpart);
-	}
-
-	if (pso_wirepart == nullptr)
-	{
-		GraphicsPSODesc desc;
-
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-		desc.bs = wiRenderer::blendStates[BSTYPE_TRANSPARENT];
-		desc.pt = LINELIST;
-
-		pso_wirepart = new GraphicsPSO;
-		device->CreateGraphicsPSO(&desc, pso_wirepart);
-	}
 
 	if (vertexBuffer_Axis == nullptr)
 	{

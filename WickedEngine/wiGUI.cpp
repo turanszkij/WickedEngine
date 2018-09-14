@@ -8,6 +8,10 @@ using namespace std;
 
 wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
+	dirty = true;
+	scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+	scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	UpdateTransform();
 }
 
 
@@ -21,6 +25,14 @@ void wiGUI::Update(float dt)
 	if (!visible)
 	{
 		return;
+	}
+
+	if (wiRenderer::GetDevice()->ResolutionChanged())
+	{
+		dirty = true;
+		scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+		scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+		UpdateTransform();
 	}
 
 	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
@@ -39,7 +51,7 @@ void wiGUI::Update(float dt)
 	focus = false;
 	for (list<wiWidget*>::reverse_iterator it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
-		if ((*it)->container == nullptr)
+		if ((*it)->parent == this)
 		{
 			// the contained child widgets will be updated by the containers
 			(*it)->Update(this, dt);
@@ -62,7 +74,7 @@ void wiGUI::Render()
 	wiRenderer::GetDevice()->EventBegin("GUI", GetGraphicsThread());
 	for (auto&x : widgets)
 	{
-		if (x->container == nullptr && x != activeWidget)
+		if (x->parent == this && x != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
 			x->Render(this);
@@ -95,11 +107,13 @@ void wiGUI::ResetScissor()
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
+	widget->AttachTo(this);
 	widgets.push_back(widget);
 }
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
+	widget->Detach();
 	widgets.remove(widget);
 }
 

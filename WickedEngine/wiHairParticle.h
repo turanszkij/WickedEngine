@@ -16,7 +16,7 @@ class wiHairParticle
 private:
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> cb;
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> targetBuffer;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> simulationBuffer;
 
 	static wiGraphicsTypes::VertexShader *vs;
 	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
@@ -40,8 +40,11 @@ public:
 	static void SetUpStatic();
 	static void Settings(int lod0,int lod1,int lod2);
 
-	float length = 1.0f;
 	uint32_t particleCount = 0;
+	float length = 1.0f;
+	float stiffness = 10.0f;
+	float randomness = 0.2f;
+
 	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 	XMFLOAT4X4 world;
 	AABB aabb;

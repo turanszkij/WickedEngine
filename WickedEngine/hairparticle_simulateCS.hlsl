@@ -1,9 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-RWRAWBUFFER(particleBuffer, 0);
-
-RAWBUFFER(targetBuffer, 0);
+RWSTRUCTUREDBUFFER(particleBuffer, Patch, 0);
+RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 1);
 
 #define NUM_LDS_FORCEFIELDS 32
 struct LDS_ForceField
@@ -38,24 +37,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 	const uint instanceID = DTid.x;
 
-	// Fetch from particle buffer:
-	const uint fetchAddress = instanceID * particleBuffer_stride;
-	float4 posLen = asfloat(particleBuffer.Load4(fetchAddress));
-	uint normalRand = particleBuffer.Load(fetchAddress + 16);
+	// Particle buffer load:
+	float3 position = particleBuffer[instanceID].position;
+	float3 normal = particleBuffer[instanceID].normal;
 
-	// Decompress particle properties:
-	float3 pos = posLen.xyz;
-	float len = posLen.w * xLength;
-	float3 normal;
-	normal.x = (normalRand >> 0) & 0x000000FF;
-	normal.y = (normalRand >> 8) & 0x000000FF;
-	normal.z = (normalRand >> 16) & 0x000000FF;
-	normal = normal / 255.0f * 2 - 1;
-
-	// Fetch from target buffer
-	uint uTarget = targetBuffer.Load(instanceID * 4);
-
-	// Decompress target:
+	// Simulation buffer load:
+	float3 velocity = simulationBuffer[instanceID].velocity;
+	uint uTarget = simulationBuffer[instanceID].target;
 	float3 target;
 	target.x = (uTarget >> 0) & 0x000000FF;
 	target.y = (uTarget >> 8) & 0x000000FF;
@@ -63,9 +51,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	target = target / 255.0f * 2 - 1;
 
 	// transform particle by the emitter object matrix:
-	pos.xyz = mul(xWorld, float4(pos.xyz, 1)).xyz;
-	normal = mul((float3x3)xWorld, normal);
-	target = mul((float3x3)xWorld, target);
+	position.xyz = mul(xWorld, float4(position.xyz, 1)).xyz;
+	normal = normalize(mul((float3x3)xWorld, normal));
+	target = normalize(mul((float3x3)xWorld, target));
 
 	// Accumulate forces:
 	float3 force = 0;
@@ -73,7 +61,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	{
 		LDS_ForceField forceField = forceFields[i];
 
-		float3 dir = forceField.position - pos;
+		float3 dir = forceField.position - position;
 		float dist;
 		if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
 		{
@@ -88,22 +76,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
 	}
 
-	// Apply forces:
-	normal += force * g_xFrame_DeltaTime;
+	// Pull back to rest position:
+	force += (target - normal) * xStiffness;
 
-	// Apply rest:
-	normal = lerp(normal, target, 0.1f);
+	// Apply forces:
+	velocity += force * g_xFrame_DeltaTime;
+	normal += velocity * g_xFrame_DeltaTime;
+
+	// Drag:
+	velocity *= 0.98f;
 
 	// Transform back to mesh space and renormalize:
-	normal = mul(normal, (float3x3)xWorld); // transposed mul!
-	normal = normalize(normal);
+	normal = normalize(mul(normal, (float3x3)xWorld)); // transposed mul!
 
+	// Store particle normal:
+	particleBuffer[instanceID].normal = normal;
 
-	// Compress normal and store:
-	uint uNormal = 0;
-	uNormal |= (uint)((normal.x * 0.5f + 0.5f) * 255.0f) << 0;
-	uNormal |= (uint)((normal.y * 0.5f + 0.5f) * 255.0f) << 8;
-	uNormal |= (uint)((normal.z * 0.5f + 0.5f) * 255.0f) << 16;
-	uNormal |= normalRand & 0xFF000000;
-	particleBuffer.Store(fetchAddress + 16, uNormal);
+	// Store simulation data:
+	simulationBuffer[instanceID].velocity = velocity;
 }

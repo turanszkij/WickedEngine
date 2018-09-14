@@ -32,7 +32,7 @@ wiWidget::wiWidget() : TransformComponent()
 	scissorRect.left = 0;
 	scissorRect.right = 0;
 	scissorRect.top = 0;
-	container = nullptr;
+	parent = nullptr;
 	tooltipTimer = 0;
 	textColor = wiColor(255, 255, 255, 255);
 	textShadowColor = wiColor(0, 0, 0, 255);
@@ -57,9 +57,9 @@ void wiWidget::Update(wiGUI* gui, float dt)
 
 	UpdateTransform();
 
-	if (container != nullptr)
+	if (parent != nullptr)
 	{
-		this->UpdateParentedTransform(*container, world_parent_bind);
+		this->UpdateParentedTransform(*parent, world_parent_bind);
 	}
 
 	XMVECTOR S, R, T;
@@ -67,12 +67,17 @@ void wiWidget::Update(wiGUI* gui, float dt)
 	XMStoreFloat3(&translation, T);
 	XMStoreFloat3(&scale, S);
 }
-void wiWidget::AttachTo(wiWidget* parent)
+void wiWidget::AttachTo(TransformComponent* parent)
 {
-	container = parent;
+	this->parent = parent;
 
-	parent->UpdateTransform();
+	this->parent->UpdateTransform();
 	XMStoreFloat4x4(&world_parent_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world)));
+}
+void wiWidget::Detach()
+{
+	this->parent = nullptr;
+	ApplyTransform();
 }
 void wiWidget::RenderTooltip(wiGUI* gui)
 {
@@ -657,7 +662,7 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 		this->end = max(this->end, args.fValue);
 		onSlide(args);
 	});
-	valueInputField->container = this;
+	valueInputField->parent = this;
 	valueInputField->AttachTo(this);
 }
 wiSlider::~wiSlider()
@@ -797,7 +802,7 @@ void wiSlider::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
-	if (container != nullptr)
+	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
@@ -934,7 +939,7 @@ void wiCheckBox::Render(wiGUI* gui)
 			, gui->GetGraphicsThread());
 	}
 
-	if (container != nullptr)
+	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
@@ -1122,7 +1127,7 @@ void wiComboBox::Render(wiGUI* gui)
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 
-	if (container != nullptr)
+	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
@@ -1340,7 +1345,6 @@ void wiWindow::AddWidget(wiWidget* widget)
 	widget->SetVisible(this->IsVisible());
 	gui->AddWidget(widget);
 	widget->AttachTo(this);
-	widget->container = this;
 
 	childrenWidgets.push_back(widget);
 }

@@ -93,9 +93,10 @@ public:
 
 	Hitbox2D hitBox;
 
-	wiWidget* container;
+	wiSceneSystem::TransformComponent* parent;
 	XMFLOAT4X4 world_parent_bind;
-	void AttachTo(wiWidget* parent);
+	void AttachTo(wiSceneSystem::TransformComponent* parent);
+	void Detach();
 
 	static void LoadShaders();
 };

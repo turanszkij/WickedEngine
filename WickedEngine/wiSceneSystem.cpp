@@ -1315,7 +1315,9 @@ namespace wiSceneSystem
 
 				TransformComponent& transform = *transforms.GetComponent(channel.target);
 
-				XMMATRIX ANIM;
+				XMMATRIX W = XMLoadFloat4x4(&transform.world);
+				XMVECTOR S, R, T;
+				XMMatrixDecompose(&S, &R, &T, W);
 
 				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
 				{
@@ -1325,19 +1327,19 @@ namespace wiSceneSystem
 					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
 					{
 						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						ANIM = XMMatrixTranslationFromVector(XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]));
+						T = XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::ROTATION:
 					{
 						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
-						ANIM = XMMatrixRotationQuaternion(XMLoadFloat4(&((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft]));
+						R = XMLoadFloat4(&((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft]);
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::SCALE:
 					{
 						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						ANIM = XMMatrixScalingFromVector(XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]));
+						S = XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]);
 					}
 					break;
 					}
@@ -1357,7 +1359,7 @@ namespace wiSceneSystem
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						ANIM = XMMatrixTranslationFromVector(vAnim);
+						T = vAnim;
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::ROTATION:
@@ -1368,7 +1370,7 @@ namespace wiSceneSystem
 						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
 						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
 						vAnim = XMQuaternionNormalize(vAnim);
-						ANIM = XMMatrixRotationQuaternion(vAnim);
+						R = vAnim;
 					}
 					break;
 					case AnimationComponent::AnimationChannel::Type::SCALE:
@@ -1378,16 +1380,15 @@ namespace wiSceneSystem
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						ANIM = XMMatrixScalingFromVector(vAnim);
+						S = vAnim;
 					}
 					break;
 					}
 				}
 
-				XMMATRIX W = XMLoadFloat4x4(&transform.world);
-				XMMATRIX M = W * ANIM;
+				W = XMMatrixScalingFromVector(S) * XMMatrixRotationQuaternion(R) * XMMatrixTranslationFromVector(T);
 
-				XMStoreFloat4x4(&transform.world, M);
+				XMStoreFloat4x4(&transform.world, W);
 				transform.dirty = true;
 
 			}

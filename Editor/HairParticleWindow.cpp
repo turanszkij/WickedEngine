@@ -69,9 +69,37 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	lengthSlider->SetTooltip("Set hair strand length");
 	hairWindow->AddWidget(lengthSlider);
 
+	stiffnessSlider = new wiSlider(0, 20, 5, 100000, "Particle Stiffness: ");
+	stiffnessSlider->SetSize(XMFLOAT2(360, 30));
+	stiffnessSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	stiffnessSlider->OnSlide([&](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->stiffness = args.fValue;
+		}
+	});
+	stiffnessSlider->SetEnabled(false);
+	stiffnessSlider->SetTooltip("Set hair strand stiffness, how much it tries to get back to rest position.");
+	hairWindow->AddWidget(stiffnessSlider);
+
+	randomnessSlider = new wiSlider(0, 1, 0.2f, 100000, "Particle Randomness: ");
+	randomnessSlider->SetSize(XMFLOAT2(360, 30));
+	randomnessSlider->SetPos(XMFLOAT2(x, y += step));
+	randomnessSlider->OnSlide([&](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->randomness = args.fValue;
+		}
+	});
+	randomnessSlider->SetEnabled(false);
+	randomnessSlider->SetTooltip("Set hair length randomization factor");
+	hairWindow->AddWidget(randomnessSlider);
+
 	countSlider = new wiSlider(0, 100000, 1000, 100000, "Particle Count: ");
 	countSlider->SetSize(XMFLOAT2(360, 30));
-	countSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	countSlider->SetPos(XMFLOAT2(x, y += step));
 	countSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
@@ -130,6 +158,8 @@ void HairParticleWindow::SetEntity(Entity entity)
 	if (hair != nullptr)
 	{
 		lengthSlider->SetValue(hair->length);
+		stiffnessSlider->SetValue(hair->stiffness);
+		randomnessSlider->SetValue(hair->randomness);
 		countSlider->SetValue((float)hair->particleCount);
 	}
 	else

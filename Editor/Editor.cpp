@@ -390,6 +390,7 @@ void EditorComponent::Load()
 
 	translator = new Translator;
 	translator->enabled = false;
+	Translator::LoadShaders();
 
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -848,6 +849,8 @@ void EditorComponent::Load()
 		//}).detach();
 
 		wiRenderer::ReloadShaders();
+
+		Translator::LoadShaders();
 
 	});
 	GetGUI().AddWidget(shaderButton);
@@ -1417,15 +1420,6 @@ void EditorComponent::Update(float dt)
 			assert(picked->entity != INVALID_ENTITY);
 
 
-			if (picked->subsetIndex >= 0)
-			{
-				const ObjectComponent* object = scene.objects.GetComponent(picked->entity);
-				meshWnd->SetEntity(object->meshID);
-
-				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-				materialWnd->SetEntity(mesh->subsets[picked->subsetIndex].materialID);
-			}
-
 			objectWnd->SetEntity(picked->entity);
 			emitterWnd->SetEntity(picked->entity);
 			hairWnd->SetEntity(picked->entity);
@@ -1434,7 +1428,20 @@ void EditorComponent::Update(float dt)
 			envProbeWnd->SetEntity(picked->entity);
 			forceFieldWnd->SetEntity(picked->entity);
 			cameraWnd->SetEntity(picked->entity);
-			materialWnd->SetEntity(picked->entity);
+
+			if (picked->subsetIndex >= 0)
+			{
+				const ObjectComponent* object = scene.objects.GetComponent(picked->entity);
+				meshWnd->SetEntity(object->meshID);
+
+				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+				materialWnd->SetEntity(mesh->subsets[picked->subsetIndex].materialID);
+			}
+			else
+			{
+				materialWnd->SetEntity(picked->entity);
+			}
+
 		}
 
 		//// Delete

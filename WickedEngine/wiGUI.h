@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiEnums.h"
+#include "wiSceneSystem.h"
 
 #include <list>
 
@@ -8,7 +9,7 @@ class wiHashString;
 
 class wiWidget;
 
-class wiGUI
+class wiGUI : public wiSceneSystem::TransformComponent
 {
 	friend class wiWidget;
 private:

@@ -241,16 +241,8 @@ void wiHairParticle::Settings(int l0,int l1,int l2)
 
 void wiHairParticle::Generate(const MeshComponent& mesh)
 {
-	struct Patch
-	{
-		XMFLOAT4 posLen;
-		UINT normalRand;
-		UINT tangent;
-	};
-	static_assert(sizeof(Patch) == particleBuffer_stride, "Mismatch!");
-
 	std::vector<Patch> points(particleCount);
-	std::vector<uint32_t> targets(particleCount);
+	std::vector<PatchSimulationData> simulationData(particleCount);
 
 	// Now the distribution is uniform. TODO: bring back weight-based distribution, but make it more intuitive to set up! (vertex colors?)
 
@@ -281,42 +273,45 @@ void wiHairParticle::Generate(const MeshComponent& mesh)
 		XMVECTOR P = XMVectorBaryCentric(p0, p1, p2, f, g);
 		XMVECTOR N = XMVectorBaryCentric(n0, n1, n2, f, g);
 		XMVECTOR T = XMVector3Normalize(XMVectorSubtract(i % 2 == 0 ? p0 : p2, p1));
+		XMVECTOR B = XMVector3Cross(N, T);
 
-		XMFLOAT3 position, normal, tangent;
-		XMStoreFloat3(&position, P);
-		XMStoreFloat3(&normal, N);
+		XMStoreFloat3(&points[i].position, P);
+		XMStoreFloat3(&points[i].normal, N);
+
+		XMFLOAT3 tangent;
 		XMStoreFloat3(&tangent, T);
+		points[i].tangent_random = wiMath::CompressNormal(tangent);
+		points[i].tangent_random |= (uint32_t)(wiRandom::getRandom(0, 255) << 24);
 
-		points[i].posLen = XMFLOAT4(position.x, position.y, position.z, 1.0f);
+		XMFLOAT3 binormal;
+		XMStoreFloat3(&binormal, B);
+		points[i].binormal_length = wiMath::CompressNormal(binormal);
+		points[i].binormal_length |= (uint32_t)(wiRandom::getRandom(0, 255) * wiMath::Clamp(randomness, 0, 1)) << 24;
 
-		uint32_t uNormal = wiMath::CompressNormal(normal);
-		points[i].normalRand = uNormal;
-		points[i].normalRand |= ((uint32_t)wiRandom::getRandom(0, 256)) << 24;
-
-		points[i].tangent = wiMath::CompressNormal(tangent);
-
-		targets[i] = uNormal;
+		simulationData[i].velocity = float3(0, 0, 0);
+		simulationData[i].target = wiMath::CompressNormal(points[i].normal);
 	}
 
 	cb.reset(new GPUBuffer);
 	particleBuffer.reset(new GPUBuffer);
-	targetBuffer.reset(new GPUBuffer);
+	simulationBuffer.reset(new GPUBuffer);
 
 	GPUBufferDesc bd;
 	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(Patch) * particleCount;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	bd.CPUAccessFlags = 0;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	SubresourceData data = {};
+
+	bd.StructureByteStride = sizeof(Patch);
+	bd.ByteWidth = bd.StructureByteStride * particleCount;
 	data.pSysMem = points.data();
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, particleBuffer.get());
 
-	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.ByteWidth = sizeof(uint32_t) * particleCount;
-	data.pSysMem = targets.data();
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, targetBuffer.get());
+	bd.StructureByteStride = sizeof(PatchSimulationData);
+	bd.ByteWidth = bd.StructureByteStride * particleCount;
+	data.pSysMem = simulationData.data();
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, simulationBuffer.get());
 
 	bd.Usage = USAGE_DYNAMIC;
 	bd.ByteWidth = sizeof(HairParticleCB);
@@ -346,23 +341,19 @@ void wiHairParticle::UpdateRenderData(const MaterialComponent& material, GRAPHIC
 	hcb.LOD0 = (float)LOD[0];
 	hcb.LOD1 = (float)LOD[1];
 	hcb.LOD2 = (float)LOD[2];
+	hcb.xStiffness = stiffness;
 	device->UpdateBuffer(cb.get(), &hcb, threadID);
 
 	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), threadID);
 
-	GPUResource* res[] = {
-		targetBuffer.get()
-	};
-	device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
-
 	GPUResource* uavs[] = {
-		particleBuffer.get()
+		particleBuffer.get(),
+		simulationBuffer.get()
 	};
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 	device->Dispatch((UINT)ceilf((float)particleCount / (float)THREADCOUNT_SIMULATEHAIR), 1, 1, threadID);
 
-	device->UnbindResources(0, ARRAYSIZE(res), threadID);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 
 	device->EventEnd(threadID);
