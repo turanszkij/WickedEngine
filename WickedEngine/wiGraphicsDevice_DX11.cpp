@@ -1535,27 +1535,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	//D3D11_FEATURE_DATA_D3D11_OPTIONS3 features_3;
 	//hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS3, &features_3, sizeof(features_3));
 
-	// Create a render target view
-	backBuffer = NULL;
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
-		exit(1);
-	}
-
-	hr = device->CreateRenderTargetView(backBuffer, NULL, &renderTargetView);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
-		exit(1);
-	}
-
-	// Setup the main viewport
-	viewPort.Width = (FLOAT)SCREENWIDTH;
-	viewPort.Height = (FLOAT)SCREENHEIGHT;
-	viewPort.MinDepth = 0.0f;
-	viewPort.MaxDepth = 1.0f;
-	viewPort.TopLeftX = 0;
-	viewPort.TopLeftY = 0;
+	CreateBackBufferResources();
 
 }
 GraphicsDevice_DX11::~GraphicsDevice_DX11()
@@ -1571,13 +1551,40 @@ GraphicsDevice_DX11::~GraphicsDevice_DX11()
 	SAFE_RELEASE(device);
 }
 
+void GraphicsDevice_DX11::CreateBackBufferResources()
+{
+	SAFE_RELEASE(backBuffer);
+	SAFE_RELEASE(renderTargetView);
+
+	HRESULT hr;
+
+	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBuffer);
+	if (FAILED(hr)) {
+		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
+		exit(1);
+	}
+
+	hr = device->CreateRenderTargetView(backBuffer, nullptr, &renderTargetView);
+	if (FAILED(hr)) {
+		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
+		exit(1);
+	}
+}
+
 void GraphicsDevice_DX11::SetResolution(int width, int height)
 {
 	if (width != SCREENWIDTH || height != SCREENHEIGHT)
 	{
 		SCREENWIDTH = width;
 		SCREENHEIGHT = height;
-		swapChain->ResizeBuffers(2, width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+
+		SAFE_RELEASE(backBuffer);
+		SAFE_RELEASE(renderTargetView);
+		HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+		assert(SUCCEEDED(hr));
+
+		CreateBackBufferResources();
+
 		RESOLUTIONCHANGED = true;
 	}
 }
@@ -2964,7 +2971,15 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& nam
 
 void GraphicsDevice_DX11::PresentBegin()
 {
+	ViewPort viewPort;
+	viewPort.Width = (FLOAT)SCREENWIDTH;
+	viewPort.Height = (FLOAT)SCREENHEIGHT;
+	viewPort.MinDepth = 0.0f;
+	viewPort.MaxDepth = 1.0f;
+	viewPort.TopLeftX = 0;
+	viewPort.TopLeftY = 0;
 	BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
+
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->OMSetRenderTargets(1, &renderTargetView, 0);
 	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
 	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ClearRenderTargetView(renderTargetView, ClearColor);

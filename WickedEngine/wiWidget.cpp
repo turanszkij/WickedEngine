@@ -771,7 +771,7 @@ void wiSlider::Render(wiGUI* gui)
 	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
 		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
-	if (parent != nullptr)
+	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
@@ -908,7 +908,7 @@ void wiCheckBox::Render(wiGUI* gui)
 			, gui->GetGraphicsThread());
 	}
 
-	if (parent != nullptr)
+	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
@@ -1096,7 +1096,7 @@ void wiComboBox::Render(wiGUI* gui)
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 
-	if (parent != nullptr)
+	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}

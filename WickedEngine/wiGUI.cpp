@@ -8,6 +8,9 @@ using namespace std;
 
 wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
+	Transform::scale_rest.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+	Transform::scale_rest.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	Transform::UpdateTransform();
 }
 
 
@@ -21,6 +24,13 @@ void wiGUI::Update(float dt)
 	if (!visible)
 	{
 		return;
+	}
+
+	if (wiRenderer::GetDevice()->ResolutionChanged())
+	{
+		Transform::scale_rest.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+		Transform::scale_rest.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+		Transform::UpdateTransform();
 	}
 
 	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
@@ -95,11 +105,13 @@ void wiGUI::ResetScissor()
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
+	widget->attachTo(this);
 	widgets.push_back(widget);
 }
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
+	this->detachChild(widget);
 	widgets.remove(widget);
 }
 

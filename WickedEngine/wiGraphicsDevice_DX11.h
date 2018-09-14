@@ -21,16 +21,15 @@ namespace wiGraphicsTypes
 	class GraphicsDevice_DX11 : public GraphicsDevice
 	{
 	private:
-		ID3D11Device*				device;
+		ID3D11Device*				device = nullptr;
 		D3D_DRIVER_TYPE				driverType;
 		D3D_FEATURE_LEVEL			featureLevel;
-		IDXGISwapChain1*			swapChain;
-		ID3D11RenderTargetView*		renderTargetView;
-		ID3D11Texture2D*			backBuffer;
-		ViewPort					viewPort;
-		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT];
-		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT];
-		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT];
+		IDXGISwapChain1*			swapChain = nullptr;
+		ID3D11RenderTargetView*		renderTargetView = nullptr;
+		ID3D11Texture2D*			backBuffer = nullptr;
+		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT] = {};
+		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT] = {};
 
 		UINT		stencilRef[GRAPHICSTHREAD_COUNT];
 		XMFLOAT4	blendFactor[GRAPHICSTHREAD_COUNT];
@@ -53,6 +52,8 @@ namespace wiGraphicsTypes
 		uint8_t raster_uavs_slot[GRAPHICSTHREAD_COUNT] = {};
 		uint8_t raster_uavs_count[GRAPHICSTHREAD_COUNT] = {};
 		void validate_raster_uavs(GRAPHICSTHREAD threadID);
+
+		void CreateBackBufferResources();
 
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);

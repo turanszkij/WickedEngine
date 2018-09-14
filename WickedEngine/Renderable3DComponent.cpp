@@ -37,6 +37,8 @@ void Renderable3DComponent::ResizeBuffers()
 {
 	Renderable2DComponent::ResizeBuffers();
 
+	wiRenderer::GetDevice()->WaitForGPU();
+
 	FORMAT defaultTextureFormat = wiRenderer::GetDevice()->GetBackBufferFormat();
 
 	// Protect against multiple buffer resizes when there is no change!
