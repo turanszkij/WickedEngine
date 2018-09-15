@@ -789,6 +789,11 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms
 	);
+	void RunAnimationUpdateSystem(
+		wiECS::ComponentManager<AnimationComponent>& animations,
+		wiECS::ComponentManager<TransformComponent>& transforms,
+		float dt
+	);
 	void RunPhysicsUpdateSystem(
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<MeshComponent>& meshes,
@@ -798,11 +803,6 @@ namespace wiSceneSystem
 		float dt
 	);
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
-	void RunAnimationUpdateSystem(
-		wiECS::ComponentManager<AnimationComponent>& animations,
-		wiECS::ComponentManager<TransformComponent>& transforms,
-		float dt
-	);
 	void RunHierarchyUpdateSystem(
 		const wiECS::ComponentManager<ParentComponent>& parents,
 		wiECS::ComponentManager<TransformComponent>& transforms,

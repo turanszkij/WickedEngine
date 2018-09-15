@@ -67,7 +67,8 @@ namespace wiSceneSystem
 
 		if (parent.dirty)
 		{
-			// If parent is dirty, that means it was tagged by animation system...
+			// If parent is dirty, that means parent ws updated for some reason (anim system, physics or user...)
+			//	So we need to propagate the new parent matrix down to this child
 			dirty = true;
 
 			W = XMLoadFloat4x4(&world);
@@ -761,11 +762,11 @@ namespace wiSceneSystem
 
 		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
 
+		RunAnimationUpdateSystem(animations, transforms, dt);
+
 		RunPhysicsUpdateSystem(transforms, meshes, objects, rigidbodies, softbodies, dt);
 
 		RunTransformUpdateSystem(transforms);
-
-		RunAnimationUpdateSystem(animations, transforms, dt);
 
 		RunHierarchyUpdateSystem(parents, transforms, layers);
 
@@ -1211,6 +1212,135 @@ namespace wiSceneSystem
 			prev_transform.world_prev = transform.world;
 		}
 	}
+	void RunAnimationUpdateSystem(
+		ComponentManager<AnimationComponent>& animations,
+		ComponentManager<TransformComponent>& transforms,
+		float dt
+	)
+	{
+		for (size_t i = 0; i < animations.GetCount(); ++i)
+		{
+			AnimationComponent& animation = animations[i];
+			if (!animation.playing && animation.timer == 0.0f)
+			{
+				continue;
+			}
+
+			for (auto& channel : animation.channels)
+			{
+				if (channel.keyframe_times.empty())
+				{
+					// No keyframes!
+					assert(0);
+					continue;
+				}
+
+				int keyLeft = 0;
+				int keyRight = 0;
+
+				if (channel.keyframe_times.back() < animation.timer)
+				{
+					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
+					keyLeft = keyRight = (int)channel.keyframe_times.size() - 1;
+				}
+				else
+				{
+					// Search for the right keyframe (greater/equal to anim time):
+					while (channel.keyframe_times[keyRight++] < animation.timer) {}
+					keyRight--;
+
+					// Left keyframe is just near right:
+					keyLeft = max(0, keyRight - 1);
+				}
+
+				float left = channel.keyframe_times[keyLeft];
+
+				TransformComponent& transform = *transforms.GetComponent(channel.target);
+
+				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
+				{
+					// Nearest neighbor method (snap to left):
+					switch (channel.type)
+					{
+					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
+					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
+						transform.translation_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::ROTATION:
+					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
+						transform.rotation_local = ((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft];
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::SCALE:
+					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
+						transform.scale_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
+					}
+					break;
+					}
+				}
+				else
+				{
+					// Linear interpolation method:
+					float right = channel.keyframe_times[keyRight];
+					float t = (animation.timer - left) / (right - left);
+
+					switch (channel.type)
+					{
+					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
+					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&transform.translation_local, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::ROTATION:
+					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
+						const XMFLOAT4* data = (const XMFLOAT4*)channel.keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
+						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
+						vAnim = XMQuaternionNormalize(vAnim);
+						XMStoreFloat4(&transform.rotation_local, vAnim);
+					}
+					break;
+					case AnimationComponent::AnimationChannel::Type::SCALE:
+					{
+						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
+						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
+						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
+						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
+						XMStoreFloat3(&transform.scale_local, vAnim);
+					}
+					break;
+					}
+				}
+
+				transform.dirty = true;
+
+			}
+
+			if (animation.playing)
+			{
+				animation.timer += dt;
+			}
+
+			if (animation.looped && animation.timer > animation.length)
+			{
+				animation.timer = 0.0f;
+			}
+
+			animation.timer = min(animation.timer, animation.length);
+		}
+	}
 	void RunPhysicsUpdateSystem(
 		ComponentManager<TransformComponent>& transforms,
 		ComponentManager<MeshComponent>& meshes,
@@ -1268,142 +1398,6 @@ namespace wiSceneSystem
 		{
 			TransformComponent& transform = transforms[i];
 			transform.UpdateTransform();
-		}
-	}
-	void RunAnimationUpdateSystem(
-		ComponentManager<AnimationComponent>& animations,
-		ComponentManager<TransformComponent>& transforms,
-		float dt
-	)
-	{
-		for (size_t i = 0; i < animations.GetCount(); ++i)
-		{
-			AnimationComponent& animation = animations[i];
-			if (!animation.playing && animation.timer == 0.0f)
-			{
-				continue;
-			}
-
-			for (auto& channel : animation.channels)
-			{
-				if (channel.keyframe_times.empty())
-				{
-					// No keyframes!
-					assert(0);
-					continue;
-				}
-
-				int keyLeft = 0;
-				int keyRight = 0;
-
-				if (channel.keyframe_times.back() < animation.timer)
-				{
-					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
-					keyLeft = keyRight = (int)channel.keyframe_times.size() - 1;
-				}
-				else
-				{
-					// Search for the right keyframe (greater/equal to anim time):
-					while (channel.keyframe_times[keyRight++] < animation.timer) {}
-					keyRight--;
-
-					// Left keyframe is just near right:
-					keyLeft = max(0, keyRight - 1);
-				}
-
-				float left = channel.keyframe_times[keyLeft];
-
-				TransformComponent& transform = *transforms.GetComponent(channel.target);
-
-				XMMATRIX W = XMLoadFloat4x4(&transform.world);
-				XMVECTOR S, R, T;
-				XMMatrixDecompose(&S, &R, &T, W);
-
-				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
-				{
-					// Nearest neighbor method (snap to left):
-					switch (channel.type)
-					{
-					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
-					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						T = XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Type::ROTATION:
-					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
-						R = XMLoadFloat4(&((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft]);
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Type::SCALE:
-					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						S = XMLoadFloat3(&((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft]);
-					}
-					break;
-					}
-				}
-				else
-				{
-					// Linear interpolation method:
-					float right = channel.keyframe_times[keyRight];
-					float t = (animation.timer - left) / (right - left);
-
-					switch (channel.type)
-					{
-					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
-					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						T = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Type::ROTATION:
-					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
-						const XMFLOAT4* data = (const XMFLOAT4*)channel.keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
-						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
-						vAnim = XMQuaternionNormalize(vAnim);
-						R = vAnim;
-					}
-					break;
-					case AnimationComponent::AnimationChannel::Type::SCALE:
-					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
-						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
-						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
-						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
-						S = vAnim;
-					}
-					break;
-					}
-				}
-
-				W = XMMatrixScalingFromVector(S) * XMMatrixRotationQuaternion(R) * XMMatrixTranslationFromVector(T);
-
-				XMStoreFloat4x4(&transform.world, W);
-				transform.dirty = true;
-
-			}
-
-			if (animation.playing)
-			{
-				animation.timer += dt;
-			}
-
-			if (animation.looped && animation.timer > animation.length)
-			{
-				animation.timer = 0.0f;
-			}
-
-			animation.timer = min(animation.timer, animation.length);
 		}
 	}
 	void RunHierarchyUpdateSystem(
