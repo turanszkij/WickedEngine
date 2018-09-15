@@ -1494,7 +1494,7 @@ namespace wiSceneSystem
 		const ComponentManager<MeshComponent>& meshes,
 		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<ObjectComponent>& objects,
-		wiECS::ComponentManager<AABB>& aabb_objects,
+		ComponentManager<AABB>& aabb_objects,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	)
@@ -1574,7 +1574,7 @@ namespace wiSceneSystem
 	}
 	void RunDecalUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<AABB>& aabb_decals,
+		ComponentManager<AABB>& aabb_decals,
 		ComponentManager<DecalComponent>& decals
 	)
 	{
@@ -1606,7 +1606,7 @@ namespace wiSceneSystem
 	}
 	void RunProbeUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<AABB>& aabb_probes,
+		ComponentManager<AABB>& aabb_probes,
 		ComponentManager<EnvironmentProbeComponent>& probes
 	)
 	{
@@ -1651,7 +1651,7 @@ namespace wiSceneSystem
 	void RunLightUpdateSystem(
 		const CameraComponent& cascadeCamera,
 		const ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<AABB>& aabb_lights,
+		ComponentManager<AABB>& aabb_lights,
 		ComponentManager<LightComponent>& lights,
 		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
 	)
