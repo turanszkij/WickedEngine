@@ -3729,7 +3729,6 @@ bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUR
 
 void GraphicsDevice_DX11::WaitForGPU()
 {
-	deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->Flush();
 }
 
 void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
