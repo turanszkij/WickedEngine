@@ -402,25 +402,25 @@ namespace wiRenderer_BindLua
 			wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) not enough arguments!");
 		return 0;
 	}
-	int HairParticleSettings(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		int lod0 = 20, lod1 = 50, lod2 = 200;
-		if (argc > 0)
-		{
-			lod0 = wiLua::SGetInt(L, 1);
-			if (argc > 1)
-			{
-				lod1 = wiLua::SGetInt(L, 2);
-				if (argc > 2)
-				{
-					lod2 = wiLua::SGetInt(L, 3);
-				}
-			}
-		}
-		wiHairParticle::Settings(lod0, lod1, lod2);
-		return 0;
-	}
+	//int HairParticleSettings(lua_State* L)
+	//{
+	//	int argc = wiLua::SGetArgCount(L);
+	//	int lod0 = 20, lod1 = 50, lod2 = 200;
+	//	if (argc > 0)
+	//	{
+	//		lod0 = wiLua::SGetInt(L, 1);
+	//		if (argc > 1)
+	//		{
+	//			lod1 = wiLua::SGetInt(L, 2);
+	//			if (argc > 2)
+	//			{
+	//				lod2 = wiLua::SGetInt(L, 3);
+	//			}
+	//		}
+	//	}
+	//	wiHairParticle::Settings(lod0, lod1, lod2);
+	//	return 0;
+	//}
 	int SetAlphaCompositionEnabled(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -736,7 +736,7 @@ namespace wiRenderer_BindLua
 			//wiLua::GetGlobal()->RegisterFunc("LoadWorldInfo", LoadWorldInfo);
 			//wiLua::GetGlobal()->RegisterFunc("DuplicateInstance", DuplicateInstance);
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
-			wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
+			//wiLua::GetGlobal()->RegisterFunc("HairParticleSettings", HairParticleSettings);
 			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::GetGlobal()->RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);

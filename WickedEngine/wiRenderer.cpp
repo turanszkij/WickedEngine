@@ -3482,12 +3482,17 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		wiHairParticle& hair = scene.hairs[i];
 
-		if (getCamera()->frustum.CheckBox(hair.aabb))
+		if (hair.meshID != INVALID_ENTITY && getCamera()->frustum.CheckBox(hair.aabb))
 		{
-			Entity entity = scene.hairs.GetEntity(i);
-			const MaterialComponent& material = *scene.materials.GetComponent(entity);
+			const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
 
-			hair.UpdateRenderData(material, threadID);
+			if (mesh != nullptr)
+			{
+				Entity entity = scene.hairs.GetEntity(i);
+				const MaterialComponent& material = *scene.materials.GetComponent(entity);
+
+				hair.UpdateRenderData(*mesh, material, threadID);
+			}
 		}
 	}
 

@@ -34,7 +34,6 @@ public:
 	wiSlider* stiffnessSlider;
 	wiSlider* randomnessSlider;
 	wiSlider* countSlider;
-	wiButton* generateButton;
 
 };
 

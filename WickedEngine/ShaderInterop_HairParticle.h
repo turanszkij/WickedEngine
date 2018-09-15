@@ -16,7 +16,7 @@ struct Patch
 struct PatchSimulationData
 {
 	float3 velocity;
-	uint target;
+	uint padding;
 };
 
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
@@ -24,13 +24,15 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float4x4 xWorld;
 	float4 xColor;
 
+	uint xHairRegenerate;
 	float xLength;
-	float LOD0;
-	float LOD1;
-	float LOD2;
-
 	float xStiffness;
-	float3 pad;
+	float xHairRandomness;
+
+	uint xHairBaseMeshIndexCount;
+	uint xHairBaseMeshVertexPositionStride;
+	uint xHairNumDispatchGroups;
+	uint pad;
 };
 
 #endif // _SHADERINTEROP_HAIRPARTICLE_H_

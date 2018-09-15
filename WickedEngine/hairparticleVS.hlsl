@@ -3,6 +3,7 @@
 #include "ShaderInterop_HairParticle.h"
 
 static const float hairPopDistanceThreshold = 0.9f;
+static const float LOD2 = 200;
 
 // billboard cross section:
 static const float3 HAIRPATCH[] = {
@@ -51,10 +52,10 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	binormal.z = (binormal_length >> 16) & 0x000000FF;
 	binormal = binormal / 255.0f * 2 - 1;
 
-	float length = (binormal_length >> 24) & 0x000000FF;
-	length /= 255.0f;
-	length += 1;
-	length *= xLength;
+	float len = (binormal_length >> 24) & 0x000000FF;
+	len /= 255.0f;
+	len += 1;
+	len *= xLength;
 
 	// expand the particle into a billboard cross section, the patch:
 	float3 patchPos = HAIRPATCH[vertexID];
@@ -67,7 +68,7 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	float2 frame;
 	texture_0.GetDimensions(frame.x, frame.y);
 	frame.xy /= frame.y;
-	frame.xy *= length;
+	frame.xy *= len;
 	patchPos.xyz *= frame.xyx * 0.5f;
 
 	// simplistic wind effect only affects the top, but leaves the base as is:
@@ -85,7 +86,7 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	patchPos = mul(patchPos, TBN);
 
 	// inset to the emitter a bit, to avoid disconnect:
-	position.xyz -= normal * 0.1 * length;
+	position.xyz -= normal * 0.1 * len;
 
 
 	// copy to output:

@@ -285,7 +285,6 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* resources[] = {
-			wiTextureHelper::getInstance()->getRandom64x64(),
 			mesh == nullptr ? nullptr : mesh->indexBuffer.get(),
 			mesh == nullptr ? nullptr : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get()),
 		};

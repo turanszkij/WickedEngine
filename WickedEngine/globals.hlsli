@@ -183,6 +183,14 @@ struct ComputeShaderInput
 
 // Helpers:
 
+// returns a random float in range (0, 1). seed must not be >0!
+inline float rand(inout float seed, in float2 uv)
+{
+	float result = frac(sin(seed * dot(uv, float2(12.9898f, 78.233f))) * 43758.5453f);
+	seed += 1.0f;
+	return result;
+}
+
 // 2D array index to flattened 1D array index
 inline uint flatten2D(uint2 coord, uint2 dim)
 {

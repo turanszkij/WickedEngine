@@ -111,27 +111,6 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	countSlider->SetTooltip("Set hair strand count");
 	hairWindow->AddWidget(countSlider);
 
-	generateButton = new wiButton("Generate Hair");
-	generateButton->SetPos(XMFLOAT2(x, y += step));
-	generateButton->SetSize(XMFLOAT2(150, 30));
-	generateButton->OnClick([&](wiEventArgs args) {
-		auto hair = GetHair();
-		if (hair != nullptr)
-		{
-			const MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(hair->meshID);
-			if (mesh != nullptr)
-			{
-				hair->Generate(*mesh);
-			}
-			else
-			{
-				wiHelper::messageBox("Please choose a mesh first!");
-			}
-		}
-	});
-	generateButton->SetTooltip("Generate hair particles on a mesh surface");
-	hairWindow->AddWidget(generateButton);
-
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));
 	hairWindow->SetVisible(false);

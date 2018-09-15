@@ -32,13 +32,11 @@ private:
 public:
 	static void LoadShaders();
 
-	void Generate(const MeshComponent& mesh);
-	void UpdateRenderData(const MaterialComponent& material, GRAPHICSTHREAD threadID);
+	void UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID);
 	void Draw(CameraComponent* camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const;
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
-	static void Settings(int lod0,int lod1,int lod2);
 
 	uint32_t particleCount = 0;
 	float length = 1.0f;

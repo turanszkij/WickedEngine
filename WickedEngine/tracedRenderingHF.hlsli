@@ -253,15 +253,6 @@ inline bool IntersectBox(in Ray ray, in BVHAABB box)
 	return (t[8] < 0 || t[7] > t[8]) ? false : true;
 }
 
-
-
-inline float rand(inout float seed, in float2 pixel)
-{
-	float result = frac(sin(seed * dot(pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
-	seed += 1.0f;
-	return result;
-}
-
 inline float3x3 GetTangentSpace(float3 normal)
 {
 	// Choose a helper vector for the cross product
