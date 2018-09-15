@@ -38,10 +38,13 @@ public:
 	static void CleanUpStatic();
 	static void SetUpStatic();
 
-	uint32_t particleCount = 0;
+	uint32_t strandCount = 0;
 	float length = 1.0f;
 	float stiffness = 10.0f;
 	float randomness = 0.2f;
+	uint32_t segmentCount = 1;
+	uint32_t randomSeed = 1;
+	float viewDistance = 200;
 
 	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 	XMFLOAT4X4 world;

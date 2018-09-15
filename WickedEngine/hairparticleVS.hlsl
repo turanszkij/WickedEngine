@@ -3,7 +3,6 @@
 #include "ShaderInterop_HairParticle.h"
 
 static const float hairPopDistanceThreshold = 0.9f;
-static const float LOD2 = 200;
 
 // billboard cross section:
 static const float3 HAIRPATCH[] = {
@@ -29,14 +28,15 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	VertexToPixel Out;
 
 	// bypass the geometry shader and expand the particle here:
-	uint vertexID = fakeIndex % 12;
-	uint instanceID = fakeIndex / 12;
+	const uint vertexID = fakeIndex % 12;
+	const uint segmentID = (fakeIndex / 12) % xHairSegmentCount;
+	const uint particleID = fakeIndex / 12;
 
 	// convert the raw loaded particle data:
-	float3 position = particleBuffer[instanceID].position;
-	uint tangent_random = particleBuffer[instanceID].tangent_random;
-	float3 normal = particleBuffer[instanceID].normal;
-	uint binormal_length = particleBuffer[instanceID].binormal_length;
+	float3 position = particleBuffer[particleID].position;
+	uint tangent_random = particleBuffer[particleID].tangent_random;
+	float3 normal = particleBuffer[particleID].normal;
+	uint binormal_length = particleBuffer[particleID].binormal_length;
 
 	float3 tangent;
 	tangent.x = (tangent_random >> 0) & 0x000000FF;
@@ -60,7 +60,9 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	// expand the particle into a billboard cross section, the patch:
 	float3 patchPos = HAIRPATCH[vertexID];
 	float2 uv = vertexID < 6 ? patchPos.xy : patchPos.zy;
-	uv = uv * float2(0.5f, -0.5f) + 0.5f;
+	uv = uv * float2(0.5f, 0.5f) + 0.5f;
+	uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
+	uv.y = 1 - uv.y;
 	uv.x = rand % 2 == 0 ? uv.x : 1 - uv.x;
 	patchPos.y += 1;
 
@@ -100,7 +102,7 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	Out.nor = normal;
 	Out.tex = uv; 
 	
-	Out.fade = pow(saturate(distance(position.xyz, g_xCamera_CamPos.xyz) / (LOD2*hairPopDistanceThreshold)), 10);
+	Out.fade = pow(saturate(distance(position.xyz, g_xCamera_CamPos.xyz) / (xHairViewDistance*hairPopDistanceThreshold)), 10);
 	Out.pos2D = Out.pos;
 	Out.pos2DPrev = mul(float4(savedPos + windPrev, 1), g_xFrame_MainCamera_PrevVP);
 

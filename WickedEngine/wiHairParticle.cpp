@@ -228,100 +228,16 @@ void wiHairParticle::SetUpStatic()
 	LoadShaders();
 }
 
-
-//void wiHairParticle::Generate(const MeshComponent& mesh)
-//{
-//	std::vector<Patch> points(particleCount);
-//	std::vector<PatchSimulationData> simulationData(particleCount);
-//
-//	// Now the distribution is uniform. TODO: bring back weight-based distribution, but make it more intuitive to set up! (vertex colors?)
-//
-//	for (uint32_t i = 0; i < particleCount; ++i)
-//	{
-//		int tri = wiRandom::getRandom(0, (int)((mesh.indices.size() - 1) / 3));
-//
-//		uint32_t i0 = mesh.indices[tri * 3 + 0];
-//		uint32_t i1 = mesh.indices[tri * 3 + 1];
-//		uint32_t i2 = mesh.indices[tri * 3 + 2];
-//
-//		XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
-//		XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
-//		XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
-//
-//		XMVECTOR n0 = XMLoadFloat3(&mesh.vertex_normals[i0]);
-//		XMVECTOR n1 = XMLoadFloat3(&mesh.vertex_normals[i1]);
-//		XMVECTOR n2 = XMLoadFloat3(&mesh.vertex_normals[i2]);
-//
-//		float f = wiRandom::getRandom(0, 1000) * 0.001f;
-//		float g = wiRandom::getRandom(0, 1000) * 0.001f;
-//		if (f + g > 1)
-//		{
-//			f = 1 - f;
-//			g = 1 - g;
-//		}
-//
-//		XMVECTOR P = XMVectorBaryCentric(p0, p1, p2, f, g);
-//		XMVECTOR N = XMVectorBaryCentric(n0, n1, n2, f, g);
-//		XMVECTOR T = XMVector3Normalize(XMVectorSubtract(i % 2 == 0 ? p0 : p2, p1));
-//		XMVECTOR B = XMVector3Cross(N, T);
-//
-//		XMStoreFloat3(&points[i].position, P);
-//		XMStoreFloat3(&points[i].normal, N);
-//
-//		XMFLOAT3 tangent;
-//		XMStoreFloat3(&tangent, T);
-//		points[i].tangent_random = wiMath::CompressNormal(tangent);
-//		points[i].tangent_random |= (uint32_t)(wiRandom::getRandom(0, 255) << 24);
-//
-//		XMFLOAT3 binormal;
-//		XMStoreFloat3(&binormal, B);
-//		points[i].binormal_length = wiMath::CompressNormal(binormal);
-//		points[i].binormal_length |= (uint32_t)(wiRandom::getRandom(0, 255) * wiMath::Clamp(randomness, 0, 1)) << 24;
-//
-//		simulationData[i].velocity = float3(0, 0, 0);
-//		simulationData[i].target = wiMath::CompressNormal(points[i].normal);
-//	}
-//
-//	cb.reset(new GPUBuffer);
-//	particleBuffer.reset(new GPUBuffer);
-//	simulationBuffer.reset(new GPUBuffer);
-//
-//	GPUBufferDesc bd;
-//	bd.Usage = USAGE_DEFAULT;
-//	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-//	bd.CPUAccessFlags = 0;
-//	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-//	SubresourceData data = {};
-//
-//	bd.StructureByteStride = sizeof(Patch);
-//	bd.ByteWidth = bd.StructureByteStride * particleCount;
-//	data.pSysMem = points.data();
-//	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, particleBuffer.get());
-//
-//	bd.StructureByteStride = sizeof(PatchSimulationData);
-//	bd.ByteWidth = bd.StructureByteStride * particleCount;
-//	data.pSysMem = simulationData.data();
-//	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, simulationBuffer.get());
-//
-//	bd.Usage = USAGE_DYNAMIC;
-//	bd.ByteWidth = sizeof(HairParticleCB);
-//	bd.BindFlags = BIND_CONSTANT_BUFFER;
-//	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-//	bd.MiscFlags = 0;
-//	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
-//
-//}
-
 void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID)
 {
-	if (particleCount == 0)
+	if (strandCount == 0)
 	{
 		return;
 	}
 
 	bool regenerate = false;
 
-	if(cb == nullptr || particleCount != particleBuffer->GetDesc().ByteWidth / sizeof(Patch))
+	if(cb == nullptr || (strandCount * segmentCount) != particleBuffer->GetDesc().ByteWidth / sizeof(Patch))
 	{
 		regenerate = true;
 
@@ -336,11 +252,11 @@ void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialC
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
 		bd.StructureByteStride = sizeof(Patch);
-		bd.ByteWidth = bd.StructureByteStride * particleCount;
+		bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer.get());
 
 		bd.StructureByteStride = sizeof(PatchSimulationData);
-		bd.ByteWidth = bd.StructureByteStride * particleCount;
+		bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, simulationBuffer.get());
 
 		bd.Usage = USAGE_DYNAMIC;
@@ -363,9 +279,15 @@ void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialC
 	hcb.xLength = length;
 	hcb.xStiffness = stiffness;
 	hcb.xHairRandomness = randomness;
+	hcb.xHairStrandCount = strandCount;
+	hcb.xHairSegmentCount = max(segmentCount, 1);
+	hcb.xHairParticleCount = hcb.xHairStrandCount * hcb.xHairSegmentCount;
+	hcb.xHairRandomSeed = randomSeed;
+	hcb.xHairViewDistance = viewDistance;
 	hcb.xHairBaseMeshIndexCount = (uint)mesh.indices.size();
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
-	hcb.xHairNumDispatchGroups = (uint)ceilf((float)particleCount / (float)THREADCOUNT_SIMULATEHAIR);
+	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
+	hcb.xHairNumDispatchGroups = (uint)ceilf((float)strandCount / (float)THREADCOUNT_SIMULATEHAIR);
 	device->UpdateBuffer(cb.get(), &hcb, threadID);
 
 	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), threadID);
@@ -392,7 +314,7 @@ void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialC
 
 void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const
 {
-	if (particleCount == 0 || cb == nullptr)
+	if (strandCount == 0 || cb == nullptr)
 	{
 		return;
 	}
@@ -424,7 +346,7 @@ void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& mate
 
 	device->BindResource(VS, particleBuffer.get(), 0, threadID);
 
-	device->Draw((int)particleCount * 12, 0, threadID);
+	device->Draw((int)strandCount * 12 * max(segmentCount, 1), 0, threadID);
 
 	device->EventEnd(threadID);
 }

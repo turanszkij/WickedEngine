@@ -9,7 +9,7 @@ struct Patch
 {
 	float3 position;
 	uint tangent_random;
-	float3 normal;
+	float3 normal; // need high precision for the simulation!
 	uint binormal_length;
 };
 
@@ -29,10 +29,15 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float xStiffness;
 	float xHairRandomness;
 
+	uint xHairParticleCount;
+	uint xHairStrandCount;
+	uint xHairSegmentCount;
+	uint xHairRandomSeed;
+
+	float xHairViewDistance;
 	uint xHairBaseMeshIndexCount;
 	uint xHairBaseMeshVertexPositionStride;
 	uint xHairNumDispatchGroups;
-	uint pad;
 };
 
 #endif // _SHADERINTEROP_HAIRPARTICLE_H_

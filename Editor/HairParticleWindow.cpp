@@ -52,12 +52,26 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 			}
 		}
 	});
-	meshComboBox->SetTooltip("Choose an animation clip...");
+	meshComboBox->SetTooltip("Choose a mesh where hair will grow from...");
 	hairWindow->AddWidget(meshComboBox);
+
+	countSlider = new wiSlider(0, 100000, 1000, 100000, "Strand Count: ");
+	countSlider->SetSize(XMFLOAT2(360, 30));
+	countSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	countSlider->OnSlide([&](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->strandCount = (uint32_t)args.iValue;
+		}
+	});
+	countSlider->SetEnabled(false);
+	countSlider->SetTooltip("Set hair strand count");
+	hairWindow->AddWidget(countSlider);
 
 	lengthSlider = new wiSlider(0, 4, 1, 100000, "Particle Length: ");
 	lengthSlider->SetSize(XMFLOAT2(360, 30));
-	lengthSlider->SetPos(XMFLOAT2(x, y += step * 2));
+	lengthSlider->SetPos(XMFLOAT2(x, y += step));
 	lengthSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
@@ -94,22 +108,36 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	randomnessSlider->SetEnabled(false);
-	randomnessSlider->SetTooltip("Set hair length randomization factor");
+	randomnessSlider->SetTooltip("Set hair length randomization factor. This will affect randomness of hair lengths.");
 	hairWindow->AddWidget(randomnessSlider);
 
-	countSlider = new wiSlider(0, 100000, 1000, 100000, "Particle Count: ");
-	countSlider->SetSize(XMFLOAT2(360, 30));
-	countSlider->SetPos(XMFLOAT2(x, y += step));
-	countSlider->OnSlide([&](wiEventArgs args) {
+	segmentcountSlider = new wiSlider(1, 10, 1, 9, "Segment Count: ");
+	segmentcountSlider->SetSize(XMFLOAT2(360, 30));
+	segmentcountSlider->SetPos(XMFLOAT2(x, y += step));
+	segmentcountSlider->OnSlide([&](wiEventArgs args) {
 		auto hair = GetHair();
 		if (hair != nullptr)
 		{
-			hair->particleCount = (uint32_t)args.iValue;
+			hair->segmentCount = (uint32_t)args.iValue;
 		}
 	});
-	countSlider->SetEnabled(false);
-	countSlider->SetTooltip("Set hair strand count");
-	hairWindow->AddWidget(countSlider);
+	segmentcountSlider->SetEnabled(false);
+	segmentcountSlider->SetTooltip("Set hair strand segment count. This will affect simulation quality and performance.");
+	hairWindow->AddWidget(segmentcountSlider);
+
+	randomSeedSlider = new wiSlider(1, 12345, 1, 12344, "Random seed: ");
+	randomSeedSlider->SetSize(XMFLOAT2(360, 30));
+	randomSeedSlider->SetPos(XMFLOAT2(x, y += step));
+	randomSeedSlider->OnSlide([&](wiEventArgs args) {
+		auto hair = GetHair();
+		if (hair != nullptr)
+		{
+			hair->randomSeed = (uint32_t)args.iValue;
+		}
+	});
+	randomSeedSlider->SetEnabled(false);
+	randomSeedSlider->SetTooltip("Set hair system-wide random seed value. This will affect hair patch placement randomization.");
+	hairWindow->AddWidget(randomSeedSlider);
 
 
 	hairWindow->Translate(XMFLOAT3(200, 50, 0));
@@ -139,7 +167,9 @@ void HairParticleWindow::SetEntity(Entity entity)
 		lengthSlider->SetValue(hair->length);
 		stiffnessSlider->SetValue(hair->stiffness);
 		randomnessSlider->SetValue(hair->randomness);
-		countSlider->SetValue((float)hair->particleCount);
+		countSlider->SetValue((float)hair->strandCount);
+		segmentcountSlider->SetValue((float)hair->segmentCount);
+		randomSeedSlider->SetValue((float)hair->randomSeed);
 	}
 	else
 	{

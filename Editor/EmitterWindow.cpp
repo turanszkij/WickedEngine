@@ -67,7 +67,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 			}
 		}
 	});
-	meshComboBox->SetTooltip("Choose an animation clip...");
+	meshComboBox->SetTooltip("Choose an mesh that particles will be emitted from...");
 	emitterWindow->AddWidget(meshComboBox);
 
 	shaderTypeComboBox = new wiComboBox("ShaderType: ");

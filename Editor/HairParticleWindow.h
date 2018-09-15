@@ -34,6 +34,8 @@ public:
 	wiSlider* stiffnessSlider;
 	wiSlider* randomnessSlider;
 	wiSlider* countSlider;
+	wiSlider* segmentcountSlider;
+	wiSlider* randomSeedSlider;
 
 };
 
