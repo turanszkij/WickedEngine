@@ -22,7 +22,7 @@ Renderable2DComponent::~Renderable2DComponent()
 wiRenderTarget Renderable2DComponent::rtFinal;
 void Renderable2DComponent::ResizeBuffers()
 {
-	//wiRenderer::GetDevice()->WaitForGPU();
+	wiRenderer::GetDevice()->WaitForGPU();
 
 	FORMAT defaultTextureFormat = wiRenderer::GetDevice()->GetBackBufferFormat();
 
