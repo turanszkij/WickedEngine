@@ -440,7 +440,7 @@ void EditorComponent::Load()
 		isScalatorCheckBox->SetTooltip("Scale");
 		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
 		isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isScalatorCheckBox->OnClick([&](wiEventArgs args) {
+		isScalatorCheckBox->OnClick([&, isTranslatorCheckBox, isRotatorCheckBox](wiEventArgs args) {
 			translator.isScalator = args.bValue;
 			translator.isTranslator = false;
 			translator.isRotator = false;
@@ -453,7 +453,7 @@ void EditorComponent::Load()
 		isRotatorCheckBox->SetTooltip("Rotate");
 		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 1, 22));
 		isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isRotatorCheckBox->OnClick([&](wiEventArgs args) {
+		isRotatorCheckBox->OnClick([&, isTranslatorCheckBox, isScalatorCheckBox](wiEventArgs args) {
 			translator.isRotator = args.bValue;
 			translator.isScalator = false;
 			translator.isTranslator = false;
@@ -466,7 +466,7 @@ void EditorComponent::Load()
 		isTranslatorCheckBox->SetTooltip("Translate");
 		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 22));
 		isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isTranslatorCheckBox->OnClick([&](wiEventArgs args) {
+		isTranslatorCheckBox->OnClick([&, isScalatorCheckBox, isRotatorCheckBox](wiEventArgs args) {
 			translator.isTranslator = args.bValue;
 			translator.isScalator = false;
 			translator.isRotator = false;
@@ -1192,6 +1192,7 @@ void EditorComponent::Update(float dt)
 				{
 					// Replace selection:
 					EndTranslate();
+					selected.clear(); // endtranslate would clear it, but not if translator is not enabled
 					AddSelected(hovered);
 				}
 
@@ -1201,6 +1202,7 @@ void EditorComponent::Update(float dt)
 			{
 				// Clear selection:
 				EndTranslate();
+				selected.clear(); // endtranslate would clear it, but not if translator is not enabled
 			}
 
 			// record NEW selection state...
