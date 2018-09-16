@@ -17,6 +17,8 @@
 #include <vector>
 #include <unordered_set>
 
+class wiArchive;
+
 namespace wiSceneSystem
 {
 	static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -76,6 +78,8 @@ namespace wiSceneSystem
 		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
 		XMFLOAT4X4 world_parent_inverse_bind; // saved parent inverse worldmatrix at the time of binding
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct MaterialComponent

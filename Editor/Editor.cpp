@@ -58,16 +58,9 @@ void Editor::Initialize()
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::EMITTERSENABLED = true;
 	wiRenderer::HAIRPARTICLEENABLED = true;
-	//wiRenderer::LoadDefaultLighting();
-	//wiRenderer::SetDirectionalLightShadowProps(1024, 2);
-	//wiRenderer::SetPointLightShadowProps(3, 512);
-	//wiRenderer::SetSpotLightShadowProps(3, 512);
 	wiRenderer::physicsEngine = new wiBULLET();
 	wiRenderer::SetOcclusionCullingEnabled(true);
-	//wiHairParticle::Settings(400, 1000, 2000);
 
-
-	//wiFont::addFontStyle("basic");
 	wiInputManager::GetInstance()->addXInput(new wiXInput());
 
 	wiProfiler::GetInstance().ENABLED = true;
@@ -107,6 +100,10 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Compose()
 {
+	font.props.posX = (int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f);
+	font.props.posY = (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f);
+	sprite.effects.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
+
 	__super::Compose();
 }
 void EditorLoadingScreen::Unload()
@@ -114,172 +111,6 @@ void EditorLoadingScreen::Unload()
 
 }
 
-
-wiArchive *clipboard = nullptr;
-enum ClipboardItemType
-{
-	CLIPBOARD_MODEL,
-	CLIPBOARD_EMPTY
-};
-
-vector<wiArchive*> history;
-int historyPos = -1;
-enum HistoryOperationType
-{
-	HISTORYOP_TRANSLATOR,
-	HISTORYOP_DELETE,
-	HISTORYOP_SELECTION,
-	HISTORYOP_NONE
-};
-void ResetHistory();
-wiArchive* AdvanceHistory();
-void ConsumeHistoryOperation(bool undo);
-
-
-
-struct Picked
-{
-	Entity entity;
-	XMFLOAT3 position, normal;
-	float distance;
-	int subsetIndex;
-
-	Picked()
-	{
-		Clear();
-	}
-
-	// Subset index, position, normal, distance don't distinguish between pickeds! 
-	bool operator==(const Picked& other)
-	{
-		return entity == other.entity;
-	}
-	void Clear()
-	{
-		distance = FLT_MAX;
-		subsetIndex = -1;
-		entity = INVALID_ENTITY;
-	}
-};
-
-
-
-Translator* translator = nullptr;
-bool translator_active = false;
-list<Picked*> selected;
-std::map<Entity, Entity> savedParents;
-Picked hovered;
-void BeginTranslate()
-{
-	translator_active = true;
-
-	TransformComponent* translator_transform = wiRenderer::GetScene().transforms.GetComponent(translator->entityID);
-	translator_transform->ClearTransform();
-
-	set<Entity> uniqueTransforms;
-	for (auto& x : selected)
-	{
-		uniqueTransforms.insert(x->entity);
-	}
-
-	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
-	float count = 0;
-	for (auto& x : uniqueTransforms)
-	{
-		TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(x);
-		if (transform != nullptr)
-		{
-			centerV = XMVectorAdd(centerV, transform->GetPositionV());
-			count += 1.0f;
-		}
-	}
-	if (count > 0 && translator->enabled)
-	{
-		centerV /= count;
-		XMFLOAT3 center;
-		XMStoreFloat3(&center, centerV);
-		translator_transform->Translate(center);
-		translator_transform->UpdateTransform();
-		for (auto& x : selected)
-		{
-			wiRenderer::GetScene().Component_Attach(x->entity, translator->entityID);
-		}
-	}
-}
-void EndTranslate()
-{
-	translator_active = false;
-	//translator->detach();
-	wiRenderer::GetScene().Component_DetachChildren(translator->entityID);
-
-	for (auto& x : selected)
-	{
-		//transform->detach();
-		auto it = savedParents.find(x->entity);
-		if (it != savedParents.end())
-		{
-			wiRenderer::GetScene().Component_Attach(x->entity, it->second);
-		}
-	}
-
-	hovered.Clear();
-}
-void ClearSelected()
-{
-	for (auto& x : selected)
-	{
-		SAFE_DELETE(x);
-	}
-	selected.clear();
-	savedParents.clear();
-}
-void AddSelected(Picked* picked, bool deselectIfAlreadySelected = false)
-{
-	list<Picked*>::iterator it = selected.begin();
-	for (; it != selected.end(); ++it)
-	{
-		if ((**it) == *picked)
-		{
-			break;
-		}
-	}
-
-	if (it == selected.end())
-	{
-		selected.push_back(picked);
-		ParentComponent* parent = wiRenderer::GetScene().parents.GetComponent(picked->entity);
-		if (parent != nullptr)
-		{
-			savedParents.insert(make_pair(picked->entity, parent->parentID));
-		}
-	}
-	else if (deselectIfAlreadySelected)
-	{
-		{
-			//picked->transform->detach();
-			wiRenderer::GetScene().Component_Detach(picked->entity);
-
-			auto it = savedParents.find(picked->entity);
-			if (it != savedParents.end())
-			{
-				//picked->transform->attachTo(it->second);
-				wiRenderer::GetScene().Component_Attach(picked->entity, it->second);
-			}
-		}
-
-		SAFE_DELETE(*it);
-		selected.erase(it);
-		savedParents.erase(picked->entity);
-		SAFE_DELETE(picked);
-	}
-}
-
-enum EDITORSTENCILREF
-{
-	EDITORSTENCILREF_CLEAR = 0x00,
-	EDITORSTENCILREF_HIGHLIGHT = 0x01,
-	EDITORSTENCILREF_LAST = 0x0F,
-};
 
 void EditorComponent::ChangeRenderPath(RENDERPATH path)
 {
@@ -388,8 +219,7 @@ void EditorComponent::Load()
 {
 	__super::Load();
 
-	translator = new Translator;
-	translator->enabled = false;
+	translator.enabled = false;
 	Translator::LoadShaders();
 
 
@@ -596,9 +426,9 @@ void EditorComponent::Load()
 	translatorCheckBox->SetTooltip("Enable the translator tool");
 	translatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 0));
 	translatorCheckBox->SetSize(XMFLOAT2(18, 18));
-	translatorCheckBox->OnClick([=](wiEventArgs args) {
+	translatorCheckBox->OnClick([&](wiEventArgs args) {
 		EndTranslate();
-		translator->enabled = args.bValue;
+		translator.enabled = args.bValue;
 		BeginTranslate();
 	});
 	GetGUI().AddWidget(translatorCheckBox);
@@ -610,40 +440,40 @@ void EditorComponent::Load()
 		isScalatorCheckBox->SetTooltip("Scale");
 		isScalatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 2, 22));
 		isScalatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isScalatorCheckBox->OnClick([=](wiEventArgs args) {
-			translator->isScalator = args.bValue;
-			translator->isTranslator = false;
-			translator->isRotator = false;
+		isScalatorCheckBox->OnClick([&](wiEventArgs args) {
+			translator.isScalator = args.bValue;
+			translator.isTranslator = false;
+			translator.isRotator = false;
 			isTranslatorCheckBox->SetCheck(false);
 			isRotatorCheckBox->SetCheck(false);
 		});
-		isScalatorCheckBox->SetCheck(translator->isScalator);
+		isScalatorCheckBox->SetCheck(translator.isScalator);
 		GetGUI().AddWidget(isScalatorCheckBox);
 
 		isRotatorCheckBox->SetTooltip("Rotate");
 		isRotatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25 - 40 * 1, 22));
 		isRotatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isRotatorCheckBox->OnClick([=](wiEventArgs args) {
-			translator->isRotator = args.bValue;
-			translator->isScalator = false;
-			translator->isTranslator = false;
+		isRotatorCheckBox->OnClick([&](wiEventArgs args) {
+			translator.isRotator = args.bValue;
+			translator.isScalator = false;
+			translator.isTranslator = false;
 			isScalatorCheckBox->SetCheck(false);
 			isTranslatorCheckBox->SetCheck(false);
 		});
-		isRotatorCheckBox->SetCheck(translator->isRotator);
+		isRotatorCheckBox->SetCheck(translator.isRotator);
 		GetGUI().AddWidget(isRotatorCheckBox);
 
 		isTranslatorCheckBox->SetTooltip("Translate");
 		isTranslatorCheckBox->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5 - 25, 22));
 		isTranslatorCheckBox->SetSize(XMFLOAT2(18, 18));
-		isTranslatorCheckBox->OnClick([=](wiEventArgs args) {
-			translator->isTranslator = args.bValue;
-			translator->isScalator = false;
-			translator->isRotator = false;
+		isTranslatorCheckBox->OnClick([&](wiEventArgs args) {
+			translator.isTranslator = args.bValue;
+			translator.isScalator = false;
+			translator.isRotator = false;
 			isScalatorCheckBox->SetCheck(false);
 			isRotatorCheckBox->SetCheck(false);
 		});
-		isTranslatorCheckBox->SetCheck(translator->isTranslator);
+		isTranslatorCheckBox->SetCheck(translator.isTranslator);
 		GetGUI().AddWidget(isTranslatorCheckBox);
 	}
 
@@ -1320,31 +1150,24 @@ void EditorComponent::Update(float dt)
 			*archive << selected.size();
 			for (auto& x : selected)
 			{
-				*archive << x->entity;
-				*archive << x->position;
-				*archive << x->normal;
-				*archive << x->subsetIndex;
-				*archive << x->distance;
+				*archive << x.entity;
+				*archive << x.position;
+				*archive << x.normal;
+				*archive << x.subsetIndex;
+				*archive << x.distance;
 			}
-			*archive << savedParents.size();
-			for (auto& x : savedParents)
-			{
-				*archive << x.first;
-				*archive << x.second;
-			}
+			savedHierarchy.Serialize(*archive);
 
 			if (selectAll)
 			{
 				// Add everything to selection:
 				selectAll = false;
-
 				EndTranslate();
-				ClearSelected();
 
 				for (Entity entity : scene.owned_entities)
 				{
-					Picked* picked = new Picked;
-					picked->entity = entity;
+					Picked picked;
+					picked.entity = entity;
 					AddSelected(picked);
 				}
 
@@ -1353,50 +1176,44 @@ void EditorComponent::Update(float dt)
 			else if (hovered.entity != INVALID_ENTITY)
 			{
 				// Add the hovered item to the selection:
-				Picked* picked = new Picked(hovered);
+
 				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
 				{
-					AddSelected(picked, true);
+					// Union selection:
+					list<Picked> saved = selected;
+					EndTranslate();
+					for (const Picked& picked : saved)
+					{
+						AddSelected(picked);
+					}
+					AddSelected(hovered);
 				}
 				else
 				{
+					// Replace selection:
 					EndTranslate();
-					ClearSelected();
-					selected.push_back(picked);
-
-					ParentComponent* parent = scene.parents.GetComponent(picked->entity);
-					if (parent != nullptr)
-					{
-						savedParents.insert(make_pair(picked->entity, parent->parentID));
-					}
+					AddSelected(hovered);
 				}
 
-				EndTranslate();
 				BeginTranslate();
 			}
 			else
 			{
 				// Clear selection:
 				EndTranslate();
-				ClearSelected();
 			}
 
 			// record NEW selection state...
 			*archive << selected.size();
 			for (auto& x : selected)
 			{
-				*archive << x->entity;
-				*archive << x->position;
-				*archive << x->normal;
-				*archive << x->subsetIndex;
-				*archive << x->distance;
+				*archive << x.entity;
+				*archive << x.position;
+				*archive << x.normal;
+				*archive << x.subsetIndex;
+				*archive << x.distance;
 			}
-			*archive << savedParents.size();
-			for (auto& x : savedParents)
-			{
-				*archive << x.first;
-				*archive << x.second;
-			}
+			savedHierarchy.Serialize(*archive);
 		}
 
 		// Update window data bindings...
@@ -1415,31 +1232,31 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			Picked* picked = selected.back();
+			const Picked& picked = selected.back();
 
-			assert(picked->entity != INVALID_ENTITY);
+			assert(picked.entity != INVALID_ENTITY);
 
 
-			objectWnd->SetEntity(picked->entity);
-			emitterWnd->SetEntity(picked->entity);
-			hairWnd->SetEntity(picked->entity);
-			lightWnd->SetEntity(picked->entity);
-			decalWnd->SetEntity(picked->entity);
-			envProbeWnd->SetEntity(picked->entity);
-			forceFieldWnd->SetEntity(picked->entity);
-			cameraWnd->SetEntity(picked->entity);
+			objectWnd->SetEntity(picked.entity);
+			emitterWnd->SetEntity(picked.entity);
+			hairWnd->SetEntity(picked.entity);
+			lightWnd->SetEntity(picked.entity);
+			decalWnd->SetEntity(picked.entity);
+			envProbeWnd->SetEntity(picked.entity);
+			forceFieldWnd->SetEntity(picked.entity);
+			cameraWnd->SetEntity(picked.entity);
 
-			if (picked->subsetIndex >= 0)
+			if (picked.subsetIndex >= 0)
 			{
-				const ObjectComponent* object = scene.objects.GetComponent(picked->entity);
+				const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
 				meshWnd->SetEntity(object->meshID);
 
 				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-				materialWnd->SetEntity(mesh->subsets[picked->subsetIndex].materialID);
+				materialWnd->SetEntity(mesh->subsets[picked.subsetIndex].materialID);
 			}
 			else
 			{
-				materialWnd->SetEntity(picked->entity);
+				materialWnd->SetEntity(picked.entity);
 			}
 
 		}
@@ -1650,14 +1467,14 @@ void EditorComponent::Update(float dt)
 
 	}
 
-	translator->Update();
+	translator.Update();
 
-	if (translator->IsDragEnded())
+	if (translator.IsDragEnded())
 	{
 		wiArchive* archive = AdvanceHistory();
 		*archive << HISTORYOP_TRANSLATOR;
-		*archive << translator->GetDragStart();
-		*archive << translator->GetDragEnd();
+		*archive << translator.GetDragStart();
+		*archive << translator.GetDragEnd();
 	}
 
 	emitterWnd->UpdateData();
@@ -1729,26 +1546,26 @@ void EditorComponent::Render()
 		AABB selectedAABB = AABB(XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX),XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
 		for (auto& picked : selected)
 		{
-			if (picked->entity != INVALID_ENTITY)
+			if (picked.entity != INVALID_ENTITY)
 			{
-				const ObjectComponent* object = scene.objects.GetComponent(picked->entity);
+				const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
 				if (object != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_objects.GetComponent(picked->entity);
+					const AABB& aabb = *scene.aabb_objects.GetComponent(picked.entity);
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
-				const LightComponent* light = scene.lights.GetComponent(picked->entity);
+				const LightComponent* light = scene.lights.GetComponent(picked.entity);
 				if (light != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_lights.GetComponent(picked->entity);
+					const AABB& aabb = *scene.aabb_lights.GetComponent(picked.entity);
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
-				const DecalComponent* decal = scene.decals.GetComponent(picked->entity);
+				const DecalComponent* decal = scene.decals.GetComponent(picked.entity);
 				if (decal != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_decals.GetComponent(picked->entity);
+					const AABB& aabb = *scene.aabb_decals.GetComponent(picked.entity);
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 
 					// also display decal OBB:
@@ -1757,14 +1574,14 @@ void EditorComponent::Render()
 					wiRenderer::AddRenderableBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
 				}
 
-				const EnvironmentProbeComponent* probe = scene.probes.GetComponent(picked->entity);
+				const EnvironmentProbeComponent* probe = scene.probes.GetComponent(picked.entity);
 				if (probe != nullptr)
 				{
-					const AABB& aabb = *scene.aabb_probes.GetComponent(picked->entity);
+					const AABB& aabb = *scene.aabb_probes.GetComponent(picked.entity);
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
-				const wiHairParticle* hair = scene.hairs.GetComponent(picked->entity);
+				const wiHairParticle* hair = scene.hairs.GetComponent(picked.entity);
 				if (hair != nullptr)
 				{
 					selectedAABB = AABB::Merge(selectedAABB, hair->aabb);
@@ -1819,7 +1636,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -1867,7 +1684,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -1902,7 +1719,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -1941,7 +1758,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -1975,7 +1792,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -2009,7 +1826,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -2043,7 +1860,7 @@ void EditorComponent::Compose()
 			}
 			for (auto& picked : selected)
 			{
-				if (picked->entity == entity)
+				if (picked.entity == entity)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;
@@ -2056,9 +1873,9 @@ void EditorComponent::Compose()
 	}
 
 
-	if (translator_active && translator->enabled)
+	if (!selected.empty() && translator.enabled)
 	{
-		translator->Draw(camera, GRAPHICSTHREAD_IMMEDIATE);
+		translator.Draw(camera, GRAPHICSTHREAD_IMMEDIATE);
 	}
 }
 void EditorComponent::Unload()
@@ -2067,13 +1884,125 @@ void EditorComponent::Unload()
 
 	DeleteWindows();
 
-	SAFE_DELETE(translator);
-
 	__super::Unload();
 }
 
 
-void ResetHistory()
+
+void EditorComponent::BeginTranslate()
+{
+	if (selected.empty() || !translator.enabled)
+	{
+		return;
+	}
+
+	Scene& scene = wiRenderer::GetScene();
+
+	// Begin translation, save scene hierarchy from before:
+	savedHierarchy.Copy(scene.parents);
+
+	// All selected entities will be attached to translator entity:
+	TransformComponent* translator_transform = wiRenderer::GetScene().transforms.GetComponent(translator.entityID);
+	translator_transform->ClearTransform();
+
+	// Find the center of all the entities that are selected:
+	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
+	float count = 0;
+	for (auto& x : selected)
+	{
+		TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(x.entity);
+		if (transform != nullptr)
+		{
+			centerV = XMVectorAdd(centerV, transform->GetPositionV());
+			count += 1.0f;
+		}
+	}
+
+	// Offset translator to center position and perform attachments:
+	if (count > 0)
+	{
+		centerV /= count;
+		XMFLOAT3 center;
+		XMStoreFloat3(&center, centerV);
+		translator_transform->ClearTransform();
+		translator_transform->Translate(center);
+		translator_transform->UpdateTransform();
+
+		for (auto& x : selected)
+		{
+			wiRenderer::GetScene().Component_Attach(x.entity, translator.entityID);
+		}
+	}
+}
+void EditorComponent::EndTranslate()
+{
+	if (selected.empty() || !translator.enabled)
+	{
+		return;
+	}
+
+	Scene& scene = wiRenderer::GetScene();
+
+	// Translation ended, apply all final transformations as local pose:
+	for (size_t i = 0; i < scene.parents.GetCount(); ++i)
+	{
+		ParentComponent& parent = scene.parents[i];
+
+		if (parent.parentID == translator.entityID) // only to entities that were attached to translator!
+		{
+			Entity entity = scene.parents.GetEntity(i);
+			TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				transform->ApplyTransform(); // (**)
+			}
+		}
+	}
+
+	// Restore scene hierarchy from before translation:
+	scene.parents.Copy(savedHierarchy);
+
+	// If an attached entity got moved, then the world transform was applied to it (**),
+	//	so we need to reattach it properly to the parent matrix:
+	for (const Picked& x : selected)
+	{
+		ParentComponent* parent = scene.parents.GetComponent(x.entity);
+		if (parent != nullptr)
+		{
+			TransformComponent* transform_parent = scene.transforms.GetComponent(parent->parentID);
+			if (transform_parent != nullptr)
+			{
+				// Save the parent's inverse worldmatrix:
+				XMStoreFloat4x4(&parent->world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
+			}
+
+			TransformComponent* transform_child = scene.transforms.GetComponent(x.entity);
+			if (transform_child != nullptr)
+			{
+				// Child updated immediately, to that it can be immediately attached to afterwards:
+				transform_child->UpdateParentedTransform(*transform_parent, parent->world_parent_inverse_bind);
+			}
+		}
+	}
+
+	selected.clear();
+}
+void EditorComponent::AddSelected(const Picked& picked)
+{
+	for (auto it = selected.begin(); it != selected.end(); ++it)
+	{
+		if ((*it) == picked)
+		{
+			// If already selected, it will be deselected now:
+			selected.erase(it);
+			return;
+		}
+	}
+
+	selected.push_back(picked);
+}
+
+void EditorComponent::ResetHistory()
 {
 	historyPos = -1;
 
@@ -2083,7 +2012,7 @@ void ResetHistory()
 	}
 	history.clear();
 }
-wiArchive* AdvanceHistory()
+wiArchive* EditorComponent::AdvanceHistory()
 {
 	historyPos++;
 
@@ -2099,7 +2028,7 @@ wiArchive* AdvanceHistory()
 
 	return archive;
 }
-void ConsumeHistoryOperation(bool undo)
+void EditorComponent::ConsumeHistoryOperation(bool undo)
 {
 	if ((undo && historyPos >= 0) || (!undo && historyPos < (int)history.size() - 1))
 	{
@@ -2121,9 +2050,9 @@ void ConsumeHistoryOperation(bool undo)
 			{
 				XMFLOAT4X4 start, end;
 				*archive >> start >> end;
-				translator->enabled = true;
+				translator.enabled = true;
 
-				TransformComponent& transform = *wiRenderer::GetScene().transforms.GetComponent(translator->entityID);
+				TransformComponent& transform = *wiRenderer::GetScene().transforms.GetComponent(translator.entityID);
 				transform.ClearTransform();
 				if (undo)
 				{
@@ -2217,78 +2146,56 @@ void ConsumeHistoryOperation(bool undo)
 		case HISTORYOP_SELECTION:
 			{
 				EndTranslate();
-				ClearSelected();
 
 				// Read selections states from archive:
 
-				list<Picked*> selectedBEFORE;
+				list<Picked> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				*archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
 				{
-					Picked* sel = new Picked;
-					*archive >> sel->entity;
-					*archive >> sel->position;
-					*archive >> sel->normal;
-					*archive >> sel->subsetIndex;
-					*archive >> sel->distance;
+					Picked sel;
+					*archive >> sel.entity;
+					*archive >> sel.position;
+					*archive >> sel.normal;
+					*archive >> sel.subsetIndex;
+					*archive >> sel.distance;
 
 					selectedBEFORE.push_back(sel);
 				}
-				std::map<Entity, Entity> savedParentsBEFORE;
-				size_t savedParentsCountBEFORE;
-				*archive >> savedParentsCountBEFORE;
-				for (size_t i = 0; i < savedParentsCountBEFORE; ++i)
-				{
-					Entity id1, id2;
-					*archive >> id1;
-					*archive >> id2;
+				ComponentManager<ParentComponent> savedHierarchyBEFORE;
+				savedHierarchyBEFORE.Serialize(*archive);
 
-					savedParentsBEFORE.insert(make_pair(id1, id2));
-				}
-
-				list<Picked*> selectedAFTER;
+				list<Picked> selectedAFTER;
 				size_t selectionCountAFTER;
 				*archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
 				{
-					Picked* sel = new Picked;
-					*archive >> sel->entity;
-					*archive >> sel->position;
-					*archive >> sel->normal;
-					*archive >> sel->subsetIndex;
-					*archive >> sel->distance;
+					Picked sel;
+					*archive >> sel.entity;
+					*archive >> sel.position;
+					*archive >> sel.normal;
+					*archive >> sel.subsetIndex;
+					*archive >> sel.distance;
 
 					selectedAFTER.push_back(sel);
 				}
-				std::map<Entity, Entity> savedParentsAFTER;
-				size_t savedParentsCountAFTER;
-				*archive >> savedParentsCountAFTER;
-				for (size_t i = 0; i < savedParentsCountAFTER; ++i)
-				{
-					uint64_t id1, id2;
-					*archive >> id1;
-					*archive >> id2;
-
-					savedParentsAFTER.insert(make_pair(id1, id2));
-				}
+				ComponentManager<ParentComponent> savedHierarchyAFTER;
+				savedHierarchyAFTER.Serialize(*archive);
 
 
 				// Restore proper selection state:
 
-				list<Picked*>* selectedCURRENT = nullptr;
 				if (undo)
 				{
-					selectedCURRENT = &selectedBEFORE;
-					savedParents = savedParentsBEFORE;
+					selected = selectedBEFORE;
+					savedHierarchy.Copy(savedHierarchyBEFORE);
 				}
 				else
 				{
-					selectedCURRENT = &selectedAFTER;
-					savedParents = savedParentsAFTER;
+					selected = selectedAFTER;
+					savedHierarchy.Copy(savedHierarchyAFTER);
 				}
-
-				selected.insert(selected.end(), selectedCURRENT->begin(), selectedCURRENT->end());
 
 				BeginTranslate();
 			}

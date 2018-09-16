@@ -62,6 +62,7 @@ Translator::Translator()
 
 	entityID = CreateEntity();
 	scene.transforms.Create(entityID);
+	scene.names.Create(entityID) = "editorTranslator";
 
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 

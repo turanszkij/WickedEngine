@@ -1,6 +1,8 @@
 #ifndef _ENTITY_COMPONENT_SYSTEM_H_
 #define _ENTITY_COMPONENT_SYSTEM_H_
 
+#include "wiArchive.h"
+
 #include <cstdint>
 #include <cassert>
 #include <vector>
@@ -35,6 +37,63 @@ namespace wiECS
 			components.clear();
 			entities.clear();
 			lookup.clear();
+		}
+
+		// Perform deep copy of all the contents of "other" into this
+		inline void Copy(const ComponentManager<Component>& other)
+		{
+			Clear();
+			components = other.components;
+			entities = other.entities;
+			lookup = other.lookup;
+		}
+
+		inline void Serialize(wiArchive& archive)
+		{
+			if (archive.IsReadMode())
+			{
+				size_t count;
+				archive >> count;
+
+				components.resize(count);
+				for (size_t i = 0; i < count; ++i)
+				{
+					components[i].Serialize(archive);
+				}
+
+				entities.resize(count);
+				for (size_t i = 0; i < count; ++i)
+				{
+					archive >> entities[i];
+				}
+
+				lookup.reserve(count);
+				for (size_t i = 0; i < count; ++i)
+				{
+					Entity entity;
+					size_t index;
+					archive >> entity;
+					archive >> index;
+					lookup[entity] = index;
+				}
+			}
+			else
+			{
+				archive << components.size();
+				for (Component& component : components)
+				{
+					component.Serialize(archive);
+				}
+				for (Entity entity : entities)
+				{
+					archive << entity;
+				}
+				for (auto it : lookup)
+				{
+					archive << it.first;
+					archive << it.second;
+				}
+			}
 		}
 
 		// Create a new component and retrieve a reference to it:

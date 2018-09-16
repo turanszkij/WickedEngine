@@ -3,6 +3,7 @@
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
 #include "wiPHYSICS.h"
+#include "wiArchive.h"
 
 using namespace wiECS;
 using namespace wiGraphicsTypes;
@@ -214,6 +215,22 @@ namespace wiSceneSystem
 		XMStoreFloat3(&translation_local, T);
 		XMStoreFloat4(&rotation_local, R);
 		XMStoreFloat3(&scale_local, S);
+	}
+
+	void ParentComponent::Serialize(wiArchive& archive)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> parentID;
+			archive >> layerMask_bind;
+			archive >> world_parent_inverse_bind;
+		}
+		else
+		{
+			archive << parentID;
+			archive << layerMask_bind;
+			archive << world_parent_inverse_bind;
+		}
 	}
 
 	Texture2D* MaterialComponent::GetBaseColorMap() const

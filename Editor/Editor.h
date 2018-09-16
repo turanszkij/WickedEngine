@@ -1,5 +1,6 @@
 #pragma once
 #include "WickedEngine.h"
+#include "Translator.h"
 
 class MaterialWindow;
 class PostprocessWindow;
@@ -75,6 +76,73 @@ public:
 	void Render() override;
 	void Compose() override;
 	void Unload() override;
+
+
+	enum EDITORSTENCILREF
+	{
+		EDITORSTENCILREF_CLEAR = 0x00,
+		EDITORSTENCILREF_HIGHLIGHT = 0x01,
+		EDITORSTENCILREF_LAST = 0x0F,
+	};
+
+
+	struct Picked
+	{
+		wiECS::Entity entity;
+		XMFLOAT3 position, normal;
+		float distance;
+		int subsetIndex;
+
+		Picked()
+		{
+			Clear();
+		}
+
+		// Subset index, position, normal, distance don't distinguish between pickeds! 
+		bool operator==(const Picked& other)
+		{
+			return entity == other.entity;
+		}
+		void Clear()
+		{
+			distance = FLT_MAX;
+			subsetIndex = -1;
+			entity = wiECS::INVALID_ENTITY;
+		}
+	};
+
+	Translator translator;
+	std::list<Picked> selected;
+	wiECS::ComponentManager<wiSceneSystem::ParentComponent> savedHierarchy;
+	Picked hovered;
+
+	void BeginTranslate();
+	void EndTranslate();
+	void AddSelected(const Picked& picked);
+
+
+
+
+	wiArchive *clipboard = nullptr;
+	enum ClipboardItemType
+	{
+		CLIPBOARD_MODEL,
+		CLIPBOARD_EMPTY
+	};
+
+	std::vector<wiArchive*> history;
+	int historyPos = -1;
+	enum HistoryOperationType
+	{
+		HISTORYOP_TRANSLATOR,
+		HISTORYOP_DELETE,
+		HISTORYOP_SELECTION,
+		HISTORYOP_NONE
+	};
+
+	void ResetHistory();
+	wiArchive* AdvanceHistory();
+	void ConsumeHistoryOperation(bool undo);
 };
 
 class Editor : public MainComponent
