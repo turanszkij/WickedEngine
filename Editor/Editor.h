@@ -113,7 +113,7 @@ public:
 
 	Translator translator;
 	std::list<Picked> selected;
-	wiECS::ComponentManager<wiSceneSystem::ParentComponent> savedHierarchy;
+	wiECS::ComponentManager<wiSceneSystem::HierarchyComponent> savedHierarchy;
 	Picked hovered;
 
 	void BeginTranslate();

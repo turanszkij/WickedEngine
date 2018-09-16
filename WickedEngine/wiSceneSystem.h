@@ -73,7 +73,7 @@ namespace wiSceneSystem
 		XMFLOAT4X4 world_prev;
 	};
 
-	struct ParentComponent
+	struct HierarchyComponent
 	{
 		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
@@ -688,7 +688,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<LayerComponent> layers;
 		wiECS::ComponentManager<TransformComponent> transforms;
 		wiECS::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
-		wiECS::ComponentManager<ParentComponent> parents;
+		wiECS::ComponentManager<HierarchyComponent> hierarchy;
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
 		wiECS::ComponentManager<ObjectComponent> objects;
@@ -808,7 +808,7 @@ namespace wiSceneSystem
 	);
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
 	void RunHierarchyUpdateSystem(
-		const wiECS::ComponentManager<ParentComponent>& parents,
+		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<LayerComponent>& layers
 	);

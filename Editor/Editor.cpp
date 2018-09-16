@@ -915,7 +915,7 @@ void EditorComponent::Update(float dt)
 		else
 		{
 			// Orbital Camera
-			ParentComponent* parented = scene.parents.GetComponent(wiRenderer::getCameraID());
+			HierarchyComponent* parented = scene.hierarchy.GetComponent(wiRenderer::getCameraID());
 			TransformComponent* target_transform = scene.transforms.GetComponent(cameraWnd->target);
 
 			if (parented == nullptr)
@@ -1899,7 +1899,7 @@ void EditorComponent::BeginTranslate()
 	Scene& scene = wiRenderer::GetScene();
 
 	// Begin translation, save scene hierarchy from before:
-	savedHierarchy.Copy(scene.parents);
+	savedHierarchy.Copy(scene.hierarchy);
 
 	// All selected entities will be attached to translator entity:
 	TransformComponent* translator_transform = wiRenderer::GetScene().transforms.GetComponent(translator.entityID);
@@ -1944,13 +1944,13 @@ void EditorComponent::EndTranslate()
 	Scene& scene = wiRenderer::GetScene();
 
 	// Translation ended, apply all final transformations as local pose:
-	for (size_t i = 0; i < scene.parents.GetCount(); ++i)
+	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
-		ParentComponent& parent = scene.parents[i];
+		HierarchyComponent& parent = scene.hierarchy[i];
 
 		if (parent.parentID == translator.entityID) // only to entities that were attached to translator!
 		{
-			Entity entity = scene.parents.GetEntity(i);
+			Entity entity = scene.hierarchy.GetEntity(i);
 			TransformComponent* transform = scene.transforms.GetComponent(entity);
 			if (transform != nullptr)
 			{
@@ -1960,13 +1960,13 @@ void EditorComponent::EndTranslate()
 	}
 
 	// Restore scene hierarchy from before translation:
-	scene.parents.Copy(savedHierarchy);
+	scene.hierarchy.Copy(savedHierarchy);
 
 	// If an attached entity got moved, then the world transform was applied to it (**),
 	//	so we need to reattach it properly to the parent matrix:
 	for (const Picked& x : selected)
 	{
-		ParentComponent* parent = scene.parents.GetComponent(x.entity);
+		HierarchyComponent* parent = scene.hierarchy.GetComponent(x.entity);
 		if (parent != nullptr)
 		{
 			TransformComponent* transform_parent = scene.transforms.GetComponent(parent->parentID);
@@ -2163,7 +2163,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 					selectedBEFORE.push_back(sel);
 				}
-				ComponentManager<ParentComponent> savedHierarchyBEFORE;
+				ComponentManager<HierarchyComponent> savedHierarchyBEFORE;
 				savedHierarchyBEFORE.Serialize(*archive);
 
 				list<Picked> selectedAFTER;
@@ -2180,7 +2180,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 					selectedAFTER.push_back(sel);
 				}
-				ComponentManager<ParentComponent> savedHierarchyAFTER;
+				ComponentManager<HierarchyComponent> savedHierarchyAFTER;
 				savedHierarchyAFTER.Serialize(*archive);
 
 

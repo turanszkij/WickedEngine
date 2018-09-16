@@ -217,7 +217,7 @@ namespace wiSceneSystem
 		XMStoreFloat3(&scale_local, S);
 	}
 
-	void ParentComponent::Serialize(wiArchive& archive)
+	void HierarchyComponent::Serialize(wiArchive& archive)
 	{
 		if (archive.IsReadMode())
 		{
@@ -785,7 +785,7 @@ namespace wiSceneSystem
 
 		RunTransformUpdateSystem(transforms);
 
-		RunHierarchyUpdateSystem(parents, transforms, layers);
+		RunHierarchyUpdateSystem(hierarchy, transforms, layers);
 
 		RunArmatureUpdateSystem(transforms, armatures);
 
@@ -818,7 +818,7 @@ namespace wiSceneSystem
 			layers.Remove(entity);
 			transforms.Remove(entity);
 			prev_transforms.Remove(entity);
-			parents.Remove(entity);
+			hierarchy.Remove(entity);
 			materials.Remove(entity);
 			meshes.Remove(entity);
 			objects.Remove(entity);
@@ -851,7 +851,7 @@ namespace wiSceneSystem
 		layers.Remove(entity);
 		transforms.Remove(entity);
 		prev_transforms.Remove(entity);
-		parents.Remove_KeepSorted(entity);
+		hierarchy.Remove_KeepSorted(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		objects.Remove(entity);
@@ -1131,28 +1131,28 @@ namespace wiSceneSystem
 	{
 		assert(entity != parent);
 
-		if (parents.Contains(entity))
+		if (hierarchy.Contains(entity))
 		{
 			Component_Detach(entity);
 		}
 
 		// Add a new hierarchy node to the end of container:
-		parents.Create(entity).parentID = parent;
+		hierarchy.Create(entity).parentID = parent;
 
 		// If this entity was already a part of a tree however, we must move it before children:
-		for (size_t i = 0; i < parents.GetCount(); ++i)
+		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 		{
-			const ParentComponent& parent = parents[i];
+			const HierarchyComponent& parent = hierarchy[i];
 			
 			if (parent.parentID == entity)
 			{
-				parents.MoveLastTo(i);
+				hierarchy.MoveLastTo(i);
 				break;
 			}
 		}
 
 		// Re-query parent after potential MoveLastTo(), because it invalidates references:
-		ParentComponent& parentcomponent = *parents.GetComponent(entity);
+		HierarchyComponent& parentcomponent = *hierarchy.GetComponent(entity);
 
 		TransformComponent* transform_parent = transforms.GetComponent(parent);
 		if (transform_parent != nullptr)
@@ -1177,7 +1177,7 @@ namespace wiSceneSystem
 	}
 	void Scene::Component_Detach(Entity entity)
 	{
-		const ParentComponent* parent = parents.GetComponent(entity);
+		const HierarchyComponent* parent = hierarchy.GetComponent(entity);
 
 		if (parent != nullptr)
 		{
@@ -1193,16 +1193,16 @@ namespace wiSceneSystem
 				layer->layerMask = parent->layerMask_bind;
 			}
 
-			parents.Remove_KeepSorted(entity);
+			hierarchy.Remove_KeepSorted(entity);
 		}
 	}
 	void Scene::Component_DetachChildren(Entity parent)
 	{
-		for (size_t i = 0; i < parents.GetCount(); )
+		for (size_t i = 0; i < hierarchy.GetCount(); )
 		{
-			if (parents[i].parentID == parent)
+			if (hierarchy[i].parentID == parent)
 			{
-				Entity entity = parents.GetEntity(i);
+				Entity entity = hierarchy.GetEntity(i);
 				Component_Detach(entity);
 			}
 			else
@@ -1418,15 +1418,15 @@ namespace wiSceneSystem
 		}
 	}
 	void RunHierarchyUpdateSystem(
-		const ComponentManager<ParentComponent>& parents,
+		const ComponentManager<HierarchyComponent>& hierarchy,
 		ComponentManager<TransformComponent>& transforms,
 		ComponentManager<LayerComponent>& layers
 		)
 	{
-		for (size_t i = 0; i < parents.GetCount(); ++i)
+		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 		{
-			const ParentComponent& parentcomponent = parents[i];
-			Entity entity = parents.GetEntity(i);
+			const HierarchyComponent& parentcomponent = hierarchy[i];
+			Entity entity = hierarchy.GetEntity(i);
 
 			TransformComponent* transform_child = transforms.GetComponent(entity);
 			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
