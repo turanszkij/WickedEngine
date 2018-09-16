@@ -136,8 +136,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		normal = normalize(mul((float3x3)xWorld, normal));
 		target = normalize(mul((float3x3)xWorld, target));
 
-		float3 tip = position + normal * len;
-		tip = mul(xWorld, float4(tip.xyz, 1)).xyz;
+		float3 tip = mul(xWorld, float4(position.xyz, 1)).xyz + normal * len;
 
 		// Accumulate forces:
 		GroupMemoryBarrierWithGroupSync();
