@@ -165,8 +165,6 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 
 	Scene& scene = wiRenderer::GetScene();
 
-	ModelComponent& model = *scene.models.GetComponent(state.modelEntity);
-
 	Entity entity = INVALID_ENTITY;
 
 	if(node->mesh >= 0)
@@ -201,7 +199,6 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 		}
 
 		entity = scene.Entity_CreateCamera(node->name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
-		model.cameras.insert(entity);
 	}
 
 	if (entity == INVALID_ENTITY)
@@ -279,7 +276,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	Scene& scene = wiRenderer::GetScene();
 
 	state.modelEntity = scene.Entity_CreateModel(name);
-	ModelComponent& model = *scene.models.GetComponent(state.modelEntity);
 	TransformComponent& model_transform = *scene.transforms.GetComponent(state.modelEntity);
 
 	// Create materials:
@@ -287,7 +283,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	{
 		Entity materialEntity = scene.Entity_CreateMaterial(x.name);
 
-		model.materials.insert(materialEntity);
 		state.materialArray.push_back(materialEntity);
 
 		MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
@@ -507,7 +502,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	if (state.materialArray.empty())
 	{
 		Entity materialEntity = scene.Entity_CreateMaterial("GLTFImport_defaultMaterial");
-		model.materials.insert(materialEntity);
 		state.materialArray.push_back(materialEntity);
 	}
 
@@ -516,11 +510,9 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	{
 		Entity meshEntity = scene.Entity_CreateMesh(x.name);
 
-		model.meshes.insert(meshEntity);
 		state.meshArray.push_back(meshEntity);
 
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-		mesh.renderable = true;
 
 		for (auto& prim : x.primitives)
 		{
@@ -679,8 +671,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 		}
 
 		mesh.CreateRenderData();
-
-		model.meshes.insert(meshEntity);
 	}
 
 	// Create armatures:
@@ -692,8 +682,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 		scene.layers.Create(armatureEntity);
 		TransformComponent& transform = scene.transforms.Create(armatureEntity);
 		ArmatureComponent& armature = scene.armatures.Create(armatureEntity);
-
-		model.armatures.insert(armatureEntity);
 
 		state.armatureArray.push_back(armatureEntity);
 
@@ -851,7 +839,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	{
 		TransformComponent& transform = *scene.transforms.GetComponent(state.modelEntity);
 		transform.scale_local.z = -transform.scale_local.z;
-		transform.dirty = true;
+		transform.SetDirty();
 	}
 
 	return state.modelEntity;

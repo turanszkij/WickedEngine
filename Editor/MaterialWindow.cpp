@@ -42,7 +42,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	waterCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->water = args.bValue;
+			material->SetWater(args.bValue);
 	});
 	materialWindow->AddWidget(waterCheckBox);
 
@@ -52,7 +52,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	planarReflCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->planar_reflections = args.bValue;
+			material->SetPlanarReflections(args.bValue);
 	});
 	materialWindow->AddWidget(planarReflCheckBox);
 
@@ -62,7 +62,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	shadowCasterCheckBox->OnClick([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->cast_shadow = args.bValue;
+			material->SetCastShadow(args.bValue);
 	});
 	materialWindow->AddWidget(shadowCasterCheckBox);
 
@@ -223,7 +223,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
-			material->dirty = true;
+			material->SetDirty();
 			material->texMulAdd.x = args.fValue;
 		}
 	});
@@ -237,7 +237,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
-			material->dirty = true;
+			material->SetDirty();
 			material->texMulAdd.y = args.fValue;
 		}
 	});
@@ -547,9 +547,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
 		materialNameField->SetValue(name.name);
-		waterCheckBox->SetCheck(material->water);
-		planarReflCheckBox->SetCheck(material->planar_reflections);
-		shadowCasterCheckBox->SetCheck(material->cast_shadow);
+		waterCheckBox->SetCheck(material->IsWater());
+		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
+		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());
 		normalMapSlider->SetValue(material->normalMapStrength);
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);

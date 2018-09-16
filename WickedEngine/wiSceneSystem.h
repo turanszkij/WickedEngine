@@ -29,6 +29,8 @@ namespace wiSceneSystem
 
 		inline void operator=(const std::string& str) { strcpy_s(name, str.c_str()); }
 		inline bool operator==(const std::string& str) const { return strcmp(name, str.c_str()) == 0; }
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct LayerComponent
@@ -36,17 +38,28 @@ namespace wiSceneSystem
 		uint32_t layerMask = ~0;
 
 		inline uint32_t GetLayerMask() const { return layerMask; }
+
+		void Serialize(wiArchive& archive);
 	};
 	
 	struct TransformComponent
 	{
-		bool dirty = true;
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DIRTY = 1 << 0,
+		};
+		uint32_t _flags = DIRTY;
 
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
 		XMFLOAT4X4 world = IDENTITYMATRIX;
+
+		inline void SetDirty() { _flags |= DIRTY; }
+		inline void SetClean() { _flags &= ~DIRTY; }
+		inline bool IsDirty() const { return _flags & DIRTY; }
 
 		XMFLOAT3 GetPosition() const;
 		XMFLOAT4 GetRotation() const;
@@ -66,11 +79,15 @@ namespace wiSceneSystem
 		void MatrixTransform(const XMMATRIX& matrix);
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct PreviousFrameTransformComponent
 	{
 		XMFLOAT4X4 world_prev;
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct HierarchyComponent
@@ -84,7 +101,15 @@ namespace wiSceneSystem
 
 	struct MaterialComponent
 	{
-		bool dirty = true; // can trigger constant buffer update
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DIRTY = 1 << 0,
+			CAST_SHADOW = 1 << 1,
+			PLANAR_REFLECTION = 1 << 2,
+			WATER = 1 << 3,
+		};
+		uint32_t _flags = DIRTY | CAST_SHADOW;
 
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
@@ -102,10 +127,6 @@ namespace wiSceneSystem
 		float parallaxOcclusionMapping = 0.0f;
 
 		float alphaRef = 1.0f;
-
-		bool cast_shadow = true;
-		bool planar_reflections = false;
-		bool water = false; 
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;
@@ -142,23 +163,34 @@ namespace wiSceneSystem
 
 		inline float GetOpacity() const { return baseColor.w; }
 
+
+		inline void SetDirty() { _flags |= DIRTY; }
+		inline void SetClean() { _flags &= ~DIRTY; }
+		inline bool IsDirty() const { return _flags & DIRTY; }
+
+		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
+		inline void SetPlanarReflections(bool value) { if (value) { _flags |= PLANAR_REFLECTION; } else { _flags &= PLANAR_REFLECTION; } }
+		inline void SetWater(bool value) { if (value) { _flags |= WATER; } else { _flags &= ~WATER; } }
+
 		inline bool IsTransparent() const { return GetOpacity() < 1.0f; }
-		inline bool IsWater() const { return water; }
-		inline bool HasPlanarReflection() const { return planar_reflections || IsWater(); }
-		inline bool IsCastingShadow() const { return cast_shadow; }
+		inline bool IsWater() const { return _flags & WATER; }
+		inline bool HasPlanarReflection() const { return (_flags & PLANAR_REFLECTION) || IsWater(); }
+		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 
-		inline void SetBaseColor(const XMFLOAT4& value) { dirty = true; baseColor = value; }
-		inline void SetRoughness(float value) { dirty = true; roughness = value; }
-		inline void SetReflectance(float value) { dirty = true; reflectance = value; }
-		inline void SetMetalness(float value) { dirty = true; metalness = value; }
-		inline void SetEmissive(float value) { dirty = true; emissive = value; }
-		inline void SetRefractionIndex(float value) { dirty = true; refractionIndex = value; }
-		inline void SetSubsurfaceScattering(float value) { dirty = true; subsurfaceScattering = value; }
-		inline void SetNormalMapStrength(float value) { dirty = true; normalMapStrength = value; }
-		inline void SetParallaxOcclusionMapping(float value) { dirty = true; parallaxOcclusionMapping = value; }
-		inline void SetOpacity(float value) { dirty = true;  baseColor.w = value; }
+		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
+		inline void SetRoughness(float value) { SetDirty(); roughness = value; }
+		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }
+		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
+		inline void SetEmissive(float value) { SetDirty(); emissive = value; }
+		inline void SetRefractionIndex(float value) { SetDirty(); refractionIndex = value; }
+		inline void SetSubsurfaceScattering(float value) { SetDirty(); subsurfaceScattering = value; }
+		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
+		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
+		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { alphaRef = value; }
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct MeshComponent
@@ -274,6 +306,15 @@ namespace wiSceneSystem
 			}
 		};
 
+		enum FLAGS
+		{
+			EMPTY = 0,
+			RENDERABLE = 1 << 0,
+			DOUBLE_SIDED = 1 << 1,
+			DYNAMIC = 1 << 2,
+		};
+		uint32_t _flags = RENDERABLE;
+
 		std::vector<XMFLOAT3>		vertex_positions;
 		std::vector<XMFLOAT3>		vertex_normals;
 		std::vector<XMFLOAT2>		vertex_texcoords;
@@ -289,39 +330,42 @@ namespace wiSceneSystem
 		};
 		std::vector<MeshSubset>		subsets;
 
+		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
+
+		AABB aabb;
+		float tessellationFactor = 0.0f;
+		float impostorDistance = 100.0f;
+		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
+
+
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	indexBuffer;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_POS;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_TEX;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
-
-		bool dynamicVB = false; // soft body will update the vertex buffer from cpu
-
-		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
-
-		bool renderable = true;
-		bool doubleSided = false;
-
-		AABB aabb;
-
-		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
-
 		wiRenderTarget	impostorTarget;
-		float impostorDistance = 100.0f;
 
-		float tessellationFactor;
+
+		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
+		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
+		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
+
+		inline bool IsRenderable() const { return _flags & RENDERABLE; }
+		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 
 		bool HasImpostor() const { return impostorTarget.IsInitialized(); }
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
-		inline bool IsDynamicVB() const { return dynamicVB; }
 
 		void CreateRenderData();
 		void ComputeNormals(bool smooth);
 		void FlipCulling();
 		void FlipNormals();
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct ObjectComponent
@@ -352,6 +396,8 @@ namespace wiSceneSystem
 		inline bool IsCastingShadow() const { return cast_shadow; }
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct RigidBodyPhysicsComponent
@@ -371,6 +417,8 @@ namespace wiSceneSystem
 		float friction = 1.0f;
 		float restitution = 1.0f;
 		float damping = 1.0f;
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct SoftBodyPhysicsComponent
@@ -380,6 +428,8 @@ namespace wiSceneSystem
 		float friction = 1.0f;
 		std::vector<XMFLOAT3> physicsvertices;
 		std::vector<uint32_t> physicsindices;
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct ArmatureComponent
@@ -408,6 +458,8 @@ namespace wiSceneSystem
 
 		// Use this to eg. mirror the armature:
 		XMFLOAT4X4 remapMatrix = IDENTITYMATRIX;
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct LightComponent
@@ -561,6 +613,7 @@ namespace wiSceneSystem
 		std::vector<SHCAM> shadowCam_dirLight;
 		std::vector<SHCAM> shadowCam_spotLight;
 
+		void Serialize(wiArchive& archive);
 	};
 
 	struct CameraComponent
@@ -591,6 +644,8 @@ namespace wiSceneSystem
 		inline XMMATRIX GetViewProjection() const { return XMLoadFloat4x4(&VP); }
 		inline XMMATRIX GetInvViewProjection() const { return XMLoadFloat4x4(&InvVP); }
 		inline XMMATRIX GetRealProjection() const { return XMLoadFloat4x4(&realProjection); }
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct EnvironmentProbeComponent
@@ -601,6 +656,8 @@ namespace wiSceneSystem
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct ForceFieldComponent
@@ -610,6 +667,8 @@ namespace wiSceneSystem
 		float range = 0.0f; // affection range
 		XMFLOAT3 position;
 		XMFLOAT3 direction;
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct DecalComponent
@@ -630,6 +689,8 @@ namespace wiSceneSystem
 		wiGraphicsTypes::Texture2D* normal = nullptr;
 
 		inline float GetOpacity() const { return color.w; }
+
+		void Serialize(wiArchive& archive);
 	};
 
 	struct AnimationComponent
@@ -665,19 +726,8 @@ namespace wiSceneSystem
 		inline void Play() { playing = true; }
 		inline void Pause() { playing = false; }
 		inline void Stop() { playing = false; timer = 0.0f; }
-	};
 
-	struct ModelComponent
-	{
-		std::unordered_set<wiECS::Entity> materials;
-		std::unordered_set<wiECS::Entity> objects;
-		std::unordered_set<wiECS::Entity> meshes;
-		std::unordered_set<wiECS::Entity> armatures;
-		std::unordered_set<wiECS::Entity> lights;
-		std::unordered_set<wiECS::Entity> cameras;
-		std::unordered_set<wiECS::Entity> probes;
-		std::unordered_set<wiECS::Entity> forces;
-		std::unordered_set<wiECS::Entity> decals;
+		void Serialize(wiArchive& archive);
 	};
 
 	struct Scene
@@ -707,7 +757,6 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<AnimationComponent> animations;
 		wiECS::ComponentManager<wiEmittedParticle> emitters;
 		wiECS::ComponentManager<wiHairParticle> hairs;
-		wiECS::ComponentManager<ModelComponent> models;
 
 		AABB bounds;
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
@@ -787,6 +836,8 @@ namespace wiSceneSystem
 		void Component_Detach(wiECS::Entity entity);
 		// Detaches all children from an entity (if there are any):
 		void Component_DetachChildren(wiECS::Entity parent);
+
+		void Serialize(wiArchive& archive);
 	};
 
 	void RunPreviousFrameTransformUpdateSystem(

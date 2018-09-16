@@ -351,4 +351,15 @@ void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& mate
 	device->EventEnd(threadID);
 }
 
+
+void wiHairParticle::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+	}
+	else
+	{
+	}
+}
+
 }

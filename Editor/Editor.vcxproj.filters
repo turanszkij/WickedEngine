@@ -147,9 +147,6 @@
     <ClCompile Include="ModelImporter_GLTF.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="ModelImporter_WIO.cpp">
-      <Filter>Code</Filter>
-    </ClCompile>
     <ClCompile Include="Translator.cpp">
       <Filter>Code</Filter>
     </ClCompile>

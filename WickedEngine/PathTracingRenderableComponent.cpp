@@ -106,7 +106,7 @@ void PathTracingRenderableComponent::Update(float dt)
 	{
 		const TransformComponent& transform = scene.transforms[i];
 
-		if (transform.dirty)
+		if (transform.IsDirty())
 		{
 			sam = -1;
 			break;

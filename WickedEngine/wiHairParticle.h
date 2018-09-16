@@ -49,6 +49,8 @@ public:
 	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 	XMFLOAT4X4 world;
 	AABB aabb;
+
+	void Serialize(wiArchive& archive);
 };
 
 }

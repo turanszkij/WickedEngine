@@ -155,19 +155,19 @@ void wiWidget::SetScriptTip(const std::string& value)
 }
 void wiWidget::SetPos(const XMFLOAT2& value)
 {
-	TransformComponent::dirty = true;
-	TransformComponent::translation_local.x = value.x;
-	TransformComponent::translation_local.y = value.y;
-	TransformComponent::UpdateTransform();
+	SetDirty();
+	translation_local.x = value.x;
+	translation_local.y = value.y;
+	UpdateTransform();
 
 	translation = translation_local;
 }
 void wiWidget::SetSize(const XMFLOAT2& value)
 {
-	TransformComponent::dirty = true;
-	TransformComponent::scale_local.x = value.x;
-	TransformComponent::scale_local.y = value.y;
-	TransformComponent::UpdateTransform();
+	SetDirty();
+	scale_local.x = value.x;
+	scale_local.y = value.y;
+	UpdateTransform();
 
 	scale = scale_local;
 }

@@ -38,82 +38,92 @@ public:
 	// So providing exact copy operations for exact types enforces platform agnosticism
 
 	// Write operations
-	wiArchive& operator<<(bool data)
+	inline wiArchive& operator<<(bool data)
 	{
 		_write((uint32_t)(data ? 1 : 0));
 		return *this;
 	}
-	wiArchive& operator<<(int data)
+	inline wiArchive& operator<<(char data)
+	{
+		_write((int8_t)data);
+		return *this;
+	}
+	inline wiArchive& operator<<(unsigned char data)
+	{
+		_write((uint8_t)data);
+		return *this;
+	}
+	inline wiArchive& operator<<(int data)
 	{
 		_write((int64_t)data);
 		return *this;
 	}
-	wiArchive& operator<<(unsigned int data)
+	inline wiArchive& operator<<(unsigned int data)
 	{
 		_write((uint64_t)data);
 		return *this;
 	}
-	wiArchive& operator<<(long data)
+	inline wiArchive& operator<<(long data)
 	{
 		_write((int64_t)data);
 		return *this;
 	}
-	wiArchive& operator<<(unsigned long data)
+	inline wiArchive& operator<<(unsigned long data)
 	{
 		_write((uint64_t)data);
 		return *this;
 	}
-	wiArchive& operator<<(long long data)
+	inline wiArchive& operator<<(long long data)
 	{
 		_write((int64_t)data);
 		return *this;
 	}
-	wiArchive& operator<<(unsigned long long data)
+	inline wiArchive& operator<<(unsigned long long data)
 	{
 		_write((uint64_t)data);
 		return *this;
 	}
-	wiArchive& operator<<(float data)
+	inline wiArchive& operator<<(float data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(double data)
+	inline wiArchive& operator<<(double data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const XMFLOAT2& data)
+	inline wiArchive& operator<<(const XMFLOAT2& data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const XMFLOAT3& data)
+	inline wiArchive& operator<<(const XMFLOAT3& data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const XMFLOAT4& data)
+	inline wiArchive& operator<<(const XMFLOAT4& data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const XMFLOAT3X3& data)
+	inline wiArchive& operator<<(const XMFLOAT3X3& data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const XMFLOAT4X3& data)
+	inline wiArchive& operator<<(const XMFLOAT4X3& data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const XMFLOAT4X4& data)
+	inline wiArchive& operator<<(const XMFLOAT4X4& data)
 	{
 		_write(data);
 		return *this;
 	}
-	wiArchive& operator<<(const std::string& data)
+	inline wiArchive& operator<<(const std::string& data)
 	{
 		uint64_t len = (uint64_t)(data.length() + 1); // +1 for the null-terminator
 		_write(len);
@@ -122,96 +132,110 @@ public:
 	}
 
 	// Read operations
-	wiArchive& operator >> (bool& data)
+	inline wiArchive& operator >> (bool& data)
 	{
 		uint32_t temp;
 		_read(temp);
 		data = (temp == 1);
 		return *this;
 	}
-	wiArchive& operator >> (int& data)
+	inline wiArchive& operator >> (char& data)
+	{
+		int8_t temp;
+		_read(temp);
+		data = (char)temp;
+		return *this;
+	}
+	inline wiArchive& operator >> (unsigned char& data)
+	{
+		uint8_t temp;
+		_read(temp);
+		data = (unsigned char)temp;
+		return *this;
+	}
+	inline wiArchive& operator >> (int& data)
 	{
 		int64_t temp;
 		_read(temp);
 		data = (int)temp;
 		return *this;
 	}
-	wiArchive& operator >> (unsigned int& data)
+	inline wiArchive& operator >> (unsigned int& data)
 	{
 		uint64_t temp;
 		_read(temp);
 		data = (unsigned int)temp;
 		return *this;
 	}
-	wiArchive& operator >> (long& data)
+	inline wiArchive& operator >> (long& data)
 	{
 		int64_t temp;
 		_read(temp);
 		data = (long)temp;
 		return *this;
 	}
-	wiArchive& operator >> (unsigned long& data)
+	inline wiArchive& operator >> (unsigned long& data)
 	{
 		uint64_t temp;
 		_read(temp);
 		data = (unsigned long)temp;
 		return *this;
 	}
-	wiArchive& operator >> (long long& data)
+	inline wiArchive& operator >> (long long& data)
 	{
 		int64_t temp;
 		_read(temp);
 		data = (long long)temp;
 		return *this;
 	}
-	wiArchive& operator >> (unsigned long long& data)
+	inline wiArchive& operator >> (unsigned long long& data)
 	{
 		uint64_t temp;
 		_read(temp);
 		data = (unsigned long long)temp;
 		return *this;
 	}
-	wiArchive& operator >> (float& data)
+	inline wiArchive& operator >> (float& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (double& data)
+	inline wiArchive& operator >> (double& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (XMFLOAT2& data)
+	inline wiArchive& operator >> (XMFLOAT2& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (XMFLOAT3& data)
+	inline wiArchive& operator >> (XMFLOAT3& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (XMFLOAT4& data)
+	inline wiArchive& operator >> (XMFLOAT4& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (XMFLOAT3X3& data)
+	inline wiArchive& operator >> (XMFLOAT3X3& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (XMFLOAT4X3& data)
+	inline wiArchive& operator >> (XMFLOAT4X3& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (XMFLOAT4X4& data)
+	inline wiArchive& operator >> (XMFLOAT4X4& data)
 	{
 		_read(data);
 		return *this;
 	}
-	wiArchive& operator >> (std::string& data)
+	inline wiArchive& operator >> (std::string& data)
 	{
 		uint64_t len;
 		_read(len);
@@ -233,7 +257,7 @@ private:
 
 	// Write data using memory operations
 	template<typename T>
-	void _write(const T& data, uint64_t count = 1)
+	inline void _write(const T& data, uint64_t count = 1)
 	{
 		size_t _size = (size_t)(sizeof(data)*count);
 		size_t _right = pos + _size;
@@ -251,7 +275,7 @@ private:
 
 	// Read data using memory operations
 	template<typename T>
-	void _read(T& data, uint64_t count = 1)
+	inline void _read(T& data, uint64_t count = 1)
 	{
 		memcpy(&data, reinterpret_cast<void*>((uint64_t)DATA + (uint64_t)pos), (size_t)(sizeof(data)*count));
 		pos += (size_t)(sizeof(data)*count);

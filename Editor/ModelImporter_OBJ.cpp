@@ -34,7 +34,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 	if (success)
 	{
 		Entity modelEntity = scene.Entity_CreateModel(name);
-		ModelComponent& model = *scene.models.GetComponent(modelEntity);
 		TransformComponent& model_transform = *scene.transforms.GetComponent(modelEntity);
 
 		model_transform.UpdateTransform(); // everything will be attached to this, so values need to be up to date
@@ -82,7 +81,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			}
 
 			materialLibrary.push_back(materialEntity); // for subset-indexing...
-			model.materials.insert(materialEntity);
 		}
 
 		if (materialLibrary.empty())
@@ -91,7 +89,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			Entity materialEntity = scene.Entity_CreateMaterial("OBJImport_defaultMaterial");
 			MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 			materialLibrary.push_back(materialEntity); // for subset-indexing...
-			model.materials.insert(materialEntity);
 		}
 
 		// Load objects, meshes:
@@ -105,7 +102,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			scene.Component_Attach(objectEntity, modelEntity);
 
 			object.meshID = meshEntity;
-			mesh.renderable = true;
 
 			unordered_map<int, int> registered_materialIndices = {};
 			unordered_map<size_t, uint32_t> uniqueVertices = {};
@@ -191,9 +187,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 				}
 			}
 			mesh.CreateRenderData();
-
-			model.objects.insert(objectEntity);
-			model.meshes.insert(meshEntity);
 		}
 
 		return modelEntity;

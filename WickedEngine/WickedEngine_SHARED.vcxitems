@@ -693,6 +693,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_Serializers.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp" />

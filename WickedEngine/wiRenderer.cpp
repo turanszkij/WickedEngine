@@ -3128,9 +3128,9 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		MaterialComponent& material = scene.materials[i];
 
-		if (material.dirty)
+		if (material.IsDirty())
 		{
-			material.dirty = false;
+			material.SetClean();
 
 			materialGPUData.Create(material);
 
@@ -4930,7 +4930,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 			{
 				Entity meshEntity = iter->first;
 				MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-				if (!mesh.renderable || !mesh.HasImpostor() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
+				if (!mesh.IsRenderable() || !mesh.HasImpostor() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
 				{
 					continue;
 				}
@@ -5061,7 +5061,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 		{
 			Entity meshEntity = iter->first;
 			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-			if (!mesh.renderable /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
+			if (!mesh.IsRenderable() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
 			{
 				continue;
 			}
@@ -5155,7 +5155,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				GraphicsPSO* pso = /*material.customShader == nullptr ?*/ GetObjectPSO(shaderType, mesh.doubleSided, tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
+				GraphicsPSO* pso = /*material.customShader == nullptr ?*/ GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
 				if (pso == nullptr)
 				{
 					continue;

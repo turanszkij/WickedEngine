@@ -45,9 +45,9 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::UpdateTransform()
 	{
-		if (dirty)
+		if (IsDirty())
 		{
-			dirty = false;
+			SetClean();
 
 			XMVECTOR S_local = XMLoadFloat3(&scale_local);
 			XMVECTOR R_local = XMLoadFloat4(&rotation_local);
@@ -66,11 +66,11 @@ namespace wiSceneSystem
 
 		// Normally, every transform would be NOT dirty at this point, but...
 
-		if (parent.dirty)
+		if (parent.IsDirty())
 		{
 			// If parent is dirty, that means parent ws updated for some reason (anim system, physics or user...)
 			//	So we need to propagate the new parent matrix down to this child
-			dirty = true;
+			SetDirty();
 
 			W = XMLoadFloat4x4(&world);
 		}
@@ -96,7 +96,7 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::ApplyTransform()
 	{
-		dirty = true;
+		SetDirty();
 
 		XMVECTOR S, R, T;
 		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
@@ -106,21 +106,21 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::ClearTransform()
 	{
-		dirty = true;
+		SetDirty();
 		scale_local = XMFLOAT3(1, 1, 1);
 		rotation_local = XMFLOAT4(0, 0, 0, 1);
 		translation_local = XMFLOAT3(0, 0, 0);
 	}
 	void TransformComponent::Translate(const XMFLOAT3& value)
 	{
-		dirty = true;
+		SetDirty();
 		translation_local.x += value.x;
 		translation_local.y += value.y;
 		translation_local.z += value.z;
 	}
 	void TransformComponent::RotateRollPitchYaw(const XMFLOAT3& value)
 	{
-		dirty = true;
+		SetDirty();
 
 		// This needs to be handled a bit differently
 		XMVECTOR quat = XMLoadFloat4(&rotation_local);
@@ -137,14 +137,15 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::Rotate(const XMFLOAT4& quaternion)
 	{
-		dirty = true;
+		SetDirty();
+
 		XMVECTOR result = XMQuaternionMultiply(XMLoadFloat4(&rotation_local), XMLoadFloat4(&quaternion));
 		result = XMQuaternionNormalize(result);
 		XMStoreFloat4(&rotation_local, result);
 	}
 	void TransformComponent::Scale(const XMFLOAT3& value)
 	{
-		dirty = true;
+		SetDirty();
 		scale_local.x *= value.x;
 		scale_local.y *= value.y;
 		scale_local.z *= value.z;
@@ -155,7 +156,7 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::MatrixTransform(const XMMATRIX& matrix)
 	{
-		dirty = true;
+		SetDirty();
 
 		XMVECTOR S;
 		XMVECTOR R;
@@ -172,7 +173,7 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::Lerp(const TransformComponent& a, const TransformComponent& b, float t)
 	{
-		dirty = true;
+		SetDirty();
 
 		XMVECTOR aS, aR, aT;
 		XMMatrixDecompose(&aS, &aR, &aT, XMLoadFloat4x4(&a.world));
@@ -190,7 +191,7 @@ namespace wiSceneSystem
 	}
 	void TransformComponent::CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t)
 	{
-		dirty = true;
+		SetDirty();
 
 		XMVECTOR aS, aR, aT;
 		XMMatrixDecompose(&aS, &aR, &aT, XMLoadFloat4x4(&a.world));
@@ -215,22 +216,6 @@ namespace wiSceneSystem
 		XMStoreFloat3(&translation_local, T);
 		XMStoreFloat4(&rotation_local, R);
 		XMStoreFloat3(&scale_local, S);
-	}
-
-	void HierarchyComponent::Serialize(wiArchive& archive)
-	{
-		if (archive.IsReadMode())
-		{
-			archive >> parentID;
-			archive >> layerMask_bind;
-			archive >> world_parent_inverse_bind;
-		}
-		else
-		{
-			archive << parentID;
-			archive << layerMask_bind;
-			archive << world_parent_inverse_bind;
-		}
 	}
 
 	Texture2D* MaterialComponent::GetBaseColorMap() const
@@ -837,7 +822,6 @@ namespace wiSceneSystem
 			animations.Remove(entity);
 			emitters.Remove(entity);
 			hairs.Remove(entity);
-			models.Remove(entity);
 		}
 
 		owned_entities.clear();
@@ -870,7 +854,6 @@ namespace wiSceneSystem
 		animations.Remove(entity);
 		emitters.Remove(entity);
 		hairs.Remove(entity);
-		models.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
@@ -896,8 +879,6 @@ namespace wiSceneSystem
 		layers.Create(entity);
 
 		transforms.Create(entity);
-
-		models.Create(entity);
 
 		return entity;
 	}
@@ -1341,7 +1322,7 @@ namespace wiSceneSystem
 					}
 				}
 
-				transform.dirty = true;
+				transform.SetDirty();
 
 			}
 
@@ -1389,7 +1370,7 @@ namespace wiSceneSystem
 					PHYSICS::PhysicsTransform* pt = physicsEngine->getObject(rigidbody.physicsObjectID);
 					transform.translation_local = pt->position;
 					transform.rotation_local = pt->rotation;
-					transform.dirty = true;
+					transform.SetDirty();
 				}
 
 			}
@@ -1401,7 +1382,7 @@ namespace wiSceneSystem
 				Entity entity = softbodies.GetEntity(i);
 
 				MeshComponent& mesh = *meshes.GetComponent(entity);
-				mesh.dynamicVB = true;
+				mesh.SetDynamic(true);
 
 			}
 
@@ -1489,7 +1470,7 @@ namespace wiSceneSystem
 				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
 				material.texAnimSleep = 1.0f;
 
-				material.dirty = true; // will trigger constant buffer update!
+				material.SetDirty(); // will trigger constant buffer update!
 			}
 
 			material.engineStencilRef = STENCILREF_DEFAULT;
@@ -1535,7 +1516,7 @@ namespace wiSceneSystem
 					aabb = mesh->aabb.get(transform->world);
 					sceneBounds = AABB::Merge(sceneBounds, aabb);
 
-					if (mesh->IsSkinned() || mesh->IsDynamicVB())
+					if (mesh->IsSkinned() || mesh->IsDynamic())
 					{
 						object.dynamic = true;
 					}
@@ -1563,7 +1544,7 @@ namespace wiSceneSystem
 								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 
-							object.cast_shadow |= material->cast_shadow;
+							object.cast_shadow |= material->IsCastingShadow();
 						}
 					}
 				}

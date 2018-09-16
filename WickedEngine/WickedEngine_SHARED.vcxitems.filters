@@ -1925,6 +1925,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem.cpp">
       <Filter>ENGINE\System</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_Serializers.cpp">
+      <Filter>ENGINE\System</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">

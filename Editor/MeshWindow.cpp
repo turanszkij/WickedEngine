@@ -38,7 +38,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			mesh->doubleSided = args.bValue;
+			mesh->SetDoubleSided(args.bValue);
 		}
 	});
 	meshWindow->AddWidget(doubleSidedCheckBox);
@@ -200,7 +200,7 @@ void MeshWindow::SetEntity(Entity entity)
 		ss << "Subset count: " << mesh->subsets.size() << endl;
 		meshInfoLabel->SetText(ss.str());
 
-		doubleSidedCheckBox->SetCheck(mesh->doubleSided);
+		doubleSidedCheckBox->SetCheck(mesh->IsDoubleSided());
 		impostorDistanceSlider->SetValue(mesh->impostorDistance);
 		tessellationFactorSlider->SetValue(mesh->GetTessellationFactor());
 

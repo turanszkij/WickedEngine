@@ -786,4 +786,15 @@ void wiEmittedParticle::CleanUpStatic()
 	SAFE_DELETE(simulateCS_SORTING_DEPTHCOLLISIONS);
 }
 
+
+void wiEmittedParticle::Serialize(wiArchive& archive)
+{
+	if (archive.IsReadMode())
+	{
+	}
+	else
+	{
+	}
+}
+
 }

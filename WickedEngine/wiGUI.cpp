@@ -8,7 +8,7 @@ using namespace std;
 
 wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
-	dirty = true;
+	SetDirty();
 	scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 	UpdateTransform();
@@ -29,7 +29,7 @@ void wiGUI::Update(float dt)
 
 	if (wiRenderer::GetDevice()->ResolutionChanged())
 	{
-		dirty = true;
+		SetDirty();
 		scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
 		scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 		UpdateTransform();

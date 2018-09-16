@@ -206,7 +206,6 @@
     <ClCompile Include="MeshWindow.cpp" />
     <ClCompile Include="ModelImporter_GLTF.cpp" />
     <ClCompile Include="ModelImporter_OBJ.cpp" />
-    <ClCompile Include="ModelImporter_WIO.cpp" />
     <ClCompile Include="ObjectWindow.cpp" />
     <ClCompile Include="OceanWindow.cpp" />
     <ClCompile Include="PostprocessWindow.cpp" />
