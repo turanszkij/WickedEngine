@@ -1573,7 +1573,7 @@ void GraphicsDevice_DX11::CreateBackBufferResources()
 
 void GraphicsDevice_DX11::SetResolution(int width, int height)
 {
-	if (width != SCREENWIDTH || height != SCREENHEIGHT)
+	if ((width != SCREENWIDTH || height != SCREENHEIGHT) && width > 0 && height > 0)
 	{
 		SCREENWIDTH = width;
 		SCREENHEIGHT = height;
