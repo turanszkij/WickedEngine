@@ -25,8 +25,8 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 		EnvironmentProbeComponent* probe = wiRenderer::GetScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
-			probe->realTime = args.bValue;
-			probe->isUpToDate = false;
+			probe->SetRealTime(args.bValue);
+			probe->SetDirty();
 		}
 	});
 	envProbeWindow->AddWidget(realTimeCheckBox);
@@ -47,7 +47,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 		EnvironmentProbeComponent* probe = wiRenderer::GetScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
-			probe->isUpToDate = false;
+			probe->SetDirty();
 		}
 	});
 	envProbeWindow->AddWidget(refreshButton);
@@ -60,7 +60,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			EnvironmentProbeComponent& probe = scene.probes[i];
-			probe.isUpToDate = false;
+			probe.SetDirty();
 		}
 	});
 	envProbeWindow->AddWidget(refreshAllButton);
@@ -95,7 +95,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 	}
 	else
 	{
-		realTimeCheckBox->SetCheck(probe->realTime);
+		realTimeCheckBox->SetCheck(probe->IsRealTime());
 		realTimeCheckBox->SetEnabled(true);
 		refreshButton->SetEnabled(true);
 	}

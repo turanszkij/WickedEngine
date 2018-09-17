@@ -479,7 +479,7 @@ void EditorComponent::Load()
 
 
 	wiButton* saveButton = new wiButton("Save");
-	saveButton->SetTooltip("Save the current scene as a model");
+	saveButton->SetTooltip("Save the current scene");
 	saveButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 5, 0));
 	saveButton->SetSize(XMFLOAT2(100, 40));
 	saveButton->SetColor(wiColor(0, 198, 101, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -498,7 +498,7 @@ void EditorComponent::Load()
 		// use the contents of szFile to initialize itself.
 		ofn.lpstrFile[0] = '\0';
 		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFilter = "Wicked Model Format\0*.wimf\0";
+		ofn.lpstrFilter = "Wicked Scene\0*.wiscene\0";
 		ofn.nFilterIndex = 1;
 		ofn.lpstrFileTitle = NULL;
 		ofn.nMaxFileTitle = 0;
@@ -506,35 +506,16 @@ void EditorComponent::Load()
 		ofn.Flags = OFN_OVERWRITEPROMPT;
 		if (GetSaveFileNameA(&ofn) == TRUE) {
 			string fileName = ofn.lpstrFile;
-			if (fileName.substr(fileName.length() - 5).compare(".wimf") != 0)
+			if (fileName.substr(fileName.length() - 8).compare(".wiscene") != 0)
 			{
-				fileName += ".wimf";
+				fileName += ".wiscene";
 			}
 			wiArchive archive(fileName, false);
 			if (archive.IsOpen())
 			{
-				const Scene& scene = wiRenderer::GetScene();
+				Scene& scene = wiRenderer::GetScene();
 
-				//Model* fullModel = new Model;
-				//for(auto& x : scene.models)
-				//{
-				//	if (x != nullptr)
-				//	{
-				//		fullModel->Add(x);
-				//	}
-				//}
-				//fullModel->Serialize(archive);
-
-				//// Clear out the temporary model so that resources won't be deleted on destruction:
-				//fullModel->objects.clear();
-				//fullModel->lights.clear();
-				//fullModel->decals.clear();
-				//fullModel->meshes.clear();
-				//fullModel->materials.clear();
-				//fullModel->armatures.clear();
-				//fullModel->forces.clear();
-				//fullModel->environmentProbes.clear();
-				//SAFE_DELETE(fullModel);
+				scene.Serialize(archive);
 
 				ResetHistory();
 			}
@@ -548,7 +529,7 @@ void EditorComponent::Load()
 
 
 	wiButton* modelButton = new wiButton("Load Model");
-	modelButton->SetTooltip("Load a model into the editor...");
+	modelButton->SetTooltip("Load a scene / import model into the editor...");
 	modelButton->SetPos(XMFLOAT2(screenW - 50 - 55 - 105 * 4, 0));
 	modelButton->SetSize(XMFLOAT2(100, 40));
 	modelButton->SetColor(wiColor(0, 89, 255, 200), wiWidget::WIDGETSTATE::IDLE);
@@ -566,7 +547,7 @@ void EditorComponent::Load()
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Model Formats\0*.obj;*.gltf;*.glb\0";
+			ofn.lpstrFilter = "Model Formats\0*.wiscene;*.obj;*.gltf;*.glb\0";
 			ofn.nFilterIndex = 1;
 			ofn.lpstrFileTitle = NULL;
 			ofn.nMaxFileTitle = 0;
@@ -579,7 +560,13 @@ void EditorComponent::Load()
 				loader->addLoadingFunction([=] {
 					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
-					if (!extension.compare("OBJ")) // wavefront-obj
+					if (!extension.compare("WISCENE")) // engine-serialized
+					{
+						wiArchive archive(fileName, true);
+						Scene& scene = wiRenderer::GetScene();
+						scene.Serialize(archive);
+					}
+					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
 						ImportModel_OBJ(fileName);
 					}
@@ -646,29 +633,6 @@ void EditorComponent::Load()
 	shaderButton->SetColor(wiColor(255, 33, 140, 200), wiWidget::WIDGETSTATE::IDLE);
 	shaderButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	shaderButton->OnClick([=](wiEventArgs args) {
-		//thread([&] {
-		//	char szFile[260];
-
-		//	OPENFILENAMEA ofn;
-		//	ZeroMemory(&ofn, sizeof(ofn));
-		//	ofn.lStructSize = sizeof(ofn);
-		//	ofn.hwndOwner = nullptr;
-		//	ofn.lpstrFile = szFile;
-		//	// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-		//	// use the contents of szFile to initialize itself.
-		//	ofn.lpstrFile[0] = '\0';
-		//	ofn.nMaxFile = sizeof(szFile);
-		//	ofn.lpstrFilter = "Compiled shader object file\0*.cso\0";
-		//	ofn.nFilterIndex = 1;
-		//	ofn.lpstrFileTitle = NULL;
-		//	ofn.nMaxFileTitle = 0;
-		//	ofn.lpstrInitialDir = NULL;
-		//	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-		//	if (GetOpenFileNameA(&ofn) == TRUE) {
-		//		string fileName = ofn.lpstrFile;
-		//		wiRenderer::ReloadShaders(wiHelper::GetDirectoryFromPath(fileName));
-		//	}
-		//}).detach();
 
 		wiRenderer::ReloadShaders();
 

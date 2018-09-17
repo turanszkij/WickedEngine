@@ -124,7 +124,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		Scene& scene = wiRenderer::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			scene.probes[i].isUpToDate = false;
+			scene.probes[i].SetDirty();
 		}
 
 	});
@@ -154,7 +154,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			scene.probes[i].isUpToDate = false;
+			scene.probes[i].SetDirty();
 		}
 
 	});
@@ -179,7 +179,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			scene.probes[i].isUpToDate = false;
+			scene.probes[i].SetDirty();
 		}
 
 	});
@@ -204,7 +204,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			scene.probes[i].isUpToDate = false;
+			scene.probes[i].SetDirty();
 		}
 
 	});
@@ -229,7 +229,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			scene.probes[i].isUpToDate = false;
+			scene.probes[i].SetDirty();
 		}
 
 	});

@@ -356,9 +356,27 @@ void wiHairParticle::Serialize(wiArchive& archive)
 {
 	if (archive.IsReadMode())
 	{
+		archive >> _flags;
+		archive >> meshID;
+		archive >> strandCount;
+		archive >> segmentCount;
+		archive >> randomSeed;
+		archive >> length;
+		archive >> stiffness;
+		archive >> randomness;
+		archive >> viewDistance;
 	}
 	else
 	{
+		archive << _flags;
+		archive << meshID;
+		archive << strandCount;
+		archive << segmentCount;
+		archive << randomSeed;
+		archive << length;
+		archive << stiffness;
+		archive << randomness;
+		archive << viewDistance;
 	}
 }
 

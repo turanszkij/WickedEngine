@@ -205,14 +205,14 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 
 void wiEmittedParticle::Update(float dt)
 {
-	if (PAUSED)
+	if (IsPaused())
 		return;
 
 	emit += (float)count*dt;
 }
 void wiEmittedParticle::Burst(float num)
 {
-	if (PAUSED)
+	if (IsPaused())
 		return;
 
 	emit += num;
@@ -220,7 +220,7 @@ void wiEmittedParticle::Burst(float num)
 void wiEmittedParticle::Restart()
 {
 	buffersUpToDate = false;
-	PAUSED = false;
+	SetPaused(false);
 }
 
 //#define DEBUG_SORTING // slow but great for debug!!
@@ -231,7 +231,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 
-	if (!PAUSED)
+	if (!IsPaused())
 	{
 
 		device->EventBegin("UpdateEmittedParticles", threadID);
@@ -268,7 +268,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		cb.xSPH_K = SPH_K;
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;
-		cb.xSPH_ENABLED = SPH_FLUIDSIMULATION ? 1 : 0;
+		cb.xSPH_ENABLED = IsSPHEnabled() ? 1 : 0;
 
 		device->UpdateBuffer(constantBuffer.get(), &cb, threadID);
 		device->BindConstantBuffer(CS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
@@ -311,7 +311,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		device->EventEnd(threadID);
 
-		if (SPH_FLUIDSIMULATION)
+		if (IsSPHEnabled())
 		{
 			wiProfiler::GetInstance().BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
 
@@ -420,9 +420,9 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 		// update CURRENT alive list, write NEW alive list
-		if (SORTING)
+		if (IsSorted())
 		{
-			if (DEPTHCOLLISIONS)
+			if (IsDepthCollisionEnabled())
 			{
 				device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
 			}
@@ -433,7 +433,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		}
 		else
 		{
-			if (DEPTHCOLLISIONS)
+			if (IsDepthCollisionEnabled())
 			{
 				device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
 			}
@@ -454,7 +454,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 
 	}
 
-	if (SORTING)
+	if (IsSorted())
 	{
 #ifdef DEBUG_SORTING
 		vector<uint32_t> before(MAX_PARTICLES);
@@ -522,7 +522,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 #endif // DEBUG_SORTING
 	}
 
-	if (!PAUSED)
+	if (!IsPaused())
 	{
 		// finish updating, update draw argument buffer:
 		device->EventBegin("FinishUpdate", threadID);
@@ -551,7 +551,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		emit -= (UINT)emit;
 	}
 
-	if (DEBUG)
+	if (IsDebug())
 	{
 		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, threadID);
 	}
@@ -791,9 +791,47 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 {
 	if (archive.IsReadMode())
 	{
+		archive >> _flags;
+		archive >> (uint32_t&)shaderType;
+		archive >> meshID;
+		archive >> FIXED_TIMESTEP;
+		archive >> size;
+		archive >> random_factor;
+		archive >> normal_factor;
+		archive >> count;
+		archive >> life;
+		archive >> random_life;
+		archive >> scaleX;
+		archive >> scaleY;
+		archive >> rotation;
+		archive >> motionBlurAmount;
+		archive >> mass;
+		archive >> SPH_h;
+		archive >> SPH_K;
+		archive >> SPH_p0;
+		archive >> SPH_e;
 	}
 	else
 	{
+		archive << _flags;
+		archive << (uint32_t)shaderType;
+		archive << meshID;
+		archive << FIXED_TIMESTEP;
+		archive << size;
+		archive << random_factor;
+		archive << normal_factor;
+		archive << count;
+		archive << life;
+		archive << random_life;
+		archive << scaleX;
+		archive << scaleY;
+		archive << rotation;
+		archive << motionBlurAmount;
+		archive << mass;
+		archive << SPH_h;
+		archive << SPH_K;
+		archive << SPH_p0;
+		archive << SPH_e;
 	}
 }
 

@@ -31,7 +31,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
-			object->renderable = args.bValue;
+			object->SetRenderable(args.bValue);
 		}
 	});
 	objectWindow->AddWidget(renderableCheckBox);
@@ -57,7 +57,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
-			object->cascadeMask = args.iValue;
+			object->cascadeMask = (uint32_t)args.iValue;
 		}
 	});
 	objectWindow->AddWidget(cascadeMaskSlider);
@@ -208,7 +208,7 @@ void ObjectWindow::SetEntity(Entity entity)
 
 	if (object != nullptr)
 	{
-		renderableCheckBox->SetCheck(object->renderable);
+		renderableCheckBox->SetCheck(object->IsRenderable());
 		cascadeMaskSlider->SetValue((float)object->cascadeMask);
 		ditherSlider->SetValue(object->GetTransparency());
 

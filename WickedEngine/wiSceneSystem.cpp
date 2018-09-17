@@ -47,7 +47,7 @@ namespace wiSceneSystem
 	{
 		if (IsDirty())
 		{
-			SetClean();
+			SetDirty(false);
 
 			XMVECTOR S_local = XMLoadFloat3(&scale_local);
 			XMVECTOR R_local = XMLoadFloat4(&rotation_local);
@@ -261,9 +261,8 @@ namespace wiSceneSystem
 			uint32_t counter = 0;
 			uint8_t stride;
 			void* gpuIndexData;
-			if (vertex_positions.size() > 65535)
+			if (GetIndexFormat() == INDEXFORMAT_32BIT)
 			{
-				indexFormat = INDEXFORMAT_32BIT;
 				gpuIndexData = new uint32_t[indices.size()];
 				stride = sizeof(uint32_t);
 
@@ -275,7 +274,6 @@ namespace wiSceneSystem
 			}
 			else
 			{
-				indexFormat = INDEXFORMAT_16BIT;
 				gpuIndexData = new uint16_t[indices.size()];
 				stride = sizeof(uint16_t);
 
@@ -780,7 +778,7 @@ namespace wiSceneSystem
 
 		RunCameraUpdateSystem(transforms, cameras);
 
-		RunDecalUpdateSystem(transforms, aabb_decals, decals);
+		RunDecalUpdateSystem(transforms, materials, aabb_decals, decals);
 
 		RunProbeUpdateSystem(transforms, aabb_probes, probes);
 
@@ -1005,10 +1003,7 @@ namespace wiSceneSystem
 
 		aabb_probes.Create(entity);
 
-		EnvironmentProbeComponent& probe = probes.Create(entity);
-		probe.isUpToDate = false;
-		probe.realTime = false;
-		probe.textureIndex = -1;
+		probes.Create(entity);
 
 		return entity;
 	}
@@ -1030,17 +1025,19 @@ namespace wiSceneSystem
 
 		aabb_decals.Create(entity);
 
-		DecalComponent& decal = decals.Create(entity);
-		decal.textureName = textureName;
-		decal.normalMapName = normalMapName;
+		decals.Create(entity);
 
-		if (!decal.textureName.empty())
+		MaterialComponent& material = materials.Create(entity);
+
+		if (!textureName.empty())
 		{
-			decal.texture = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.textureName);
+			material.baseColorMapName = textureName;
+			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.baseColorMapName);
 		}
-		if (!decal.normalMapName.empty())
+		if (!normalMapName.empty())
 		{
-			decal.normal = (Texture2D*)wiResourceManager::GetGlobal()->add(decal.normalMapName);
+			material.normalMapName = normalMapName;
+			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.normalMapName);
 		}
 
 		return entity;
@@ -1219,7 +1216,7 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < animations.GetCount(); ++i)
 		{
 			AnimationComponent& animation = animations[i];
-			if (!animation.playing && animation.timer == 0.0f)
+			if (!animation.IsPlaying() && animation.timer == 0.0f)
 			{
 				continue;
 			}
@@ -1326,12 +1323,12 @@ namespace wiSceneSystem
 
 			}
 
-			if (animation.playing)
+			if (animation.IsPlaying())
 			{
 				animation.timer += dt;
 			}
 
-			if (animation.looped && animation.timer > animation.length)
+			if (animation.IsLooped() && animation.timer > animation.length)
 			{
 				animation.timer = 0.0f;
 			}
@@ -1503,8 +1500,8 @@ namespace wiSceneSystem
 
 			aabb.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 			object.rendertypeMask = 0;
-			object.dynamic = false;
-			object.cast_shadow = false;
+			object.SetDynamic(false);
+			object.SetCastShadow(false);
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -1518,7 +1515,7 @@ namespace wiSceneSystem
 
 					if (mesh->IsSkinned() || mesh->IsDynamic())
 					{
-						object.dynamic = true;
+						object.SetDynamic(true);
 					}
 
 					for (auto& subset : mesh->subsets)
@@ -1544,7 +1541,7 @@ namespace wiSceneSystem
 								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 
-							object.cast_shadow |= material->IsCastingShadow();
+							object.SetCastShadow(material->IsCastingShadow());
 						}
 					}
 				}
@@ -1566,6 +1563,7 @@ namespace wiSceneSystem
 	}
 	void RunDecalUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
+		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<AABB>& aabb_decals,
 		ComponentManager<DecalComponent>& decals
 	)
@@ -1594,6 +1592,12 @@ namespace wiSceneSystem
 			AABB& aabb = aabb_decals[i];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.get(transform.world);
+
+			const MaterialComponent& material = *materials.GetComponent(entity);
+			decal.color = material.baseColor;
+			decal.emissive = material.emissive;
+			decal.texture = material.GetBaseColorMap();
+			decal.normal = material.GetNormalMap();
 		}
 	}
 	void RunProbeUpdateSystem(
@@ -1672,7 +1676,7 @@ namespace wiSceneSystem
 				sunDirection = light.direction;
 				sunColor = light.color;
 
-				if (light.shadow)
+				if (light.IsCastingShadow())
 				{
 					XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 					float nearPlane = cascadeCamera.zNearP;
@@ -1744,7 +1748,7 @@ namespace wiSceneSystem
 			break;
 			case LightComponent::SPOT:
 			{
-				if (light.shadow)
+				if (light.IsCastingShadow())
 				{
 					if (light.shadowCam_spotLight.empty())
 					{
@@ -1764,7 +1768,7 @@ namespace wiSceneSystem
 			case LightComponent::RECTANGLE:
 			case LightComponent::TUBE:
 			{
-				if (light.shadow)
+				if (light.IsCastingShadow())
 				{
 					if (light.shadowCam_pointLight.empty())
 					{

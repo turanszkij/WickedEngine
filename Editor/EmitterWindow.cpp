@@ -94,7 +94,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->SORTING = args.bValue;
+			emitter->SetSorted(args.bValue);
 		}
 	});
 	sortCheckBox->SetCheck(false);
@@ -108,7 +108,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->DEPTHCOLLISIONS = args.bValue;
+			emitter->SetDepthCollisionEnabled(args.bValue);
 		}
 	});
 	depthCollisionsCheckBox->SetCheck(false);
@@ -122,7 +122,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->SPH_FLUIDSIMULATION = args.bValue;
+			emitter->SetSPHEnabled(args.bValue);
 		}
 	});
 	sphCheckBox->SetCheck(false);
@@ -136,7 +136,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->PAUSED = args.bValue;
+			emitter->SetPaused(args.bValue);
 		}
 	});
 	pauseCheckBox->SetCheck(false);
@@ -150,7 +150,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->DEBUG = args.bValue;
+			emitter->SetDebug(args.bValue);
 		}
 	});
 	debugCheckBox->SetCheck(false);
@@ -429,7 +429,7 @@ void EmitterWindow::SetEntity(Entity entity)
 	// first try to turn off any debug readbacks for emitters:
 	if (GetEmitter() != nullptr)
 	{
-		GetEmitter()->DEBUG = false;
+		GetEmitter()->SetDebug(false);
 	}
 	debugCheckBox->SetCheck(false);
 
@@ -439,10 +439,10 @@ void EmitterWindow::SetEntity(Entity entity)
 
 	if (emitter != nullptr)
 	{
-		sortCheckBox->SetCheck(emitter->SORTING);
-		depthCollisionsCheckBox->SetCheck(emitter->DEPTHCOLLISIONS);
-		sphCheckBox->SetCheck(emitter->SPH_FLUIDSIMULATION);
-		pauseCheckBox->SetCheck(emitter->PAUSED);
+		sortCheckBox->SetCheck(emitter->IsSorted());
+		depthCollisionsCheckBox->SetCheck(emitter->IsDepthCollisionEnabled());
+		sphCheckBox->SetCheck(emitter->IsSPHEnabled());
+		pauseCheckBox->SetCheck(emitter->IsPaused());
 		maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
 		emitCountSlider->SetValue(emitter->count);

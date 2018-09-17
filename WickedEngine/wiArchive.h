@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include <string>
+#include <vector>
 
 class wiArchive
 {
@@ -123,11 +124,37 @@ public:
 		_write(data);
 		return *this;
 	}
+	inline wiArchive& operator<<(const XMUINT2& data)
+	{
+		_write(data);
+		return *this;
+	}
+	inline wiArchive& operator<<(const XMUINT3& data)
+	{
+		_write(data);
+		return *this;
+	}
+	inline wiArchive& operator<<(const XMUINT4& data)
+	{
+		_write(data);
+		return *this;
+	}
 	inline wiArchive& operator<<(const std::string& data)
 	{
 		uint64_t len = (uint64_t)(data.length() + 1); // +1 for the null-terminator
 		_write(len);
 		_write(*data.c_str(), len);
+		return *this;
+	}
+	template<typename T>
+	inline wiArchive& operator<<(const std::vector<T>& data)
+	{
+		// Here we will use the << operator so that non-specified types will have compile error!
+		(*this) << data.size();
+		for (const T& x : data)
+		{
+			(*this) << x;
+		}
 		return *this;
 	}
 
@@ -235,6 +262,21 @@ public:
 		_read(data);
 		return *this;
 	}
+	inline wiArchive& operator >> (XMUINT2& data)
+	{
+		_read(data);
+		return *this;
+	}
+	inline wiArchive& operator >> (XMUINT3& data)
+	{
+		_read(data);
+		return *this;
+	}
+	inline wiArchive& operator >> (XMUINT4& data)
+	{
+		_read(data);
+		return *this;
+	}
 	inline wiArchive& operator >> (std::string& data)
 	{
 		uint64_t len;
@@ -244,6 +286,19 @@ public:
 		_read(*str, len);
 		data = std::string(str);
 		delete[] str;
+		return *this;
+	}
+	template<typename T>
+	inline wiArchive& operator >> (std::vector<T>& data)
+	{
+		// Here we will use the >> operator so that non-specified types will have compile error!
+		size_t count;
+		(*this) >> count;
+		data.resize(count);
+		for (size_t i = 0; i < count; ++i)
+		{
+			(*this) >> data[i];
+		}
 		return *this;
 	}
 

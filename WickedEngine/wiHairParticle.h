@@ -38,15 +38,23 @@ public:
 	static void CleanUpStatic();
 	static void SetUpStatic();
 
+	enum FLAGS
+	{
+		EMPTY = 0,
+	};
+	uint32_t _flags = EMPTY;
+
+	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
+
 	uint32_t strandCount = 0;
+	uint32_t segmentCount = 1;
+	uint32_t randomSeed = 1;
 	float length = 1.0f;
 	float stiffness = 10.0f;
 	float randomness = 0.2f;
-	uint32_t segmentCount = 1;
-	uint32_t randomSeed = 1;
 	float viewDistance = 200;
 
-	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
+	// Non-serialized attributes:
 	XMFLOAT4X4 world;
 	AABB aabb;
 

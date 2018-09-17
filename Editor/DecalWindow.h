@@ -17,8 +17,8 @@ public:
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
+	wiTextInputField*	decalNameField;
+
 	wiWindow*	decalWindow;
-	wiSlider*	opacitySlider;
-	wiSlider*	emissiveSlider;
 };
 

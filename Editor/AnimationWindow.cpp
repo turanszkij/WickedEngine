@@ -38,7 +38,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 		AnimationComponent* animation = wiRenderer::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
-			animation->looped = args.bValue;
+			animation->SetLooped(args.bValue);
 		}
 	});
 	animWindow->AddWidget(loopedCheckBox);

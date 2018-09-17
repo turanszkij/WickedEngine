@@ -55,10 +55,10 @@ namespace wiSceneSystem
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
+		// Non-serialized attributes:
 		XMFLOAT4X4 world = IDENTITYMATRIX;
 
-		inline void SetDirty() { _flags |= DIRTY; }
-		inline void SetClean() { _flags &= ~DIRTY; }
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
 		XMFLOAT3 GetPosition() const;
@@ -85,6 +85,7 @@ namespace wiSceneSystem
 
 	struct PreviousFrameTransformComponent
 	{
+		// Non-serialized attributes:
 		XMFLOAT4X4 world_prev;
 
 		void Serialize(wiArchive& archive);
@@ -133,17 +134,15 @@ namespace wiSceneSystem
 		float texAnimSleep = 0.0f;
 
 		std::string baseColorMapName;
-		wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
-
 		std::string surfaceMapName;
-		wiGraphicsTypes::Texture2D* surfaceMap = nullptr;
-
 		std::string normalMapName;
-		wiGraphicsTypes::Texture2D* normalMap = nullptr;
-
 		std::string displacementMapName;
-		wiGraphicsTypes::Texture2D* displacementMap = nullptr;
 
+		// Non-serialized attributes:
+		wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
+		wiGraphicsTypes::Texture2D* surfaceMap = nullptr;
+		wiGraphicsTypes::Texture2D* normalMap = nullptr;
+		wiGraphicsTypes::Texture2D* displacementMap = nullptr;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 
 		inline void SetUserStencilRef(uint8_t value)
@@ -195,6 +194,66 @@ namespace wiSceneSystem
 
 	struct MeshComponent
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			RENDERABLE = 1 << 0,
+			DOUBLE_SIDED = 1 << 1,
+			DYNAMIC = 1 << 2,
+		};
+		uint32_t _flags = RENDERABLE;
+
+		std::vector<XMFLOAT3>		vertex_positions;
+		std::vector<XMFLOAT3>		vertex_normals;
+		std::vector<XMFLOAT2>		vertex_texcoords;
+		std::vector<XMUINT4>		vertex_boneindices;
+		std::vector<XMFLOAT4>		vertex_boneweights;
+		std::vector<uint32_t>		indices;
+
+		struct MeshSubset
+		{
+			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
+			uint32_t indexOffset = 0;
+			uint32_t indexCount = 0;
+		};
+		std::vector<MeshSubset>		subsets;
+
+		float tessellationFactor = 0.0f;
+		float impostorDistance = 100.0f;
+		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
+
+		// Non-serialized attributes:
+		AABB aabb;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	indexBuffer;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_POS;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_TEX;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
+		wiRenderTarget impostorTarget;
+
+
+		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
+		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
+		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
+
+		inline bool IsRenderable() const { return _flags & RENDERABLE; }
+		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+		inline bool IsDynamic() const { return _flags & DYNAMIC; }
+
+		bool HasImpostor() const { return impostorTarget.IsInitialized(); }
+		inline float GetTessellationFactor() const { return tessellationFactor; }
+		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphicsTypes::INDEXFORMAT_32BIT : wiGraphicsTypes::INDEXFORMAT_16BIT; }
+		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
+
+		void CreateRenderData();
+		void ComputeNormals(bool smooth);
+		void FlipCulling();
+		void FlipNormals();
+
+		void Serialize(wiArchive& archive);
+
+
 		struct Vertex_POS
 		{
 			XMFLOAT3 pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -306,78 +365,25 @@ namespace wiSceneSystem
 			}
 		};
 
-		enum FLAGS
-		{
-			EMPTY = 0,
-			RENDERABLE = 1 << 0,
-			DOUBLE_SIDED = 1 << 1,
-			DYNAMIC = 1 << 2,
-		};
-		uint32_t _flags = RENDERABLE;
-
-		std::vector<XMFLOAT3>		vertex_positions;
-		std::vector<XMFLOAT3>		vertex_normals;
-		std::vector<XMFLOAT2>		vertex_texcoords;
-		std::vector<XMUINT4>		vertex_boneindices;
-		std::vector<XMFLOAT4>		vertex_boneweights;
-		std::vector<uint32_t>		indices;
-
-		struct MeshSubset
-		{
-			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
-			uint32_t indexOffset = 0;
-			uint32_t indexCount = 0;
-		};
-		std::vector<MeshSubset>		subsets;
-
-		wiGraphicsTypes::INDEXBUFFER_FORMAT indexFormat = wiGraphicsTypes::INDEXFORMAT_16BIT;
-
-		AABB aabb;
-		float tessellationFactor = 0.0f;
-		float impostorDistance = 100.0f;
-		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
-
-
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	indexBuffer;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_POS;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_TEX;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
-		wiRenderTarget	impostorTarget;
-
-
-		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
-		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
-		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
-
-		inline bool IsRenderable() const { return _flags & RENDERABLE; }
-		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
-		inline bool IsDynamic() const { return _flags & DYNAMIC; }
-
-		bool HasImpostor() const { return impostorTarget.IsInitialized(); }
-		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return indexFormat; }
-		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
-
-		void CreateRenderData();
-		void ComputeNormals(bool smooth);
-		void FlipCulling();
-		void FlipNormals();
-
-		void Serialize(wiArchive& archive);
 	};
 
 	struct ObjectComponent
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			RENDERABLE = 1 << 0,
+			CAST_SHADOW = 1 << 1,
+			DYNAMIC = 1 << 2,
+		};
+		uint32_t _flags = RENDERABLE | CAST_SHADOW;
+
 		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
-		bool renderable = true;
-		bool dynamic = false;
-		bool cast_shadow = false;
-		int cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
+		uint32_t cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
+		uint32_t rendertypeMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 
-		uint32_t rendertypeMask = 0;
+		// Non-serialized attributes:
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
@@ -392,8 +398,15 @@ namespace wiSceneSystem
 			// If it pops up for a frame after occluded, it is visible again for some frames
 			return ((occlusionQueryID >= 0) && (occlusionHistory & 0xFFFFFFFF) == 0);
 		}
-		inline bool IsDynamic() const { return dynamic; }
-		inline bool IsCastingShadow() const { return cast_shadow; }
+
+		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
+		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
+		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
+
+		inline bool IsRenderable() const { return _flags & RENDERABLE; }
+		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
+		inline bool IsDynamic() const { return _flags & DYNAMIC; }
+
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
 
@@ -402,40 +415,69 @@ namespace wiSceneSystem
 
 	struct RigidBodyPhysicsComponent
 	{
-		enum class CollisionShape
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DISABLE_DEACTIVATION = 1 << 0,
+			KINEMATIC = 1 << 1,
+		};
+		uint32_t _flags = EMPTY;
+
+		enum CollisionShape
 		{
 			BOX,
 			SPHERE,
 			CAPSULE,
 			CONVEX_HULL,
 			TRIANGLE_MESH,
+			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape;
-		int physicsObjectID = -1;
 		bool kinematic = false;
 		float mass = 1.0f;
 		float friction = 1.0f;
 		float restitution = 1.0f;
 		float damping = 1.0f;
 
+		// Non-serialized attributes:
+		int physicsObjectID = -1;
+
 		void Serialize(wiArchive& archive);
 	};
 
 	struct SoftBodyPhysicsComponent
 	{
-		int physicsObjectID = -1;
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DISABLE_DEACTIVATION = 1 << 0,
+		};
+		uint32_t _flags = EMPTY;
+
 		float mass = 1.0f;
 		float friction = 1.0f;
 		std::vector<XMFLOAT3> physicsvertices;
 		std::vector<uint32_t> physicsindices;
+
+		// Non-serialized attributes:
+		int physicsObjectID = -1;
 
 		void Serialize(wiArchive& archive);
 	};
 
 	struct ArmatureComponent
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
 		std::vector<wiECS::Entity> boneCollection;
 		std::vector<XMFLOAT4X4> inverseBindMatrices;
+		XMFLOAT4X4 remapMatrix = IDENTITYMATRIX; // Use this to eg. mirror the armature
+
+		// Non-serialized attributes:
 		std::vector<XMFLOAT4X4> skinningMatrices;
 
 		GFX_STRUCT ShaderBoneType
@@ -456,26 +498,66 @@ namespace wiSceneSystem
 		std::vector<ShaderBoneType> boneData;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> boneBuffer;
 
-		// Use this to eg. mirror the armature:
-		XMFLOAT4X4 remapMatrix = IDENTITYMATRIX;
-
 		void Serialize(wiArchive& archive);
 	};
 
 	struct LightComponent
 	{
-		enum LightType {
-			DIRECTIONAL			= ENTITY_TYPE_DIRECTIONALLIGHT,
-			POINT				= ENTITY_TYPE_POINTLIGHT,
-			SPOT				= ENTITY_TYPE_SPOTLIGHT,
-			SPHERE				= ENTITY_TYPE_SPHERELIGHT,
-			DISC				= ENTITY_TYPE_DISCLIGHT,
-			RECTANGLE			= ENTITY_TYPE_RECTANGLELIGHT,
-			TUBE				= ENTITY_TYPE_TUBELIGHT,
-			LIGHTTYPE_COUNT,
-		} type = POINT;
+		enum FLAGS
+		{
+			EMPTY = 0,
+			CAST_SHADOW = 1 << 0,
+			VOLUMETRICS = 1 << 1,
+			VISUALIZER = 1 << 2,
+		};
+		uint32_t _flags = EMPTY;
+		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
 
-		inline void SetType(LightType val) { 
+		enum LightType 
+		{
+			DIRECTIONAL = ENTITY_TYPE_DIRECTIONALLIGHT,
+			POINT = ENTITY_TYPE_POINTLIGHT,
+			SPOT = ENTITY_TYPE_SPOTLIGHT,
+			SPHERE = ENTITY_TYPE_SPHERELIGHT,
+			DISC = ENTITY_TYPE_DISCLIGHT,
+			RECTANGLE = ENTITY_TYPE_RECTANGLELIGHT,
+			TUBE = ENTITY_TYPE_TUBELIGHT,
+			LIGHTTYPE_COUNT,
+			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
+		};
+		LightType type = POINT;
+		float energy = 1.0f;
+		float range = 10.0f;
+		float fov = XM_PIDIV4;
+		float shadowBias = 0.0001f;
+		float radius = 1.0f; // area light
+		float width = 1.0f;  // area light
+		float height = 1.0f; // area light
+
+		std::vector<std::string> lensFlareNames;
+
+		// Non-serialized attributes:
+		XMFLOAT3 position;
+		XMFLOAT3 direction;
+		XMFLOAT4 rotation;
+		XMFLOAT3 front;
+		XMFLOAT3 right;
+		int shadowMap_index = -1;
+		int entityArray_index = -1;
+
+		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
+
+		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
+		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
+		inline void SetVisualizerEnabled(bool value) { if (value) { _flags |= VISUALIZER; } else { _flags &= ~VISUALIZER; } }
+
+		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
+		inline bool IsVolumetricsEnabled() const { return _flags & VOLUMETRICS; }
+		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
+
+		inline float GetRange() const { return range; }
+
+		inline void SetType(LightType val) {
 			type = val;
 			switch (type)
 			{
@@ -494,34 +576,6 @@ namespace wiSceneSystem
 			}
 		}
 		inline LightType GetType() const { return type; }
-
-		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
-		float energy = 1.0f;
-		float range = 10.0f;
-		float fov = XM_PIDIV4;
-		bool volumetrics = false;
-		bool visualizer = false;
-		bool shadow = false;
-		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
-		std::vector<std::string> lensFlareNames;
-
-		XMFLOAT3 position;
-		XMFLOAT3 direction;
-		XMFLOAT4 rotation;
-
-		int shadowMap_index = -1;
-		int entityArray_index = -1;
-
-		float shadowBias = 0.0001f;
-
-		// area light props:
-		float radius = 1.0f;
-		float width = 1.0f;
-		float height = 1.0f;
-		XMFLOAT3 front;
-		XMFLOAT3 right;
-
-		inline float GetRange() const { return range; }
 
 		struct SHCAM 
 		{
@@ -618,9 +672,19 @@ namespace wiSceneSystem
 
 	struct CameraComponent
 	{
-		float width = 0.0f, height = 0.0f;
-		float zNearP = 0.001f, zFarP = 800.0f;
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		float width = 0.0f;
+		float height = 0.0f;
+		float zNearP = 0.001f;
+		float zFarP = 800.0f;
 		float fov = XM_PI / 3.0f;
+
+		// Non-serialized attributes:
 		XMFLOAT3 Eye, At, Up;
 		XMFLOAT3X3 rotationMatrix;
 		XMFLOAT4X4 View, Projection, VP;
@@ -650,21 +714,42 @@ namespace wiSceneSystem
 
 	struct EnvironmentProbeComponent
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DIRTY = 1 << 0,
+			REALTIME = 1 << 1,
+		};
+		uint32_t _flags = DIRTY;
+
+		// Non-serialized attributes:
 		int textureIndex = -1;
-		bool realTime = false;
-		bool isUpToDate = false;
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
+
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
+
+		inline bool IsDirty() const { return _flags & DIRTY; }
+		inline bool IsRealTime() const { return _flags & REALTIME; }
 
 		void Serialize(wiArchive& archive);
 	};
 
 	struct ForceFieldComponent
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
 		int type = ENTITY_TYPE_FORCEFIELD_POINT;
 		float gravity = 0.0f; // negative = deflector, positive = attractor
 		float range = 0.0f; // affection range
+
+		// Non-serialized attributes:
 		XMFLOAT3 position;
 		XMFLOAT3 direction;
 
@@ -673,19 +758,22 @@ namespace wiSceneSystem
 
 	struct DecalComponent
 	{
-		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
-		XMFLOAT4 atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		XMFLOAT4X4 world;
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
+		// Non-serialized attributes:
+		XMFLOAT4 color;
+		float emissive;
 		XMFLOAT3 front;
 		XMFLOAT3 position;
 		float range;
+		XMFLOAT4 atlasMulAdd;
+		XMFLOAT4X4 world;
 
-		float emissive = 0;
-
-		std::string textureName;
 		wiGraphicsTypes::Texture2D* texture = nullptr;
-
-		std::string normalMapName;
 		wiGraphicsTypes::Texture2D* normal = nullptr;
 
 		inline float GetOpacity() const { return color.w; }
@@ -695,37 +783,54 @@ namespace wiSceneSystem
 
 	struct AnimationComponent
 	{
-		bool playing = false;
-		bool looped = true;
-		float timer = 0.0f;
+		enum FLAGS
+		{
+			EMPTY = 0,
+			PLAYING = 1 << 0,
+			LOOPED = 1 << 1,
+		};
+		uint32_t _flags = LOOPED;
 		float length = 0.0f;
 
 		struct AnimationChannel
 		{
+			enum FLAGS
+			{
+				EMPTY = 0,
+			};
+			uint32_t _flags = EMPTY;
+
 			wiECS::Entity target = wiECS::INVALID_ENTITY;
-			enum class Type
+			enum Type
 			{
 				TRANSLATION,
 				ROTATION,
-				SCALE
-			} type = Type::TRANSLATION;
-			enum class Mode
+				SCALE,
+				TYPE_FORCE_UINT32 = 0xFFFFFFFF
+			} type = TRANSLATION;
+			enum Mode
 			{
 				LINEAR,
 				STEP,
-			} mode = Mode::LINEAR;
+				MODE_FORCE_UINT32 = 0xFFFFFFFF
+			} mode = LINEAR;
+
 			std::vector<float> keyframe_times;
 			std::vector<float> keyframe_data;
 		};
 
 		std::vector<AnimationChannel> channels;
 
-		inline bool IsPlaying() const { return playing; }
-		inline bool IsLooped() const { return looped; }
+		// Non-serialized attributes:
+		float timer = 0.0f;
 
-		inline void Play() { playing = true; }
-		inline void Pause() { playing = false; }
-		inline void Stop() { playing = false; timer = 0.0f; }
+		inline bool IsPlaying() const { return _flags & PLAYING; }
+		inline bool IsLooped() const { return _flags & LOOPED; }
+
+		inline void Play() { _flags |= PLAYING; }
+		inline void Pause() { _flags &= ~PLAYING; }
+		inline void Stop() { Pause(); timer = 0.0f; }
+		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
 		void Serialize(wiArchive& archive);
 	};
@@ -758,7 +863,6 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<wiEmittedParticle> emitters;
 		wiECS::ComponentManager<wiHairParticle> hairs;
 
-		AABB bounds;
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -767,13 +871,16 @@ namespace wiSceneSystem
 		float fogStart = 100;
 		float fogEnd = 1000;
 		float fogHeight = 0;
-		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 		float cloudiness = 0.0f;
 		float cloudScale = 0.0003f;
 		float cloudSpeed = 0.1f;
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
 		float windRandomness = 5;
 		float windWaveSize = 1;
+
+		// Non-serialized attributes:
+		AABB bounds;
+		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);
@@ -883,6 +990,7 @@ namespace wiSceneSystem
 	);
 	void RunDecalUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
+		const wiECS::ComponentManager<MaterialComponent>& materials,
 		wiECS::ComponentManager<AABB>& aabb_decals,
 		wiECS::ComponentManager<DecalComponent>& decals
 	);

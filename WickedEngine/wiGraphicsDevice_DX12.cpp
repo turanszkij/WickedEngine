@@ -2034,7 +2034,7 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_DX12::SetResolution(int width, int height)
 	{
-		if (width != SCREENWIDTH || height != SCREENHEIGHT)
+		if ((width != SCREENWIDTH || height != SCREENHEIGHT) && width > 0 && height > 0)
 		{
 			SCREENWIDTH = width;
 			SCREENHEIGHT = height;

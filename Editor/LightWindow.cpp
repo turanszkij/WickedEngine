@@ -125,7 +125,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->shadow = args.bValue;
+			light->SetCastShadow(args.bValue);
 		}
 	});
 	shadowCheckBox->SetEnabled(false);
@@ -138,7 +138,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->volumetrics = args.bValue;
+			light->SetVolumetricsEnabled(args.bValue);
 		}
 	});
 	volumetricsCheckBox->SetEnabled(false);
@@ -151,7 +151,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->visualizer = args.bValue;
+			light->SetVisualizerEnabled(args.bValue);
 		}
 	});
 	haloCheckBox->SetEnabled(false);
@@ -241,11 +241,11 @@ void LightWindow::SetEntity(Entity entity)
 		biasSlider->SetEnabled(true);
 		biasSlider->SetValue(light->shadowBias);
 		shadowCheckBox->SetEnabled(true);
-		shadowCheckBox->SetCheck(light->shadow);
+		shadowCheckBox->SetCheck(light->IsCastingShadow());
 		haloCheckBox->SetEnabled(true);
-		haloCheckBox->SetCheck(light->visualizer);
+		haloCheckBox->SetCheck(light->IsVisualizerEnabled());
 		volumetricsCheckBox->SetEnabled(true);
-		volumetricsCheckBox->SetCheck(light->volumetrics);
+		volumetricsCheckBox->SetCheck(light->IsVolumetricsEnabled());
 		colorPicker->SetEnabled(true);
 		typeSelectorComboBox->SetEnabled(true);
 		typeSelectorComboBox->SetSelected((int)light->GetType());

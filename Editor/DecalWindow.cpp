@@ -20,30 +20,17 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 	float x = 200;
 	float y = 0;
 
-	opacitySlider = new wiSlider(0, 1, 1, 100000, "Opacity: ");
-	opacitySlider->SetSize(XMFLOAT2(100, 30));
-	opacitySlider->SetPos(XMFLOAT2(x, y += 30));
-	opacitySlider->OnSlide([&](wiEventArgs args) {
-		DecalComponent* decal = wiRenderer::GetScene().decals.GetComponent(entity);
-		if (decal != nullptr)
+	decalNameField = new wiTextInputField("MaterialName");
+	decalNameField->SetPos(XMFLOAT2(10, 30));
+	decalNameField->SetSize(XMFLOAT2(300, 20));
+	decalNameField->OnInputAccepted([&](wiEventArgs args) {
+		NameComponent* name = wiRenderer::GetScene().names.GetComponent(entity);
+		if (name != nullptr)
 		{
-			decal->color.w = args.fValue;
+			*name = args.sValue;
 		}
 	});
-	decalWindow->AddWidget(opacitySlider);
-
-	emissiveSlider = new wiSlider(0, 100, 0, 100000, "Emissive: ");
-	emissiveSlider->SetSize(XMFLOAT2(100, 30));
-	emissiveSlider->SetPos(XMFLOAT2(x, y += 30));
-	emissiveSlider->OnSlide([&](wiEventArgs args) {
-		DecalComponent* decal = wiRenderer::GetScene().decals.GetComponent(entity);
-		if (decal != nullptr)
-		{
-			decal->emissive = args.fValue;
-		}
-	});
-	decalWindow->AddWidget(emissiveSlider);
-
+	decalWindow->AddWidget(decalNameField);
 
 	decalWindow->Translate(XMFLOAT3(30, 30, 0));
 	decalWindow->SetVisible(false);
@@ -66,16 +53,19 @@ void DecalWindow::SetEntity(Entity entity)
 
 	this->entity = entity;
 
-	const DecalComponent* decal = wiRenderer::GetScene().decals.GetComponent(entity);
+	Scene& scene = wiRenderer::GetScene();
+	const DecalComponent* decal = scene.decals.GetComponent(entity);
 
 	if (decal != nullptr)
 	{
-		opacitySlider->SetValue(decal->color.w);
-		emissiveSlider->SetValue(decal->emissive);
+		const NameComponent& name = *scene.names.GetComponent(entity);
+
+		decalNameField->SetValue(name.name);
 		decalWindow->SetEnabled(true);
 	}
 	else
 	{
+		decalNameField->SetValue("No decal selected");
 		decalWindow->SetEnabled(false);
 	}
 }

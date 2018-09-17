@@ -3026,7 +3026,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 					light.shadowMap_index = -1;
 
-					if (light.shadow)
+					if (light.IsCastingShadow())
 					{
 						switch (light.GetType())
 						{
@@ -3209,7 +3209,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				entityArray[entityCounter].directionWS = light.direction;
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (light.shadow && shadowIndex >= 0 && !light.shadowCam_dirLight.empty())
+				if (light.IsCastingShadow() && shadowIndex >= 0 && !light.shadowCam_dirLight.empty())
 				{
 					matrixArray[shadowIndex + 0] = light.shadowCam_dirLight[0].getVP();
 					matrixArray[shadowIndex + 1] = light.shadowCam_dirLight[1].getVP();
@@ -3225,7 +3225,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (light.shadow && shadowIndex >= 0 && !light.shadowCam_spotLight.empty())
+				if (light.IsCastingShadow() && shadowIndex >= 0 && !light.shadowCam_spotLight.empty())
 				{
 					matrixArray[shadowIndex + 0] = light.shadowCam_spotLight[0].getVP();
 					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 1);
@@ -3556,7 +3556,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		for (Entity entity : culling.culledObjects)
 		{
 			ObjectComponent& object = *scene.objects.GetComponent(entity);
-			if (!object.renderable)
+			if (!object.IsRenderable())
 			{
 				continue;
 			}
@@ -3623,7 +3623,7 @@ void wiRenderer::OcclusionCulling_Read()
 		for (Entity entity : culling.culledObjects)
 		{
 			ObjectComponent& object = *scene.objects.GetComponent(entity);
-			if (!object.renderable)
+			if (!object.IsRenderable())
 			{
 				continue;
 			}
@@ -4333,7 +4333,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 		{
 			LightComponent& light = scene.lights[i];
 
-			if (light.GetType() == type && light.visualizer) 
+			if (light.GetType() == type && light.IsVisualizerEnabled()) 
 			{
 
 				VolumeLightCB lcb;
@@ -4453,7 +4453,7 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 			for (Entity entity : culledLights)
 			{
 				const LightComponent& light = *scene.lights.GetComponent(entity);
-				if (light.GetType() == type && light.volumetrics)
+				if (light.GetType() == type && light.IsVolumetricsEnabled())
 				{
 
 					switch (type)
@@ -4679,7 +4679,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 				for (Entity entity : culledLights)
 				{
 					const LightComponent& light = *scene.lights.GetComponent(entity);
-					if (light.GetType() != type || !light.shadow)
+					if (light.GetType() != type || !light.IsCastingShadow())
 					{
 						continue;
 					}
@@ -4692,7 +4692,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							break;
 						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-						for (int cascade = 0; cascade < 3; ++cascade)
+						for (uint32_t cascade = 0; cascade < 3; ++cascade)
 						{
 							const float siz = light.shadowCam_dirLight[cascade].size * 0.5f;
 							const float f = light.shadowCam_dirLight[cascade].farplane * 0.5f;
@@ -5614,13 +5614,13 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			}
 		}
 
-		if (probe.isUpToDate)
+		if (!probe.IsDirty())
 		{
 			continue;
 		}
-		if (!probe.realTime)
+		if (!probe.IsRealTime())
 		{
-			probe.isUpToDate = true;
+			probe.SetDirty(false);
 		}
 
 		GetDevice()->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe.textureIndex);
@@ -6186,8 +6186,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 			{
 				GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
 				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-				desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-				desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+				desc.Width = max(1, desc.Width / 2);
+				desc.Height = max(1, desc.Height / 2);
 
 				GenerateMIPChainCB cb;
 				cb.outputResolution.x = desc.Width;
@@ -6234,8 +6234,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 			{
 				GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
 				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-				desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-				desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+				desc.Width = max(1, desc.Width / 2);
+				desc.Height = max(1, desc.Height / 2);
 
 				GenerateMIPChainCB cb;
 				cb.outputResolution.x = desc.Width;
@@ -6288,8 +6288,8 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 		{
 			GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
 			GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-			desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-			desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
+			desc.Width = max(1, desc.Width / 2);
+			desc.Height = max(1, desc.Height / 2);
 
 			GenerateMIPChainCB cb;
 			cb.outputResolution.x = desc.Width;
@@ -6363,9 +6363,9 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	{
 		GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
 		GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-		desc.Width = max(1, (UINT)ceilf(desc.Width * 0.5f));
-		desc.Height = max(1, (UINT)ceilf(desc.Height * 0.5f));
-		desc.Depth = max(1, (UINT)ceilf(desc.Depth * 0.5f));
+		desc.Width = max(1, desc.Width / 2);
+		desc.Height = max(1, desc.Height / 2);
+		desc.Depth = max(1, desc.Depth / 2);
 
 		GenerateMIPChainCB cb;
 		cb.outputResolution.x = desc.Width;
@@ -7879,101 +7879,6 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 	return result;
 }
 
-Entity wiRenderer::LoadModel(const std::string& fileName, const XMMATRIX& transform)
-{
-	//Model* model = nullptr;
-
-	//wiArchive archive(fileName, true);
-	//if (archive.IsOpen())
-	//{
-	//	model = new Model;
-	//	model->Serialize(archive);
-	//	model->transform(transform);
-
-	//	AddModel(model);
-	//}
-	//else
-	//{
-	//	wiHelper::messageBox("Could not open archive!", "Error!");
-	//}
-
-	//LoadWorldInfo(fileName);
-
-	//return model;
-
-	return INVALID_ENTITY;
-}
-void wiRenderer::LoadWorldInfo(const std::string& fileName)
-{
-	Scene& scene = GetScene();
-
-	string extension = wiHelper::GetExtensionFromFileName(fileName);
-
-	string realName;
-	if (!extension.compare("wiw"))
-	{
-		realName = fileName;
-	}
-	else if (extension.empty())
-	{
-		realName = fileName + ".wiw";
-	}
-	else
-	{
-		realName = fileName;
-		wiHelper::RemoveExtensionFromFileName(realName);
-		realName += ".wiw";
-	}
-
-	ifstream file(realName);
-	if (file)
-	{
-		while (!file.eof())
-		{
-			string read = "";
-			file >> read;
-			switch (read[0])
-			{
-			case 'h':
-				file >> scene.horizon.x >> scene.horizon.y >> scene.horizon.z;
-				// coming from blender, de-apply gamma correction:
-				scene.horizon.x = powf(scene.horizon.x, 1.0f / 2.2f);
-				scene.horizon.y = powf(scene.horizon.y, 1.0f / 2.2f);
-				scene.horizon.z = powf(scene.horizon.z, 1.0f / 2.2f);
-				break;
-			case 'z':
-				file >> scene.zenith.x >> scene.zenith.y >> scene.zenith.z;
-				// coming from blender, de-apply gamma correction:
-				scene.zenith.x = powf(scene.zenith.x, 1.0f / 2.2f);
-				scene.zenith.y = powf(scene.zenith.y, 1.0f / 2.2f);
-				scene.zenith.z = powf(scene.zenith.z, 1.0f / 2.2f);
-				break;
-			case 'a':
-				file >> scene.ambient.x >> scene.ambient.y >> scene.ambient.z;
-				// coming from blender, de-apply gamma correction:
-				scene.zenith.x = powf(scene.zenith.x, 1.0f / 2.2f);
-				scene.zenith.y = powf(scene.zenith.y, 1.0f / 2.2f);
-				scene.zenith.z = powf(scene.zenith.z, 1.0f / 2.2f);
-				break;
-			case 'W':
-			{
-				XMFLOAT4 r;
-				float s;
-				file >> r.x >> r.y >> r.z >> r.w >> s;
-				XMStoreFloat3(&scene.windDirection, XMVector3Transform(XMVectorSet(0, s, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&r))));
-			}
-			break;
-			case 'm':
-			{
-				file >> scene.fogStart >> scene.fogEnd >> scene.fogHeight;
-			}
-			break;
-			default:break;
-			}
-		}
-	}
-	file.close();
-}
 Scene& wiRenderer::GetScene()
 {
 	if (scene == nullptr)

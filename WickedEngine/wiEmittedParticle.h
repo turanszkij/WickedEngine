@@ -21,6 +21,7 @@ public:
 		SOFT_DISTORTION,
 		SIMPLEST,
 		PARTICLESHADERTYPE_COUNT,
+		ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 	};
 
 private:
@@ -70,22 +71,28 @@ public:
 	void Burst(float num);
 	void Restart();
 
-	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
-
 	// Must have a transform and material component, but mesh is optional
 	void UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID);
 	void Draw(const MaterialComponent& material, GRAPHICSTHREAD threadID);
 
-	bool DEBUG = false;
 	ParticleCounters GetDebugData() { return debugData; }
-	bool PAUSED = false;
 
-	bool SORTING = false;
-	bool DEPTHCOLLISIONS = false;
-	bool SPH_FLUIDSIMULATION = false;
-	float FIXED_TIMESTEP = -1.0f; // -1 : variable timestep; >=0 : fixed timestep
+	enum FLAGS
+	{
+		EMPTY = 0,
+		DEBUG = 1 << 0,
+		PAUSED = 1 << 1,
+		SORTING = 1 << 2,
+		DEPTHCOLLISION = 1 << 3,
+		SPH_FLUIDSIMULATION = 1 << 4,
+	};
+	uint32_t _flags = EMPTY;
 
 	PARTICLESHADERTYPE shaderType = SOFT;
+
+	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
+
+	float FIXED_TIMESTEP = -1.0f; // -1 : variable timestep; >=0 : fixed timestep
 
 	float size = 1.0f;
 	float random_factor = 1.0f;
@@ -107,6 +114,18 @@ public:
 	void SetMaxParticleCount(uint32_t value);
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
 	uint32_t GetMemorySizeInBytes() const;
+
+	inline bool IsDebug() const { return _flags & DEBUG; }
+	inline bool IsPaused() const { return _flags & PAUSED; }
+	inline bool IsSorted() const { return _flags & SORTING; }
+	inline bool IsDepthCollisionEnabled() const { return _flags & DEPTHCOLLISION; }
+	inline bool IsSPHEnabled() const { return _flags & SPH_FLUIDSIMULATION; }
+
+	inline void SetDebug(bool value) { if (value) { _flags |= DEBUG; } else { _flags &= ~DEBUG; } }
+	inline void SetPaused(bool value) { if (value) { _flags |= PAUSED; } else { _flags &= ~PAUSED; } }
+	inline void SetSorted(bool value) { if (value) { _flags |= SORTING; } else { _flags &= ~SORTING; } }
+	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= DEPTHCOLLISION; } else { _flags &= ~DEPTHCOLLISION; } }
+	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
 
 	void Serialize(wiArchive& archive);
 };
