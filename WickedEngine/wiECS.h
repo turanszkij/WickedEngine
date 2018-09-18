@@ -10,7 +10,7 @@
 
 namespace wiECS
 {
-	typedef uint64_t Entity;
+	typedef uint32_t Entity;
 	static const Entity INVALID_ENTITY = 0;
 	inline Entity CreateEntity()
 	{
@@ -48,6 +48,28 @@ namespace wiECS
 			lookup = other.lookup;
 		}
 
+		// Merge in an other component manager of the same type to this. 
+		//	The other component manager MUST NOT contain any of the same entities!
+		//	The other component manager is not retained after this operation!
+		inline void Merge(ComponentManager<Component>& other)
+		{
+			components.reserve(GetCount() + other.GetCount());
+			entities.reserve(GetCount() + other.GetCount());
+			lookup.reserve(GetCount() + other.GetCount());
+
+			for (size_t i = 0; i < other.GetCount(); ++i)
+			{
+				Entity entity = other.entities[i];
+				assert(Contains(entity));
+				entities.push_back(entity);
+				lookup[entity] = components.size();
+				components.push_back(std::move(other.components[i]));
+			}
+
+			other.Clear();
+		}
+
+		// Read/Write everything to an archive depending on the archive state
 		inline void Serialize(wiArchive& archive)
 		{
 			if (archive.IsReadMode())
@@ -96,7 +118,7 @@ namespace wiECS
 			}
 		}
 
-		// Create a new component and retrieve a reference to it:
+		// Create a new component and retrieve a reference to it
 		inline Component& Create(Entity entity)
 		{
 			// Only one of this component type per entity is allowed!
@@ -118,7 +140,7 @@ namespace wiECS
 			return components.back();
 		}
 
-		// Remove a component of a certain entity if it exists:
+		// Remove a component of a certain entity if it exists
 		inline void Remove(Entity entity)
 		{
 			auto it = lookup.find(entity);
@@ -145,7 +167,7 @@ namespace wiECS
 			}
 		}
 
-		// Remove a component of a certain entity if it exists while keeping the current ordering:
+		// Remove a component of a certain entity if it exists while keeping the current ordering
 		inline void Remove_KeepSorted(Entity entity)
 		{
 			auto it = lookup.find(entity);
@@ -177,7 +199,7 @@ namespace wiECS
 			}
 		}
 
-		// Swap two components' data:
+		// Swap two components' data
 		inline void Swap(Entity a, Entity b)
 		{
 			auto it_a = lookup.find(a);
@@ -203,7 +225,7 @@ namespace wiECS
 
 		}
 
-		// Place the last added entity-component to the specified index position while keeping the ordering intact:
+		// Place the last added entity-component to the specified index position while keeping the ordering intact
 		inline void MoveLastTo(size_t index)
 		{
 			// No operation if less than two components, or the target index is already the last index:
@@ -234,13 +256,13 @@ namespace wiECS
 			lookup[entity] = index;
 		}
 
-		// Check if a component exists for a given entity or not:
+		// Check if a component exists for a given entity or not
 		inline bool Contains(Entity entity) const
 		{
 			return lookup.find(entity) != lookup.end();
 		}
 
-		// Retrieve a [read/write] component specified by an entity (if it exists, otherwise nullptr):
+		// Retrieve a [read/write] component specified by an entity (if it exists, otherwise nullptr)
 		inline Component* GetComponent(Entity entity)
 		{
 			auto it = lookup.find(entity);
@@ -251,7 +273,7 @@ namespace wiECS
 			return nullptr;
 		}
 
-		// Retrieve a [read only] component specified by an entity (if it exists, otherwise nullptr):
+		// Retrieve a [read only] component specified by an entity (if it exists, otherwise nullptr)
 		inline const Component* GetComponent(Entity entity) const
 		{
 			const auto it = lookup.find(entity);
@@ -262,30 +284,30 @@ namespace wiECS
 			return nullptr;
 		}
 
-		// Retrieve the number of existing entries:
+		// Retrieve the number of existing entries
 		inline size_t GetCount() const { return components.size(); }
 
-		// Directly index a specific component without indirection:
+		// Directly index a specific component without indirection
 		//	0 <= index < GetCount()
 		inline Entity GetEntity(size_t index) const { return entities[index]; }
 
-		// Directly index a specific [read/write] component without indirection:
+		// Directly index a specific [read/write] component without indirection
 		//	0 <= index < GetCount()
 		inline Component& operator[](size_t index) { return components[index]; }
 
-		// Directly index a specific [read only] component without indirection:
+		// Directly index a specific [read only] component without indirection
 		//	0 <= index < GetCount()
 		inline const Component& operator[](size_t index) const { return components[index]; }
 
 	private:
-		// This is a linear array of alive components:
+		// This is a linear array of alive components
 		std::vector<Component> components;
-		// This is a linear array of entities corresponding to each alive component:
+		// This is a linear array of entities corresponding to each alive component
 		std::vector<Entity> entities;
-		// This is a lookup table for entities:
+		// This is a lookup table for entities
 		std::unordered_map<Entity, size_t> lookup;
 
-		// Disallow this to be copied by mistake:
+		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;
 	};
 }

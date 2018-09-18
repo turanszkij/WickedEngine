@@ -204,7 +204,6 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 	if (entity == INVALID_ENTITY)
 	{
 		entity = CreateEntity();
-		scene.owned_entities.insert(entity);
 		scene.transforms.Create(entity);
 	}
 
@@ -677,7 +676,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	for (auto& skin : state.gltfModel.skins)
 	{
 		Entity armatureEntity = CreateEntity();
-		scene.owned_entities.insert(armatureEntity);
 		scene.names.Create(armatureEntity) = skin.name;
 		scene.layers.Create(armatureEntity);
 		TransformComponent& transform = scene.transforms.Create(armatureEntity);
@@ -738,7 +736,6 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	for (auto& anim : state.gltfModel.animations)
 	{
 		Entity entity = CreateEntity();
-		scene.owned_entities.insert(entity);
 		scene.names.Create(entity) = anim.name;
 		AnimationComponent& animationcomponent = scene.animations.Create(entity);
 

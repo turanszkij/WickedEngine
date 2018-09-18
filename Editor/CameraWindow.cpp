@@ -8,18 +8,13 @@ void CameraWindow::ResetCam()
 {
 	Scene& scene = wiRenderer::GetScene();
 
-	TransformComponent* transform = scene.transforms.GetComponent(wiRenderer::getCameraID());
-	if (transform != nullptr)
-	{
-		transform->ClearTransform();
-		transform->Translate(XMFLOAT3(0, 2, -10));
-	}
+	camera_transform.ClearTransform();
+	camera_transform.Translate(XMFLOAT3(0, 2, -10));
+	camera_transform.UpdateTransform();
+	wiRenderer::getCamera()->UpdateCamera(&camera_transform);
 
-	TransformComponent* target_transform = scene.transforms.GetComponent(target);
-	if (target_transform != nullptr)
-	{
-		target_transform->ClearTransform();
-	}
+	camera_target.ClearTransform();
+	camera_target.UpdateTransform();
 }
 
 CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
@@ -28,14 +23,6 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
-
-	target = (Entity)wiHashString("__editorCameraTarget").GetHash();
-
-	Scene& scene = wiRenderer::GetScene();
-	if (scene.transforms.GetComponent(target) == nullptr)
-	{
-		scene.transforms.Create(target);
-	}
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(600, 420));
@@ -51,7 +38,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	farPlaneSlider->SetValue(wiRenderer::getCamera()->zFarP);
 	farPlaneSlider->OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiRenderer::GetScene();
-		CameraComponent& camera = *scene.cameras.GetComponent(wiRenderer::getCameraID());
+		CameraComponent& camera = *wiRenderer::getCamera();
 		camera.zFarP = args.fValue;
 		camera.UpdateProjection();
 	});
@@ -63,7 +50,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	nearPlaneSlider->SetValue(wiRenderer::getCamera()->zNearP);
 	nearPlaneSlider->OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiRenderer::GetScene();
-		CameraComponent& camera = *scene.cameras.GetComponent(wiRenderer::getCameraID());
+		CameraComponent& camera = *wiRenderer::getCamera();
 		camera.zNearP = args.fValue;
 		camera.UpdateProjection();
 	});
@@ -74,7 +61,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	fovSlider->SetPos(XMFLOAT2(x, y += inc));
 	fovSlider->OnSlide([&](wiEventArgs args) {
 		Scene& scene = wiRenderer::GetScene();
-		CameraComponent& camera = *scene.cameras.GetComponent(wiRenderer::getCameraID());
+		CameraComponent& camera = *wiRenderer::getCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
 		camera.UpdateProjection();
 	});
@@ -111,16 +98,13 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
 	proxyButton->OnClick([&](wiEventArgs args) {
 
+		CameraComponent& camera = *wiRenderer::getCamera();
+
 		Scene& scene = wiRenderer::GetScene();
 
-		Entity proxy = CreateEntity();
+		Entity entity = scene.Entity_CreateCamera("cam", camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
 
-		auto& name = scene.names.Create(proxy);
-		auto& transform = scene.transforms.Create(proxy);
-		auto& camera = scene.cameras.Create(proxy);
-
-		name = "cam";
-		camera = *wiRenderer::getCamera();
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
 	});
 	cameraWindow->AddWidget(proxyButton);

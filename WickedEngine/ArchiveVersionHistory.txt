@@ -1,5 +1,7 @@
 This file contains changelog of wiArchive versions
 
+22: rewrite all systems
+--VERSION_BARRIER------------------
 21: serialize armature skinningRemap matrix + remove redundant bone matrices
 20: serialize cameras
 19: serialized object cascade mask

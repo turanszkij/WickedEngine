@@ -63,7 +63,7 @@ int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRendere
 bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
 bool wiRenderer::TRANSPARENTSHADOWSENABLED = false;
 bool wiRenderer::ALPHACOMPOSITIONENABLED = false;
-bool wiRenderer::wireRender = false, wiRenderer::debugSpheres = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
+bool wiRenderer::wireRender = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
 , wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::debugCameras = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
 , wiRenderer::advancedRefractions = false;
 bool wiRenderer::ldsSkinningEnabled = true;
@@ -76,8 +76,6 @@ UINT wiRenderer::entityArrayOffset_Lights = 0, wiRenderer::entityArrayCount_Ligh
 UINT wiRenderer::entityArrayOffset_Decals = 0, wiRenderer::entityArrayCount_Decals = 0;
 UINT wiRenderer::entityArrayOffset_ForceFields = 0, wiRenderer::entityArrayCount_ForceFields = 0;
 UINT wiRenderer::entityArrayOffset_EnvProbes = 0, wiRenderer::entityArrayCount_EnvProbes = 0;
-
-Entity wiRenderer::cameraID = INVALID_ENTITY;
 
 Texture2D* wiRenderer::enviroMap = nullptr;
 float wiRenderer::GameSpeed=1;
@@ -313,10 +311,7 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(customsamplers[i]);
 	}
 
-	cameraID = CreateEntity();
-
-	wireRender=false;
-	debugSpheres=false;
+	getCamera()->CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 
 	SetUpStates();
 	LoadBuffers();
@@ -2914,7 +2909,6 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	scene.Update(dt * GetGameSpeed());
 
 	*getPrevCamera() = *getCamera();
-	*getCamera() = *scene.cameras.GetComponent(cameraID);
 
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
@@ -4102,11 +4096,6 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		{
 			CameraComponent& cam = scene.cameras[i];
 			Entity entity = scene.cameras.GetEntity(i);
-
-			if (entity == getCameraID()) // avoid drawing the main camera...
-			{
-				continue;
-			}
 
 			sb.mTransform = XMMatrixTranspose(cam.GetInvView()*camera->GetViewProjection());
 
@@ -7884,9 +7873,6 @@ Scene& wiRenderer::GetScene()
 	if (scene == nullptr)
 	{
 		scene = new Scene;
-
-		scene->transforms.Create(cameraID);
-		scene->cameras.Create(cameraID).CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 	}
 	return *scene;
 }
@@ -7987,8 +7973,8 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 	}
 
 
-	CameraComponent camera = *getCamera();
-	TransformComponent camera_transform = *scene.transforms.GetComponent(getCameraID());
+	CameraComponent impostorcamera;
+	TransformComponent camera_transform;
 
 	BindPersistentState(threadID);
 
@@ -8046,14 +8032,14 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		{
 			// front capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-			XMStoreFloat4x4(&camera.Projection, ortho);
+			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
 		}
 		break;
 		case 1:
 		{
 			// right capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-			XMStoreFloat4x4(&camera.Projection, ortho);
+			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
 			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
 		}
 		break;
@@ -8061,7 +8047,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		{
 			// back capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-			XMStoreFloat4x4(&camera.Projection, ortho);
+			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
 			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
 		}
 		break;
@@ -8069,7 +8055,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		{
 			// left capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-			XMStoreFloat4x4(&camera.Projection, ortho);
+			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
 			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
 		}
 		break;
@@ -8077,7 +8063,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		{
 			// bottom capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-			XMStoreFloat4x4(&camera.Projection, ortho);
+			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
 			camera_transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
 		}
 		break;
@@ -8085,7 +8071,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		{
 			// top capture
 			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-			XMStoreFloat4x4(&camera.Projection, ortho);
+			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
 			camera_transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
 		}
 		break;
@@ -8093,9 +8079,9 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 			break;
 		}
 		camera_transform.UpdateTransform();
-		camera.UpdateCamera(&camera_transform);
-		camera.UpdateProjection();
-		UpdateCameraCB(&camera, threadID);
+		impostorcamera.UpdateCamera(&camera_transform);
+		impostorcamera.UpdateProjection();
+		UpdateCameraCB(&impostorcamera, threadID);
 
 		for (MeshComponent::MeshSubset& subset : mesh.subsets)
 		{

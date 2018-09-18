@@ -58,11 +58,7 @@ void Translator::LoadShaders()
 
 Translator::Translator()
 {
-	Scene& scene = wiRenderer::GetScene();
-
 	entityID = CreateEntity();
-	scene.transforms.Create(entityID);
-	scene.names.Create(entityID) = "editorTranslator";
 
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
@@ -203,6 +199,12 @@ Translator::~Translator()
 void Translator::Update()
 {
 	Scene& scene = wiRenderer::GetScene();
+
+	if (!scene.transforms.Contains(entityID))
+	{
+		return;
+	}
+
 	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
 
 	dragStarted = false;
@@ -433,12 +435,18 @@ void Translator::Update()
 }
 void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
 {
+	Scene& scene = wiRenderer::GetScene();
+
+	if (!scene.transforms.Contains(entityID))
+	{
+		return;
+	}
+
+	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("Editor - Translator", threadID);
-
-	Scene& scene = wiRenderer::GetScene();
-	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
 
 	XMMATRIX VP = camera->GetViewProjection();
 

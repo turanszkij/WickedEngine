@@ -349,7 +349,7 @@ namespace wiSceneSystem
 			assert(SUCCEEDED(hr));
 		}
 
-		aabb.create(_min, _max);
+		aabb = AABB(_min, _max);
 
 		// skinning buffers:
 		if (!vertex_boneindices.empty())
@@ -784,51 +784,68 @@ namespace wiSceneSystem
 
 		RunForceUpdateSystem(transforms, forces);
 
-		RunLightUpdateSystem(*cameras.GetComponent(wiRenderer::getCameraID()), transforms, aabb_lights, lights, sunDirection, sunColor);
+		RunLightUpdateSystem(*wiRenderer::getCamera(), transforms, aabb_lights, lights, sunDirection, sunColor);
 
 		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
 
 	}
 	void Scene::Clear()
 	{
-		// Preferrably, we wouldn't write all of this, just call clear on every container
-		//	But: we want to only delete the owned entities, and there might be others
-		//	Think about it, probably there is a better way...
+		names.Clear();
+		layers.Clear();
+		transforms.Clear();
+		prev_transforms.Clear();
+		hierarchy.Clear();
+		materials.Clear();
+		meshes.Clear();
+		objects.Clear();
+		aabb_objects.Clear();
+		rigidbodies.Clear();
+		softbodies.Clear();
+		armatures.Clear();
+		lights.Clear();
+		aabb_lights.Clear();
+		cameras.Clear();
+		probes.Clear();
+		aabb_probes.Clear();
+		forces.Clear();
+		decals.Clear();
+		aabb_decals.Clear();
+		animations.Clear();
+		emitters.Clear();
+		hairs.Clear();
+	}
+	void Scene::Merge(Scene& other)
+	{
+		names.Merge(other.names);
+		layers.Merge(other.layers);
+		transforms.Merge(other.transforms);
+		prev_transforms.Merge(other.prev_transforms);
+		hierarchy.Merge(other.hierarchy);
+		materials.Merge(other.materials);
+		meshes.Merge(other.meshes);
+		objects.Merge(other.objects);
+		aabb_objects.Merge(other.aabb_objects);
+		rigidbodies.Merge(other.rigidbodies);
+		softbodies.Merge(other.softbodies);
+		armatures.Merge(other.armatures);
+		lights.Merge(other.lights);
+		aabb_lights.Merge(other.aabb_lights);
+		cameras.Merge(other.cameras);
+		probes.Merge(other.probes);
+		aabb_probes.Merge(other.aabb_probes);
+		forces.Merge(other.forces);
+		decals.Merge(other.decals);
+		aabb_decals.Merge(other.aabb_decals);
+		animations.Merge(other.animations);
+		emitters.Merge(other.emitters);
+		hairs.Merge(other.hairs);
 
-		for (Entity entity : owned_entities)
-		{
-			names.Remove(entity);
-			layers.Remove(entity);
-			transforms.Remove(entity);
-			prev_transforms.Remove(entity);
-			hierarchy.Remove(entity);
-			materials.Remove(entity);
-			meshes.Remove(entity);
-			objects.Remove(entity);
-			aabb_objects.Remove(entity);
-			rigidbodies.Remove(entity);
-			softbodies.Remove(entity);
-			armatures.Remove(entity);
-			lights.Remove(entity);
-			aabb_lights.Remove(entity);
-			cameras.Remove(entity);
-			probes.Remove(entity);
-			aabb_probes.Remove(entity);
-			forces.Remove(entity);
-			decals.Remove(entity);
-			aabb_decals.Remove(entity);
-			animations.Remove(entity);
-			emitters.Remove(entity);
-			hairs.Remove(entity);
-		}
-
-		owned_entities.clear();
+		bounds = AABB::Merge(bounds, other.bounds);
 	}
 
 	void Scene::Entity_Remove(Entity entity)
 	{
-		owned_entities.erase(entity);
-
 		names.Remove(entity);
 		layers.Remove(entity);
 		transforms.Remove(entity);
@@ -870,8 +887,6 @@ namespace wiSceneSystem
 	{
 		Entity entity = CreateEntity();
 
-		owned_entities.insert(entity);
-
 		names.Create(entity) = name;
 
 		layers.Create(entity);
@@ -886,8 +901,6 @@ namespace wiSceneSystem
 	{
 		Entity entity = CreateEntity();
 
-		owned_entities.insert(entity);
-
 		names.Create(entity) = name;
 
 		materials.Create(entity);
@@ -899,8 +912,6 @@ namespace wiSceneSystem
 	)
 	{
 		Entity entity = CreateEntity();
-
-		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
 
@@ -922,8 +933,6 @@ namespace wiSceneSystem
 	{
 		Entity entity = CreateEntity();
 
-		owned_entities.insert(entity);
-
 		names.Create(entity) = name;
 
 		meshes.Create(entity);
@@ -938,8 +947,6 @@ namespace wiSceneSystem
 		float range)
 	{
 		Entity entity = CreateEntity();
-
-		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
 
@@ -967,8 +974,6 @@ namespace wiSceneSystem
 	{
 		Entity entity = CreateEntity();
 
-		owned_entities.insert(entity);
-
 		names.Create(entity) = name;
 
 		layers.Create(entity);
@@ -991,8 +996,6 @@ namespace wiSceneSystem
 	{
 		Entity entity = CreateEntity();
 
-		owned_entities.insert(entity);
-
 		names.Create(entity) = name;
 
 		layers.Create(entity);
@@ -1014,8 +1017,6 @@ namespace wiSceneSystem
 	)
 	{
 		Entity entity = CreateEntity();
-
-		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
 
@@ -1049,8 +1050,6 @@ namespace wiSceneSystem
 	{
 		Entity entity = CreateEntity();
 
-		owned_entities.insert(entity);
-
 		names.Create(entity) = name;
 
 		layers.Create(entity);
@@ -1068,8 +1067,6 @@ namespace wiSceneSystem
 	)
 	{
 		Entity entity = CreateEntity();
-
-		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
 
@@ -1089,8 +1086,6 @@ namespace wiSceneSystem
 	)
 	{
 		Entity entity = CreateEntity();
-
-		owned_entities.insert(entity);
 
 		names.Create(entity) = name;
 
@@ -1490,7 +1485,7 @@ namespace wiSceneSystem
 	{
 		assert(objects.GetCount() == aabb_objects.GetCount());
 
-		sceneBounds.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+		sceneBounds = AABB();
 
 		for (size_t i = 0; i < objects.GetCount(); ++i)
 		{
@@ -1498,7 +1493,7 @@ namespace wiSceneSystem
 			Entity entity = objects.GetEntity(i);
 			AABB& aabb = aabb_objects[i];
 
-			aabb.create(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
 			object.SetCastShadow(false);
@@ -1844,7 +1839,7 @@ namespace wiSceneSystem
 					min.y -= hair.length;
 					min.z -= hair.length;
 
-					hair.aabb.create(min, max);
+					hair.aabb = AABB(min, max);
 					hair.aabb = hair.aabb.get(hair.world);
 				}
 			}

@@ -13,9 +13,7 @@
 #include "wiSceneSystem_Decl.h"
 
 #include <string>
-#include <unordered_map>
 #include <vector>
-#include <unordered_set>
 
 class wiArchive;
 
@@ -68,7 +66,7 @@ namespace wiSceneSystem
 		XMVECTOR GetRotationV() const;
 		XMVECTOR GetScaleV() const;
 		void UpdateTransform();
-		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix);
+		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix = IDENTITYMATRIX);
 		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
@@ -837,8 +835,6 @@ namespace wiSceneSystem
 
 	struct Scene
 	{
-		std::unordered_set<wiECS::Entity> owned_entities;
-
 		wiECS::ComponentManager<NameComponent> names;
 		wiECS::ComponentManager<LayerComponent> layers;
 		wiECS::ComponentManager<TransformComponent> transforms;
@@ -866,7 +862,7 @@ namespace wiSceneSystem
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		XMFLOAT3 zenith = XMFLOAT3(0.00f, 0.00f, 0.0f);
+		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		float fogStart = 100;
 		float fogEnd = 1000;
@@ -886,6 +882,8 @@ namespace wiSceneSystem
 		void Update(float dt);
 		// Remove everything from the scene that it owns:
 		void Clear();
+		// Merge with an other scene (world properties like ambient, etc. are retained as-is). Other scene state is non-retained!
+		void Merge(Scene& other);
 
 		// Removes a specific entity from the scene (if it exists):
 		void Entity_Remove(wiECS::Entity entity);

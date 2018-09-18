@@ -28,7 +28,6 @@ private:
 	static wiGraphicsTypes::GraphicsPSO PSO[SHADERTYPE_COUNT][2]; // shadertype * transparency
 	static wiGraphicsTypes::GraphicsPSO PSO_wire;
 	static wiGraphicsTypes::ComputePSO CPSO_simulate;
-	static int LOD[3];
 public:
 	static void LoadShaders();
 

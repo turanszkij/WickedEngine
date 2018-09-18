@@ -223,7 +223,7 @@ public:
 
 protected:
 
-	static bool	wireRender, debugSpheres, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, debugForceFields, debugCameras, gridHelper, voxelHelper, advancedLightCulling, advancedRefractions;
+	static bool	wireRender, debugBoneLines, debugPartitionTree, debugEnvProbes, debugEmitters, debugForceFields, debugCameras, gridHelper, voxelHelper, advancedLightCulling, advancedRefractions;
 	static bool ldsSkinningEnabled;
 	static bool requestReflectionRendering;
 
@@ -298,9 +298,6 @@ public:
 	static float GetGamma() { return GAMMA; }
 	static void SetWireRender(bool value) { wireRender = value; }
 	static bool IsWireRender() { return wireRender; }
-	static void ToggleDebugSpheres(){debugSpheres=!debugSpheres;}
-	static void SetToDrawDebugSpheres(bool param){debugSpheres=param;}
-	static bool GetToDrawDebugSpheres() { return debugSpheres; }
 	static void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }
 	static bool GetToDrawDebugBoneLines() { return debugBoneLines; }
 	static void SetToDrawDebugPartitionTree(bool param){debugPartitionTree=param;}
@@ -439,8 +436,6 @@ public:
 	static std::deque<wiSprite*> waterRipples;
 	static void ClearWorld();
 	
-	static wiECS::Entity cameraID;
-	static wiECS::Entity getCameraID() { return cameraID; }
 	static wiSceneSystem::CameraComponent* getCamera();
 	static wiSceneSystem::CameraComponent* getPrevCamera();
 	static wiSceneSystem::CameraComponent* getRefCamera();

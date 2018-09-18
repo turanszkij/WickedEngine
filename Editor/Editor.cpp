@@ -563,8 +563,11 @@ void EditorComponent::Load()
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
 						wiArchive archive(fileName, true);
-						Scene& scene = wiRenderer::GetScene();
-						scene.Serialize(archive);
+						if (archive.IsOpen())
+						{
+							Scene& scene = wiRenderer::GetScene();
+							scene.Serialize(archive);
+						}
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
@@ -756,9 +759,7 @@ void EditorComponent::FixedUpdate()
 void EditorComponent::Update(float dt)
 {
 	Scene& scene = wiRenderer::GetScene();
-	CameraComponent* camera = wiRenderer::getCamera();
-	TransformComponent* camera_transform = scene.transforms.GetComponent(wiRenderer::getCameraID());
-	assert(camera_transform != nullptr);
+	CameraComponent& camera = *wiRenderer::getCamera();
 
 	// Follow camera proxy:
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
@@ -766,7 +767,7 @@ void EditorComponent::Update(float dt)
 		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->proxy);
 		if (proxy != nullptr)
 		{
-			camera_transform->Lerp(*camera_transform, *proxy, 1.0f - cameraWnd->followSlider->GetValue());
+			cameraWnd->camera_transform.Lerp(cameraWnd->camera_transform, *proxy, 1.0f - cameraWnd->followSlider->GetValue());
 		}
 	}
 
@@ -860,41 +861,40 @@ void EditorComponent::Update(float dt)
 			
 			if (abs(xDif) + abs(yDif) > 0 || moveLength > 0.0001f)
 			{
-				XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&camera_transform->rotation_local));
+				XMMATRIX camRot = XMMatrixRotationQuaternion(XMLoadFloat4(&cameraWnd->camera_transform.rotation_local));
 				XMVECTOR move_rot = XMVector3TransformNormal(move, camRot);
 				XMFLOAT3 _move;
 				XMStoreFloat3(&_move, move_rot);
-				camera_transform->Translate(_move);
-				camera_transform->RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+				cameraWnd->camera_transform.Translate(_move);
+				cameraWnd->camera_transform.RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
 			}
+
+			cameraWnd->camera_transform.UpdateTransform();
 		}
 		else
 		{
 			// Orbital Camera
-			HierarchyComponent* parented = scene.hierarchy.GetComponent(wiRenderer::getCameraID());
-			TransformComponent* target_transform = scene.transforms.GetComponent(cameraWnd->target);
 
-			if (parented == nullptr)
-			{
-				//cam->attachTo(cameraWnd->orbitalCamTarget);
-				scene.Component_Attach(wiRenderer::getCameraID(), cameraWnd->target);
-			}
 			if (wiInputManager::GetInstance()->down(VK_LSHIFT))
 			{
-				XMVECTOR V = XMVectorAdd(camera->GetRight() * xDif, camera->GetUp() * yDif) * 10;
+				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
-				target_transform->Translate(vec);
+				cameraWnd->camera_target.Translate(vec);
 			}
 			else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
 			{
-				camera_transform->Translate(XMFLOAT3(0, 0, yDif * 4));
+				cameraWnd->camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4));
 			}
 			else if(abs(xDif) + abs(yDif) > 0)
 			{
-				target_transform->RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
+				cameraWnd->camera_target.RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
 			}
+
+			cameraWnd->camera_target.UpdateTransform();
+			cameraWnd->camera_transform.UpdateParentedTransform(cameraWnd->camera_target);
 		}
+		camera.UpdateCamera(&cameraWnd->camera_transform);
 
 		// Begin picking:
 		UINT pickMask = rendererWnd->GetPickType();
@@ -1023,10 +1023,6 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 				{
 					Entity entity = scene.cameras.GetEntity(i);
-					if (entity == wiRenderer::getCameraID())
-					{
-						continue;
-					}
 
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
@@ -1120,8 +1116,10 @@ void EditorComponent::Update(float dt)
 				selectAll = false;
 				EndTranslate();
 
-				for (Entity entity : scene.owned_entities)
+				for (size_t i = 0; i < scene.names.GetCount(); ++i)
 				{
+					Entity entity = scene.names.GetEntity(i);
+
 					Picked picked;
 					picked.entity = entity;
 					AddSelected(picked);
@@ -1694,10 +1692,6 @@ void EditorComponent::Compose()
 		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
 			Entity entity = scene.cameras.GetEntity(i);
-			if (entity == wiRenderer::getCameraID())
-			{
-				continue;
-			}
 
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
@@ -1856,6 +1850,9 @@ void EditorComponent::BeginTranslate()
 
 	Scene& scene = wiRenderer::GetScene();
 
+	// Insert translator into scene:
+	scene.transforms.Create(translator.entityID);
+
 	// Begin translation, save scene hierarchy from before:
 	savedHierarchy.Copy(scene.hierarchy);
 
@@ -1900,6 +1897,9 @@ void EditorComponent::EndTranslate()
 	}
 
 	Scene& scene = wiRenderer::GetScene();
+
+	// Remove translator from scene:
+	scene.Entity_Remove(translator.entityID);
 
 	// Translation ended, apply all final transformations as local pose:
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
