@@ -15,7 +15,7 @@ public:
 	~Translator();
 
 	void Update();
-	void Draw(wiSceneSystem::CameraComponent* camera, GRAPHICSTHREAD threadID);
+	void Draw(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 
 	wiECS::Entity entityID = wiECS::INVALID_ENTITY;
 

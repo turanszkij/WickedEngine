@@ -418,11 +418,11 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				}
 				else
 				{
-					faceRot = XMLoadFloat3x3(&wiRenderer::getCamera()->rotationMatrix);
+					faceRot = XMLoadFloat3x3(&wiRenderer::GetCamera().rotationMatrix);
 				}
 
-				XMMATRIX view = wiRenderer::getCamera()->GetView();
-				XMMATRIX projection = wiRenderer::getCamera()->GetProjection();
+				XMMATRIX view = wiRenderer::GetCamera().GetView();
+				XMMATRIX projection = wiRenderer::GetCamera().GetProjection();
 				// Remove possible jittering from temporal camera:
 				projection.r[2] = XMVectorSetX(projection.r[2], 0);
 				projection.r[2] = XMVectorSetY(projection.r[2], 0);

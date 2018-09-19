@@ -28,7 +28,7 @@ namespace wiSceneSystem
 		inline void operator=(const std::string& str) { strcpy_s(name, str.c_str()); }
 		inline bool operator==(const std::string& str) const { return strcmp(name, str.c_str()) == 0; }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct LayerComponent
@@ -37,7 +37,7 @@ namespace wiSceneSystem
 
 		inline uint32_t GetLayerMask() const { return layerMask; }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 	
 	struct TransformComponent
@@ -78,7 +78,7 @@ namespace wiSceneSystem
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct PreviousFrameTransformComponent
@@ -86,7 +86,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 		XMFLOAT4X4 world_prev;
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct HierarchyComponent
@@ -95,7 +95,7 @@ namespace wiSceneSystem
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
 		XMFLOAT4X4 world_parent_inverse_bind; // saved parent inverse worldmatrix at the time of binding
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct MaterialComponent
@@ -187,7 +187,7 @@ namespace wiSceneSystem
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { alphaRef = value; }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct MeshComponent
@@ -249,7 +249,7 @@ namespace wiSceneSystem
 		void FlipCulling();
 		void FlipNormals();
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 
 
 		struct Vertex_POS
@@ -408,7 +408,7 @@ namespace wiSceneSystem
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct RigidBodyPhysicsComponent
@@ -440,7 +440,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 		int physicsObjectID = -1;
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct SoftBodyPhysicsComponent
@@ -460,7 +460,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 		int physicsObjectID = -1;
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct ArmatureComponent
@@ -496,7 +496,7 @@ namespace wiSceneSystem
 		std::vector<ShaderBoneType> boneData;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> boneBuffer;
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct LightComponent
@@ -665,7 +665,7 @@ namespace wiSceneSystem
 		std::vector<SHCAM> shadowCam_dirLight;
 		std::vector<SHCAM> shadowCam_spotLight;
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct CameraComponent
@@ -673,6 +673,7 @@ namespace wiSceneSystem
 		enum FLAGS
 		{
 			EMPTY = 0,
+			DIRTY = 1 << 0,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -707,7 +708,10 @@ namespace wiSceneSystem
 		inline XMMATRIX GetInvViewProjection() const { return XMLoadFloat4x4(&InvVP); }
 		inline XMMATRIX GetRealProjection() const { return XMLoadFloat4x4(&realProjection); }
 
-		void Serialize(wiArchive& archive);
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		inline bool IsDirty() const { return _flags & DIRTY; }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct EnvironmentProbeComponent
@@ -732,7 +736,7 @@ namespace wiSceneSystem
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct ForceFieldComponent
@@ -751,7 +755,7 @@ namespace wiSceneSystem
 		XMFLOAT3 position;
 		XMFLOAT3 direction;
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct DecalComponent
@@ -776,7 +780,7 @@ namespace wiSceneSystem
 
 		inline float GetOpacity() const { return color.w; }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct AnimationComponent
@@ -830,7 +834,7 @@ namespace wiSceneSystem
 		inline void Stop() { Pause(); timer = 0.0f; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
 	struct Scene
@@ -882,17 +886,20 @@ namespace wiSceneSystem
 		void Update(float dt);
 		// Remove everything from the scene that it owns:
 		void Clear();
-		// Merge with an other scene (world properties like ambient, etc. are retained as-is). Other scene state is non-retained!
+		// Merge with an other scene. Other scene state is non-retained!
 		void Merge(Scene& other);
+		// Count how many entities there are in the scene:
+		size_t CountEntities() const;
 
 		// Removes a specific entity from the scene (if it exists):
 		void Entity_Remove(wiECS::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wiECS::Entity Entity_FindByName(const std::string& name);
+		// Serializes entity and all of its components to archive:
+		//	You can specify entity = INVALID_ENTITY when the entity needs to be created from archive
+		//	You can specify seed = 0 when the archive is guaranteed to be storing persistent and unique entities
+		void Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY, uint32_t seed = 0);
 
-		wiECS::Entity Entity_CreateModel(
-			const std::string& name
-		);
 		wiECS::Entity Entity_CreateMaterial(
 			const std::string& name
 		);

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "wiSceneSystem.h"
 #include "ModelImporter.h"
 
 #include "Utility/stb_image.h"
@@ -148,7 +149,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 struct LoaderState
 {
 	tinygltf::Model gltfModel;
-	Entity modelEntity;
+	Scene scene;
 	unordered_map<const tinygltf::Node*, Entity> entityMap;
 	vector<Entity> materialArray;
 	vector<Entity> meshArray;
@@ -163,14 +164,12 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 		return;
 	}
 
-	Scene& scene = wiRenderer::GetScene();
-
 	Entity entity = INVALID_ENTITY;
 
 	if(node->mesh >= 0)
 	{
-		entity = scene.Entity_CreateObject(node->name);
-		ObjectComponent& object = *scene.objects.GetComponent(entity);
+		entity = state.scene.Entity_CreateObject(node->name);
+		ObjectComponent& object = *state.scene.objects.GetComponent(entity);
 
 		if (node->mesh < state.meshArray.size())
 		{
@@ -178,7 +177,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 
 			if (node->skin >= 0)
 			{
-				MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				MeshComponent& mesh = *state.scene.meshes.GetComponent(object.meshID);
 				assert(!mesh.vertex_boneindices.empty());
 				mesh.armatureID = state.armatureArray[node->skin];
 			}
@@ -198,18 +197,18 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 			node->name = ss.str();
 		}
 
-		entity = scene.Entity_CreateCamera(node->name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+		entity = state.scene.Entity_CreateCamera(node->name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 	}
 
 	if (entity == INVALID_ENTITY)
 	{
 		entity = CreateEntity();
-		scene.transforms.Create(entity);
+		state.scene.transforms.Create(entity);
 	}
 
 	state.entityMap[node] = entity;
 
-	TransformComponent& transform = *scene.transforms.GetComponent(entity);
+	TransformComponent& transform = *state.scene.transforms.GetComponent(entity);
 	if (!node->scale.empty())
 	{
 		transform.scale_local = XMFLOAT3((float)node->scale[0], (float)node->scale[1], (float)node->scale[2]);
@@ -229,7 +228,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 
 	if (parent != INVALID_ENTITY)
 	{
-		scene.Component_Attach(entity, parent);
+		state.scene.Component_Attach(entity, parent);
 	}
 
 	if (!node->children.empty())
@@ -241,7 +240,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 	}
 }
 
-Entity ImportModel_GLTF(const std::string& fileName)
+void ImportModel_GLTF(const std::string& fileName)
 {
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
@@ -269,22 +268,19 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	}
 	if (!ret) {
 		wiHelper::messageBox(err, "GLTF error!");
-		return INVALID_ENTITY;
 	}
 
-	Scene& scene = wiRenderer::GetScene();
-
-	state.modelEntity = scene.Entity_CreateModel(name);
-	TransformComponent& model_transform = *scene.transforms.GetComponent(state.modelEntity);
+	Entity rootEntity = CreateEntity();
+	state.scene.transforms.Create(rootEntity);
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
 	{
-		Entity materialEntity = scene.Entity_CreateMaterial(x.name);
+		Entity materialEntity = state.scene.Entity_CreateMaterial(x.name);
 
 		state.materialArray.push_back(materialEntity);
 
-		MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
+		MaterialComponent& material = *state.scene.materials.GetComponent(materialEntity);
 
 		material.baseColor = XMFLOAT4(1, 1, 1, 1);
 		material.roughness = 1.0f;
@@ -500,18 +496,18 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 	if (state.materialArray.empty())
 	{
-		Entity materialEntity = scene.Entity_CreateMaterial("GLTFImport_defaultMaterial");
+		Entity materialEntity = state.scene.Entity_CreateMaterial("GLTFImport_defaultMaterial");
 		state.materialArray.push_back(materialEntity);
 	}
 
 	// Create meshes:
 	for (auto& x : state.gltfModel.meshes)
 	{
-		Entity meshEntity = scene.Entity_CreateMesh(x.name);
+		Entity meshEntity = state.scene.Entity_CreateMesh(x.name);
 
 		state.meshArray.push_back(meshEntity);
 
-		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
+		MeshComponent& mesh = *state.scene.meshes.GetComponent(meshEntity);
 
 		for (auto& prim : x.primitives)
 		{
@@ -676,10 +672,10 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	for (auto& skin : state.gltfModel.skins)
 	{
 		Entity armatureEntity = CreateEntity();
-		scene.names.Create(armatureEntity) = skin.name;
-		scene.layers.Create(armatureEntity);
-		TransformComponent& transform = scene.transforms.Create(armatureEntity);
-		ArmatureComponent& armature = scene.armatures.Create(armatureEntity);
+		state.scene.names.Create(armatureEntity) = skin.name;
+		state.scene.layers.Create(armatureEntity);
+		TransformComponent& transform = state.scene.transforms.Create(armatureEntity);
+		ArmatureComponent& armature = state.scene.armatures.Create(armatureEntity);
 
 		state.armatureArray.push_back(armatureEntity);
 
@@ -706,7 +702,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[max(0, state.gltfModel.defaultScene)];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
-		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], state.modelEntity, state);
+		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], rootEntity, state);
 	}
 
 	// Create armature-bone mappings:
@@ -714,7 +710,7 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	for (auto& skin : state.gltfModel.skins)
 	{
 		Entity entity = state.armatureArray[armatureIndex++];
-		ArmatureComponent& armature = *scene.armatures.GetComponent(entity);
+		ArmatureComponent& armature = *state.scene.armatures.GetComponent(entity);
 
 		const size_t jointCount = skin.joints.size();
 
@@ -736,8 +732,8 @@ Entity ImportModel_GLTF(const std::string& fileName)
 	for (auto& anim : state.gltfModel.animations)
 	{
 		Entity entity = CreateEntity();
-		scene.names.Create(entity) = anim.name;
-		AnimationComponent& animationcomponent = scene.animations.Create(entity);
+		state.scene.names.Create(entity) = anim.name;
+		AnimationComponent& animationcomponent = state.scene.animations.Create(entity);
 
 		for (auto& channel : anim.channels)
 		{
@@ -834,10 +830,17 @@ Entity ImportModel_GLTF(const std::string& fileName)
 
 	if (transform_to_LH)
 	{
-		TransformComponent& transform = *scene.transforms.GetComponent(state.modelEntity);
+		TransformComponent& transform = *state.scene.transforms.GetComponent(rootEntity);
 		transform.scale_local.z = -transform.scale_local.z;
 		transform.SetDirty();
 	}
 
-	return state.modelEntity;
+	// We parented everything to a root transform, but we actually don't need that after loading model.
+	//	Apply every transformation according to root transform, then remove root all together. 
+	//	We could also keep it, but right now, it seems better to delete and have less hierarchy
+	state.scene.Update(0);
+	state.scene.Entity_Remove(rootEntity);
+
+	wiRenderer::GetScene().Merge(state.scene);
+
 }

@@ -312,7 +312,7 @@ void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialC
 	device->EventEnd(threadID);
 }
 
-void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const
+void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const
 {
 	if (strandCount == 0 || cb == nullptr)
 	{
@@ -352,12 +352,12 @@ void wiHairParticle::Draw(CameraComponent* camera, const MaterialComponent& mate
 }
 
 
-void wiHairParticle::Serialize(wiArchive& archive)
+void wiHairParticle::Serialize(wiArchive& archive, uint32_t seed)
 {
 	if (archive.IsReadMode())
 	{
 		archive >> _flags;
-		archive >> meshID;
+		wiECS::SerializeEntity(archive, meshID, seed);
 		archive >> strandCount;
 		archive >> segmentCount;
 		archive >> randomSeed;
@@ -369,7 +369,7 @@ void wiHairParticle::Serialize(wiArchive& archive)
 	else
 	{
 		archive << _flags;
-		archive << meshID;
+		wiECS::SerializeEntity(archive, meshID, seed);
 		archive << strandCount;
 		archive << segmentCount;
 		archive << randomSeed;

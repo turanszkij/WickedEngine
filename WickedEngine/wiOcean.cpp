@@ -325,7 +325,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 }
 
 
-void wiOcean::Render(const CameraComponent* camera, float time, GRAPHICSTHREAD threadID)
+void wiOcean::Render(const CameraComponent& camera, float time, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 

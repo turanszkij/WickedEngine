@@ -102,14 +102,21 @@ void PathTracingRenderableComponent::Update(float dt)
 {
 	const Scene& scene = wiRenderer::GetScene();
 
-	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+	if (wiRenderer::GetCamera().IsDirty())
 	{
-		const TransformComponent& transform = scene.transforms[i];
-
-		if (transform.IsDirty())
+		sam = -1;
+	}
+	else
+	{
+		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 		{
-			sam = -1;
-			break;
+			const TransformComponent& transform = scene.transforms[i];
+
+			if (transform.IsDirty())
+			{
+				sam = -1;
+				break;
+			}
 		}
 	}
 	sam++;
@@ -132,9 +139,9 @@ void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	wiRenderer::DrawTracedScene(wiRenderer::getCamera(), traceResult, threadID);
+	wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult, threadID);
 
 
 

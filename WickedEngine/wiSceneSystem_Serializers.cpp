@@ -1,11 +1,14 @@
 #include "wiSceneSystem.h"
 #include "wiResourceManager.h"
 #include "wiArchive.h"
+#include "wiRandom.h"
+
+using namespace wiECS;
 
 namespace wiSceneSystem
 {
 
-	void NameComponent::Serialize(wiArchive& archive)
+	void NameComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -19,7 +22,7 @@ namespace wiSceneSystem
 			archive << tmp;
 		}
 	}
-	void LayerComponent::Serialize(wiArchive& archive)
+	void LayerComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -30,7 +33,7 @@ namespace wiSceneSystem
 			archive << layerMask;
 		}
 	}
-	void TransformComponent::Serialize(wiArchive& archive)
+	void TransformComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -49,27 +52,27 @@ namespace wiSceneSystem
 			archive << translation_local;
 		}
 	}
-	void PreviousFrameTransformComponent::Serialize(wiArchive& archive)
+	void PreviousFrameTransformComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		// NOTHING! We just need a serialize function for this to be able serialize with ComponentManager!
 		//	This structure has no persistent state!
 	}
-	void HierarchyComponent::Serialize(wiArchive& archive)
+	void HierarchyComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
+		SerializeEntity(archive, parentID, seed);
+
 		if (archive.IsReadMode())
 		{
-			archive >> parentID;
 			archive >> layerMask_bind;
 			archive >> world_parent_inverse_bind;
 		}
 		else
 		{
-			archive << parentID;
 			archive << layerMask_bind;
 			archive << world_parent_inverse_bind;
 		}
 	}
-	void MaterialComponent::Serialize(wiArchive& archive)
+	void MaterialComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -143,8 +146,9 @@ namespace wiSceneSystem
 			archive << displacementMapName;
 		}
 	}
-	void MeshComponent::Serialize(wiArchive& archive)
+	void MeshComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -160,14 +164,14 @@ namespace wiSceneSystem
 			subsets.resize(subsetCount);
 			for (size_t i = 0; i < subsetCount; ++i)
 			{
-				archive >> subsets[i].materialID;
+				SerializeEntity(archive, subsets[i].materialID, seed);
 				archive >> subsets[i].indexOffset;
 				archive >> subsets[i].indexCount;
 			}
 
 			archive >> tessellationFactor;
 			archive >> impostorDistance;
-			archive >> armatureID;
+			SerializeEntity(archive, armatureID, seed);
 
 			CreateRenderData();
 		}
@@ -184,23 +188,23 @@ namespace wiSceneSystem
 			archive << subsets.size();
 			for (size_t i = 0; i < subsets.size(); ++i)
 			{
-				archive << subsets[i].materialID;
+				SerializeEntity(archive, subsets[i].materialID, seed);
 				archive << subsets[i].indexOffset;
 				archive << subsets[i].indexCount;
 			}
 
 			archive << tessellationFactor;
 			archive << impostorDistance;
-			archive << armatureID;
+			SerializeEntity(archive, armatureID, seed);
 
 		}
 	}
-	void ObjectComponent::Serialize(wiArchive& archive)
+	void ObjectComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> meshID;
+			SerializeEntity(archive, meshID, seed);
 			archive >> cascadeMask;
 			archive >> rendertypeMask;
 			archive >> color;
@@ -208,13 +212,13 @@ namespace wiSceneSystem
 		else
 		{
 			archive << _flags;
-			archive << meshID;
+			SerializeEntity(archive, meshID, seed);
 			archive << cascadeMask;
 			archive << rendertypeMask;
 			archive << color;
 		}
 	}
-	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive)
+	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -237,7 +241,7 @@ namespace wiSceneSystem
 			archive << damping;
 		}
 	}
-	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive)
+	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -256,12 +260,16 @@ namespace wiSceneSystem
 			archive << physicsindices;
 		}
 	}
-	void ArmatureComponent::Serialize(wiArchive& archive)
+	void ArmatureComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
 			archive >> boneCollection;
+			for (Entity& boneID : boneCollection)
+			{
+				SerializeEntity(archive, boneID, seed);
+			}
 			archive >> inverseBindMatrices;
 			archive >> remapMatrix;
 		}
@@ -273,7 +281,7 @@ namespace wiSceneSystem
 			archive << remapMatrix;
 		}
 	}
-	void LightComponent::Serialize(wiArchive& archive)
+	void LightComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -306,7 +314,7 @@ namespace wiSceneSystem
 			archive << lensFlareNames;
 		}
 	}
-	void CameraComponent::Serialize(wiArchive& archive)
+	void CameraComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -316,6 +324,8 @@ namespace wiSceneSystem
 			archive >> zNearP;
 			archive >> zFarP;
 			archive >> fov;
+
+			SetDirty();
 		}
 		else
 		{
@@ -327,7 +337,7 @@ namespace wiSceneSystem
 			archive << fov;
 		}
 	}
-	void EnvironmentProbeComponent::Serialize(wiArchive& archive)
+	void EnvironmentProbeComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -340,7 +350,7 @@ namespace wiSceneSystem
 			archive << _flags;
 		}
 	}
-	void ForceFieldComponent::Serialize(wiArchive& archive)
+	void ForceFieldComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -357,7 +367,7 @@ namespace wiSceneSystem
 			archive << range;
 		}
 	}
-	void DecalComponent::Serialize(wiArchive& archive)
+	void DecalComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -368,7 +378,7 @@ namespace wiSceneSystem
 			archive << _flags;
 		}
 	}
-	void AnimationComponent::Serialize(wiArchive& archive)
+	void AnimationComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
 		if (archive.IsReadMode())
 		{
@@ -381,7 +391,7 @@ namespace wiSceneSystem
 			for (size_t i = 0; i < channelCount; ++i)
 			{
 				archive >> channels[i]._flags;
-				archive >> channels[i].target;
+				SerializeEntity(archive, channels[i].target, seed);
 				archive >> (uint32_t&)channels[i].type;
 				archive >> (uint32_t&)channels[i].mode;
 				archive >> channels[i].keyframe_times;
@@ -397,7 +407,7 @@ namespace wiSceneSystem
 			for (size_t i = 0; i < channels.size(); ++i)
 			{
 				archive << channels[i]._flags;
-				archive << channels[i].target;
+				SerializeEntity(archive, channels[i].target, seed);
 				archive << (uint32_t&)channels[i].type;
 				archive << (uint32_t&)channels[i].mode;
 				archive << channels[i].keyframe_times;
@@ -408,29 +418,42 @@ namespace wiSceneSystem
 
 	void Scene::Serialize(wiArchive& archive)
 	{
-		names.Serialize(archive);
-		layers.Serialize(archive);
-		transforms.Serialize(archive);
-		prev_transforms.Serialize(archive);
-		hierarchy.Serialize(archive);
-		materials.Serialize(archive);
-		meshes.Serialize(archive);
-		objects.Serialize(archive);
-		aabb_objects.Serialize(archive);
-		rigidbodies.Serialize(archive);
-		softbodies.Serialize(archive);
-		armatures.Serialize(archive);
-		lights.Serialize(archive);
-		aabb_lights.Serialize(archive);
-		cameras.Serialize(archive);
-		probes.Serialize(archive);
-		aabb_probes.Serialize(archive);
-		forces.Serialize(archive);
-		decals.Serialize(archive);
-		aabb_decals.Serialize(archive);
-		animations.Serialize(archive);
-		emitters.Serialize(archive);
-		hairs.Serialize(archive);
+		if (archive.IsReadMode())
+		{
+			uint32_t entityCount;
+			archive >> entityCount; // reserved
+		}
+		else
+		{
+			archive << CountEntities();
+		}
+
+		// With this we will ensure that serialized entities are unique and persistent across the scene:
+		uint32_t seed = (uint32_t)wiRandom::getRandom(1, INT_MAX);
+
+		names.Serialize(archive, seed);
+		layers.Serialize(archive, seed);
+		transforms.Serialize(archive, seed);
+		prev_transforms.Serialize(archive, seed);
+		hierarchy.Serialize(archive, seed);
+		materials.Serialize(archive, seed);
+		meshes.Serialize(archive, seed);
+		objects.Serialize(archive, seed);
+		aabb_objects.Serialize(archive, seed);
+		rigidbodies.Serialize(archive, seed);
+		softbodies.Serialize(archive, seed);
+		armatures.Serialize(archive, seed);
+		lights.Serialize(archive, seed);
+		aabb_lights.Serialize(archive, seed);
+		cameras.Serialize(archive, seed);
+		probes.Serialize(archive, seed);
+		aabb_probes.Serialize(archive, seed);
+		forces.Serialize(archive, seed);
+		decals.Serialize(archive, seed);
+		aabb_decals.Serialize(archive, seed);
+		animations.Serialize(archive, seed);
+		emitters.Serialize(archive, seed);
+		hairs.Serialize(archive, seed);
 
 		if (archive.IsReadMode())
 		{
@@ -467,6 +490,508 @@ namespace wiSceneSystem
 			archive << windWaveSize;
 		}
 
+	}
+
+	void Scene::Entity_Serialize(wiArchive& archive, Entity entity, uint32_t seed)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> entity;
+
+			// Check for each components if it exists, and if yes, read it:
+
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = names.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = layers.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = transforms.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = prev_transforms.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = hierarchy.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = materials.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = meshes.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = objects.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = aabb_objects.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = rigidbodies.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = softbodies.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = armatures.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = lights.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = aabb_lights.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = cameras.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = probes.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = aabb_probes.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = forces.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = decals.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = aabb_decals.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = animations.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = emitters.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = hairs.Create(entity);
+					component.Serialize(archive, seed);
+				}
+			}
+		}
+		else
+		{
+			archive << entity;
+
+			// Find existing components one-by-one and write them out:
+
+			{
+				auto component = names.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = layers.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = transforms.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = prev_transforms.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = hierarchy.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = materials.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = meshes.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = objects.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = aabb_objects.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = rigidbodies.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = softbodies.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = armatures.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = lights.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = aabb_lights.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = cameras.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = probes.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = aabb_probes.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = forces.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = decals.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = aabb_decals.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = animations.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = emitters.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = hairs.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+
+		}
 	}
 
 }

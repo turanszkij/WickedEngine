@@ -558,7 +558,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 }
 
 
-void wiEmittedParticle::Draw(const MaterialComponent& material, GRAPHICSTHREAD threadID)
+void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", threadID);
@@ -787,13 +787,13 @@ void wiEmittedParticle::CleanUpStatic()
 }
 
 
-void wiEmittedParticle::Serialize(wiArchive& archive)
+void wiEmittedParticle::Serialize(wiArchive& archive, uint32_t seed)
 {
 	if (archive.IsReadMode())
 	{
 		archive >> _flags;
 		archive >> (uint32_t&)shaderType;
-		archive >> meshID;
+		wiECS::SerializeEntity(archive, meshID, seed);
 		archive >> FIXED_TIMESTEP;
 		archive >> size;
 		archive >> random_factor;
@@ -815,7 +815,7 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 	{
 		archive << _flags;
 		archive << (uint32_t)shaderType;
-		archive << meshID;
+		wiECS::SerializeEntity(archive, meshID, seed);
 		archive << FIXED_TIMESTEP;
 		archive << size;
 		archive << random_factor;

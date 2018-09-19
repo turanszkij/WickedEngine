@@ -32,7 +32,7 @@ public:
 	static void LoadShaders();
 
 	void UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID);
-	void Draw(CameraComponent* camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const;
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const;
 
 	static void CleanUpStatic();
 	static void SetUpStatic();
@@ -57,7 +57,7 @@ public:
 	XMFLOAT4X4 world;
 	AABB aabb;
 
-	void Serialize(wiArchive& archive);
+	void Serialize(wiArchive& archive, uint32_t seed = 0);
 };
 
 }

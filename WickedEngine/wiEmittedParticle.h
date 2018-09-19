@@ -73,7 +73,7 @@ public:
 
 	// Must have a transform and material component, but mesh is optional
 	void UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID);
-	void Draw(const MaterialComponent& material, GRAPHICSTHREAD threadID);
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID);
 
 	ParticleCounters GetDebugData() { return debugData; }
 
@@ -127,7 +127,7 @@ public:
 	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= DEPTHCOLLISION; } else { _flags &= ~DEPTHCOLLISION; } }
 	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
 
-	void Serialize(wiArchive& archive);
+	void Serialize(wiArchive& archive, uint32_t seed = 0);
 };
 
 }

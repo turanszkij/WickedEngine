@@ -2,6 +2,7 @@
 #define _ENTITY_COMPONENT_SYSTEM_H_
 
 #include "wiArchive.h"
+#include "wiRandom.h"
 
 #include <cstdint>
 #include <cassert>
@@ -12,10 +13,27 @@ namespace wiECS
 {
 	typedef uint32_t Entity;
 	static const Entity INVALID_ENTITY = 0;
+	// Runtime can create a new entity with this
 	inline Entity CreateEntity()
 	{
-		static Entity id = 0;
-		return ++id;
+		return wiRandom::getRandom(1, INT_MAX);
+	}
+	// This is the safe way to serialize an entity
+	//	seed : ensures that entity will be unique after loading (specify seed = 0 to leave entity as-is)
+	inline void SerializeEntity(wiArchive& archive, Entity& entity, uint32_t seed)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> entity;
+			if (entity != INVALID_ENTITY && seed > 0)
+			{
+				entity = ((entity << 1) ^ seed) >> 1;
+			}
+		}
+		else
+		{
+			archive << entity;
+		}
 	}
 
 	template<typename Component>
@@ -60,7 +78,7 @@ namespace wiECS
 			for (size_t i = 0; i < other.GetCount(); ++i)
 			{
 				Entity entity = other.entities[i];
-				assert(Contains(entity));
+				assert(!Contains(entity));
 				entities.push_back(entity);
 				lookup[entity] = components.size();
 				components.push_back(std::move(other.components[i]));
@@ -70,33 +88,29 @@ namespace wiECS
 		}
 
 		// Read/Write everything to an archive depending on the archive state
-		inline void Serialize(wiArchive& archive)
+		//	seed: needed when serializing from disk which might cause discrepancy in entity uniqueness
+		inline void Serialize(wiArchive& archive, uint32_t seed = 0)
 		{
 			if (archive.IsReadMode())
 			{
+				Clear(); // If we deserialize, we start from empty
+
 				size_t count;
 				archive >> count;
 
 				components.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					components[i].Serialize(archive);
+					components[i].Serialize(archive, seed);
 				}
 
 				entities.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					archive >> entities[i];
-				}
-
-				lookup.reserve(count);
-				for (size_t i = 0; i < count; ++i)
-				{
 					Entity entity;
-					size_t index;
-					archive >> entity;
-					archive >> index;
-					lookup[entity] = index;
+					SerializeEntity(archive, entity, seed);
+					entities[i] = entity;
+					lookup[entity] = i;
 				}
 			}
 			else
@@ -108,12 +122,7 @@ namespace wiECS
 				}
 				for (Entity entity : entities)
 				{
-					archive << entity;
-				}
-				for (auto it : lookup)
-				{
-					archive << it.first;
-					archive << it.second;
+					SerializeEntity(archive, entity, seed);
 				}
 			}
 		}
@@ -121,6 +130,9 @@ namespace wiECS
 		// Create a new component and retrieve a reference to it
 		inline Component& Create(Entity entity)
 		{
+			// INVALID_ENTITY is not allowed!
+			assert(entity != INVALID_ENTITY);
+
 			// Only one of this component type per entity is allowed!
 			assert(lookup.find(entity) == lookup.end());
 

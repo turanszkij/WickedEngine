@@ -211,7 +211,7 @@ void Translator::Update()
 	dragEnded = false;
 
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
-	CameraComponent* cam = wiRenderer::getCamera();
+	const CameraComponent& cam = wiRenderer::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
 	if (enabled)
@@ -219,11 +219,11 @@ void Translator::Update()
 
 		if (!dragging)
 		{
-			XMMATRIX P = cam->GetProjection();
-			XMMATRIX V = cam->GetView();
+			XMMATRIX P = cam.GetProjection();
+			XMMATRIX V = cam.GetView();
 			XMMATRIX W = XMMatrixIdentity();
 
-			dist = wiMath::Distance(transform.GetPosition(), cam->Eye) * 0.05f;
+			dist = wiMath::Distance(transform.GetPosition(), cam.Eye) * 0.05f;
 
 			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
@@ -237,13 +237,13 @@ void Translator::Update()
 			yz = o + XMVectorSet(0, 0.5f, 0.5f, 0) * dist;
 
 
-			o = XMVector3Project(o, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			x = XMVector3Project(x, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			y = XMVector3Project(y, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			z = XMVector3Project(z, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			xy = XMVector3Project(xy, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			xz = XMVector3Project(xz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			yz = XMVector3Project(yz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			o = XMVector3Project(o, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			x = XMVector3Project(x, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			y = XMVector3Project(y, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			z = XMVector3Project(z, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			xy = XMVector3Project(xy, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			xz = XMVector3Project(xz, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			yz = XMVector3Project(yz, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
 
 			XMVECTOR oDisV = XMVector3Length(o - p);
 			XMVECTOR xyDisV = XMVector3Length(xy - p);
@@ -298,19 +298,19 @@ void Translator::Update()
 			if (state == TRANSLATOR_X)
 			{
 				XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
-				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
 			}
 			else if (state == TRANSLATOR_Y)
 			{
 				XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
-				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
 			}
 			else if (state == TRANSLATOR_Z)
 			{
 				XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
-				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
 			}
 			else if (state == TRANSLATOR_XY)
@@ -328,19 +328,19 @@ void Translator::Update()
 			else
 			{
 				// xyz
-				planeNormal = cam->GetAt();
+				planeNormal = cam.GetAt();
 			}
 			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-			RAY ray = wiRenderer::getPickRay((long)pointer.x, (long)pointer.y);
+			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
-			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
-			ray = wiRenderer::getPickRay((long)prevPointer.x, (long)prevPointer.y);
+			ray = wiRenderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y);
 			rayOrigin = XMLoadFloat3(&ray.origin);
 			rayDir = XMLoadFloat3(&ray.direction);
-			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
 			XMVECTOR deltaV;
 			if (state == TRANSLATOR_X)
@@ -433,7 +433,7 @@ void Translator::Update()
 
 	prevPointer = pointer;
 }
-void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = wiRenderer::GetScene();
 
@@ -448,7 +448,7 @@ void Translator::Draw(CameraComponent* camera, GRAPHICSTHREAD threadID)
 
 	device->EventBegin("Editor - Translator", threadID);
 
-	XMMATRIX VP = camera->GetViewProjection();
+	XMMATRIX VP = camera.GetViewProjection();
 
 	wiRenderer::MiscCB sb;
 

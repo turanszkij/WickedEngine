@@ -2,6 +2,7 @@
 #define _INTERSECTABLES_H_
 #include "CommonInclude.h"
 #include "wiArchive.h"
+#include "wiECS.h"
 
 struct SPHERE;
 struct RAY;
@@ -52,17 +53,9 @@ struct AABB
 		}
 		assert(0);
 		return XMFLOAT3(0, 0, 0);
-		//corners[0] = min;
-		//corners[1] = XMFLOAT3(min.x, max.y, min.z);
-		//corners[2] = XMFLOAT3(min.x, max.y, max.z);
-		//corners[3] = XMFLOAT3(min.x, min.y, max.z);
-		//corners[4] = XMFLOAT3(max.x, min.y, min.z);
-		//corners[5] = XMFLOAT3(max.x, max.y, min.z);
-		//corners[6] = max;
-		//corners[7] = XMFLOAT3(max.x, min.y, max.z);
 	}
 
-	void Serialize(wiArchive& archive);
+	void Serialize(wiArchive& archive, uint32_t seed = 0);
 };
 struct SPHERE 
 {

@@ -130,7 +130,7 @@ struct FrameCulling
 		culledEnvProbes.clear();
 	}
 };
-unordered_map<CameraComponent*, FrameCulling> frameCullings;
+unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
 GFX_STRUCT Instance
 {
@@ -311,7 +311,7 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(customsamplers[i]);
 	}
 
-	getCamera()->CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+	GetCamera().CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 
 	SetUpStates();
 	LoadBuffers();
@@ -2908,14 +2908,12 @@ void wiRenderer::UpdatePerFrameData(float dt)
 
 	scene.Update(dt * GetGameSpeed());
 
-	*getPrevCamera() = *getCamera();
-
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
 		// We don't update it if the scene is empty, this even makes it easier to debug
 		const float f = 0.05f / voxelSceneData.voxelsize;
-		XMFLOAT3 center = XMFLOAT3(floorf(getCamera()->Eye.x * f) / f, floorf(getCamera()->Eye.y * f) / f, floorf(getCamera()->Eye.z * f) / f);
+		XMFLOAT3 center = XMFLOAT3(floorf(GetCamera().Eye.x * f) / f, floorf(GetCamera().Eye.y * f) / f, floorf(GetCamera().Eye.z * f) / f);
 		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
 		{
 			voxelSceneData.centerChangedThisFrame = true;
@@ -2934,7 +2932,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	{
 		for (auto& x : frameCullings)
 		{
-			CameraComponent* camera = x.first;
+			const CameraComponent* camera = x.first;
 			FrameCulling& culling = x.second;
 			culling.Clear();
 
@@ -2970,7 +2968,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 			}
 
 			// the following cullings will be only for the main camera:
-			if (camera == getCamera())
+			if (camera == &GetCamera())
 			{
 				// Cull decals:
 				for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
@@ -3073,6 +3071,8 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	}
 
 
+	GetPrevCamera() = GetCamera();
+
 	if (GetTemporalAAEnabled())
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 256);
@@ -3080,9 +3080,9 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = temporalAAJitter;
 		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetInternalResolution().x;
 		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetInternalResolution().y;
-		getCamera()->Projection.m[2][0] = temporalAAJitter.x;
-		getCamera()->Projection.m[2][1] = temporalAAJitter.y;
-		getCamera()->UpdateCamera();
+		GetCamera().Projection.m[2][0] = temporalAAJitter.x;
+		GetCamera().Projection.m[2][1] = temporalAAJitter.y;
+		GetCamera().UpdateCamera();
 	}
 	else
 	{
@@ -3090,8 +3090,8 @@ void wiRenderer::UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = XMFLOAT2(0, 0);
 	}
 
-	*getRefCamera() = *getCamera();
-	getRefCamera()->Reflect(waterPlane);
+	GetRefCamera() = GetCamera();
+	GetRefCamera().Reflect(waterPlane);
 
 	for (auto& x : waterRipples)
 	{
@@ -3151,7 +3151,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 
-	const FrameCulling& mainCameraCulling = frameCullings[getCamera()];
+	const FrameCulling& mainCameraCulling = frameCullings[&GetCamera()];
 
 	// Fill Light Array with lights + envprobes + decals in the frustum:
 	{
@@ -3160,7 +3160,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
 		static XMMATRIX* matrixArray = (XMMATRIX*)_mm_malloc(sizeof(XMMATRIX)*MATRIXARRAY_COUNT, 16);
 
-		const XMMATRIX viewMatrix = getCamera()->GetView();
+		const XMMATRIX viewMatrix = GetCamera().GetView();
 
 		UINT entityCounter = 0;
 		UINT matrixCounter = 0;
@@ -3476,7 +3476,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	{
 		wiHairParticle& hair = scene.hairs[i];
 
-		if (hair.meshID != INVALID_ENTITY && getCamera()->frustum.CheckBox(hair.aabb))
+		if (hair.meshID != INVALID_ENTITY && GetCamera().frustum.CheckBox(hair.aabb))
 		{
 			const MeshComponent* mesh = scene.meshes.GetComponent(hair.meshID);
 
@@ -3529,7 +3529,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	const FrameCulling& culling = frameCullings[getCamera()];
+	const FrameCulling& culling = frameCullings[&GetCamera()];
 
 	wiProfiler::GetInstance().BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
 
@@ -3570,7 +3570,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 			const AABB& aabb = *scene.aabb_objects.GetComponent(entity);
 
-			if (aabb.intersects(getCamera()->Eye))
+			if (aabb.intersects(GetCamera().Eye))
 			{
 				// camera is inside the instance, mark it as visible in this frame:
 				object.occlusionHistory |= 1;
@@ -3582,7 +3582,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 				queryID++;
 
 				// previous frame view*projection because these are drawn against the previous depth buffer:
-				cb.mTransform = XMMatrixTranspose(aabb.getAsBoxMatrix()*getPrevCamera()->GetViewProjection()); // todo: obb
+				cb.mTransform = XMMatrixTranspose(aabb.getAsBoxMatrix()*GetPrevCamera().GetViewProjection()); // todo: obb
 				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 				// render bounding box to later read the occlusion status
@@ -3606,7 +3606,7 @@ void wiRenderer::OcclusionCulling_Read()
 
 	wiProfiler::GetInstance().BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
 
-	const FrameCulling& culling = frameCullings[getCamera()];
+	const FrameCulling& culling = frameCullings[&GetCamera()];
 
 	if (!culling.culledObjects.empty())
 	{
@@ -3684,7 +3684,7 @@ void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -3699,7 +3699,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
 
 		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mTransform = XMMatrixTranspose(camera.GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
@@ -3767,7 +3767,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
 
 		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mTransform = XMMatrixTranspose(camera.GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
@@ -3829,7 +3829,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 
 		for (auto& x : renderableBoxes)
 		{
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera->GetViewProjection());
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera.GetViewProjection());
 			sb.mColor = x.second;
 
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -3895,7 +3895,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 			Entity entity = scene.probes.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera->GetViewProjection());
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.mColor = XMFLOAT4(0, 1, 1, 1);
 
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -3956,7 +3956,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		}
 
 		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
+		sb.mTransform = XMMatrixTranspose(camera.GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
 		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -3981,7 +3981,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 
 
 		MiscCB sb;
-		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera->GetViewProjection());
+		sb.mTransform = XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection());
 		sb.mColor = XMFLOAT4(1, 1, 1, 1);
 
 		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -4003,7 +4003,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
-			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera->GetViewProjection());
+			sb.mTransform = XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.mColor = XMFLOAT4(0, 1, 0, 1);
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
@@ -4051,8 +4051,8 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 		{
 			ForceFieldComponent& force = scene.forces[i];
 
-			sb.mTransform = XMMatrixTranspose(camera->GetViewProjection());
-			sb.mColor = XMFLOAT4(camera->Eye.x, camera->Eye.y, camera->Eye.z, (float)i);
+			sb.mTransform = XMMatrixTranspose(camera.GetViewProjection());
+			sb.mColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			switch (force.type)
@@ -4094,10 +4094,10 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 
 		for(size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
-			CameraComponent& cam = scene.cameras[i];
+			const CameraComponent& cam = scene.cameras[i];
 			Entity entity = scene.cameras.GetEntity(i);
 
-			sb.mTransform = XMMatrixTranspose(cam.GetInvView()*camera->GetViewProjection());
+			sb.mTransform = XMMatrixTranspose(cam.GetInvView()*camera.GetViewProjection());
 
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
 
@@ -4110,7 +4110,7 @@ void wiRenderer::DrawDebugWorld(CameraComponent* camera, GRAPHICSTHREAD threadID
 	device->EventEnd(threadID);
 }
 
-void wiRenderer::DrawSoftParticles(CameraComponent* camera, bool distortion, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = GetScene();
 
@@ -4122,11 +4122,11 @@ void wiRenderer::DrawSoftParticles(CameraComponent* camera, bool distortion, GRA
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
 		{
-			emitter.Draw(material, threadID);
+			emitter.Draw(camera, material, threadID);
 		}
 		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
 		{
-			emitter.Draw(material, threadID);
+			emitter.Draw(camera, material, threadID);
 		}
 	}
 
@@ -4225,9 +4225,9 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 
 	//GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
-	const FrameCulling& culling = frameCullings[camera];
+	const FrameCulling& culling = frameCullings[&camera];
 	const auto& culledLights = culling.culledLights;
 
 	Scene& scene = GetScene();
@@ -4271,7 +4271,7 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 					MiscCB miscCb;
 					miscCb.mColor.x = (float)light.entityArray_index;
 					float sca = light.range + 1;
-					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera->GetViewProjection());
+					miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection());
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					GetDevice()->Draw(240, 0, threadID); // icosphere
@@ -4286,7 +4286,7 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 						XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
-						camera->GetViewProjection()
+						camera.GetViewProjection()
 					);
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
@@ -4302,7 +4302,7 @@ void wiRenderer::DrawLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = GetScene();
 
@@ -4311,7 +4311,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 	GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 	GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
-	XMMATRIX camrot = XMLoadFloat3x3(&camera->rotationMatrix);
+	XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
 
 
 	for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
@@ -4362,7 +4362,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 						XMMatrixScaling(light.radius, light.radius, light.radius)*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera->GetViewProjection()
+						camera.GetViewProjection()
 					);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -4375,7 +4375,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 						XMMatrixScaling(light.radius, light.radius, light.radius)*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera->GetViewProjection()
+						camera.GetViewProjection()
 					);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -4388,7 +4388,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 						XMMatrixScaling(light.width * 0.5f, light.height * 0.5f, 0.5f)*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera->GetViewProjection()
+						camera.GetViewProjection()
 					);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -4401,7 +4401,7 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 						XMMatrixScaling(max(light.width * 0.5f, light.radius), light.radius, light.radius)*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera->GetViewProjection()
+						camera.GetViewProjection()
 					);
 
 					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
@@ -4417,9 +4417,9 @@ void wiRenderer::DrawLightVisualizers(CameraComponent* camera, GRAPHICSTHREAD th
 
 
 }
-void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
-	const FrameCulling& culling = frameCullings[camera];
+	const FrameCulling& culling = frameCullings[&camera];
 	const auto& culledLights = culling.culledLights;
 
 	if (!culledLights.empty())
@@ -4465,7 +4465,7 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 						MiscCB miscCb;
 						miscCb.mColor.x = (float)light.entityArray_index;
 						float sca = light.range + 1;
-						miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera->GetViewProjection());
+						miscCb.mTransform = XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection());
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						GetDevice()->Draw(240, 0, threadID); // icosphere
@@ -4480,7 +4480,7 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 							XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
-							camera->GetViewProjection()
+							camera.GetViewProjection()
 						);
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
@@ -4501,7 +4501,9 @@ void wiRenderer::DrawVolumeLights(CameraComponent* camera, GRAPHICSTHREAD thread
 }
 void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 {
-	const FrameCulling& culling = frameCullings[getCamera()];
+	const CameraComponent& camera = GetCamera();
+
+	const FrameCulling& culling = frameCullings[&camera];
 	const auto& culledLights = culling.culledLights;
 
 	Scene& scene = GetScene();
@@ -4525,9 +4527,9 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 				) * 100000;
 			}
 			
-			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.0f,1.0f,getCamera()->GetRealProjection(),getCamera()->GetView(),XMMatrixIdentity());
+			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.0f,1.0f, camera.GetRealProjection(), camera.GetView(),XMMatrixIdentity());
 
-			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS,getCamera()->GetEye()),getCamera()->GetAt() ))>0 )
+			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS, camera.GetEye()), camera.GetAt() ))>0 )
 				wiLensFlare::Draw(threadID,flarePos,light.lensFlareRimTextures);
 
 		}
@@ -4610,7 +4612,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 		const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
 
-		const FrameCulling& culling = frameCullings[getCamera()];
+		const FrameCulling& culling = frameCullings[&GetCamera()];
 		const auto& culledLights = culling.culledLights;
 
 		ViewPort vp;
@@ -5310,9 +5312,9 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	}
 }
 
-void wiRenderer::DrawWorld(CameraComponent* camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
+void wiRenderer::DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
-	const FrameCulling& culling = frameCullings[camera];
+	const FrameCulling& culling = frameCullings[&camera];
 
 	GetDevice()->EventBegin("DrawWorld", threadID);
 
@@ -5335,7 +5337,7 @@ void wiRenderer::DrawWorld(CameraComponent* camera, bool tessellation, GRAPHICST
 		{
 			const wiHairParticle& hair = scene.hairs[i];
 
-			if (camera->frustum.CheckBox(hair.aabb))
+			if (camera.frustum.CheckBox(hair.aabb))
 			{
 				Entity entity = scene.hairs.GetEntity(i);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
@@ -5347,16 +5349,16 @@ void wiRenderer::DrawWorld(CameraComponent* camera, bool tessellation, GRAPHICST
 
 	if (!culling.culledRenderer_opaque.empty()/* || (grass && culling.culledHairParticleSystems.empty())*/)
 	{
-		RenderMeshes(camera->Eye, culling.culledRenderer_opaque, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
+		RenderMeshes(camera.Eye, culling.culledRenderer_opaque, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
 	}
 
 	GetDevice()->EventEnd(threadID);
 
 }
 
-void wiRenderer::DrawWorldTransparent(CameraComponent* camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
+void wiRenderer::DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
-	const FrameCulling& culling = frameCullings[camera];
+	const FrameCulling& culling = frameCullings[&camera];
 
 	GetDevice()->EventBegin("DrawWorldTransparent", threadID);
 
@@ -5379,7 +5381,7 @@ void wiRenderer::DrawWorldTransparent(CameraComponent* camera, SHADERTYPE shader
 		{
 			const wiHairParticle& hair = scene.hairs[i];
 
-			if (camera->frustum.CheckBox(hair.aabb))
+			if (camera.frustum.CheckBox(hair.aabb))
 			{
 				Entity entity = scene.hairs.GetEntity(i);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
@@ -5391,7 +5393,7 @@ void wiRenderer::DrawWorldTransparent(CameraComponent* camera, SHADERTYPE shader
 
 	if (!culling.culledRenderer_transparent.empty())
 	{
-		RenderMeshes(camera->Eye, culling.culledRenderer_transparent, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
+		RenderMeshes(camera.Eye, culling.culledRenderer_transparent, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
 	}
 
 	GetDevice()->EventEnd(threadID);
@@ -5444,7 +5446,7 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
@@ -5470,7 +5472,7 @@ void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
 			Entity entity = scene.decals.GetEntity(i);
 			const AABB& aabb = *scene.aabb_decals.GetComponent(entity);
 
-			if ((decal.texture != nullptr || decal.normal != nullptr) && camera->frustum.CheckBox(aabb)) 
+			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBox(aabb)) 
 			{
 
 				device->BindResource(PS, decal.texture, TEXSLOT_ONDEMAND0, threadID);
@@ -5479,7 +5481,7 @@ void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
 				XMMATRIX decalWorld = XMLoadFloat4x4(&decal.world);
 
 				MiscCB dcbvs;
-				dcbvs.mTransform = XMMatrixTranspose(decalWorld*camera->GetViewProjection());
+				dcbvs.mTransform = XMMatrixTranspose(decalWorld*camera.GetViewProjection());
 				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
 				DecalCB dcbps;
@@ -5489,7 +5491,7 @@ void wiRenderer::DrawDecals(CameraComponent* camera, GRAPHICSTHREAD threadID)
 					dcbps.hasTexNor |= 0x0000001;
 				if (decal.normal != nullptr)
 					dcbps.hasTexNor |= 0x0000010;
-				XMStoreFloat3(&dcbps.eye, camera->GetEye());
+				XMStoreFloat3(&dcbps.eye, camera.GetEye());
 				dcbps.opacity = decal.GetOpacity();
 				dcbps.front = decal.front;
 				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
@@ -5563,8 +5565,8 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	VP.MaxDepth = 1.0f;
 	GetDevice()->BindViewports(1, &VP, threadID);
 
-	const float zNearP = getCamera()->zNearP;
-	const float zFarP = getCamera()->zFarP;
+	const float zNearP = GetCamera().zNearP;
+	const float zFarP = GetCamera().zFarP;
 
 	// reconstruct envmap array status:
 	bool envmapTaken[envmapCount] = {};
@@ -5981,9 +5983,9 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
 	static XMFLOAT4X4 _savedProjection;
-	if (memcmp(&_savedProjection, &getCamera()->Projection, sizeof(XMFLOAT4X4)) != 0)
+	if (memcmp(&_savedProjection, &GetCamera().Projection, sizeof(XMFLOAT4X4)) != 0)
 	{
-		_savedProjection = getCamera()->Projection;
+		_savedProjection = GetCamera().Projection;
 		frustumsComplete = false;
 	}
 	if(!frustumsComplete || _resolutionChanged)
@@ -6047,7 +6049,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 		}
 
 
-		const FrameCulling& frameCulling = frameCullings[getCamera()];
+		const FrameCulling& frameCulling = frameCullings[&GetCamera()];
 
 
 		DispatchParamsCB dispatchParams;
@@ -6805,7 +6807,7 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
 }
 
-void wiRenderer::DrawTracedScene(CameraComponent* camera, Texture2D* result, GRAPHICSTHREAD threadID)
+void wiRenderer::DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	Scene& scene = GetScene();
@@ -7552,37 +7554,37 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.mTemporalAAJitter = temporalAAJitter;
 	cb.mTemporalAAJitterPrev = temporalAAJitterPrev;
 
-	auto camera = getCamera();
-	auto prevCam = getPrevCamera();
-	auto reflCam = getRefCamera();
+	const auto& camera = GetCamera();
+	const auto& prevCam = GetPrevCamera();
+	const auto& reflCam = GetRefCamera();
 
-	cb.mVP = XMMatrixTranspose(camera->GetViewProjection());
-	cb.mView = XMMatrixTranspose(camera->GetView());
-	cb.mProj = XMMatrixTranspose(camera->GetProjection());
-	cb.mCamPos = camera->Eye;
+	cb.mVP = XMMatrixTranspose(camera.GetViewProjection());
+	cb.mView = XMMatrixTranspose(camera.GetView());
+	cb.mProj = XMMatrixTranspose(camera.GetProjection());
+	cb.mCamPos = camera.Eye;
 	cb.mCamDistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.mCamPos)));
-	cb.mPrevV = XMMatrixTranspose(prevCam->GetView());
-	cb.mPrevP = XMMatrixTranspose(prevCam->GetProjection());
-	cb.mPrevVP = XMMatrixTranspose(prevCam->GetViewProjection());
-	cb.mPrevInvVP = XMMatrixTranspose(prevCam->GetInvViewProjection());
-	cb.mReflVP = XMMatrixTranspose(reflCam->GetViewProjection());
-	cb.mInvV = XMMatrixTranspose(camera->GetInvView());
-	cb.mInvP = XMMatrixTranspose(camera->GetInvProjection());
-	cb.mInvVP = XMMatrixTranspose(camera->GetInvViewProjection());
-	cb.mAt = camera->At;
-	cb.mUp = camera->Up;
-	cb.mZNearP = camera->zNearP;
-	cb.mZFarP = camera->zFarP;
+	cb.mPrevV = XMMatrixTranspose(prevCam.GetView());
+	cb.mPrevP = XMMatrixTranspose(prevCam.GetProjection());
+	cb.mPrevVP = XMMatrixTranspose(prevCam.GetViewProjection());
+	cb.mPrevInvVP = XMMatrixTranspose(prevCam.GetInvViewProjection());
+	cb.mReflVP = XMMatrixTranspose(reflCam.GetViewProjection());
+	cb.mInvV = XMMatrixTranspose(camera.GetInvView());
+	cb.mInvP = XMMatrixTranspose(camera.GetInvProjection());
+	cb.mInvVP = XMMatrixTranspose(camera.GetInvViewProjection());
+	cb.mAt = camera.At;
+	cb.mUp = camera.Up;
+	cb.mZNearP = camera.zNearP;
+	cb.mZFarP = camera.zFarP;
 	cb.mZNearP_Recip = 1.0f / max(0.0001f, cb.mZNearP);
 	cb.mZFarP_Recip = 1.0f / max(0.0001f, cb.mZFarP);
 	cb.mZRange = abs(cb.mZFarP - cb.mZNearP);
 	cb.mZRange_Recip = 1.0f / max(0.0001f, cb.mZRange);
-	cb.mFrustumPlanesWS[0] = camera->frustum.getLeftPlane();
-	cb.mFrustumPlanesWS[1] = camera->frustum.getRightPlane();
-	cb.mFrustumPlanesWS[2] = camera->frustum.getTopPlane();
-	cb.mFrustumPlanesWS[3] = camera->frustum.getBottomPlane();
-	cb.mFrustumPlanesWS[4] = camera->frustum.getNearPlane();
-	cb.mFrustumPlanesWS[5] = camera->frustum.getFarPlane();
+	cb.mFrustumPlanesWS[0] = camera.frustum.getLeftPlane();
+	cb.mFrustumPlanesWS[1] = camera.frustum.getRightPlane();
+	cb.mFrustumPlanesWS[2] = camera.frustum.getTopPlane();
+	cb.mFrustumPlanesWS[3] = camera.frustum.getBottomPlane();
+	cb.mFrustumPlanesWS[4] = camera.frustum.getNearPlane();
+	cb.mFrustumPlanesWS[5] = camera.frustum.getFarPlane();
 
 	cb.mWorldBoundsMin = scene.bounds.getMin();
 	cb.mWorldBoundsMax = scene.bounds.getMax();
@@ -7595,14 +7597,14 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }
-void wiRenderer::UpdateCameraCB(CameraComponent* camera, GRAPHICSTHREAD threadID)
+void wiRenderer::UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	CameraCB cb;
 
-	cb.mVP = XMMatrixTranspose(camera->GetViewProjection());
-	cb.mView = XMMatrixTranspose(camera->GetView());
-	cb.mProj = XMMatrixTranspose(camera->GetProjection());
-	cb.mCamPos = camera->Eye;
+	cb.mVP = XMMatrixTranspose(camera.GetViewProjection());
+	cb.mView = XMMatrixTranspose(camera.GetView());
+	cb.mProj = XMMatrixTranspose(camera.GetProjection());
+	cb.mCamPos = camera.Eye;
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 }
@@ -7735,8 +7737,9 @@ const XMFLOAT4& wiRenderer::GetWaterPlane()
 }
 
 
-RAY wiRenderer::getPickRay(long cursorX, long cursorY) {
-	const CameraComponent& camera = *getCamera();
+RAY wiRenderer::GetPickRay(long cursorX, long cursorY) 
+{
+	const CameraComponent& camera = GetCamera();
 	XMMATRIX V = camera.GetView();
 	XMMATRIX P = camera.GetRealProjection();
 	XMMATRIX W = XMMatrixIdentity();
@@ -8081,7 +8084,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		camera_transform.UpdateTransform();
 		impostorcamera.UpdateCamera(&camera_transform);
 		impostorcamera.UpdateProjection();
-		UpdateCameraCB(&impostorcamera, threadID);
+		UpdateCameraCB(impostorcamera, threadID);
 
 		for (MeshComponent::MeshSubset& subset : mesh.subsets)
 		{
@@ -8105,7 +8108,7 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 	wiRenderer::GenerateMipChain(mesh.impostorTarget.GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
 
 	mesh.impostorTarget.viewPort = savedViewPort;
-	UpdateCameraCB(getCamera(), threadID);
+	UpdateCameraCB(GetCamera(), threadID);
 }
 
 void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
@@ -8164,18 +8167,18 @@ void wiRenderer::SetOceanEnabled(bool enabled, const wiOceanParameter& params)
 }
 
 
-CameraComponent* wiRenderer::getCamera()
+CameraComponent& wiRenderer::GetCamera()
 {
 	static CameraComponent camera;
-	return &camera;
+	return camera;
 }
-CameraComponent* wiRenderer::getPrevCamera()
+CameraComponent& wiRenderer::GetPrevCamera()
 {
 	static CameraComponent camera;
-	return &camera;
+	return camera;
 }
-CameraComponent* wiRenderer::getRefCamera()
+CameraComponent& wiRenderer::GetRefCamera()
 {
 	static CameraComponent camera;
-	return &camera;
+	return camera;
 }

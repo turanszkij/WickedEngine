@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "wiSceneSystem.h"
 #include "ModelImporter.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -14,15 +15,13 @@ using namespace wiECS;
 // Transform the data from OBJ space to engine-space:
 static const bool transform_to_LH = true;
 
-Entity ImportModel_OBJ(const std::string& fileName)
+void ImportModel_OBJ(const std::string& fileName)
 {
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
 	wiHelper::RemoveExtensionFromFileName(name);
 
-
-	Scene& scene = wiRenderer::GetScene();
-
+	Scene scene;
 
 	tinyobj::attrib_t obj_attrib;
 	vector<tinyobj::shape_t> obj_shapes;
@@ -31,13 +30,13 @@ Entity ImportModel_OBJ(const std::string& fileName)
 
 	bool success = tinyobj::LoadObj(&obj_attrib, &obj_shapes, &obj_materials, &obj_errors, fileName.c_str(), directory.c_str(), true);
 
+	if (!obj_errors.empty())
+	{
+		wiBackLog::post(obj_errors.c_str());
+	}
+
 	if (success)
 	{
-		Entity modelEntity = scene.Entity_CreateModel(name);
-		TransformComponent& model_transform = *scene.transforms.GetComponent(modelEntity);
-
-		model_transform.UpdateTransform(); // everything will be attached to this, so values need to be up to date
-
 		// Load material library:
 		vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
@@ -98,8 +97,6 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			Entity meshEntity = scene.Entity_CreateMesh(shape.name + "_mesh");
 			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
 			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-
-			scene.Component_Attach(objectEntity, modelEntity);
 
 			object.meshID = meshEntity;
 
@@ -189,14 +186,10 @@ Entity ImportModel_OBJ(const std::string& fileName)
 			mesh.CreateRenderData();
 		}
 
-		return modelEntity;
+		wiRenderer::GetScene().Merge(scene);
 	}
-
-	if (!obj_errors.empty())
+	else
 	{
-		wiBackLog::post(obj_errors.c_str());
 		wiHelper::messageBox("OBJ import failed! Check backlog for errors!", "Error!");
 	}
-
-	return INVALID_ENTITY;
 }

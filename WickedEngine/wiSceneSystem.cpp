@@ -694,6 +694,8 @@ namespace wiSceneSystem
 	}
 	void CameraComponent::UpdateCamera(const TransformComponent* transform)
 	{
+		SetDirty(false);
+
 		XMVECTOR _Eye;
 		XMVECTOR _At;
 		XMVECTOR _Up;
@@ -784,7 +786,7 @@ namespace wiSceneSystem
 
 		RunForceUpdateSystem(transforms, forces);
 
-		RunLightUpdateSystem(*wiRenderer::getCamera(), transforms, aabb_lights, lights, sunDirection, sunColor);
+		RunLightUpdateSystem(wiRenderer::GetCamera(), transforms, aabb_lights, lights, sunDirection, sunColor);
 
 		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
 
@@ -817,6 +819,24 @@ namespace wiSceneSystem
 	}
 	void Scene::Merge(Scene& other)
 	{
+		if (CountEntities() == 0)
+		{
+			sunDirection = other.sunDirection;
+			sunColor = other.sunColor;
+			horizon = other.horizon;
+			zenith = other.zenith;
+			ambient = other.ambient;
+			fogStart = other.fogStart;
+			fogEnd = other.fogEnd;
+			fogHeight = other.fogHeight;
+			cloudiness = other.cloudiness;
+			cloudScale = other.cloudScale;
+			cloudSpeed = other.cloudSpeed;
+			windDirection = other.windDirection;
+			windRandomness = other.windRandomness;
+			windWaveSize = other.windWaveSize;
+		}
+
 		names.Merge(other.names);
 		layers.Merge(other.layers);
 		transforms.Merge(other.transforms);
@@ -842,6 +862,36 @@ namespace wiSceneSystem
 		hairs.Merge(other.hairs);
 
 		bounds = AABB::Merge(bounds, other.bounds);
+	}
+	size_t Scene::CountEntities() const
+	{
+		// Entities are unique within a ComponentManager, so the most populated ComponentManager
+		//	will actually give us how many entities there are in the scene
+		size_t entityCount = 0;
+		entityCount = max(entityCount, names.GetCount());
+		entityCount = max(entityCount, layers.GetCount());
+		entityCount = max(entityCount, transforms.GetCount());
+		entityCount = max(entityCount, prev_transforms.GetCount());
+		entityCount = max(entityCount, hierarchy.GetCount());
+		entityCount = max(entityCount, materials.GetCount());
+		entityCount = max(entityCount, meshes.GetCount());
+		entityCount = max(entityCount, objects.GetCount());
+		entityCount = max(entityCount, aabb_objects.GetCount());
+		entityCount = max(entityCount, rigidbodies.GetCount());
+		entityCount = max(entityCount, softbodies.GetCount());
+		entityCount = max(entityCount, armatures.GetCount());
+		entityCount = max(entityCount, lights.GetCount());
+		entityCount = max(entityCount, aabb_lights.GetCount());
+		entityCount = max(entityCount, cameras.GetCount());
+		entityCount = max(entityCount, probes.GetCount());
+		entityCount = max(entityCount, aabb_probes.GetCount());
+		entityCount = max(entityCount, forces.GetCount());
+		entityCount = max(entityCount, decals.GetCount());
+		entityCount = max(entityCount, aabb_decals.GetCount());
+		entityCount = max(entityCount, animations.GetCount());
+		entityCount = max(entityCount, emitters.GetCount());
+		entityCount = max(entityCount, hairs.GetCount());
+		return entityCount;
 	}
 
 	void Scene::Entity_Remove(Entity entity)
@@ -880,20 +930,6 @@ namespace wiSceneSystem
 			}
 		}
 		return INVALID_ENTITY;
-	}
-	Entity Scene::Entity_CreateModel(
-		const std::string& name
-	)
-	{
-		Entity entity = CreateEntity();
-
-		names.Create(entity) = name;
-
-		layers.Create(entity);
-
-		transforms.Create(entity);
-
-		return entity;
 	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name
@@ -1132,13 +1168,13 @@ namespace wiSceneSystem
 		{
 			// Save the parent's inverse worldmatrix:
 			XMStoreFloat4x4(&parentcomponent.world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
-		}
 
-		TransformComponent* transform_child = transforms.GetComponent(entity);
-		if (transform_child != nullptr)
-		{
-			// Child updated immediately, to that it can be immediately attached to afterwards:
-			transform_child->UpdateParentedTransform(*transform_parent, parentcomponent.world_parent_inverse_bind);
+			TransformComponent* transform_child = transforms.GetComponent(entity);
+			if (transform_child != nullptr)
+			{
+				// Child updated immediately, to that it can be immediately attached to afterwards:
+				transform_child->UpdateParentedTransform(*transform_parent, parentcomponent.world_parent_inverse_bind);
+			}
 		}
 
 		LayerComponent* layer_child = layers.GetComponent(entity);
@@ -1738,7 +1774,7 @@ namespace wiSceneSystem
 					}
 				}
 
-				aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
+				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 			}
 			break;
 			case LightComponent::SPOT:
@@ -1793,7 +1829,7 @@ namespace wiSceneSystem
 					XMStoreFloat3(&light.right, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), W));
 					XMStoreFloat3(&light.front, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W));
 					// area lights have no bounds, just like directional lights (maybe todo)
-					aabb.createFromHalfWidth(wiRenderer::getCamera()->Eye, XMFLOAT3(10000, 10000, 10000));
+					aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 				}
 			}
 			break;

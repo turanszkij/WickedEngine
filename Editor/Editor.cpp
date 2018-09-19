@@ -565,8 +565,9 @@ void EditorComponent::Load()
 						wiArchive archive(fileName, true);
 						if (archive.IsOpen())
 						{
-							Scene& scene = wiRenderer::GetScene();
+							Scene scene;
 							scene.Serialize(archive);
+							wiRenderer::GetScene().Merge(scene);
 						}
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
@@ -586,7 +587,7 @@ void EditorComponent::Load()
 					main->activateComponent(this, 10, wiColor::Black);
 					worldWnd->UpdateFromRenderer();
 				});
-				main->activateComponent(loader,10,wiColor::Black);
+				main->activateComponent(loader, 10, wiColor::Black);
 				ResetHistory();
 			}
 		}).detach();
@@ -696,9 +697,8 @@ void EditorComponent::Load()
 			ss << "Delete: DELETE button" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
-			ss << "You can find sample models in the models directory. Try to load one." << endl;
-			ss << "You can also import models from .OBJ, .GLTF, .GLB, .WIO files." << endl;
-			ss << "You can also export models from Blender with the io_export_wicked_wi_bin.py script." << endl;
+			ss << "You can find sample scenes in the models directory. Try to load one." << endl;
+			ss << "You can also import models from .OBJ, .GLTF, .GLB files." << endl;
 			ss << "You can find a program configuration file at Editor/config.ini" << endl;
 			ss << "You can find sample LUA scripts in the scripts directory. Try to load one." << endl;
 			ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << endl;
@@ -759,7 +759,7 @@ void EditorComponent::FixedUpdate()
 void EditorComponent::Update(float dt)
 {
 	Scene& scene = wiRenderer::GetScene();
-	CameraComponent& camera = *wiRenderer::getCamera();
+	CameraComponent& camera = wiRenderer::GetCamera();
 
 	// Follow camera proxy:
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
@@ -867,6 +867,7 @@ void EditorComponent::Update(float dt)
 				XMStoreFloat3(&_move, move_rot);
 				cameraWnd->camera_transform.Translate(_move);
 				cameraWnd->camera_transform.RotateRollPitchYaw(XMFLOAT3(yDif, xDif, 0));
+				camera.SetDirty();
 			}
 
 			cameraWnd->camera_transform.UpdateTransform();
@@ -885,20 +886,21 @@ void EditorComponent::Update(float dt)
 			else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
 			{
 				cameraWnd->camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4));
+				camera.SetDirty();
 			}
 			else if(abs(xDif) + abs(yDif) > 0)
 			{
 				cameraWnd->camera_target.RotateRollPitchYaw(XMFLOAT3(yDif*2, xDif*2, 0));
+				camera.SetDirty();
 			}
 
 			cameraWnd->camera_target.UpdateTransform();
 			cameraWnd->camera_transform.UpdateParentedTransform(cameraWnd->camera_target);
 		}
-		camera.UpdateCamera(&cameraWnd->camera_transform);
 
 		// Begin picking:
 		UINT pickMask = rendererWnd->GetPickType();
-		RAY pickRay = wiRenderer::getPickRay((long)currentMouse.x, (long)currentMouse.y);
+		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y);
 		{
 			hovered.Clear();
 
@@ -1083,7 +1085,7 @@ void EditorComponent::Update(float dt)
 						TransformComponent& transform = *scene.transforms.GetComponent(entity);
 						transform.Translate(hovered.position);
 						transform.Scale(XMFLOAT3(4, 4, 4));
-						transform.MatrixTransform(XMLoadFloat3x3(&wiRenderer::getCamera()->rotationMatrix));
+						transform.MatrixTransform(XMLoadFloat3x3(&wiRenderer::GetCamera().rotationMatrix));
 						scene.Component_Attach(entity, hovered.entity);
 					}
 				}
@@ -1192,7 +1194,6 @@ void EditorComponent::Update(float dt)
 
 			assert(picked.entity != INVALID_ENTITY);
 
-
 			objectWnd->SetEntity(picked.entity);
 			emitterWnd->SetEntity(picked.entity);
 			hairWnd->SetEntity(picked.entity);
@@ -1205,10 +1206,16 @@ void EditorComponent::Update(float dt)
 			if (picked.subsetIndex >= 0)
 			{
 				const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
-				meshWnd->SetEntity(object->meshID);
+				if (object != nullptr) // maybe it was deleted...
+				{
+					meshWnd->SetEntity(object->meshID);
 
-				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-				materialWnd->SetEntity(mesh->subsets[picked.subsetIndex].materialID);
+					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+					if (mesh != nullptr && mesh->subsets.size() > picked.subsetIndex)
+					{
+						materialWnd->SetEntity(mesh->subsets[picked.subsetIndex].materialID);
+					}
+				}
 			}
 			else
 			{
@@ -1217,101 +1224,30 @@ void EditorComponent::Update(float dt)
 
 		}
 
-		//// Delete
-		//if (wiInputManager::GetInstance()->press(VK_DELETE))
-		//{
-		//	wiArchive* archive = AdvanceHistory();
-		//	*archive << HISTORYOP_DELETE;
-		//	*archive << selected.size();
-		//	for (auto& x : selected)
-		//	{
-		//		*archive << x->transform->GetID();
+		// Delete
+		if (wiInputManager::GetInstance()->press(VK_DELETE))
+		{
 
-		//		if (x->object != nullptr)
-		//		{
-		//			*archive << true;
-		//			x->object->Serialize(*archive);
-		//			x->object->mesh->Serialize(*archive);
-		//			*archive << x->object->mesh->subsets.size();
-		//			for (auto& y : x->object->mesh->subsets)
-		//			{
-		//				y.material->Serialize(*archive);
-		//			}
+			wiArchive* archive = AdvanceHistory();
+			*archive << HISTORYOP_DELETE;
 
-		//			wiRenderer::Remove(x->object);
-		//			SAFE_DELETE(x->object);
-		//			x->transform = nullptr;
-		//		}
-		//		else
-		//		{
-		//			*archive << false;
-		//		}
+			*archive << selected.size();
+			for (auto& x : selected)
+			{
+				*archive << x.entity;
+			}
+			for (auto& x : selected)
+			{
+				scene.Entity_Serialize(*archive, x.entity);
+			}
+			for (auto& x : selected)
+			{
+				scene.Entity_Remove(x.entity);
+				savedHierarchy.Remove_KeepSorted(x.entity);
+			}
 
-		//		if (x->light != nullptr)
-		//		{
-		//			*archive << true;
-		//			x->light->Serialize(*archive);
-
-		//			wiRenderer::Remove(x->light);
-		//			SAFE_DELETE(x->light);
-		//			x->transform = nullptr;
-		//		}
-		//		else
-		//		{
-		//			*archive << false;
-		//		}
-
-		//		if (x->decal != nullptr)
-		//		{
-		//			*archive << true;
-		//			x->decal->Serialize(*archive);
-
-		//			wiRenderer::Remove(x->decal);
-		//			SAFE_DELETE(x->decal);
-		//			x->transform = nullptr;
-		//		}
-		//		else
-		//		{
-		//			*archive << false;
-		//		}
-
-		//		if (x->forceField != nullptr)
-		//		{
-		//			*archive << true;
-		//			x->forceField->Serialize(*archive);
-
-		//			wiRenderer::Remove(x->forceField);
-		//			SAFE_DELETE(x->forceField);
-		//			x->transform = nullptr;
-		//		}
-		//		else
-		//		{
-		//			*archive << false;
-		//		}
-
-		//		if (x->camera != nullptr)
-		//		{
-		//			*archive << true;
-		//			x->camera->Serialize(*archive);
-
-		//			wiRenderer::Remove(x->camera);
-		//			SAFE_DELETE(x->camera);
-		//			x->camera = nullptr;
-		//		}
-		//		else
-		//		{
-		//			*archive << false;
-		//		}
-
-		//		EnvironmentProbe* envProbe = dynamic_cast<EnvironmentProbe*>(x->transform);
-		//		if (envProbe != nullptr)
-		//		{
-		//			wiRenderer::Remove(envProbe);
-		//			SAFE_DELETE(envProbe);
-		//		}
-		//	}
-		//	ClearSelected();
-		//}
+			EndTranslate();
+		}
 
 		// Control operations...
 		if (wiInputManager::GetInstance()->down(VK_CONTROL))
@@ -1439,6 +1375,8 @@ void EditorComponent::Update(float dt)
 	__super::Update(dt);
 
 	renderPath->Update(dt);
+
+	camera.UpdateCamera(&cameraWnd->camera_transform);
 }
 void EditorComponent::Render()
 {
@@ -1565,7 +1503,7 @@ void EditorComponent::Compose()
 		return;
 	}
 
-	CameraComponent* camera = wiRenderer::getCamera();
+	const CameraComponent& camera = wiRenderer::GetCamera();
 
 	Scene& scene = wiRenderer::GetScene();
 
@@ -1577,7 +1515,7 @@ void EditorComponent::Compose()
 			Entity entity = scene.lights.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1625,7 +1563,7 @@ void EditorComponent::Compose()
 			Entity entity = scene.decals.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1660,7 +1598,7 @@ void EditorComponent::Compose()
 			Entity entity = scene.forces.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1695,7 +1633,7 @@ void EditorComponent::Compose()
 
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1729,7 +1667,7 @@ void EditorComponent::Compose()
 			Entity entity = scene.armatures.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1763,7 +1701,7 @@ void EditorComponent::Compose()
 			Entity entity = scene.emitters.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1797,7 +1735,7 @@ void EditorComponent::Compose()
 			Entity entity = scene.hairs.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera->Eye) * 0.08f;
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			wiImageEffects fx;
 			fx.pos = transform.GetPosition();
@@ -1932,14 +1870,15 @@ void EditorComponent::EndTranslate()
 			{
 				// Save the parent's inverse worldmatrix:
 				XMStoreFloat4x4(&parent->world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
+
+				TransformComponent* transform_child = scene.transforms.GetComponent(x.entity);
+				if (transform_child != nullptr)
+				{
+					// Child updated immediately, to that it can be immediately attached to afterwards:
+					transform_child->UpdateParentedTransform(*transform_parent, parent->world_parent_inverse_bind);
+				}
 			}
 
-			TransformComponent* transform_child = scene.transforms.GetComponent(x.entity);
-			if (transform_child != nullptr)
-			{
-				// Child updated immediately, to that it can be immediately attached to afterwards:
-				transform_child->UpdateParentedTransform(*transform_parent, parent->world_parent_inverse_bind);
-			}
 		}
 	}
 
@@ -2010,7 +1949,9 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				*archive >> start >> end;
 				translator.enabled = true;
 
-				TransformComponent& transform = *wiRenderer::GetScene().transforms.GetComponent(translator.entityID);
+				Scene& scene = wiRenderer::GetScene();
+
+				TransformComponent& transform = *scene.transforms.GetComponent(translator.entityID);
 				transform.ClearTransform();
 				if (undo)
 				{
@@ -2022,85 +1963,35 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				}
 			}
 			break;
-		//case HISTORYOP_DELETE:
-		//	{
-		//		Model* model = nullptr;
-		//		if (undo)
-		//		{
-		//			model = new Model;
-		//		}
+		case HISTORYOP_DELETE:
+			{
+				Scene& scene = wiRenderer::GetScene();
 
-		//		size_t count;
-		//		*archive >> count;
-		//		for (size_t i = 0; i < count; ++i)
-		//		{
-		//			// Entity ID
-		//			uint64_t id;
-		//			*archive >> id;
+				size_t count;
+				*archive >> count;
+				vector<Entity> deletedEntities(count);
+				for (size_t i = 0; i < count; ++i)
+				{
+					*archive >> deletedEntities[i];
+				}
 
+				if (undo)
+				{
+					for (size_t i = 0; i < count; ++i)
+					{
+						scene.Entity_Serialize(*archive);
+					}
+				}
+				else
+				{
+					for (size_t i = 0; i < count; ++i)
+					{
+						scene.Entity_Remove(deletedEntities[i]);
+					}
+				}
 
-		//			bool tmp;
-
-		//			// object
-		//			*archive >> tmp;
-		//			if (tmp)
-		//			{
-		//				if (undo)
-		//				{
-		//					Object* object = new Object;
-		//					object->Serialize(*archive);
-		//					object->SetID(id);
-		//					object->mesh = new Mesh;
-		//					object->mesh->Serialize(*archive);
-		//					size_t subsetCount;
-		//					*archive >> subsetCount;
-		//					for (size_t i = 0; i < subsetCount; ++i)
-		//					{
-		//						object->mesh->subsets[i].material = new Material;
-		//						object->mesh->subsets[i].material->Serialize(*archive);
-		//					}
-		//					object->mesh->CreateRenderData();
-		//					model->Add(object);
-		//				}
-		//			}
-
-		//			// light
-		//			*archive >> tmp;
-		//			if (tmp)
-		//			{
-		//				Light* light = new Light;
-		//				light->Serialize(*archive);
-		//				light->SetID(id);
-		//				model->Add(light);
-		//			}
-
-		//			// decal
-		//			*archive >> tmp;
-		//			if (tmp)
-		//			{
-		//				Decal* decal = new Decal;
-		//				decal->Serialize(*archive);
-		//				decal->SetID(id);
-		//				model->Add(decal);
-		//			}
-
-		//			// force field
-		//			*archive >> tmp;
-		//			if (tmp)
-		//			{
-		//				ForceField* force = new ForceField;
-		//				force->Serialize(*archive);
-		//				force->SetID(id);
-		//				model->Add(force);
-		//			}
-		//		}
-
-		//		if (undo)
-		//		{
-		//			wiRenderer::AddModel(model);
-		//		}
-		//	}
-		//	break;
+			}
+			break;
 		case HISTORYOP_SELECTION:
 			{
 				EndTranslate();
