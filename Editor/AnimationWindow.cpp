@@ -155,7 +155,7 @@ void AnimationWindow::Update()
 
 		loopedCheckBox->SetCheck(animation.IsLooped());
 
-		timerSlider->SetRange(0, animation.length);
+		timerSlider->SetRange(0, animation.GetLength());
 		timerSlider->SetValue(animation.timer);
 	}
 }

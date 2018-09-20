@@ -424,6 +424,50 @@ namespace wiSceneSystem
 			assert(SUCCEEDED(hr));
 		}
 
+		// vertexBuffer - COLORS
+		if (!vertex_colors.empty())
+		{
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = 0;
+			bd.StructureByteStride = sizeof(uint32_t);
+			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertex_colors.size());
+			bd.Format = FORMAT_R8G8B8A8_UNORM;
+
+			SubresourceData InitData;
+			InitData.pSysMem = vertex_colors.data();
+			vertexBuffer_COL.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_COL.get());
+			assert(SUCCEEDED(hr));
+		}
+
+		// vertexBuffer - ATLAS
+		if (!vertex_atlas.empty())
+		{
+			std::vector<Vertex_TEX> vertices(vertex_atlas.size());
+			for (size_t i = 0; i < vertices.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_atlas[i]);
+			}
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = 0;
+			bd.StructureByteStride = sizeof(Vertex_TEX);
+			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices.size());
+			bd.Format = Vertex_TEX::FORMAT;
+
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
+			vertexBuffer_ATL.reset(new GPUBuffer);
+			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_ATL.get());
+			assert(SUCCEEDED(hr));
+		}
+
 	}
 	void MeshComponent::ComputeNormals(bool smooth)
 	{
@@ -931,6 +975,19 @@ namespace wiSceneSystem
 		}
 		return INVALID_ENTITY;
 	}
+	Entity Scene::Entity_Duplicate(Entity entity)
+	{
+		wiArchive archive;
+
+		// First write the entity to staging area:
+		archive.SetReadModeAndResetPos(false);
+		Entity_Serialize(archive, entity, 0);
+
+		// Then deserialize with a unique seed:
+		archive.SetReadModeAndResetPos(true);
+		uint32_t seed = wiRandom::getRandom(1, INT_MAX);
+		return Entity_Serialize(archive, entity, seed);
+	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name
 	)
@@ -1252,58 +1309,54 @@ namespace wiSceneSystem
 				continue;
 			}
 
-			for (auto& channel : animation.channels)
+			for (const AnimationComponent::AnimationChannel& channel : animation.channels)
 			{
-				if (channel.keyframe_times.empty())
-				{
-					// No keyframes!
-					assert(0);
-					continue;
-				}
+				assert(channel.samplerIndex < animation.samplers.size());
+				const AnimationComponent::AnimationSampler& sampler = animation.samplers[channel.samplerIndex];
 
 				int keyLeft = 0;
 				int keyRight = 0;
 
-				if (channel.keyframe_times.back() < animation.timer)
+				if (sampler.keyframe_times.back() < animation.timer)
 				{
 					// Rightmost keyframe is already outside animation, so just snap to last keyframe:
-					keyLeft = keyRight = (int)channel.keyframe_times.size() - 1;
+					keyLeft = keyRight = (int)sampler.keyframe_times.size() - 1;
 				}
 				else
 				{
 					// Search for the right keyframe (greater/equal to anim time):
-					while (channel.keyframe_times[keyRight++] < animation.timer) {}
+					while (sampler.keyframe_times[keyRight++] < animation.timer) {}
 					keyRight--;
 
 					// Left keyframe is just near right:
 					keyLeft = max(0, keyRight - 1);
 				}
 
-				float left = channel.keyframe_times[keyLeft];
+				float left = sampler.keyframe_times[keyLeft];
 
 				TransformComponent& transform = *transforms.GetComponent(channel.target);
 
-				if (channel.mode == AnimationComponent::AnimationChannel::Mode::STEP || keyLeft == keyRight)
+				if (sampler.mode == AnimationComponent::AnimationSampler::Mode::STEP || keyLeft == keyRight)
 				{
 					// Nearest neighbor method (snap to left):
-					switch (channel.type)
+					switch (channel.path)
 					{
-					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						transform.translation_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
+						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
+						transform.translation_local = ((const XMFLOAT3*)sampler.keyframe_data.data())[keyLeft];
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Type::ROTATION:
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
 					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
-						transform.rotation_local = ((const XMFLOAT4*)channel.keyframe_data.data())[keyLeft];
+						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 4);
+						transform.rotation_local = ((const XMFLOAT4*)sampler.keyframe_data.data())[keyLeft];
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Type::SCALE:
+					case AnimationComponent::AnimationChannel::Path::SCALE:
 					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						transform.scale_local = ((const XMFLOAT3*)channel.keyframe_data.data())[keyLeft];
+						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
+						transform.scale_local = ((const XMFLOAT3*)sampler.keyframe_data.data())[keyLeft];
 					}
 					break;
 					}
@@ -1311,25 +1364,25 @@ namespace wiSceneSystem
 				else
 				{
 					// Linear interpolation method:
-					float right = channel.keyframe_times[keyRight];
+					float right = sampler.keyframe_times[keyRight];
 					float t = (animation.timer - left) / (right - left);
 
-					switch (channel.type)
+					switch (channel.path)
 					{
-					case AnimationComponent::AnimationChannel::Type::TRANSLATION:
+					case AnimationComponent::AnimationChannel::Path::TRANSLATION:
 					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
+						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)sampler.keyframe_data.data();
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
 						XMStoreFloat3(&transform.translation_local, vAnim);
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Type::ROTATION:
+					case AnimationComponent::AnimationChannel::Path::ROTATION:
 					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 4);
-						const XMFLOAT4* data = (const XMFLOAT4*)channel.keyframe_data.data();
+						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 4);
+						const XMFLOAT4* data = (const XMFLOAT4*)sampler.keyframe_data.data();
 						XMVECTOR vLeft = XMLoadFloat4(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat4(&data[keyRight]);
 						XMVECTOR vAnim = XMQuaternionSlerp(vLeft, vRight, t);
@@ -1337,10 +1390,10 @@ namespace wiSceneSystem
 						XMStoreFloat4(&transform.rotation_local, vAnim);
 					}
 					break;
-					case AnimationComponent::AnimationChannel::Type::SCALE:
+					case AnimationComponent::AnimationChannel::Path::SCALE:
 					{
-						assert(channel.keyframe_data.size() == channel.keyframe_times.size() * 3);
-						const XMFLOAT3* data = (const XMFLOAT3*)channel.keyframe_data.data();
+						assert(sampler.keyframe_data.size() == sampler.keyframe_times.size() * 3);
+						const XMFLOAT3* data = (const XMFLOAT3*)sampler.keyframe_data.data();
 						XMVECTOR vLeft = XMLoadFloat3(&data[keyLeft]);
 						XMVECTOR vRight = XMLoadFloat3(&data[keyRight]);
 						XMVECTOR vAnim = XMVectorLerp(vLeft, vRight, t);
@@ -1359,12 +1412,14 @@ namespace wiSceneSystem
 				animation.timer += dt;
 			}
 
-			if (animation.IsLooped() && animation.timer > animation.length)
+			const float animationLength = animation.GetLength();
+
+			if (animation.IsLooped() && animation.timer > animationLength)
 			{
 				animation.timer = 0.0f;
 			}
 
-			animation.timer = min(animation.timer, animation.length);
+			animation.timer = min(animation.timer, animationLength);
 		}
 	}
 	void RunPhysicsUpdateSystem(

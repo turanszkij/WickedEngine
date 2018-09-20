@@ -39,12 +39,8 @@ wiInputManager::~wiInputManager()
 
 wiInputManager* wiInputManager::GetInstance()
 {
-	static wiInputManager* instance = nullptr;
-	if (instance == nullptr)
-	{
-		instance = new wiInputManager();
-	}
-	return instance;
+	static wiInputManager instance;
+	return &instance;
 }
 
 
@@ -78,7 +74,8 @@ void wiInputManager::Update()
 		//rawinput->RetrieveBufferedData();
 	}
 
-	for(InputCollection::iterator iter=inputs.begin();iter!=inputs.end();){
+	for (InputCollection::iterator iter = inputs.begin(); iter != inputs.end();)
+	{
 		InputType type = iter->first.type;
 		DWORD button = iter->first.button;
 		short playerIndex = iter->first.playerIndex;
@@ -94,10 +91,12 @@ void wiInputManager::Update()
 			todelete = true;
 		}
 
-		if(todelete){
+		if (todelete) 
+		{
 			inputs.erase(iter++);
 		}
-		else{
+		else 
+		{
 			++iter;
 		}
 	}
@@ -166,13 +165,14 @@ bool wiInputManager::hold(DWORD button, DWORD frames, bool continuous, InputType
 		return false;
 
 	Input input = Input();
-	input.button=button;
-	input.type=inputType;
-	input.playerIndex=playerIndex;
+	input.button = button;
+	input.type = inputType;
+	input.playerIndex = playerIndex;
 	LOCK();
 	InputCollection::iterator iter = inputs.find(input);
-	if(iter==inputs.end()){
-		inputs.insert(pair<Input,DWORD>(input,0));
+	if (iter == inputs.end())
+	{
+		inputs.insert(pair<Input, DWORD>(input, 0));
 		UNLOCK();
 		return false;
 	}

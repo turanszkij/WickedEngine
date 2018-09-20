@@ -3,7 +3,6 @@
 #include "wiRenderer.h"
 #include "wiInputManager.h"
 #include "wiMath.h"
-#include "wiSceneComponents_BindLua.h"
 
 using namespace wiGraphicsTypes;
 using namespace wiECS;

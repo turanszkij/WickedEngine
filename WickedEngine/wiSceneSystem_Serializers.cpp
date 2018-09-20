@@ -43,6 +43,7 @@ namespace wiSceneSystem
 			archive >> translation_local;
 
 			SetDirty();
+			UpdateTransform();
 		}
 		else
 		{
@@ -157,6 +158,8 @@ namespace wiSceneSystem
 			archive >> vertex_texcoords;
 			archive >> vertex_boneindices;
 			archive >> vertex_boneweights;
+			archive >> vertex_atlas;
+			archive >> vertex_colors;
 			archive >> indices;
 
 			size_t subsetCount;
@@ -183,6 +186,8 @@ namespace wiSceneSystem
 			archive << vertex_texcoords;
 			archive << vertex_boneindices;
 			archive << vertex_boneweights;
+			archive << vertex_atlas;
+			archive << vertex_colors;
 			archive << indices;
 
 			archive << subsets.size();
@@ -265,18 +270,31 @@ namespace wiSceneSystem
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> boneCollection;
-			for (Entity& boneID : boneCollection)
+
+			size_t boneCount;
+			archive >> boneCount;
+			boneCollection.resize(boneCount);
+			for (size_t i = 0; i < boneCount; ++i)
 			{
+				Entity boneID;
 				SerializeEntity(archive, boneID, seed);
+				boneCollection[i] = boneID;
 			}
+
 			archive >> inverseBindMatrices;
 			archive >> remapMatrix;
 		}
 		else
 		{
 			archive << _flags;
-			archive << boneCollection;
+
+			archive << boneCollection.size();
+			for (size_t i = 0; i < boneCollection.size(); ++i)
+			{
+				Entity boneID = boneCollection[i];
+				SerializeEntity(archive, boneID, seed);
+			}
+
 			archive << inverseBindMatrices;
 			archive << remapMatrix;
 		}
@@ -383,7 +401,9 @@ namespace wiSceneSystem
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			archive >> length;
+			archive >> start;
+			archive >> end;
+			archive >> timer;
 
 			size_t channelCount;
 			archive >> channelCount;
@@ -391,27 +411,46 @@ namespace wiSceneSystem
 			for (size_t i = 0; i < channelCount; ++i)
 			{
 				archive >> channels[i]._flags;
+				archive >> (uint32_t&)channels[i].path;
 				SerializeEntity(archive, channels[i].target, seed);
-				archive >> (uint32_t&)channels[i].type;
-				archive >> (uint32_t&)channels[i].mode;
-				archive >> channels[i].keyframe_times;
-				archive >> channels[i].keyframe_data;
+				archive >> channels[i].samplerIndex;
 			}
+
+			size_t samplerCount;
+			archive >> samplerCount;
+			samplers.resize(samplerCount);
+			for (size_t i = 0; i < samplerCount; ++i)
+			{
+				archive >> samplers[i]._flags;
+				archive >> (uint32_t&)samplers[i].mode;
+				archive >> samplers[i].keyframe_times;
+				archive >> samplers[i].keyframe_data;
+			}
+
 		}
 		else
 		{
 			archive << _flags;
-			archive << length;
+			archive << start;
+			archive << end;
+			archive << timer;
 
 			archive << channels.size();
 			for (size_t i = 0; i < channels.size(); ++i)
 			{
 				archive << channels[i]._flags;
+				archive << (uint32_t&)channels[i].path;
 				SerializeEntity(archive, channels[i].target, seed);
-				archive << (uint32_t&)channels[i].type;
-				archive << (uint32_t&)channels[i].mode;
-				archive << channels[i].keyframe_times;
-				archive << channels[i].keyframe_data;
+				archive << channels[i].samplerIndex;
+			}
+
+			archive << samplers.size();
+			for (size_t i = 0; i < samplers.size(); ++i)
+			{
+				archive << samplers[i]._flags;
+				archive << samplers[i].mode;
+				archive << samplers[i].keyframe_times;
+				archive << samplers[i].keyframe_data;
 			}
 		}
 	}
@@ -492,14 +531,13 @@ namespace wiSceneSystem
 
 	}
 
-	void Scene::Entity_Serialize(wiArchive& archive, Entity entity, uint32_t seed)
+	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity, uint32_t seed)
 	{
+		SerializeEntity(archive, entity, seed);
+
 		if (archive.IsReadMode())
 		{
-			archive >> entity;
-
-			// Check for each components if it exists, and if yes, read it:
-
+			// Check for each components if it exists, and if yes, READ it:
 			{
 				bool component_exists;
 				archive >> component_exists;
@@ -710,10 +748,7 @@ namespace wiSceneSystem
 		}
 		else
 		{
-			archive << entity;
-
-			// Find existing components one-by-one and write them out:
-
+			// Find existing components one-by-one and WRITE them out:
 			{
 				auto component = names.GetComponent(entity);
 				if (component != nullptr)
@@ -992,6 +1027,8 @@ namespace wiSceneSystem
 			}
 
 		}
+
+		return entity;
 	}
 
 }

@@ -660,6 +660,18 @@ void ImportModel_GLTF(const std::string& fileName)
 						mesh.vertex_boneweights[vertexOffset + i] = ((XMFLOAT4*)data)[i];
 					}
 				}
+				else if (!attr_name.compare("COLOR_0"))
+				{
+					mesh.vertex_colors.resize(vertexOffset + vertexCount);
+					assert(stride == 16);
+					for (size_t i = 0; i < vertexCount; ++i)
+					{
+						const XMFLOAT4& color = ((XMFLOAT4*)data)[i];
+						uint32_t rgba = wiMath::CompressColor(color);
+
+						mesh.vertex_colors[vertexOffset + i] = rgba;
+					}
+				}
 
 			}
 
@@ -734,13 +746,21 @@ void ImportModel_GLTF(const std::string& fileName)
 		Entity entity = CreateEntity();
 		state.scene.names.Create(entity) = anim.name;
 		AnimationComponent& animationcomponent = state.scene.animations.Create(entity);
+		animationcomponent.samplers.resize(anim.samplers.size());
+		animationcomponent.channels.resize(anim.channels.size());
 
-		for (auto& channel : anim.channels)
+		for (size_t i = 0; i < anim.samplers.size(); ++i)
 		{
-			const tinygltf::AnimationSampler& sam = anim.samplers[channel.sampler];
+			auto& sam = anim.samplers[i];
 
-			animationcomponent.channels.push_back(AnimationComponent::AnimationChannel());
-			animationcomponent.channels.back().target = state.entityMap[&state.gltfModel.nodes[channel.target_node]];
+			if (!sam.interpolation.compare("LINEAR"))
+			{
+				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::LINEAR;
+			}
+			else if (!sam.interpolation.compare("STEP"))
+			{
+				animationcomponent.samplers[i].mode = AnimationComponent::AnimationSampler::Mode::STEP;
+			}
 
 			// AnimationSampler input = keyframe times
 			{
@@ -753,18 +773,18 @@ void ImportModel_GLTF(const std::string& fileName)
 				int stride = accessor.ByteStride(bufferView);
 				size_t count = accessor.count;
 
-				animationcomponent.channels.back().keyframe_times.resize(count);
+				animationcomponent.samplers[i].keyframe_times.resize(count);
 
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
 				assert(stride == 4);
 
-				animationcomponent.length = 0.0f;
-				for (size_t i = 0; i < count; ++i)
+				for (size_t j = 0; j < count; ++j)
 				{
-					float time = ((float*)data)[i];
-					animationcomponent.channels.back().keyframe_times[i] = time;
-					animationcomponent.length = max(animationcomponent.length, time);
+					float time = ((float*)data)[j];
+					animationcomponent.samplers[i].keyframe_times[j] = time;
+					animationcomponent.start = min(animationcomponent.start, time);
+					animationcomponent.end = max(animationcomponent.end, time);
 				}
 
 			}
@@ -780,50 +800,60 @@ void ImportModel_GLTF(const std::string& fileName)
 
 				const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
-				if (!channel.target_path.compare("scale"))
+				switch (accessor.type)
 				{
-					animationcomponent.channels.back().type = AnimationComponent::AnimationChannel::Type::SCALE;
-					animationcomponent.channels.back().keyframe_data.resize(count * 3);
-
+				case TINYGLTF_TYPE_VEC3:
+				{
 					assert(stride == sizeof(XMFLOAT3));
-					for (size_t i = 0; i < count; ++i)
+					animationcomponent.samplers[i].keyframe_data.resize(count * 3);
+					for (size_t j = 0; j < count; ++j)
 					{
-						XMFLOAT3 sca = ((XMFLOAT3*)data)[i];
-						((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i] = sca;
+						((XMFLOAT3*)animationcomponent.samplers[i].keyframe_data.data())[j] = ((XMFLOAT3*)data)[j];
 					}
 				}
-				else if (!channel.target_path.compare("rotation"))
+				break;
+				case TINYGLTF_TYPE_VEC4:
 				{
-					animationcomponent.channels.back().type = AnimationComponent::AnimationChannel::Type::ROTATION;
-					animationcomponent.channels.back().keyframe_data.resize(count * 4);
-
 					assert(stride == sizeof(XMFLOAT4));
-					for (size_t i = 0; i < count; ++i)
+					animationcomponent.samplers[i].keyframe_data.resize(count * 4);
+					for (size_t j = 0; j < count; ++j)
 					{
-						const XMFLOAT4& rot = ((XMFLOAT4*)data)[i];
-						((XMFLOAT4*)animationcomponent.channels.back().keyframe_data.data())[i] = rot;
+						((XMFLOAT4*)animationcomponent.samplers[i].keyframe_data.data())[j] = ((XMFLOAT4*)data)[j];
 					}
 				}
-				else if (!channel.target_path.compare("translation"))
-				{
-					animationcomponent.channels.back().type = AnimationComponent::AnimationChannel::Type::TRANSLATION;
-					animationcomponent.channels.back().keyframe_data.resize(count * 3);
+				break;
+				default: assert(0); break;
 
-					assert(stride == sizeof(XMFLOAT3));
-					for (size_t i = 0; i < count; ++i)
-					{
-						const XMFLOAT3& tra = ((XMFLOAT3*)data)[i];
-						((XMFLOAT3*)animationcomponent.channels.back().keyframe_data.data())[i] = tra;
-					}
 				}
-				else
-				{
-					// Not implemented:
-					animationcomponent.channels.pop_back();
-				}
+
 			}
 
+		}
 
+		for (size_t i = 0; i < anim.channels.size(); ++i)
+		{
+			auto& channel = anim.channels[i];
+
+			animationcomponent.channels[i].target = state.entityMap[&state.gltfModel.nodes[channel.target_node]];
+			assert(channel.sampler >= 0);
+			animationcomponent.channels[i].samplerIndex = (uint32_t)channel.sampler;
+
+			if (!channel.target_path.compare("scale"))
+			{
+				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::SCALE;
+			}
+			else if (!channel.target_path.compare("rotation"))
+			{
+				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::ROTATION;
+			}
+			else if (!channel.target_path.compare("translation"))
+			{
+				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::TRANSLATION;
+			}
+			else
+			{
+				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::UNKNOWN;
+			}
 		}
 
 	}
@@ -839,6 +869,7 @@ void ImportModel_GLTF(const std::string& fileName)
 	//	Apply every transformation according to root transform, then remove root all together. 
 	//	We could also keep it, but right now, it seems better to delete and have less hierarchy
 	state.scene.Update(0);
+	state.scene.Component_DetachChildren(rootEntity);
 	state.scene.Entity_Remove(rootEntity);
 
 	wiRenderer::GetScene().Merge(state.scene);

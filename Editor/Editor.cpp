@@ -1257,94 +1257,48 @@ void EditorComponent::Update(float dt)
 			{
 				selectAll = true;
 			}
-			//// Copy
-			//if (wiInputManager::GetInstance()->press('C'))
-			//{
-			//	SAFE_DELETE(clipboard);
-			//	clipboard = new wiArchive();
-			//	*clipboard << CLIPBOARD_MODEL;
-			//	Model* model = new Model;
-			//	for (auto& x : selected)
-			//	{
-			//		model->Add(x->object);
-			//		model->Add(x->light);
-			//		model->Add(x->decal);
-			//		model->Add(x->forceField);
-			//		model->Add(x->camera);
-			//	}
-			//	model->Serialize(*clipboard);
+			// Copy
+			if (wiInputManager::GetInstance()->press('C'))
+			{
+				SAFE_DELETE(clipboard);
+				clipboard = new wiArchive();
+				*clipboard << selected.size();
+				for (auto& x : selected)
+				{
+					scene.Entity_Serialize(*clipboard, x.entity, 0);
+				}
+			}
+			// Paste
+			if (wiInputManager::GetInstance()->press('V'))
+			{
+				auto prevSel = selected;
+				EndTranslate();
 
-			//	model->objects.clear();
-			//	model->lights.clear();
-			//	model->decals.clear();
-			//	model->meshes.clear();
-			//	model->materials.clear();
-			//	model->forces.clear();
-			//	model->armatures.clear();
-			//	model->cameras.clear();
-			//	SAFE_DELETE(model);
-			//}
-			//// Paste
-			//if (wiInputManager::GetInstance()->press('V'))
-			//{
-			//	clipboard->SetReadModeAndResetPos(true);
-			//	int tmp;
-			//	*clipboard >> tmp;
-			//	ClipboardItemType type = (ClipboardItemType)tmp;
-			//	switch (type)
-			//	{
-			//	case CLIPBOARD_MODEL:
-			//	{
-			//		Model* model = new Model;
-			//		model->Serialize(*clipboard);
-			//		wiRenderer::AddModel(model);
-			//	}
-			//	break;
-			//	case CLIPBOARD_EMPTY:
-			//		break;
-			//	default:
-			//		break;
-			//	}
-			//}
-			//// Duplicate Instances
-			//if (wiInputManager::GetInstance()->press('D'))
-			//{
-			//	EndTranslate();
+				clipboard->SetReadModeAndResetPos(true);
+				size_t count;
+				*clipboard >> count;
+				for (size_t i = 0; i < count; ++i)
+				{
+					Picked picked;
+					picked.entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX));
+					AddSelected(picked);
+				}
 
-			//	for (auto& x : selected)
-			//	{
-			//		if (x->object != nullptr)
-			//		{
-			//			Object* o = new Object(*x->object);
-			//			wiRenderer::Add(o);
-			//			x->transform = o;
-			//			x->object = o;
-			//		}
-			//		if (x->light != nullptr)
-			//		{
-			//			Light* l = new Light(*x->light);
-			//			wiRenderer::Add(l);
-			//			x->transform = l;
-			//			x->light = l;
-			//		}
-			//		if (x->forceField != nullptr)
-			//		{
-			//			ForceField* l = new ForceField(*x->forceField);
-			//			wiRenderer::Add(l);
-			//			x->transform = l;
-			//			x->forceField = l;
-			//		}
-			//		if (x->camera != nullptr)
-			//		{
-			//			Camera* l = new Camera(*x->camera);
-			//			wiRenderer::Add(l);
-			//			x->transform = l;
-			//			x->camera = l;
-			//		}
-			//	}
-
-			//	BeginTranslate();
-			//}
+				BeginTranslate();
+			}
+			// Duplicate Instances
+			if (wiInputManager::GetInstance()->press('D'))
+			{
+				auto prevSel = selected;
+				EndTranslate();
+				for (auto& x : prevSel)
+				{
+					Picked picked;
+					picked.entity = scene.Entity_Duplicate(x.entity);
+					AddSelected(picked);
+				}
+				BeginTranslate();
+			}
 			// Undo
 			if (wiInputManager::GetInstance()->press('Z'))
 			{

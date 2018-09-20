@@ -206,6 +206,8 @@ namespace wiSceneSystem
 		std::vector<XMFLOAT2>		vertex_texcoords;
 		std::vector<XMUINT4>		vertex_boneindices;
 		std::vector<XMFLOAT4>		vertex_boneweights;
+		std::vector<XMFLOAT2>		vertex_atlas;
+		std::vector<uint32_t>		vertex_colors;
 		std::vector<uint32_t>		indices;
 
 		struct MeshSubset
@@ -226,6 +228,8 @@ namespace wiSceneSystem
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_POS;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_TEX;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_COL;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_ATL;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
 		wiRenderTarget impostorTarget;
@@ -792,7 +796,9 @@ namespace wiSceneSystem
 			LOOPED = 1 << 1,
 		};
 		uint32_t _flags = LOOPED;
-		float length = 0.0f;
+		float start = 0;
+		float end = 0;
+		float timer = 0.0f;
 
 		struct AnimationChannel
 		{
@@ -802,14 +808,26 @@ namespace wiSceneSystem
 			};
 			uint32_t _flags = EMPTY;
 
-			wiECS::Entity target = wiECS::INVALID_ENTITY;
-			enum Type
+			enum Path
 			{
 				TRANSLATION,
 				ROTATION,
 				SCALE,
+				UNKNOWN,
 				TYPE_FORCE_UINT32 = 0xFFFFFFFF
-			} type = TRANSLATION;
+			} path = TRANSLATION;
+
+			wiECS::Entity target = wiECS::INVALID_ENTITY;
+			uint32_t samplerIndex = 0;
+		};
+		struct AnimationSampler
+		{
+			enum FLAGS
+			{
+				EMPTY = 0,
+			};
+			uint32_t _flags = EMPTY;
+
 			enum Mode
 			{
 				LINEAR,
@@ -822,12 +840,11 @@ namespace wiSceneSystem
 		};
 
 		std::vector<AnimationChannel> channels;
-
-		// Non-serialized attributes:
-		float timer = 0.0f;
+		std::vector<AnimationSampler> samplers;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
+		inline float GetLength() const { return end - start; }
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void Pause() { _flags &= ~PLAYING; }
@@ -895,10 +912,13 @@ namespace wiSceneSystem
 		void Entity_Remove(wiECS::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wiECS::Entity Entity_FindByName(const std::string& name);
+		// Duplicates all of an entity's components and creates a new entity with them:
+		wiECS::Entity Entity_Duplicate(wiECS::Entity entity);
 		// Serializes entity and all of its components to archive:
 		//	You can specify entity = INVALID_ENTITY when the entity needs to be created from archive
 		//	You can specify seed = 0 when the archive is guaranteed to be storing persistent and unique entities
-		void Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY, uint32_t seed = 0);
+		//	Returns either the new entity that was read, or the original entity that was written
+		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY, uint32_t seed = 0);
 
 		wiECS::Entity Entity_CreateMaterial(
 			const std::string& name

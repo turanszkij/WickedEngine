@@ -124,11 +124,6 @@ public:
 
 
 	wiArchive *clipboard = nullptr;
-	enum ClipboardItemType
-	{
-		CLIPBOARD_MODEL,
-		CLIPBOARD_EMPTY
-	};
 
 	std::vector<wiArchive*> history;
 	int historyPos = -1;
