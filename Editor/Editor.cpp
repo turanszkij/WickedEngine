@@ -3,7 +3,7 @@
 #include "wiRenderer.h"
 #include "MaterialWindow.h"
 #include "PostprocessWindow.h"
-#include "WorldWindow.h"
+#include "WeatherWindow.h"
 #include "ObjectWindow.h"
 #include "MeshWindow.h"
 #include "CameraWindow.h"
@@ -157,7 +157,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	materialWnd = new MaterialWindow(&GetGUI());
 	postprocessWnd = new PostprocessWindow(&GetGUI(), renderPath);
-	worldWnd = new WorldWindow(&GetGUI());
+	weatherWnd = new WeatherWindow(&GetGUI());
 	objectWnd = new ObjectWindow(&GetGUI());
 	meshWnd = new MeshWindow(&GetGUI());
 	cameraWnd = new CameraWindow(&GetGUI());
@@ -175,7 +175,7 @@ void EditorComponent::DeleteWindows()
 {
 	SAFE_DELETE(materialWnd);
 	SAFE_DELETE(postprocessWnd);
-	SAFE_DELETE(worldWnd);
+	SAFE_DELETE(weatherWnd);
 	SAFE_DELETE(objectWnd);
 	SAFE_DELETE(meshWnd);
 	SAFE_DELETE(cameraWnd);
@@ -194,7 +194,7 @@ void EditorComponent::Initialize()
 {
 	SAFE_INIT(materialWnd);
 	SAFE_INIT(postprocessWnd);
-	SAFE_INIT(worldWnd);
+	SAFE_INIT(weatherWnd);
 	SAFE_INIT(objectWnd);
 	SAFE_INIT(meshWnd);
 	SAFE_INIT(cameraWnd);
@@ -293,14 +293,14 @@ void EditorComponent::Load()
 	});
 	GetGUI().AddWidget(rendererWnd_Toggle);
 
-	wiButton* worldWnd_Toggle = new wiButton("World");
-	worldWnd_Toggle->SetTooltip("World settings window");
-	worldWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	worldWnd_Toggle->SetSize(XMFLOAT2(100, 40));
-	worldWnd_Toggle->OnClick([=](wiEventArgs args) {
-		worldWnd->worldWindow->SetVisible(!worldWnd->worldWindow->IsVisible());
+	wiButton* weatherWnd_Toggle = new wiButton("Weather");
+	weatherWnd_Toggle->SetTooltip("World settings window");
+	weatherWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
+	weatherWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	weatherWnd_Toggle->OnClick([=](wiEventArgs args) {
+		weatherWnd->weatherWindow->SetVisible(!weatherWnd->weatherWindow->IsVisible());
 	});
-	GetGUI().AddWidget(worldWnd_Toggle);
+	GetGUI().AddWidget(weatherWnd_Toggle);
 
 	wiButton* objectWnd_Toggle = new wiButton("Object");
 	objectWnd_Toggle->SetTooltip("Object settings window");
@@ -585,7 +585,7 @@ void EditorComponent::Load()
 				});
 				loader->onFinished([=] {
 					main->activateComponent(this, 10, wiColor::Black);
-					worldWnd->UpdateFromRenderer();
+					weatherWnd->UpdateFromRenderer();
 				});
 				main->activateComponent(loader, 10, wiColor::Black);
 				ResetHistory();
@@ -688,7 +688,7 @@ void EditorComponent::Load()
 			ss << "Place decal, interact with water: Left mouse button when nothing is selected" << endl;
 			ss << "Camera speed: SHIFT button" << endl;
 			ss << "Camera up: E, down: Q" << endl;
-			ss << "Duplicate entity (with instancing): Ctrl + D" << endl;
+			ss << "Duplicate entity: Ctrl + D" << endl;
 			ss << "Select All: Ctrl + A" << endl;
 			ss << "Undo: Ctrl + Z" << endl;
 			ss << "Redo: Ctrl + Y" << endl;

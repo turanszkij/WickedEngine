@@ -4,7 +4,7 @@
 
 class MaterialWindow;
 class PostprocessWindow;
-class WorldWindow;
+class WeatherWindow;
 class ObjectWindow;
 class MeshWindow;
 class CameraWindow;
@@ -37,7 +37,7 @@ private:
 public:
 	MaterialWindow*			materialWnd;
 	PostprocessWindow*		postprocessWnd;
-	WorldWindow*			worldWnd;
+	WeatherWindow*			weatherWnd;
 	ObjectWindow*			objectWnd;
 	MeshWindow*				meshWnd;
 	CameraWindow*			cameraWnd;

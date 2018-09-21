@@ -189,7 +189,7 @@
     <ClInclude Include="tiny_gltf.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="Translator.h" />
-    <ClInclude Include="WorldWindow.h" />
+    <ClInclude Include="WeatherWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AnimationWindow.cpp" />
@@ -217,7 +217,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Translator.cpp" />
-    <ClCompile Include="WorldWindow.cpp" />
+    <ClCompile Include="WeatherWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="images\arealight.dds">

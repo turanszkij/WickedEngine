@@ -52,9 +52,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Code</Filter>
     </ClInclude>
-    <ClInclude Include="WorldWindow.h">
-      <Filter>Code</Filter>
-    </ClInclude>
     <ClInclude Include="AnimationWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
@@ -86,6 +83,9 @@
       <Filter>Code</Filter>
     </ClInclude>
     <ClInclude Include="HairParticleWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
+    <ClInclude Include="WeatherWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
   </ItemGroup>
@@ -123,9 +123,6 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="WorldWindow.cpp">
-      <Filter>Code</Filter>
-    </ClCompile>
     <ClCompile Include="AnimationWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
@@ -151,6 +148,9 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="HairParticleWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="WeatherWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

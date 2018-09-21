@@ -37,6 +37,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Entity_FindByName),
+	lunamethod(Scene_BindLua, Entity_Remove),
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
 	lunamethod(Scene_BindLua, Component_GetTransform),
@@ -93,6 +94,21 @@ int Scene_BindLua::Entity_FindByName(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "Scene::Entity_FindByName(string name) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Entity_Remove(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		scene->Entity_Remove(entity);
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Entity_Remove(Entity entity) not enough arguments!");
 	}
 	return 0;
 }

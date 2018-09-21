@@ -890,6 +890,7 @@ namespace wiSceneSystem
 		animations.Merge(other.animations);
 		emitters.Merge(other.emitters);
 		hairs.Merge(other.hairs);
+		weathers.Merge(other.weathers);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}

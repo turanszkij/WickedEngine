@@ -6,18 +6,27 @@ class wiLabel;
 class wiCheckBox;
 class wiSlider;
 class wiColorPicker;
+class wiButton;
 
-class WorldWindow
+class WeatherWindow
 {
 public:
-	WorldWindow(wiGUI* gui);
-	~WorldWindow();
+	WeatherWindow(wiGUI* gui);
+	~WeatherWindow();
+
+	wiECS::Entity entity = wiECS::INVALID_ENTITY;
 
 	void UpdateFromRenderer();
 
+	void SetEntity(wiECS::Entity entity);
+
+	wiSceneSystem::WeatherComponent* GetWeather() const;
+	void InvalidateProbes() const;
+
 	wiGUI* GUI;
 
-	wiWindow*		worldWindow;
+	wiWindow*		weatherWindow;
+	wiButton*		newWeatherButton;
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;
