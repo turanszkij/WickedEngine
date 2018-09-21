@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "AnimationWindow.h"
 
+#include <sstream>
+
 using namespace wiECS;
 using namespace wiSceneSystem;
 
@@ -125,7 +127,9 @@ void AnimationWindow::Update()
 		Entity e = scene.animations.GetEntity(i);
 		NameComponent& name = *scene.names.GetComponent(e);
 
-		animationsComboBox->AddItem(name.name);
+		std::stringstream ss("");
+		ss << name.name << " (" << e << ")";
+		animationsComboBox->AddItem(ss.str());
 
 		if (e == entity)
 		{

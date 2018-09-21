@@ -6,6 +6,7 @@
 #include "wiMath.h"
 #include "wiHelper.h"
 #include "wiInputManager.h"
+#include "ShaderInterop_Renderer.h"
 
 #include <DirectXCollision.h>
 
@@ -1770,7 +1771,7 @@ void wiColorPicker::Render(wiGUI* gui)
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
 	wiRenderer::GetDevice()->BindGraphicsPSO(PSO_colorpicker, threadID);
 
-	wiRenderer::MiscCB cb;
+	MiscCB cb;
 
 	// render saturation triangle
 	{
@@ -1780,12 +1781,12 @@ void wiColorPicker::Render(wiGUI* gui)
 			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), threadID, vb_saturation.GetDesc().ByteWidth);
 		}
 
-		cb.mTransform = XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 			XMMatrixRotationZ(-angle) *
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
 			__cam
-		);
-		cb.mColor = XMFLOAT4(1, 1, 1, 1);
+		));
+		cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_saturation,
@@ -1799,11 +1800,11 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	// render hue circle
 	{
-		cb.mTransform = XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
 			__cam
-		);
-		cb.mColor = XMFLOAT4(1, 1, 1, 1);
+		));
+		cb.g_xColor = float4(1, 1, 1, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_hue,
@@ -1817,11 +1818,11 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	// render hue picker
 	{
-		cb.mTransform = XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 			XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
 			__cam
-		);
-		cb.mColor = XMFLOAT4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
+		));
+		cb.g_xColor = float4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_picker,
@@ -1835,11 +1836,11 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	// render saturation picker
 	{
-		cb.mTransform = XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 			XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
 			__cam
-		);
-		cb.mColor = XMFLOAT4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
+		));
+		cb.g_xColor = float4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_picker,
@@ -1853,11 +1854,11 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	// render preview
 	{
-		cb.mTransform = XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
 			__cam
-		);
-		cb.mColor = GetPickColor();
+		));
+		cb.g_xColor = GetPickColor();
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_preview,

@@ -1,13 +1,8 @@
+#include "globals.hlsli"
 #include "reconstructPositionHF.hlsli"
 #include "tangentComputeHF.hlsli"
 #include "packHF.hlsli"
 
-//Texture2D<float> xSceneDepthMap:register(t1);
-//Texture2D<float4> xTexture:register(t2);
-//Texture2D<float4> xNormal:register(t3);
-
-// texture_0	: texture map
-// texture_1	: normal map
 
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
@@ -18,15 +13,6 @@ struct PixelOutputType
 	float4 col	: SV_TARGET0;
 	//float4 nor	: SV_TARGET1;
 };
-
-CBUFFER(DecalCB, CBSLOT_RENDERER_DECAL)
-{
-	float4x4 xDecalVP;
-	int hasTexNor;
-	float3 eye;
-	float opacity;
-	float3 front;
-}
 
 PixelOutputType main(VertexToPixel PSIn)
 {

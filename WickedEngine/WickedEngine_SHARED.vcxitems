@@ -235,6 +235,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h" />

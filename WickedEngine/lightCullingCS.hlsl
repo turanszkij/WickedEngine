@@ -6,14 +6,6 @@
 
 #define	xSSR texture_9
 
-CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
-{
-	uint3	xDispatchParams_numThreadGroups;
-	uint	xDispatchParams_value0;
-	uint3	xDispatchParams_numThreads;
-	uint	xDispatchParams_value1;
-}
-
 #ifdef DEBUG_TILEDLIGHTCULLING
 RWTEXTURE2D(DebugTexture, unorm float4, UAVSLOT_DEBUGTEXTURE);
 #endif

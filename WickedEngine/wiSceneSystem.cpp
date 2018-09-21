@@ -805,6 +805,10 @@ namespace wiSceneSystem
 
 	void Scene::Update(float dt)
 	{
+		if (weathers.GetCount() > 0)
+		{
+			weather = weathers[0];
+		}
 
 		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
 
@@ -830,10 +834,9 @@ namespace wiSceneSystem
 
 		RunForceUpdateSystem(transforms, forces);
 
-		RunLightUpdateSystem(wiRenderer::GetCamera(), transforms, aabb_lights, lights, sunDirection, sunColor);
+		RunLightUpdateSystem(wiRenderer::GetCamera(), transforms, aabb_lights, lights, &weather);
 
 		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
-
 	}
 	void Scene::Clear()
 	{
@@ -860,27 +863,10 @@ namespace wiSceneSystem
 		animations.Clear();
 		emitters.Clear();
 		hairs.Clear();
+		weathers.Clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
-		if (CountEntities() == 0)
-		{
-			sunDirection = other.sunDirection;
-			sunColor = other.sunColor;
-			horizon = other.horizon;
-			zenith = other.zenith;
-			ambient = other.ambient;
-			fogStart = other.fogStart;
-			fogEnd = other.fogEnd;
-			fogHeight = other.fogHeight;
-			cloudiness = other.cloudiness;
-			cloudScale = other.cloudScale;
-			cloudSpeed = other.cloudSpeed;
-			windDirection = other.windDirection;
-			windRandomness = other.windRandomness;
-			windWaveSize = other.windWaveSize;
-		}
-
 		names.Merge(other.names);
 		layers.Merge(other.layers);
 		transforms.Merge(other.transforms);
@@ -963,6 +949,7 @@ namespace wiSceneSystem
 		animations.Remove(entity);
 		emitters.Remove(entity);
 		hairs.Remove(entity);
+		weathers.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
@@ -986,7 +973,7 @@ namespace wiSceneSystem
 		// Then deserialize with a unique seed:
 		archive.SetReadModeAndResetPos(true);
 		uint32_t seed = wiRandom::getRandom(1, INT_MAX);
-		return Entity_Serialize(archive, entity, seed);
+		return Entity_Serialize(archive, entity, seed, false);
 	}
 	Entity Scene::Entity_CreateMaterial(
 		const std::string& name
@@ -1735,7 +1722,7 @@ namespace wiSceneSystem
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<AABB>& aabb_lights,
 		ComponentManager<LightComponent>& lights,
-		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
+		WeatherComponent* weather
 	)
 	{
 		assert(lights.GetCount() == aabb_lights.GetCount());
@@ -1759,8 +1746,11 @@ namespace wiSceneSystem
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				sunDirection = light.direction;
-				sunColor = light.color;
+				if (weather != nullptr)
+				{
+					weather->sunColor = light.color;
+					weather->sunDirection = light.direction;
+				}
 
 				if (light.IsCastingShadow())
 				{

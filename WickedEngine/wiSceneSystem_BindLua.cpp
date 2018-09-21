@@ -1,4 +1,5 @@
 #include "wiSceneSystem_BindLua.h"
+#include "wiSceneSystem.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "wiEmittedParticle.h"
@@ -18,8 +19,13 @@ void Bind()
 	{
 		initialized = true;
 
-		Luna<Scene_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		Luna<TransformComponent_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		lua_State* L = wiLua::GetGlobal()->GetLuaState();
+
+		Luna<Scene_BindLua>::Register(L);
+		Luna<NameComponent_BindLua>::Register(L);
+		Luna<LayerComponent_BindLua>::Register(L);
+		Luna<TransformComponent_BindLua>::Register(L);
+		Luna<AnimationComponent_BindLua>::Register(L);
 	}
 }
 
@@ -31,7 +37,10 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Entity_FindByName),
+	lunamethod(Scene_BindLua, Component_GetName),
+	lunamethod(Scene_BindLua, Component_GetLayer),
 	lunamethod(Scene_BindLua, Component_GetTransform),
+	lunamethod(Scene_BindLua, Component_GetAnimation),
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
 	lunamethod(Scene_BindLua, Component_DetachChildren),
@@ -88,6 +97,40 @@ int Scene_BindLua::Entity_FindByName(lua_State* L)
 	return 0;
 }
 
+int Scene_BindLua::Component_GetName(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		NameComponent* component = scene->names.GetComponent(entity);
+		Luna<NameComponent_BindLua>::push(L, new NameComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetName(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_GetLayer(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		LayerComponent* component = scene->layers.GetComponent(entity);
+		Luna<LayerComponent_BindLua>::push(L, new LayerComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetLayer(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_GetTransform(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -95,8 +138,8 @@ int Scene_BindLua::Component_GetTransform(lua_State* L)
 	{
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
-		TransformComponent* transform = scene->transforms.GetComponent(entity);
-		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(transform));
+		TransformComponent* component = scene->transforms.GetComponent(entity);
+		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(component));
 		return 1;
 	}
 	else
@@ -105,6 +148,24 @@ int Scene_BindLua::Component_GetTransform(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetAnimation(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		AnimationComponent* component = scene->animations.GetComponent(entity);
+		Luna<AnimationComponent_BindLua>::push(L, new AnimationComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+
 int Scene_BindLua::Component_Attach(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -156,6 +217,104 @@ int Scene_BindLua::Component_DetachChildren(lua_State* L)
 
 
 
+
+const char NameComponent_BindLua::className[] = "NameComponent";
+
+Luna<NameComponent_BindLua>::FunctionType NameComponent_BindLua::methods[] = {
+	lunamethod(NameComponent_BindLua, SetName),
+	lunamethod(NameComponent_BindLua, GetName),
+	{ NULL, NULL }
+};
+Luna<NameComponent_BindLua>::PropertyType NameComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+NameComponent_BindLua::NameComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new NameComponent;
+}
+NameComponent_BindLua::~NameComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int NameComponent_BindLua::SetName(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		string name = wiLua::SGetString(L, 1);
+		*component = name;
+	}
+	else
+	{
+		wiLua::SError(L, "SetName(string value) not enough arguments!");
+	}
+	return 0;
+}
+int NameComponent_BindLua::GetName(lua_State* L)
+{
+	wiLua::SSetString(L, component->name);
+	return 1;
+}
+
+
+
+
+
+const char LayerComponent_BindLua::className[] = "LayerComponent";
+
+Luna<LayerComponent_BindLua>::FunctionType LayerComponent_BindLua::methods[] = {
+	lunamethod(LayerComponent_BindLua, SetLayerMask),
+	lunamethod(LayerComponent_BindLua, GetLayerMask),
+	{ NULL, NULL }
+};
+Luna<LayerComponent_BindLua>::PropertyType LayerComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+LayerComponent_BindLua::LayerComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new LayerComponent;
+}
+LayerComponent_BindLua::~LayerComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int LayerComponent_BindLua::SetLayerMask(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		int mask = wiLua::SGetInt(L, 1);
+		component->layerMask = *reinterpret_cast<uint32_t*>(&mask);
+	}
+	else
+	{
+		wiLua::SError(L, "SetLayerMask(int value) not enough arguments!");
+	}
+	return 0;
+}
+int LayerComponent_BindLua::GetLayerMask(lua_State* L)
+{
+	wiLua::SSetInt(L, component->GetLayerMask());
+	return 1;
+}
+
+
+
+
+
+
 const char TransformComponent_BindLua::className[] = "TransformComponent";
 
 Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::methods[] = {
@@ -178,9 +337,15 @@ Luna<TransformComponent_BindLua>::PropertyType TransformComponent_BindLua::prope
 
 TransformComponent_BindLua::TransformComponent_BindLua(lua_State *L)
 {
+	owning = true;
+	component = new TransformComponent;
 }
 TransformComponent_BindLua::~TransformComponent_BindLua()
 {
+	if (owning)
+	{
+		delete component;
+	}
 }
 
 int TransformComponent_BindLua::Scale(lua_State* L)
@@ -194,7 +359,7 @@ int TransformComponent_BindLua::Scale(lua_State* L)
 			XMFLOAT3 value;
 			XMStoreFloat3(&value, v->vector);
 			
-			transform->Scale(value);
+			component->Scale(value);
 		}
 		else
 		{
@@ -218,7 +383,7 @@ int TransformComponent_BindLua::Rotate(lua_State* L)
 			XMFLOAT3 rollPitchYaw;
 			XMStoreFloat3(&rollPitchYaw, v->vector);
 
-			transform->RotateRollPitchYaw(rollPitchYaw);
+			component->RotateRollPitchYaw(rollPitchYaw);
 		}
 		else
 		{
@@ -242,7 +407,7 @@ int TransformComponent_BindLua::Translate(lua_State* L)
 			XMFLOAT3 value;
 			XMStoreFloat3(&value, v->vector);
 
-			transform->Translate(value);
+			component->Translate(value);
 		}
 		else
 		{
@@ -269,21 +434,21 @@ int TransformComponent_BindLua::Lerp(lua_State* L)
 			{
 				float t = wiLua::SGetFloat(L, 3);
 
-				transform->Lerp(*a->transform, *b->transform, t);
+				component->Lerp(*a->component, *b->component, t);
 			}
 			else
 			{
-				wiLua::SError(L, "Lerp(Transform a,b, float t) argument (b) is not a Transform!");
+				wiLua::SError(L, "Lerp(TransformComponent a,b, float t) argument (b) is not a Transform!");
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "Lerp(Transform a,b, float t) argument (a) is not a Transform!");
+			wiLua::SError(L, "Lerp(TransformComponent a,b, float t) argument (a) is not a Transform!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "Lerp(Transform a,b, float t) not enough arguments!");
+		wiLua::SError(L, "Lerp(TransformComponent a,b, float t) not enough arguments!");
 	}
 	return 0;
 }
@@ -309,31 +474,31 @@ int TransformComponent_BindLua::CatmullRom(lua_State* L)
 					{
 						float t = wiLua::SGetFloat(L, 5);
 
-						transform->CatmullRom(*a->transform, *b->transform, *c->transform, *d->transform, t);
+						component->CatmullRom(*a->component, *b->component, *c->component, *d->component, t);
 					}
 					else
 					{
-						wiLua::SError(L, "CatmullRom(Transform a,b,c,d, float t) argument (d) is not a Transform!");
+						wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (d) is not a Transform!");
 					}
 				}
 				else
 				{
-					wiLua::SError(L, "CatmullRom(Transform a,b,c,d, float t) argument (c) is not a Transform!");
+					wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (c) is not a Transform!");
 				}
 			}
 			else
 			{
-				wiLua::SError(L, "CatmullRom(Transform a,b,c,d, float t) argument (b) is not a Transform!");
+				wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (b) is not a Transform!");
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "CatmullRom(Transform a,b,c,d, float t) argument (a) is not a Transform!");
+			wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (a) is not a Transform!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "CatmullRom(Transform a,b,c,d, float t) not enough arguments!");
+		wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) not enough arguments!");
 	}
 	return 0;
 }
@@ -345,7 +510,7 @@ int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
 		if (m != nullptr)
 		{
-			transform->MatrixTransform(m->matrix);
+			component->MatrixTransform(m->matrix);
 		}
 		else
 		{
@@ -360,32 +525,82 @@ int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 }
 int TransformComponent_BindLua::GetMatrix(lua_State* L)
 {
-	XMMATRIX M = XMLoadFloat4x4(&transform->world);
+	XMMATRIX M = XMLoadFloat4x4(&component->world);
 	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(M));
 	return 1;
 }
 int TransformComponent_BindLua::ClearTransform(lua_State* L)
 {
-	transform->ClearTransform();
+	component->ClearTransform();
 	return 0;
 }
 int TransformComponent_BindLua::GetPosition(lua_State* L)
 {
-	XMVECTOR V = transform->GetPositionV();
+	XMVECTOR V = component->GetPositionV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
 }
 int TransformComponent_BindLua::GetRotation(lua_State* L)
 {
-	XMVECTOR V = transform->GetRotationV();
+	XMVECTOR V = component->GetRotationV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
 }
 int TransformComponent_BindLua::GetScale(lua_State* L)
 {
-	XMVECTOR V = transform->GetScaleV();
+	XMVECTOR V = component->GetScaleV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
+}
+
+
+
+
+
+
+
+
+
+
+const char AnimationComponent_BindLua::className[] = "AnimationComponent";
+
+Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::methods[] = {
+	lunamethod(AnimationComponent_BindLua, Play),
+	lunamethod(AnimationComponent_BindLua, Pause),
+	lunamethod(AnimationComponent_BindLua, Stop),
+	{ NULL, NULL }
+};
+Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+AnimationComponent_BindLua::AnimationComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new AnimationComponent;
+}
+AnimationComponent_BindLua::~AnimationComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int AnimationComponent_BindLua::Play(lua_State* L)
+{
+	component->Play();
+	return 0;
+}
+int AnimationComponent_BindLua::Pause(lua_State* L)
+{
+	component->Pause();
+	return 0;
+}
+int AnimationComponent_BindLua::Stop(lua_State* L)
+{
+	component->Stop();
+	return 0;
 }
 
 

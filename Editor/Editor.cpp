@@ -1280,7 +1280,7 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < count; ++i)
 				{
 					Picked picked;
-					picked.entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX));
+					picked.entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
 					AddSelected(picked);
 				}
 

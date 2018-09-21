@@ -13,12 +13,6 @@ struct PS_CUBEMAP_IN
 	uint RTIndex	: SV_RenderTargetArrayIndex;
 };
 
-
-CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
-{
-	float4x4 xCubeShadowVP[6];
-}
-
 [maxvertexcount(18)]
 void main(triangle GS_CUBEMAP_IN input[3], inout TriangleStream<PS_CUBEMAP_IN> CubeMapStream)
 {

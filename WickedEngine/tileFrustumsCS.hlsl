@@ -1,14 +1,6 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 
-CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
-{
-	uint3	xDispatchParams_numThreadGroups;
-	uint	xDispatchParams_value0;
-	uint3	xDispatchParams_numThreads;
-	uint	xDispatchParams_value1;
-}
-
 // View space frustums for the grid cells.
 RWSTRUCTUREDBUFFER(out_Frustums, Frustum, UAVSLOT_TILEFRUSTUMS);
 

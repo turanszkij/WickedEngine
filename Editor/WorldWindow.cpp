@@ -29,7 +29,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
 	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().fogStart = args.fValue;
+		wiRenderer::GetScene().weather.fogStart = args.fValue;
 	});
 	worldWindow->AddWidget(fogStartSlider);
 
@@ -37,7 +37,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogEndSlider->SetSize(XMFLOAT2(100, 30));
 	fogEndSlider->SetPos(XMFLOAT2(x, y += step));
 	fogEndSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().fogEnd = args.fValue;
+		wiRenderer::GetScene().weather.fogEnd = args.fValue;
 	});
 	worldWindow->AddWidget(fogEndSlider);
 
@@ -45,7 +45,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	fogHeightSlider->SetSize(XMFLOAT2(100, 30));
 	fogHeightSlider->SetPos(XMFLOAT2(x, y += step));
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().fogHeight = args.fValue;
+		wiRenderer::GetScene().weather.fogHeight = args.fValue;
 	});
 	worldWindow->AddWidget(fogHeightSlider);
 
@@ -53,7 +53,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	cloudinessSlider->SetSize(XMFLOAT2(100, 30));
 	cloudinessSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudinessSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().cloudiness = args.fValue;
+		wiRenderer::GetScene().weather.cloudiness = args.fValue;
 	});
 	worldWindow->AddWidget(cloudinessSlider);
 
@@ -61,7 +61,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	cloudScaleSlider->SetSize(XMFLOAT2(100, 30));
 	cloudScaleSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudScaleSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().cloudScale = args.fValue;
+		wiRenderer::GetScene().weather.cloudScale = args.fValue;
 	});
 	worldWindow->AddWidget(cloudScaleSlider);
 
@@ -69,7 +69,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	cloudSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	cloudSpeedSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudSpeedSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().cloudSpeed = args.fValue;
+		wiRenderer::GetScene().weather.cloudSpeed = args.fValue;
 	});
 	worldWindow->AddWidget(cloudSpeedSlider);
 
@@ -77,7 +77,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	windSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	windSpeedSlider->SetPos(XMFLOAT2(x, y += step));
 	windSpeedSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::GetScene().windDirection = XMFLOAT3(args.fValue, 0, 0);
+		wiRenderer::GetScene().weather.windDirection = XMFLOAT3(args.fValue, 0, 0);
 	});
 	worldWindow->AddWidget(windSpeedSlider);
 
@@ -143,13 +143,13 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 		Scene& scene = wiRenderer::GetScene();
 
-		scene.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		scene.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
-		scene.zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
-		scene.cloudiness = 0.4f;
-		scene.fogStart = 100;
-		scene.fogEnd = 1000;
-		scene.fogHeight = 0;
+		scene.weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		scene.weather.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
+		scene.weather.zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
+		scene.weather.cloudiness = 0.4f;
+		scene.weather.fogStart = 100;
+		scene.weather.fogEnd = 1000;
+		scene.weather.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -168,13 +168,13 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 		Scene& scene = wiRenderer::GetScene();
 
-		scene.ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
-		scene.horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
-		scene.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
-		scene.cloudiness = 0.36f;
-		scene.fogStart = 50;
-		scene.fogEnd = 600;
-		scene.fogHeight = 0;
+		scene.weather.ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
+		scene.weather.horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
+		scene.weather.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
+		scene.weather.cloudiness = 0.36f;
+		scene.weather.fogStart = 50;
+		scene.weather.fogEnd = 600;
+		scene.weather.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -193,13 +193,13 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 		Scene& scene = wiRenderer::GetScene();
 
-		scene.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		scene.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
-		scene.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
-		scene.cloudiness = 0.75f;
-		scene.fogStart = 0;
-		scene.fogEnd = 500;
-		scene.fogHeight = 0;
+		scene.weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		scene.weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
+		scene.weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
+		scene.weather.cloudiness = 0.75f;
+		scene.weather.fogStart = 0;
+		scene.weather.fogEnd = 500;
+		scene.weather.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -218,13 +218,13 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 
 		Scene& scene = wiRenderer::GetScene();
 
-		scene.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
-		scene.horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
-		scene.zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
-		scene.cloudiness = 0.28f;
-		scene.fogStart = 10;
-		scene.fogEnd = 400;
-		scene.fogHeight = 0;
+		scene.weather.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
+		scene.weather.horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
+		scene.weather.zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
+		scene.weather.cloudiness = 0.28f;
+		scene.weather.fogStart = 10;
+		scene.weather.fogEnd = 400;
+		scene.weather.fogHeight = 0;
 
 		// Also, we invalidate all environment probes to reflect the sky changes.
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -311,7 +311,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	ambientColorPicker->SetVisible(false);
 	ambientColorPicker->SetEnabled(true);
 	ambientColorPicker->OnColorChanged([&](wiEventArgs args) {
-		wiRenderer::GetScene().ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		wiRenderer::GetScene().weather.ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	worldWindow->AddWidget(ambientColorPicker);
 
@@ -322,7 +322,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	horizonColorPicker->SetVisible(false);
 	horizonColorPicker->SetEnabled(true);
 	horizonColorPicker->OnColorChanged([&](wiEventArgs args) {
-		wiRenderer::GetScene().horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		wiRenderer::GetScene().weather.horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	worldWindow->AddWidget(horizonColorPicker);
 
@@ -334,7 +334,7 @@ WorldWindow::WorldWindow(wiGUI* gui) : GUI(gui)
 	zenithColorPicker->SetVisible(false);
 	zenithColorPicker->SetEnabled(true);
 	zenithColorPicker->OnColorChanged([&](wiEventArgs args) {
-		wiRenderer::GetScene().zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		wiRenderer::GetScene().weather.zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	worldWindow->AddWidget(zenithColorPicker);
 
@@ -355,9 +355,9 @@ WorldWindow::~WorldWindow()
 
 void WorldWindow::UpdateFromRenderer()
 {
-	auto& w = wiRenderer::GetScene();
+	const Scene& scene = wiRenderer::GetScene();
 
-	fogStartSlider->SetValue(w.fogStart);
-	fogEndSlider->SetValue(w.fogEnd);
-	fogHeightSlider->SetValue(w.fogHeight);
+	fogStartSlider->SetValue(scene.weather.fogStart);
+	fogEndSlider->SetValue(scene.weather.fogEnd);
+	fogHeightSlider->SetValue(scene.weather.fogHeight);
 }

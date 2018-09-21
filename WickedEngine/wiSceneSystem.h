@@ -854,6 +854,26 @@ namespace wiSceneSystem
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
+	struct WeatherComponent
+	{
+		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
+		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
+		float fogStart = 100;
+		float fogEnd = 1000;
+		float fogHeight = 0;
+		float cloudiness = 0.0f;
+		float cloudScale = 0.0003f;
+		float cloudSpeed = 0.1f;
+		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
+		float windRandomness = 5;
+		float windWaveSize = 1;
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
+	};
+
 	struct Scene
 	{
 		wiECS::ComponentManager<NameComponent> names;
@@ -879,31 +899,18 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<AnimationComponent> animations;
 		wiECS::ComponentManager<wiEmittedParticle> emitters;
 		wiECS::ComponentManager<wiHairParticle> hairs;
-
-		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
-		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
-		float fogStart = 100;
-		float fogEnd = 1000;
-		float fogHeight = 0;
-		float cloudiness = 0.0f;
-		float cloudScale = 0.0003f;
-		float cloudSpeed = 0.1f;
-		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
-		float windRandomness = 5;
-		float windWaveSize = 1;
+		wiECS::ComponentManager<WeatherComponent> weathers;
 
 		// Non-serialized attributes:
 		AABB bounds;
 		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
+		WeatherComponent weather;
 
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);
 		// Remove everything from the scene that it owns:
 		void Clear();
-		// Merge with an other scene. Other scene state is non-retained!
+		// Merge with an other scene.
 		void Merge(Scene& other);
 		// Count how many entities there are in the scene:
 		size_t CountEntities() const;
@@ -917,8 +924,9 @@ namespace wiSceneSystem
 		// Serializes entity and all of its components to archive:
 		//	You can specify entity = INVALID_ENTITY when the entity needs to be created from archive
 		//	You can specify seed = 0 when the archive is guaranteed to be storing persistent and unique entities
+		//	propagateDeepSeed : request that entity references inside components should be seeded as well
 		//	Returns either the new entity that was read, or the original entity that was written
-		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY, uint32_t seed = 0);
+		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY, uint32_t seed = 0, bool propagateSeedDeep = true);
 
 		wiECS::Entity Entity_CreateMaterial(
 			const std::string& name
@@ -1033,7 +1041,7 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<AABB>& aabb_lights,
 		wiECS::ComponentManager<LightComponent>& lights,
-		XMFLOAT3& sunDirection, XMFLOAT3& sunColor
+		WeatherComponent* weather = nullptr
 	);
 	void RunParticleUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,

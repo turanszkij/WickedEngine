@@ -4,15 +4,6 @@
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
 
-inline float3 GetSunColor()
-{
-	return EntityArray[g_xFrame_SunEntityArrayIndex].GetColor().rgb * EntityArray[g_xFrame_SunEntityArrayIndex].energy;
-}
-inline float3 GetSunDirection()
-{
-	return EntityArray[g_xFrame_SunEntityArrayIndex].directionWS;
-}
-
 struct LightingResult
 {
 	float3 diffuse;

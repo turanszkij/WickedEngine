@@ -454,6 +454,43 @@ namespace wiSceneSystem
 			}
 		}
 	}
+	void WeatherComponent::Serialize(wiArchive& archive, uint32_t seed)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> sunDirection;
+			archive >> sunColor;
+			archive >> horizon;
+			archive >> zenith;
+			archive >> ambient;
+			archive >> fogStart;
+			archive >> fogEnd;
+			archive >> fogHeight;
+			archive >> cloudiness;
+			archive >> cloudScale;
+			archive >> cloudSpeed;
+			archive >> windDirection;
+			archive >> windRandomness;
+			archive >> windWaveSize;
+		}
+		else
+		{
+			archive << sunDirection;
+			archive << sunColor;
+			archive << horizon;
+			archive << zenith;
+			archive << ambient;
+			archive << fogStart;
+			archive << fogEnd;
+			archive << fogHeight;
+			archive << cloudiness;
+			archive << cloudScale;
+			archive << cloudSpeed;
+			archive << windDirection;
+			archive << windRandomness;
+			archive << windWaveSize;
+		}
+	}
 
 	void Scene::Serialize(wiArchive& archive)
 	{
@@ -493,45 +530,11 @@ namespace wiSceneSystem
 		animations.Serialize(archive, seed);
 		emitters.Serialize(archive, seed);
 		hairs.Serialize(archive, seed);
-
-		if (archive.IsReadMode())
-		{
-			archive >> sunDirection;
-			archive >> sunColor;
-			archive >> horizon;
-			archive >> zenith;
-			archive >> ambient;
-			archive >> fogStart;
-			archive >> fogEnd;
-			archive >> fogHeight;
-			archive >> cloudiness;
-			archive >> cloudScale;
-			archive >> cloudSpeed;
-			archive >> windDirection;
-			archive >> windRandomness;
-			archive >> windWaveSize;
-		}
-		else
-		{
-			archive << sunDirection;
-			archive << sunColor;
-			archive << horizon;
-			archive << zenith;
-			archive << ambient;
-			archive << fogStart;
-			archive << fogEnd;
-			archive << fogHeight;
-			archive << cloudiness;
-			archive << cloudScale;
-			archive << cloudSpeed;
-			archive << windDirection;
-			archive << windRandomness;
-			archive << windWaveSize;
-		}
+		weathers.Serialize(archive, seed);
 
 	}
 
-	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity, uint32_t seed)
+	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity, uint32_t seed, bool propagateSeedDeep)
 	{
 		SerializeEntity(archive, entity, seed);
 
@@ -544,7 +547,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = names.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -553,7 +556,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = layers.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -562,7 +565,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = transforms.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -571,7 +574,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = prev_transforms.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -580,7 +583,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = hierarchy.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -589,7 +592,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = materials.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -598,7 +601,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = meshes.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -607,7 +610,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = objects.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -616,7 +619,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = aabb_objects.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -625,7 +628,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = rigidbodies.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -634,7 +637,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = softbodies.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -643,7 +646,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = armatures.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -652,7 +655,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = lights.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -661,7 +664,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = aabb_lights.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -670,7 +673,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = cameras.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -679,7 +682,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = probes.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -688,7 +691,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = aabb_probes.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -697,7 +700,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = forces.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -706,7 +709,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = decals.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -715,7 +718,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = aabb_decals.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -724,7 +727,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = animations.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -733,7 +736,7 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = emitters.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 			{
@@ -742,7 +745,16 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = hairs.Create(entity);
-					component.Serialize(archive, seed);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = weathers.Create(entity);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
 		}
@@ -1015,6 +1027,18 @@ namespace wiSceneSystem
 			}
 			{
 				auto component = hairs.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = weathers.GetComponent(entity);
 				if (component != nullptr)
 				{
 					archive << true;

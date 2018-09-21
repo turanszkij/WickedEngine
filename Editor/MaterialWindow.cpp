@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "MaterialWindow.h"
 
+#include <sstream>
+
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
@@ -545,8 +547,10 @@ void MaterialWindow::SetEntity(Entity entity)
 		material->SetUserStencilRef(0);
 
 		const NameComponent& name = *scene.names.GetComponent(entity);
+		stringstream ss("");
+		ss << name.name << " (" << entity << ")";
 
-		materialNameField->SetValue(name.name);
+		materialNameField->SetValue(ss.str());
 		waterCheckBox->SetCheck(material->IsWater());
 		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
 		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());

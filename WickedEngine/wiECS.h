@@ -89,7 +89,8 @@ namespace wiECS
 
 		// Read/Write everything to an archive depending on the archive state
 		//	seed: needed when serializing from disk which might cause discrepancy in entity uniqueness
-		inline void Serialize(wiArchive& archive, uint32_t seed = 0)
+		//	propagateSeedDeep: Components can have Entity references inside them, should the seed be propageted to those too?
+		inline void Serialize(wiArchive& archive, uint32_t seed = 0, bool propagateSeedDeep = true)
 		{
 			if (archive.IsReadMode())
 			{
@@ -101,7 +102,7 @@ namespace wiECS
 				components.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					components[i].Serialize(archive, seed);
+					components[i].Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 
 				entities.resize(count);

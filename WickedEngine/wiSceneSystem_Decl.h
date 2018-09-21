@@ -20,6 +20,6 @@ namespace wiSceneSystem
 	struct ForceFieldComponent;
 	struct DecalComponent;
 	struct AnimationComponent;
-	struct ModelComponent;
+	struct WeatherComponent;
 	struct Scene;
 }

@@ -350,7 +350,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 	wiProfiler::GetInstance().BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	XMVECTOR sunDirection = XMLoadFloat3(&wiRenderer::GetScene().sunDirection);
+	XMVECTOR sunDirection = XMLoadFloat3(&wiRenderer::GetScene().weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
 	{
 		wiRenderer::GetDevice()->EventBegin("Light Shafts", threadID);
