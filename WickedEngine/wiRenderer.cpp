@@ -29,6 +29,7 @@
 #include "ShaderInterop_Utility.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
+#include "wiAllocator.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -40,6 +41,7 @@ using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiSceneSystem;
 using namespace wiECS;
+using namespace wiAllocators;
 
 namespace wiRenderer
 {
@@ -64,6 +66,8 @@ Sampler				*customsamplers[SSTYPE_LAST] = {};
 GPURingBuffer		*dynamicVertexBufferPool = nullptr;
 
 string SHADERPATH = "shaders/";
+
+LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
 
 float GAMMA = 2.2f;
 int SHADOWRES_2D = 1024;
@@ -173,6 +177,12 @@ struct FrameCulling
 	}
 };
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
+
+struct RenderBatch
+{
+	Entity meshID;
+	Entity instanceID;
+};
 
 GFX_STRUCT Instance
 {
@@ -381,6 +391,11 @@ CameraComponent& GetRefCamera()
 
 void Initialize()
 {
+	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+	{
+		frameAllocators[i].reserve(4 * 1024 * 1024);
+	}
+
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
 		SAFE_INIT(vertexShaders[i]);
@@ -2776,11 +2791,19 @@ void UpdatePerFrameData(float dt)
 					culling.culledObjects.push_back(entity);
 					if (object.GetRenderTypes() & RENDERTYPE_OPAQUE)
 					{
-						culling.culledRenderer_opaque[object.meshID].push_back(entity);
+						//culling.culledRenderer_opaque[object.meshID].push_back(entity);
+						RenderBatch* batch = (RenderBatch*)frameAllocators[GRAPHICSTHREAD_IMMEDIATE].allocate(sizeof(RenderBatch));
+						batch->meshID = object.meshID;
+						batch->instanceID = entity;
+						culling.culledRenderer_opaque.add(batch);
 					}
 					if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 					{
-						culling.culledRenderer_transparent[object.meshID].push_back(entity);
+						//culling.culledRenderer_transparent[object.meshID].push_back(entity);
+						RenderBatch* batch = (RenderBatch*)frameAllocators[GRAPHICSTHREAD_IMMEDIATE].allocate(sizeof(RenderBatch));
+						batch->meshID = object.meshID;
+						batch->instanceID = entity;
+						culling.culledRenderer_transparent.add(batch);
 					}
 					if (object.GetRenderTypes() & RENDERTYPE_WATER)
 					{
@@ -3478,6 +3501,11 @@ void EndFrame()
 {
 	OcclusionCulling_Read();
 	wiFrameRate::Frame();
+
+	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+	{
+		frameAllocators[i].reset();
+	}
 }
 
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
@@ -4131,7 +4159,11 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 										if (all_layers || (layerMask & layer.GetLayerMask()))
 										{
-											culledRenderer[object.meshID].push_back(cullable_entity);
+											//culledRenderer[object.meshID].push_back(cullable_entity);
+											RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+											batch->meshID = object.meshID;
+											batch->instanceID = cullable_entity;
+											culledRenderer.add(batch);
 
 											if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 											{
@@ -4193,7 +4225,11 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 									if (all_layers || (layerMask & layer.GetLayerMask()))
 									{
-										culledRenderer[object.meshID].push_back(cullable_entity);
+										//culledRenderer[object.meshID].push_back(cullable_entity);
+										RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+										batch->meshID = object.meshID;
+										batch->instanceID = cullable_entity;
+										culledRenderer.add(batch);
 
 										if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 										{
@@ -4254,7 +4290,11 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 									if (all_layers || (layerMask & layer.GetLayerMask()))
 									{
-										culledRenderer[object.meshID].push_back(cullable_entity);
+										//culledRenderer[object.meshID].push_back(cullable_entity);
+										RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+										batch->meshID = object.meshID;
+										batch->instanceID = cullable_entity;
+										culledRenderer.add(batch);
 									}
 								}
 							}
@@ -4346,25 +4386,29 @@ void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, S
 		{
 			bool impostorGraphicsStateComplete = false;
 
-			for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
+			for (size_t batchID = 0; batchID < culledRenderer.dataCount; ++batchID)
 			{
-				Entity meshEntity = iter->first;
+				const RenderBatch& batch = ((RenderBatch*)culledRenderer.dataBegin)[batchID];
+
+				Entity meshEntity = batch.meshID;
 				MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 				if (!mesh.IsRenderable() || !mesh.HasImpostor() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
 				{
 					continue;
 				}
 
-				const auto& visibleInstances = iter->second;
+				//const auto& visibleInstances = iter->second;
 
 				UINT instancesOffset;
-				size_t alloc_size = visibleInstances.size();
+				size_t alloc_size = /*visibleInstances.size()*/ 1;
 				alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
 				void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
 
 				int k = 0;
-				for (const Entity objectEntity : visibleInstances)
+				for (size_t instanceID = 0; instanceID < 1; ++instanceID)
 				{
+					Entity objectEntity = batch.instanceID;
+
 					const ObjectComponent& instance = *scene.objects.GetComponent(objectEntity);
 					if (occlusionCulling && instance.IsOccluded())
 						continue;
@@ -4477,16 +4521,18 @@ void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, S
 		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
 
 		// Render meshes:
-		for (CulledCollection::const_iterator iter = culledRenderer.begin(); iter != culledRenderer.end(); ++iter)
+		for (size_t batchID = 0; batchID < culledRenderer.dataCount; ++batchID)
 		{
-			Entity meshEntity = iter->first;
+			const RenderBatch& batch = ((RenderBatch*)culledRenderer.dataBegin)[batchID];
+
+			Entity meshEntity = batch.meshID;
 			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 			if (!mesh.IsRenderable() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
 			{
 				continue;
 			}
 
-			const auto& visibleInstances = iter->second;
+			//const auto& visibleInstances = iter->second;
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
@@ -4502,13 +4548,15 @@ void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, S
 			bool forceAlphaTestForDithering = false;
 
 			UINT instancesOffset;
-			size_t alloc_size = visibleInstances.size();
+			size_t alloc_size = /*visibleInstances.size()*/1;
 			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
 			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
 
 			int k = 0;
-			for (const Entity objectEntity : visibleInstances)
+			for (size_t instanceID = 0; instanceID < 1; ++instanceID)
 			{
+				Entity objectEntity = batch.instanceID;
+
 				const ObjectComponent& instance = *scene.objects.GetComponent(objectEntity);
 				if (occlusionCulling && instance.IsOccluded())
 					continue;
@@ -4517,12 +4565,11 @@ void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, S
 
 				if (all_layers || (layerMask & layer.GetLayerMask()))
 				{
-					const AABB& aabb = *scene.aabb_objects.GetComponent(objectEntity);
-
 					float dither = instance.GetTransparency();
 					if (impostorRequest != nullptr)
 					{
 						// fade out to impostor...
+						const AABB& aabb = *scene.aabb_objects.GetComponent(objectEntity);
 						const float impostorThreshold = aabb.getRadius();
 						float dist = wiMath::Distance(eye, aabb.getCenter());
 						if (mesh.HasImpostor())
@@ -5522,7 +5569,11 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				if ((layerMask & layer.GetLayerMask()))
 				{
 					const ObjectComponent& object = scene.objects[i];
-					culledRenderer[object.meshID].push_back(cullable_entity);
+					//culledRenderer[object.meshID].push_back(cullable_entity);
+					RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+					batch->meshID = object.meshID;
+					batch->instanceID = cullable_entity;
+					culledRenderer.add(batch);
 				}
 			}
 		}
@@ -5677,7 +5728,11 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		{
 			Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 			const ObjectComponent& object = scene.objects[i];
-			culledRenderer[object.meshID].push_back(cullable_entity);
+			//culledRenderer[object.meshID].push_back(cullable_entity);
+			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+			batch->meshID = object.meshID;
+			batch->instanceID = cullable_entity;
+			culledRenderer.add(batch);
 		}
 	}
 

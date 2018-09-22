@@ -255,6 +255,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\nv_dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
