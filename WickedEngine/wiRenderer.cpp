@@ -125,7 +125,6 @@ struct VoxelizedSceneData
 	UINT mips = 7;
 } voxelSceneData;
 
-PHYSICS* physicsEngine = nullptr;
 wiOcean* ocean = nullptr;
 
 Texture2D* shadowMapArray_2D = nullptr;
@@ -523,16 +522,11 @@ void CleanUp()
 
 	SAFE_DELETE(dynamicVertexBufferPool);
 
-	if (physicsEngine) physicsEngine->CleanUp();
-
 	SAFE_DELETE(graphicsDevice);
 }
 void ClearWorld()
 {
 	GetDevice()->WaitForGPU();
-	
-	if (physicsEngine)
-		physicsEngine->ClearWorld();
 
 	enviroMap = nullptr;
 
@@ -7783,85 +7777,6 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 	}
 
 	return result;
-}
-
-
-void SynchronizeWithPhysicsEngine(float dt)
-{
-	//if (physicsEngine && GetGameSpeed())
-	//{
-	//	physicsEngine->addWind(GetScene().worldInfo.windDirection);
-
-	//	// Update physics world data
-	//	for (Model* model : GetScene().models)
-	//	{
-	//		for (Object* object : model->objects) 
-	//		{
-	//			Mesh* mesh = object->mesh;
-	//			int pI = object->physicsObjectID;
-
-	//			if (pI < 0 && (object->rigidBody || mesh->softBody))
-	//			{
-	//				// Register the objects with physics attributes that doesn't exist in the simulation
-	//				physicsEngine->registerObject(object);
-	//			}
-
-	//			if (pI >= 0) 
-	//			{
-	//				if (mesh->softBody) 
-	//				{
-	//					int gvg = mesh->goalVG;
-	//					if (gvg >= 0)
-	//					{
-	//						XMMATRIX worldMat = mesh->hasArmature() ? XMMatrixIdentity() : XMLoadFloat4x4(&object->world);
-	//						int j = 0;
-	//						for (std::map<int, float>::iterator it = mesh->vertexGroups[gvg].vertices.begin(); it != mesh->vertexGroups[gvg].vertices.end(); ++it)
-	//						{
-	//							int vi = (*it).first;
-	//							MeshComponent::Vertex_FULL tvert = mesh->TransformVertex(vi, worldMat);
-	//							mesh->goalPositions[j] = XMFLOAT3(tvert.pos.x, tvert.pos.y, tvert.pos.z);
-	//							mesh->goalNormals[j] = XMFLOAT3(tvert.nor.x, tvert.nor.y, tvert.nor.z);
-	//							++j;
-	//						}
-	//					}
-	//					physicsEngine->connectSoftBodyToVertices(
-	//						object->mesh, pI
-	//						);
-	//				}
-	//				if (object->kinematic && object->rigidBody)
-	//				{
-	//					physicsEngine->transformBody(object->rotation, object->translation, pI);
-	//				}
-	//			}
-	//		}
-	//	}
-
-	//	// Run physics simulation
-	//	physicsEngine->Update(dt);
-
-	//	// Retrieve physics simulation data
-	//	for (Model* model : GetScene().models)
-	//	{
-	//		for (Object* object : model->objects) {
-	//			int pI = object->physicsObjectID;
-	//			if (pI >= 0 && !object->kinematic && (object->rigidBody || object->mesh->softBody)) {
-	//				PHYSICS::PhysicsTransform* transform(physicsEngine->getObject(pI));
-	//				object->translation_rest = transform->position;
-	//				object->rotation_rest = transform->rotation;
-
-	//				if (object->mesh->softBody) {
-	//					object->scale_rest = XMFLOAT3(1, 1, 1);
-	//					physicsEngine->connectVerticesToSoftBody(
-	//						object->mesh, pI
-	//						);
-	//				}
-	//			}
-	//		}
-	//	}
-
-
-	//	physicsEngine->NextRunWorld();
-	//}
 }
 
 void CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)

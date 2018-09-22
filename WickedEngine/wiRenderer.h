@@ -245,9 +245,6 @@ namespace wiRenderer
 	RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);
 
 
-	void SynchronizeWithPhysicsEngine(float dt = 1.0f / 60.0f);
-
-
 	// Add box to render in next frame
 	void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 

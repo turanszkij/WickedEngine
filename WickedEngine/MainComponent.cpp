@@ -14,6 +14,8 @@
 #include "wiProfiler.h"
 #include "wiInitializer.h"
 #include "wiStartupArguments.h"
+#include "wiPHYSICS.h"
+#include "wiBULLET.h"
 
 #include "wiGraphicsDevice_DX11.h"
 #include "wiGraphicsDevice_DX12.h"
@@ -41,12 +43,16 @@ MainComponent::MainComponent()
 	infoDisplay = InfoDisplayer();
 
 	fadeManager.Clear();
+
+	physicsEngine = new wiBULLET;
 }
 
 
 MainComponent::~MainComponent()
 {
 	wiRenderer::GetDevice()->WaitForGPU();
+
+	SAFE_DELETE(physicsEngine);
 }
 
 void MainComponent::Initialize()
@@ -149,7 +155,7 @@ void MainComponent::Run()
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
 	wiProfiler::GetInstance().BeginRange("Physics", wiProfiler::DOMAIN_CPU);
-	wiRenderer::SynchronizeWithPhysicsEngine((float)elapsedTime);
+	physicsEngine->Update((float)elapsedTime);
 	wiProfiler::GetInstance().EndRange(); // Physics
 
 	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);

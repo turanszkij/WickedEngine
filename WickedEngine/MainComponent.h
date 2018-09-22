@@ -6,7 +6,7 @@
 #include "wiWindowRegistration.h"
 
 class RenderableComponent;
-
+class PHYSICS;
 
 class MainComponent
 {
@@ -15,7 +15,7 @@ private:
 	bool frameskip;
 	int targetFrameRate;
 	double targetFrameRateInv;
-	int applicationControlLostThreshold;
+	int applicationControlLostThreshold; 
 
 	wiFadeManager fadeManager;
 public:
@@ -24,6 +24,8 @@ public:
 
 	int screenW, screenH;
 	bool fullscreen;
+
+	PHYSICS* physicsEngine = nullptr;
 
 	// Runs the main engine loop
 	void Run();
