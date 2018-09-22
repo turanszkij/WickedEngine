@@ -100,7 +100,7 @@ public:
 	static void DrawDeferred(wiGraphicsTypes::Texture2D* lightmap_diffuse, wiGraphicsTypes::Texture2D* lightmap_specular, 
 		wiGraphicsTypes::Texture2D* ao, GRAPHICSTHREAD threadID, int stencilref = 0);
 
-	static void Load();
+	static void Initialize();
 	static void CleanUp();
 };
 

@@ -167,15 +167,16 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::physicsEngine->rigidBodyPhysicsEnabled = wiLua::SGetBool(L, 1);
-			if (argc > 1)
-			{
-				wiRenderer::physicsEngine->softBodyPhysicsEnabled = wiLua::SGetBool(L, 2);
-				if (argc > 2)
-				{
-					wiRenderer::physicsEngine->softBodyIterationCount = wiLua::SGetInt(L, 3);
-				}
-			}
+			assert(0);
+			//wiRenderer::physicsEngine->rigidBodyPhysicsEnabled = wiLua::SGetBool(L, 1);
+			//if (argc > 1)
+			//{
+			//	wiRenderer::physicsEngine->softBodyPhysicsEnabled = wiLua::SGetBool(L, 2);
+			//	if (argc > 2)
+			//	{
+			//		wiRenderer::physicsEngine->softBodyIterationCount = wiLua::SGetInt(L, 3);
+			//	}
+			//}
 		}
 		return 0;
 	}

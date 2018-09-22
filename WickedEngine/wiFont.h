@@ -91,8 +91,7 @@ private:
 
 public:
 	static void Initialize();
-	static void SetUpStaticComponents();
-	static void CleanUpStatic();
+	static void CleanUp();
 
 	std::wstring text;
 	wiFontProps props;
@@ -116,6 +115,4 @@ public:
 	void SetText(const std::wstring& text);
 	std::wstring GetText();
 	std::string GetTextA();
-
-	void CleanUp();
 };

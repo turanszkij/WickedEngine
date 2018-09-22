@@ -237,12 +237,12 @@ void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
 void wiWidget::LoadShaders()
 {
 	GraphicsPSODesc desc;
-	desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-	desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-	desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-	desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-	desc.bs = wiRenderer::blendStates[BSTYPE_OPAQUE];
-	desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
+	desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
+	desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
+	desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
+	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+	desc.bs = wiRenderer::GetBlendState(BSTYPE_OPAQUE);
+	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 	desc.pt = TRIANGLESTRIP;
@@ -1768,7 +1768,7 @@ void wiColorPicker::Render(wiGUI* gui)
 
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
-	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::constantBuffers[CBTYPE_MISC], CBSLOT_RENDERER_MISC, threadID);
+	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, threadID);
 	wiRenderer::GetDevice()->BindGraphicsPSO(PSO_colorpicker, threadID);
 
 	MiscCB cb;
@@ -1787,7 +1787,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			__cam
 		));
 		cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_saturation,
 		};
@@ -1805,7 +1805,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			__cam
 		));
 		cb.g_xColor = float4(1, 1, 1, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
@@ -1823,7 +1823,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			__cam
 		));
 		cb.g_xColor = float4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
@@ -1841,7 +1841,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			__cam
 		));
 		cb.g_xColor = float4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
@@ -1859,7 +1859,7 @@ void wiColorPicker::Render(wiGUI* gui)
 			__cam
 		));
 		cb.g_xColor = GetPickColor();
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 		GPUBuffer* vbs[] = {
 			&vb_preview,
 		};

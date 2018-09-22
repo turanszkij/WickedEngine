@@ -1419,46 +1419,46 @@ namespace wiSceneSystem
 		float dt
 	)
 	{
-		PHYSICS* physicsEngine = wiRenderer::physicsEngine;
+		//PHYSICS* physicsEngine = wiRenderer::physicsEngine;
 
-		if (physicsEngine != nullptr)
-		{
-			physicsEngine->Update(dt);
+		//if (physicsEngine != nullptr)
+		//{
+		//	physicsEngine->Update(dt);
 
-			// Rigid bodies - Objects:
-			for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
-			{
-				RigidBodyPhysicsComponent& rigidbody = rigidbodies[i];
-				Entity entity = rigidbodies.GetEntity(i);
-				TransformComponent& transform = *transforms.GetComponent(entity);
+		//	// Rigid bodies - Objects:
+		//	for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
+		//	{
+		//		RigidBodyPhysicsComponent& rigidbody = rigidbodies[i];
+		//		Entity entity = rigidbodies.GetEntity(i);
+		//		TransformComponent& transform = *transforms.GetComponent(entity);
 
-				if (rigidbody.kinematic)
-				{
-					//physicsEngine->transformBody(transform.rotation, transform.translation, rigidbody.physicsObjectID);
-				}
-				else
-				{
-					PHYSICS::PhysicsTransform* pt = physicsEngine->getObject(rigidbody.physicsObjectID);
-					transform.translation_local = pt->position;
-					transform.rotation_local = pt->rotation;
-					transform.SetDirty();
-				}
+		//		if (rigidbody.kinematic)
+		//		{
+		//			//physicsEngine->transformBody(transform.rotation, transform.translation, rigidbody.physicsObjectID);
+		//		}
+		//		else
+		//		{
+		//			PHYSICS::PhysicsTransform* pt = physicsEngine->getObject(rigidbody.physicsObjectID);
+		//			transform.translation_local = pt->position;
+		//			transform.rotation_local = pt->rotation;
+		//			transform.SetDirty();
+		//		}
 
-			}
+		//	}
 
-			// Soft bodies - Meshes:
-			for (size_t i = 0; i < softbodies.GetCount(); ++i)
-			{
-				SoftBodyPhysicsComponent& softbody = softbodies[i];
-				Entity entity = softbodies.GetEntity(i);
+		//	// Soft bodies - Meshes:
+		//	for (size_t i = 0; i < softbodies.GetCount(); ++i)
+		//	{
+		//		SoftBodyPhysicsComponent& softbody = softbodies[i];
+		//		Entity entity = softbodies.GetEntity(i);
 
-				MeshComponent& mesh = *meshes.GetComponent(entity);
-				mesh.SetDynamic(true);
+		//		MeshComponent& mesh = *meshes.GetComponent(entity);
+		//		mesh.SetDynamic(true);
 
-			}
+		//	}
 
-			physicsEngine->NextRunWorld();
-		}
+		//	physicsEngine->NextRunWorld();
+		//}
 
 	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
@@ -1805,9 +1805,9 @@ namespace wiSceneSystem
 						XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 
 						// Avoid shadowmap texel swimming by aligning them to a discrete grid:
-						float f0 = light.shadowCam_dirLight[0].size / (float)wiRenderer::SHADOWRES_2D;
-						float f1 = light.shadowCam_dirLight[1].size / (float)wiRenderer::SHADOWRES_2D;
-						float f2 = light.shadowCam_dirLight[2].size / (float)wiRenderer::SHADOWRES_2D;
+						float f0 = light.shadowCam_dirLight[0].size / (float)wiRenderer::GetShadowRes2D();
+						float f1 = light.shadowCam_dirLight[1].size / (float)wiRenderer::GetShadowRes2D();
+						float f2 = light.shadowCam_dirLight[2].size / (float)wiRenderer::GetShadowRes2D();
 						XMVECTOR e0 = XMVectorFloor(XMVectorLerp(c, d, lerp0) / f0) * f0;
 						XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
 						XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;

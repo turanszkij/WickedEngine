@@ -28,12 +28,12 @@ void Translator::LoadShaders()
 	{
 		GraphicsPSODesc desc;
 
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = wiRenderer::blendStates[BSTYPE_ADDITIVE];
+		desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
+		desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
+		desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
+		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+		desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
 		desc.pt = TRIANGLELIST;
 
 		pso_solidpart = new GraphicsPSO;
@@ -43,12 +43,12 @@ void Translator::LoadShaders()
 	{
 		GraphicsPSODesc desc;
 
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-		desc.bs = wiRenderer::blendStates[BSTYPE_TRANSPARENT];
+		desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
+		desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
+		desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
+		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.pt = LINELIST;
 
 		pso_wirepart = new GraphicsPSO;
@@ -472,19 +472,19 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	// xy
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// xz
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// yz
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// Lines:
@@ -502,19 +502,19 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	// x
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// y
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// z
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// Origin:
@@ -529,7 +529,7 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(mat));
 		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
-		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 		device->Draw(vertexCount_Origin, 0, threadID);
 	}
 

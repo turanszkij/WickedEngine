@@ -371,15 +371,17 @@ void wiOcean::Render(const CameraComponent& camera, float time, GRAPHICSTHREAD t
 void wiOcean::LoadShaders()
 {
 
-	m_pUpdateSpectrumCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSimulatorCS.cso", wiResourceManager::COMPUTESHADER));
-	m_pUpdateDisplacementMapCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateDisplacementMapCS.cso", wiResourceManager::COMPUTESHADER));
-	m_pUpdateGradientFoldingCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanUpdateGradientFoldingCS.cso", wiResourceManager::COMPUTESHADER));
+	std::string path = wiRenderer::GetShaderPath();
+
+	m_pUpdateSpectrumCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "oceanSimulatorCS.cso", wiResourceManager::COMPUTESHADER));
+	m_pUpdateDisplacementMapCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "oceanUpdateDisplacementMapCS.cso", wiResourceManager::COMPUTESHADER));
+	m_pUpdateGradientFoldingCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "oceanUpdateGradientFoldingCS.cso", wiResourceManager::COMPUTESHADER));
 
 
-	g_pOceanSurfVS = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceVS.cso", wiResourceManager::VERTEXSHADER));
+	g_pOceanSurfVS = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "oceanSurfaceVS.cso", wiResourceManager::VERTEXSHADER));
 
-	g_pOceanSurfPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
-	g_pWireframePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
+	g_pOceanSurfPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "oceanSurfacePS.cso", wiResourceManager::PIXELSHADER));
+	g_pWireframePS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "oceanSurfaceSimplePS.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -412,7 +414,7 @@ void wiOcean::LoadShaders()
 	}
 }
 
-void wiOcean::SetUpStatic()
+void wiOcean::Initialize()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -472,7 +474,7 @@ void wiOcean::SetUpStatic()
 	fft512x512_create_plan(&m_fft_plan, 3);
 }
 
-void wiOcean::CleanUpStatic()
+void wiOcean::CleanUp()
 {
 	fft512x512_destroy_plan(&m_fft_plan);
 

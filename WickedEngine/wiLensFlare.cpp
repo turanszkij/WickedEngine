@@ -67,12 +67,13 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const 
 
 void wiLensFlare::LoadShaders()
 {
-	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
+	std::string path = wiRenderer::GetShaderPath();
+
+	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path+ "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
 	
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
-
-	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(path + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();

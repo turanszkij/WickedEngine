@@ -31,6 +31,8 @@
 #include "wiGPUSortLib.h"
 
 #include <algorithm>
+#include <unordered_set>
+#include <deque>
 
 #include <DirectXCollision.h>
 
@@ -39,76 +41,116 @@ using namespace wiGraphicsTypes;
 using namespace wiSceneSystem;
 using namespace wiECS;
 
-#pragma region STATICS
-GraphicsDevice* wiRenderer::graphicsDevice = nullptr;
-Sampler				*wiRenderer::samplers[SSLOT_COUNT];
-VertexShader		*wiRenderer::vertexShaders[VSTYPE_LAST];
-PixelShader			*wiRenderer::pixelShaders[PSTYPE_LAST];
-GeometryShader		*wiRenderer::geometryShaders[GSTYPE_LAST];
-HullShader			*wiRenderer::hullShaders[HSTYPE_LAST];
-DomainShader		*wiRenderer::domainShaders[DSTYPE_LAST];
-ComputeShader		*wiRenderer::computeShaders[CSTYPE_LAST];
-VertexLayout		*wiRenderer::vertexLayouts[VLTYPE_LAST];
-RasterizerState		*wiRenderer::rasterizers[RSTYPE_LAST];
-DepthStencilState	*wiRenderer::depthStencils[DSSTYPE_LAST];
-BlendState			*wiRenderer::blendStates[BSTYPE_LAST];
-GPUBuffer			*wiRenderer::constantBuffers[CBTYPE_LAST];
-GPUBuffer			*wiRenderer::resourceBuffers[RBTYPE_LAST];
-Texture				*wiRenderer::textures[TEXTYPE_LAST];
-Sampler				*wiRenderer::customsamplers[SSTYPE_LAST];
+namespace wiRenderer
+{
 
-GPURingBuffer		*wiRenderer::dynamicVertexBufferPool;
+GraphicsDevice* graphicsDevice = nullptr;
 
-float wiRenderer::GAMMA = 2.2f;
-int wiRenderer::SHADOWRES_2D = 1024, wiRenderer::SHADOWRES_CUBE = 256, wiRenderer::SHADOWCOUNT_2D = 5 + 3 + 3, wiRenderer::SHADOWCOUNT_CUBE = 5, wiRenderer::SOFTSHADOWQUALITY_2D = 2;
-bool wiRenderer::HAIRPARTICLEENABLED=true,wiRenderer::EMITTERSENABLED=true;
-bool wiRenderer::TRANSPARENTSHADOWSENABLED = false;
-bool wiRenderer::ALPHACOMPOSITIONENABLED = false;
-bool wiRenderer::wireRender = false, wiRenderer::debugBoneLines = false, wiRenderer::debugPartitionTree = false, wiRenderer::debugEmitters = false, wiRenderer::freezeCullingCamera = false
-, wiRenderer::debugEnvProbes = false, wiRenderer::debugForceFields = false, wiRenderer::debugCameras = false, wiRenderer::gridHelper = false, wiRenderer::voxelHelper = false, wiRenderer::requestReflectionRendering = false, wiRenderer::advancedLightCulling = true
-, wiRenderer::advancedRefractions = false;
-bool wiRenderer::ldsSkinningEnabled = true;
-float wiRenderer::SPECULARAA = 0.0f;
-float wiRenderer::renderTime = 0, wiRenderer::renderTime_Prev = 0, wiRenderer::deltaTime = 0;
-XMFLOAT2 wiRenderer::temporalAAJitter = XMFLOAT2(0, 0), wiRenderer::temporalAAJitterPrev = XMFLOAT2(0, 0);
-float wiRenderer::RESOLUTIONSCALE = 1.0f;
-GPUQuery wiRenderer::occlusionQueries[];
-UINT wiRenderer::entityArrayOffset_Lights = 0, wiRenderer::entityArrayCount_Lights = 0;
-UINT wiRenderer::entityArrayOffset_Decals = 0, wiRenderer::entityArrayCount_Decals = 0;
-UINT wiRenderer::entityArrayOffset_ForceFields = 0, wiRenderer::entityArrayCount_ForceFields = 0;
-UINT wiRenderer::entityArrayOffset_EnvProbes = 0, wiRenderer::entityArrayCount_EnvProbes = 0;
+Sampler				*samplers[SSLOT_COUNT] = {};
+VertexShader		*vertexShaders[VSTYPE_LAST] = {};
+PixelShader			*pixelShaders[PSTYPE_LAST] = {};
+GeometryShader		*geometryShaders[GSTYPE_LAST] = {};
+HullShader			*hullShaders[HSTYPE_LAST] = {};
+DomainShader		*domainShaders[DSTYPE_LAST] = {};
+ComputeShader		*computeShaders[CSTYPE_LAST] = {};
+VertexLayout		*vertexLayouts[VLTYPE_LAST] = {};
+RasterizerState		*rasterizers[RSTYPE_LAST] = {};
+DepthStencilState	*depthStencils[DSSTYPE_LAST] = {};
+BlendState			*blendStates[BSTYPE_LAST] = {};
+GPUBuffer			*constantBuffers[CBTYPE_LAST] = {};
+GPUBuffer			*resourceBuffers[RBTYPE_LAST] = {};
+Texture				*textures[TEXTYPE_LAST] = {};
+Sampler				*customsamplers[SSTYPE_LAST] = {};
+GPURingBuffer		*dynamicVertexBufferPool = nullptr;
 
-Texture2D* wiRenderer::enviroMap = nullptr;
-float wiRenderer::GameSpeed=1;
-bool wiRenderer::debugLightCulling = false;
-bool wiRenderer::occlusionCulling = false;
-bool wiRenderer::temporalAA = false, wiRenderer::temporalAADEBUG = false;
-wiRenderer::VoxelizedSceneData wiRenderer::voxelSceneData = VoxelizedSceneData();
-PHYSICS* wiRenderer::physicsEngine = nullptr;
-wiOcean* wiRenderer::ocean = nullptr;
+string SHADERPATH = "shaders/";
+
+float GAMMA = 2.2f;
+int SHADOWRES_2D = 1024;
+int SHADOWRES_CUBE = 256;
+int SHADOWCOUNT_2D = 5 + 3 + 3;
+int SHADOWCOUNT_CUBE = 5;
+int SOFTSHADOWQUALITY_2D = 2;
+bool TRANSPARENTSHADOWSENABLED = false;
+bool ALPHACOMPOSITIONENABLED = false;
+bool wireRender = false;
+bool debugBoneLines = false;
+bool debugPartitionTree = false;
+bool debugEmitters = false;
+bool freezeCullingCamera = false;
+bool debugEnvProbes = false;
+bool debugForceFields = false;
+bool debugCameras = false;
+bool gridHelper = false;
+bool voxelHelper = false;
+bool requestReflectionRendering = false;
+bool advancedLightCulling = true;
+bool advancedRefractions = false;
+bool ldsSkinningEnabled = true;
+float SPECULARAA = 0.0f;
+float renderTime = 0;
+float renderTime_Prev = 0;
+float deltaTime = 0;
+XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
+XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
+float RESOLUTIONSCALE = 1.0f;
+GPUQuery occlusionQueries[256];
+UINT entityArrayOffset_Lights = 0;
+UINT entityArrayCount_Lights = 0;
+UINT entityArrayOffset_Decals = 0;
+UINT entityArrayCount_Decals = 0;
+UINT entityArrayOffset_ForceFields = 0;
+UINT entityArrayCount_ForceFields = 0;
+UINT entityArrayOffset_EnvProbes = 0;
+UINT entityArrayCount_EnvProbes = 0;
+Texture2D* enviroMap = nullptr;
+float GameSpeed = 1;
+bool debugLightCulling = false;
+bool occlusionCulling = false;
+bool temporalAA = false;
+bool temporalAADEBUG = false;
+
+struct VoxelizedSceneData
+{
+	bool enabled = false;
+	int res = 128;
+	float voxelsize = 1;
+	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
+	int numCones = 8;
+	float rayStepSize = 0.5f;
+	bool secondaryBounceEnabled = true;
+	bool reflectionsEnabled = false;
+	bool centerChangedThisFrame = true;
+	UINT mips = 7;
+} voxelSceneData;
+
+PHYSICS* physicsEngine = nullptr;
+wiOcean* ocean = nullptr;
 
 Texture2D* shadowMapArray_2D = nullptr;
 Texture2D* shadowMapArray_Cube = nullptr;
 Texture2D* shadowMapArray_Transparent = nullptr;
 
-string wiRenderer::SHADERPATH = "shaders/";
-#pragma endregion
+deque<wiSprite*> waterRipples;
 
-#pragma region STATIC TEMP
+std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+std::vector<RenderableLine> renderableLines;
 
-deque<wiSprite*> wiRenderer::waterRipples;
-
-Scene* wiRenderer::scene = nullptr;
-
-std::vector<pair<XMFLOAT4X4, XMFLOAT4>> wiRenderer::renderableBoxes;
-std::vector<wiRenderer::RenderableLine> wiRenderer::renderableLines;
-
-XMFLOAT4 wiRenderer::waterPlane = XMFLOAT4(0, 1, 0, 0);
+XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
 wiSpinLock deferredMIPGenLock;
 unordered_set<Texture2D*> deferredMIPGens;
 
-#pragma endregion
+
+void SetDevice(wiGraphicsTypes::GraphicsDevice* newDevice)
+{
+	graphicsDevice = newDevice;
+}
+GraphicsDevice* GetDevice()
+{
+	return graphicsDevice;
+}
 
 
 struct FrameCulling
@@ -233,27 +275,112 @@ GPUBuffer impostorVB_POS;
 GPUBuffer impostorVB_TEX;
 
 
-void wiRenderer::Present(function<void()> drawToScreen1,function<void()> drawToScreen2,function<void()> drawToScreen3)
+Sampler* GetSampler(int slot)
 {
-	GetDevice()->PresentBegin();
-	
-	if(drawToScreen1!=nullptr)
-		drawToScreen1();
-	if(drawToScreen2!=nullptr)
-		drawToScreen2();
-	if(drawToScreen3!=nullptr)
-		drawToScreen3();
+	return samplers[slot];
+}
+VertexShader* GetVertexShader(VSTYPES id)
+{
+	return vertexShaders[id];
+}
+HullShader* GetHullShader(VSTYPES id)
+{
+	return hullShaders[id];
+}
+DomainShader* GetDomainShader(VSTYPES id)
+{
+	return domainShaders[id];
+}
+GeometryShader* GetGeometryShader(VSTYPES id)
+{
+	return geometryShaders[id];
+}
+PixelShader* GetPixelShader(PSTYPES id)
+{
+	return pixelShaders[id];
+}
+ComputeShader* GetComputeShader(VSTYPES id)
+{
+	return computeShaders[id];
+}
+VertexLayout* GetVertexLayout(VLTYPES id)
+{
+	return vertexLayouts[id];
+}
+RasterizerState* GetRasterizerState(RSTYPES id)
+{
+	return rasterizers[id];
+}
+DepthStencilState* GetDepthStencilState(DSSTYPES id)
+{
+	return depthStencils[id];
+}
+BlendState* GetBlendState(BSTYPES id)
+{
+	return blendStates[id];
+}
+GPUBuffer* GetConstantBuffer(CBTYPES id)
+{
+	return constantBuffers[id];
+}
+Texture* GetTexture(TEXTYPES id)
+{
+	return textures[id];
+}
 
-	GetDevice()->PresentEnd();
+void ModifySampler(const SamplerDesc& desc, int slot)
+{
+	SAFE_DELETE(samplers[slot]);
+	samplers[slot] = new wiGraphicsTypes::Sampler;
+	GetDevice()->CreateSamplerState(&desc, samplers[slot]);
+}
 
-	OcclusionCulling_Read();
+std::string& GetShaderPath()
+{
+	return SHADERPATH;
+}
+void ReloadShaders(const std::string& path)
+{
+	GetShaderPath() = path;
 
-	wiFrameRate::Frame();
+	GetDevice()->WaitForGPU();
 
+	wiResourceManager::GetShaderManager()->CleanUp();
+	LoadShaders();
+	wiHairParticle::LoadShaders();
+	wiEmittedParticle::LoadShaders();
+	wiFont::LoadShaders();
+	wiImage::LoadShaders();
+	wiLensFlare::LoadShaders();
+	wiOcean::LoadShaders();
+	CSFFT_512x512_Data_t::LoadShaders();
+	wiWidget::LoadShaders();
+	wiGPUSortLib::LoadShaders();
+}
+
+Scene& GetScene()
+{
+	static Scene scene;
+	return scene;
+}
+CameraComponent& GetCamera()
+{
+	static CameraComponent camera;
+	return camera;
+}
+CameraComponent& GetPrevCamera()
+{
+	static CameraComponent camera;
+	return camera;
+}
+CameraComponent& GetRefCamera()
+{
+	static CameraComponent camera;
+	return camera;
 }
 
 
-void wiRenderer::SetUpStaticComponents()
+void Initialize()
 {
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
@@ -312,7 +439,7 @@ void wiRenderer::SetUpStaticComponents()
 		SAFE_INIT(customsamplers[i]);
 	}
 
-	GetCamera().CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+	GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
 
 	SetUpStates();
 	LoadBuffers();
@@ -326,222 +453,12 @@ void wiRenderer::SetUpStaticComponents()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-	// Set up impostor resources:
-	{
-		if (!impostorMaterialCB.IsValid())
-		{
-			MaterialCB mcb;
-			ZeroMemory(&mcb, sizeof(mcb));
-			mcb.baseColor = XMFLOAT4(1, 1, 1, 1);
-			mcb.texMulAdd = XMFLOAT4(1, 1, 0, 0);
-			mcb.normalMapStrength = 1.0f;
-			mcb.roughness = 1.0f;
-			mcb.reflectance = 1.0f;
-			mcb.metalness = 1.0f;
-
-			GPUBufferDesc bd;
-			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.CPUAccessFlags = 0;
-			bd.ByteWidth = sizeof(MaterialCB);
-			SubresourceData initData;
-			initData.pSysMem = &mcb;
-
-			GetDevice()->CreateBuffer(&bd, &initData, &impostorMaterialCB);
-		}
-		if (!impostorVB_POS.IsValid())
-		{
-			const int count = 6 * 6;
-
-			XMFLOAT3 impostorVertices_pos[count];
-			XMFLOAT3 impostorVertices_nor[count];
-			XMFLOAT2 impostorVertices_tex[count];
-
-			float stepX = 1.f / 6.f;
-
-			// front
-			impostorVertices_pos[0] = XMFLOAT3(-1, 1, 0);
-			impostorVertices_nor[0] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[0] = XMFLOAT2(0, 0);
-
-			impostorVertices_pos[1] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[1] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[1] = XMFLOAT2(0, 1);
-
-			impostorVertices_pos[2] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[2] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[2] = XMFLOAT2(stepX, 0);
-
-			impostorVertices_pos[3] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[3] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[3] = XMFLOAT2(0, 1);
-
-			impostorVertices_pos[4] = XMFLOAT3(1, -1, 0);
-			impostorVertices_nor[4] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[4] = XMFLOAT2(stepX, 1);
-
-			impostorVertices_pos[5] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[5] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[5] = XMFLOAT2(stepX, 0);
-
-			// right
-			impostorVertices_pos[6] = XMFLOAT3(0, 1, -1);
-			impostorVertices_nor[6] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[6] = XMFLOAT2(stepX, 0);
-
-			impostorVertices_pos[7] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[7] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[7] = XMFLOAT2(stepX, 1);
-
-			impostorVertices_pos[8] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[8] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[8] = XMFLOAT2(stepX * 2, 0);
-
-			impostorVertices_pos[9] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[9] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[9] = XMFLOAT2(stepX, 1);
-
-			impostorVertices_pos[10] = XMFLOAT3(0, -1, 1);
-			impostorVertices_nor[10] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[10] = XMFLOAT2(stepX * 2, 1);
-
-			impostorVertices_pos[11] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[11] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[11] = XMFLOAT2(stepX * 2, 0);
-
-			// back
-			impostorVertices_pos[12] = XMFLOAT3(-1, 1, 0);
-			impostorVertices_nor[12] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[12] = XMFLOAT2(stepX * 3, 0);
-
-			impostorVertices_pos[13] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[13] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[13] = XMFLOAT2(stepX * 2, 0);
-
-			impostorVertices_pos[14] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[14] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[14] = XMFLOAT2(stepX * 3, 1);
-
-			impostorVertices_pos[15] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[15] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[15] = XMFLOAT2(stepX * 3, 1);
-
-			impostorVertices_pos[16] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[16] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[16] = XMFLOAT2(stepX * 2, 0);
-
-			impostorVertices_pos[17] = XMFLOAT3(1, -1, 0);
-			impostorVertices_nor[17] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[17] = XMFLOAT2(stepX * 2, 1);
-
-			// left
-			impostorVertices_pos[18] = XMFLOAT3(0, 1, -1);
-			impostorVertices_nor[18] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[18] = XMFLOAT2(stepX * 4, 0);
-
-			impostorVertices_pos[19] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[19] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[19] = XMFLOAT2(stepX * 3, 0);
-
-			impostorVertices_pos[20] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[20] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[20] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[21] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[21] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[21] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[22] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[22] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[22] = XMFLOAT2(stepX * 3, 0);
-
-			impostorVertices_pos[23] = XMFLOAT3(0, -1, 1);
-			impostorVertices_nor[23] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[23] = XMFLOAT2(stepX * 3, 1);
-
-			// bottom
-			impostorVertices_pos[24] = XMFLOAT3(-1, 0, 1);
-			impostorVertices_nor[24] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[24] = XMFLOAT2(stepX * 4, 0);
-
-			impostorVertices_pos[25] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[25] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[25] = XMFLOAT2(stepX * 5, 0);
-
-			impostorVertices_pos[26] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[26] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[26] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[27] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[27] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[27] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[28] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[28] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[28] = XMFLOAT2(stepX * 5, 0);
-
-			impostorVertices_pos[29] = XMFLOAT3(1, 0, -1);
-			impostorVertices_nor[29] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[29] = XMFLOAT2(stepX * 5, 1);
-
-			// top
-			impostorVertices_pos[30] = XMFLOAT3(-1, 0, 1);
-			impostorVertices_nor[30] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[30] = XMFLOAT2(stepX * 5, 0);
-
-			impostorVertices_pos[31] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[31] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[31] = XMFLOAT2(stepX * 5, 1);
-
-			impostorVertices_pos[32] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[32] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[32] = XMFLOAT2(stepX * 6, 0);
-
-			impostorVertices_pos[33] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[33] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[33] = XMFLOAT2(stepX * 5, 1);
-
-			impostorVertices_pos[34] = XMFLOAT3(1, 0, -1);
-			impostorVertices_nor[34] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[34] = XMFLOAT2(stepX * 6, 1);
-
-			impostorVertices_pos[35] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[35] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[35] = XMFLOAT2(stepX * 6, 0);
-
-
-			MeshComponent::Vertex_POS impostorVertices_POS[count];
-			MeshComponent::Vertex_TEX impostorVertices_TEX[count];
-			for (int i = 0; i < count; ++i)
-			{
-				impostorVertices_POS[i].FromFULL(impostorVertices_pos[i], impostorVertices_nor[i], 0);
-				impostorVertices_TEX[i].FromFULL(impostorVertices_tex[i]);
-			}
-
-
-			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
-			InitData.pSysMem = impostorVertices_POS;
-			bd.ByteWidth = sizeof(impostorVertices_POS);
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_POS);
-			InitData.pSysMem = impostorVertices_TEX;
-			bd.ByteWidth = sizeof(impostorVertices_TEX);
-			wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
-		}
-	}
 }
-void wiRenderer::CleanUpStatic()
+void CleanUp()
 {
-
 	wiHairParticle::CleanUpStatic();
 	wiEmittedParticle::CleanUpStatic();
 	Cube::CleanUpStatic();
-
 
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
@@ -610,7 +527,7 @@ void wiRenderer::CleanUpStatic()
 
 	SAFE_DELETE(graphicsDevice);
 }
-void wiRenderer::ClearWorld()
+void ClearWorld()
 {
 	GetDevice()->WaitForGPU();
 	
@@ -628,143 +545,6 @@ void wiRenderer::ClearWorld()
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
-}
-float wiRenderer::GetGameSpeed() { return GameSpeed; }
-
-
-bool wiRenderer::ResolutionChanged()
-{
-	//detect internal resolution change:
-	static float _savedresscale = GetResolutionScale();
-	static uint64_t lastFrameInternalResChange = 0;
-	if (_savedresscale != GetResolutionScale() || lastFrameInternalResChange == GetDevice()->GetFrameCount())
-	{
-		_savedresscale = GetResolutionScale();
-		lastFrameInternalResChange = GetDevice()->GetFrameCount();
-		return true;
-	}
-
-	// detect device resolution change:
-	return GetDevice()->ResolutionChanged();
-}
-
-
-void wiRenderer::LoadBuffers()
-{
-	GPUBufferDesc bd;
-
-	// Ring buffer allows fast allocation of dynamic buffers for one frame:
-	dynamicVertexBufferPool = new GPURingBuffer;
-	bd.BindFlags = BIND_VERTEX_BUFFER;
-	bd.ByteWidth = 1024 * 1024 * 64;
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	bd.MiscFlags = 0;
-	GetDevice()->CreateBuffer(&bd, nullptr, dynamicVertexBufferPool);
-	GetDevice()->SetName(dynamicVertexBufferPool, "DynamicVertexBufferPool");
-
-
-	for (int i = 0; i < CBTYPE_LAST; ++i)
-	{
-		constantBuffers[i] = new GPUBuffer;
-	}
-
-	ZeroMemory( &bd, sizeof(bd) );
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-
-	//Persistent buffers...
-
-	// Per World Constant buffer will be updated occasionally, so it should reside in DEFAULT GPU memory!
-	bd.CPUAccessFlags = 0;
-	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(WorldCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_WORLD], "PerWorldConstantBuffer");
-
-	bd.ByteWidth = sizeof(FrameCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
-
-	// The other constant buffers will be updated frequently (> per frame) so they should reside in DYNAMIC GPU memory!
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-	bd.ByteWidth = sizeof(CameraCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
-
-	bd.ByteWidth = sizeof(MiscCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_MISC], "MiscConstantBuffer");
-
-	bd.ByteWidth = sizeof(APICB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_API], "APIConstantBuffer");
-
-
-	// On demand buffers...
-
-	bd.ByteWidth = sizeof(VolumeLightCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
-
-	bd.ByteWidth = sizeof(DecalCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DECAL]);
-
-	bd.ByteWidth = sizeof(CubemapRenderCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CUBEMAPRENDER]);
-
-	bd.ByteWidth = sizeof(TessellationCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TESSELLATION]);
-
-	bd.ByteWidth = sizeof(DispatchParamsCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
-
-	bd.ByteWidth = sizeof(CloudGeneratorCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
-
-	bd.ByteWidth = sizeof(TracedRenderingCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
-
-	bd.ByteWidth = sizeof(BVHCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
-
-	bd.ByteWidth = sizeof(GenerateMIPChainCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MIPGEN]);
-
-	bd.ByteWidth = sizeof(FilterEnvmapCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FILTERENVMAP]);
-
-	bd.ByteWidth = sizeof(CopyTextureCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
-
-
-
-
-
-	// Resource Buffers:
-
-	for (int i = 0; i < RBTYPE_LAST; ++i)
-	{
-		resourceBuffers[i] = new GPUBuffer;
-	}
-
-	bd.Usage = USAGE_DEFAULT;
-	bd.CPUAccessFlags = 0;
-
-
-	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_SHADER_ENTITY_COUNT;
-	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(ShaderEntityType);
-	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
-
-	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
-	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(XMMATRIX);
-	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_MATRIXARRAY]);
-
-	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
 
 enum OBJECTRENDERING_DOUBLESIDED
@@ -814,7 +594,7 @@ GraphicsPSO* PSO_object_water[SHADERTYPE_COUNT] = {};
 GraphicsPSO* PSO_object_wire = nullptr;
 GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
 {
-	if (wiRenderer::IsWireRender())
+	if (IsWireRender())
 	{
 		switch (shaderType)
 		{
@@ -1275,7 +1055,7 @@ GraphicsPSO* PSO_impostor[SHADERTYPE_COUNT] = {};
 GraphicsPSO* PSO_captureimpostor = nullptr;
 GraphicsPSO* GetImpostorPSO(SHADERTYPE shaderType)
 {
-	if (wiRenderer::IsWireRender())
+	if (IsWireRender())
 	{
 		switch (shaderType)
 		{
@@ -1342,7 +1122,7 @@ enum TILEDLIGHTING_DEBUG
 ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
 ComputePSO* CPSO[CSTYPE_LAST] = {};
 
-void wiRenderer::LoadShaders()
+void LoadShaders()
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -2333,32 +2113,124 @@ void wiRenderer::LoadShaders()
 	}
 	thread_pool.clear();
 }
-
-void wiRenderer::ReloadShaders(const std::string& path)
+void LoadBuffers()
 {
+	GPUBufferDesc bd;
 
-	if (path.length() > 0)
+	// Ring buffer allows fast allocation of dynamic buffers for one frame:
+	dynamicVertexBufferPool = new GPURingBuffer;
+	bd.BindFlags = BIND_VERTEX_BUFFER;
+	bd.ByteWidth = 1024 * 1024 * 64;
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.MiscFlags = 0;
+	GetDevice()->CreateBuffer(&bd, nullptr, dynamicVertexBufferPool);
+	GetDevice()->SetName(dynamicVertexBufferPool, "DynamicVertexBufferPool");
+
+
+	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
-		SHADERPATH = path;
+		constantBuffers[i] = new GPUBuffer;
 	}
 
-	GetDevice()->WaitForGPU();
+	ZeroMemory(&bd, sizeof(bd));
+	bd.BindFlags = BIND_CONSTANT_BUFFER;
 
-	wiResourceManager::GetShaderManager()->CleanUp();
-	LoadShaders();
-	wiHairParticle::LoadShaders();
-	wiEmittedParticle::LoadShaders();
-	wiFont::LoadShaders();
-	wiImage::LoadShaders();
-	wiLensFlare::LoadShaders();
-	wiOcean::LoadShaders();
-	CSFFT_512x512_Data_t::LoadShaders();
-	wiWidget::LoadShaders();
-	wiGPUSortLib::LoadShaders();
+	//Persistent buffers...
+
+	// Per World Constant buffer will be updated occasionally, so it should reside in DEFAULT GPU memory!
+	bd.CPUAccessFlags = 0;
+	bd.Usage = USAGE_DEFAULT;
+	bd.ByteWidth = sizeof(WorldCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_WORLD], "PerWorldConstantBuffer");
+
+	bd.ByteWidth = sizeof(FrameCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
+
+	// The other constant buffers will be updated frequently (> per frame) so they should reside in DYNAMIC GPU memory!
+	bd.Usage = USAGE_DYNAMIC;
+	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+	bd.ByteWidth = sizeof(CameraCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
+
+	bd.ByteWidth = sizeof(MiscCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_MISC], "MiscConstantBuffer");
+
+	bd.ByteWidth = sizeof(APICB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
+	GetDevice()->SetName(constantBuffers[CBTYPE_API], "APIConstantBuffer");
+
+
+	// On demand buffers...
+
+	bd.ByteWidth = sizeof(VolumeLightCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
+
+	bd.ByteWidth = sizeof(DecalCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DECAL]);
+
+	bd.ByteWidth = sizeof(CubemapRenderCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CUBEMAPRENDER]);
+
+	bd.ByteWidth = sizeof(TessellationCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TESSELLATION]);
+
+	bd.ByteWidth = sizeof(DispatchParamsCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
+
+	bd.ByteWidth = sizeof(CloudGeneratorCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
+
+	bd.ByteWidth = sizeof(TracedRenderingCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
+
+	bd.ByteWidth = sizeof(BVHCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
+
+	bd.ByteWidth = sizeof(GenerateMIPChainCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MIPGEN]);
+
+	bd.ByteWidth = sizeof(FilterEnvmapCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FILTERENVMAP]);
+
+	bd.ByteWidth = sizeof(CopyTextureCB);
+	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
+
+
+
+
+
+	// Resource Buffers:
+
+	for (int i = 0; i < RBTYPE_LAST; ++i)
+	{
+		resourceBuffers[i] = new GPUBuffer;
+	}
+
+	bd.Usage = USAGE_DEFAULT;
+	bd.CPUAccessFlags = 0;
+
+
+	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_SHADER_ENTITY_COUNT;
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(ShaderEntityType);
+	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
+
+	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
+	bd.BindFlags = BIND_SHADER_RESOURCE;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.StructureByteStride = sizeof(XMMATRIX);
+	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_MATRIXARRAY]);
+
+	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
-
-
-void wiRenderer::SetUpStates()
+void SetUpStates()
 {
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
@@ -2853,57 +2725,12 @@ void wiRenderer::SetUpStates()
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
 }
 
-void wiRenderer::BindPersistentState(GRAPHICSTHREAD threadID)
-{
-	GraphicsDevice* device = GetDevice();
-
-	for (int i = 0; i < SSLOT_COUNT; ++i)
-	{
-		device->BindSampler(PS, samplers[i], i, threadID);
-		device->BindSampler(VS, samplers[i], i, threadID);
-		device->BindSampler(GS, samplers[i], i, threadID);
-		device->BindSampler(DS, samplers[i], i, threadID);
-		device->BindSampler(HS, samplers[i], i, threadID);
-		device->BindSampler(CS, samplers[i], i, threadID);
-	}
 
 
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
-}
-
-void wiRenderer::FixedUpdate()
+void FixedUpdate()
 {
 }
-void wiRenderer::UpdatePerFrameData(float dt)
+void UpdatePerFrameData(float dt)
 {
 	Scene& scene = GetScene();
 
@@ -3103,7 +2930,7 @@ void wiRenderer::UpdatePerFrameData(float dt)
 	renderTime += dt * GetGameSpeed();
 	deltaTime = dt;
 }
-void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
+void UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
@@ -3523,7 +3350,7 @@ void wiRenderer::UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Render out of date environment probes:
 	RefreshEnvProbes(threadID);
 }
-void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
+void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -3598,7 +3425,7 @@ void wiRenderer::OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 	wiProfiler::GetInstance().EndRange(threadID); // Occlusion Culling Render
 }
-void wiRenderer::OcclusionCulling_Read()
+void OcclusionCulling_Read()
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -3653,7 +3480,13 @@ void wiRenderer::OcclusionCulling_Read()
 
 	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
 }
-void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
+void EndFrame()
+{
+	OcclusionCulling_Read();
+	wiFrameRate::Frame();
+}
+
+void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
 	wiSprite* img=new wiSprite("","",image);
 	img->anim.fad=0.01f;
@@ -3669,14 +3502,14 @@ void wiRenderer::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	img->effects.lookAt.w=1;
 	waterRipples.push_back(img);
 }
-void wiRenderer::ManageWaterRipples(){
+void ManageWaterRipples(){
 	while(	
 		!waterRipples.empty() && 
 			(waterRipples.front()->effects.opacity <= 0 + FLT_EPSILON || waterRipples.front()->effects.fade==1)
 		)
 		waterRipples.pop_front();
 }
-void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
+void DrawWaterRipples(GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("Water Ripples", threadID);
 	for(wiSprite* i:waterRipples){
@@ -3685,433 +3518,8 @@ void wiRenderer::DrawWaterRipples(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
-{
-	GraphicsDevice* device = GetDevice();
 
-	Scene& scene = GetScene();
-
-	device->EventBegin("DrawDebugWorld", threadID);
-
-	if (debugBoneLines)
-	{
-		device->EventBegin("DebugBoneLines", threadID);
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
-
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
-		{
-			const ArmatureComponent& armature = scene.armatures[i];
-
-			if (armature.boneCollection.empty())
-			{
-				continue;
-			}
-
-			struct LineSegment
-			{
-				XMFLOAT4 a, colorA, b, colorB;
-			};
-			UINT offset;
-			void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * armature.boneCollection.size(), offset, threadID);
-
-			int j = 0;
-			for (Entity entity : armature.boneCollection)
-			{
-				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-				XMMATRIX world = XMLoadFloat4x4(&transform.world);
-				XMVECTOR a = XMVectorSet(0, 0, 0, 1);
-				XMVECTOR b = XMVectorSet(0, 0, 1, 1);
-
-				a = XMVector4Transform(a, world);
-				b = XMVector4Transform(b, world);
-
-
-				LineSegment segment;
-				XMStoreFloat4(&segment.a, a);
-				XMStoreFloat4(&segment.b, b);
-
-				memcpy((void*)((size_t)mem + j * sizeof(LineSegment)), &segment, sizeof(LineSegment));
-				j++;
-			}
-
-			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-			GPUBuffer* vbs[] = {
-				dynamicVertexBufferPool,
-			};
-			const UINT strides[] = {
-				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-			};
-			const UINT offsets[] = {
-				offset,
-			};
-			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-
-			device->Draw(2 * j, 0, threadID);
-
-		}
-
-		device->EventEnd(threadID);
-	}
-	
-	if (!renderableLines.empty())
-	{
-		device->EventBegin("DebugLines", threadID);
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
-
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-		struct LineSegment
-		{
-			XMFLOAT4 a, colorA, b, colorB;
-		};
-		UINT offset;
-		void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * renderableLines.size(), offset, threadID);
-
-		int i = 0;
-		for (auto& line : renderableLines)
-		{
-			LineSegment segment;
-			segment.a = XMFLOAT4(line.start.x, line.start.y, line.start.z, 1);
-			segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
-			segment.colorA = segment.colorB = line.color;
-
-			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
-			i++;
-		}
-
-		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-		GPUBuffer* vbs[] = {
-			dynamicVertexBufferPool,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		const UINT offsets[] = {
-			offset,
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-
-		device->Draw(2 * i, 0, threadID);
-
-		renderableLines.clear();
-
-		device->EventEnd(threadID);
-	}
-
-	if (!renderableBoxes.empty())
-	{
-		device->EventBegin("DebugBoxes", threadID);
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
-
-		GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
-
-		MiscCB sb;
-
-		for (auto& x : renderableBoxes)
-		{
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera.GetViewProjection()));
-			sb.g_xColor = x.second;
-
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			device->DrawIndexed(24, 0, 0, threadID);
-		}
-		renderableBoxes.clear();
-
-		device->EventEnd(threadID);
-	}
-
-
-	if (debugEnvProbes)
-	{
-		device->EventBegin("Debug EnvProbes", threadID);
-		// Envmap spheres:
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
-
-		MiscCB sb;
-		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
-		{
-			EnvironmentProbeComponent& probe = scene.probes[i];
-
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position))));
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			if (probe.textureIndex < 0)
-			{
-				device->BindResource(PS, wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ONDEMAND0, threadID);
-			}
-			else
-			{
-				device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + probe.textureIndex);
-			}
-
-			device->Draw(2880, 0, threadID); // uv-sphere
-		}
-
-
-		// Local proxy boxes:
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
-
-		GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
-
-		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
-		{
-			EnvironmentProbeComponent& probe = scene.probes[i];
-
-			if (probe.textureIndex < 0)
-			{
-				continue;
-			}
-
-			Entity entity = scene.probes.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-			XMStoreFloat4x4(&sb.g_xTransform , XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
-			sb.g_xColor = float4(0, 1, 1, 1);
-
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			device->DrawIndexed(24, 0, 0, threadID);
-		}
-
-		device->EventEnd(threadID);
-	}
-
-
-	if (gridHelper)
-	{
-		device->EventBegin("GridHelper", threadID);
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
-
-		static float col = 0.7f;
-		static int gridVertexCount = 0;
-		static GPUBuffer* grid = nullptr;
-		if (grid == nullptr)
-		{
-			const float h = 0.01f; // avoid z-fight with zero plane
-			const int a = 20;
-			XMFLOAT4 verts[((a + 1) * 2 + (a + 1) * 2) * 2];
-
-			int count = 0;
-			for (int i = 0; i <= a; ++i)
-			{
-				verts[count++] = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
-
-				verts[count++] = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
-				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
-			}
-			for (int j = 0; j <= a; ++j)
-			{
-				verts[count++] = XMFLOAT4(-a * 0.5f, h, j - a * 0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
-
-				verts[count++] = XMFLOAT4(+a * 0.5f, h, j - a * 0.5f, 1);
-				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
-			}
-
-			gridVertexCount = ARRAYSIZE(verts) / 2;
-
-			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.ByteWidth = sizeof(verts);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
-			InitData.pSysMem = verts;
-			grid = new GPUBuffer;
-			device->CreateBuffer(&bd, &InitData, grid);
-		}
-
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
-		sb.g_xColor = float4(1, 1, 1, 1);
-
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-		GPUBuffer* vbs[] = {
-			grid,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->Draw(gridVertexCount, 0, threadID);
-
-		device->EventEnd(threadID);
-	}
-
-	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr)
-	{
-		device->EventBegin("Debug Voxels", threadID);
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
-
-
-		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection()));
-		sb.g_xColor = float4(1, 1, 1, 1);
-
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
-
-		device->EventEnd(threadID);
-	}
-
-	if (debugEmitters)
-	{
-		device->EventBegin("DebugEmitters", threadID);
-
-		MiscCB sb;
-		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
-		{
-			const wiEmittedParticle& emitter = scene.emitters[i];
-			Entity entity = scene.emitters.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
-
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
-			sb.g_xColor = float4(0, 1, 0, 1);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			if (mesh == nullptr)
-			{
-				// No mesh, just draw a box:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
-				GPUBuffer* vbs[] = {
-					&Cube::vertexBuffer,
-				};
-				const UINT strides[] = {
-					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
-				device->DrawIndexed(24, 0, 0, threadID);
-			}
-			else
-			{
-				// Draw mesh wireframe:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
-				GPUBuffer* vbs[] = {
-					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
-				};
-				const UINT strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, threadID);
-
-				device->DrawIndexed((int)mesh->indices.size(), 0, 0, threadID);
-			}
-		}
-
-		device->EventEnd(threadID);
-	}
-
-
-	if (debugForceFields)
-	{
-		device->EventBegin("DebugForceFields", threadID);
-
-		MiscCB sb;
-		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
-		{
-			ForceFieldComponent& force = scene.forces[i];
-
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
-			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			switch (force.type)
-			{
-			case ENTITY_TYPE_FORCEFIELD_POINT:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
-				device->Draw(2880, 0, threadID); // uv-sphere
-				break;
-			case ENTITY_TYPE_FORCEFIELD_PLANE:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
-				device->Draw(14, 0, threadID); // box
-				break;
-			}
-
-			++i;
-		}
-
-		device->EventEnd(threadID);
-	}
-
-
-	if (debugCameras)
-	{
-		device->EventBegin("DebugCameras", threadID);
-
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
-
-		GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
-		};
-		const UINT strides[] = {
-			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
-		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
-
-		MiscCB sb;
-		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-
-		for(size_t i = 0; i < scene.cameras.GetCount(); ++i)
-		{
-			const CameraComponent& cam = scene.cameras[i];
-			Entity entity = scene.cameras.GetEntity(i);
-
-			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(cam.GetInvView()*camera.GetViewProjection()));
-
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
-
-			device->DrawIndexed(24, 0, 0, threadID);
-		}
-
-		device->EventEnd(threadID);
-	}
-
-	device->EventEnd(threadID);
-}
-
-void wiRenderer::DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
+void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = GetScene();
 
@@ -4132,7 +3540,7 @@ void wiRenderer::DrawSoftParticles(const CameraComponent& camera, bool distortio
 	}
 
 }
-void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
+void DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 {
 	//if (objectsWithTrails.empty())
 	//{
@@ -4226,7 +3634,7 @@ void wiRenderer::DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 
 	//GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	const FrameCulling& culling = frameCullings[&camera];
 	const auto& culledLights = culling.culledLights;
@@ -4303,7 +3711,7 @@ void wiRenderer::DrawLights(const CameraComponent& camera, GRAPHICSTHREAD thread
 	wiProfiler::GetInstance().EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = GetScene();
 
@@ -4418,7 +3826,7 @@ void wiRenderer::DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHR
 
 
 }
-void wiRenderer::DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	const FrameCulling& culling = frameCullings[&camera];
 	const auto& culledLights = culling.culledLights;
@@ -4500,7 +3908,7 @@ void wiRenderer::DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD 
 
 
 }
-void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
+void DrawLensFlares(GRAPHICSTHREAD threadID)
 {
 	const CameraComponent& camera = GetCamera();
 
@@ -4538,66 +3946,90 @@ void wiRenderer::DrawLensFlares(GRAPHICSTHREAD threadID)
 	}
 }
 
-void wiRenderer::SetShadowProps2D(int resolution, int count, int softShadowQuality)
+void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 {
-	SHADOWRES_2D = resolution;
-	SHADOWCOUNT_2D = count;
-	SOFTSHADOWQUALITY_2D = softShadowQuality;
+	if (resolution >= 0)
+	{
+		SHADOWRES_2D = resolution;
+	}
+	if (count >= 0)
+	{
+		SHADOWCOUNT_2D = count;
+	}
+	if (softShadowQuality >= 0)
+	{
+		SOFTSHADOWQUALITY_2D = softShadowQuality;
+	}
 
-	SAFE_DELETE(shadowMapArray_2D);
-	shadowMapArray_2D = new Texture2D;
-	shadowMapArray_2D->RequestIndependentRenderTargetArraySlices(true);
+	if (SHADOWCOUNT_2D > 0)
+	{
+		SAFE_DELETE(shadowMapArray_2D);
+		shadowMapArray_2D = new Texture2D;
+		shadowMapArray_2D->RequestIndependentRenderTargetArraySlices(true);
 
-	SAFE_DELETE(shadowMapArray_Transparent);
-	shadowMapArray_Transparent = new Texture2D;
-	shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
+		SAFE_DELETE(shadowMapArray_Transparent);
+		shadowMapArray_Transparent = new Texture2D;
+		shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
 
-	TextureDesc desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = SHADOWRES_2D;
-	desc.Height = SHADOWRES_2D;
-	desc.MipLevels = 1;
-	desc.ArraySize = SHADOWCOUNT_2D;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = USAGE_DEFAULT;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
+		TextureDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = SHADOWRES_2D;
+		desc.Height = SHADOWRES_2D;
+		desc.MipLevels = 1;
+		desc.ArraySize = SHADOWCOUNT_2D;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = 0;
 
-	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-	desc.Format = DSFormat_small_alias;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
+		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+		desc.Format = DSFormat_small_alias;
+		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
 
-	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-	desc.Format = RTFormat_ldr;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.Format = RTFormat_ldr;
+		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+	}
+
 }
-void wiRenderer::SetShadowPropsCube(int resolution, int count)
+void SetShadowPropsCube(int resolution, int count)
 {
-	SHADOWRES_CUBE = resolution;
-	SHADOWCOUNT_CUBE = count;
+	if (resolution >= 0)
+	{
+		SHADOWRES_CUBE = resolution;
+	}
+	if (count >= 0)
+	{
+		SHADOWCOUNT_CUBE = count;
+	}
 
-	SAFE_DELETE(shadowMapArray_Cube);
-	shadowMapArray_Cube = new Texture2D;
-	shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
-	shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
+	if (SHADOWCOUNT_CUBE > 0)
+	{
 
-	TextureDesc desc;
-	ZeroMemory(&desc, sizeof(desc));
-	desc.Width = SHADOWRES_CUBE;
-	desc.Height = SHADOWRES_CUBE;
-	desc.MipLevels = 1;
-	desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
-	desc.Format = DSFormat_small_alias;
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Usage = USAGE_DEFAULT;
-	desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-	GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
+		SAFE_DELETE(shadowMapArray_Cube);
+		shadowMapArray_Cube = new Texture2D;
+		shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
+		shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
+
+		TextureDesc desc;
+		ZeroMemory(&desc, sizeof(desc));
+		desc.Width = SHADOWRES_CUBE;
+		desc.Height = SHADOWRES_CUBE;
+		desc.MipLevels = 1;
+		desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
+		desc.Format = DSFormat_small_alias;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Usage = USAGE_DEFAULT;
+		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
+		desc.CPUAccessFlags = 0;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
+	}
+
 }
-void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
+void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 {
 	if (wireRender)
 		return;
@@ -4876,7 +4308,7 @@ void wiRenderer::DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 	}
 }
 
-void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
+void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation, bool occlusionCulling, uint32_t layerMask)
 {
 	// Intensive section, refactor and optimize!
@@ -5315,7 +4747,7 @@ void wiRenderer::RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culle
 	}
 }
 
-void wiRenderer::DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
 	const FrameCulling& culling = frameCullings[&camera];
 
@@ -5359,7 +4791,7 @@ void wiRenderer::DrawWorld(const CameraComponent& camera, bool tessellation, GRA
 
 }
 
-void wiRenderer::DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
 	const FrameCulling& culling = frameCullings[&camera];
 
@@ -5402,8 +4834,433 @@ void wiRenderer::DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE 
 	GetDevice()->EventEnd(threadID);
 }
 
+void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
 
-void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
+	Scene& scene = GetScene();
+
+	device->EventBegin("DrawDebugWorld", threadID);
+
+	if (debugBoneLines)
+	{
+		device->EventBegin("DebugBoneLines", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+		{
+			const ArmatureComponent& armature = scene.armatures[i];
+
+			if (armature.boneCollection.empty())
+			{
+				continue;
+			}
+
+			struct LineSegment
+			{
+				XMFLOAT4 a, colorA, b, colorB;
+			};
+			UINT offset;
+			void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * armature.boneCollection.size(), offset, threadID);
+
+			int j = 0;
+			for (Entity entity : armature.boneCollection)
+			{
+				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+				XMMATRIX world = XMLoadFloat4x4(&transform.world);
+				XMVECTOR a = XMVectorSet(0, 0, 0, 1);
+				XMVECTOR b = XMVectorSet(0, 0, 1, 1);
+
+				a = XMVector4Transform(a, world);
+				b = XMVector4Transform(b, world);
+
+
+				LineSegment segment;
+				XMStoreFloat4(&segment.a, a);
+				XMStoreFloat4(&segment.b, b);
+
+				memcpy((void*)((size_t)mem + j * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+				j++;
+			}
+
+			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+			GPUBuffer* vbs[] = {
+				dynamicVertexBufferPool,
+			};
+			const UINT strides[] = {
+				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+			};
+			const UINT offsets[] = {
+				offset,
+			};
+			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+			device->Draw(2 * j, 0, threadID);
+
+		}
+
+		device->EventEnd(threadID);
+	}
+
+	if (!renderableLines.empty())
+	{
+		device->EventBegin("DebugLines", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		struct LineSegment
+		{
+			XMFLOAT4 a, colorA, b, colorB;
+		};
+		UINT offset;
+		void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * renderableLines.size(), offset, threadID);
+
+		int i = 0;
+		for (auto& line : renderableLines)
+		{
+			LineSegment segment;
+			segment.a = XMFLOAT4(line.start.x, line.start.y, line.start.z, 1);
+			segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
+			segment.colorA = segment.colorB = line.color;
+
+			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			i++;
+		}
+
+		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+		GPUBuffer* vbs[] = {
+			dynamicVertexBufferPool,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		const UINT offsets[] = {
+			offset,
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+		device->Draw(2 * i, 0, threadID);
+
+		renderableLines.clear();
+
+		device->EventEnd(threadID);
+	}
+
+	if (!renderableBoxes.empty())
+	{
+		device->EventBegin("DebugBoxes", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+
+		GPUBuffer* vbs[] = {
+			&Cube::vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+
+		MiscCB sb;
+
+		for (auto& x : renderableBoxes)
+		{
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera.GetViewProjection()));
+			sb.g_xColor = x.second;
+
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+		renderableBoxes.clear();
+
+		device->EventEnd(threadID);
+	}
+
+
+	if (debugEnvProbes)
+	{
+		device->EventBegin("Debug EnvProbes", threadID);
+		// Envmap spheres:
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
+
+		MiscCB sb;
+		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+		{
+			EnvironmentProbeComponent& probe = scene.probes[i];
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position))));
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			if (probe.textureIndex < 0)
+			{
+				device->BindResource(PS, wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ONDEMAND0, threadID);
+			}
+			else
+			{
+				device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + probe.textureIndex);
+			}
+
+			device->Draw(2880, 0, threadID); // uv-sphere
+		}
+
+
+		// Local proxy boxes:
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+
+		GPUBuffer* vbs[] = {
+			&Cube::vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+
+		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
+		{
+			EnvironmentProbeComponent& probe = scene.probes[i];
+
+			if (probe.textureIndex < 0)
+			{
+				continue;
+			}
+
+			Entity entity = scene.probes.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
+			sb.g_xColor = float4(0, 1, 1, 1);
+
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+
+		device->EventEnd(threadID);
+	}
+
+
+	if (gridHelper)
+	{
+		device->EventBegin("GridHelper", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
+
+		static float col = 0.7f;
+		static int gridVertexCount = 0;
+		static GPUBuffer* grid = nullptr;
+		if (grid == nullptr)
+		{
+			const float h = 0.01f; // avoid z-fight with zero plane
+			const int a = 20;
+			XMFLOAT4 verts[((a + 1) * 2 + (a + 1) * 2) * 2];
+
+			int count = 0;
+			for (int i = 0; i <= a; ++i)
+			{
+				verts[count++] = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+
+				verts[count++] = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
+				verts[count++] = (i == a / 2 ? XMFLOAT4(0, 0, 1, 1) : XMFLOAT4(col, col, col, 1));
+			}
+			for (int j = 0; j <= a; ++j)
+			{
+				verts[count++] = XMFLOAT4(-a * 0.5f, h, j - a * 0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+
+				verts[count++] = XMFLOAT4(+a * 0.5f, h, j - a * 0.5f, 1);
+				verts[count++] = (j == a / 2 ? XMFLOAT4(1, 0, 0, 1) : XMFLOAT4(col, col, col, 1));
+			}
+
+			gridVertexCount = ARRAYSIZE(verts) / 2;
+
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = verts;
+			grid = new GPUBuffer;
+			device->CreateBuffer(&bd, &InitData, grid);
+		}
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
+		sb.g_xColor = float4(1, 1, 1, 1);
+
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		GPUBuffer* vbs[] = {
+			grid,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->Draw(gridVertexCount, 0, threadID);
+
+		device->EventEnd(threadID);
+	}
+
+	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr)
+	{
+		device->EventBegin("Debug Voxels", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
+
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection()));
+		sb.g_xColor = float4(1, 1, 1, 1);
+
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
+
+		device->EventEnd(threadID);
+	}
+
+	if (debugEmitters)
+	{
+		device->EventBegin("DebugEmitters", threadID);
+
+		MiscCB sb;
+		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+		{
+			const wiEmittedParticle& emitter = scene.emitters[i];
+			Entity entity = scene.emitters.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
+			sb.g_xColor = float4(0, 1, 0, 1);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			if (mesh == nullptr)
+			{
+				// No mesh, just draw a box:
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+				GPUBuffer* vbs[] = {
+					&Cube::vertexBuffer,
+				};
+				const UINT strides[] = {
+					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+				device->DrawIndexed(24, 0, 0, threadID);
+			}
+			else
+			{
+				// Draw mesh wireframe:
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
+				GPUBuffer* vbs[] = {
+					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
+				};
+				const UINT strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, threadID);
+
+				device->DrawIndexed((int)mesh->indices.size(), 0, 0, threadID);
+			}
+		}
+
+		device->EventEnd(threadID);
+	}
+
+
+	if (debugForceFields)
+	{
+		device->EventBegin("DebugForceFields", threadID);
+
+		MiscCB sb;
+		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
+		{
+			ForceFieldComponent& force = scene.forces[i];
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
+			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			switch (force.type)
+			{
+			case ENTITY_TYPE_FORCEFIELD_POINT:
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
+				device->Draw(2880, 0, threadID); // uv-sphere
+				break;
+			case ENTITY_TYPE_FORCEFIELD_PLANE:
+				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
+				device->Draw(14, 0, threadID); // box
+				break;
+			}
+
+			++i;
+		}
+
+		device->EventEnd(threadID);
+	}
+
+
+	if (debugCameras)
+	{
+		device->EventBegin("DebugCameras", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+
+		GPUBuffer* vbs[] = {
+			&Cube::vertexBuffer,
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+
+		MiscCB sb;
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+
+		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
+		{
+			const CameraComponent& cam = scene.cameras[i];
+			Entity entity = scene.cameras.GetEntity(i);
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(cam.GetInvView()*camera.GetViewProjection()));
+
+			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+
+		device->EventEnd(threadID);
+	}
+
+	device->EventEnd(threadID);
+}
+
+void DrawSky(GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("DrawSky", threadID);
 	
@@ -5429,7 +5286,7 @@ void wiRenderer::DrawSky(GRAPHICSTHREAD threadID)
 
 	GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
+void DrawSun(GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("DrawSun", threadID);
 
@@ -5449,7 +5306,7 @@ void wiRenderer::DrawSun(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
@@ -5509,7 +5366,7 @@ void wiRenderer::DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD thread
 	}
 }
 
-void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
+void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("EnvironmentProbe Refresh", threadID);
 
@@ -5700,7 +5557,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		//GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
-		wiRenderer::GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe.textureIndex);
+		GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
@@ -5752,7 +5609,7 @@ void wiRenderer::RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	GetDevice()->EventEnd(threadID); // EnvironmentProbe Refresh
 }
 
-void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
+void VoxelRadiance(GRAPHICSTHREAD threadID)
 {
 	if (!GetVoxelRadianceEnabled())
 	{
@@ -5907,10 +5764,18 @@ void wiRenderer::VoxelRadiance(GRAPHICSTHREAD threadID)
 }
 
 
-void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
+
+inline XMUINT3 GetEntityCullingTileCount()
+{
+	return XMUINT3(
+		(UINT)ceilf((float)GetInternalResolution().x / (float)TILED_CULLING_BLOCKSIZE),
+		(UINT)ceilf((float)GetInternalResolution().y / (float)TILED_CULLING_BLOCKSIZE),
+		1);
+}
+void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = GetDevice();
 
 	int _width = GetInternalResolution().x;
 	int _height = GetInternalResolution().y;
@@ -6101,7 +5966,7 @@ void wiRenderer::ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID
 
 	wiProfiler::GetInstance().EndRange(threadID);
 }
-void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
+void ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("Resolve MSAA DepthBuffer", threadID);
 
@@ -6119,11 +5984,11 @@ void wiRenderer::ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICS
 
 	GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
+void GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	assert(0 && "Not implemented!");
 }
-void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
+void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	TextureDesc desc = texture->GetDesc();
 
@@ -6156,17 +6021,17 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 
 			switch (filter)
 			{
-			case wiRenderer::MIPGENFILTER_POINT:
+			case MIPGENFILTER_POINT:
 				GetDevice()->EventBegin("GenerateMipChain CubeArray - PointFilter", threadID);
 				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
 				GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
-			case wiRenderer::MIPGENFILTER_LINEAR:
+			case MIPGENFILTER_LINEAR:
 				GetDevice()->EventBegin("GenerateMipChain CubeArray - LinearFilter", threadID);
 				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
 				GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
-			case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+			case MIPGENFILTER_LINEAR_MAXIMUM:
 				GetDevice()->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", threadID);
 				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
 				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
@@ -6204,17 +6069,17 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 			// Cubemap
 			switch (filter)
 			{
-			case wiRenderer::MIPGENFILTER_POINT:
+			case MIPGENFILTER_POINT:
 				GetDevice()->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
 				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
 				GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
-			case wiRenderer::MIPGENFILTER_LINEAR:
+			case MIPGENFILTER_LINEAR:
 				GetDevice()->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
 				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
 				GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
-			case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+			case MIPGENFILTER_LINEAR_MAXIMUM:
 				GetDevice()->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
 				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
 				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
@@ -6254,22 +6119,22 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 		// Texture2D
 		switch (filter)
 		{
-		case wiRenderer::MIPGENFILTER_POINT:
+		case MIPGENFILTER_POINT:
 			GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
 			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
 			GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
-		case wiRenderer::MIPGENFILTER_LINEAR:
+		case MIPGENFILTER_LINEAR:
 			GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
 			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
 			GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
-		case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+		case MIPGENFILTER_LINEAR_MAXIMUM:
 			GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
 			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
 			GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
-		case wiRenderer::MIPGENFILTER_GAUSSIAN:
+		case MIPGENFILTER_GAUSSIAN:
 			GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
 			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
 			break;
@@ -6307,7 +6172,7 @@ void wiRenderer::GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPH
 
 	GetDevice()->EventEnd(threadID);
 }
-void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
+void GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	TextureDesc desc = texture->GetDesc();
 
@@ -6332,22 +6197,22 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 
 	switch (filter)
 	{
-	case wiRenderer::MIPGENFILTER_POINT:
+	case MIPGENFILTER_POINT:
 		GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
 		GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
-	case wiRenderer::MIPGENFILTER_LINEAR:
+	case MIPGENFILTER_LINEAR:
 		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
 		GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
-	case wiRenderer::MIPGENFILTER_LINEAR_MAXIMUM:
+	case MIPGENFILTER_LINEAR_MAXIMUM:
 		GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
 		GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
-	case wiRenderer::MIPGENFILTER_GAUSSIAN:
+	case MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
 		break;
@@ -6382,7 +6247,7 @@ void wiRenderer::GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPH
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, BORDEREXPANDSTYLE borderExpand)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -6435,19 +6300,18 @@ void wiRenderer::CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY
 
 
 
-// Should I care that usually buffers are not declared here?
-static GPUBuffer* bvhNodeBuffer = nullptr;
-static GPUBuffer* bvhAABBBuffer = nullptr;
-static GPUBuffer* bvhFlagBuffer = nullptr;
-static GPUBuffer* triangleBuffer = nullptr;
-static GPUBuffer* clusterCounterBuffer = nullptr;
-static GPUBuffer* clusterIndexBuffer = nullptr;
-static GPUBuffer* clusterMortonBuffer = nullptr;
-static GPUBuffer* clusterSortedMortonBuffer = nullptr;
-static GPUBuffer* clusterOffsetBuffer = nullptr;
-static GPUBuffer* clusterAABBBuffer = nullptr;
-static GPUBuffer* clusterConeBuffer = nullptr;
-void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
+GPUBuffer* bvhNodeBuffer = nullptr;
+GPUBuffer* bvhAABBBuffer = nullptr;
+GPUBuffer* bvhFlagBuffer = nullptr;
+GPUBuffer* triangleBuffer = nullptr;
+GPUBuffer* clusterCounterBuffer = nullptr;
+GPUBuffer* clusterIndexBuffer = nullptr;
+GPUBuffer* clusterMortonBuffer = nullptr;
+GPUBuffer* clusterSortedMortonBuffer = nullptr;
+GPUBuffer* clusterOffsetBuffer = nullptr;
+GPUBuffer* clusterAABBBuffer = nullptr;
+GPUBuffer* clusterConeBuffer = nullptr;
+void BuildSceneBVH(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
@@ -6809,10 +6673,9 @@ void wiRenderer::BuildSceneBVH(GRAPHICSTHREAD threadID)
 
 	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
 }
-
-void wiRenderer::DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICSTHREAD threadID)
+void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
 
 	device->EventBegin("DrawTracedScene", threadID);
@@ -7295,7 +7158,7 @@ void wiRenderer::DrawTracedScene(const CameraComponent& camera, Texture2D* resul
 	device->EventEnd(threadID); // DrawTracedScene
 }
 
-void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
+void GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->EventBegin("Cloud Generator", threadID);
 
@@ -7331,7 +7194,7 @@ void wiRenderer::GenerateClouds(Texture2D* dst, UINT refinementCount, float rand
 	GetDevice()->EventEnd(threadID);
 }
 
-void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
+void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -7455,7 +7318,53 @@ void wiRenderer::ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	}
 }
 
-void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
+void BindPersistentState(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	for (int i = 0; i < SSLOT_COUNT; ++i)
+	{
+		device->BindSampler(PS, samplers[i], i, threadID);
+		device->BindSampler(VS, samplers[i], i, threadID);
+		device->BindSampler(GS, samplers[i], i, threadID);
+		device->BindSampler(DS, samplers[i], i, threadID);
+		device->BindSampler(HS, samplers[i], i, threadID);
+		device->BindSampler(CS, samplers[i], i, threadID);
+	}
+
+
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
+
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+}
+void UpdateWorldCB(GRAPHICSTHREAD threadID)
 {
 	const Scene& scene = GetScene();
 
@@ -7510,7 +7419,7 @@ void wiRenderer::UpdateWorldCB(GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &prevcb[threadID], threadID);
 	}
 }
-void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
+void UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
 	const Scene& scene = GetScene();
 
@@ -7601,7 +7510,7 @@ void wiRenderer::UpdateFrameCB(GRAPHICSTHREAD threadID)
 
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }
-void wiRenderer::UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	CameraCB cb;
 
@@ -7614,12 +7523,12 @@ void wiRenderer::UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD th
 }
 
 APICB apiCB[GRAPHICSTHREAD_COUNT];
-void wiRenderer::SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID)
+void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID)
 {
 	apiCB[threadID].g_xClipPlane = clipPlane;
 	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 }
-void wiRenderer::SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
+void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 {
 	if (alphaRef != apiCB[threadID].g_xAlphaRef)
 	{
@@ -7627,7 +7536,7 @@ void wiRenderer::SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 	}
 }
-void wiRenderer::BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
+void BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
 	GetDevice()->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
@@ -7641,7 +7550,7 @@ void wiRenderer::BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture
 	GetDevice()->BindResource(CS, slot3, TEXSLOT_GBUFFER3, threadID);
 	GetDevice()->BindResource(CS, slot4, TEXSLOT_GBUFFER4, threadID);
 }
-void wiRenderer::BindDepthTextures(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
+void BindDepthTextures(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->BindResource(PS, depth, TEXSLOT_DEPTH, threadID);
 	GetDevice()->BindResource(VS, depth, TEXSLOT_DEPTH, threadID);
@@ -7655,9 +7564,9 @@ void wiRenderer::BindDepthTextures(Texture2D* depth, Texture2D* linearDepth, GRA
 }
 
 
-Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
+Texture2D* GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = GetDevice();
 
 	static Texture2D* luminance_map = nullptr;
 	static std::vector<Texture2D*> luminance_avg(0);
@@ -7736,13 +7645,13 @@ Texture2D* wiRenderer::GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threa
 	return nullptr;
 }
 
-const XMFLOAT4& wiRenderer::GetWaterPlane()
+const XMFLOAT4& GetWaterPlane()
 {
 	return waterPlane;
 }
 
 
-RAY wiRenderer::GetPickRay(long cursorX, long cursorY) 
+RAY GetPickRay(long cursorX, long cursorY) 
 {
 	const CameraComponent& camera = GetCamera();
 	XMMATRIX V = camera.GetView();
@@ -7754,7 +7663,7 @@ RAY wiRenderer::GetPickRay(long cursorX, long cursorY)
 	return RAY(lineStart, rayDirection);
 }
 
-wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask)
+RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask)
 {
 	Scene& scene = GetScene();
 
@@ -7876,16 +7785,8 @@ wiRenderer::RayIntersectWorldResult wiRenderer::RayIntersectWorld(const RAY& ray
 	return result;
 }
 
-Scene& wiRenderer::GetScene()
-{
-	if (scene == nullptr)
-	{
-		scene = new Scene;
-	}
-	return *scene;
-}
 
-void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
+void SynchronizeWithPhysicsEngine(float dt)
 {
 	//if (physicsEngine && GetGameSpeed())
 	//{
@@ -7963,8 +7864,216 @@ void wiRenderer::SynchronizeWithPhysicsEngine(float dt)
 	//}
 }
 
-void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
+void CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = GetDevice();
+
+	if (!impostorMaterialCB.IsValid())
+	{
+		MaterialCB mcb;
+		ZeroMemory(&mcb, sizeof(mcb));
+		mcb.baseColor = XMFLOAT4(1, 1, 1, 1);
+		mcb.texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		mcb.normalMapStrength = 1.0f;
+		mcb.roughness = 1.0f;
+		mcb.reflectance = 1.0f;
+		mcb.metalness = 1.0f;
+
+		GPUBufferDesc bd;
+		bd.BindFlags = BIND_CONSTANT_BUFFER;
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.CPUAccessFlags = 0;
+		bd.ByteWidth = sizeof(MaterialCB);
+		SubresourceData initData;
+		initData.pSysMem = &mcb;
+
+		device->CreateBuffer(&bd, &initData, &impostorMaterialCB);
+	}
+	if (!impostorVB_POS.IsValid())
+	{
+		const int count = 6 * 6;
+
+		XMFLOAT3 impostorVertices_pos[count];
+		XMFLOAT3 impostorVertices_nor[count];
+		XMFLOAT2 impostorVertices_tex[count];
+
+		float stepX = 1.f / 6.f;
+
+		// front
+		impostorVertices_pos[0] = XMFLOAT3(-1, 1, 0);
+		impostorVertices_nor[0] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[0] = XMFLOAT2(0, 0);
+
+		impostorVertices_pos[1] = XMFLOAT3(-1, -1, 0);
+		impostorVertices_nor[1] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[1] = XMFLOAT2(0, 1);
+
+		impostorVertices_pos[2] = XMFLOAT3(1, 1, 0);
+		impostorVertices_nor[2] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[2] = XMFLOAT2(stepX, 0);
+
+		impostorVertices_pos[3] = XMFLOAT3(-1, -1, 0);
+		impostorVertices_nor[3] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[3] = XMFLOAT2(0, 1);
+
+		impostorVertices_pos[4] = XMFLOAT3(1, -1, 0);
+		impostorVertices_nor[4] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[4] = XMFLOAT2(stepX, 1);
+
+		impostorVertices_pos[5] = XMFLOAT3(1, 1, 0);
+		impostorVertices_nor[5] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[5] = XMFLOAT2(stepX, 0);
+
+		// right
+		impostorVertices_pos[6] = XMFLOAT3(0, 1, -1);
+		impostorVertices_nor[6] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[6] = XMFLOAT2(stepX, 0);
+
+		impostorVertices_pos[7] = XMFLOAT3(0, -1, -1);
+		impostorVertices_nor[7] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[7] = XMFLOAT2(stepX, 1);
+
+		impostorVertices_pos[8] = XMFLOAT3(0, 1, 1);
+		impostorVertices_nor[8] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[8] = XMFLOAT2(stepX * 2, 0);
+
+		impostorVertices_pos[9] = XMFLOAT3(0, -1, -1);
+		impostorVertices_nor[9] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[9] = XMFLOAT2(stepX, 1);
+
+		impostorVertices_pos[10] = XMFLOAT3(0, -1, 1);
+		impostorVertices_nor[10] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[10] = XMFLOAT2(stepX * 2, 1);
+
+		impostorVertices_pos[11] = XMFLOAT3(0, 1, 1);
+		impostorVertices_nor[11] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[11] = XMFLOAT2(stepX * 2, 0);
+
+		// back
+		impostorVertices_pos[12] = XMFLOAT3(-1, 1, 0);
+		impostorVertices_nor[12] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[12] = XMFLOAT2(stepX * 3, 0);
+
+		impostorVertices_pos[13] = XMFLOAT3(1, 1, 0);
+		impostorVertices_nor[13] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[13] = XMFLOAT2(stepX * 2, 0);
+
+		impostorVertices_pos[14] = XMFLOAT3(-1, -1, 0);
+		impostorVertices_nor[14] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[14] = XMFLOAT2(stepX * 3, 1);
+
+		impostorVertices_pos[15] = XMFLOAT3(-1, -1, 0);
+		impostorVertices_nor[15] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[15] = XMFLOAT2(stepX * 3, 1);
+
+		impostorVertices_pos[16] = XMFLOAT3(1, 1, 0);
+		impostorVertices_nor[16] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[16] = XMFLOAT2(stepX * 2, 0);
+
+		impostorVertices_pos[17] = XMFLOAT3(1, -1, 0);
+		impostorVertices_nor[17] = XMFLOAT3(0, 0, -1);
+		impostorVertices_tex[17] = XMFLOAT2(stepX * 2, 1);
+
+		// left
+		impostorVertices_pos[18] = XMFLOAT3(0, 1, -1);
+		impostorVertices_nor[18] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[18] = XMFLOAT2(stepX * 4, 0);
+
+		impostorVertices_pos[19] = XMFLOAT3(0, 1, 1);
+		impostorVertices_nor[19] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[19] = XMFLOAT2(stepX * 3, 0);
+
+		impostorVertices_pos[20] = XMFLOAT3(0, -1, -1);
+		impostorVertices_nor[20] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[20] = XMFLOAT2(stepX * 4, 1);
+
+		impostorVertices_pos[21] = XMFLOAT3(0, -1, -1);
+		impostorVertices_nor[21] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[21] = XMFLOAT2(stepX * 4, 1);
+
+		impostorVertices_pos[22] = XMFLOAT3(0, 1, 1);
+		impostorVertices_nor[22] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[22] = XMFLOAT2(stepX * 3, 0);
+
+		impostorVertices_pos[23] = XMFLOAT3(0, -1, 1);
+		impostorVertices_nor[23] = XMFLOAT3(1, 0, 0);
+		impostorVertices_tex[23] = XMFLOAT2(stepX * 3, 1);
+
+		// bottom
+		impostorVertices_pos[24] = XMFLOAT3(-1, 0, 1);
+		impostorVertices_nor[24] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[24] = XMFLOAT2(stepX * 4, 0);
+
+		impostorVertices_pos[25] = XMFLOAT3(1, 0, 1);
+		impostorVertices_nor[25] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[25] = XMFLOAT2(stepX * 5, 0);
+
+		impostorVertices_pos[26] = XMFLOAT3(-1, 0, -1);
+		impostorVertices_nor[26] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[26] = XMFLOAT2(stepX * 4, 1);
+
+		impostorVertices_pos[27] = XMFLOAT3(-1, 0, -1);
+		impostorVertices_nor[27] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[27] = XMFLOAT2(stepX * 4, 1);
+
+		impostorVertices_pos[28] = XMFLOAT3(1, 0, 1);
+		impostorVertices_nor[28] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[28] = XMFLOAT2(stepX * 5, 0);
+
+		impostorVertices_pos[29] = XMFLOAT3(1, 0, -1);
+		impostorVertices_nor[29] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[29] = XMFLOAT2(stepX * 5, 1);
+
+		// top
+		impostorVertices_pos[30] = XMFLOAT3(-1, 0, 1);
+		impostorVertices_nor[30] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[30] = XMFLOAT2(stepX * 5, 0);
+
+		impostorVertices_pos[31] = XMFLOAT3(-1, 0, -1);
+		impostorVertices_nor[31] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[31] = XMFLOAT2(stepX * 5, 1);
+
+		impostorVertices_pos[32] = XMFLOAT3(1, 0, 1);
+		impostorVertices_nor[32] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[32] = XMFLOAT2(stepX * 6, 0);
+
+		impostorVertices_pos[33] = XMFLOAT3(-1, 0, -1);
+		impostorVertices_nor[33] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[33] = XMFLOAT2(stepX * 5, 1);
+
+		impostorVertices_pos[34] = XMFLOAT3(1, 0, -1);
+		impostorVertices_nor[34] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[34] = XMFLOAT2(stepX * 6, 1);
+
+		impostorVertices_pos[35] = XMFLOAT3(1, 0, 1);
+		impostorVertices_nor[35] = XMFLOAT3(0, 1, 0);
+		impostorVertices_tex[35] = XMFLOAT2(stepX * 6, 0);
+
+
+		MeshComponent::Vertex_POS impostorVertices_POS[count];
+		MeshComponent::Vertex_TEX impostorVertices_TEX[count];
+		for (int i = 0; i < count; ++i)
+		{
+			impostorVertices_POS[i].FromFULL(impostorVertices_pos[i], impostorVertices_nor[i], 0);
+			impostorVertices_TEX[i].FromFULL(impostorVertices_tex[i]);
+		}
+
+
+		GPUBufferDesc bd;
+		ZeroMemory(&bd, sizeof(bd));
+		bd.Usage = USAGE_IMMUTABLE;
+		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		SubresourceData InitData;
+		ZeroMemory(&InitData, sizeof(InitData));
+		InitData.pSysMem = impostorVertices_POS;
+		bd.ByteWidth = sizeof(impostorVertices_POS);
+		device->CreateBuffer(&bd, &InitData, &impostorVB_POS);
+		InitData.pSysMem = impostorVertices_TEX;
+		bd.ByteWidth = sizeof(impostorVertices_TEX);
+		device->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
+	}
+
 	Scene& scene = GetScene();
 
 	MeshComponent& mesh = *scene.meshes.GetComponent(entity);
@@ -7992,11 +8101,11 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		Instance instance;
 		InstancePrev instancePrev;
 	};
-	UINT instancesOffset; 
-	volatile InstBuf* buff = (volatile InstBuf*)GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
+	UINT instancesOffset;
+	volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
 	buff->instance.Create(__identity);
 	buff->instancePrev.Create(__identity);
-	GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+	device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
 
 	GPUBuffer* vbs[] = {
 		mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
@@ -8016,11 +8125,11 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		0,
 		instancesOffset
 	};
-	GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
-	GetDevice()->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
 
-	GetDevice()->BindGraphicsPSO(PSO_captureimpostor, threadID);
+	device->BindGraphicsPSO(PSO_captureimpostor, threadID);
 
 	ViewPort savedViewPort = mesh.impostorTarget.viewPort;
 	mesh.impostorTarget.Activate(threadID, 0, 0, 0, 0);
@@ -8099,33 +8208,33 @@ void wiRenderer::CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 			}
 			MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
 
-			GetDevice()->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+			device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 
-			GetDevice()->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-			GetDevice()->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-			GetDevice()->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
+			device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+			device->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+			device->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
 
-			GetDevice()->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
+			device->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
 
 		}
 
 	}
-	wiRenderer::GenerateMipChain(mesh.impostorTarget.GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
+	GenerateMipChain(mesh.impostorTarget.GetTexture(), MIPGENFILTER_LINEAR, threadID);
 
 	mesh.impostorTarget.viewPort = savedViewPort;
 	UpdateCameraCB(GetCamera(), threadID);
 }
 
-void wiRenderer::AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
+void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
 	renderableBoxes.push_back(pair<XMFLOAT4X4,XMFLOAT4>(boxMatrix,color));
 }
-void wiRenderer::AddRenderableLine(const RenderableLine& line)
+void AddRenderableLine(const RenderableLine& line)
 {
 	renderableLines.push_back(line);
 }
 
-void wiRenderer::AddDeferredMIPGen(Texture2D* tex)
+void AddDeferredMIPGen(Texture2D* tex)
 {
 	deferredMIPGenLock.lock();
 	deferredMIPGens.insert(tex);
@@ -8133,7 +8242,68 @@ void wiRenderer::AddDeferredMIPGen(Texture2D* tex)
 }
 
 
-void wiRenderer::SetOcclusionCullingEnabled(bool value)
+
+void SetOceanEnabled(bool enabled, const wiOceanParameter& params)
+{
+	SAFE_DELETE(ocean);
+
+	if (enabled)
+	{
+		ocean = new wiOcean(params);
+	}
+}
+
+
+
+void SetResolutionScale(float value) { RESOLUTIONSCALE = value; }
+float GetResolutionScale() { return RESOLUTIONSCALE; }
+int GetShadowRes2D() { return SHADOWRES_2D; }
+int GetShadowResCube() { return SHADOWRES_CUBE; }
+void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
+float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
+XMUINT2 GetInternalResolution() { return XMUINT2((UINT)ceilf(GetDevice()->GetScreenWidth()*GetResolutionScale()), (UINT)ceilf(GetDevice()->GetScreenHeight()*GetResolutionScale())); }
+bool ResolutionChanged()
+{
+	//detect internal resolution change:
+	static float _savedresscale = GetResolutionScale();
+	static uint64_t lastFrameInternalResChange = 0;
+	if (_savedresscale != GetResolutionScale() || lastFrameInternalResChange == GetDevice()->GetFrameCount())
+	{
+		_savedresscale = GetResolutionScale();
+		lastFrameInternalResChange = GetDevice()->GetFrameCount();
+		return true;
+	}
+
+	// detect device resolution change:
+	return GetDevice()->ResolutionChanged();
+}
+void SetGamma(float value) { GAMMA = value; }
+float GetGamma() { return GAMMA; }
+void SetWireRender(bool value) { wireRender = value; }
+bool IsWireRender() { return wireRender; }
+void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }
+bool GetToDrawDebugBoneLines() { return debugBoneLines; }
+void SetToDrawDebugPartitionTree(bool param) { debugPartitionTree = param; }
+bool GetToDrawDebugPartitionTree() { return debugPartitionTree; }
+bool GetToDrawDebugEnvProbes() { return debugEnvProbes; }
+void SetToDrawDebugEnvProbes(bool value) { debugEnvProbes = value; }
+void SetToDrawDebugEmitters(bool param) { debugEmitters = param; }
+bool GetToDrawDebugEmitters() { return debugEmitters; }
+void SetToDrawDebugForceFields(bool param) { debugForceFields = param; }
+bool GetToDrawDebugForceFields() { return debugForceFields; }
+void SetToDrawDebugCameras(bool param) { debugCameras = param; }
+bool GetToDrawDebugCameras() { return debugCameras; }
+bool GetToDrawGridHelper() { return gridHelper; }
+void SetToDrawGridHelper(bool value) { gridHelper = value; }
+bool GetToDrawVoxelHelper() { return voxelHelper; }
+void SetToDrawVoxelHelper(bool value) { voxelHelper = value; }
+void SetDebugLightCulling(bool enabled) { debugLightCulling = enabled; }
+bool GetDebugLightCulling() { return debugLightCulling; }
+void SetAdvancedLightCulling(bool enabled) { advancedLightCulling = enabled; }
+bool GetAdvancedLightCulling() { return advancedLightCulling; }
+void SetAlphaCompositionEnabled(bool enabled) { ALPHACOMPOSITIONENABLED = enabled; }
+bool GetAlphaCompositionEnabled() { return ALPHACOMPOSITIONENABLED; }
+void SetOcclusionCullingEnabled(bool value)
 {
 	static bool initialized = false;
 
@@ -8148,42 +8318,44 @@ void wiRenderer::SetOcclusionCullingEnabled(bool value)
 
 		for (int i = 0; i < ARRAYSIZE(occlusionQueries); ++i)
 		{
-			wiRenderer::GetDevice()->CreateQuery(&desc, &occlusionQueries[i]);
+			GetDevice()->CreateQuery(&desc, &occlusionQueries[i]);
 			occlusionQueries[i].result_passed = TRUE;
 		}
 	}
 
 	occlusionCulling = value;
 }
+bool GetOcclusionCullingEnabled() { return occlusionCulling; }
+void SetLDSSkinningEnabled(bool enabled) { ldsSkinningEnabled = enabled; }
+bool GetLDSSkinningEnabled() { return ldsSkinningEnabled; }
+void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
+bool GetTemporalAAEnabled() { return temporalAA; }
+void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }
+bool GetTemporalAADebugEnabled() { return temporalAADEBUG; }
+void SetFreezeCullingCameraEnabled(bool enabled) { freezeCullingCamera = enabled; }
+bool GetFreezeCullingCameraEnabled() { return freezeCullingCamera; }
+void SetVoxelRadianceEnabled(bool enabled) { voxelSceneData.enabled = enabled; }
+bool GetVoxelRadianceEnabled() { return voxelSceneData.enabled; }
+void SetVoxelRadianceSecondaryBounceEnabled(bool enabled) { voxelSceneData.secondaryBounceEnabled = enabled; }
+bool GetVoxelRadianceSecondaryBounceEnabled() { return voxelSceneData.secondaryBounceEnabled; }
+void SetVoxelRadianceReflectionsEnabled(bool enabled) { voxelSceneData.reflectionsEnabled = enabled; }
+bool GetVoxelRadianceReflectionsEnabled() { return voxelSceneData.reflectionsEnabled; }
+void SetVoxelRadianceVoxelSize(float value) { voxelSceneData.voxelsize = value; }
+float GetVoxelRadianceVoxelSize() { return voxelSceneData.voxelsize; }
+int GetVoxelRadianceResolution() { return voxelSceneData.res; }
+void SetVoxelRadianceNumCones(int value) { voxelSceneData.numCones = value; }
+int GetVoxelRadianceNumCones() { return voxelSceneData.numCones; }
+float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
+void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
+void SetSpecularAAParam(float value) { SPECULARAA = value; }
+float GetSpecularAAParam() { return SPECULARAA; }
+void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
+bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
+bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
+void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex) { enviroMap = tex; }
+Texture2D* GetEnviromentMap() { return enviroMap; }
+void SetGameSpeed(float value) { GameSpeed = max(0, value); }
+float GetGameSpeed() { return GameSpeed; }
+wiOcean* GetOcean() { return ocean; }
 
-bool wiRenderer::GetAdvancedRefractionsEnabled()
-{
-	return advancedRefractions && GetDevice()->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT);
-}
-
-void wiRenderer::SetOceanEnabled(bool enabled, const wiOceanParameter& params)
-{
-	SAFE_DELETE(ocean);
-
-	if (enabled)
-	{
-		ocean = new wiOcean(params);
-	}
-}
-
-
-CameraComponent& wiRenderer::GetCamera()
-{
-	static CameraComponent camera;
-	return camera;
-}
-CameraComponent& wiRenderer::GetPrevCamera()
-{
-	static CameraComponent camera;
-	return camera;
-}
-CameraComponent& wiRenderer::GetRefCamera()
-{
-	static CameraComponent camera;
-	return camera;
 }

@@ -23,18 +23,13 @@ namespace wiInitializer
 		wiFrameRate::Initialize();
 		wiCpuInfo::Initialize();
 
-		wiRenderer::SetUpStaticComponents();
+		wiRenderer::Initialize();
 		wiLensFlare::Initialize();
-
-		wiImage::Load();
-
+		wiImage::Initialize();
 		wiFont::Initialize();
-		wiFont::SetUpStaticComponents();
-
-		wiOcean::SetUpStatic();
+		wiOcean::Initialize();
 
 		wiWidget::LoadShaders();
-
 		wiGPUSortLib::LoadShaders();
 
 		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))

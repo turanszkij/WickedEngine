@@ -45,7 +45,7 @@ void Editor::Initialize()
 {
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
 	// otherwise, shaders will be loaded from the working directory
-	wiRenderer::SHADERPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
+	wiRenderer::GetShaderPath() = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
 	wiFont::FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
 
@@ -56,9 +56,7 @@ void Editor::Initialize()
 	infoDisplay.resolution = true;
 
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
-	wiRenderer::EMITTERSENABLED = true;
-	wiRenderer::HAIRPARTICLEENABLED = true;
-	wiRenderer::physicsEngine = new wiBULLET();
+	//wiRenderer::physicsEngine = new wiBULLET();
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
 	wiInputManager::GetInstance()->addXInput(new wiXInput());

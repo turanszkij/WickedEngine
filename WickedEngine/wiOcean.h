@@ -68,9 +68,10 @@ public:
 
 	const wiOceanParameter& getParameters();
 
+
+	static void Initialize();
+	static void CleanUp();
 	static void LoadShaders();
-	static void SetUpStatic();
-	static void CleanUpStatic();
 
 	XMFLOAT3 waterColor = XMFLOAT3(powf(0.07f, 1.0f / 2.2f), powf(0.15f, 1.0f / 2.2f), powf(0.2f, 1.0f / 2.2f));
 	float waterHeight = 0.0f;

@@ -108,7 +108,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 					RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
 					rigidbody.kinematic = kinematicCheckBox->GetCheck();
 					rigidbody.shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox->GetSelected();
-					wiRenderer::physicsEngine->addRigidBody(rigidbody, *mesh, *transform);
+					//wiRenderer::physicsEngine->addRigidBody(rigidbody, *mesh, *transform);
 				}
 			}
 		}
@@ -117,8 +117,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 			RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
 			if (physicscomponent != nullptr)
 			{
-				wiRenderer::physicsEngine->removeRigidBody(*physicscomponent);
-				scene.rigidbodies.Remove(entity);
+				//wiRenderer::physicsEngine->removeRigidBody(*physicscomponent);
+				//scene.rigidbodies.Remove(entity);
 			}
 		}
 	});

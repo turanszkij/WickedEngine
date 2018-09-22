@@ -203,9 +203,6 @@ void Renderable3DComponent::Initialize()
 void Renderable3DComponent::Load()
 {
 	Renderable2DComponent::Load();
-
-	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();
-	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
 }
 
 void Renderable3DComponent::Start()
@@ -233,7 +230,7 @@ void Renderable3DComponent::Compose()
 
 	if (wiRenderer::GetDebugLightCulling())
 	{
-		wiImage::Draw((Texture2D*)wiRenderer::textures[TEXTYPE_2D_DEBUGUAV], wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	Renderable2DComponent::Compose();
