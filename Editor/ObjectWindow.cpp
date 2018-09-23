@@ -94,33 +94,26 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	rigidBodyCheckBox->OnClick([&](wiEventArgs args) 
 	{
 		Scene& scene = wiRenderer::GetScene();
+		RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
+
 		if (args.bValue)
 		{
-			TransformComponent* transform = scene.transforms.GetComponent(entity);
-			ObjectComponent* object = scene.objects.GetComponent(entity);
-			if (transform != nullptr && object != nullptr)
+			if (physicscomponent == nullptr)
 			{
-				MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-
-				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
-				if (physicscomponent == nullptr)
-				{
-					RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
-					rigidbody.kinematic = kinematicCheckBox->GetCheck();
-					rigidbody.shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox->GetSelected();
-					//wiRenderer::physicsEngine->addRigidBody(rigidbody, *mesh, *transform);
-				}
+				RigidBodyPhysicsComponent& rigidbody = scene.rigidbodies.Create(entity);
+				rigidbody.SetKinematic(kinematicCheckBox->GetCheck());
+				rigidbody.SetDisableDeactivation(disabledeactivationCheckBox->GetCheck());
+				rigidbody.shape = (RigidBodyPhysicsComponent::CollisionShape)collisionShapeComboBox->GetSelected();
 			}
 		}
 		else
 		{
-			RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
 			if (physicscomponent != nullptr)
 			{
-				//wiRenderer::physicsEngine->removeRigidBody(*physicscomponent);
-				//scene.rigidbodies.Remove(entity);
+				scene.rigidbodies.Remove(entity);
 			}
 		}
+
 	});
 	objectWindow->AddWidget(rigidBodyCheckBox);
 
@@ -132,10 +125,23 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
-			physicscomponent->kinematic = args.bValue;
+			physicscomponent->SetKinematic(args.bValue);
 		}
 	});
 	objectWindow->AddWidget(kinematicCheckBox);
+
+	disabledeactivationCheckBox = new wiCheckBox("Disable Deactivation: ");
+	disabledeactivationCheckBox->SetTooltip("Toggle kinematic behaviour.");
+	disabledeactivationCheckBox->SetPos(XMFLOAT2(x, y += 30));
+	disabledeactivationCheckBox->SetCheck(false);
+	disabledeactivationCheckBox->OnClick([&](wiEventArgs args) {
+		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			physicscomponent->SetDisableDeactivation(args.bValue);
+		}
+	});
+	objectWindow->AddWidget(disabledeactivationCheckBox);
 
 	collisionShapeComboBox = new wiComboBox("Collision Shape:");
 	collisionShapeComboBox->SetSize(XMFLOAT2(100, 20));
@@ -218,7 +224,8 @@ void ObjectWindow::SetEntity(Entity entity)
 
 		if (physicsComponent != nullptr)
 		{
-			kinematicCheckBox->SetCheck(physicsComponent->kinematic);
+			kinematicCheckBox->SetCheck(physicsComponent->IsKinematic());
+			disabledeactivationCheckBox->SetCheck(physicsComponent->IsDisableDeactivation());
 
 			if (physicsComponent->shape == RigidBodyPhysicsComponent::CollisionShape::BOX)
 			{

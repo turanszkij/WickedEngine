@@ -28,6 +28,7 @@ public:
 
 	wiLabel*	physicsLabel;
 	wiCheckBox*	rigidBodyCheckBox;
+	wiCheckBox* disabledeactivationCheckBox;
 	wiCheckBox* kinematicCheckBox;
 	wiComboBox*	collisionShapeComboBox;
 };

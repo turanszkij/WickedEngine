@@ -309,7 +309,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h" />
@@ -339,6 +338,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h" />
@@ -347,7 +347,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiOcean.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiProfiler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRandom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h" />
@@ -654,7 +653,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBULLET.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiClient.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp" />
@@ -679,6 +677,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Bullet.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />

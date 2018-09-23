@@ -6,7 +6,6 @@
 #include "wiWindowRegistration.h"
 
 class RenderableComponent;
-class PHYSICS;
 
 class MainComponent
 {
@@ -24,8 +23,6 @@ public:
 
 	int screenW, screenH;
 	bool fullscreen;
-
-	PHYSICS* physicsEngine = nullptr;
 
 	// Runs the main engine loop
 	void Run();

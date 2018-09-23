@@ -435,14 +435,16 @@ namespace wiSceneSystem
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape;
-		bool kinematic = false;
 		float mass = 1.0f;
 		float friction = 1.0f;
 		float restitution = 1.0f;
 		float damping = 1.0f;
 
-		// Non-serialized attributes:
-		int physicsObjectID = -1;
+		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+		inline void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
+
+		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
+		inline bool IsKinematic() const { return _flags & KINEMATIC; }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -460,9 +462,6 @@ namespace wiSceneSystem
 		float friction = 1.0f;
 		std::vector<XMFLOAT3> physicsvertices;
 		std::vector<uint32_t> physicsindices;
-
-		// Non-serialized attributes:
-		int physicsObjectID = -1;
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -987,14 +986,6 @@ namespace wiSceneSystem
 	void RunAnimationUpdateSystem(
 		wiECS::ComponentManager<AnimationComponent>& animations,
 		wiECS::ComponentManager<TransformComponent>& transforms,
-		float dt
-	);
-	void RunPhysicsUpdateSystem(
-		wiECS::ComponentManager<TransformComponent>& transforms,
-		wiECS::ComponentManager<MeshComponent>& meshes,
-		wiECS::ComponentManager<ObjectComponent>& objects,
-		wiECS::ComponentManager<RigidBodyPhysicsComponent>& rigidbodies,
-		wiECS::ComponentManager<SoftBodyPhysicsComponent>& softbodies,
 		float dt
 	);
 	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);

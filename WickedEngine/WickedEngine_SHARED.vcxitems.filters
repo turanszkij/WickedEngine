@@ -951,9 +951,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h">
       <Filter>ENGINE\Audio</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBULLET.h">
-      <Filter>ENGINE\Physics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1001,9 +998,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h">
       <Filter>ENGINE\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPHYSICS.h">
-      <Filter>ENGINE\Physics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBackLog.h">
       <Filter>ENGINE\Tools</Filter>
@@ -1142,6 +1136,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h">
       <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics.h">
+      <Filter>ENGINE\Physics</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1814,9 +1811,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp">
       <Filter>ENGINE\Audio</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBULLET.cpp">
-      <Filter>ENGINE\Physics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1933,6 +1927,9 @@
     </ClCompile>
     <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneSystem_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Bullet.cpp">
+      <Filter>ENGINE\Physics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

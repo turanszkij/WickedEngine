@@ -229,7 +229,6 @@ namespace wiSceneSystem
 		{
 			archive >> _flags;
 			archive >> (uint32_t&)shape;
-			archive >> kinematic;
 			archive >> mass;
 			archive >> friction;
 			archive >> restitution;
@@ -239,7 +238,6 @@ namespace wiSceneSystem
 		{
 			archive << _flags;
 			archive << (uint32_t&)shape;
-			archive << kinematic;
 			archive << mass;
 			archive << friction;
 			archive << restitution;
