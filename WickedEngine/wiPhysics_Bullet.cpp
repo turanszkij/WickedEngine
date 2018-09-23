@@ -21,7 +21,7 @@ using namespace wiSceneSystem;
 
 namespace wiPhysics
 {
-	btVector3 gravity(0, -11, 0);
+	btVector3 gravity(0, -110, 0);
 	int softbodyIterationCount = 5;
 	btCollisionConfiguration* collisionConfiguration = nullptr;
 	btCollisionDispatcher* dispatcher = nullptr;
@@ -125,7 +125,7 @@ namespace wiPhysics
 		switch (physicscomponent.shape)
 		{
 		case RigidBodyPhysicsComponent::CollisionShape::BOX:
-			shape = new btBoxShape(S);
+			shape = new btBoxShape(S * 0.5f);
 			break;
 
 		case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
@@ -459,7 +459,7 @@ namespace wiPhysics
 			}
 		}
 
-		dynamicsWorld->stepSimulation(dt, 6);
+		dynamicsWorld->stepSimulation(dt, 10);
 
 		wiProfiler::GetInstance().EndRange(); // Physics
 	}
