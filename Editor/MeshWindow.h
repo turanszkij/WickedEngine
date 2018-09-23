@@ -21,6 +21,7 @@ public:
 	wiWindow*	meshWindow;
 	wiLabel*	meshInfoLabel;
 	wiCheckBox* doubleSidedCheckBox;
+	wiCheckBox* softbodyCheckBox;
 	wiSlider*	massSlider;
 	wiSlider*	frictionSlider;
 	wiButton*	impostorCreateButton;

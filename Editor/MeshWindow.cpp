@@ -16,7 +16,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
-	meshWindow->SetSize(XMFLOAT2(800, 600));
+	meshWindow->SetSize(XMFLOAT2(800, 640));
 	meshWindow->SetEnabled(false);
 	GUI->AddWidget(meshWindow);
 
@@ -42,6 +42,34 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	meshWindow->AddWidget(doubleSidedCheckBox);
+
+	softbodyCheckBox = new wiCheckBox("Soft body: ");
+	softbodyCheckBox->SetTooltip("Enable soft body simulation.");
+	softbodyCheckBox->SetPos(XMFLOAT2(x, y += step));
+	softbodyCheckBox->OnClick([&](wiEventArgs args) {
+
+		Scene& scene = wiRenderer::GetScene();
+		SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
+
+		if (args.bValue)
+		{
+			if (physicscomponent == nullptr)
+			{
+				SoftBodyPhysicsComponent& softbody = scene.softbodies.Create(entity);
+				softbody.friction = frictionSlider->GetValue();
+				softbody.mass = massSlider->GetValue();
+			}
+		}
+		else
+		{
+			if (physicscomponent != nullptr)
+			{
+				scene.softbodies.Remove(entity);
+			}
+		}
+
+	});
+	meshWindow->AddWidget(softbodyCheckBox);
 
 	massSlider = new wiSlider(0, 5000, 0, 100000, "Mass: ");
 	massSlider->SetTooltip("Set the mass amount for the physics engine.");

@@ -440,6 +440,13 @@ namespace wiPhysics
 			}
 			assert(id >= 0 && id <= dynamicsWorld->getCollisionObjectArray().size());
 
+			btCollisionObject*	obj = dynamicsWorld->getCollisionObjectArray()[id];
+			btSoftBody* body = btSoftBody::upcast(obj);
+			if (body != nullptr)
+			{
+				body->setWindVelocity(wind);
+			}
+
 		}
 
 		// Tidy:

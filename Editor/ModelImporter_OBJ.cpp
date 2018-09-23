@@ -121,9 +121,7 @@ void ImportModel_OBJ(const std::string& fileName)
 
 				for (auto& index : reordered_indices)
 				{
-					XMFLOAT3 pos;
-
-					pos = XMFLOAT3(
+					XMFLOAT3 pos = XMFLOAT3(
 						obj_attrib.vertices[index.vertex_index * 3 + 0],
 						obj_attrib.vertices[index.vertex_index * 3 + 1],
 						obj_attrib.vertices[index.vertex_index * 3 + 2]
