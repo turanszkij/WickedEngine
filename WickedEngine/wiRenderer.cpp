@@ -1234,153 +1234,211 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 
 		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
 
-		// Render impostors:
-		if (impostorRequest != nullptr)
+		//// Render impostors:
+		//if (impostorRequest != nullptr)
+		//{
+		//	bool impostorGraphicsStateComplete = false;
+
+		//	for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
+		//	{
+		//		const RenderBatch& batch = renderQueue.batchArray[batchID];
+
+		//		const size_t meshIndex = batch.GetMeshIndex();
+		//		const MeshComponent& mesh = scene.meshes[meshIndex];
+		//		if (!mesh.IsRenderable() || !mesh.HasImpostor())
+		//		{
+		//			continue;
+		//		}
+
+		//		//const auto& visibleInstances = iter->second;
+
+		//		UINT instancesOffset;
+		//		size_t alloc_size = /*visibleInstances.size()*/ 1;
+		//		alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+		//		void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+		//		int k = 0;
+		//		for (size_t instanceID = 0; instanceID < 1; ++instanceID)
+		//		{
+		//			size_t instanceIndex = batch.GetInstanceIndex();
+		//			const ObjectComponent& instance = scene.objects[instanceIndex];
+		//			if (occlusionCulling && instance.IsOccluded())
+		//				continue;
+
+		//			const AABB& aabb = scene.aabb_objects[instanceIndex];
+
+		//			const float impostorThreshold = aabb.getRadius();
+		//			float dist = wiMath::Distance(eye, aabb.getCenter());
+		//			float dither = instance.GetTransparency();
+		//			dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
+		//			if (dither > 1.0f - FLT_EPSILON)
+		//				continue;
+
+		//			XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
+
+		//			Entity objectEntity = scene.objects.GetEntity(instanceIndex);
+		//			const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+
+		//			XMFLOAT4X4 tempMat;
+		//			XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
+
+		//			if (advancedVBRequest)
+		//			{
+		//				((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
+
+		//				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+		//				XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
+		//				((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+		//			}
+		//			else
+		//			{
+		//				((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
+		//			}
+
+		//			++k;
+		//		}
+
+		//		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+		//		if (k < 1)
+		//			continue;
+
+		//		if (!advancedVBRequest || IsWireRender())
+		//		{
+		//			GPUBuffer* vbs[] = {
+		//				&impostorVB_POS,
+		//				&impostorVB_TEX,
+		//				dynamicVertexBufferPool
+		//			};
+		//			UINT strides[] = {
+		//				sizeof(MeshComponent::Vertex_POS),
+		//				sizeof(MeshComponent::Vertex_TEX),
+		//				sizeof(Instance)
+		//			};
+		//			UINT offsets[] = {
+		//				0,
+		//				0,
+		//				instancesOffset
+		//			};
+		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//		}
+		//		else
+		//		{
+		//			GPUBuffer* vbs[] = {
+		//				&impostorVB_POS,
+		//				&impostorVB_TEX,
+		//				&impostorVB_POS,
+		//				dynamicVertexBufferPool
+		//			};
+		//			UINT strides[] = {
+		//				sizeof(MeshComponent::Vertex_POS),
+		//				sizeof(MeshComponent::Vertex_TEX),
+		//				sizeof(MeshComponent::Vertex_POS),
+		//				sizeof(InstBuf)
+		//			};
+		//			UINT offsets[] = {
+		//				0,
+		//				0,
+		//				0,
+		//				instancesOffset
+		//			};
+		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//		}
+
+		//		GPUResource* res[] = {
+		//			mesh.impostorTarget.GetTexture(0),
+		//			mesh.impostorTarget.GetTexture(1),
+		//			mesh.impostorTarget.GetTexture(2)
+		//		};
+		//		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+
+		//		if (!impostorGraphicsStateComplete)
+		//		{
+		//			device->BindGraphicsPSO(impostorRequest, threadID);
+		//			device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
+		//			SetAlphaRef(0.75f, threadID);
+		//			impostorGraphicsStateComplete = true;
+		//		}
+
+		//		device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
+
+		//	}
+		//}
+
+
+		// Pre-allocate space for all the instances in GPU-buffer:
+		const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+		UINT instancesOffset;
+		const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
+		void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+		struct InstancedBatch
 		{
-			bool impostorGraphicsStateComplete = false;
+			size_t meshIndex;
+			int instanceCount;
+			UINT dataOffset;
+		};
+		InstancedBatch* instancedBatchArray = nullptr;
+		int instancedBatchCount = 0;
 
-			for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
-			{
-				const RenderBatch& batch = renderQueue.batchArray[batchID];
-
-				const size_t meshIndex = batch.GetMeshIndex();
-				const MeshComponent& mesh = scene.meshes[meshIndex];
-				if (!mesh.IsRenderable() || !mesh.HasImpostor())
-				{
-					continue;
-				}
-
-				//const auto& visibleInstances = iter->second;
-
-				UINT instancesOffset;
-				size_t alloc_size = /*visibleInstances.size()*/ 1;
-				alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-				void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
-
-				int k = 0;
-				for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-				{
-					size_t instanceIndex = batch.GetInstanceIndex();
-					const ObjectComponent& instance = scene.objects[instanceIndex];
-					if (occlusionCulling && instance.IsOccluded())
-						continue;
-
-					const AABB& aabb = scene.aabb_objects[instanceIndex];
-
-					const float impostorThreshold = aabb.getRadius();
-					float dist = wiMath::Distance(eye, aabb.getCenter());
-					float dither = instance.GetTransparency();
-					dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
-					if (dither > 1.0f - FLT_EPSILON)
-						continue;
-
-					XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
-
-					Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-					const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
-
-					XMFLOAT4X4 tempMat;
-					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
-
-					if (advancedVBRequest)
-					{
-						((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
-
-						const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
-						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-					}
-					else
-					{
-						((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
-					}
-
-					++k;
-				}
-
-				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-				if (k < 1)
-					continue;
-
-				if (!advancedVBRequest || IsWireRender())
-				{
-					GPUBuffer* vbs[] = {
-						&impostorVB_POS,
-						&impostorVB_TEX,
-						dynamicVertexBufferPool
-					};
-					UINT strides[] = {
-						sizeof(MeshComponent::Vertex_POS),
-						sizeof(MeshComponent::Vertex_TEX),
-						sizeof(Instance)
-					};
-					UINT offsets[] = {
-						0,
-						0,
-						instancesOffset
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				}
-				else
-				{
-					GPUBuffer* vbs[] = {
-						&impostorVB_POS,
-						&impostorVB_TEX,
-						&impostorVB_POS,
-						dynamicVertexBufferPool
-					};
-					UINT strides[] = {
-						sizeof(MeshComponent::Vertex_POS),
-						sizeof(MeshComponent::Vertex_TEX),
-						sizeof(MeshComponent::Vertex_POS),
-						sizeof(InstBuf)
-					};
-					UINT offsets[] = {
-						0,
-						0,
-						0,
-						instancesOffset
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				}
-
-				GPUResource* res[] = {
-					mesh.impostorTarget.GetTexture(0),
-					mesh.impostorTarget.GetTexture(1),
-					mesh.impostorTarget.GetTexture(2)
-				};
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-				if (!impostorGraphicsStateComplete)
-				{
-					device->BindGraphicsPSO(impostorRequest, threadID);
-					device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
-					SetAlphaRef(0.75f, threadID);
-					impostorGraphicsStateComplete = true;
-				}
-
-				device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
-
-			}
-		}
-
-
-		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-
-		// Render meshes:
+		int k = 0; // global instance counter
+		size_t prevMeshIndex = ~0;
 		for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
 		{
 			const RenderBatch& batch = renderQueue.batchArray[batchID];
-
 			const size_t meshIndex = batch.GetMeshIndex();
-			const MeshComponent& mesh = scene.meshes[meshIndex];
-			if (!mesh.IsRenderable())
+			const size_t instanceIndex = batch.GetInstanceIndex();
+
+			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
+			if (meshIndex != prevMeshIndex)
 			{
-				continue;
+				prevMeshIndex = meshIndex;
+				instancedBatchCount++;
+				InstancedBatch* instancedBatch = (InstancedBatch*)frameAllocators[threadID].allocate(sizeof(InstancedBatch));
+				instancedBatch->meshIndex = meshIndex;
+				instancedBatch->instanceCount = 0;
+				instancedBatch->dataOffset = instancesOffset + k * instanceDataSize;
+				if (instancedBatchArray == nullptr)
+				{
+					instancedBatchArray = instancedBatch;
+				}
 			}
 
-			//const auto& visibleInstances = iter->second;
+			const ObjectComponent& instance = scene.objects[instanceIndex];
+			if (occlusionCulling && instance.IsOccluded())
+				continue;
+
+			float dither = instance.GetTransparency();
+
+			Entity objectEntity = scene.objects.GetEntity(instanceIndex);
+			const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+
+			// Write into actual GPU-buffer:
+			if (advancedVBRequest)
+			{
+				((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
+
+				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+				((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
+			}
+			else
+			{
+				((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
+			}
+
+			k++; // next global instance
+			instancedBatchArray[instancedBatchCount - 1].instanceCount++; // next instance in current InstancedBatch
+		}
+		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID); // closes instance GPU-buffer, ready to draw!
+
+
+		// Render instanced batches:
+		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
+		for (int instancedBatchIdx = 0; instancedBatchIdx < instancedBatchCount; ++instancedBatchIdx)
+		{
+			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchIdx];
+			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
+
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
@@ -1395,59 +1453,8 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 
 			bool forceAlphaTestForDithering = false;
 
-			UINT instancesOffset;
-			size_t alloc_size = /*visibleInstances.size()*/1;
-			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
-
-			int k = 0;
-			for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-			{
-				size_t instanceIndex = batch.GetInstanceIndex();
-				const ObjectComponent& instance = scene.objects[instanceIndex];
-				if (occlusionCulling && instance.IsOccluded())
-					continue;
-
-				float dither = instance.GetTransparency();
-				if (impostorRequest != nullptr)
-				{
-					// fade out to impostor...
-					const AABB& aabb = scene.aabb_objects[instanceIndex];
-					const float impostorThreshold = aabb.getRadius();
-					float dist = wiMath::Distance(eye, aabb.getCenter());
-					if (mesh.HasImpostor())
-						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh.impostorDistance) / impostorThreshold, 0, 1));
-				}
-				if (dither > 1.0f - FLT_EPSILON)
-					continue;
-
-				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
-
-				Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-				const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
-
-				if (advancedVBRequest || tessellatorRequested)
-				{
-					((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
-
-					const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-					((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
-				}
-				else
-				{
-					((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
-				}
-
-				++k;
-
-			}
-
-			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-			if (k < 1)
-				continue;
-
 			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+
 
 			enum class BOUNDVERTEXBUFFERTYPE
 			{
@@ -1466,7 +1473,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				GraphicsPSO* pso = /*material.customShader == nullptr ?*/ GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
+				GraphicsPSO* pso = GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
 				if (pso == nullptr)
 				{
 					continue;
@@ -1546,11 +1553,11 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
-							sizeof(Instance)
+							instanceDataSize
 						};
 						UINT offsets[] = {
 							0,
-							instancesOffset
+							instancedBatch.dataOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 					}
@@ -1565,12 +1572,12 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
 							sizeof(MeshComponent::Vertex_TEX),
-							sizeof(Instance)
+							instanceDataSize
 						};
 						UINT offsets[] = {
 							0,
 							0,
-							instancesOffset
+							instancedBatch.dataOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 					}
@@ -1587,13 +1594,13 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 							sizeof(MeshComponent::Vertex_POS),
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_POS),
-							sizeof(InstBuf)
+							instanceDataSize
 						};
 						UINT offsets[] = {
 							0,
 							0,
 							0,
-							instancesOffset
+							instancedBatch.dataOffset
 						};
 						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 					}
@@ -1621,10 +1628,263 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 
 				SetAlphaRef(material.alphaRef, threadID);
 
-				device->DrawIndexedInstanced((int)subset.indexCount, k, subset.indexOffset, 0, 0, threadID);
+				device->DrawIndexedInstanced((int)subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, threadID);
 			}
-
 		}
+
+
+
+		//// Render meshes:
+		//for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
+		//{
+		//	const RenderBatch& batch = renderQueue.batchArray[batchID];
+
+		//	const size_t meshIndex = batch.GetMeshIndex();
+		//	const MeshComponent& mesh = scene.meshes[meshIndex];
+
+		//	const float tessF = mesh.GetTessellationFactor();
+		//	const bool tessellatorRequested = tessF > 0 && tessellation;
+
+		//	if (tessellatorRequested)
+		//	{
+		//		TessellationCB tessCB;
+		//		tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+		//		device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
+		//		device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
+		//	}
+
+		//	bool forceAlphaTestForDithering = false;
+
+		//	UINT instancesOffset;
+		//	size_t alloc_size = /*visibleInstances.size()*/1;
+		//	alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+		//	void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+		//	int k = 0;
+		//	for (size_t instanceID = 0; instanceID < 1; ++instanceID)
+		//	{
+		//		size_t instanceIndex = batch.GetInstanceIndex();
+		//		const ObjectComponent& instance = scene.objects[instanceIndex];
+		//		if (occlusionCulling && instance.IsOccluded())
+		//			continue;
+
+		//		float dither = instance.GetTransparency();
+		//		if (impostorRequest != nullptr)
+		//		{
+		//			// fade out to impostor...
+		//			const AABB& aabb = scene.aabb_objects[instanceIndex];
+		//			const float impostorThreshold = aabb.getRadius();
+		//			float dist = wiMath::Distance(eye, aabb.getCenter());
+		//			if (mesh.HasImpostor())
+		//				dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh.impostorDistance) / impostorThreshold, 0, 1));
+		//		}
+		//		if (dither > 1.0f - FLT_EPSILON)
+		//			continue;
+
+		//		forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
+
+		//		Entity objectEntity = scene.objects.GetEntity(instanceIndex);
+		//		const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+
+		//		if (advancedVBRequest || tessellatorRequested)
+		//		{
+		//			((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
+
+		//			const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+		//			((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
+		//		}
+		//		else
+		//		{
+		//			((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
+		//		}
+
+		//		++k;
+
+		//	}
+
+		//	device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+		//	if (k < 1)
+		//		continue;
+
+		//	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+
+		//	enum class BOUNDVERTEXBUFFERTYPE
+		//	{
+		//		NOTHING,
+		//		POSITION,
+		//		POSITION_TEXCOORD,
+		//		EVERYTHING,
+		//	};
+		//	BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
+
+		//	for (const MeshComponent::MeshSubset& subset : mesh.subsets)
+		//	{
+		//		if (subset.indexCount == 0)
+		//		{
+		//			continue;
+		//		}
+		//		const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+		//		GraphicsPSO* pso = GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
+		//		if (pso == nullptr)
+		//		{
+		//			continue;
+		//		}
+
+		//		bool subsetRenderable = false;
+
+		//		if (renderTypeFlags & RENDERTYPE_OPAQUE)
+		//		{
+		//			subsetRenderable = subsetRenderable || (!material.IsTransparent() && !material.IsWater());
+		//		}
+		//		if (renderTypeFlags & RENDERTYPE_TRANSPARENT)
+		//		{
+		//			subsetRenderable = subsetRenderable || material.IsTransparent();
+		//		}
+		//		if (renderTypeFlags & RENDERTYPE_WATER)
+		//		{
+		//			subsetRenderable = subsetRenderable || material.IsWater();
+		//		}
+		//		if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+		//		{
+		//			subsetRenderable = subsetRenderable && material.IsCastingShadow();
+		//		}
+
+		//		if (!subsetRenderable)
+		//		{
+		//			continue;
+		//		}
+
+		//		BOUNDVERTEXBUFFERTYPE boundVBType;
+		//		if (advancedVBRequest || tessellatorRequested)
+		//		{
+		//			boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+		//		}
+		//		else
+		//		{
+		//			// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
+		//			if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
+		//			{
+		//				if (shaderType == SHADERTYPE_SHADOW && material.IsTransparent())
+		//				{
+		//					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+		//				}
+		//				else
+		//				{
+		//					// bypass texcoord stream for non alphatested shadows and zprepass
+		//					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
+		//				}
+		//			}
+		//			else
+		//			{
+		//				boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+		//			}
+		//		}
+
+		//		if (material.IsWater())
+		//		{
+		//			boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+		//		}
+
+		//		if (IsWireRender())
+		//		{
+		//			boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+		//		}
+
+		//		// Only bind vertex buffers when the layout changes
+		//		if (boundVBType != boundVBType_Prev)
+		//		{
+		//			// Assemble the required vertex buffer:
+		//			switch (boundVBType)
+		//			{
+		//			case BOUNDVERTEXBUFFERTYPE::POSITION:
+		//			{
+		//				GPUBuffer* vbs[] = {
+		//					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+		//					dynamicVertexBufferPool
+		//				};
+		//				UINT strides[] = {
+		//					sizeof(MeshComponent::Vertex_POS),
+		//					sizeof(Instance)
+		//				};
+		//				UINT offsets[] = {
+		//					0,
+		//					instancesOffset
+		//				};
+		//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//			}
+		//			break;
+		//			case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
+		//			{
+		//				GPUBuffer* vbs[] = {
+		//					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+		//					mesh.vertexBuffer_TEX.get(),
+		//					dynamicVertexBufferPool
+		//				};
+		//				UINT strides[] = {
+		//					sizeof(MeshComponent::Vertex_POS),
+		//					sizeof(MeshComponent::Vertex_TEX),
+		//					sizeof(Instance)
+		//				};
+		//				UINT offsets[] = {
+		//					0,
+		//					0,
+		//					instancesOffset
+		//				};
+		//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//			}
+		//			break;
+		//			case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
+		//			{
+		//				GPUBuffer* vbs[] = {
+		//					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+		//					mesh.vertexBuffer_TEX.get(),
+		//					mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
+		//					dynamicVertexBufferPool
+		//				};
+		//				UINT strides[] = {
+		//					sizeof(MeshComponent::Vertex_POS),
+		//					sizeof(MeshComponent::Vertex_TEX),
+		//					sizeof(MeshComponent::Vertex_POS),
+		//					sizeof(InstBuf)
+		//				};
+		//				UINT offsets[] = {
+		//					0,
+		//					0,
+		//					0,
+		//					instancesOffset
+		//				};
+		//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		//			}
+		//			break;
+		//			default:
+		//				assert(0);
+		//				break;
+		//			}
+		//		}
+		//		boundVBType_Prev = boundVBType;
+
+		//		device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+
+		//		device->BindStencilRef(material.GetStencilRef(), threadID);
+
+		//		device->BindGraphicsPSO(pso, threadID);
+
+		//		GPUResource* res[] = {
+		//			material.GetBaseColorMap(),
+		//			material.GetNormalMap(),
+		//			material.GetSurfaceMap(),
+		//			material.GetDisplacementMap(),
+		//		};
+		//		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
+
+		//		SetAlphaRef(material.alphaRef, threadID);
+
+		//		device->DrawIndexedInstanced((int)subset.indexCount, k, subset.indexOffset, 0, 0, threadID);
+		//	}
+
+		//}
 
 		ResetAlphaRef(threadID);
 
@@ -4640,7 +4900,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 								if (boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(aabb))
 								{
 									const ObjectComponent& object = scene.objects[i];
-									if (cascade >= object.cascadeMask && object.IsCastingShadow())
+									if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
 									{
 										Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
@@ -4705,7 +4965,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							if (frustum.CheckBox(aabb))
 							{
 								const ObjectComponent& object = scene.objects[i];
-								if (object.IsCastingShadow())
+								if (object.IsRenderable() && object.IsCastingShadow())
 								{
 									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
@@ -4769,7 +5029,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							if (SPHERE(light.position, light.range).intersects(aabb))
 							{
 								const ObjectComponent& object = scene.objects[i];
-								if (object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
+								if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
 								{
 									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
@@ -4876,7 +5136,7 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 		size_t instanceIndex = scene.objects.GetIndex(entity);
 		const ObjectComponent& object = scene.objects[instanceIndex];
 
-		if (object.GetRenderTypes() & RENDERTYPE_OPAQUE)
+		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_OPAQUE)
 		{
 			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
@@ -4944,7 +5204,7 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 		size_t instanceIndex = scene.objects.GetIndex(entity);
 		const ObjectComponent& object = scene.objects[instanceIndex];
 
-		if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
+		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 		{
 			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
@@ -5655,10 +5915,13 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				if ((layerMask & layer.GetLayerMask()))
 				{
 					const ObjectComponent& object = scene.objects[i];
-					RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-					batch->Create(meshIndex, i, 0);
-					renderQueue.add(batch);
+					if (object.IsRenderable())
+					{
+						RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+						size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+						batch->Create(meshIndex, i, 0);
+						renderQueue.add(batch);
+					}
 				}
 			}
 		}
@@ -5811,12 +6074,14 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		const AABB& aabb = scene.aabb_objects[i];
 		if (bbox.intersects(aabb))
 		{
-			Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 			const ObjectComponent& object = scene.objects[i];
-			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-			batch->Create(meshIndex, i, 0);
-			renderQueue.add(batch);
+			if (object.IsRenderable())
+			{
+				RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+				size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+				batch->Create(meshIndex, i, 0);
+				renderQueue.add(batch);
+			}
 		}
 	}
 
