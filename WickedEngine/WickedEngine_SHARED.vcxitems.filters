@@ -1137,7 +1137,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiPhysicsEngine.h">
       <Filter>ENGINE\Physics</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1928,7 +1931,7 @@
     <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneSystem_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Bullet.cpp">
+    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiPhysicsEngine_Bullet.cpp">
       <Filter>ENGINE\Physics</Filter>
     </ClCompile>
   </ItemGroup>

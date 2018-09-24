@@ -9,21 +9,6 @@ enum BLENDMODE;
 class wiImage
 {
 protected:
-	CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
-	{
-		XMMATRIX	mTransform;
-		XMFLOAT4	mTexMulAdd;
-		XMFLOAT4	mColor;
-		XMFLOAT2	mPivot;
-		UINT		mMirror;
-		float		mMipLevel;
-	};
-	CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
-	{
-		float params0[4];
-		float params1[4];
-	};
-	
 	static wiGraphicsTypes::GPUBuffer       constantBuffer, processCb;
 
 	static wiGraphicsTypes::VertexShader*   vertexShader;

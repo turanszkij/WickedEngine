@@ -155,6 +155,12 @@ CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 	float4 lightEnerdis;
 };
 
+CBUFFER(LensFlareCB, CBSLOT_RENDERER_LENSFLARE)
+{
+	float4		xSunPos; // light position
+	float4		xScreen; // screen dimensions
+};
+
 CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 {
 	float4x4 xCubeShadowVP[6];

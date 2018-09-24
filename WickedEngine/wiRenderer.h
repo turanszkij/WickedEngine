@@ -86,18 +86,6 @@ namespace wiRenderer
 	void BindGBufferTextures(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
 	void BindDepthTextures(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 
-	struct CulledCollection
-	{
-		uint8_t* dataBegin = nullptr;
-		size_t dataCount = 0;
-
-		inline bool empty() const { return dataBegin == nullptr || dataCount == 0; }
-		inline void clear() { dataBegin = nullptr; dataCount = 0; }
-		inline void add(void* item) { if (empty()) dataBegin = (uint8_t*)item; dataCount++; }
-	};
-	void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-		bool tessellation = false, bool occlusionCulling = false, uint32_t layerMask = 0xFFFFFFFF);
-
 	void DrawSky(GRAPHICSTHREAD threadID);
 	void DrawSun(GRAPHICSTHREAD threadID);
 	void DrawWorld(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);

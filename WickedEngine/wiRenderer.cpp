@@ -12,7 +12,6 @@
 #include "wiMath.h"
 #include "wiLensFlare.h"
 #include "wiTextureHelper.h"
-#include "wiPHYSICS.h"
 #include "wiCube.h"
 #include "wiEnums.h"
 #include "wiRandom.h"
@@ -156,11 +155,86 @@ GraphicsDevice* GetDevice()
 }
 
 
+struct RenderBatch
+{
+	uint32_t hash;
+	uint32_t instance;
+
+	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
+	{
+		hash = 0;
+
+		assert(meshIndex < 0x00FFFFFF);
+		hash |= (uint32_t)(meshIndex & 0x00FFFFFF) << 8;
+		hash |= ((uint32_t)(distance)) & 0xFF;
+
+		instance = (uint32_t)instanceIndex;
+	}
+
+	inline size_t GetMeshIndex() const
+	{
+		return (size_t)((hash >> 8) & 0x00FFFFFF);
+	}
+	inline size_t GetInstanceIndex() const
+	{
+		return instance;
+	}
+	inline float GetDistance() const
+	{
+		return (float)(hash & 0xFF);
+	}
+};
+struct RenderQueue
+{
+	RenderBatch* batchArray = nullptr;
+	size_t batchCount = 0;
+
+	enum RenderQueueSortType
+	{
+		SORT_FRONT_TO_BACK,
+		SORT_BACK_TO_FRONT,
+	};
+
+	inline bool empty() const { return batchArray == nullptr || batchCount == 0; }
+	inline void add(RenderBatch* item) 
+	{ 
+		assert(item != nullptr); 
+		if (empty())
+		{
+			batchArray = item;
+		}
+		batchCount++; 
+	}
+	inline void sort(RenderQueueSortType sortType = SORT_FRONT_TO_BACK)
+	{
+		if (batchCount > 1)
+		{
+			std::sort(batchArray, batchArray + batchCount, [sortType](const RenderBatch& a, const RenderBatch& b) -> bool {
+				return ((sortType == SORT_FRONT_TO_BACK) ? (a.hash < b.hash) : (a.hash > b.hash));
+			});
+
+			//for (size_t i = 0; i < batchCount - 1; ++i)
+			//{
+			//	for (size_t j = i + 1; j < batchCount; ++j)
+			//	{
+			//		bool swap = false;
+			//		swap = sortType == SORT_FRONT_TO_BACK && batchArray[i].hash > batchArray[j].hash;
+			//		swap = sortType == SORT_BACK_TO_FRONT && batchArray[i].hash < batchArray[j].hash;
+
+			//		if (swap)
+			//		{
+			//			RenderBatch tmp = batchArray[i];
+			//			batchArray[i] = batchArray[j];
+			//			batchArray[j] = tmp;
+			//		}
+			//	}
+			//}
+		}
+	}
+};
 struct FrameCulling
 {
 	Frustum frustum;
-	CulledCollection culledRenderer_opaque;
-	CulledCollection culledRenderer_transparent;
 	vector<Entity> culledObjects;
 	vector<Entity> culledLights;
 	vector<Entity> culledDecals;
@@ -168,8 +242,6 @@ struct FrameCulling
 
 	void Clear()
 	{
-		culledRenderer_opaque.clear();
-		culledRenderer_transparent.clear();
 		culledObjects.clear();
 		culledLights.clear();
 		culledDecals.clear();
@@ -177,12 +249,6 @@ struct FrameCulling
 	}
 };
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
-
-struct RenderBatch
-{
-	Entity meshID;
-	Entity instanceID;
-};
 
 GFX_STRUCT Instance
 {
@@ -1131,6 +1197,443 @@ enum TILEDLIGHTING_DEBUG
 ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
 ComputePSO* CPSO[CSTYPE_LAST] = {};
 
+void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
+	bool tessellation = false, bool occlusionCulling = false)
+{
+	// Intensive section, refactor and optimize!
+
+	if (!renderQueue.empty())
+	{
+		GraphicsDevice* device = GetDevice();
+		Scene& scene = GetScene();
+
+		device->EventBegin("RenderMeshes", threadID);
+
+		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
+
+		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+		struct InstBuf
+		{
+			Instance instance;
+			InstancePrev instancePrev;
+		};
+
+		const bool advancedVBRequest =
+			!IsWireRender() &&
+			(shaderType == SHADERTYPE_FORWARD ||
+				shaderType == SHADERTYPE_DEFERRED ||
+				shaderType == SHADERTYPE_TILEDFORWARD);
+
+		const bool easyTextureBind =
+			shaderType == SHADERTYPE_TEXTURE ||
+			shaderType == SHADERTYPE_SHADOW ||
+			shaderType == SHADERTYPE_SHADOWCUBE ||
+			shaderType == SHADERTYPE_DEPTHONLY ||
+			shaderType == SHADERTYPE_VOXELIZE;
+
+		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
+
+		// Render impostors:
+		if (impostorRequest != nullptr)
+		{
+			bool impostorGraphicsStateComplete = false;
+
+			for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
+			{
+				const RenderBatch& batch = renderQueue.batchArray[batchID];
+
+				const size_t meshIndex = batch.GetMeshIndex();
+				const MeshComponent& mesh = scene.meshes[meshIndex];
+				if (!mesh.IsRenderable() || !mesh.HasImpostor())
+				{
+					continue;
+				}
+
+				//const auto& visibleInstances = iter->second;
+
+				UINT instancesOffset;
+				size_t alloc_size = /*visibleInstances.size()*/ 1;
+				alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+				void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+				int k = 0;
+				for (size_t instanceID = 0; instanceID < 1; ++instanceID)
+				{
+					size_t instanceIndex = batch.GetInstanceIndex();
+					const ObjectComponent& instance = scene.objects[instanceIndex];
+					if (occlusionCulling && instance.IsOccluded())
+						continue;
+
+					const AABB& aabb = scene.aabb_objects[instanceIndex];
+
+					const float impostorThreshold = aabb.getRadius();
+					float dist = wiMath::Distance(eye, aabb.getCenter());
+					float dither = instance.GetTransparency();
+					dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
+					if (dither > 1.0f - FLT_EPSILON)
+						continue;
+
+					XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
+
+					Entity objectEntity = scene.objects.GetEntity(instanceIndex);
+					const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+
+					XMFLOAT4X4 tempMat;
+					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
+
+					if (advancedVBRequest)
+					{
+						((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
+
+						const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
+						((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+					}
+					else
+					{
+						((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
+					}
+
+					++k;
+				}
+
+				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+				if (k < 1)
+					continue;
+
+				if (!advancedVBRequest || IsWireRender())
+				{
+					GPUBuffer* vbs[] = {
+						&impostorVB_POS,
+						&impostorVB_TEX,
+						dynamicVertexBufferPool
+					};
+					UINT strides[] = {
+						sizeof(MeshComponent::Vertex_POS),
+						sizeof(MeshComponent::Vertex_TEX),
+						sizeof(Instance)
+					};
+					UINT offsets[] = {
+						0,
+						0,
+						instancesOffset
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+				}
+				else
+				{
+					GPUBuffer* vbs[] = {
+						&impostorVB_POS,
+						&impostorVB_TEX,
+						&impostorVB_POS,
+						dynamicVertexBufferPool
+					};
+					UINT strides[] = {
+						sizeof(MeshComponent::Vertex_POS),
+						sizeof(MeshComponent::Vertex_TEX),
+						sizeof(MeshComponent::Vertex_POS),
+						sizeof(InstBuf)
+					};
+					UINT offsets[] = {
+						0,
+						0,
+						0,
+						instancesOffset
+					};
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+				}
+
+				GPUResource* res[] = {
+					mesh.impostorTarget.GetTexture(0),
+					mesh.impostorTarget.GetTexture(1),
+					mesh.impostorTarget.GetTexture(2)
+				};
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+
+				if (!impostorGraphicsStateComplete)
+				{
+					device->BindGraphicsPSO(impostorRequest, threadID);
+					device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
+					SetAlphaRef(0.75f, threadID);
+					impostorGraphicsStateComplete = true;
+				}
+
+				device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
+
+			}
+		}
+
+
+		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
+
+		// Render meshes:
+		for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
+		{
+			const RenderBatch& batch = renderQueue.batchArray[batchID];
+
+			const size_t meshIndex = batch.GetMeshIndex();
+			const MeshComponent& mesh = scene.meshes[meshIndex];
+			if (!mesh.IsRenderable())
+			{
+				continue;
+			}
+
+			//const auto& visibleInstances = iter->second;
+
+			const float tessF = mesh.GetTessellationFactor();
+			const bool tessellatorRequested = tessF > 0 && tessellation;
+
+			if (tessellatorRequested)
+			{
+				TessellationCB tessCB;
+				tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
+				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
+			}
+
+			bool forceAlphaTestForDithering = false;
+
+			UINT instancesOffset;
+			size_t alloc_size = /*visibleInstances.size()*/1;
+			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+			int k = 0;
+			for (size_t instanceID = 0; instanceID < 1; ++instanceID)
+			{
+				size_t instanceIndex = batch.GetInstanceIndex();
+				const ObjectComponent& instance = scene.objects[instanceIndex];
+				if (occlusionCulling && instance.IsOccluded())
+					continue;
+
+				float dither = instance.GetTransparency();
+				if (impostorRequest != nullptr)
+				{
+					// fade out to impostor...
+					const AABB& aabb = scene.aabb_objects[instanceIndex];
+					const float impostorThreshold = aabb.getRadius();
+					float dist = wiMath::Distance(eye, aabb.getCenter());
+					if (mesh.HasImpostor())
+						dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh.impostorDistance) / impostorThreshold, 0, 1));
+				}
+				if (dither > 1.0f - FLT_EPSILON)
+					continue;
+
+				forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
+
+				Entity objectEntity = scene.objects.GetEntity(instanceIndex);
+				const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+
+				if (advancedVBRequest || tessellatorRequested)
+				{
+					((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
+
+					const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+					((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
+				}
+				else
+				{
+					((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
+				}
+
+				++k;
+
+			}
+
+			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+			if (k < 1)
+				continue;
+
+			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+
+			enum class BOUNDVERTEXBUFFERTYPE
+			{
+				NOTHING,
+				POSITION,
+				POSITION_TEXCOORD,
+				EVERYTHING,
+			};
+			BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
+
+			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
+			{
+				if (subset.indexCount == 0)
+				{
+					continue;
+				}
+				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+				GraphicsPSO* pso = /*material.customShader == nullptr ?*/ GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
+				if (pso == nullptr)
+				{
+					continue;
+				}
+
+				bool subsetRenderable = false;
+
+				if (renderTypeFlags & RENDERTYPE_OPAQUE)
+				{
+					subsetRenderable = subsetRenderable || (!material.IsTransparent() && !material.IsWater());
+				}
+				if (renderTypeFlags & RENDERTYPE_TRANSPARENT)
+				{
+					subsetRenderable = subsetRenderable || material.IsTransparent();
+				}
+				if (renderTypeFlags & RENDERTYPE_WATER)
+				{
+					subsetRenderable = subsetRenderable || material.IsWater();
+				}
+				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+				{
+					subsetRenderable = subsetRenderable && material.IsCastingShadow();
+				}
+
+				if (!subsetRenderable)
+				{
+					continue;
+				}
+
+				BOUNDVERTEXBUFFERTYPE boundVBType;
+				if (advancedVBRequest || tessellatorRequested)
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
+				}
+				else
+				{
+					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
+					if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
+					{
+						if (shaderType == SHADERTYPE_SHADOW && material.IsTransparent())
+						{
+							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+						}
+						else
+						{
+							// bypass texcoord stream for non alphatested shadows and zprepass
+							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
+						}
+					}
+					else
+					{
+						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+					}
+				}
+
+				if (material.IsWater())
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+				}
+
+				if (IsWireRender())
+				{
+					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
+				}
+
+				// Only bind vertex buffers when the layout changes
+				if (boundVBType != boundVBType_Prev)
+				{
+					// Assemble the required vertex buffer:
+					switch (boundVBType)
+					{
+					case BOUNDVERTEXBUFFERTYPE::POSITION:
+					{
+						GPUBuffer* vbs[] = {
+							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+							dynamicVertexBufferPool
+						};
+						UINT strides[] = {
+							sizeof(MeshComponent::Vertex_POS),
+							sizeof(Instance)
+						};
+						UINT offsets[] = {
+							0,
+							instancesOffset
+						};
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+					}
+					break;
+					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
+					{
+						GPUBuffer* vbs[] = {
+							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+							mesh.vertexBuffer_TEX.get(),
+							dynamicVertexBufferPool
+						};
+						UINT strides[] = {
+							sizeof(MeshComponent::Vertex_POS),
+							sizeof(MeshComponent::Vertex_TEX),
+							sizeof(Instance)
+						};
+						UINT offsets[] = {
+							0,
+							0,
+							instancesOffset
+						};
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+					}
+					break;
+					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
+					{
+						GPUBuffer* vbs[] = {
+							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+							mesh.vertexBuffer_TEX.get(),
+							mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
+							dynamicVertexBufferPool
+						};
+						UINT strides[] = {
+							sizeof(MeshComponent::Vertex_POS),
+							sizeof(MeshComponent::Vertex_TEX),
+							sizeof(MeshComponent::Vertex_POS),
+							sizeof(InstBuf)
+						};
+						UINT offsets[] = {
+							0,
+							0,
+							0,
+							instancesOffset
+						};
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+					}
+					break;
+					default:
+						assert(0);
+						break;
+					}
+				}
+				boundVBType_Prev = boundVBType;
+
+				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+
+				device->BindStencilRef(material.GetStencilRef(), threadID);
+
+				device->BindGraphicsPSO(pso, threadID);
+
+				GPUResource* res[] = {
+					material.GetBaseColorMap(),
+					material.GetNormalMap(),
+					material.GetSurfaceMap(),
+					material.GetDisplacementMap(),
+				};
+				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
+
+				SetAlphaRef(material.alphaRef, threadID);
+
+				device->DrawIndexedInstanced((int)subset.indexCount, k, subset.indexOffset, 0, 0, threadID);
+			}
+
+		}
+
+		ResetAlphaRef(threadID);
+
+		device->EventEnd(threadID);
+	}
+}
+
+
+
 void LoadShaders()
 {
 	GraphicsDevice* device = GetDevice();
@@ -1152,30 +1655,30 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_COMMON]->code.data, vertexShaders[VSTYPE_OBJECT_COMMON]->code.size, vertexLayouts[VLTYPE_OBJECT_ALL]);
-		
+
 	}
 	{
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code.data, vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code.size, vertexLayouts[VLTYPE_OBJECT_POS]);
@@ -1185,12 +1688,12 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_SIMPLE]->code.data, vertexShaders[VSTYPE_OBJECT_SIMPLE]->code.size, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
@@ -1201,10 +1704,10 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_SHADOW]->code.data, vertexShaders[VSTYPE_SHADOW]->code.size, vertexLayouts[VLTYPE_SHADOW_POS]);
@@ -1214,12 +1717,12 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code.data, vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code.size, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
@@ -1233,7 +1736,7 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_LINE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_LINE]->code.data, vertexShaders[VSTYPE_LINE]->code.size, vertexLayouts[VLTYPE_LINE]);
@@ -1244,8 +1747,8 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_TRAIL]->code.data, vertexShaders[VSTYPE_TRAIL]->code.size, vertexLayouts[VLTYPE_TRAIL]);
@@ -2273,40 +2776,40 @@ void SetUpStates()
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_WRAP]);
-	
+
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_MIRROR]);
-	
+
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_WRAP]);
-	
-	
+
+
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_CLAMP]);
-	
+
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MaxAnisotropy = 16;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_CLAMP]);
-	
+
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_WRAP]);
-	
+
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
@@ -2321,7 +2824,7 @@ void SetUpStates()
 	samplerDesc.MaxAnisotropy = 16;
 	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_OBJECTSHADER]);
 
-	ZeroMemory( &samplerDesc, sizeof(SamplerDesc) );
+	ZeroMemory(&samplerDesc, sizeof(SamplerDesc));
 	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
@@ -2356,96 +2859,96 @@ void SetUpStates()
 	{
 		rasterizers[i] = new RasterizerState;
 	}
-	
+
 	RasterizerStateDesc rs;
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_BACK;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_BACK;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_FRONT]);
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_FRONT]);
 
-	
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_BACK;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
+
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_BACK;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = -2.0f;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_SHADOW]);
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW]);
 
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_NONE;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = -2.0f;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
-	rs.FillMode=FILL_WIREFRAME;
-	rs.CullMode=CULL_BACK;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
+	rs.FillMode = FILL_WIREFRAME;
+	rs.CullMode = CULL_BACK;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE]);
 	rs.AntialiasedLineEnable = true;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_SMOOTH]);
-	
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_NONE;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
-	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_DOUBLESIDED]);
-	
-	rs.FillMode=FILL_WIREFRAME;
-	rs.CullMode=CULL_NONE;
-	rs.FrontCounterClockwise=true;
+
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = true;
 	rs.DepthBias = 0;
 	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	rs.ConservativeRasterizationEnable = false;
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_DOUBLESIDED]);
+
+	rs.FillMode = FILL_WIREFRAME;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	rs.AntialiasedLineEnable = true;
 	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
-	
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_FRONT;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=true;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
+
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_FRONT;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = true;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs,rasterizers[RSTYPE_BACK]);
+	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_BACK]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -2588,7 +3091,7 @@ void SetUpStates()
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
-	dsd.StencilEnable=false;
+	dsd.StencilEnable = false;
 	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_XRAY]);
 
 
@@ -2608,10 +3111,10 @@ void SetUpStates()
 	{
 		blendStates[i] = new BlendState;
 	}
-	
+
 	BlendStateDesc bd;
 	ZeroMemory(&bd, sizeof(bd));
-	bd.RenderTarget[0].BlendEnable=false;
+	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_MAX;
@@ -2619,9 +3122,9 @@ void SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.AlphaToCoverageEnable=false;
+	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_OPAQUE]);
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_OPAQUE]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -2629,14 +3132,14 @@ void SetUpStates()
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_TRANSPARENT]);
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENT]);
 
 
-	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
@@ -2644,19 +3147,19 @@ void SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable=false,
-	bd.AlphaToCoverageEnable=false;
-	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_ADDITIVE]);
+	bd.IndependentBlendEnable = false,
+		bd.AlphaToCoverageEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_ADDITIVE]);
 
 
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 	bd.IndependentBlendEnable = false,
-	bd.AlphaToCoverageEnable = false;
+		bd.AlphaToCoverageEnable = false;
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_COLORWRITEDISABLE]);
 
 
-	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
@@ -2664,9 +3167,9 @@ void SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
-	bd.IndependentBlendEnable=false,
-	bd.AlphaToCoverageEnable=false;
-	GetDevice()->CreateBlendState(&bd,blendStates[BSTYPE_DEFERREDLIGHT]);
+	bd.IndependentBlendEnable = false,
+		bd.AlphaToCoverageEnable = false;
+	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_DEFERREDLIGHT]);
 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -2677,7 +3180,7 @@ void SetUpStates()
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false,
-	bd.AlphaToCoverageEnable = false;
+		bd.AlphaToCoverageEnable = false;
 	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_SRC_COLOR;
@@ -2735,7 +3238,6 @@ void SetUpStates()
 }
 
 
-
 void FixedUpdate()
 {
 }
@@ -2778,7 +3280,7 @@ void UpdatePerFrameData(float dt)
 				culling.frustum = camera->frustum;
 			}
 
-			// Cull objects for every camera:
+			// Cull objects for each camera:
 			for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 			{
 				const AABB& aabb = scene.aabb_objects[i];
@@ -2789,22 +3291,6 @@ void UpdatePerFrameData(float dt)
 					Entity entity = scene.objects.GetEntity(i);
 
 					culling.culledObjects.push_back(entity);
-					if (object.GetRenderTypes() & RENDERTYPE_OPAQUE)
-					{
-						//culling.culledRenderer_opaque[object.meshID].push_back(entity);
-						RenderBatch* batch = (RenderBatch*)frameAllocators[GRAPHICSTHREAD_IMMEDIATE].allocate(sizeof(RenderBatch));
-						batch->meshID = object.meshID;
-						batch->instanceID = entity;
-						culling.culledRenderer_opaque.add(batch);
-					}
-					if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
-					{
-						//culling.culledRenderer_transparent[object.meshID].push_back(entity);
-						RenderBatch* batch = (RenderBatch*)frameAllocators[GRAPHICSTHREAD_IMMEDIATE].allocate(sizeof(RenderBatch));
-						batch->meshID = object.meshID;
-						batch->instanceID = entity;
-						culling.culledRenderer_transparent.add(batch);
-					}
 					if (object.GetRenderTypes() & RENDERTYPE_WATER)
 					{
 						requestReflectionRendering = true;
@@ -3541,6 +4027,7 @@ void DrawWaterRipples(GRAPHICSTHREAD threadID)
 }
 
 
+
 void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = GetScene();
@@ -4065,7 +4552,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 		GetDevice()->EventBegin("ShadowMap Render", threadID);
 		wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
-		const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
+		const bool all_layers = layerMask == 0xFFFFFFFF;
 
 		const FrameCulling& culling = frameCullings[&GetCamera()];
 		const auto& culledLights = culling.culledLights;
@@ -4145,7 +4632,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							AABB boundingbox;
 							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
 
-							CulledCollection culledRenderer;
+							RenderQueue renderQueue;
 							bool transparentShadowsRequested = false;
 							for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 							{
@@ -4159,11 +4646,10 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 										if (all_layers || (layerMask & layer.GetLayerMask()))
 										{
-											//culledRenderer[object.meshID].push_back(cullable_entity);
 											RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-											batch->meshID = object.meshID;
-											batch->instanceID = cullable_entity;
-											culledRenderer.add(batch);
+											size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+											batch->Create(meshIndex, i, 0);
+											renderQueue.add(batch);
 
 											if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 											{
@@ -4173,7 +4659,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									}
 								}
 							}
-							if (!culledRenderer.empty())
+							if (!renderQueue.empty())
 							{
 								CameraCB cb;
 								XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_dirLight[cascade].getVP());
@@ -4186,7 +4672,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 								// render opaque shadowmap:
 								GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-								RenderMeshes(light.shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+								RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 								{
@@ -4195,7 +4681,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 										shadowMapArray_Transparent
 									};
 									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-									RenderMeshes(light.shadowCam_dirLight[cascade].Eye, culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+									RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 								}
 							}
 
@@ -4211,7 +4697,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 						Frustum frustum;
 						frustum.ConstructFrustum(light.shadowCam_spotLight[0].farplane, light.shadowCam_spotLight[0].realProjection, light.shadowCam_spotLight[0].View);
 
-						CulledCollection culledRenderer;
+						RenderQueue renderQueue;
 						bool transparentShadowsRequested = false;
 						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 						{
@@ -4225,11 +4711,10 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 									if (all_layers || (layerMask & layer.GetLayerMask()))
 									{
-										//culledRenderer[object.meshID].push_back(cullable_entity);
 										RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-										batch->meshID = object.meshID;
-										batch->instanceID = cullable_entity;
-										culledRenderer.add(batch);
+										size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+										batch->Create(meshIndex, i, 0);
+										renderQueue.add(batch);
 
 										if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 										{
@@ -4239,7 +4724,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 								}
 							}
 						}
-						if (!culledRenderer.empty())
+						if (!renderQueue.empty())
 						{
 							CameraCB cb;
 							XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_spotLight[0].getVP());
@@ -4252,7 +4737,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 							// render opaque shadowmap:
 							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index);
-							RenderMeshes(frustum.getCamPos(), culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+							RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
@@ -4261,7 +4746,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									shadowMapArray_Transparent
 								};
 								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index);
-								RenderMeshes(frustum.getCamPos(), culledRenderer, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 							}
 						}
 
@@ -4277,7 +4762,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 							break;
 						shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-						CulledCollection culledRenderer;
+						RenderQueue renderQueue;
 						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 						{
 							const AABB& aabb = scene.aabb_objects[i];
@@ -4290,16 +4775,15 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
 									if (all_layers || (layerMask & layer.GetLayerMask()))
 									{
-										//culledRenderer[object.meshID].push_back(cullable_entity);
 										RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-										batch->meshID = object.meshID;
-										batch->instanceID = cullable_entity;
-										culledRenderer.add(batch);
+										size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+										batch->Create(meshIndex, i, 0);
+										renderQueue.add(batch);
 									}
 								}
 							}
 						}
-						if (!culledRenderer.empty())
+						if (!renderQueue.empty())
 						{
 							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube, threadID, light.shadowMap_index);
 							GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
@@ -4316,7 +4800,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
-							RenderMeshes(light.position, culledRenderer, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+							RenderMeshes(light.position, renderQueue, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
 						}
 
 					}
@@ -4342,454 +4826,9 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 	}
 }
 
-void RenderMeshes(const XMFLOAT3& eye, const CulledCollection& culledRenderer, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation, bool occlusionCulling, uint32_t layerMask)
-{
-	// Intensive section, refactor and optimize!
-
-	if (!culledRenderer.empty())
-	{
-		GraphicsDevice* device = GetDevice();
-		Scene& scene = GetScene();
-
-		device->EventBegin("RenderMeshes", threadID);
-
-		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
-
-		const XMFLOAT4X4 __identityMat = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-
-		struct InstBuf
-		{
-			Instance instance;
-			InstancePrev instancePrev;
-		};
-
-		const bool advancedVBRequest =
-			!IsWireRender() &&
-			(shaderType == SHADERTYPE_FORWARD ||
-			shaderType == SHADERTYPE_DEFERRED ||
-			shaderType == SHADERTYPE_TILEDFORWARD);
-
-		const bool easyTextureBind = 
-			shaderType == SHADERTYPE_TEXTURE || 
-			shaderType == SHADERTYPE_SHADOW || 
-			shaderType == SHADERTYPE_SHADOWCUBE || 
-			shaderType == SHADERTYPE_DEPTHONLY || 
-			shaderType == SHADERTYPE_VOXELIZE;
-
-		const bool all_layers = layerMask == 0xFFFFFFFF; // this can avoid the recursive call per object : GetLayerMask()
-
-		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
-
-		// Render impostors:
-		if (impostorRequest != nullptr)
-		{
-			bool impostorGraphicsStateComplete = false;
-
-			for (size_t batchID = 0; batchID < culledRenderer.dataCount; ++batchID)
-			{
-				const RenderBatch& batch = ((RenderBatch*)culledRenderer.dataBegin)[batchID];
-
-				Entity meshEntity = batch.meshID;
-				MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-				if (!mesh.IsRenderable() || !mesh.HasImpostor() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
-				{
-					continue;
-				}
-
-				//const auto& visibleInstances = iter->second;
-
-				UINT instancesOffset;
-				size_t alloc_size = /*visibleInstances.size()*/ 1;
-				alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-				void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
-
-				int k = 0;
-				for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-				{
-					Entity objectEntity = batch.instanceID;
-
-					const ObjectComponent& instance = *scene.objects.GetComponent(objectEntity);
-					if (occlusionCulling && instance.IsOccluded())
-						continue;
-
-					const LayerComponent& layer = *scene.layers.GetComponent(objectEntity);
-
-					if (all_layers || (layerMask & layer.GetLayerMask()))
-					{
-						const AABB& aabb = *scene.aabb_objects.GetComponent(objectEntity);
-
-						const float impostorThreshold = aabb.getRadius();
-						float dist = wiMath::Distance(eye, aabb.getCenter());
-						float dither = instance.GetTransparency();
-						dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
-						if (dither > 1.0f - FLT_EPSILON)
-							continue;
-
-						XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
-
-						const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
-
-						XMFLOAT4X4 tempMat;
-						XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
-
-						if (advancedVBRequest)
-						{
-							((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
-
-							const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-							XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
-							((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-						}
-						else
-						{
-							((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
-						}
-
-						++k;
-					}
-				}
-
-				device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-				if (k < 1)
-					continue;
-
-				if (!advancedVBRequest || IsWireRender())
-				{
-					GPUBuffer* vbs[] = {
-						&impostorVB_POS,
-						&impostorVB_TEX,
-						dynamicVertexBufferPool
-					};
-					UINT strides[] = {
-						sizeof(MeshComponent::Vertex_POS),
-						sizeof(MeshComponent::Vertex_TEX),
-						sizeof(Instance)
-					};
-					UINT offsets[] = {
-						0,
-						0,
-						instancesOffset
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				}
-				else
-				{
-					GPUBuffer* vbs[] = {
-						&impostorVB_POS,
-						&impostorVB_TEX,
-						&impostorVB_POS,
-						dynamicVertexBufferPool
-					};
-					UINT strides[] = {
-						sizeof(MeshComponent::Vertex_POS),
-						sizeof(MeshComponent::Vertex_TEX),
-						sizeof(MeshComponent::Vertex_POS),
-						sizeof(InstBuf)
-					};
-					UINT offsets[] = {
-						0,
-						0,
-						0,
-						instancesOffset
-					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-				}
-
-				GPUResource* res[] = {
-					mesh.impostorTarget.GetTexture(0),
-					mesh.impostorTarget.GetTexture(1),
-					mesh.impostorTarget.GetTexture(2)
-				};
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-				if (!impostorGraphicsStateComplete)
-				{
-					device->BindGraphicsPSO(impostorRequest, threadID);
-					device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
-					SetAlphaRef(0.75f, threadID);
-					impostorGraphicsStateComplete = true;
-				}
-
-				device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
-
-			}
-		}
-
-
-		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-
-		// Render meshes:
-		for (size_t batchID = 0; batchID < culledRenderer.dataCount; ++batchID)
-		{
-			const RenderBatch& batch = ((RenderBatch*)culledRenderer.dataBegin)[batchID];
-
-			Entity meshEntity = batch.meshID;
-			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
-			if (!mesh.IsRenderable() /*|| !(mesh.GetRenderTypes() & renderTypeFlags)*/)
-			{
-				continue;
-			}
-
-			//const auto& visibleInstances = iter->second;
-
-			const float tessF = mesh.GetTessellationFactor();
-			const bool tessellatorRequested = tessF > 0 && tessellation;
-
-			if (tessellatorRequested)
-			{
-				TessellationCB tessCB;
-				tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
-				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
-			}
-
-			bool forceAlphaTestForDithering = false;
-
-			UINT instancesOffset;
-			size_t alloc_size = /*visibleInstances.size()*/1;
-			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
-
-			int k = 0;
-			for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-			{
-				Entity objectEntity = batch.instanceID;
-
-				const ObjectComponent& instance = *scene.objects.GetComponent(objectEntity);
-				if (occlusionCulling && instance.IsOccluded())
-					continue;
-
-				const LayerComponent& layer = *scene.layers.GetComponent(objectEntity);
-
-				if (all_layers || (layerMask & layer.GetLayerMask()))
-				{
-					float dither = instance.GetTransparency();
-					if (impostorRequest != nullptr)
-					{
-						// fade out to impostor...
-						const AABB& aabb = *scene.aabb_objects.GetComponent(objectEntity);
-						const float impostorThreshold = aabb.getRadius();
-						float dist = wiMath::Distance(eye, aabb.getCenter());
-						if (mesh.HasImpostor())
-							dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh.impostorDistance) / impostorThreshold, 0, 1));
-					}
-					if (dither > 1.0f - FLT_EPSILON)
-						continue;
-
-					forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
-
-					const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
-
-					if (advancedVBRequest || tessellatorRequested)
-					{
-						((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
-
-						const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-						((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
-					}
-					else
-					{
-						((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
-					}
-
-					++k;
-				}
-			}
-
-			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-			if (k < 1)
-				continue;
-
-			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
-
-			enum class BOUNDVERTEXBUFFERTYPE
-			{
-				NOTHING,
-				POSITION,
-				POSITION_TEXCOORD,
-				EVERYTHING,
-			};
-			BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
-
-			for (MeshComponent::MeshSubset& subset : mesh.subsets)
-			{
-				if (subset.indexCount == 0)
-				{
-					continue;
-				}
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-				GraphicsPSO* pso = /*material.customShader == nullptr ?*/ GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
-				if (pso == nullptr)
-				{
-					continue;
-				}
-
-				bool subsetRenderable = false;
-
-				if (renderTypeFlags & RENDERTYPE_OPAQUE)
-				{
-					subsetRenderable = subsetRenderable || (!material.IsTransparent() && !material.IsWater());
-				}
-				if (renderTypeFlags & RENDERTYPE_TRANSPARENT)
-				{
-					subsetRenderable = subsetRenderable || material.IsTransparent();
-				}
-				if (renderTypeFlags & RENDERTYPE_WATER)
-				{
-					subsetRenderable = subsetRenderable || material.IsWater();
-				}
-				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-				{
-					subsetRenderable = subsetRenderable && material.IsCastingShadow();
-				}
-
-				if (!subsetRenderable)
-				{
-					continue;
-				}
-
-				BOUNDVERTEXBUFFERTYPE boundVBType;
-				if (advancedVBRequest || tessellatorRequested)
-				{
-					boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
-				}
-				else
-				{
-					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-					if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
-					{
-						if (shaderType == SHADERTYPE_SHADOW && material.IsTransparent())
-						{
-							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-						}
-						else
-						{
-							// bypass texcoord stream for non alphatested shadows and zprepass
-							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
-						}
-					}
-					else
-					{
-						boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-					}
-				}
-
-				if (material.IsWater())
-				{
-					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-				}
-
-				if (IsWireRender())
-				{
-					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-				}
-
-				// Only bind vertex buffers when the layout changes
-				if (boundVBType != boundVBType_Prev)
-				{
-					// Assemble the required vertex buffer:
-					switch (boundVBType)
-					{
-					case BOUNDVERTEXBUFFERTYPE::POSITION:
-					{
-						GPUBuffer* vbs[] = {
-							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							dynamicVertexBufferPool
-						};
-						UINT strides[] = {
-							sizeof(MeshComponent::Vertex_POS),
-							sizeof(Instance)
-						};
-						UINT offsets[] = {
-							0,
-							instancesOffset
-						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-					}
-					break;
-					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
-					{
-						GPUBuffer* vbs[] = {
-							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							mesh.vertexBuffer_TEX.get(),
-							dynamicVertexBufferPool
-						};
-						UINT strides[] = {
-							sizeof(MeshComponent::Vertex_POS),
-							sizeof(MeshComponent::Vertex_TEX),
-							sizeof(Instance)
-						};
-						UINT offsets[] = {
-							0,
-							0,
-							instancesOffset
-						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-					}
-					break;
-					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
-					{
-						GPUBuffer* vbs[] = {
-							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							mesh.vertexBuffer_TEX.get(),
-							mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
-							dynamicVertexBufferPool
-						};
-						UINT strides[] = {
-							sizeof(MeshComponent::Vertex_POS),
-							sizeof(MeshComponent::Vertex_TEX),
-							sizeof(MeshComponent::Vertex_POS),
-							sizeof(InstBuf)
-						};
-						UINT offsets[] = {
-							0,
-							0,
-							0,
-							instancesOffset
-						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-					}
-					break;
-					default:
-						assert(0);
-						break;
-					}
-				}
-				boundVBType_Prev = boundVBType;
-
-				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-
-				device->BindStencilRef(material.GetStencilRef(), threadID);
-
-				device->BindGraphicsPSO(pso, threadID);
-
-				GPUResource* res[] = {
-					material.GetBaseColorMap(),
-					material.GetNormalMap(),
-					material.GetSurfaceMap(),
-					material.GetDisplacementMap(),
-				};
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
-
-				SetAlphaRef(material.alphaRef, threadID);
-
-				device->DrawIndexedInstanced((int)subset.indexCount, k, subset.indexOffset, 0, 0, threadID);
-			}
-
-		}
-
-		ResetAlphaRef(threadID);
-
-		device->EventEnd(threadID);
-	}
-}
-
 void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
+	Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings[&camera];
 
 	GetDevice()->EventBegin("DrawWorld", threadID);
@@ -4807,8 +4846,6 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 			SetAlphaRef(0.25f, threadID);
 		}
 
-		Scene& scene = GetScene();
-
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
 			const wiHairParticle& hair = scene.hairs[i];
@@ -4823,9 +4860,34 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 		}
 	}
 
-	if (!culling.culledRenderer_opaque.empty()/* || (grass && culling.culledHairParticleSystems.empty())*/)
+
+	RenderQueue renderQueue;
+	for (Entity entity : culling.culledObjects)
 	{
-		RenderMeshes(camera.Eye, culling.culledRenderer_opaque, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
+		if (layerMask != ~0)
+		{
+			const LayerComponent& layer = *scene.layers.GetComponent(entity);
+			if (!(layer.GetLayerMask() & layerMask))
+			{
+				continue;
+			}
+		}
+
+		size_t instanceIndex = scene.objects.GetIndex(entity);
+		const ObjectComponent& object = scene.objects[instanceIndex];
+
+		if (object.GetRenderTypes() & RENDERTYPE_OPAQUE)
+		{
+			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.position));
+			renderQueue.add(batch);
+		}
+	}
+	if (!renderQueue.empty())
+	{
+		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
+		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
 	GetDevice()->EventEnd(threadID);
@@ -4834,6 +4896,7 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
+	Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings[&camera];
 
 	GetDevice()->EventBegin("DrawWorldTransparent", threadID);
@@ -4851,7 +4914,6 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 	if (grass && GetAlphaCompositionEnabled())
 	{
 		// transparent passes can only render hair when alpha composition is enabled
-		Scene& scene = GetScene();
 
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
@@ -4867,9 +4929,33 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 		}
 	}
 
-	if (!culling.culledRenderer_transparent.empty())
+	RenderQueue renderQueue;
+	for (Entity entity : culling.culledObjects)
 	{
-		RenderMeshes(camera.Eye, culling.culledRenderer_transparent, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling, layerMask);
+		if (layerMask != ~0)
+		{
+			const LayerComponent& layer = *scene.layers.GetComponent(entity);
+			if (!(layer.GetLayerMask() & layerMask))
+			{
+				continue;
+			}
+		}
+
+		size_t instanceIndex = scene.objects.GetIndex(entity);
+		const ObjectComponent& object = scene.objects[instanceIndex];
+
+		if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
+		{
+			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.position));
+			renderQueue.add(batch);
+		}
+	}
+	if (!renderQueue.empty())
+	{
+		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
+		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
 	}
 
 	GetDevice()->EventEnd(threadID);
@@ -5558,7 +5644,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		SPHERE culler = SPHERE(center, zFarP);
 
-		CulledCollection culledRenderer;
+		RenderQueue renderQueue;
 		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 		{
 			const AABB& aabb = scene.aabb_objects[i];
@@ -5569,18 +5655,17 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				if ((layerMask & layer.GetLayerMask()))
 				{
 					const ObjectComponent& object = scene.objects[i];
-					//culledRenderer[object.meshID].push_back(cullable_entity);
 					RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-					batch->meshID = object.meshID;
-					batch->instanceID = cullable_entity;
-					culledRenderer.add(batch);
+					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+					batch->Create(meshIndex, i, 0);
+					renderQueue.add(batch);
 				}
 			}
 		}
 
-		if (!culledRenderer.empty())
+		if (!renderQueue.empty())
 		{
-			RenderMeshes(center, culledRenderer, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
+			RenderMeshes(center, renderQueue, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
 		}
 
 		// sky
@@ -5720,7 +5805,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	bbox.createFromHalfWidth(center, extents);
 
 
-	CulledCollection culledRenderer;
+	RenderQueue renderQueue;
 	for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 	{
 		const AABB& aabb = scene.aabb_objects[i];
@@ -5728,15 +5813,14 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		{
 			Entity cullable_entity = scene.aabb_objects.GetEntity(i);
 			const ObjectComponent& object = scene.objects[i];
-			//culledRenderer[object.meshID].push_back(cullable_entity);
 			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-			batch->meshID = object.meshID;
-			batch->instanceID = cullable_entity;
-			culledRenderer.add(batch);
+			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+			batch->Create(meshIndex, i, 0);
+			renderQueue.add(batch);
 		}
 	}
 
-	if (!culledRenderer.empty())
+	if (!renderQueue.empty())
 	{
 		ViewPort VP;
 		VP.TopLeftX = 0;
@@ -5750,7 +5834,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
-		RenderMeshes(center, culledRenderer, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+		RenderMeshes(center, renderQueue, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", threadID);

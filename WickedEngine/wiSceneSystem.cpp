@@ -2,9 +2,8 @@
 #include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
-#include "wiPHYSICS.h"
+#include "wiPhysicsEngine.h"
 #include "wiArchive.h"
-#include "wiPhysics.h"
 
 using namespace wiECS;
 using namespace wiGraphicsTypes;
@@ -1536,6 +1535,8 @@ namespace wiSceneSystem
 				{
 					aabb = mesh->aabb.get(transform->world);
 					sceneBounds = AABB::Merge(sceneBounds, aabb);
+
+					object.position = transform->GetPosition();
 
 					if (mesh->IsSkinned() || mesh->IsDynamic())
 					{

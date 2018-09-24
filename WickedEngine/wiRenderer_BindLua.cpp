@@ -8,7 +8,6 @@
 #include "Texture_BindLua.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
-#include "wiPHYSICS.h"
 
 using namespace std;
 using namespace wiECS;

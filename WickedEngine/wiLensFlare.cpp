@@ -2,6 +2,7 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "ResourceMapping.h"
+#include "ShaderInterop_Renderer.h"
 
 using namespace wiGraphicsTypes;
 
@@ -36,12 +37,12 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const 
 
 		device->BindGraphicsPSO(&PSO, threadID);
 
-		ConstantBuffer cb;
-		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1);
-		cb.mScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
+		LensFlareCB cb;
+		XMStoreFloat4(&cb.xSunPos, lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1));
+		cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
-		device->BindConstantBuffer(GS, constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBuffer(GS, constantBuffer, CB_GETBINDSLOT(LensFlareCB),threadID);
 
 
 		int i=0;
@@ -95,7 +96,7 @@ void wiLensFlare::SetUpCB()
 	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
+	bd.ByteWidth = sizeof(LensFlareCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	constantBuffer = new GPUBuffer;

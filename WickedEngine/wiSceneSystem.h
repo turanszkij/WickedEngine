@@ -387,6 +387,8 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
 		// occlusion query pool index

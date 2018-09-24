@@ -11,7 +11,7 @@
 #include "wiHelper.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
-#include "wiPhysics.h"
+#include "wiPhysicsEngine.h"
 
 using namespace std;
 

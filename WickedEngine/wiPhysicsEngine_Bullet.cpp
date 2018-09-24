@@ -1,4 +1,4 @@
-#include "wiPhysics.h"
+#include "wiPhysicsEngine.h"
 #include "wiSceneSystem.h"
 #include "wiProfiler.h"
 

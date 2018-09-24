@@ -297,6 +297,17 @@ namespace wiECS
 			return nullptr;
 		}
 
+		// Retrieve component index by entity handle (if not exists, returns ~0 value)
+		inline size_t GetIndex(Entity entity) const 
+		{
+			const auto it = lookup.find(entity);
+			if (it != lookup.end())
+			{
+				return it->second;
+			}
+			return ~0;
+		}
+
 		// Retrieve the number of existing entries
 		inline size_t GetCount() const { return components.size(); }
 

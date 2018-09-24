@@ -6,6 +6,7 @@
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
 #include "wiSceneSystem.h"
+#include "ShaderInterop_Image.h"
 
 #include <thread>
 
@@ -397,12 +398,12 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		if(!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y){
 			if (effects.typeFlag == SCREEN)
 			{
-				cb.mTransform = XMMatrixTranspose(
+				XMStoreFloat4x4(&cb.xTransform, XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x*effects.siz.x, effects.scale.y*effects.siz.y, 1)
 					* XMMatrixRotationZ(effects.rotation)
 					* XMMatrixTranslation(effects.pos.x, effects.pos.y, 0)
 					* device->GetScreenProjection()
-				);
+				));
 			}
 			else if (effects.typeFlag == WORLD)
 			{
@@ -429,27 +430,27 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 				projection.r[2] = XMVectorSetX(projection.r[2], 0);
 				projection.r[2] = XMVectorSetY(projection.r[2], 0);
 
-				cb.mTransform = XMMatrixTranspose(
+				XMStoreFloat4x4(&cb.xTransform, XMMatrixTranspose(
 					XMMatrixScaling(effects.scale.x*effects.siz.x, -1 * effects.scale.y*effects.siz.y, 1)
 					*XMMatrixRotationZ(effects.rotation)
 					*faceRot
 					*XMMatrixTranslation(effects.pos.x, effects.pos.y, effects.pos.z)
 					*view * projection
-				);
+				));
 			}
 
 			// todo: effects.drawRec -> texmuladd!
 
-			cb.mTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
-			cb.mColor = effects.col;
-			cb.mColor.x *= 1 - effects.fade;
-			cb.mColor.y *= 1 - effects.fade;
-			cb.mColor.z *= 1 - effects.fade;
-			cb.mColor.w *= effects.opacity;
-			cb.mPivot = effects.pivot;
-			cb.mMirror = effects.mirror;
-			cb.mPivot = effects.pivot;
-			cb.mMipLevel = effects.mipLevel;
+			cb.xTexMulAdd = XMFLOAT4(1,1,effects.texOffset.x, effects.texOffset.y);
+			cb.xColor = effects.col;
+			cb.xColor.x *= 1 - effects.fade;
+			cb.xColor.y *= 1 - effects.fade;
+			cb.xColor.z *= 1 - effects.fade;
+			cb.xColor.w *= effects.opacity;
+			cb.xPivot = effects.pivot;
+			cb.xMirror = effects.mirror;
+			cb.xPivot = effects.pivot;
+			cb.xMipLevel = effects.mipLevel;
 
 			device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
@@ -501,21 +502,21 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			{
 				targetShader = POSTPROCESS_OUTLINE;
 
-				prcb.params0[1] = effects.process.outline ? 1.0f : 0.0f;
+				prcb.xPPParams0.y = effects.process.outline ? 1.0f : 0.0f;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.motionBlur) 
 			{
 				targetShader = POSTPROCESS_MOTIONBLUR;
 
-				prcb.params0[0] = effects.process.motionBlur ? 1.0f : 0.0f;
+				prcb.xPPParams0.x = effects.process.motionBlur ? 1.0f : 0.0f;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.dofStrength) 
 			{
 				targetShader = POSTPROCESS_DEPTHOFFIELD;
 
-				prcb.params0[2] = effects.process.dofStrength;
+				prcb.xPPParams0.z = effects.process.dofStrength;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.fxaa) 
@@ -550,17 +551,17 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			{
 				targetShader = POSTPROCESS_SSSS;
 
-				prcb.params0[0] = effects.process.ssss.x;
-				prcb.params0[1] = effects.process.ssss.y;
+				prcb.xPPParams0.x = effects.process.ssss.x;
+				prcb.xPPParams0.y = effects.process.ssss.y;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.bloom.separate) 
 			{
 				targetShader = POSTPROCESS_BLOOMSEPARATE;
 
-				prcb.params1[0] = effects.bloom.separate ? 1.0f : 0.0f;
-				prcb.params1[1] = effects.bloom.threshold;
-				prcb.params1[2] = effects.bloom.saturation;
+				prcb.xPPParams1.x = effects.bloom.separate ? 1.0f : 0.0f;
+				prcb.xPPParams1.y = effects.bloom.threshold;
+				prcb.xPPParams1.z = effects.bloom.saturation;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else if (effects.process.reprojectDepthBuffer)
@@ -579,7 +580,7 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			{
 				targetShader = POSTPROCESS_SHARPEN;
 
-				prcb.params0[0] = effects.process.sharpen;
+				prcb.xPPParams0.x = effects.process.sharpen;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 			}
 			else 
@@ -596,12 +597,12 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 			fullScreenEffect = true;
 
 			//Density|Weight|Decay|Exposure
-			prcb.params0[0] = 0.65f;
-			prcb.params0[1] = 0.25f;
-			prcb.params0[2] = 0.945f;
-			prcb.params0[3] = 0.2f;
-			prcb.params1[0] = effects.sunPos.x;
-			prcb.params1[1] = effects.sunPos.y;
+			prcb.xPPParams0.x = 0.65f;
+			prcb.xPPParams0.y = 0.25f;
+			prcb.xPPParams0.z = 0.945f;
+			prcb.xPPParams0.w = 0.2f;
+			prcb.xPPParams1.x = effects.sunPos.x;
+			prcb.xPPParams1.y = effects.sunPos.y;
 
 			device->UpdateBuffer(&processCb,&prcb,threadID);
 
@@ -620,12 +621,12 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		if(effects.blurDir==0)
 		{
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_H], threadID);
-			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().x;
+			prcb.xPPParams1.z = 1.0f / wiRenderer::GetInternalResolution().x;
 		}
 		else
 		{
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_V], threadID);
-			prcb.params1[3] = 1.0f / wiRenderer::GetInternalResolution().y;
+			prcb.xPPParams1.z = 1.0f / wiRenderer::GetInternalResolution().y;
 		}
 
 		static float weight0 = 1.0f;
@@ -634,13 +635,13 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		static float weight3 = 0.18f;
 		static float weight4 = 0.1f;
 		const float normalization = 1.0f / (weight0 + 2.0f * (weight1 + weight2 + weight3 + weight4));
-		prcb.params0[0] = weight0 * normalization;
-		prcb.params0[1] = weight1 * normalization;
-		prcb.params0[2] = weight2 * normalization;
-		prcb.params0[3] = weight3 * normalization;
-		prcb.params1[0] = weight4 * normalization;
-		prcb.params1[1] = effects.blur;
-		prcb.params1[2] = effects.mipLevel;
+		prcb.xPPParams0.x = weight0 * normalization;
+		prcb.xPPParams0.y = weight1 * normalization;
+		prcb.xPPParams0.z = weight2 * normalization;
+		prcb.xPPParams0.w = weight3 * normalization;
+		prcb.xPPParams1.x = weight4 * normalization;
+		prcb.xPPParams1.y = effects.blur;
+		prcb.xPPParams1.z = effects.mipLevel;
 
 		device->UpdateBuffer(&processCb, &prcb, threadID);
 
