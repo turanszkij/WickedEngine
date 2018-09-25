@@ -33,7 +33,7 @@ namespace wiInitializer
 		wiWidget::LoadShaders();
 		wiGPUSortLib::LoadShaders();
 
-		wiPhysics::Initialize();
+		wiPhysicsEngine::Initialize();
 
 		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
 		{

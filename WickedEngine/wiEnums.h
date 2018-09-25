@@ -51,7 +51,6 @@ enum STENCILREF
 // constant buffers
 enum CBTYPES
 {
-	CBTYPE_WORLD,
 	CBTYPE_FRAME,
 	CBTYPE_CAMERA,
 	CBTYPE_MISC,

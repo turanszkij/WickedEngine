@@ -6,7 +6,6 @@
 
 // Persistent buffers:
 // These are bound once and are alive forever
-#define CBSLOT_RENDERER_WORLD					0
 #define CBSLOT_RENDERER_FRAME					1
 #define CBSLOT_RENDERER_CAMERA					2
 #define CBSLOT_RENDERER_MISC					3

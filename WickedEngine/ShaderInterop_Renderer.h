@@ -4,54 +4,51 @@
 
 // ---------- Persistent: -----------------
 
-CBUFFER(WorldCB, CBSLOT_RENDERER_WORLD)
-{
-	float2		g_xWorld_ScreenWidthHeight;
-	float2		g_xWorld_ScreenWidthHeight_Inverse;
-
-	float2		g_xWorld_InternalResolution;
-	float2		g_xWorld_InternalResolution_Inverse;
-
-	float		g_xWorld_Gamma;
-	float3		g_xWorld_SunColor;
-
-	float3		g_xWorld_SunDirection; float pad0_WorldCB;
-
-	float3		g_xWorld_Horizon; float pad1_WorldCB;
-
-	float3		g_xWorld_Zenith;
-	float		g_xWorld_CloudScale;
-
-	float3		g_xWorld_Ambient;
-	float		g_xWorld_Cloudiness;
-
-	float3		g_xWorld_Fog;					// Fog Start,End,Height
-	float		g_xWorld_SpecularAA;
-
-	float		g_xWorld_VoxelRadianceDataSize;				// voxel half-extent in world space units
-	float		g_xWorld_VoxelRadianceDataSize_Inverse;		// 1.0 / voxel-half extent
-	uint		g_xWorld_VoxelRadianceDataRes;				// voxel grid resolution
-	float		g_xWorld_VoxelRadianceDataRes_Inverse;		// 1.0 / voxel grid resolution
-
-	uint		g_xWorld_VoxelRadianceDataMIPs;				// voxel grid mipmap count
-	uint		g_xWorld_VoxelRadianceNumCones;				// number of diffuse cones to trace
-	float		g_xWorld_VoxelRadianceNumCones_Inverse;		// 1.0 / number of diffuse cones to trace
-	float		g_xWorld_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
-
-	uint		g_xWorld_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
-	float3		g_xWorld_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
-
-	uint		g_xWorld_AdvancedRefractions;
-	uint3		g_xWorld_EntityCullingTileCount;
-
-	uint		g_xWorld_TransparentShadowsEnabled;
-	int			g_xWorld_GlobalEnvProbeIndex;
-	uint		g_xWorld_EnvProbeMipCount;
-	float		g_xWorld_EnvProbeMipCount_Inverse;
-};
-
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
+	float2		g_xFrame_ScreenWidthHeight;
+	float2		g_xFrame_ScreenWidthHeight_Inverse;
+
+	float2		g_xFrame_InternalResolution;
+	float2		g_xFrame_InternalResolution_Inverse;
+
+	float		g_xFrame_Gamma;
+	float3		g_xFrame_SunColor;
+
+	float3		g_xFrame_SunDirection; float pad0_WorldCB;
+
+	float3		g_xFrame_Horizon; float pad1_WorldCB;
+
+	float3		g_xFrame_Zenith;
+	float		g_xFrame_CloudScale;
+
+	float3		g_xFrame_Ambient;
+	float		g_xFrame_Cloudiness;
+
+	float3		g_xFrame_Fog;								// Fog Start,End,Height
+	float		g_xFrame_SpecularAA;
+
+	float		g_xFrame_VoxelRadianceDataSize;				// voxel half-extent in world space units
+	float		g_xFrame_VoxelRadianceDataSize_Inverse;		// 1.0 / voxel-half extent
+	uint		g_xFrame_VoxelRadianceDataRes;				// voxel grid resolution
+	float		g_xFrame_VoxelRadianceDataRes_Inverse;		// 1.0 / voxel grid resolution
+
+	uint		g_xFrame_VoxelRadianceDataMIPs;				// voxel grid mipmap count
+	uint		g_xFrame_VoxelRadianceNumCones;				// number of diffuse cones to trace
+	float		g_xFrame_VoxelRadianceNumCones_Inverse;		// 1.0 / number of diffuse cones to trace
+	float		g_xFrame_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
+
+	uint		g_xFrame_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
+	float3		g_xFrame_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
+
+	uint		g_xFrame_AdvancedRefractions;
+	uint3		g_xFrame_EntityCullingTileCount;
+
+	uint		g_xFrame_TransparentShadowsEnabled;
+	int			g_xFrame_GlobalEnvProbeIndex;
+	uint		g_xFrame_EnvProbeMipCount;
+	float		g_xFrame_EnvProbeMipCount_Inverse;
+
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
 	float		g_xFrame_DeltaTime;
@@ -113,6 +110,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_WorldBoundsExtents;			float pad2_frameCB;		// world enclosing AABB abs(max - min)
 	float3		g_xFrame_WorldBoundsExtents_Inverse;	float pad3_frameCB;		// world enclosing AABB 1.0f / abs(max - min)
 };
+
 // The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 {
@@ -121,6 +119,21 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_Proj;
 	float3		g_xCamera_CamPos;				float xPadding0_Camera_CommonCB;
 };
+
+CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
+{
+	float4		g_xMat_baseColor;
+	float4		g_xMat_texMulAdd;
+	float		g_xMat_roughness;
+	float		g_xMat_reflectance;
+	float		g_xMat_metalness;
+	float		g_xMat_emissive;
+	float		g_xMat_refractionIndex;
+	float		g_xMat_subsurfaceScattering;
+	float		g_xMat_normalMapStrength;
+	float		g_xMat_parallaxOcclusionMapping;
+};
+
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {
 	float4x4	g_xTransform;

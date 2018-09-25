@@ -2,7 +2,7 @@
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
 
-namespace wiPhysics
+namespace wiPhysicsEngine
 {
 	void Initialize();
 	void CleanUp();

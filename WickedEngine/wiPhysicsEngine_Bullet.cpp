@@ -19,7 +19,7 @@ using namespace std;
 using namespace wiECS;
 using namespace wiSceneSystem;
 
-namespace wiPhysics
+namespace wiPhysicsEngine
 {
 	btVector3 gravity(0, -110, 0);
 	int softbodyIterationCount = 5;
@@ -85,35 +85,24 @@ namespace wiPhysics
 			int id = it->second;
 			lookup.erase(it);
 
-			btCollisionObject*	obj = dynamicsWorld->getCollisionObjectArray()[id];
-			btRigidBody*		body = btRigidBody::upcast(obj);
+			btCollisionObject* collisionobject = dynamicsWorld->getCollisionObjectArray()[id];
 
-			if (body && body->getMotionState())
+			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
+			if (rigidbody != nullptr)
 			{
-				delete body->getMotionState();
-			}
-			while (dynamicsWorld->getNumConstraints())
-			{
-				btTypedConstraint*	pc = dynamicsWorld->getConstraint(0);
-				dynamicsWorld->removeConstraint(pc);
-				delete pc;
-			}
-
-			btSoftBody* softBody = btSoftBody::upcast(obj);
-			if (softBody)
-			{
-				((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softBody);
+				dynamicsWorld->removeRigidBody(rigidbody);
 			}
 			else
 			{
-				btRigidBody* body = btRigidBody::upcast(obj);
-				if (body)
-					dynamicsWorld->removeRigidBody(body);
-				else
-					dynamicsWorld->removeCollisionObject(obj);
+				btSoftBody* softbody = btSoftBody::upcast(collisionobject);
+
+				if (softbody != nullptr)
+				{
+					((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softbody);
+				}
 			}
 
-			delete obj;
+			dynamicsWorld->removeCollisionObject(collisionobject);
 		}
 	}
 	int AddRigidBody(Entity entity, wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh, const wiSceneSystem::TransformComponent& transform)
@@ -187,7 +176,7 @@ namespace wiPhysics
 
 		if (shape != nullptr)
 		{
-			shape->setMargin(btScalar(0.05));
+			shape->setMargin(btScalar(0.01));
 
 			btScalar mass(physicscomponent.mass);
 

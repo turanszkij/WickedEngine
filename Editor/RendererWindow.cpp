@@ -410,6 +410,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
 	partitionBoxesCheckBox->SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
+	partitionBoxesCheckBox->SetEnabled(false); // SP tree is not implemented at the moment anymore
 	rendererWindow->AddWidget(partitionBoxesCheckBox);
 
 	boneLinesCheckBox = new wiCheckBox("Bone line visualizer: ");

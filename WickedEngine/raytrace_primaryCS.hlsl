@@ -227,7 +227,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
 
 		// Compute screen coordinates:
-		float2 uv = float2((coords2D + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+		float2 uv = float2((coords2D + xTracePixelOffset) * g_xFrame_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
 
 		float seed = xTraceRandomSeed;
 

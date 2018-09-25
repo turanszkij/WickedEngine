@@ -77,7 +77,6 @@ namespace wiRenderer
 
 
 	void BindPersistentState(GRAPHICSTHREAD threadID);
-	void UpdateWorldCB(GRAPHICSTHREAD threadID);
 	void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	void UpdateCameraCB(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);

@@ -1128,9 +1128,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneSystem_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
@@ -1140,8 +1137,11 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiPhysicsEngine.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h">
       <Filter>ENGINE\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1928,11 +1928,11 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_Serializers.cpp">
       <Filter>ENGINE\System</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiSceneSystem_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiPhysicsEngine_Bullet.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp">
       <Filter>ENGINE\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

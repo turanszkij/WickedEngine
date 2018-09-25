@@ -5,7 +5,7 @@ RWSTRUCTUREDBUFFER(output, VoxelType, 0);
 
 void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D, nointerpolation float3 instanceColor : COLOR)
 {
-	float3 diff = (P - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceDataRes_Inverse * g_xWorld_VoxelRadianceDataSize_Inverse;
+	float3 diff = (P - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataRes_Inverse * g_xFrame_VoxelRadianceDataSize_Inverse;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 	[branch]
@@ -128,8 +128,8 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		uint normal_encoded = EncodeNormal(N);
 
 		// output:
-		uint3 writecoord = floor(uvw * g_xWorld_VoxelRadianceDataRes);
-		uint id = flatten3D(writecoord, g_xWorld_VoxelRadianceDataRes);
+		uint3 writecoord = floor(uvw * g_xFrame_VoxelRadianceDataRes);
+		uint id = flatten3D(writecoord, g_xFrame_VoxelRadianceDataRes);
 		InterlockedMax(output[id].colorMask, color_encoded);
 		InterlockedMax(output[id].normalMask, normal_encoded);
 	}

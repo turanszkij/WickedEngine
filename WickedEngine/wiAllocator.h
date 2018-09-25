@@ -35,6 +35,12 @@ namespace wiAllocators
 			return nullptr;
 		}
 
+		inline void free(size_t size)
+		{
+			assert(offset >= size);
+			offset -= size;
+		}
+
 		inline void reset()
 		{
 			offset = 0;

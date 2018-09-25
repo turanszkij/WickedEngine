@@ -621,12 +621,12 @@ void wiImage::Draw(Texture2D* texture, const wiImageEffects& effects,GRAPHICSTHR
 		if(effects.blurDir==0)
 		{
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_H], threadID);
-			prcb.xPPParams1.z = 1.0f / wiRenderer::GetInternalResolution().x;
+			prcb.xPPParams1.w = 1.0f / wiRenderer::GetInternalResolution().x;
 		}
 		else
 		{
 			device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_V], threadID);
-			prcb.xPPParams1.z = 1.0f / wiRenderer::GetInternalResolution().y;
+			prcb.xPPParams1.w = 1.0f / wiRenderer::GetInternalResolution().y;
 		}
 
 		static float weight0 = 1.0f;

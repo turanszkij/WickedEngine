@@ -56,19 +56,19 @@ static const float	 SQRT2 = 1.41421356237309504880;
 #define ALPHATEST(x)	clip((x) - (1.0f - g_xAlphaRef));
 #endif
 
-#define DEGAMMA(x)		pow(abs(x),g_xWorld_Gamma)
-#define GAMMA(x)		pow(abs(x),1.0/g_xWorld_Gamma)
+#define DEGAMMA(x)		pow(abs(x),g_xFrame_Gamma)
+#define GAMMA(x)		pow(abs(x),1.0/g_xFrame_Gamma)
 
-inline float3 GetSunColor() { return g_xWorld_SunColor; }
-inline float3 GetSunDirection() { return g_xWorld_SunDirection; }
-inline float3 GetHorizonColor() { return g_xWorld_Horizon.rgb; }
-inline float3 GetZenithColor() { return g_xWorld_Zenith.rgb; }
-inline float3 GetAmbientColor() { return g_xWorld_Ambient.rgb; }
+inline float3 GetSunColor() { return g_xFrame_SunColor; }
+inline float3 GetSunDirection() { return g_xFrame_SunDirection; }
+inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
+inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
+inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }
 inline float3 GetAmbient(in float3 N) { return lerp(GetHorizonColor(), GetZenithColor(), saturate(N.y * 0.5f + 0.5f)) + GetAmbientColor(); }
-inline float2 GetScreenResolution() { return g_xWorld_ScreenWidthHeight; }
-inline float GetScreenWidth() { return g_xWorld_ScreenWidthHeight.x; }
-inline float GetScreenHeight() { return g_xWorld_ScreenWidthHeight.y; }
-inline float2 GetInternalResolution() { return g_xWorld_InternalResolution; }
+inline float2 GetScreenResolution() { return g_xFrame_ScreenWidthHeight; }
+inline float GetScreenWidth() { return g_xFrame_ScreenWidthHeight.x; }
+inline float GetScreenHeight() { return g_xFrame_ScreenWidthHeight.y; }
+inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline float GetEmissive(float emissive) { return emissive * 10.0f; }
 inline uint2 GetTemporalAASampleRotation() { return float2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }

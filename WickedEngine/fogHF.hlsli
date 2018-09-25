@@ -4,7 +4,7 @@
 
 inline float GetFog(float dist)
 {
-	return saturate((dist - g_xWorld_Fog.x) / (g_xWorld_Fog.y - g_xWorld_Fog.x));
+	return saturate((dist - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
 }
 
 #endif // _FOGHF_

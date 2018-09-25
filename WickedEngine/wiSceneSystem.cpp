@@ -814,7 +814,7 @@ namespace wiSceneSystem
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
 
-		wiPhysics::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
+		wiPhysicsEngine::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
 
 		RunTransformUpdateSystem(transforms);
 
@@ -1454,7 +1454,6 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < armatures.GetCount(); ++i)
 		{
 			ArmatureComponent& armature = armatures[i];
-			Entity entity = armatures.GetEntity(i);
 
 			if (armature.skinningMatrices.size() != armature.boneCollection.size())
 			{
@@ -1518,7 +1517,6 @@ namespace wiSceneSystem
 		for (size_t i = 0; i < objects.GetCount(); ++i)
 		{
 			ObjectComponent& object = objects[i];
-			Entity entity = objects.GetEntity(i);
 			AABB& aabb = aabb_objects[i];
 
 			aabb = AABB();
@@ -1528,6 +1526,7 @@ namespace wiSceneSystem
 
 			if (object.meshID != INVALID_ENTITY)
 			{
+				Entity entity = objects.GetEntity(i);
 				const TransformComponent* transform = transforms.GetComponent(entity);
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 

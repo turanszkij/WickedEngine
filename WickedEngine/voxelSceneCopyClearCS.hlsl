@@ -11,7 +11,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	const float4 color = DecodeColor(voxel.colorMask);
 
-	const uint3 writecoord = unflatten3D(DTid.x, g_xWorld_VoxelRadianceDataRes);
+	const uint3 writecoord = unflatten3D(DTid.x, g_xFrame_VoxelRadianceDataRes);
 
 	[branch]
 	if (color.a > 0)

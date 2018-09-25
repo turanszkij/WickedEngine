@@ -89,7 +89,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			if (pos2D.x > -1 && pos2D.x < 1 && pos2D.y > -1 && pos2D.y < 1)
 			{
 				float2 uv = pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
-				uint2 pixel = uv * g_xWorld_InternalResolution;
+				uint2 pixel = uv * g_xFrame_InternalResolution;
 
 				float depth0 = texture_depth[pixel + uint2(0, 0)];
 				float surfaceLinearDepth = getLinearDepth(depth0);

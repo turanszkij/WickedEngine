@@ -62,11 +62,11 @@ GPUBuffer			*constantBuffers[CBTYPE_LAST] = {};
 GPUBuffer			*resourceBuffers[RBTYPE_LAST] = {};
 Texture				*textures[TEXTYPE_LAST] = {};
 Sampler				*customsamplers[SSTYPE_LAST] = {};
-GPURingBuffer		*dynamicVertexBufferPool = nullptr;
 
 string SHADERPATH = "shaders/";
 
 LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
+GPURingBuffer	dynamicVertexBufferPools[GRAPHICSTHREAD_COUNT] = {};
 
 float GAMMA = 2.2f;
 int SHADOWRES_2D = 1024;
@@ -154,7 +154,7 @@ GraphicsDevice* GetDevice()
 	return graphicsDevice;
 }
 
-
+// Direct reference to a renderable instance:
 struct RenderBatch
 {
 	uint32_t hash;
@@ -171,11 +171,11 @@ struct RenderBatch
 		instance = (uint32_t)instanceIndex;
 	}
 
-	inline size_t GetMeshIndex() const
+	inline uint32_t GetMeshIndex() const
 	{
-		return (size_t)((hash >> 8) & 0x00FFFFFF);
+		return (hash >> 8) & 0x00FFFFFF;
 	}
-	inline size_t GetInstanceIndex() const
+	inline uint32_t GetInstanceIndex() const
 	{
 		return instance;
 	}
@@ -184,10 +184,12 @@ struct RenderBatch
 		return (float)(hash & 0xFF);
 	}
 };
+
+// This is just a utility that points to a linear array of render batches:
 struct RenderQueue
 {
 	RenderBatch* batchArray = nullptr;
-	size_t batchCount = 0;
+	uint32_t batchCount = 0;
 
 	enum RenderQueueSortType
 	{
@@ -232,13 +234,15 @@ struct RenderQueue
 		}
 	}
 };
+
+// This is a storage for component indices inside the camera frustum. These can directly index the corresponding ComponentManagers:
 struct FrameCulling
 {
 	Frustum frustum;
-	vector<Entity> culledObjects;
-	vector<Entity> culledLights;
-	vector<Entity> culledDecals;
-	vector<Entity> culledEnvProbes;
+	vector<uint32_t> culledObjects;
+	vector<uint32_t> culledLights;
+	vector<uint32_t> culledDecals;
+	vector<uint32_t> culledEnvProbes;
 
 	void Clear()
 	{
@@ -316,33 +320,6 @@ GFX_STRUCT InstancePrev
 	}
 
 	ALIGN_16
-};
-CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
-{
-	XMFLOAT4 baseColor; // + alpha (.w)
-	XMFLOAT4 texMulAdd;
-	float roughness;
-	float reflectance;
-	float metalness;
-	float emissive;
-	float refractionIndex;
-	float subsurfaceScattering;
-	float normalMapStrength;
-	float parallaxOcclusionMapping;
-
-	void Create(const MaterialComponent& mat)
-	{
-		baseColor = mat.baseColor;
-		texMulAdd = mat.texMulAdd;
-		roughness = mat.roughness;
-		reflectance = mat.reflectance;
-		metalness = mat.metalness;
-		emissive = mat.emissive;
-		refractionIndex = mat.refractionIndex;
-		subsurfaceScattering = mat.subsurfaceScattering;
-		normalMapStrength = (mat.normalMap == nullptr ? 0 : mat.normalMapStrength);
-		parallaxOcclusionMapping = mat.parallaxOcclusionMapping;
-	}
 };
 
 GPUBuffer impostorMaterialCB;
@@ -600,8 +577,6 @@ void CleanUp()
 	{
 		SAFE_DELETE(customsamplers[i]);
 	}
-
-	SAFE_DELETE(dynamicVertexBufferPool);
 
 	SAFE_DELETE(graphicsDevice);
 }
@@ -1198,7 +1173,7 @@ ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_C
 ComputePSO* CPSO[CSTYPE_LAST] = {};
 
 void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation = false, bool occlusionCulling = false)
+	bool tessellation = false)
 {
 	// Intensive section, refactor and optimize!
 
@@ -1232,162 +1207,31 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 			shaderType == SHADERTYPE_DEPTHONLY ||
 			shaderType == SHADERTYPE_VOXELIZE;
 
-		GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
-
-		//// Render impostors:
-		//if (impostorRequest != nullptr)
-		//{
-		//	bool impostorGraphicsStateComplete = false;
-
-		//	for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
-		//	{
-		//		const RenderBatch& batch = renderQueue.batchArray[batchID];
-
-		//		const size_t meshIndex = batch.GetMeshIndex();
-		//		const MeshComponent& mesh = scene.meshes[meshIndex];
-		//		if (!mesh.IsRenderable() || !mesh.HasImpostor())
-		//		{
-		//			continue;
-		//		}
-
-		//		//const auto& visibleInstances = iter->second;
-
-		//		UINT instancesOffset;
-		//		size_t alloc_size = /*visibleInstances.size()*/ 1;
-		//		alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-		//		void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
-
-		//		int k = 0;
-		//		for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-		//		{
-		//			size_t instanceIndex = batch.GetInstanceIndex();
-		//			const ObjectComponent& instance = scene.objects[instanceIndex];
-		//			if (occlusionCulling && instance.IsOccluded())
-		//				continue;
-
-		//			const AABB& aabb = scene.aabb_objects[instanceIndex];
-
-		//			const float impostorThreshold = aabb.getRadius();
-		//			float dist = wiMath::Distance(eye, aabb.getCenter());
-		//			float dither = instance.GetTransparency();
-		//			dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
-		//			if (dither > 1.0f - FLT_EPSILON)
-		//				continue;
-
-		//			XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
-
-		//			Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-		//			const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
-
-		//			XMFLOAT4X4 tempMat;
-		//			XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
-
-		//			if (advancedVBRequest)
-		//			{
-		//				((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
-
-		//				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-		//				XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
-		//				((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-		//			}
-		//			else
-		//			{
-		//				((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
-		//			}
-
-		//			++k;
-		//		}
-
-		//		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-		//		if (k < 1)
-		//			continue;
-
-		//		if (!advancedVBRequest || IsWireRender())
-		//		{
-		//			GPUBuffer* vbs[] = {
-		//				&impostorVB_POS,
-		//				&impostorVB_TEX,
-		//				dynamicVertexBufferPool
-		//			};
-		//			UINT strides[] = {
-		//				sizeof(MeshComponent::Vertex_POS),
-		//				sizeof(MeshComponent::Vertex_TEX),
-		//				sizeof(Instance)
-		//			};
-		//			UINT offsets[] = {
-		//				0,
-		//				0,
-		//				instancesOffset
-		//			};
-		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//		}
-		//		else
-		//		{
-		//			GPUBuffer* vbs[] = {
-		//				&impostorVB_POS,
-		//				&impostorVB_TEX,
-		//				&impostorVB_POS,
-		//				dynamicVertexBufferPool
-		//			};
-		//			UINT strides[] = {
-		//				sizeof(MeshComponent::Vertex_POS),
-		//				sizeof(MeshComponent::Vertex_TEX),
-		//				sizeof(MeshComponent::Vertex_POS),
-		//				sizeof(InstBuf)
-		//			};
-		//			UINT offsets[] = {
-		//				0,
-		//				0,
-		//				0,
-		//				instancesOffset
-		//			};
-		//			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//		}
-
-		//		GPUResource* res[] = {
-		//			mesh.impostorTarget.GetTexture(0),
-		//			mesh.impostorTarget.GetTexture(1),
-		//			mesh.impostorTarget.GetTexture(2)
-		//		};
-		//		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-		//		if (!impostorGraphicsStateComplete)
-		//		{
-		//			device->BindGraphicsPSO(impostorRequest, threadID);
-		//			device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
-		//			SetAlphaRef(0.75f, threadID);
-		//			impostorGraphicsStateComplete = true;
-		//		}
-
-		//		device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
-
-		//	}
-		//}
-
 
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
 		UINT instancesOffset;
 		const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
-		void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+		void* instances = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], alloc_size, instancesOffset, threadID);
 
+		// Purpose of InstancedBatch:
+		//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
+		//	and the InstancedBatchArray contains this information. The array size will be the unique mesh count here.
 		struct InstancedBatch
 		{
-			size_t meshIndex;
+			uint32_t meshIndex;
 			int instanceCount;
-			UINT dataOffset;
+			uint32_t dataOffset;
 		};
 		InstancedBatch* instancedBatchArray = nullptr;
 		int instancedBatchCount = 0;
 
-		int k = 0; // global instance counter
 		size_t prevMeshIndex = ~0;
-		for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
+		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
 		{
 			const RenderBatch& batch = renderQueue.batchArray[batchID];
-			const size_t meshIndex = batch.GetMeshIndex();
-			const size_t instanceIndex = batch.GetInstanceIndex();
+			const uint32_t meshIndex = batch.GetMeshIndex();
+			const uint32_t instanceIndex = batch.GetInstanceIndex();
 
 			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
 			if (meshIndex != prevMeshIndex)
@@ -1397,7 +1241,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				InstancedBatch* instancedBatch = (InstancedBatch*)frameAllocators[threadID].allocate(sizeof(InstancedBatch));
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
-				instancedBatch->dataOffset = instancesOffset + k * instanceDataSize;
+				instancedBatch->dataOffset = instancesOffset + batchID * instanceDataSize;
 				if (instancedBatchArray == nullptr)
 				{
 					instancedBatchArray = instancedBatch;
@@ -1405,8 +1249,6 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 			}
 
 			const ObjectComponent& instance = scene.objects[instanceIndex];
-			if (occlusionCulling && instance.IsOccluded())
-				continue;
 
 			float dither = instance.GetTransparency();
 
@@ -1416,27 +1258,26 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 			// Write into actual GPU-buffer:
 			if (advancedVBRequest)
 			{
-				((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
+				((volatile InstBuf*)instances)[batchID].instance.Create(transform.world, instance.color);
 
 				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-				((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
+				((volatile InstBuf*)instances)[batchID].instancePrev.Create(prev_transform.world_prev);
 			}
 			else
 			{
-				((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
+				((volatile Instance*)instances)[batchID].Create(transform.world, instance.color, dither);
 			}
 
-			k++; // next global instance
 			instancedBatchArray[instancedBatchCount - 1].instanceCount++; // next instance in current InstancedBatch
 		}
-		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID); // closes instance GPU-buffer, ready to draw!
+		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID); // closes instance GPU-buffer, ready to draw!
 
 
 		// Render instanced batches:
 		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-		for (int instancedBatchIdx = 0; instancedBatchIdx < instancedBatchCount; ++instancedBatchIdx)
+		for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
 		{
-			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchIdx];
+			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
 			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
 
 
@@ -1473,7 +1314,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				GraphicsPSO* pso = GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
+				GraphicsPSO* pso = GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
 				if (pso == nullptr)
 				{
 					continue;
@@ -1549,7 +1390,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 					{
 						GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							dynamicVertexBufferPool
+							&dynamicVertexBufferPools[threadID]
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
@@ -1567,7 +1408,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 						GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
-							dynamicVertexBufferPool
+							&dynamicVertexBufferPools[threadID]
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
@@ -1588,7 +1429,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
 							mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
-							dynamicVertexBufferPool
+							&dynamicVertexBufferPools[threadID]
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
@@ -1632,266 +1473,174 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 			}
 		}
 
-
-
-		//// Render meshes:
-		//for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
-		//{
-		//	const RenderBatch& batch = renderQueue.batchArray[batchID];
-
-		//	const size_t meshIndex = batch.GetMeshIndex();
-		//	const MeshComponent& mesh = scene.meshes[meshIndex];
-
-		//	const float tessF = mesh.GetTessellationFactor();
-		//	const bool tessellatorRequested = tessF > 0 && tessellation;
-
-		//	if (tessellatorRequested)
-		//	{
-		//		TessellationCB tessCB;
-		//		tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-		//		device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
-		//		device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
-		//	}
-
-		//	bool forceAlphaTestForDithering = false;
-
-		//	UINT instancesOffset;
-		//	size_t alloc_size = /*visibleInstances.size()*/1;
-		//	alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-		//	void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
-
-		//	int k = 0;
-		//	for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-		//	{
-		//		size_t instanceIndex = batch.GetInstanceIndex();
-		//		const ObjectComponent& instance = scene.objects[instanceIndex];
-		//		if (occlusionCulling && instance.IsOccluded())
-		//			continue;
-
-		//		float dither = instance.GetTransparency();
-		//		if (impostorRequest != nullptr)
-		//		{
-		//			// fade out to impostor...
-		//			const AABB& aabb = scene.aabb_objects[instanceIndex];
-		//			const float impostorThreshold = aabb.getRadius();
-		//			float dist = wiMath::Distance(eye, aabb.getCenter());
-		//			if (mesh.HasImpostor())
-		//				dither = wiMath::SmoothStep(dither, 1.0f, wiMath::Clamp((dist - impostorThreshold - mesh.impostorDistance) / impostorThreshold, 0, 1));
-		//		}
-		//		if (dither > 1.0f - FLT_EPSILON)
-		//			continue;
-
-		//		forceAlphaTestForDithering = forceAlphaTestForDithering || (dither > 0);
-
-		//		Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-		//		const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
-
-		//		if (advancedVBRequest || tessellatorRequested)
-		//		{
-		//			((volatile InstBuf*)instances)[k].instance.Create(transform.world, instance.color);
-
-		//			const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-		//			((volatile InstBuf*)instances)[k].instancePrev.Create(prev_transform.world_prev);
-		//		}
-		//		else
-		//		{
-		//			((volatile Instance*)instances)[k].Create(transform.world, instance.color, dither);
-		//		}
-
-		//		++k;
-
-		//	}
-
-		//	device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-		//	if (k < 1)
-		//		continue;
-
-		//	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
-
-		//	enum class BOUNDVERTEXBUFFERTYPE
-		//	{
-		//		NOTHING,
-		//		POSITION,
-		//		POSITION_TEXCOORD,
-		//		EVERYTHING,
-		//	};
-		//	BOUNDVERTEXBUFFERTYPE boundVBType_Prev = BOUNDVERTEXBUFFERTYPE::NOTHING;
-
-		//	for (const MeshComponent::MeshSubset& subset : mesh.subsets)
-		//	{
-		//		if (subset.indexCount == 0)
-		//		{
-		//			continue;
-		//		}
-		//		const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-		//		GraphicsPSO* pso = GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering) /*: material.customShader->passes[shaderType].pso*/;
-		//		if (pso == nullptr)
-		//		{
-		//			continue;
-		//		}
-
-		//		bool subsetRenderable = false;
-
-		//		if (renderTypeFlags & RENDERTYPE_OPAQUE)
-		//		{
-		//			subsetRenderable = subsetRenderable || (!material.IsTransparent() && !material.IsWater());
-		//		}
-		//		if (renderTypeFlags & RENDERTYPE_TRANSPARENT)
-		//		{
-		//			subsetRenderable = subsetRenderable || material.IsTransparent();
-		//		}
-		//		if (renderTypeFlags & RENDERTYPE_WATER)
-		//		{
-		//			subsetRenderable = subsetRenderable || material.IsWater();
-		//		}
-		//		if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
-		//		{
-		//			subsetRenderable = subsetRenderable && material.IsCastingShadow();
-		//		}
-
-		//		if (!subsetRenderable)
-		//		{
-		//			continue;
-		//		}
-
-		//		BOUNDVERTEXBUFFERTYPE boundVBType;
-		//		if (advancedVBRequest || tessellatorRequested)
-		//		{
-		//			boundVBType = BOUNDVERTEXBUFFERTYPE::EVERYTHING;
-		//		}
-		//		else
-		//		{
-		//			// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-		//			if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
-		//			{
-		//				if (shaderType == SHADERTYPE_SHADOW && material.IsTransparent())
-		//				{
-		//					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-		//				}
-		//				else
-		//				{
-		//					// bypass texcoord stream for non alphatested shadows and zprepass
-		//					boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION;
-		//				}
-		//			}
-		//			else
-		//			{
-		//				boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-		//			}
-		//		}
-
-		//		if (material.IsWater())
-		//		{
-		//			boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-		//		}
-
-		//		if (IsWireRender())
-		//		{
-		//			boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
-		//		}
-
-		//		// Only bind vertex buffers when the layout changes
-		//		if (boundVBType != boundVBType_Prev)
-		//		{
-		//			// Assemble the required vertex buffer:
-		//			switch (boundVBType)
-		//			{
-		//			case BOUNDVERTEXBUFFERTYPE::POSITION:
-		//			{
-		//				GPUBuffer* vbs[] = {
-		//					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-		//					dynamicVertexBufferPool
-		//				};
-		//				UINT strides[] = {
-		//					sizeof(MeshComponent::Vertex_POS),
-		//					sizeof(Instance)
-		//				};
-		//				UINT offsets[] = {
-		//					0,
-		//					instancesOffset
-		//				};
-		//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//			}
-		//			break;
-		//			case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
-		//			{
-		//				GPUBuffer* vbs[] = {
-		//					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-		//					mesh.vertexBuffer_TEX.get(),
-		//					dynamicVertexBufferPool
-		//				};
-		//				UINT strides[] = {
-		//					sizeof(MeshComponent::Vertex_POS),
-		//					sizeof(MeshComponent::Vertex_TEX),
-		//					sizeof(Instance)
-		//				};
-		//				UINT offsets[] = {
-		//					0,
-		//					0,
-		//					instancesOffset
-		//				};
-		//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//			}
-		//			break;
-		//			case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
-		//			{
-		//				GPUBuffer* vbs[] = {
-		//					mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-		//					mesh.vertexBuffer_TEX.get(),
-		//					mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
-		//					dynamicVertexBufferPool
-		//				};
-		//				UINT strides[] = {
-		//					sizeof(MeshComponent::Vertex_POS),
-		//					sizeof(MeshComponent::Vertex_TEX),
-		//					sizeof(MeshComponent::Vertex_POS),
-		//					sizeof(InstBuf)
-		//				};
-		//				UINT offsets[] = {
-		//					0,
-		//					0,
-		//					0,
-		//					instancesOffset
-		//				};
-		//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-		//			}
-		//			break;
-		//			default:
-		//				assert(0);
-		//				break;
-		//			}
-		//		}
-		//		boundVBType_Prev = boundVBType;
-
-		//		device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-
-		//		device->BindStencilRef(material.GetStencilRef(), threadID);
-
-		//		device->BindGraphicsPSO(pso, threadID);
-
-		//		GPUResource* res[] = {
-		//			material.GetBaseColorMap(),
-		//			material.GetNormalMap(),
-		//			material.GetSurfaceMap(),
-		//			material.GetDisplacementMap(),
-		//		};
-		//		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
-
-		//		SetAlphaRef(material.alphaRef, threadID);
-
-		//		device->DrawIndexedInstanced((int)subset.indexCount, k, subset.indexOffset, 0, 0, threadID);
-		//	}
-
-		//}
-
 		ResetAlphaRef(threadID);
+
+		frameAllocators[threadID].free(sizeof(InstancedBatch) * instancedBatchCount);
 
 		device->EventEnd(threadID);
 	}
 }
 
+void RenderImpostors(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID)
+{
+	//GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
+
+	//if (!renderQueue.empty() && impostorRequest != nullptr)
+	//{
+	//	GraphicsDevice* device = GetDevice();
+	//	Scene& scene = GetScene();
+
+	//	device->EventBegin("RenderImpostors", threadID);
+
+	//	const bool easyTextureBind =
+	//		shaderType == SHADERTYPE_TEXTURE ||
+	//		shaderType == SHADERTYPE_SHADOW ||
+	//		shaderType == SHADERTYPE_SHADOWCUBE ||
+	//		shaderType == SHADERTYPE_DEPTHONLY ||
+	//		shaderType == SHADERTYPE_VOXELIZE;
+
+
+	//	// Pre-allocate space for all the instances in GPU-buffer:
+	//	const UINT instanceDataSize = sizeof(Instance);
+	//	UINT instancesOffset;
+	//	const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
+	//	void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+	//	// Render impostors:
+	//	if (impostorRequest != nullptr)
+	//	{
+	//		bool impostorGraphicsStateComplete = false;
+
+	//		for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
+	//		{
+	//			const RenderBatch& batch = renderQueue.batchArray[batchID];
+
+	//			const size_t meshIndex = batch.GetMeshIndex();
+	//			const MeshComponent& mesh = scene.meshes[meshIndex];
+	//			if (!mesh.IsRenderable() || !mesh.HasImpostor())
+	//			{
+	//				continue;
+	//			}
+
+	//			//const auto& visibleInstances = iter->second;
+
+	//			UINT instancesOffset;
+	//			size_t alloc_size = /*visibleInstances.size()*/ 1;
+	//			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+	//			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+
+	//			int k = 0;
+	//			for (size_t instanceID = 0; instanceID < 1; ++instanceID)
+	//			{
+	//				size_t instanceIndex = batch.GetInstanceIndex();
+	//				const ObjectComponent& instance = scene.objects[instanceIndex];
+	//				if (occlusionCulling && instance.IsOccluded())
+	//					continue;
+
+	//				const AABB& aabb = scene.aabb_objects[instanceIndex];
+
+	//				const float impostorThreshold = aabb.getRadius();
+	//				float dist = wiMath::Distance(eye, aabb.getCenter());
+	//				float dither = instance.GetTransparency();
+	//				dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
+	//				if (dither > 1.0f - FLT_EPSILON)
+	//					continue;
+
+	//				XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
+
+	//				Entity objectEntity = scene.objects.GetEntity(instanceIndex);
+	//				const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+
+	//				XMFLOAT4X4 tempMat;
+	//				XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
+
+	//				if (advancedVBRequest)
+	//				{
+	//					((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
+
+	//					const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
+	//					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
+	//					((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
+	//				}
+	//				else
+	//				{
+	//					((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
+	//				}
+
+	//				++k;
+	//			}
+
+	//			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+
+	//			if (k < 1)
+	//				continue;
+
+	//			if (!advancedVBRequest || IsWireRender())
+	//			{
+	//				GPUBuffer* vbs[] = {
+	//					&impostorVB_POS,
+	//					&impostorVB_TEX,
+	//					dynamicVertexBufferPool
+	//				};
+	//				UINT strides[] = {
+	//					sizeof(MeshComponent::Vertex_POS),
+	//					sizeof(MeshComponent::Vertex_TEX),
+	//					sizeof(Instance)
+	//				};
+	//				UINT offsets[] = {
+	//					0,
+	//					0,
+	//					instancesOffset
+	//				};
+	//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	//			}
+	//			else
+	//			{
+	//				GPUBuffer* vbs[] = {
+	//					&impostorVB_POS,
+	//					&impostorVB_TEX,
+	//					&impostorVB_POS,
+	//					dynamicVertexBufferPool
+	//				};
+	//				UINT strides[] = {
+	//					sizeof(MeshComponent::Vertex_POS),
+	//					sizeof(MeshComponent::Vertex_TEX),
+	//					sizeof(MeshComponent::Vertex_POS),
+	//					sizeof(InstBuf)
+	//				};
+	//				UINT offsets[] = {
+	//					0,
+	//					0,
+	//					0,
+	//					instancesOffset
+	//				};
+	//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	//			}
+
+	//			GPUResource* res[] = {
+	//				mesh.impostorTarget.GetTexture(0),
+	//				mesh.impostorTarget.GetTexture(1),
+	//				mesh.impostorTarget.GetTexture(2)
+	//			};
+	//			device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
+
+	//			if (!impostorGraphicsStateComplete)
+	//			{
+	//				device->BindGraphicsPSO(impostorRequest, threadID);
+	//				device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
+	//				SetAlphaRef(0.75f, threadID);
+	//				impostorGraphicsStateComplete = true;
+	//			}
+
+	//			device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
+
+	//		}
+	//	}
+
+
+	//	device->EventEnd(threadID);
+	//}
+}
 
 
 void LoadShaders()
@@ -2890,14 +2639,16 @@ void LoadBuffers()
 	GPUBufferDesc bd;
 
 	// Ring buffer allows fast allocation of dynamic buffers for one frame:
-	dynamicVertexBufferPool = new GPURingBuffer;
-	bd.BindFlags = BIND_VERTEX_BUFFER;
-	bd.ByteWidth = 1024 * 1024 * 64;
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-	bd.MiscFlags = 0;
-	GetDevice()->CreateBuffer(&bd, nullptr, dynamicVertexBufferPool);
-	GetDevice()->SetName(dynamicVertexBufferPool, "DynamicVertexBufferPool");
+	for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
+	{
+		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.ByteWidth = 1024 * 1024 * 64;
+		bd.Usage = USAGE_DYNAMIC;
+		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+		bd.MiscFlags = 0;
+		GetDevice()->CreateBuffer(&bd, nullptr, &dynamicVertexBufferPools[threadID]);
+		GetDevice()->SetName(&dynamicVertexBufferPools[threadID], "DynamicVertexBufferPool");
+	}
 
 
 	for (int i = 0; i < CBTYPE_LAST; ++i)
@@ -2913,10 +2664,6 @@ void LoadBuffers()
 	// Per World Constant buffer will be updated occasionally, so it should reside in DEFAULT GPU memory!
 	bd.CPUAccessFlags = 0;
 	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(WorldCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_WORLD]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_WORLD], "PerWorldConstantBuffer");
-
 	bd.ByteWidth = sizeof(FrameCB);
 	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
 	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
@@ -3547,13 +3294,16 @@ void UpdatePerFrameData(float dt)
 
 				if (culling.frustum.CheckBox(aabb))
 				{
-					const ObjectComponent& object = scene.objects[i];
-					Entity entity = scene.objects.GetEntity(i);
+					culling.culledObjects.push_back((uint32_t)i);
 
-					culling.culledObjects.push_back(entity);
-					if (object.GetRenderTypes() & RENDERTYPE_WATER)
+					// Main camera can request reflection rendering:
+					if (camera == &GetCamera())
 					{
-						requestReflectionRendering = true;
+						const ObjectComponent& object = scene.objects[i];
+						if (object.GetRenderTypes() & RENDERTYPE_WATER)
+						{
+							requestReflectionRendering = true;
+						}
 					}
 				}
 			}
@@ -3568,8 +3318,7 @@ void UpdatePerFrameData(float dt)
 
 					if (culling.frustum.CheckBox(aabb))
 					{
-						Entity entity = scene.decals.GetEntity(i);
-						culling.culledDecals.push_back(entity);
+						culling.culledDecals.push_back((uint32_t)i);
 					}
 				}
 
@@ -3580,8 +3329,7 @@ void UpdatePerFrameData(float dt)
 
 					if (culling.frustum.CheckBox(aabb))
 					{
-						Entity entity = scene.probes.GetEntity(i);
-						culling.culledEnvProbes.push_back(entity);
+						culling.culledEnvProbes.push_back((uint32_t)i);
 					}
 				}
 
@@ -3592,17 +3340,16 @@ void UpdatePerFrameData(float dt)
 
 					if (culling.frustum.CheckBox(aabb))
 					{
-						Entity entity = scene.lights.GetEntity(i);
-						culling.culledLights.push_back(entity);
+						culling.culledLights.push_back((uint32_t)i);
 					}
 				}
 
 				int i = 0;
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
-				for (Entity entity : culling.culledLights)
+				for (uint32_t lightIndex : culling.culledLights)
 				{
-					LightComponent& light = *scene.lights.GetComponent(entity);
+					LightComponent& light = scene.lights[lightIndex];
 					light.entityArray_index = i;
 
 					// Link shadowmaps to lights till there are free slots
@@ -3717,7 +3464,16 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		{
 			material.SetClean();
 
-			materialGPUData.Create(material);
+			materialGPUData.g_xMat_baseColor = material.baseColor;
+			materialGPUData.g_xMat_texMulAdd = material.texMulAdd;
+			materialGPUData.g_xMat_roughness = material.roughness;
+			materialGPUData.g_xMat_reflectance = material.reflectance;
+			materialGPUData.g_xMat_metalness = material.metalness;
+			materialGPUData.g_xMat_emissive = material.emissive;
+			materialGPUData.g_xMat_refractionIndex = material.refractionIndex;
+			materialGPUData.g_xMat_subsurfaceScattering = material.subsurfaceScattering;
+			materialGPUData.g_xMat_normalMapStrength = (material.normalMap == nullptr ? 0 : material.normalMapStrength);
+			materialGPUData.g_xMat_parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
 			if (material.constantBuffer == nullptr)
 			{
@@ -3746,8 +3502,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// Fill Light Array with lights + envprobes + decals in the frustum:
 	{
-		const auto& culledLights = mainCameraCulling.culledLights;
-
 		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
 		static XMMATRIX* matrixArray = (XMMATRIX*)_mm_malloc(sizeof(XMMATRIX)*MATRIXARRAY_COUNT, 16);
 
@@ -3766,7 +3520,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_EnvProbes = 0;
 
 		entityArrayOffset_Lights = entityCounter;
-		for (Entity entity : culledLights)
+		for (uint32_t lightIndex : mainCameraCulling.culledLights)
 		{
 			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
 			{
@@ -3775,7 +3529,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				break;
 			}
 
-			const LightComponent& light = *scene.lights.GetComponent(entity);
+			const LightComponent& light = scene.lights[lightIndex];
 
 			const int shadowIndex = light.shadowMap_index;
 
@@ -3841,7 +3595,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
 
 		entityArrayOffset_EnvProbes = entityCounter;
-		for (Entity entity : mainCameraCulling.culledEnvProbes)
+		for (uint32_t probeIndex : mainCameraCulling.culledEnvProbes)
 		{
 			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
 			{
@@ -3856,7 +3610,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				break;
 			}
 
-			EnvironmentProbeComponent& probe = *scene.probes.GetComponent(entity);
+			EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 			if (probe.textureIndex < 0)
 			{
 				continue;
@@ -3877,7 +3631,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_EnvProbes = entityCounter - entityArrayOffset_EnvProbes;
 
 		entityArrayOffset_Decals = entityCounter;
-		for (Entity entity : mainCameraCulling.culledDecals)
+		for (uint32_t decalIndex : mainCameraCulling.culledDecals)
 		{
 			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
 			{
@@ -3891,7 +3645,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				matrixCounter--;
 				break;
 			}
-			const DecalComponent& decal = *scene.decals.GetComponent(entity);
+			const DecalComponent& decal = scene.decals[decalIndex];
 
 			entityArray[entityCounter].type = ENTITY_TYPE_DECAL;
 			entityArray[entityCounter].positionWS = decal.position;
@@ -3920,7 +3674,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 
 			const ForceFieldComponent& force = scene.forces[i];
-			Entity entity = scene.forces.GetEntity(i);
 
 			entityArray[entityCounter].type = force.type;
 			entityArray[entityCounter].positionWS = force.position;
@@ -3946,8 +3699,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
 
-
-	UpdateWorldCB(threadID); // only commits when parameters are changed
 	UpdateFrameCB(threadID);
 	BindPersistentState(threadID);
 
@@ -4138,9 +3889,9 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 		MiscCB cb;
 
-		for (Entity entity : culling.culledObjects)
+		for (uint32_t instanceIndex : culling.culledObjects)
 		{
-			ObjectComponent& object = *scene.objects.GetComponent(entity);
+			ObjectComponent& object = scene.objects[instanceIndex];
 			if (!object.IsRenderable())
 			{
 				continue;
@@ -4159,7 +3910,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			const AABB& aabb = *scene.aabb_objects.GetComponent(entity);
+			const AABB& aabb = scene.aabb_objects[instanceIndex];
 
 			if (aabb.intersects(GetCamera().Eye))
 			{
@@ -4205,9 +3956,9 @@ void OcclusionCulling_Read()
 
 		Scene& scene = GetScene();
 
-		for (Entity entity : culling.culledObjects)
+		for (uint32_t instanceIndex : culling.culledObjects)
 		{
-			ObjectComponent& object = *scene.objects.GetComponent(entity);
+			ObjectComponent& object = scene.objects[instanceIndex];
 			if (!object.IsRenderable())
 			{
 				continue;
@@ -4406,7 +4157,6 @@ void DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
 void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	const FrameCulling& culling = frameCullings[&camera];
-	const auto& culledLights = culling.culledLights;
 
 	Scene& scene = GetScene();
 
@@ -4423,9 +4173,9 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		GetDevice()->BindGraphicsPSO(PSO_deferredlight[type], threadID);
 
-		for (Entity entity : culledLights)
+		for (uint32_t lightIndex : culling.culledLights)
 		{
-			const LightComponent& light = *scene.lights.GetComponent(entity);
+			const LightComponent& light = scene.lights[lightIndex];
 			if (light.GetType() != type)
 				continue;
 
@@ -4482,125 +4232,128 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 }
 void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
-	Scene& scene = GetScene();
+	const FrameCulling& culling = frameCullings[&camera];
 
-	GetDevice()->EventBegin("Light Visualizer Render", threadID);
-
-	GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-	GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-
-	XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
-
-
-	for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+	if (!culling.culledLights.empty())
 	{
-		GetDevice()->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
+		Scene& scene = GetScene();
 
-		for (size_t i = 0; i < scene.lights.GetCount(); ++i) 
+		GetDevice()->EventBegin("Light Visualizer Render", threadID);
+
+		GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+
+		XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
+
+
+		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			LightComponent& light = scene.lights[i];
+			GetDevice()->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
 
-			if (light.GetType() == type && light.IsVisualizerEnabled()) 
+			for (uint32_t lightIndex : culling.culledLights)
 			{
+				LightComponent& light = scene.lights[lightIndex];
 
-				VolumeLightCB lcb;
-				lcb.lightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
-				lcb.lightEnerdis = XMFLOAT4(light.energy, light.range, light.fov, light.energy);
-
-				if (type == LightComponent::POINT) 
+				if (light.GetType() == type && light.IsVisualizerEnabled())
 				{
-					lcb.lightEnerdis.w = light.range*light.energy*0.01f; // scale
-					XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-						XMMatrixScaling(lcb.lightEnerdis.w, lcb.lightEnerdis.w, lcb.lightEnerdis.w)*
-						camrot*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
-					));
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+					VolumeLightCB lcb;
+					lcb.lightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
+					lcb.lightEnerdis = XMFLOAT4(light.energy, light.range, light.fov, light.energy);
 
-					GetDevice()->Draw(108, 0, threadID); // circle
-				}
-				else if(type == LightComponent::SPOT)
-				{
-					float coneS = (float)(light.fov / 0.7853981852531433);
-					lcb.lightEnerdis.w = light.range*light.energy*0.03f; // scale
-					XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-						XMMatrixScaling(coneS*lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS*lcb.lightEnerdis.w)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
-					));
+					if (type == LightComponent::POINT)
+					{
+						lcb.lightEnerdis.w = light.range*light.energy*0.01f; // scale
+						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
+							XMMatrixScaling(lcb.lightEnerdis.w, lcb.lightEnerdis.w, lcb.lightEnerdis.w)*
+							camrot*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
+						));
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-					GetDevice()->Draw(192, 0, threadID); // cone
-				}
-				else if (type == LightComponent::SPHERE)
-				{
-					XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-						XMMatrixScaling(light.radius, light.radius, light.radius)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera.GetViewProjection()
-					));
+						GetDevice()->Draw(108, 0, threadID); // circle
+					}
+					else if (type == LightComponent::SPOT)
+					{
+						float coneS = (float)(light.fov / 0.7853981852531433);
+						lcb.lightEnerdis.w = light.range*light.energy*0.03f; // scale
+						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
+							XMMatrixScaling(coneS*lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS*lcb.lightEnerdis.w)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
+						));
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-					GetDevice()->Draw(2880, 0, threadID); // uv-sphere
-				}
-				else if (type == LightComponent::DISC)
-				{
-					XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-						XMMatrixScaling(light.radius, light.radius, light.radius)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera.GetViewProjection()
-					));
+						GetDevice()->Draw(192, 0, threadID); // cone
+					}
+					else if (type == LightComponent::SPHERE)
+					{
+						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
+							XMMatrixScaling(light.radius, light.radius, light.radius)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
+							camera.GetViewProjection()
+						));
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-					GetDevice()->Draw(108, 0, threadID); // circle
-				}
-				else if (type == LightComponent::RECTANGLE)
-				{
-					XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-						XMMatrixScaling(light.width * 0.5f, light.height * 0.5f, 0.5f)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera.GetViewProjection()
-					));
+						GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+					}
+					else if (type == LightComponent::DISC)
+					{
+						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
+							XMMatrixScaling(light.radius, light.radius, light.radius)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
+							camera.GetViewProjection()
+						));
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-					GetDevice()->Draw(6, 0, threadID); // quad
-				}
-				else if (type == LightComponent::TUBE)
-				{
-					XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-						XMMatrixScaling(max(light.width * 0.5f, light.radius), light.radius, light.radius)*
-						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
-						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
-						camera.GetViewProjection()
-					));
+						GetDevice()->Draw(108, 0, threadID); // circle
+					}
+					else if (type == LightComponent::RECTANGLE)
+					{
+						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
+							XMMatrixScaling(light.width * 0.5f, light.height * 0.5f, 0.5f)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
+							camera.GetViewProjection()
+						));
 
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-					GetDevice()->Draw(384, 0, threadID); // cylinder
+						GetDevice()->Draw(6, 0, threadID); // quad
+					}
+					else if (type == LightComponent::TUBE)
+					{
+						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
+							XMMatrixScaling(max(light.width * 0.5f, light.radius), light.radius, light.radius)*
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
+							camera.GetViewProjection()
+						));
+
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+
+						GetDevice()->Draw(384, 0, threadID); // cylinder
+					}
 				}
 			}
+
 		}
 
+		GetDevice()->EventEnd(threadID);
+
 	}
-
-	GetDevice()->EventEnd(threadID);
-
-
 }
 void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	const FrameCulling& culling = frameCullings[&camera];
-	const auto& culledLights = culling.culledLights;
 
-	if (!culledLights.empty())
+	if (!culling.culledLights.empty())
 	{
 		GetDevice()->EventBegin("Volumetric Light Render", threadID);
 
@@ -4617,9 +4370,9 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			GetDevice()->BindGraphicsPSO(pso, threadID);
 
-			for (Entity entity : culledLights)
+			for (uint32_t lightIndex : culling.culledLights)
 			{
-				const LightComponent& light = *scene.lights.GetComponent(entity);
+				const LightComponent& light = scene.lights[lightIndex];
 				if (light.GetType() == type && light.IsVolumetricsEnabled())
 				{
 
@@ -4682,13 +4435,12 @@ void DrawLensFlares(GRAPHICSTHREAD threadID)
 	const CameraComponent& camera = GetCamera();
 
 	const FrameCulling& culling = frameCullings[&camera];
-	const auto& culledLights = culling.culledLights;
 
 	Scene& scene = GetScene();
 
-	for(Entity entity : culledLights)
+	for(uint32_t lightIndex : culling.culledLights)
 	{
-		const LightComponent& light = *scene.lights.GetComponent(entity);
+		const LightComponent& light = scene.lights[lightIndex];
 
 		if(!light.lensFlareRimTextures.empty())
 		{
@@ -4800,51 +4552,222 @@ void SetShadowPropsCube(int resolution, int count)
 }
 void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 {
-	if (wireRender)
+	if (IsWireRender())
 		return;
 
-	// We need to render shadows even if the gamespeed is 0 for these reasons:
-	// 1.) Shadow cascades is updated every time according to camera
-	// 2.) We can move any other light, or object, too
+	const FrameCulling& culling = frameCullings[&GetCamera()];
 
-	//if (GetGameSpeed() > 0) 
+	if (!culling.culledLights.empty())
 	{
 		GetDevice()->EventBegin("ShadowMap Render", threadID);
 		wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 		const bool all_layers = layerMask == 0xFFFFFFFF;
 
-		const FrameCulling& culling = frameCullings[&GetCamera()];
-		const auto& culledLights = culling.culledLights;
 
 		ViewPort vp;
 
 		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
 		const float transparentShadowClearColor[] = { 1,1,1,0 };
 
-		if (!culledLights.empty())
+
+		Scene& scene = GetScene();
+
+		GetDevice()->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+
+		int shadowCounter_2D = 0;
+		int shadowCounter_Cube = 0;
+		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			Scene& scene = GetScene();
-
-			GetDevice()->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
-
-			int shadowCounter_2D = 0;
-			int shadowCounter_Cube = 0;
-			for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+			switch (type)
 			{
+			case LightComponent::DIRECTIONAL:
+			case LightComponent::SPOT:
+			{
+				vp.TopLeftX = 0;
+				vp.TopLeftY = 0;
+				vp.Width = (float)SHADOWRES_2D;
+				vp.Height = (float)SHADOWRES_2D;
+				vp.MinDepth = 0.0f;
+				vp.MaxDepth = 1.0f;
+				GetDevice()->BindViewports(1, &vp, threadID);
+				break;
+			}
+			break;
+			case LightComponent::POINT:
+			case LightComponent::SPHERE:
+			case LightComponent::DISC:
+			case LightComponent::RECTANGLE:
+			case LightComponent::TUBE:
+			{
+				vp.TopLeftX = 0;
+				vp.TopLeftY = 0;
+				vp.Width = (float)SHADOWRES_CUBE;
+				vp.Height = (float)SHADOWRES_CUBE;
+				vp.MinDepth = 0.0f;
+				vp.MaxDepth = 1.0f;
+				GetDevice()->BindViewports(1, &vp, threadID);
+
+				GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+				break;
+			}
+			break;
+			default:
+				break;
+			}
+
+			for (uint32_t lightIndex : culling.culledLights)
+			{
+				const LightComponent& light = scene.lights[lightIndex];
+				if (light.GetType() != type || !light.IsCastingShadow())
+				{
+					continue;
+				}
+
 				switch (type)
 				{
 				case LightComponent::DIRECTIONAL:
+				{
+					if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_dirLight.empty())
+						break;
+					shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
+
+					for (uint32_t cascade = 0; cascade < 3; ++cascade)
+					{
+						const float siz = light.shadowCam_dirLight[cascade].size * 0.5f;
+						const float f = light.shadowCam_dirLight[cascade].farplane * 0.5f;
+						AABB boundingbox;
+						boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
+
+						RenderQueue renderQueue;
+						bool transparentShadowsRequested = false;
+						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+						{
+							const AABB& aabb = scene.aabb_objects[i];
+							if (boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(aabb))
+							{
+								const ObjectComponent& object = scene.objects[i];
+								if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
+								{
+									if (!all_layers)
+									{
+										Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+										if (!(layerMask & layer.GetLayerMask()))
+										{
+											continue;
+										}
+									}
+
+									RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+									size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+									batch->Create(meshIndex, i, 0);
+									renderQueue.add(batch);
+
+									if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+									{
+										transparentShadowsRequested = true;
+									}
+								}
+							}
+						}
+						if (!renderQueue.empty())
+						{
+							CameraCB cb;
+							XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_dirLight[cascade].getVP());
+							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+
+							GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
+
+							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
+
+							// render opaque shadowmap:
+							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
+							RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+
+							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+							{
+								// render transparent shadowmap:
+								Texture2D* rts[] = {
+									shadowMapArray_Transparent
+								};
+								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
+								RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+							}
+							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+						}
+
+					}
+				}
+				break;
 				case LightComponent::SPOT:
 				{
-					vp.TopLeftX = 0;
-					vp.TopLeftY = 0;
-					vp.Width = (float)SHADOWRES_2D;
-					vp.Height = (float)SHADOWRES_2D;
-					vp.MinDepth = 0.0f;
-					vp.MaxDepth = 1.0f;
-					GetDevice()->BindViewports(1, &vp, threadID);
-					break;
+					if (shadowCounter_2D >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_spotLight.empty())
+						break;
+					shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
+
+					Frustum frustum;
+					frustum.ConstructFrustum(light.shadowCam_spotLight[0].farplane, light.shadowCam_spotLight[0].realProjection, light.shadowCam_spotLight[0].View);
+
+					RenderQueue renderQueue;
+					bool transparentShadowsRequested = false;
+					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+					{
+						const AABB& aabb = scene.aabb_objects[i];
+						if (frustum.CheckBox(aabb))
+						{
+							const ObjectComponent& object = scene.objects[i];
+							if (object.IsRenderable() && object.IsCastingShadow())
+							{
+								if (!all_layers)
+								{
+									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+									if (!(layerMask & layer.GetLayerMask()))
+									{
+										continue;
+									}
+								}
+								RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+								batch->Create(meshIndex, i, 0);
+								renderQueue.add(batch);
+
+								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
+								{
+									transparentShadowsRequested = true;
+								}
+							}
+						}
+					}
+					if (!renderQueue.empty())
+					{
+						CameraCB cb;
+						XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_spotLight[0].getVP());
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+
+						GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+
+						// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
+						GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index);
+
+						// render opaque shadowmap:
+						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index);
+						RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+
+						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
+						{
+							// render transparent shadowmap:
+							Texture2D* rts[] = {
+								shadowMapArray_Transparent
+							};
+							GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index);
+							RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+						}
+						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+					}
+
 				}
 				break;
 				case LightComponent::POINT:
@@ -4853,225 +4776,65 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 				case LightComponent::RECTANGLE:
 				case LightComponent::TUBE:
 				{
-					vp.TopLeftX = 0;
-					vp.TopLeftY = 0;
-					vp.Width = (float)SHADOWRES_CUBE;
-					vp.Height = (float)SHADOWRES_CUBE;
-					vp.MinDepth = 0.0f;
-					vp.MaxDepth = 1.0f;
-					GetDevice()->BindViewports(1, &vp, threadID);
+					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || light.shadowMap_index < 0 || light.shadowCam_pointLight.empty())
+						break;
+					shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-					GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
-					break;
+					RenderQueue renderQueue;
+					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+					{
+						const AABB& aabb = scene.aabb_objects[i];
+						if (SPHERE(light.position, light.range).intersects(aabb))
+						{
+							const ObjectComponent& object = scene.objects[i];
+							if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
+							{
+								if (!all_layers)
+								{
+									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
+									if (!(layerMask & layer.GetLayerMask()))
+									{
+										continue;
+									}
+								}
+
+								RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+								batch->Create(meshIndex, i, 0);
+								renderQueue.add(batch);
+							}
+						}
+					}
+					if (!renderQueue.empty())
+					{
+						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube, threadID, light.shadowMap_index);
+						GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+
+						MiscCB miscCb;
+						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+
+						CubemapRenderCB cb;
+						for (size_t shcam = 0; shcam < light.shadowCam_pointLight.size(); ++shcam)
+						{
+							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], light.shadowCam_pointLight[shcam].getVP());
+						}
+						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+
+						RenderMeshes(light.position, renderQueue, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+
+						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+					}
+
 				}
 				break;
-				default:
-					break;
-				}
-
-				for (Entity entity : culledLights)
-				{
-					const LightComponent& light = *scene.lights.GetComponent(entity);
-					if (light.GetType() != type || !light.IsCastingShadow())
-					{
-						continue;
-					}
-
-					switch (type)
-					{
-					case LightComponent::DIRECTIONAL:
-					{
-						if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_dirLight.empty())
-							break;
-						shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
-
-						for (uint32_t cascade = 0; cascade < 3; ++cascade)
-						{
-							const float siz = light.shadowCam_dirLight[cascade].size * 0.5f;
-							const float f = light.shadowCam_dirLight[cascade].farplane * 0.5f;
-							AABB boundingbox;
-							boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
-
-							RenderQueue renderQueue;
-							bool transparentShadowsRequested = false;
-							for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
-							{
-								const AABB& aabb = scene.aabb_objects[i];
-								if (boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(aabb))
-								{
-									const ObjectComponent& object = scene.objects[i];
-									if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
-									{
-										Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-										if (all_layers || (layerMask & layer.GetLayerMask()))
-										{
-											RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-											size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-											batch->Create(meshIndex, i, 0);
-											renderQueue.add(batch);
-
-											if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
-											{
-												transparentShadowsRequested = true;
-											}
-										}
-									}
-								}
-							}
-							if (!renderQueue.empty())
-							{
-								CameraCB cb;
-								XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_dirLight[cascade].getVP());
-								GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
-
-								GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
-
-								// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-								GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
-
-								// render opaque shadowmap:
-								GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-								RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
-
-								if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
-								{
-									// render transparent shadowmap:
-									Texture2D* rts[] = {
-										shadowMapArray_Transparent
-									};
-									GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-									RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
-								}
-							}
-
-						}
-					}
-					break;
-					case LightComponent::SPOT:
-					{
-						if (shadowCounter_2D >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_spotLight.empty())
-							break;
-						shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
-
-						Frustum frustum;
-						frustum.ConstructFrustum(light.shadowCam_spotLight[0].farplane, light.shadowCam_spotLight[0].realProjection, light.shadowCam_spotLight[0].View);
-
-						RenderQueue renderQueue;
-						bool transparentShadowsRequested = false;
-						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
-						{
-							const AABB& aabb = scene.aabb_objects[i];
-							if (frustum.CheckBox(aabb))
-							{
-								const ObjectComponent& object = scene.objects[i];
-								if (object.IsRenderable() && object.IsCastingShadow())
-								{
-									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-									if (all_layers || (layerMask & layer.GetLayerMask()))
-									{
-										RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-										size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-										batch->Create(meshIndex, i, 0);
-										renderQueue.add(batch);
-
-										if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
-										{
-											transparentShadowsRequested = true;
-										}
-									}
-								}
-							}
-						}
-						if (!renderQueue.empty())
-						{
-							CameraCB cb;
-							XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_spotLight[0].getVP());
-							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
-
-							GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
-
-							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index);
-
-							// render opaque shadowmap:
-							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index);
-							RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
-
-							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
-							{
-								// render transparent shadowmap:
-								Texture2D* rts[] = {
-									shadowMapArray_Transparent
-								};
-								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index);
-								RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
-							}
-						}
-
-					}
-					break;
-					case LightComponent::POINT:
-					case LightComponent::SPHERE:
-					case LightComponent::DISC:
-					case LightComponent::RECTANGLE:
-					case LightComponent::TUBE:
-					{
-						if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || light.shadowMap_index < 0 || light.shadowCam_pointLight.empty())
-							break;
-						shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
-
-						RenderQueue renderQueue;
-						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
-						{
-							const AABB& aabb = scene.aabb_objects[i];
-							if (SPHERE(light.position, light.range).intersects(aabb))
-							{
-								const ObjectComponent& object = scene.objects[i];
-								if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
-								{
-									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-									if (all_layers || (layerMask & layer.GetLayerMask()))
-									{
-										RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-										size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-										batch->Create(meshIndex, i, 0);
-										renderQueue.add(batch);
-									}
-								}
-							}
-						}
-						if (!renderQueue.empty())
-						{
-							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube, threadID, light.shadowMap_index);
-							GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
-
-							MiscCB miscCb;
-							miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
-							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-
-							CubemapRenderCB cb;
-							for (unsigned int shcam = 0; shcam < light.shadowCam_pointLight.size(); ++shcam)
-							{
-								XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], light.shadowCam_pointLight[shcam].getVP());
-							}
-
-							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-
-							RenderMeshes(light.position, renderQueue, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
-						}
-
-					}
-					break;
-					} // terminate switch
-				}
-
+				} // terminate switch
 			}
 
-			GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 		}
+
+		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 
 		wiProfiler::GetInstance().EndRange(); // Shadow Rendering
@@ -5122,10 +4885,11 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 
 	RenderQueue renderQueue;
-	for (Entity entity : culling.culledObjects)
+	for (uint32_t instanceIndex : culling.culledObjects)
 	{
 		if (layerMask != ~0)
 		{
+			Entity entity = scene.objects.GetEntity(instanceIndex);
 			const LayerComponent& layer = *scene.layers.GetComponent(entity);
 			if (!(layer.GetLayerMask() & layerMask))
 			{
@@ -5133,8 +4897,10 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 			}
 		}
 
-		size_t instanceIndex = scene.objects.GetIndex(entity);
 		const ObjectComponent& object = scene.objects[instanceIndex];
+
+		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
+			continue;
 
 		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_OPAQUE)
 		{
@@ -5147,7 +4913,10 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation, GetOcclusionCullingEnabled() && occlusionCulling);
+		RenderImpostors(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID);
+		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
+
+		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
 	GetDevice()->EventEnd(threadID);
@@ -5190,10 +4959,11 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 	}
 
 	RenderQueue renderQueue;
-	for (Entity entity : culling.culledObjects)
+	for (uint32_t instanceIndex : culling.culledObjects)
 	{
 		if (layerMask != ~0)
 		{
+			Entity entity = scene.objects.GetEntity(instanceIndex);
 			const LayerComponent& layer = *scene.layers.GetComponent(entity);
 			if (!(layer.GetLayerMask() & layerMask))
 			{
@@ -5201,8 +4971,10 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 			}
 		}
 
-		size_t instanceIndex = scene.objects.GetIndex(entity);
 		const ObjectComponent& object = scene.objects[instanceIndex];
+
+		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
+			continue;
 
 		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 		{
@@ -5215,7 +4987,9 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
-		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false, GetOcclusionCullingEnabled() && occlusionCulling);
+		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
+
+		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
 	GetDevice()->EventEnd(threadID);
@@ -5254,7 +5028,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				XMFLOAT4 a, colorA, b, colorB;
 			};
 			UINT offset;
-			void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * armature.boneCollection.size(), offset, threadID);
+			void* mem = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(LineSegment) * armature.boneCollection.size(), offset, threadID);
 
 			int j = 0;
 			for (Entity entity : armature.boneCollection)
@@ -5277,10 +5051,10 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				j++;
 			}
 
-			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+			device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 			GPUBuffer* vbs[] = {
-				dynamicVertexBufferPool,
+				&dynamicVertexBufferPools[threadID],
 			};
 			const UINT strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5313,7 +5087,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMFLOAT4 a, colorA, b, colorB;
 		};
 		UINT offset;
-		void* mem = device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(LineSegment) * renderableLines.size(), offset, threadID);
+		void* mem = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(LineSegment) * renderableLines.size(), offset, threadID);
 
 		int i = 0;
 		for (auto& line : renderableLines)
@@ -5327,10 +5101,10 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			i++;
 		}
 
-		device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 		GPUBuffer* vbs[] = {
-			dynamicVertexBufferPool,
+			&dynamicVertexBufferPools[threadID],
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5695,29 +5469,26 @@ void DrawSun(GRAPHICSTHREAD threadID)
 
 void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
-	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene();
+	const FrameCulling& culling = frameCullings[&camera];
 
-	bool boundCB = false;
-	if(scene.decals.GetCount() > 0)
+	if(!culling.culledDecals.empty())
 	{
+		GraphicsDevice* device = GetDevice();
+
 		device->EventBegin("Decals", threadID);
 
-		if (!boundCB)
-		{
-			boundCB = true;
-			device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
-		}
+		Scene& scene = GetScene();
+
+		device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
 
 		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
 
 		device->BindGraphicsPSO(PSO_decal, threadID);
 
-		for (size_t i = 0; i < scene.decals.GetCount(); ++i) 
+		for (size_t decalIndex : culling.culledDecals) 
 		{
-			DecalComponent& decal = scene.decals[i];
-			Entity entity = scene.decals.GetEntity(i);
-			const AABB& aabb = *scene.aabb_decals.GetComponent(entity);
+			const DecalComponent& decal = scene.decals[decalIndex];
+			const AABB& aabb = scene.aabb_decals[decalIndex];
 
 			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBox(aabb)) 
 			{
@@ -5929,6 +5700,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		if (!renderQueue.empty())
 		{
 			RenderMeshes(center, renderQueue, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
+
+			frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
 
 		// sky
@@ -6100,6 +5873,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
 		RenderMeshes(center, renderQueue, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", threadID);
@@ -7287,19 +7061,18 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 				MaterialCB mat;
-				mat.Create(material);
 
 				// Copy base params:
-				materialArray[totalMaterials].baseColor = mat.baseColor;
-				materialArray[totalMaterials].texMulAdd = mat.texMulAdd;
-				materialArray[totalMaterials].roughness = mat.roughness;
-				materialArray[totalMaterials].reflectance = mat.reflectance;
-				materialArray[totalMaterials].metalness = mat.metalness;
-				materialArray[totalMaterials].emissive = mat.emissive;
-				materialArray[totalMaterials].refractionIndex = mat.refractionIndex;
-				materialArray[totalMaterials].subsurfaceScattering = mat.subsurfaceScattering;
-				materialArray[totalMaterials].normalMapStrength = mat.normalMapStrength;
-				materialArray[totalMaterials].parallaxOcclusionMapping = mat.normalMapStrength;
+				materialArray[totalMaterials].baseColor = mat.g_xMat_baseColor;
+				materialArray[totalMaterials].texMulAdd = mat.g_xMat_texMulAdd;
+				materialArray[totalMaterials].roughness = mat.g_xMat_roughness;
+				materialArray[totalMaterials].reflectance = mat.g_xMat_reflectance;
+				materialArray[totalMaterials].metalness = mat.g_xMat_metalness;
+				materialArray[totalMaterials].emissive = mat.g_xMat_emissive;
+				materialArray[totalMaterials].refractionIndex = mat.g_xMat_refractionIndex;
+				materialArray[totalMaterials].subsurfaceScattering = mat.g_xMat_subsurfaceScattering;
+				materialArray[totalMaterials].normalMapStrength = mat.g_xMat_normalMapStrength;
+				materialArray[totalMaterials].parallaxOcclusionMapping = mat.g_xMat_normalMapStrength;
 
 				// Add extended properties:
 				const TextureDesc& desc = atlasTexture->GetDesc();
@@ -7731,13 +7504,6 @@ void BindPersistentState(GRAPHICSTHREAD threadID)
 	}
 
 
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_WORLD], CB_GETBINDSLOT(WorldCB), threadID);
-
 	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
@@ -7762,66 +7528,51 @@ void BindPersistentState(GRAPHICSTHREAD threadID)
 	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 }
-void UpdateWorldCB(GRAPHICSTHREAD threadID)
-{
-	const Scene& scene = GetScene();
-
-	static WorldCB prevcb[GRAPHICSTHREAD_COUNT];
-
-	WorldCB value;
-	ZeroMemory(&value, sizeof(value));
-
-	value.g_xWorld_ScreenWidthHeight = float2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
-	value.g_xWorld_ScreenWidthHeight_Inverse = float2(1.0f / value.g_xWorld_ScreenWidthHeight.x, 1.0f / value.g_xWorld_ScreenWidthHeight.y);
-	value.g_xWorld_InternalResolution = float2((float)GetInternalResolution().x, (float)GetInternalResolution().y);
-	value.g_xWorld_InternalResolution_Inverse = float2(1.0f / value.g_xWorld_InternalResolution.x, 1.0f / value.g_xWorld_InternalResolution.y);
-	value.g_xWorld_Gamma = GetGamma();
-	value.g_xWorld_SunColor = scene.weather.sunColor;
-	value.g_xWorld_SunDirection = scene.weather.sunDirection;
-	value.g_xWorld_Ambient = scene.weather.ambient;
-	value.g_xWorld_Cloudiness = scene.weather.cloudiness;
-	value.g_xWorld_CloudScale = scene.weather.cloudScale;
-	value.g_xWorld_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
-	value.g_xWorld_Horizon = scene.weather.horizon;
-	value.g_xWorld_Zenith = scene.weather.zenith;
-	value.g_xWorld_SpecularAA = SPECULARAA;
-	value.g_xWorld_VoxelRadianceDataSize = voxelSceneData.voxelsize;
-	value.g_xWorld_VoxelRadianceDataSize_Inverse = 1.0f / (float)value.g_xWorld_VoxelRadianceDataSize;
-	value.g_xWorld_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	value.g_xWorld_VoxelRadianceDataRes_Inverse = 1.0f / (float)value.g_xWorld_VoxelRadianceDataRes;
-	value.g_xWorld_VoxelRadianceDataMIPs = voxelSceneData.mips;
-	value.g_xWorld_VoxelRadianceNumCones = max(min(voxelSceneData.numCones, 16), 1);
-	value.g_xWorld_VoxelRadianceNumCones_Inverse = 1.0f / (float)value.g_xWorld_VoxelRadianceNumCones;
-	value.g_xWorld_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
-	value.g_xWorld_VoxelRadianceReflectionsEnabled = voxelSceneData.reflectionsEnabled;
-	value.g_xWorld_VoxelRadianceDataCenter = voxelSceneData.center;
-	value.g_xWorld_AdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
-	value.g_xWorld_EntityCullingTileCount = GetEntityCullingTileCount();
-	value.g_xWorld_TransparentShadowsEnabled = TRANSPARENTSHADOWSENABLED;
-	value.g_xWorld_GlobalEnvProbeIndex = -1;
-	value.g_xWorld_EnvProbeMipCount = 0;
-	value.g_xWorld_EnvProbeMipCount_Inverse = 1.0f;
-	if (scene.probes.GetCount() > 0)
-	{
-		value.g_xWorld_GlobalEnvProbeIndex = 0; // for now, the global envprobe will be the first probe in the array. Easy change later on if required...
-	}
-	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] != nullptr)
-	{
-		value.g_xWorld_EnvProbeMipCount = static_cast<Texture2D*>(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY])->GetDesc().MipLevels;
-		value.g_xWorld_EnvProbeMipCount_Inverse = 1.0f / (float)value.g_xWorld_EnvProbeMipCount;
-	}
-
-	if (memcmp(&prevcb[threadID], &value, sizeof(WorldCB)) != 0) // prevent overcommit
-	{
-		prevcb[threadID] = value;
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_WORLD], &prevcb[threadID], threadID);
-	}
-}
 void UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
 	const Scene& scene = GetScene();
 
 	FrameCB cb;
+
+	cb.g_xFrame_ScreenWidthHeight = float2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
+	cb.g_xFrame_ScreenWidthHeight_Inverse = float2(1.0f / cb.g_xFrame_ScreenWidthHeight.x, 1.0f / cb.g_xFrame_ScreenWidthHeight.y);
+	cb.g_xFrame_InternalResolution = float2((float)GetInternalResolution().x, (float)GetInternalResolution().y);
+	cb.g_xFrame_InternalResolution_Inverse = float2(1.0f / cb.g_xFrame_InternalResolution.x, 1.0f / cb.g_xFrame_InternalResolution.y);
+	cb.g_xFrame_Gamma = GetGamma();
+	cb.g_xFrame_SunColor = scene.weather.sunColor;
+	cb.g_xFrame_SunDirection = scene.weather.sunDirection;
+	cb.g_xFrame_Ambient = scene.weather.ambient;
+	cb.g_xFrame_Cloudiness = scene.weather.cloudiness;
+	cb.g_xFrame_CloudScale = scene.weather.cloudScale;
+	cb.g_xFrame_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
+	cb.g_xFrame_Horizon = scene.weather.horizon;
+	cb.g_xFrame_Zenith = scene.weather.zenith;
+	cb.g_xFrame_SpecularAA = SPECULARAA;
+	cb.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
+	cb.g_xFrame_VoxelRadianceDataSize_Inverse = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataSize;
+	cb.g_xFrame_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
+	cb.g_xFrame_VoxelRadianceDataRes_Inverse = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataRes;
+	cb.g_xFrame_VoxelRadianceDataMIPs = voxelSceneData.mips;
+	cb.g_xFrame_VoxelRadianceNumCones = max(min(voxelSceneData.numCones, 16), 1);
+	cb.g_xFrame_VoxelRadianceNumCones_Inverse = 1.0f / (float)cb.g_xFrame_VoxelRadianceNumCones;
+	cb.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
+	cb.g_xFrame_VoxelRadianceReflectionsEnabled = voxelSceneData.reflectionsEnabled;
+	cb.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
+	cb.g_xFrame_AdvancedRefractions = GetAdvancedRefractionsEnabled() ? 1 : 0;
+	cb.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount();
+	cb.g_xFrame_TransparentShadowsEnabled = TRANSPARENTSHADOWSENABLED;
+	cb.g_xFrame_GlobalEnvProbeIndex = -1;
+	cb.g_xFrame_EnvProbeMipCount = 0;
+	cb.g_xFrame_EnvProbeMipCount_Inverse = 1.0f;
+	if (scene.probes.GetCount() > 0)
+	{
+		cb.g_xFrame_GlobalEnvProbeIndex = 0; // for now, the global envprobe will be the first probe in the array. Easy change later on if required...
+	}
+	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] != nullptr)
+	{
+		cb.g_xFrame_EnvProbeMipCount = static_cast<Texture2D*>(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY])->GetDesc().MipLevels;
+		cb.g_xFrame_EnvProbeMipCount_Inverse = 1.0f / (float)cb.g_xFrame_EnvProbeMipCount;
+	}
 
 	cb.g_xFrame_Time = renderTime;
 	cb.g_xFrame_TimePrev = renderTime_Prev;
@@ -8191,12 +7942,12 @@ void CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 	{
 		MaterialCB mcb;
 		ZeroMemory(&mcb, sizeof(mcb));
-		mcb.baseColor = XMFLOAT4(1, 1, 1, 1);
-		mcb.texMulAdd = XMFLOAT4(1, 1, 0, 0);
-		mcb.normalMapStrength = 1.0f;
-		mcb.roughness = 1.0f;
-		mcb.reflectance = 1.0f;
-		mcb.metalness = 1.0f;
+		mcb.g_xMat_baseColor = XMFLOAT4(1, 1, 1, 1);
+		mcb.g_xMat_texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		mcb.g_xMat_normalMapStrength = 1.0f;
+		mcb.g_xMat_roughness = 1.0f;
+		mcb.g_xMat_reflectance = 1.0f;
+		mcb.g_xMat_metalness = 1.0f;
 
 		GPUBufferDesc bd;
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
@@ -8421,16 +8172,16 @@ void CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
 		InstancePrev instancePrev;
 	};
 	UINT instancesOffset;
-	volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(InstBuf), instancesOffset, threadID);
+	volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
 	buff->instance.Create(__identity);
 	buff->instancePrev.Create(__identity);
-	device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
+	device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 	GPUBuffer* vbs[] = {
 		mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 		mesh.vertexBuffer_TEX.get(),
 		mesh.IsSkinned() ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
-		dynamicVertexBufferPool
+		&dynamicVertexBufferPools[threadID]
 	};
 	UINT strides[] = {
 		sizeof(MeshComponent::Vertex_POS),
