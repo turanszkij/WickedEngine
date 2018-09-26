@@ -160,9 +160,7 @@ namespace wiSceneSystem
 
 		inline float GetOpacity() const { return baseColor.w; }
 
-
-		inline void SetDirty() { _flags |= DIRTY; }
-		inline void SetClean() { _flags &= ~DIRTY; }
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
@@ -219,7 +217,6 @@ namespace wiSceneSystem
 		std::vector<MeshSubset>		subsets;
 
 		float tessellationFactor = 0.0f;
-		float impostorDistance = 100.0f;
 		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
 
 		// Non-serialized attributes:
@@ -232,7 +229,6 @@ namespace wiSceneSystem
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_ATL;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
-		wiRenderTarget impostorTarget;
 
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
@@ -243,7 +239,6 @@ namespace wiSceneSystem
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 
-		bool HasImpostor() const { return impostorTarget.IsInitialized(); }
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphicsTypes::INDEXFORMAT_32BIT : wiGraphicsTypes::INDEXFORMAT_16BIT; }
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
@@ -369,6 +364,29 @@ namespace wiSceneSystem
 
 	};
 
+	struct ImpostorComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			DIRTY = 1 << 0,
+		};
+		uint32_t _flags = DIRTY;
+
+		float swapInDistance = 100.0f;
+
+		// Non-serialized attributes:
+		AABB aabb;
+		wiRenderTarget rendertarget; // todo: combine all impostors into atlas/texture2darray
+		float fadeThresholdRadius;
+		std::vector<XMFLOAT4X4> instanceMatrices;
+
+		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+		inline bool IsDirty() const { return _flags & DIRTY; }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
+	};
+
 	struct ObjectComponent
 	{
 		enum FLAGS
@@ -377,6 +395,7 @@ namespace wiSceneSystem
 			RENDERABLE = 1 << 0,
 			CAST_SHADOW = 1 << 1,
 			DYNAMIC = 1 << 2,
+			IMPOSTOR_PLACEMENT = 1 << 3,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -387,7 +406,9 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 
-		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
+		float impostorFadeThresholdRadius;
+		float impostorSwapDistance;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
@@ -406,10 +427,12 @@ namespace wiSceneSystem
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
+		inline void SetImpostorPlacement(bool value) { if (value) { _flags |= IMPOSTOR_PLACEMENT; } else { _flags &= ~IMPOSTOR_PLACEMENT; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
+		inline bool IsImpostorPlacement() const { return _flags & IMPOSTOR_PLACEMENT; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
@@ -884,6 +907,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<HierarchyComponent> hierarchy;
 		wiECS::ComponentManager<MaterialComponent> materials;
 		wiECS::ComponentManager<MeshComponent> meshes;
+		wiECS::ComponentManager<ImpostorComponent> impostors;
 		wiECS::ComponentManager<ObjectComponent> objects;
 		wiECS::ComponentManager<AABB> aabb_objects;
 		wiECS::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
@@ -1001,12 +1025,14 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<ArmatureComponent>& armatures
 	);
 	void RunMaterialUpdateSystem(wiECS::ComponentManager<MaterialComponent>& materials, float dt);
+	void RunImpostorUpdateSystem(wiECS::ComponentManager<ImpostorComponent>& impostors);
 	void RunObjectUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		const wiECS::ComponentManager<MeshComponent>& meshes,
 		const wiECS::ComponentManager<MaterialComponent>& materials,
 		wiECS::ComponentManager<ObjectComponent>& objects,
 		wiECS::ComponentManager<AABB>& aabb_objects,
+		wiECS::ComponentManager<ImpostorComponent>& impostors,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	);

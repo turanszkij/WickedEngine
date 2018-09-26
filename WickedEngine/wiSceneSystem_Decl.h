@@ -10,6 +10,7 @@ namespace wiSceneSystem
 	struct HierarchyComponent;
 	struct MaterialComponent;
 	struct MeshComponent;
+	struct ImpostorComponent;
 	struct ObjectComponent;
 	struct RigidBodyPhysicsComponent;
 	struct SoftBodyPhysicsComponent;

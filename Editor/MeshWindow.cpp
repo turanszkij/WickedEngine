@@ -105,7 +105,8 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			wiRenderer::CreateImpostor(entity, GRAPHICSTHREAD_IMMEDIATE);
+			Scene& scene = wiRenderer::GetScene();
+			scene.impostors.Create(entity).swapInDistance = impostorDistanceSlider->GetValue();
 		}
 	});
 	meshWindow->AddWidget(impostorCreateButton);
@@ -115,10 +116,10 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorDistanceSlider->SetSize(XMFLOAT2(100, 30));
 	impostorDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	impostorDistanceSlider->OnSlide([&](wiEventArgs args) {
-		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
-		if (mesh != nullptr)
+		ImpostorComponent* impostor = wiRenderer::GetScene().impostors.GetComponent(entity);
+		if (impostor != nullptr)
 		{
-			mesh->impostorDistance = args.fValue;
+			impostor->swapInDistance = args.fValue;
 		}
 	});
 	meshWindow->AddWidget(impostorDistanceSlider);
@@ -229,7 +230,12 @@ void MeshWindow::SetEntity(Entity entity)
 		meshInfoLabel->SetText(ss.str());
 
 		doubleSidedCheckBox->SetCheck(mesh->IsDoubleSided());
-		impostorDistanceSlider->SetValue(mesh->impostorDistance);
+
+		const ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
+		if (impostor != nullptr)
+		{
+			impostorDistanceSlider->SetValue(impostor->swapInDistance);
+		}
 		tessellationFactorSlider->SetValue(mesh->GetTessellationFactor());
 
 		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);

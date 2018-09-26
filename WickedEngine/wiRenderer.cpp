@@ -159,16 +159,18 @@ struct RenderBatch
 {
 	uint32_t hash;
 	uint32_t instance;
+	float distance;
 
-	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
+	inline void Create(size_t meshIndex, size_t instanceIndex, float _distance)
 	{
 		hash = 0;
 
 		assert(meshIndex < 0x00FFFFFF);
 		hash |= (uint32_t)(meshIndex & 0x00FFFFFF) << 8;
-		hash |= ((uint32_t)(distance)) & 0xFF;
+		hash |= ((uint32_t)(_distance)) & 0xFF;
 
 		instance = (uint32_t)instanceIndex;
+		distance = _distance;
 	}
 
 	inline uint32_t GetMeshIndex() const
@@ -181,7 +183,7 @@ struct RenderBatch
 	}
 	inline float GetDistance() const
 	{
-		return (float)(hash & 0xFF);
+		return distance;
 	}
 };
 
@@ -1222,6 +1224,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 			uint32_t meshIndex;
 			int instanceCount;
 			uint32_t dataOffset;
+			int forceAlphatestForDithering;
 		};
 		InstancedBatch* instancedBatchArray = nullptr;
 		int instancedBatchCount = 0;
@@ -1242,6 +1245,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
 				instancedBatch->dataOffset = instancesOffset + batchID * instanceDataSize;
+				instancedBatch->forceAlphatestForDithering = 0;
 				if (instancedBatchArray == nullptr)
 				{
 					instancedBatchArray = instancedBatch;
@@ -1250,7 +1254,16 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 
 			const ObjectComponent& instance = scene.objects[instanceIndex];
 
-			float dither = instance.GetTransparency();
+			float dither = instance.GetTransparency(); 
+			
+			if (instance.IsImpostorPlacement())
+			{
+				float distance = batch.GetDistance();
+				float swapDistance = instance.impostorSwapDistance;
+				float fadeThreshold = instance.impostorFadeThresholdRadius;
+				dither = max(0, distance - swapDistance) / fadeThreshold;
+				instancedBatchArray[instancedBatchCount - 1].forceAlphatestForDithering = 1;
+			}
 
 			Entity objectEntity = scene.objects.GetEntity(instanceIndex);
 			const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
@@ -1258,7 +1271,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 			// Write into actual GPU-buffer:
 			if (advancedVBRequest)
 			{
-				((volatile InstBuf*)instances)[batchID].instance.Create(transform.world, instance.color);
+				((volatile InstBuf*)instances)[batchID].instance.Create(transform.world, instance.color, dither);
 
 				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
 				((volatile InstBuf*)instances)[batchID].instancePrev.Create(prev_transform.world_prev);
@@ -1279,7 +1292,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 		{
 			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
 			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
-
+			bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
@@ -1291,8 +1304,6 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
 				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
 			}
-
-			bool forceAlphaTestForDithering = false;
 
 			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
 
@@ -1481,165 +1492,146 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 	}
 }
 
-void RenderImpostors(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID)
+void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
 {
-	//GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
+	Scene& scene = GetScene();
+	GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
 
-	//if (!renderQueue.empty() && impostorRequest != nullptr)
-	//{
-	//	GraphicsDevice* device = GetDevice();
-	//	Scene& scene = GetScene();
+	if (scene.impostors.GetCount() > 0 && impostorRequest != nullptr)
+	{
+		GraphicsDevice* device = GetDevice();
 
-	//	device->EventBegin("RenderImpostors", threadID);
+		device->EventBegin("RenderImpostors", threadID);
 
-	//	const bool easyTextureBind =
-	//		shaderType == SHADERTYPE_TEXTURE ||
-	//		shaderType == SHADERTYPE_SHADOW ||
-	//		shaderType == SHADERTYPE_SHADOWCUBE ||
-	//		shaderType == SHADERTYPE_DEPTHONLY ||
-	//		shaderType == SHADERTYPE_VOXELIZE;
+		// TODO: Now the impostors are using the regular mesh shaders for simplicity, but we should do much better, simpler impostor shaders!
+		struct InstBuf
+		{
+			Instance instance;
+			InstancePrev instancePrev;
+		};
 
+		const bool advancedVBRequest =
+			!IsWireRender() &&
+			(shaderType == SHADERTYPE_FORWARD ||
+				shaderType == SHADERTYPE_DEFERRED ||
+				shaderType == SHADERTYPE_TILEDFORWARD);
 
-	//	// Pre-allocate space for all the instances in GPU-buffer:
-	//	const UINT instanceDataSize = sizeof(Instance);
-	//	UINT instancesOffset;
-	//	const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
-	//	void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+		const bool easyTextureBind =
+			shaderType == SHADERTYPE_TEXTURE ||
+			shaderType == SHADERTYPE_SHADOW ||
+			shaderType == SHADERTYPE_SHADOWCUBE ||
+			shaderType == SHADERTYPE_DEPTHONLY ||
+			shaderType == SHADERTYPE_VOXELIZE;
 
-	//	// Render impostors:
-	//	if (impostorRequest != nullptr)
-	//	{
-	//		bool impostorGraphicsStateComplete = false;
+		bool impostorGraphicsStateComplete = false;
 
-	//		for (size_t batchID = 0; batchID < renderQueue.batchCount; ++batchID)
-	//		{
-	//			const RenderBatch& batch = renderQueue.batchArray[batchID];
+		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		{
+			const ImpostorComponent& impostor = scene.impostors[impostorID];
+			if (!camera.frustum.CheckBox(impostor.aabb))
+			{
+				continue;
+			}
 
-	//			const size_t meshIndex = batch.GetMeshIndex();
-	//			const MeshComponent& mesh = scene.meshes[meshIndex];
-	//			if (!mesh.IsRenderable() || !mesh.HasImpostor())
-	//			{
-	//				continue;
-	//			}
+			if (!impostorGraphicsStateComplete)
+			{
+				device->BindGraphicsPSO(impostorRequest, threadID);
+				device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
+				SetAlphaRef(0.75f, threadID);
+				impostorGraphicsStateComplete = true;
+			}
 
-	//			//const auto& visibleInstances = iter->second;
+			UINT instanceCount = (UINT)impostor.instanceMatrices.size();
 
-	//			UINT instancesOffset;
-	//			size_t alloc_size = /*visibleInstances.size()*/ 1;
-	//			alloc_size *= advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-	//			void* instances = device->AllocateFromRingBuffer(dynamicVertexBufferPool, alloc_size, instancesOffset, threadID);
+			// Pre-allocate space for all the instances in GPU-buffer:
+			const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
+			UINT instancesOffset;
+			const size_t alloc_size = instanceCount * instanceDataSize;
+			void* instances = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], alloc_size, instancesOffset, threadID);
+			
+			int drawableInstanceCount = 0;
+			for (UINT instanceID = 0; instanceID < instanceCount; ++instanceID)
+			{
+				const XMFLOAT4X4& mat = impostor.instanceMatrices[instanceID];
+				const XMFLOAT3 center = *((XMFLOAT3*)&mat._41);
+				float distance = wiMath::Distance(camera.Eye, center);
 
-	//			int k = 0;
-	//			for (size_t instanceID = 0; instanceID < 1; ++instanceID)
-	//			{
-	//				size_t instanceIndex = batch.GetInstanceIndex();
-	//				const ObjectComponent& instance = scene.objects[instanceIndex];
-	//				if (occlusionCulling && instance.IsOccluded())
-	//					continue;
+				if (distance < impostor.swapInDistance - impostor.fadeThresholdRadius)
+				{
+					continue;
+				}
 
-	//				const AABB& aabb = scene.aabb_objects[instanceIndex];
+				float dither = max(0, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-	//				const float impostorThreshold = aabb.getRadius();
-	//				float dist = wiMath::Distance(eye, aabb.getCenter());
-	//				float dither = instance.GetTransparency();
-	//				dither = wiMath::SmoothStep(1.0f, dither, wiMath::Clamp((dist - mesh.impostorDistance) / impostorThreshold, 0, 1));
-	//				if (dither > 1.0f - FLT_EPSILON)
-	//					continue;
+				if (advancedVBRequest)
+				{
+					((volatile InstBuf*)instances)[drawableInstanceCount].instance.Create(mat, XMFLOAT4(1, 1, 1, 1), dither);
+					((volatile InstBuf*)instances)[drawableInstanceCount].instancePrev.Create(mat);
+				}
+				else
+				{
+					((volatile Instance*)instances)[drawableInstanceCount].Create(mat, XMFLOAT4(1, 1, 1, 1), dither);
+				}
 
-	//				XMMATRIX boxMat = mesh.aabb.getAsBoxMatrix();
+				drawableInstanceCount++;
+			}
+			device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
-	//				Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-	//				const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+			if (!advancedVBRequest || IsWireRender())
+			{
+				GPUBuffer* vbs[] = {
+					&impostorVB_POS,
+					&impostorVB_TEX,
+					&dynamicVertexBufferPools[threadID]
+				};
+				UINT strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(Instance)
+				};
+				UINT offsets[] = {
+					0,
+					0,
+					instancesOffset
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+			}
+			else
+			{
+				GPUBuffer* vbs[] = {
+					&impostorVB_POS,
+					&impostorVB_TEX,
+					&impostorVB_POS,
+					&dynamicVertexBufferPools[threadID]
+				};
+				UINT strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(InstBuf)
+				};
+				UINT offsets[] = {
+					0,
+					0,
+					0,
+					instancesOffset
+				};
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+			}
 
-	//				XMFLOAT4X4 tempMat;
-	//				XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&transform.world));
+			GPUResource* res[] = {
+				impostor.rendertarget.GetTexture(0),
+				impostor.rendertarget.GetTexture(1),
+				impostor.rendertarget.GetTexture(2)
+			};
+			device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
 
-	//				if (advancedVBRequest)
-	//				{
-	//					((volatile InstBuf*)instances)[k].instance.Create(tempMat, instance.color, dither);
+			device->DrawInstanced(6 * 6, drawableInstanceCount, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
 
-	//					const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-	//					XMStoreFloat4x4(&tempMat, boxMat*XMLoadFloat4x4(&prev_transform.world_prev));
-	//					((volatile InstBuf*)instances)[k].instancePrev.Create(tempMat);
-	//				}
-	//				else
-	//				{
-	//					((volatile Instance*)instances)[k].Create(tempMat, instance.color, dither);
-	//				}
+		}
 
-	//				++k;
-	//			}
-
-	//			device->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-	//			if (k < 1)
-	//				continue;
-
-	//			if (!advancedVBRequest || IsWireRender())
-	//			{
-	//				GPUBuffer* vbs[] = {
-	//					&impostorVB_POS,
-	//					&impostorVB_TEX,
-	//					dynamicVertexBufferPool
-	//				};
-	//				UINT strides[] = {
-	//					sizeof(MeshComponent::Vertex_POS),
-	//					sizeof(MeshComponent::Vertex_TEX),
-	//					sizeof(Instance)
-	//				};
-	//				UINT offsets[] = {
-	//					0,
-	//					0,
-	//					instancesOffset
-	//				};
-	//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-	//			}
-	//			else
-	//			{
-	//				GPUBuffer* vbs[] = {
-	//					&impostorVB_POS,
-	//					&impostorVB_TEX,
-	//					&impostorVB_POS,
-	//					dynamicVertexBufferPool
-	//				};
-	//				UINT strides[] = {
-	//					sizeof(MeshComponent::Vertex_POS),
-	//					sizeof(MeshComponent::Vertex_TEX),
-	//					sizeof(MeshComponent::Vertex_POS),
-	//					sizeof(InstBuf)
-	//				};
-	//				UINT offsets[] = {
-	//					0,
-	//					0,
-	//					0,
-	//					instancesOffset
-	//				};
-	//				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-	//			}
-
-	//			GPUResource* res[] = {
-	//				mesh.impostorTarget.GetTexture(0),
-	//				mesh.impostorTarget.GetTexture(1),
-	//				mesh.impostorTarget.GetTexture(2)
-	//			};
-	//			device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-	//			if (!impostorGraphicsStateComplete)
-	//			{
-	//				device->BindGraphicsPSO(impostorRequest, threadID);
-	//				device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
-	//				SetAlphaRef(0.75f, threadID);
-	//				impostorGraphicsStateComplete = true;
-	//			}
-
-	//			device->DrawInstanced(6 * 6, k, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
-
-	//		}
-	//	}
-
-
-	//	device->EventEnd(threadID);
-	//}
+		device->EventEnd(threadID);
+	}
 }
 
 
@@ -3462,7 +3454,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		if (material.IsDirty())
 		{
-			material.SetClean();
+			material.SetDirty(false);
 
 			materialGPUData.g_xMat_baseColor = material.baseColor;
 			materialGPUData.g_xMat_texMulAdd = material.texMulAdd;
@@ -3861,8 +3853,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
-	// Render out of date environment probes:
 	RefreshEnvProbes(threadID);
+	RefreshImpostors(threadID);
 }
 void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 {
@@ -4042,11 +4034,26 @@ void DrawWaterRipples(GRAPHICSTHREAD threadID)
 void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
 {
 	Scene& scene = GetScene();
+	size_t emitterCount = scene.emitters.GetCount();
 
-	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	// Sort emitters based on distance:
+	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
+	uint32_t* emitterSortingHashes = (uint32_t*)frameAllocators[threadID].allocate(sizeof(uint32_t) * emitterCount);
+	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		wiEmittedParticle& emitter = scene.emitters[i];
-		Entity entity = scene.emitters.GetEntity(i);
+		float distance = wiMath::DistanceEstimated(emitter.center, camera.Eye);
+		emitterSortingHashes[i] = 0;
+		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
+		emitterSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
+	}
+	std::sort(emitterSortingHashes, emitterSortingHashes + emitterCount, std::greater<uint32_t>());
+
+	for (size_t i = 0; i < emitterCount; ++i)
+	{
+		uint32_t emitterIndex = emitterSortingHashes[i] & 0x0000FFFF;
+		wiEmittedParticle& emitter = scene.emitters[emitterIndex];
+		Entity entity = scene.emitters.GetEntity(emitterIndex);
 		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
@@ -4058,6 +4065,8 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 			emitter.Draw(camera, material, threadID);
 		}
 	}
+
+	frameAllocators[threadID].free(sizeof(uint32_t) * emitterCount);
 
 }
 void DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
@@ -4883,6 +4892,7 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 		}
 	}
 
+	RenderImpostors(camera, shaderType, threadID);
 
 	RenderQueue renderQueue;
 	for (uint32_t instanceIndex : culling.culledObjects)
@@ -4904,16 +4914,20 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_OPAQUE)
 		{
+			const float distance = wiMath::Distance(camera.Eye, object.center);
+			if (object.IsImpostorPlacement() && distance > object.impostorSwapDistance + object.impostorFadeThresholdRadius)
+			{
+				continue;
+			}
 			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.position));
+			batch->Create(meshIndex, instanceIndex, distance);
 			renderQueue.add(batch);
 		}
 	}
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderImpostors(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID);
 		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
 
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -4980,7 +4994,7 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 		{
 			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.position));
+			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.center));
 			renderQueue.add(batch);
 		}
 	}
@@ -5526,9 +5540,10 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("EnvironmentProbe Refresh", threadID);
-
 	Scene& scene = GetScene();
+
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("EnvironmentProbe Refresh", threadID);
 
 	static const UINT envmapRes = 128;
 	static const UINT envmapCount = 16;
@@ -5552,7 +5567,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+		HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -5570,7 +5585,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
 
-		HRESULT hr = GetDevice()->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
+		HRESULT hr = device->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -5581,7 +5596,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	VP.TopLeftY = 0;
 	VP.MinDepth = 0.0f;
 	VP.MaxDepth = 1.0f;
-	GetDevice()->BindViewports(1, &VP, threadID);
+	device->BindViewports(1, &VP, threadID);
 
 	const float zNearP = GetCamera().zNearP;
 	const float zFarP = GetCamera().zFarP;
@@ -5632,10 +5647,10 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			probe.SetDirty(false);
 		}
 
-		GetDevice()->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe.textureIndex);
+		device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe.textureIndex);
 		const float clearColor[4] = { 0,0,0,1 };
-		GetDevice()->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe.textureIndex);
-		GetDevice()->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
+		device->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe.textureIndex);
+		device->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
 
 
 		std::vector<LightComponent::SHCAM> cameras;
@@ -5662,13 +5677,13 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].getVP());
 		}
 
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-		GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+		device->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+		device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
 
 
 		CameraCB camcb;
 		camcb.g_xCamera_CamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
+		device->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
 
 		const LayerComponent& layer = *scene.layers.GetComponent(entity);
 		const uint32_t layerMask = layer.GetLayerMask();
@@ -5709,39 +5724,39 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 			if (enviroMap != nullptr)
 			{
-				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
-				GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
+				device->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
+				device->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
 			}
 			else
 			{
-				GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
-				GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+				device->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+				device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 			}
 
-			GetDevice()->Draw(240, 0, threadID);
+			device->Draw(240, 0, threadID);
 		}
 
-		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
-		//GetDevice()->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
+		device->BindRenderTargets(0, nullptr, nullptr, threadID);
+		//device->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
 		GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
 		//	and we generatethe filtered MIPs from bottom to top.
-		GetDevice()->EventBegin("FilterEnvMap", threadID);
+		device->EventBegin("FilterEnvMap", threadID);
 		{
 			Texture* texture = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY];
 			TextureDesc desc = texture->GetDesc();
 			int arrayIndex = probe.textureIndex;
 
-			GetDevice()->BindComputePSO(CPSO[CSTYPE_FILTERENVMAP], threadID);
+			device->BindComputePSO(CPSO[CSTYPE_FILTERENVMAP], threadID);
 
 			desc.Width = 1;
 			desc.Height = 1;
 			for (UINT i = desc.MipLevels - 1; i > 0; --i)
 			{
-				GetDevice()->BindUAV(CS, texture, 0, threadID, i);
-				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, max(0, (int)i - 2));
+				device->BindUAV(CS, texture, 0, threadID, i);
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -5749,30 +5764,410 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				cb.filterArrayIndex = arrayIndex;
 				cb.filterRoughness = (float)i / (float)desc.MipLevels;
 				cb.filterRayCount = 128;
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
-				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
 
-				GetDevice()->Dispatch(
+				device->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					threadID);
 
-				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				device->UAVBarrier((GPUResource**)&texture, 1, threadID);
 
 				desc.Width *= 2;
 				desc.Height *= 2;
 			}
-			GetDevice()->UnbindUAVs(0, 1, threadID);
+			device->UnbindUAVs(0, 1, threadID);
 		}
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 
 	}
 
-	GetDevice()->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
-	GetDevice()->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+	device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+	device->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
 
-	GetDevice()->EventEnd(threadID); // EnvironmentProbe Refresh
+	device->EventEnd(threadID); // EnvironmentProbe Refresh
+}
+
+void RefreshImpostors(GRAPHICSTHREAD threadID)
+{
+	Scene& scene = GetScene();
+
+	if (scene.impostors.GetCount() > 0)
+	{
+		GraphicsDevice* device = GetDevice();
+		device->EventBegin("Impostor Refresh", threadID);
+
+
+		if (!impostorMaterialCB.IsValid())
+		{
+			MaterialCB mcb;
+			ZeroMemory(&mcb, sizeof(mcb));
+			mcb.g_xMat_baseColor = XMFLOAT4(1, 1, 1, 1);
+			mcb.g_xMat_texMulAdd = XMFLOAT4(1, 1, 0, 0);
+			mcb.g_xMat_normalMapStrength = 1.0f;
+			mcb.g_xMat_roughness = 1.0f;
+			mcb.g_xMat_reflectance = 1.0f;
+			mcb.g_xMat_metalness = 1.0f;
+
+			GPUBufferDesc bd;
+			bd.BindFlags = BIND_CONSTANT_BUFFER;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.ByteWidth = sizeof(MaterialCB);
+			SubresourceData initData;
+			initData.pSysMem = &mcb;
+
+			device->CreateBuffer(&bd, &initData, &impostorMaterialCB);
+		}
+		if (!impostorVB_POS.IsValid())
+		{
+			const int count = 6 * 6;
+
+			XMFLOAT3 impostorVertices_pos[count];
+			XMFLOAT3 impostorVertices_nor[count];
+			XMFLOAT2 impostorVertices_tex[count];
+
+			float stepX = 1.f / 6.f;
+
+			// front
+			impostorVertices_pos[0] = XMFLOAT3(-1, 1, 0);
+			impostorVertices_nor[0] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[0] = XMFLOAT2(0, 0);
+
+			impostorVertices_pos[1] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[1] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[1] = XMFLOAT2(0, 1);
+
+			impostorVertices_pos[2] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[2] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[2] = XMFLOAT2(stepX, 0);
+
+			impostorVertices_pos[3] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[3] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[3] = XMFLOAT2(0, 1);
+
+			impostorVertices_pos[4] = XMFLOAT3(1, -1, 0);
+			impostorVertices_nor[4] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[4] = XMFLOAT2(stepX, 1);
+
+			impostorVertices_pos[5] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[5] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[5] = XMFLOAT2(stepX, 0);
+
+			// right
+			impostorVertices_pos[6] = XMFLOAT3(0, 1, -1);
+			impostorVertices_nor[6] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[6] = XMFLOAT2(stepX, 0);
+
+			impostorVertices_pos[7] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[7] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[7] = XMFLOAT2(stepX, 1);
+
+			impostorVertices_pos[8] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[8] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[8] = XMFLOAT2(stepX * 2, 0);
+
+			impostorVertices_pos[9] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[9] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[9] = XMFLOAT2(stepX, 1);
+
+			impostorVertices_pos[10] = XMFLOAT3(0, -1, 1);
+			impostorVertices_nor[10] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[10] = XMFLOAT2(stepX * 2, 1);
+
+			impostorVertices_pos[11] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[11] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[11] = XMFLOAT2(stepX * 2, 0);
+
+			// back
+			impostorVertices_pos[12] = XMFLOAT3(-1, 1, 0);
+			impostorVertices_nor[12] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[12] = XMFLOAT2(stepX * 3, 0);
+
+			impostorVertices_pos[13] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[13] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[13] = XMFLOAT2(stepX * 2, 0);
+
+			impostorVertices_pos[14] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[14] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[14] = XMFLOAT2(stepX * 3, 1);
+
+			impostorVertices_pos[15] = XMFLOAT3(-1, -1, 0);
+			impostorVertices_nor[15] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[15] = XMFLOAT2(stepX * 3, 1);
+
+			impostorVertices_pos[16] = XMFLOAT3(1, 1, 0);
+			impostorVertices_nor[16] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[16] = XMFLOAT2(stepX * 2, 0);
+
+			impostorVertices_pos[17] = XMFLOAT3(1, -1, 0);
+			impostorVertices_nor[17] = XMFLOAT3(0, 0, -1);
+			impostorVertices_tex[17] = XMFLOAT2(stepX * 2, 1);
+
+			// left
+			impostorVertices_pos[18] = XMFLOAT3(0, 1, -1);
+			impostorVertices_nor[18] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[18] = XMFLOAT2(stepX * 4, 0);
+
+			impostorVertices_pos[19] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[19] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[19] = XMFLOAT2(stepX * 3, 0);
+
+			impostorVertices_pos[20] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[20] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[20] = XMFLOAT2(stepX * 4, 1);
+
+			impostorVertices_pos[21] = XMFLOAT3(0, -1, -1);
+			impostorVertices_nor[21] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[21] = XMFLOAT2(stepX * 4, 1);
+
+			impostorVertices_pos[22] = XMFLOAT3(0, 1, 1);
+			impostorVertices_nor[22] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[22] = XMFLOAT2(stepX * 3, 0);
+
+			impostorVertices_pos[23] = XMFLOAT3(0, -1, 1);
+			impostorVertices_nor[23] = XMFLOAT3(1, 0, 0);
+			impostorVertices_tex[23] = XMFLOAT2(stepX * 3, 1);
+
+			// bottom
+			impostorVertices_pos[24] = XMFLOAT3(-1, 0, 1);
+			impostorVertices_nor[24] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[24] = XMFLOAT2(stepX * 4, 0);
+
+			impostorVertices_pos[25] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[25] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[25] = XMFLOAT2(stepX * 5, 0);
+
+			impostorVertices_pos[26] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[26] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[26] = XMFLOAT2(stepX * 4, 1);
+
+			impostorVertices_pos[27] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[27] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[27] = XMFLOAT2(stepX * 4, 1);
+
+			impostorVertices_pos[28] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[28] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[28] = XMFLOAT2(stepX * 5, 0);
+
+			impostorVertices_pos[29] = XMFLOAT3(1, 0, -1);
+			impostorVertices_nor[29] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[29] = XMFLOAT2(stepX * 5, 1);
+
+			// top
+			impostorVertices_pos[30] = XMFLOAT3(-1, 0, 1);
+			impostorVertices_nor[30] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[30] = XMFLOAT2(stepX * 5, 0);
+
+			impostorVertices_pos[31] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[31] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[31] = XMFLOAT2(stepX * 5, 1);
+
+			impostorVertices_pos[32] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[32] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[32] = XMFLOAT2(stepX * 6, 0);
+
+			impostorVertices_pos[33] = XMFLOAT3(-1, 0, -1);
+			impostorVertices_nor[33] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[33] = XMFLOAT2(stepX * 5, 1);
+
+			impostorVertices_pos[34] = XMFLOAT3(1, 0, -1);
+			impostorVertices_nor[34] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[34] = XMFLOAT2(stepX * 6, 1);
+
+			impostorVertices_pos[35] = XMFLOAT3(1, 0, 1);
+			impostorVertices_nor[35] = XMFLOAT3(0, 1, 0);
+			impostorVertices_tex[35] = XMFLOAT2(stepX * 6, 0);
+
+
+			MeshComponent::Vertex_POS impostorVertices_POS[count];
+			MeshComponent::Vertex_TEX impostorVertices_TEX[count];
+			for (int i = 0; i < count; ++i)
+			{
+				impostorVertices_POS[i].FromFULL(impostorVertices_pos[i], impostorVertices_nor[i], 0);
+				impostorVertices_TEX[i].FromFULL(impostorVertices_tex[i]);
+			}
+
+
+			GPUBufferDesc bd;
+			ZeroMemory(&bd, sizeof(bd));
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			ZeroMemory(&InitData, sizeof(InitData));
+			InitData.pSysMem = impostorVertices_POS;
+			bd.ByteWidth = sizeof(impostorVertices_POS);
+			device->CreateBuffer(&bd, &InitData, &impostorVB_POS);
+			InitData.pSysMem = impostorVertices_TEX;
+			bd.ByteWidth = sizeof(impostorVertices_TEX);
+			device->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
+		}
+
+		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		{
+			ImpostorComponent& impostor = scene.impostors[impostorID];
+			if (!impostor.IsDirty())
+			{
+				continue;
+			}
+			impostor.SetDirty(false);
+
+			Entity entity = scene.impostors.GetEntity(impostorID);
+			const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+
+			static const int res = 256;
+
+			const AABB& bbox = mesh.aabb;
+			const XMFLOAT3 extents = bbox.getHalfWidth();
+			if (!impostor.rendertarget.IsInitialized())
+			{
+				impostor.rendertarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
+				impostor.rendertarget.Add(RTFormat_impostor_normal);		// normal, roughness
+				impostor.rendertarget.Add(RTFormat_impostor_surface);		// surface properties
+			}
+
+
+			CameraComponent impostorcamera;
+			TransformComponent camera_transform;
+
+			BindPersistentState(threadID);
+
+			const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+			struct InstBuf
+			{
+				Instance instance;
+				InstancePrev instancePrev;
+			};
+			UINT instancesOffset;
+			volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
+			buff->instance.Create(__identity);
+			buff->instancePrev.Create(__identity);
+			device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
+
+			GPUBuffer* vbs[] = {
+				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
+				mesh.vertexBuffer_TEX.get(),
+				mesh.IsSkinned() ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
+				&dynamicVertexBufferPools[threadID]
+			};
+			UINT strides[] = {
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(InstBuf)
+			};
+			UINT offsets[] = {
+				0,
+				0,
+				0,
+				instancesOffset
+			};
+			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+
+			device->BindGraphicsPSO(PSO_captureimpostor, threadID);
+
+			ViewPort savedViewPort = impostor.rendertarget.viewPort;
+			impostor.rendertarget.Activate(threadID, 0, 0, 0, 0);
+			for (size_t i = 0; i < 6; ++i)
+			{
+				impostor.rendertarget.viewPort.Height = (float)res;
+				impostor.rendertarget.viewPort.Width = (float)res;
+				impostor.rendertarget.viewPort.TopLeftX = (float)(i*res);
+				impostor.rendertarget.viewPort.TopLeftY = 0.f;
+				impostor.rendertarget.Set(threadID);
+
+				camera_transform.ClearTransform();
+				camera_transform.Translate(bbox.getCenter());
+				switch (i)
+				{
+				case 0:
+				{
+					// front capture
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+				}
+				break;
+				case 1:
+				{
+					// right capture
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
+				}
+				break;
+				case 2:
+				{
+					// back capture
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
+				}
+				break;
+				case 3:
+				{
+					// left capture
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
+				}
+				break;
+				case 4:
+				{
+					// bottom capture
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					camera_transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
+				}
+				break;
+				case 5:
+				{
+					// top capture
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					camera_transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+				}
+				break;
+				default:
+					break;
+				}
+				camera_transform.UpdateTransform();
+				impostorcamera.UpdateCamera(&camera_transform);
+				impostorcamera.UpdateProjection();
+				UpdateCameraCB(impostorcamera, threadID);
+
+				for (auto& subset : mesh.subsets)
+				{
+					if (subset.indexCount == 0)
+					{
+						continue;
+					}
+					MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
+
+					device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+
+					device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+					device->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
+					device->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
+
+					device->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
+
+				}
+
+			}
+			GenerateMipChain(impostor.rendertarget.GetTexture(), MIPGENFILTER_LINEAR, threadID);
+
+			impostor.rendertarget.viewPort = savedViewPort;
+		}
+
+		UpdateCameraCB(GetCamera(), threadID);
+
+		device->EventEnd(threadID);
+	}
 }
 
 void VoxelRadiance(GRAPHICSTHREAD threadID)
@@ -7932,367 +8327,6 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 	}
 
 	return result;
-}
-
-void CreateImpostor(Entity entity, GRAPHICSTHREAD threadID)
-{
-	GraphicsDevice* device = GetDevice();
-
-	if (!impostorMaterialCB.IsValid())
-	{
-		MaterialCB mcb;
-		ZeroMemory(&mcb, sizeof(mcb));
-		mcb.g_xMat_baseColor = XMFLOAT4(1, 1, 1, 1);
-		mcb.g_xMat_texMulAdd = XMFLOAT4(1, 1, 0, 0);
-		mcb.g_xMat_normalMapStrength = 1.0f;
-		mcb.g_xMat_roughness = 1.0f;
-		mcb.g_xMat_reflectance = 1.0f;
-		mcb.g_xMat_metalness = 1.0f;
-
-		GPUBufferDesc bd;
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.CPUAccessFlags = 0;
-		bd.ByteWidth = sizeof(MaterialCB);
-		SubresourceData initData;
-		initData.pSysMem = &mcb;
-
-		device->CreateBuffer(&bd, &initData, &impostorMaterialCB);
-	}
-	if (!impostorVB_POS.IsValid())
-	{
-		const int count = 6 * 6;
-
-		XMFLOAT3 impostorVertices_pos[count];
-		XMFLOAT3 impostorVertices_nor[count];
-		XMFLOAT2 impostorVertices_tex[count];
-
-		float stepX = 1.f / 6.f;
-
-		// front
-		impostorVertices_pos[0] = XMFLOAT3(-1, 1, 0);
-		impostorVertices_nor[0] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[0] = XMFLOAT2(0, 0);
-
-		impostorVertices_pos[1] = XMFLOAT3(-1, -1, 0);
-		impostorVertices_nor[1] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[1] = XMFLOAT2(0, 1);
-
-		impostorVertices_pos[2] = XMFLOAT3(1, 1, 0);
-		impostorVertices_nor[2] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[2] = XMFLOAT2(stepX, 0);
-
-		impostorVertices_pos[3] = XMFLOAT3(-1, -1, 0);
-		impostorVertices_nor[3] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[3] = XMFLOAT2(0, 1);
-
-		impostorVertices_pos[4] = XMFLOAT3(1, -1, 0);
-		impostorVertices_nor[4] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[4] = XMFLOAT2(stepX, 1);
-
-		impostorVertices_pos[5] = XMFLOAT3(1, 1, 0);
-		impostorVertices_nor[5] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[5] = XMFLOAT2(stepX, 0);
-
-		// right
-		impostorVertices_pos[6] = XMFLOAT3(0, 1, -1);
-		impostorVertices_nor[6] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[6] = XMFLOAT2(stepX, 0);
-
-		impostorVertices_pos[7] = XMFLOAT3(0, -1, -1);
-		impostorVertices_nor[7] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[7] = XMFLOAT2(stepX, 1);
-
-		impostorVertices_pos[8] = XMFLOAT3(0, 1, 1);
-		impostorVertices_nor[8] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[8] = XMFLOAT2(stepX * 2, 0);
-
-		impostorVertices_pos[9] = XMFLOAT3(0, -1, -1);
-		impostorVertices_nor[9] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[9] = XMFLOAT2(stepX, 1);
-
-		impostorVertices_pos[10] = XMFLOAT3(0, -1, 1);
-		impostorVertices_nor[10] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[10] = XMFLOAT2(stepX * 2, 1);
-
-		impostorVertices_pos[11] = XMFLOAT3(0, 1, 1);
-		impostorVertices_nor[11] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[11] = XMFLOAT2(stepX * 2, 0);
-
-		// back
-		impostorVertices_pos[12] = XMFLOAT3(-1, 1, 0);
-		impostorVertices_nor[12] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[12] = XMFLOAT2(stepX * 3, 0);
-
-		impostorVertices_pos[13] = XMFLOAT3(1, 1, 0);
-		impostorVertices_nor[13] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[13] = XMFLOAT2(stepX * 2, 0);
-
-		impostorVertices_pos[14] = XMFLOAT3(-1, -1, 0);
-		impostorVertices_nor[14] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[14] = XMFLOAT2(stepX * 3, 1);
-
-		impostorVertices_pos[15] = XMFLOAT3(-1, -1, 0);
-		impostorVertices_nor[15] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[15] = XMFLOAT2(stepX * 3, 1);
-
-		impostorVertices_pos[16] = XMFLOAT3(1, 1, 0);
-		impostorVertices_nor[16] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[16] = XMFLOAT2(stepX * 2, 0);
-
-		impostorVertices_pos[17] = XMFLOAT3(1, -1, 0);
-		impostorVertices_nor[17] = XMFLOAT3(0, 0, -1);
-		impostorVertices_tex[17] = XMFLOAT2(stepX * 2, 1);
-
-		// left
-		impostorVertices_pos[18] = XMFLOAT3(0, 1, -1);
-		impostorVertices_nor[18] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[18] = XMFLOAT2(stepX * 4, 0);
-
-		impostorVertices_pos[19] = XMFLOAT3(0, 1, 1);
-		impostorVertices_nor[19] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[19] = XMFLOAT2(stepX * 3, 0);
-
-		impostorVertices_pos[20] = XMFLOAT3(0, -1, -1);
-		impostorVertices_nor[20] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[20] = XMFLOAT2(stepX * 4, 1);
-
-		impostorVertices_pos[21] = XMFLOAT3(0, -1, -1);
-		impostorVertices_nor[21] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[21] = XMFLOAT2(stepX * 4, 1);
-
-		impostorVertices_pos[22] = XMFLOAT3(0, 1, 1);
-		impostorVertices_nor[22] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[22] = XMFLOAT2(stepX * 3, 0);
-
-		impostorVertices_pos[23] = XMFLOAT3(0, -1, 1);
-		impostorVertices_nor[23] = XMFLOAT3(1, 0, 0);
-		impostorVertices_tex[23] = XMFLOAT2(stepX * 3, 1);
-
-		// bottom
-		impostorVertices_pos[24] = XMFLOAT3(-1, 0, 1);
-		impostorVertices_nor[24] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[24] = XMFLOAT2(stepX * 4, 0);
-
-		impostorVertices_pos[25] = XMFLOAT3(1, 0, 1);
-		impostorVertices_nor[25] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[25] = XMFLOAT2(stepX * 5, 0);
-
-		impostorVertices_pos[26] = XMFLOAT3(-1, 0, -1);
-		impostorVertices_nor[26] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[26] = XMFLOAT2(stepX * 4, 1);
-
-		impostorVertices_pos[27] = XMFLOAT3(-1, 0, -1);
-		impostorVertices_nor[27] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[27] = XMFLOAT2(stepX * 4, 1);
-
-		impostorVertices_pos[28] = XMFLOAT3(1, 0, 1);
-		impostorVertices_nor[28] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[28] = XMFLOAT2(stepX * 5, 0);
-
-		impostorVertices_pos[29] = XMFLOAT3(1, 0, -1);
-		impostorVertices_nor[29] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[29] = XMFLOAT2(stepX * 5, 1);
-
-		// top
-		impostorVertices_pos[30] = XMFLOAT3(-1, 0, 1);
-		impostorVertices_nor[30] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[30] = XMFLOAT2(stepX * 5, 0);
-
-		impostorVertices_pos[31] = XMFLOAT3(-1, 0, -1);
-		impostorVertices_nor[31] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[31] = XMFLOAT2(stepX * 5, 1);
-
-		impostorVertices_pos[32] = XMFLOAT3(1, 0, 1);
-		impostorVertices_nor[32] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[32] = XMFLOAT2(stepX * 6, 0);
-
-		impostorVertices_pos[33] = XMFLOAT3(-1, 0, -1);
-		impostorVertices_nor[33] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[33] = XMFLOAT2(stepX * 5, 1);
-
-		impostorVertices_pos[34] = XMFLOAT3(1, 0, -1);
-		impostorVertices_nor[34] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[34] = XMFLOAT2(stepX * 6, 1);
-
-		impostorVertices_pos[35] = XMFLOAT3(1, 0, 1);
-		impostorVertices_nor[35] = XMFLOAT3(0, 1, 0);
-		impostorVertices_tex[35] = XMFLOAT2(stepX * 6, 0);
-
-
-		MeshComponent::Vertex_POS impostorVertices_POS[count];
-		MeshComponent::Vertex_TEX impostorVertices_TEX[count];
-		for (int i = 0; i < count; ++i)
-		{
-			impostorVertices_POS[i].FromFULL(impostorVertices_pos[i], impostorVertices_nor[i], 0);
-			impostorVertices_TEX[i].FromFULL(impostorVertices_tex[i]);
-		}
-
-
-		GPUBufferDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
-		bd.Usage = USAGE_IMMUTABLE;
-		bd.BindFlags = BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
-		SubresourceData InitData;
-		ZeroMemory(&InitData, sizeof(InitData));
-		InitData.pSysMem = impostorVertices_POS;
-		bd.ByteWidth = sizeof(impostorVertices_POS);
-		device->CreateBuffer(&bd, &InitData, &impostorVB_POS);
-		InitData.pSysMem = impostorVertices_TEX;
-		bd.ByteWidth = sizeof(impostorVertices_TEX);
-		device->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
-	}
-
-	Scene& scene = GetScene();
-
-	MeshComponent& mesh = *scene.meshes.GetComponent(entity);
-
-	static const int res = 256;
-
-	const AABB& bbox = mesh.aabb;
-	const XMFLOAT3 extents = bbox.getHalfWidth();
-	if (!mesh.impostorTarget.IsInitialized())
-	{
-		mesh.impostorTarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
-		mesh.impostorTarget.Add(RTFormat_impostor_normal);		// normal, roughness
-		mesh.impostorTarget.Add(RTFormat_impostor_surface);		// surface properties
-	}
-
-
-	CameraComponent impostorcamera;
-	TransformComponent camera_transform;
-
-	BindPersistentState(threadID);
-
-	const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	struct InstBuf
-	{
-		Instance instance;
-		InstancePrev instancePrev;
-	};
-	UINT instancesOffset;
-	volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
-	buff->instance.Create(__identity);
-	buff->instancePrev.Create(__identity);
-	device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
-
-	GPUBuffer* vbs[] = {
-		mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-		mesh.vertexBuffer_TEX.get(),
-		mesh.IsSkinned() ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
-		&dynamicVertexBufferPools[threadID]
-	};
-	UINT strides[] = {
-		sizeof(MeshComponent::Vertex_POS),
-		sizeof(MeshComponent::Vertex_TEX),
-		sizeof(MeshComponent::Vertex_POS),
-		sizeof(InstBuf)
-	};
-	UINT offsets[] = {
-		0,
-		0,
-		0,
-		instancesOffset
-	};
-	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-
-	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
-
-	device->BindGraphicsPSO(PSO_captureimpostor, threadID);
-
-	ViewPort savedViewPort = mesh.impostorTarget.viewPort;
-	mesh.impostorTarget.Activate(threadID, 0, 0, 0, 0);
-	for (size_t i = 0; i < 6; ++i)
-	{
-		mesh.impostorTarget.viewPort.Height = (float)res;
-		mesh.impostorTarget.viewPort.Width = (float)res;
-		mesh.impostorTarget.viewPort.TopLeftX = (float)(i*res);
-		mesh.impostorTarget.viewPort.TopLeftY = 0.f;
-		mesh.impostorTarget.Set(threadID);
-
-		camera_transform.ClearTransform();
-		camera_transform.Translate(bbox.getCenter());
-		switch (i)
-		{
-		case 0:
-		{
-			// front capture
-			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-		}
-		break;
-		case 1:
-		{
-			// right capture
-			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
-		}
-		break;
-		case 2:
-		{
-			// back capture
-			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
-		}
-		break;
-		case 3:
-		{
-			// left capture
-			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-			camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
-		}
-		break;
-		case 4:
-		{
-			// bottom capture
-			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-			camera_transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
-		}
-		break;
-		case 5:
-		{
-			// top capture
-			XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-			XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-			camera_transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-		}
-		break;
-		default:
-			break;
-		}
-		camera_transform.UpdateTransform();
-		impostorcamera.UpdateCamera(&camera_transform);
-		impostorcamera.UpdateProjection();
-		UpdateCameraCB(impostorcamera, threadID);
-
-		for (MeshComponent::MeshSubset& subset : mesh.subsets)
-		{
-			if (subset.indexCount == 0)
-			{
-				continue;
-			}
-			MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
-
-			device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-
-			device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-			device->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-			device->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
-
-			device->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
-
-		}
-
-	}
-	GenerateMipChain(mesh.impostorTarget.GetTexture(), MIPGENFILTER_LINEAR, threadID);
-
-	mesh.impostorTarget.viewPort = savedViewPort;
-	UpdateCameraCB(GetCamera(), threadID);
 }
 
 void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)

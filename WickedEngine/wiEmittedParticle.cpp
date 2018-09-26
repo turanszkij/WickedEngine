@@ -226,6 +226,8 @@ void wiEmittedParticle::Restart()
 //#define DEBUG_SORTING // slow but great for debug!!
 void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID)
 {
+	center = transform.GetPosition();
+
 	CreateSelfBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();

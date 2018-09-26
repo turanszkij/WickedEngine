@@ -824,7 +824,9 @@ namespace wiSceneSystem
 
 		RunMaterialUpdateSystem(materials, dt);
 
-		RunObjectUpdateSystem(transforms, meshes, materials, objects, aabb_objects, bounds, waterPlane);
+		RunImpostorUpdateSystem(impostors);
+
+		RunObjectUpdateSystem(transforms, meshes, materials, objects, aabb_objects, impostors, bounds, waterPlane);
 
 		RunCameraUpdateSystem(transforms, cameras);
 
@@ -847,6 +849,7 @@ namespace wiSceneSystem
 		hierarchy.Clear();
 		materials.Clear();
 		meshes.Clear();
+		impostors.Clear();
 		objects.Clear();
 		aabb_objects.Clear();
 		rigidbodies.Clear();
@@ -874,6 +877,7 @@ namespace wiSceneSystem
 		hierarchy.Merge(other.hierarchy);
 		materials.Merge(other.materials);
 		meshes.Merge(other.meshes);
+		impostors.Merge(other.impostors);
 		objects.Merge(other.objects);
 		aabb_objects.Merge(other.aabb_objects);
 		rigidbodies.Merge(other.rigidbodies);
@@ -906,6 +910,7 @@ namespace wiSceneSystem
 		entityCount = max(entityCount, hierarchy.GetCount());
 		entityCount = max(entityCount, materials.GetCount());
 		entityCount = max(entityCount, meshes.GetCount());
+		entityCount = max(entityCount, impostors.GetCount());
 		entityCount = max(entityCount, objects.GetCount());
 		entityCount = max(entityCount, aabb_objects.GetCount());
 		entityCount = max(entityCount, rigidbodies.GetCount());
@@ -934,6 +939,7 @@ namespace wiSceneSystem
 		hierarchy.Remove_KeepSorted(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
+		impostors.Remove(entity);
 		objects.Remove(entity);
 		aabb_objects.Remove(entity);
 		rigidbodies.Remove(entity);
@@ -1500,12 +1506,22 @@ namespace wiSceneSystem
 
 		}
 	}
+	void RunImpostorUpdateSystem(ComponentManager<ImpostorComponent>& impostors)
+	{
+		for (size_t i = 0; i < impostors.GetCount(); ++i)
+		{
+			ImpostorComponent& impostor = impostors[i];
+			impostor.aabb = AABB();
+			impostor.instanceMatrices.clear();
+		}
+	}
 	void RunObjectUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MeshComponent>& meshes,
 		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<ObjectComponent>& objects,
 		ComponentManager<AABB>& aabb_objects,
+		ComponentManager<ImpostorComponent>& impostors,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	)
@@ -1523,6 +1539,7 @@ namespace wiSceneSystem
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
 			object.SetCastShadow(false);
+			object.SetImpostorPlacement(false);
 
 			if (object.meshID != INVALID_ENTITY)
 			{
@@ -1535,7 +1552,12 @@ namespace wiSceneSystem
 					aabb = mesh->aabb.get(transform->world);
 					sceneBounds = AABB::Merge(sceneBounds, aabb);
 
-					object.position = transform->GetPosition();
+					// This is instance bounding box matrix:
+					XMFLOAT4X4 meshMatrix;
+					XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * XMLoadFloat4x4(&transform->world));
+
+					// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
+					object.center = *((XMFLOAT3*)&meshMatrix._41);
 
 					if (mesh->IsSkinned() || mesh->IsDynamic())
 					{
@@ -1567,6 +1589,18 @@ namespace wiSceneSystem
 
 							object.SetCastShadow(material->IsCastingShadow());
 						}
+					}
+
+					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
+					if (impostor != nullptr)
+					{
+						object.SetImpostorPlacement(true);
+						object.impostorSwapDistance = impostor->swapInDistance;
+						object.impostorFadeThresholdRadius = aabb.getRadius();
+
+						impostor->aabb = AABB::Merge(impostor->aabb, aabb);
+						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
+						impostor->instanceMatrices.push_back(meshMatrix);
 					}
 				}
 			}

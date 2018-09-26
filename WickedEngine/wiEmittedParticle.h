@@ -115,6 +115,9 @@ public:
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
 	uint32_t GetMemorySizeInBytes() const;
 
+	// Non-serialized attributes:
+	XMFLOAT3 center;
+
 	inline bool IsDebug() const { return _flags & DEBUG; }
 	inline bool IsPaused() const { return _flags & PAUSED; }
 	inline bool IsSorted() const { return _flags & SORTING; }

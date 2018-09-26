@@ -99,6 +99,7 @@ namespace wiRenderer
 	void DrawLensFlares(GRAPHICSTHREAD threadID);
 	void DrawDecals(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	void RefreshEnvProbes(GRAPHICSTHREAD threadID);
+	void RefreshImpostors(GRAPHICSTHREAD threadID);
 	void VoxelRadiance(GRAPHICSTHREAD threadID);
 	void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID);
 	void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
@@ -138,7 +139,6 @@ namespace wiRenderer
 	void GenerateClouds(wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
 
 	void ManageDecalAtlas(GRAPHICSTHREAD threadID);
-	void CreateImpostor(wiECS::Entity, GRAPHICSTHREAD threadID);
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	void ManageWaterRipples();

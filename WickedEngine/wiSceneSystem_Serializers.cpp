@@ -173,7 +173,6 @@ namespace wiSceneSystem
 			}
 
 			archive >> tessellationFactor;
-			archive >> impostorDistance;
 			SerializeEntity(archive, armatureID, seed);
 
 			CreateRenderData();
@@ -199,9 +198,23 @@ namespace wiSceneSystem
 			}
 
 			archive << tessellationFactor;
-			archive << impostorDistance;
 			SerializeEntity(archive, armatureID, seed);
 
+		}
+	}
+	void ImpostorComponent::Serialize(wiArchive& archive, uint32_t seed)
+	{
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> swapInDistance;
+
+			SetDirty();
+		}
+		else
+		{
+			archive << _flags;
+			archive << swapInDistance;
 		}
 	}
 	void ObjectComponent::Serialize(wiArchive& archive, uint32_t seed)
@@ -512,6 +525,7 @@ namespace wiSceneSystem
 		hierarchy.Serialize(archive, seed);
 		materials.Serialize(archive, seed);
 		meshes.Serialize(archive, seed);
+		impostors.Serialize(archive, seed);
 		objects.Serialize(archive, seed);
 		aabb_objects.Serialize(archive, seed);
 		rigidbodies.Serialize(archive, seed);
@@ -599,6 +613,15 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = meshes.Create(entity);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+				}
+			}
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = impostors.Create(entity);
 					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
@@ -833,6 +856,18 @@ namespace wiSceneSystem
 			}
 			{
 				auto component = meshes.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			{
+				auto component = impostors.GetComponent(entity);
 				if (component != nullptr)
 				{
 					archive << true;
