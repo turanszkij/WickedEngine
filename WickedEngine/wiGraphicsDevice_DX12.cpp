@@ -3495,13 +3495,13 @@ namespace wiGraphicsTypes
 		{
 			if (ppRenderTargets[i] != nullptr)
 			{
-				if (arrayIndex < 0 || depthStencilTexture->additionalRTVs_DX12.empty())
+				if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs_DX12.empty())
 				{
 					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->RTV_DX12);
 				}
 				else
 				{
-					assert(depthStencilTexture->additionalRTVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+					assert(ppRenderTargets[i]->additionalRTVs_DX12.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
 					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->additionalRTVs_DX12[arrayIndex]);
 				}
 			}

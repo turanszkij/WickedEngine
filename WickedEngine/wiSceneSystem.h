@@ -377,7 +377,6 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 		AABB aabb;
-		wiRenderTarget rendertarget; // todo: combine all impostors into atlas/texture2darray
 		float fadeThresholdRadius;
 		std::vector<XMFLOAT4X4> instanceMatrices;
 

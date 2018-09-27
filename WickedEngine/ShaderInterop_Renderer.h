@@ -2,6 +2,8 @@
 #define _SHADERINTEROP_RENDERER_H_
 #include "ShaderInterop.h"
 
+static const int impostorCaptureAngles = 12;
+
 // ---------- Persistent: -----------------
 
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)

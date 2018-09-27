@@ -324,10 +324,6 @@ GFX_STRUCT InstancePrev
 	ALIGN_16
 };
 
-GPUBuffer impostorMaterialCB;
-GPUBuffer impostorVB_POS;
-GPUBuffer impostorVB_TEX;
-
 
 Sampler* GetSampler(int slot)
 {
@@ -395,7 +391,10 @@ std::string& GetShaderPath()
 }
 void ReloadShaders(const std::string& path)
 {
-	GetShaderPath() = path;
+	if (!path.empty())
+	{
+		GetShaderPath() = path;
+	}
 
 	GetDevice()->WaitForGPU();
 
@@ -1104,7 +1103,9 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 GraphicsPSO* PSO_decal = nullptr;
 GraphicsPSO* PSO_occlusionquery = nullptr;
 GraphicsPSO* PSO_impostor[SHADERTYPE_COUNT] = {};
-GraphicsPSO* PSO_captureimpostor = nullptr;
+GraphicsPSO* PSO_captureimpostor_albedo = nullptr;
+GraphicsPSO* PSO_captureimpostor_normal = nullptr;
+GraphicsPSO* PSO_captureimpostor_surface = nullptr;
 GraphicsPSO* GetImpostorPSO(SHADERTYPE shaderType)
 {
 	if (IsWireRender())
@@ -1177,8 +1178,6 @@ ComputePSO* CPSO[CSTYPE_LAST] = {};
 void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation = false)
 {
-	// Intensive section, refactor and optimize!
-
 	if (!renderQueue.empty())
 	{
 		GraphicsDevice* device = GetDevice();
@@ -1262,6 +1261,10 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				float swapDistance = instance.impostorSwapDistance;
 				float fadeThreshold = instance.impostorFadeThresholdRadius;
 				dither = max(0, distance - swapDistance) / fadeThreshold;
+			}
+
+			if (dither > 0)
+			{
 				instancedBatchArray[instancedBatchCount - 1].forceAlphatestForDithering = 1;
 			}
 
@@ -1503,28 +1506,28 @@ void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPH
 
 		device->EventBegin("RenderImpostors", threadID);
 
-		// TODO: Now the impostors are using the regular mesh shaders for simplicity, but we should do much better, simpler impostor shaders!
-		struct InstBuf
+		UINT instanceCount = 0;
+		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
-			Instance instance;
-			InstancePrev instancePrev;
-		};
+			const ImpostorComponent& impostor = scene.impostors[impostorID];
+			if (camera.frustum.CheckBox(impostor.aabb))
+			{
+				instanceCount += (UINT)impostor.instanceMatrices.size();
+			}
+		}
 
-		const bool advancedVBRequest =
-			!IsWireRender() &&
-			(shaderType == SHADERTYPE_FORWARD ||
-				shaderType == SHADERTYPE_DEFERRED ||
-				shaderType == SHADERTYPE_TILEDFORWARD);
+		if (instanceCount == 0)
+		{
+			return;
+		}
 
-		const bool easyTextureBind =
-			shaderType == SHADERTYPE_TEXTURE ||
-			shaderType == SHADERTYPE_SHADOW ||
-			shaderType == SHADERTYPE_SHADOWCUBE ||
-			shaderType == SHADERTYPE_DEPTHONLY ||
-			shaderType == SHADERTYPE_VOXELIZE;
+		// Pre-allocate space for all the instances in GPU-buffer:
+		const UINT instanceDataSize = sizeof(Instance);
+		UINT instancesOffset;
+		const size_t alloc_size = instanceCount * instanceDataSize;
+		void* instances = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], alloc_size, instancesOffset, threadID);
 
-		bool impostorGraphicsStateComplete = false;
-
+		int drawableInstanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorID];
@@ -1533,26 +1536,8 @@ void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPH
 				continue;
 			}
 
-			if (!impostorGraphicsStateComplete)
+			for (auto& mat : impostor.instanceMatrices)
 			{
-				device->BindGraphicsPSO(impostorRequest, threadID);
-				device->BindConstantBuffer(PS, &impostorMaterialCB, CB_GETBINDSLOT(MaterialCB), threadID);
-				SetAlphaRef(0.75f, threadID);
-				impostorGraphicsStateComplete = true;
-			}
-
-			UINT instanceCount = (UINT)impostor.instanceMatrices.size();
-
-			// Pre-allocate space for all the instances in GPU-buffer:
-			const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-			UINT instancesOffset;
-			const size_t alloc_size = instanceCount * instanceDataSize;
-			void* instances = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], alloc_size, instancesOffset, threadID);
-			
-			int drawableInstanceCount = 0;
-			for (UINT instanceID = 0; instanceID < instanceCount; ++instanceID)
-			{
-				const XMFLOAT4X4& mat = impostor.instanceMatrices[instanceID];
 				const XMFLOAT3 center = *((XMFLOAT3*)&mat._41);
 				float distance = wiMath::Distance(camera.Eye, center);
 
@@ -1563,72 +1548,24 @@ void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPH
 
 				float dither = max(0, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-				if (advancedVBRequest)
-				{
-					((volatile InstBuf*)instances)[drawableInstanceCount].instance.Create(mat, XMFLOAT4(1, 1, 1, 1), dither);
-					((volatile InstBuf*)instances)[drawableInstanceCount].instancePrev.Create(mat);
-				}
-				else
-				{
-					((volatile Instance*)instances)[drawableInstanceCount].Create(mat, XMFLOAT4(1, 1, 1, 1), dither);
-				}
+				((volatile Instance*)instances)[drawableInstanceCount].Create(mat, XMFLOAT4((float)impostorID * impostorCaptureAngles * 3, 1, 1, 1), dither);
 
 				drawableInstanceCount++;
 			}
-			device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
-
-			if (!advancedVBRequest || IsWireRender())
-			{
-				GPUBuffer* vbs[] = {
-					&impostorVB_POS,
-					&impostorVB_TEX,
-					&dynamicVertexBufferPools[threadID]
-				};
-				UINT strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(Instance)
-				};
-				UINT offsets[] = {
-					0,
-					0,
-					instancesOffset
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-			}
-			else
-			{
-				GPUBuffer* vbs[] = {
-					&impostorVB_POS,
-					&impostorVB_TEX,
-					&impostorVB_POS,
-					&dynamicVertexBufferPools[threadID]
-				};
-				UINT strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(InstBuf)
-				};
-				UINT offsets[] = {
-					0,
-					0,
-					0,
-					instancesOffset
-				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-			}
-
-			GPUResource* res[] = {
-				impostor.rendertarget.GetTexture(0),
-				impostor.rendertarget.GetTexture(1),
-				impostor.rendertarget.GetTexture(2)
-			};
-			device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 1 : ARRAYSIZE(res)), threadID);
-
-			device->DrawInstanced(6 * 6, drawableInstanceCount, 0, 0, threadID); // 6 * 6: see MeshComponent::CreateImpostorVB function
-
 		}
+		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID); // close buffer, ready to draw all!
+
+		device->BindGraphicsPSO(impostorRequest, threadID);
+		SetAlphaRef(0.75f, threadID);
+
+		MiscCB cb;
+		cb.g_xColor.x = (float)instancesOffset;
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+
+		device->BindResource(VS, &dynamicVertexBufferPools[threadID], TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, textures[TEXTYPE_2D_IMPOSTORARRAY], TEXSLOT_ONDEMAND0, threadID);
+
+		device->Draw(drawableInstanceCount * 6, 0, threadID);
 
 		device->EventEnd(threadID);
 	}
@@ -1656,16 +1593,16 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_COMMON]->code.data, vertexShaders[VSTYPE_OBJECT_COMMON]->code.size, vertexLayouts[VLTYPE_OBJECT_ALL]);
@@ -1676,10 +1613,10 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code.data, vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code.size, vertexLayouts[VLTYPE_OBJECT_POS]);
@@ -1689,12 +1626,12 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_SIMPLE]->code.data, vertexShaders[VSTYPE_OBJECT_SIMPLE]->code.size, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
@@ -1705,10 +1642,10 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_SHADOW]->code.data, vertexShaders[VSTYPE_SHADOW]->code.size, vertexLayouts[VLTYPE_SHADOW_POS]);
@@ -1718,12 +1655,12 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-		{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-		{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code.data, vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code.size, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
@@ -1737,7 +1674,7 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_LINE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_LINE]->code.data, vertexShaders[VSTYPE_LINE]->code.size, vertexLayouts[VLTYPE_LINE]);
@@ -1748,8 +1685,8 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_TRAIL]->code.data, vertexShaders[VSTYPE_TRAIL]->code.size, vertexLayouts[VLTYPE_TRAIL]);
@@ -1758,6 +1695,7 @@ void LoadShaders()
 
 	vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common_tessellation.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple_tessellation.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_IMPOSTOR] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER));
@@ -1786,6 +1724,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_deferred.cso", wiResourceManager::PIXELSHADER));
 
 	pixelShaders[PSTYPE_OBJECT_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap.cso", wiResourceManager::PIXELSHADER));
@@ -1800,6 +1739,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_FORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_water.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_forward.cso", wiResourceManager::PIXELSHADER));
 
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_normalmap.cso", wiResourceManager::PIXELSHADER));
@@ -1814,6 +1754,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_water.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
 	pixelShaders[PSTYPE_OBJECT_HOLOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_hologram.cso", wiResourceManager::PIXELSHADER));
 
@@ -1823,6 +1764,8 @@ void LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_simple.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
@@ -1839,7 +1782,9 @@ void LoadShaders()
 	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVMAP_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_static.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_CAPTUREIMPOSTOR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS_albedo.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS_normal.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS_surface.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_CUBEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubemapPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_static.cso", wiResourceManager::PIXELSHADER));
@@ -2213,14 +2158,13 @@ void LoadShaders()
 			desc.rs = rasterizers[RSTYPE_FRONT];
 			desc.bs = blendStates[BSTYPE_OPAQUE];
 			desc.dss = depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+			desc.il = nullptr;
 
-			VLTYPES realVL = (shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_TEXTURE) ? VLTYPE_OBJECT_POS_TEX : VLTYPE_OBJECT_ALL;
-			VSTYPES realVS = realVL == VLTYPE_OBJECT_POS_TEX ? VSTYPE_OBJECT_SIMPLE : VSTYPE_OBJECT_COMMON;
-			PSTYPES realPS;
 			switch (shaderType)
 			{
 			case SHADERTYPE_DEFERRED:
-				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
+				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
 				desc.numRTs = 4;
 				desc.RTFormats[0] = RTFormat_gbuffer_0;
 				desc.RTFormats[1] = RTFormat_gbuffer_1;
@@ -2228,31 +2172,31 @@ void LoadShaders()
 				desc.RTFormats[3] = RTFormat_gbuffer_3;
 				break;
 			case SHADERTYPE_FORWARD:
-				realPS = PSTYPE_OBJECT_FORWARD_NORMALMAP;
+				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
 				desc.numRTs = 2;
 				desc.RTFormats[0] = RTFormat_hdr;
 				desc.RTFormats[1] = RTFormat_gbuffer_1;
 				break;
 			case SHADERTYPE_TILEDFORWARD:
-				realPS = PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP;
+				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
 				desc.numRTs = 2;
 				desc.RTFormats[0] = RTFormat_hdr;
 				desc.RTFormats[1] = RTFormat_gbuffer_1;
 				break;
 			case SHADERTYPE_DEPTHONLY:
-				realPS = PSTYPE_OBJECT_ALPHATESTONLY;
+				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY];
 				break;
 			default:
-				realPS = PSTYPE_OBJECT_TEXTUREONLY;
+				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_SIMPLE];
 				desc.numRTs = 1;
 				desc.RTFormats[0] = RTFormat_hdr;
 				break;
 			}
 			desc.DSFormat = DSFormat_full;
-
-			desc.vs = vertexShaders[realVS];
-			desc.il = vertexLayouts[realVL];
-			desc.ps = pixelShaders[realPS];
 
 			RECREATE(PSO_impostor[shaderType]);
 			device->CreateGraphicsPSO(&desc, PSO_impostor[shaderType]);
@@ -2260,20 +2204,26 @@ void LoadShaders()
 		{
 			GraphicsPSODesc desc;
 			desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
-			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR];
 			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
 			desc.bs = blendStates[BSTYPE_OPAQUE];
 			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
 
-			desc.numRTs = 3;
-			desc.RTFormats[0] = RTFormat_impostor_albedo;
-			desc.RTFormats[1] = RTFormat_impostor_normal;
-			desc.RTFormats[2] = RTFormat_impostor_surface;
-			desc.DSFormat = DSFormat_full;
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_impostor;
+			desc.DSFormat = DSFormat_small;
 
-			RECREATE(PSO_captureimpostor);
-			device->CreateGraphicsPSO(&desc, PSO_captureimpostor);
+			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
+			RECREATE(PSO_captureimpostor_albedo);
+			device->CreateGraphicsPSO(&desc, PSO_captureimpostor_albedo);
+
+			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL];
+			RECREATE(PSO_captureimpostor_normal);
+			device->CreateGraphicsPSO(&desc, PSO_captureimpostor_normal);
+
+			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
+			RECREATE(PSO_captureimpostor_surface);
+			device->CreateGraphicsPSO(&desc, PSO_captureimpostor_surface);
 		}
 	}));
 
@@ -2575,7 +2525,8 @@ void LoadShaders()
 			desc.DSFormat = DSFormat_full;
 
 			RECREATE(PSO_debug[debug]);
-			device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
+			HRESULT hr = device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
+			assert(SUCCEEDED(hr));
 		}
 	}));
 
@@ -2633,11 +2584,11 @@ void LoadBuffers()
 	// Ring buffer allows fast allocation of dynamic buffers for one frame:
 	for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 	{
-		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 		bd.ByteWidth = 1024 * 1024 * 64;
 		bd.Usage = USAGE_DYNAMIC;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		bd.MiscFlags = 0;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		GetDevice()->CreateBuffer(&bd, nullptr, &dynamicVertexBufferPools[threadID]);
 		GetDevice()->SetName(&dynamicVertexBufferPools[threadID], "DynamicVertexBufferPool");
 	}
@@ -5578,7 +5529,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		desc.ArraySize = 6;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_D16_UNORM;
+		desc.Format = DSFormat_small;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = 1;
@@ -5799,214 +5750,48 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Impostor Refresh", threadID);
 
+		static const UINT maxImpostorCount = 8;
+		static const UINT textureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
+		static const UINT textureDim = 128;
+		static Texture2D* depthStencil = nullptr;
 
-		if (!impostorMaterialCB.IsValid())
+		if (textures[TEXTYPE_2D_IMPOSTORARRAY] == nullptr)
 		{
-			MaterialCB mcb;
-			ZeroMemory(&mcb, sizeof(mcb));
-			mcb.g_xMat_baseColor = XMFLOAT4(1, 1, 1, 1);
-			mcb.g_xMat_texMulAdd = XMFLOAT4(1, 1, 0, 0);
-			mcb.g_xMat_normalMapStrength = 1.0f;
-			mcb.g_xMat_roughness = 1.0f;
-			mcb.g_xMat_reflectance = 1.0f;
-			mcb.g_xMat_metalness = 1.0f;
+			TextureDesc desc;
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.Usage = USAGE_DEFAULT;
+			desc.CPUAccessFlags = 0;
+			desc.ArraySize = textureArraySize;
+			desc.Width = textureDim;
+			desc.Height = textureDim;
+			desc.Depth = 1;
+			desc.MipLevels = 1;
+			desc.Format = RTFormat_impostor;
+			desc.MiscFlags = 0;
 
-			GPUBufferDesc bd;
-			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.CPUAccessFlags = 0;
-			bd.ByteWidth = sizeof(MaterialCB);
-			SubresourceData initData;
-			initData.pSysMem = &mcb;
+			textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
+			textures[TEXTYPE_2D_IMPOSTORARRAY]->RequestIndependentRenderTargetArraySlices(true);
+			HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY]);
+			assert(SUCCEEDED(hr));
+			device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
 
-			device->CreateBuffer(&bd, &initData, &impostorMaterialCB);
-		}
-		if (!impostorVB_POS.IsValid())
-		{
-			const int count = 6 * 6;
-
-			XMFLOAT3 impostorVertices_pos[count];
-			XMFLOAT3 impostorVertices_nor[count];
-			XMFLOAT2 impostorVertices_tex[count];
-
-			float stepX = 1.f / 6.f;
-
-			// front
-			impostorVertices_pos[0] = XMFLOAT3(-1, 1, 0);
-			impostorVertices_nor[0] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[0] = XMFLOAT2(0, 0);
-
-			impostorVertices_pos[1] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[1] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[1] = XMFLOAT2(0, 1);
-
-			impostorVertices_pos[2] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[2] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[2] = XMFLOAT2(stepX, 0);
-
-			impostorVertices_pos[3] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[3] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[3] = XMFLOAT2(0, 1);
-
-			impostorVertices_pos[4] = XMFLOAT3(1, -1, 0);
-			impostorVertices_nor[4] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[4] = XMFLOAT2(stepX, 1);
-
-			impostorVertices_pos[5] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[5] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[5] = XMFLOAT2(stepX, 0);
-
-			// right
-			impostorVertices_pos[6] = XMFLOAT3(0, 1, -1);
-			impostorVertices_nor[6] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[6] = XMFLOAT2(stepX, 0);
-
-			impostorVertices_pos[7] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[7] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[7] = XMFLOAT2(stepX, 1);
-
-			impostorVertices_pos[8] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[8] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[8] = XMFLOAT2(stepX * 2, 0);
-
-			impostorVertices_pos[9] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[9] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[9] = XMFLOAT2(stepX, 1);
-
-			impostorVertices_pos[10] = XMFLOAT3(0, -1, 1);
-			impostorVertices_nor[10] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[10] = XMFLOAT2(stepX * 2, 1);
-
-			impostorVertices_pos[11] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[11] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[11] = XMFLOAT2(stepX * 2, 0);
-
-			// back
-			impostorVertices_pos[12] = XMFLOAT3(-1, 1, 0);
-			impostorVertices_nor[12] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[12] = XMFLOAT2(stepX * 3, 0);
-
-			impostorVertices_pos[13] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[13] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[13] = XMFLOAT2(stepX * 2, 0);
-
-			impostorVertices_pos[14] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[14] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[14] = XMFLOAT2(stepX * 3, 1);
-
-			impostorVertices_pos[15] = XMFLOAT3(-1, -1, 0);
-			impostorVertices_nor[15] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[15] = XMFLOAT2(stepX * 3, 1);
-
-			impostorVertices_pos[16] = XMFLOAT3(1, 1, 0);
-			impostorVertices_nor[16] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[16] = XMFLOAT2(stepX * 2, 0);
-
-			impostorVertices_pos[17] = XMFLOAT3(1, -1, 0);
-			impostorVertices_nor[17] = XMFLOAT3(0, 0, -1);
-			impostorVertices_tex[17] = XMFLOAT2(stepX * 2, 1);
-
-			// left
-			impostorVertices_pos[18] = XMFLOAT3(0, 1, -1);
-			impostorVertices_nor[18] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[18] = XMFLOAT2(stepX * 4, 0);
-
-			impostorVertices_pos[19] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[19] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[19] = XMFLOAT2(stepX * 3, 0);
-
-			impostorVertices_pos[20] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[20] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[20] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[21] = XMFLOAT3(0, -1, -1);
-			impostorVertices_nor[21] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[21] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[22] = XMFLOAT3(0, 1, 1);
-			impostorVertices_nor[22] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[22] = XMFLOAT2(stepX * 3, 0);
-
-			impostorVertices_pos[23] = XMFLOAT3(0, -1, 1);
-			impostorVertices_nor[23] = XMFLOAT3(1, 0, 0);
-			impostorVertices_tex[23] = XMFLOAT2(stepX * 3, 1);
-
-			// bottom
-			impostorVertices_pos[24] = XMFLOAT3(-1, 0, 1);
-			impostorVertices_nor[24] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[24] = XMFLOAT2(stepX * 4, 0);
-
-			impostorVertices_pos[25] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[25] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[25] = XMFLOAT2(stepX * 5, 0);
-
-			impostorVertices_pos[26] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[26] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[26] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[27] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[27] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[27] = XMFLOAT2(stepX * 4, 1);
-
-			impostorVertices_pos[28] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[28] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[28] = XMFLOAT2(stepX * 5, 0);
-
-			impostorVertices_pos[29] = XMFLOAT3(1, 0, -1);
-			impostorVertices_nor[29] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[29] = XMFLOAT2(stepX * 5, 1);
-
-			// top
-			impostorVertices_pos[30] = XMFLOAT3(-1, 0, 1);
-			impostorVertices_nor[30] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[30] = XMFLOAT2(stepX * 5, 0);
-
-			impostorVertices_pos[31] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[31] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[31] = XMFLOAT2(stepX * 5, 1);
-
-			impostorVertices_pos[32] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[32] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[32] = XMFLOAT2(stepX * 6, 0);
-
-			impostorVertices_pos[33] = XMFLOAT3(-1, 0, -1);
-			impostorVertices_nor[33] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[33] = XMFLOAT2(stepX * 5, 1);
-
-			impostorVertices_pos[34] = XMFLOAT3(1, 0, -1);
-			impostorVertices_nor[34] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[34] = XMFLOAT2(stepX * 6, 1);
-
-			impostorVertices_pos[35] = XMFLOAT3(1, 0, 1);
-			impostorVertices_nor[35] = XMFLOAT3(0, 1, 0);
-			impostorVertices_tex[35] = XMFLOAT2(stepX * 6, 0);
-
-
-			MeshComponent::Vertex_POS impostorVertices_POS[count];
-			MeshComponent::Vertex_TEX impostorVertices_TEX[count];
-			for (int i = 0; i < count; ++i)
-			{
-				impostorVertices_POS[i].FromFULL(impostorVertices_pos[i], impostorVertices_nor[i], 0);
-				impostorVertices_TEX[i].FromFULL(impostorVertices_tex[i]);
-			}
-
-
-			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
-			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
-			InitData.pSysMem = impostorVertices_POS;
-			bd.ByteWidth = sizeof(impostorVertices_POS);
-			device->CreateBuffer(&bd, &InitData, &impostorVB_POS);
-			InitData.pSysMem = impostorVertices_TEX;
-			bd.ByteWidth = sizeof(impostorVertices_TEX);
-			device->CreateBuffer(&bd, &InitData, &impostorVB_TEX);
+			desc.BindFlags = BIND_DEPTH_STENCIL;
+			desc.ArraySize = 1;
+			desc.Format = DSFormat_small;
+			hr = device->CreateTexture2D(&desc, nullptr, &depthStencil);
+			assert(SUCCEEDED(hr));
+			device->SetName(depthStencil, "ImpostorDepthTarget");
 		}
 
-		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
+		bool state_set = false;
+		UINT instancesOffset;
+		struct InstBuf
+		{
+			Instance instance;
+			InstancePrev instancePrev;
+		};
+
+		for (size_t impostorID = 0; impostorID < min(maxImpostorCount, scene.impostors.GetCount()); ++impostorID)
 		{
 			ImpostorComponent& impostor = scene.impostors[impostorID];
 			if (!impostor.IsDirty())
@@ -6015,37 +5800,24 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			}
 			impostor.SetDirty(false);
 
+			if (!state_set)
+			{
+				BindPersistentState(threadID);
+
+				const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+				volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
+				buff->instance.Create(__identity);
+				buff->instancePrev.Create(__identity);
+				device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
+
+				state_set = true;
+			}
+
 			Entity entity = scene.impostors.GetEntity(impostorID);
 			const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
-			static const int res = 256;
-
 			const AABB& bbox = mesh.aabb;
 			const XMFLOAT3 extents = bbox.getHalfWidth();
-			if (!impostor.rendertarget.IsInitialized())
-			{
-				impostor.rendertarget.Initialize(res * 6, res, true, RTFormat_impostor_albedo, 0);
-				impostor.rendertarget.Add(RTFormat_impostor_normal);		// normal, roughness
-				impostor.rendertarget.Add(RTFormat_impostor_surface);		// surface properties
-			}
-
-
-			CameraComponent impostorcamera;
-			TransformComponent camera_transform;
-
-			BindPersistentState(threadID);
-
-			const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-			struct InstBuf
-			{
-				Instance instance;
-				InstancePrev instancePrev;
-			};
-			UINT instancesOffset;
-			volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
-			buff->instance.Create(__identity);
-			buff->instancePrev.Create(__identity);
-			device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 			GPUBuffer* vbs[] = {
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
@@ -6069,99 +5841,77 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 
 			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
 
-			device->BindGraphicsPSO(PSO_captureimpostor, threadID);
-
-			ViewPort savedViewPort = impostor.rendertarget.viewPort;
-			impostor.rendertarget.Activate(threadID, 0, 0, 0, 0);
-			for (size_t i = 0; i < 6; ++i)
+			for (int prop = 0; prop < 3; ++prop)
 			{
-				impostor.rendertarget.viewPort.Height = (float)res;
-				impostor.rendertarget.viewPort.Width = (float)res;
-				impostor.rendertarget.viewPort.TopLeftX = (float)(i*res);
-				impostor.rendertarget.viewPort.TopLeftY = 0.f;
-				impostor.rendertarget.Set(threadID);
-
-				camera_transform.ClearTransform();
-				camera_transform.Translate(bbox.getCenter());
-				switch (i)
+				switch (prop)
 				{
 				case 0:
-				{
-					// front capture
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-				}
-				break;
+					device->BindGraphicsPSO(PSO_captureimpostor_albedo, threadID);
+					break;
 				case 1:
-				{
-					// right capture
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PIDIV2, 0));
-				}
-				break;
+					device->BindGraphicsPSO(PSO_captureimpostor_normal, threadID);
+					break;
 				case 2:
-				{
-					// back capture
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, -XM_PI, 0));
-				}
-				break;
-				case 3:
-				{
-					// left capture
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.z, extents.z, -extents.y, extents.y, -extents.x, extents.x);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_PIDIV2, 0));
-				}
-				break;
-				case 4:
-				{
-					// bottom capture
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-					camera_transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV2, 0, 0));
-				}
-				break;
-				case 5:
-				{
-					// top capture
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.z, extents.z, -extents.y, extents.y);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
-					camera_transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-				}
-				break;
-				default:
+					device->BindGraphicsPSO(PSO_captureimpostor_surface, threadID);
 					break;
 				}
-				camera_transform.UpdateTransform();
-				impostorcamera.UpdateCamera(&camera_transform);
-				impostorcamera.UpdateProjection();
-				UpdateCameraCB(impostorcamera, threadID);
 
-				for (auto& subset : mesh.subsets)
+				for (size_t i = 0; i < impostorCaptureAngles; ++i)
 				{
-					if (subset.indexCount == 0)
+					int textureIndex = (int)(impostorID * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
+					device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY], depthStencil, threadID, textureIndex);
+					const float clearColor[4] = { 0,0,0,0 };
+					device->ClearRenderTarget(textures[TEXTYPE_2D_IMPOSTORARRAY], clearColor, threadID, textureIndex);
+					device->ClearDepthStencil(depthStencil, CLEAR_DEPTH, 0.0f, 0, threadID);
+
+					ViewPort viewPort;
+					viewPort.Height = (float)textureDim;
+					viewPort.Width = (float)textureDim;
+					viewPort.TopLeftX = 0;
+					viewPort.TopLeftY = 0;
+					viewPort.MinDepth = 0;
+					viewPort.MaxDepth = 1;
+					device->BindViewports(1, &viewPort, threadID);
+
+
+					CameraComponent impostorcamera;
+					TransformComponent camera_transform;
+
+					camera_transform.ClearTransform();
+					camera_transform.Translate(bbox.getCenter());
+
+					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * (float)i / (float)impostorCaptureAngles, 0));
+
+					camera_transform.UpdateTransform();
+					impostorcamera.UpdateCamera(&camera_transform);
+					impostorcamera.UpdateProjection();
+					UpdateCameraCB(impostorcamera, threadID);
+
+					for (auto& subset : mesh.subsets)
 					{
-						continue;
+						if (subset.indexCount == 0)
+						{
+							continue;
+						}
+						MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
+
+						device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+
+						GPUResource* res[] = {
+							material.GetBaseColorMap(),
+							material.GetNormalMap(),
+							material.GetSurfaceMap(),
+						};
+						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+						device->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
 					}
-					MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
-
-					device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-
-					device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
-					device->BindResource(PS, material.GetNormalMap(), TEXSLOT_ONDEMAND1, threadID);
-					device->BindResource(PS, material.GetSurfaceMap(), TEXSLOT_ONDEMAND2, threadID);
-
-					device->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
 
 				}
-
 			}
-			GenerateMipChain(impostor.rendertarget.GetTexture(), MIPGENFILTER_LINEAR, threadID);
 
-			impostor.rendertarget.viewPort = savedViewPort;
 		}
 
 		UpdateCameraCB(GetCamera(), threadID);

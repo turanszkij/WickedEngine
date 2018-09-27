@@ -115,6 +115,9 @@
     <None Include="tracedRenderingHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="impostorHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
@@ -316,9 +319,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_deferred_pom.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="captureImpostorPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="lightCullingCS.hlsl">
@@ -791,6 +791,33 @@
     </FxCompile>
     <FxCompile Include="hairparticle_simulateCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="impostorVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="impostorPS_deferred.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="impostorPS_forward.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="impostorPS_tiledforward.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="impostorPS_alphatestonly.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="impostorPS_simple.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="captureImpostorPS_normal.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="captureImpostorPS_surface.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="captureImpostorPS_albedo.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -27,9 +27,7 @@ namespace wiRenderer
 	static const wiGraphicsTypes::FORMAT RTFormat_depthresolve = wiGraphicsTypes::FORMAT_R32_FLOAT;
 	static const wiGraphicsTypes::FORMAT RTFormat_voxelradiance = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
 	static const wiGraphicsTypes::FORMAT RTFormat_envprobe = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor_albedo = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor_normal = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor_surface = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphicsTypes::FORMAT RTFormat_impostor = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
 
 	static const wiGraphicsTypes::FORMAT DSFormat_full = wiGraphicsTypes::FORMAT_D32_FLOAT_S8X24_UINT;
 	static const wiGraphicsTypes::FORMAT DSFormat_full_alias = wiGraphicsTypes::FORMAT_R32G8X24_TYPELESS;

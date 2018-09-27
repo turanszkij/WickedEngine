@@ -2,6 +2,7 @@
 #include "wiResourceManager.h"
 #include "wiArchive.h"
 #include "wiRandom.h"
+#include "wiHelper.h"
 
 using namespace wiECS;
 
@@ -102,20 +103,26 @@ namespace wiSceneSystem
 			archive >> displacementMapName;
 
 			SetDirty();
+
+			std::string texturesDir = archive.GetSourceDirectory() + "textures/";
 			if (!baseColorMapName.empty())
 			{
+				baseColorMapName = texturesDir + baseColorMapName;
 				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
+				surfaceMapName = texturesDir + surfaceMapName;
 				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
+				normalMapName = texturesDir + normalMapName;
 				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
+				displacementMapName = texturesDir + displacementMapName;
 				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(displacementMapName);
 			}
 
@@ -141,10 +148,10 @@ namespace wiSceneSystem
 			archive << texAnimFrameRate;
 			archive << texAnimSleep;
 
-			archive << baseColorMapName;
-			archive << surfaceMapName;
-			archive << normalMapName;
-			archive << displacementMapName;
+			archive << wiHelper::GetFileNameFromPath(baseColorMapName);
+			archive << wiHelper::GetFileNameFromPath(surfaceMapName);
+			archive << wiHelper::GetFileNameFromPath(normalMapName);
+			archive << wiHelper::GetFileNameFromPath(displacementMapName);
 		}
 	}
 	void MeshComponent::Serialize(wiArchive& archive, uint32_t seed)
