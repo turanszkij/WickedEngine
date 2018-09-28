@@ -3244,7 +3244,7 @@ void UpdatePerFrameData(float dt)
 					if (camera == &GetCamera())
 					{
 						const ObjectComponent& object = scene.objects[i];
-						if (object.GetRenderTypes() & RENDERTYPE_WATER)
+						if (object.IsRequestPlanarReflection())
 						{
 							requestReflectionRendering = true;
 						}
@@ -3352,9 +3352,6 @@ void UpdatePerFrameData(float dt)
 		XMStoreFloat4(&waterPlane, _refPlane);
 	}
 
-
-	GetPrevCamera() = GetCamera();
-
 	if (GetTemporalAAEnabled())
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(GetDevice()->GetFrameCount() % 256);
@@ -3364,7 +3361,6 @@ void UpdatePerFrameData(float dt)
 		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetInternalResolution().y;
 		GetCamera().Projection.m[2][0] = temporalAAJitter.x;
 		GetCamera().Projection.m[2][1] = temporalAAJitter.y;
-		GetCamera().UpdateCamera();
 	}
 	else
 	{
@@ -3372,6 +3368,7 @@ void UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = XMFLOAT2(0, 0);
 	}
 
+	GetCamera().UpdateCamera();
 	GetRefCamera() = GetCamera();
 	GetRefCamera().Reflect(waterPlane);
 
@@ -3645,6 +3642,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	UpdateFrameCB(threadID);
 	BindPersistentState(threadID);
+
+	GetPrevCamera() = GetCamera();
 
 	ManageDecalAtlas(threadID);
 

@@ -1536,12 +1536,13 @@ namespace wiSceneSystem
 			object.SetDynamic(false);
 			object.SetCastShadow(false);
 			object.SetImpostorPlacement(false);
+			object.SetRequestPlanarReflection(false);
 
 			if (object.meshID != INVALID_ENTITY)
 			{
 				Entity entity = objects.GetEntity(i);
 
-				object.transformComponentIndex = transforms.GetIndex(entity);
+				object.transformComponentIndex = (uint32_t)transforms.GetIndex(entity);
 
 				const TransformComponent& transform = transforms[object.transformComponentIndex];
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
@@ -1581,8 +1582,12 @@ namespace wiSceneSystem
 							if (material->IsWater())
 							{
 								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+							}
 
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(transform.GetPositionV(), XMVectorSet(0, 1, 0, 0));
+							if (material->HasPlanarReflection())
+							{
+								object.SetRequestPlanarReflection(true);
+								XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object.center), XMVectorSet(0, 1, 0, 0));
 								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 
