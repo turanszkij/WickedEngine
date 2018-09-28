@@ -893,7 +893,7 @@ void EditorComponent::Update(float dt)
 			}
 
 			cameraWnd->camera_target.UpdateTransform();
-			cameraWnd->camera_transform.UpdateParentedTransform(cameraWnd->camera_target);
+			cameraWnd->camera_transform.UpdateTransform_Parented(cameraWnd->camera_target);
 		}
 
 		// Begin picking:
@@ -1827,7 +1827,7 @@ void EditorComponent::EndTranslate()
 				if (transform_child != nullptr)
 				{
 					// Child updated immediately, to that it can be immediately attached to afterwards:
-					transform_child->UpdateParentedTransform(*transform_parent, parent->world_parent_inverse_bind);
+					transform_child->UpdateTransform_Parented(*transform_parent, parent->world_parent_inverse_bind);
 				}
 			}
 

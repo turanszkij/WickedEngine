@@ -5,8 +5,6 @@
 #include "wiSceneSystem_Decl.h"
 #include "wiECS.h"
 
-class  wiOcean;
-struct wiOceanParameter;
 struct RAY;
 
 namespace wiRenderer
@@ -220,8 +218,8 @@ namespace wiRenderer
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
-	void SetOceanEnabled(bool enabled, const wiOceanParameter& params);
-	wiOcean* GetOcean();
+	void SetOceanEnabled(bool enabled);
+	bool GetOceanEnabled();
 
 
 	RAY GetPickRay(long cursorX, long cursorY);

@@ -25,6 +25,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	camera_transform.MatrixTransform(wiRenderer::GetCamera().GetInvView());
+	camera_transform.UpdateTransform();
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(600, 420));

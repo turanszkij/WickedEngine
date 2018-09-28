@@ -266,7 +266,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->blendFlag = static_cast<BLENDMODE>(args.iValue);
+			material->blendMode = static_cast<BLENDMODE>(args.iValue);
 		}
 	});
 	blendModeComboBox->AddItem("Opaque");
@@ -571,7 +571,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		colorPicker->SetEnabled(true);
-		blendModeComboBox->SetSelected((int)material->blendFlag);
+		blendModeComboBox->SetSelected((int)material->blendMode);
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));

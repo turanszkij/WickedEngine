@@ -66,7 +66,7 @@ namespace wiSceneSystem
 		XMVECTOR GetRotationV() const;
 		XMVECTOR GetScaleV() const;
 		void UpdateTransform();
-		void UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix = IDENTITYMATRIX);
+		void UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix = IDENTITYMATRIX);
 		void ApplyTransform();
 		void ClearTransform();
 		void Translate(const XMFLOAT3& value);
@@ -112,7 +112,7 @@ namespace wiSceneSystem
 
 		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
-		BLENDMODE blendFlag = BLENDMODE_OPAQUE;
+		BLENDMODE blendMode = BLENDMODE_OPAQUE;
 
 		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
@@ -409,6 +409,9 @@ namespace wiSceneSystem
 		float impostorFadeThresholdRadius;
 		float impostorSwapDistance;
 
+		// single frame-lifetime, to directly index transform component:
+		uint32_t transformComponentIndex;
+
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
 		// occlusion query pool index
@@ -503,7 +506,6 @@ namespace wiSceneSystem
 		XMFLOAT4X4 remapMatrix = IDENTITYMATRIX; // Use this to eg. mirror the armature
 
 		// Non-serialized attributes:
-		std::vector<XMFLOAT4X4> skinningMatrices;
 
 		GFX_STRUCT ShaderBoneType
 		{
@@ -511,11 +513,22 @@ namespace wiSceneSystem
 			XMFLOAT4A pose1;
 			XMFLOAT4A pose2;
 
-			void Create(const XMFLOAT4X4& matIn)
+			inline void Store(const XMMATRIX& M)
 			{
-				pose0 = XMFLOAT4A(matIn._11, matIn._21, matIn._31, matIn._41);
-				pose1 = XMFLOAT4A(matIn._12, matIn._22, matIn._32, matIn._42);
-				pose2 = XMFLOAT4A(matIn._13, matIn._23, matIn._33, matIn._43);
+				XMFLOAT4X4 mat;
+				XMStoreFloat4x4(&mat, M);
+				pose0 = XMFLOAT4A(mat._11, mat._21, mat._31, mat._41);
+				pose1 = XMFLOAT4A(mat._12, mat._22, mat._32, mat._42);
+				pose2 = XMFLOAT4A(mat._13, mat._23, mat._33, mat._43);
+			}
+			inline XMMATRIX Load() const
+			{
+				return XMMATRIX(
+					pose0.x, pose1.x, pose2.x, 0, 
+					pose0.y, pose1.y, pose2.y, 0, 
+					pose0.z, pose1.z, pose2.z, 0, 
+					pose0.w, pose1.w, pose2.w, 1
+				);
 			}
 
 			ALIGN_16
@@ -879,6 +892,12 @@ namespace wiSceneSystem
 
 	struct WeatherComponent
 	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+		};
+		uint32_t _flags = EMPTY;
+
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -893,6 +912,35 @@ namespace wiSceneSystem
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
 		float windRandomness = 5;
 		float windWaveSize = 1;
+
+		struct OceanParameters
+		{
+			// Must be power of 2.
+			int dmap_dim = 512;
+			// Typical value is 1000 ~ 2000
+			float patch_length = 50.0f;
+
+			// Adjust the time interval for simulation.
+			float time_scale = 0.3f;
+			// Amplitude for transverse wave. Around 1.0
+			float wave_amplitude = 1000.0f;
+			// Wind direction. Normalization not required.
+			XMFLOAT2 wind_dir = XMFLOAT2(0.8f, 0.6f);
+			// Around 100 ~ 1000
+			float wind_speed = 600.0f;
+			// This value damps out the waves against the wind direction.
+			// Smaller value means higher wind dependency.
+			float wind_dependency = 0.07f;
+			// The amplitude for longitudinal wave. Must be positive.
+			float choppy_scale = 1.3f;
+
+
+			XMFLOAT3 waterColor = XMFLOAT3(powf(0.07f, 1.0f / 2.2f), powf(0.15f, 1.0f / 2.2f), powf(0.2f, 1.0f / 2.2f));
+			float waterHeight = 0.0f;
+			uint32_t surfaceDetail = 4;
+			float surfaceDisplacementTolerance = 2;
+		};
+		OceanParameters oceanParameters;
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};

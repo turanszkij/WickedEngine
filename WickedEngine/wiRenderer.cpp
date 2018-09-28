@@ -1268,14 +1268,15 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				instancedBatchArray[instancedBatchCount - 1].forceAlphatestForDithering = 1;
 			}
 
-			Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-			const TransformComponent& transform = *scene.transforms.GetComponent(objectEntity);
+			const TransformComponent& transform = scene.transforms[instance.transformComponentIndex];
 
 			// Write into actual GPU-buffer:
 			if (advancedVBRequest)
 			{
 				((volatile InstBuf*)instances)[batchID].instance.Create(transform.world, instance.color, dither);
 
+				// The following GetComponent() is going to be a map lookup in this hot loop, but ideally just once per frame per object. Might need to optimize later if it becomes a problem:
+				Entity objectEntity = scene.objects.GetEntity(instanceIndex);
 				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
 				((volatile InstBuf*)instances)[batchID].instancePrev.Create(prev_transform.world_prev);
 			}
@@ -1467,11 +1468,10 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 				}
 				boundVBType_Prev = boundVBType;
 
-				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-
 				device->BindStencilRef(material.GetStencilRef(), threadID);
-
 				device->BindGraphicsPSO(pso, threadID);
+
+				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 
 				GPUResource* res[] = {
 					material.GetBaseColorMap(),
@@ -1555,6 +1555,7 @@ void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPH
 		}
 		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID); // close buffer, ready to draw all!
 
+		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
 		device->BindGraphicsPSO(impostorRequest, threadID);
 		SetAlphaRef(0.75f, threadID);
 
@@ -3347,7 +3348,7 @@ void UpdatePerFrameData(float dt)
 	if (ocean != nullptr)
 	{
 		requestReflectionRendering = true; 
-		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, ocean->waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, scene.weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
 		XMStoreFloat4(&waterPlane, _refPlane);
 	}
 
@@ -3657,14 +3658,12 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		{
 			MeshComponent& mesh = scene.meshes[i];
 
-			if (mesh.IsSkinned())
+			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
 				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
 				if (armature.boneBuffer == nullptr)
 				{
-					armature.boneData.resize(armature.boneCollection.size());
-
 					GPUBufferDesc bd;
 					bd.Usage = USAGE_DYNAMIC;
 					bd.CPUAccessFlags = CPU_ACCESS_WRITE;
@@ -3695,7 +3694,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 				CSTYPES targetCS = CSTYPE_SKINNING_LDS;
 
-				if (!GetLDSSkinningEnabled() || armature.skinningMatrices.size() > SKINNING_COMPUTE_THREADCOUNT)
+				if (!GetLDSSkinningEnabled() || armature.boneData.size() > SKINNING_COMPUTE_THREADCOUNT)
 				{
 					// If we have more bones that can fit into LDS, we switch to a skinning shader which loads from device memory:
 					targetCS = CSTYPE_SKINNING;
@@ -3708,10 +3707,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				}
 
 				// Upload bones for skinning to shader
-				for (size_t k = 0; k < armature.skinningMatrices.size(); k++)
-				{
-					armature.boneData[k].Create(armature.skinningMatrices[k]);
-				}
 				device->UpdateBuffer(armature.boneBuffer.get(), armature.boneData.data(), threadID, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
 				device->BindResource(CS, armature.boneBuffer.get(), SKINNINGSLOT_IN_BONEBUFFER, threadID);
 
@@ -3778,7 +3773,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Compute water simulation:
 	if (ocean != nullptr)
 	{
-		ocean->UpdateDisplacementMap(renderTime, threadID);
+		ocean->UpdateDisplacementMap(scene.weather, renderTime, threadID);
 	}
 
 	// Generate cloud layer:
@@ -4902,7 +4897,7 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 
 	if (ocean != nullptr)
 	{
-		ocean->Render(camera, renderTime, threadID);
+		ocean->Render(camera, scene.weather, renderTime, threadID);
 	}
 
 	if (grass && GetAlphaCompositionEnabled())
@@ -6852,7 +6847,7 @@ void BuildSceneBVH(GRAPHICSTHREAD threadID)
 			{
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 				Entity entity = scene.objects.GetEntity(i);
-				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				const TransformComponent& transform = scene.transforms[object.transformComponentIndex];
 
 				BVHCB cb;
 				cb.xTraceBVHWorld = transform.world;
@@ -7205,19 +7200,17 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 			{
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				MaterialCB mat;
-
 				// Copy base params:
-				materialArray[totalMaterials].baseColor = mat.g_xMat_baseColor;
-				materialArray[totalMaterials].texMulAdd = mat.g_xMat_texMulAdd;
-				materialArray[totalMaterials].roughness = mat.g_xMat_roughness;
-				materialArray[totalMaterials].reflectance = mat.g_xMat_reflectance;
-				materialArray[totalMaterials].metalness = mat.g_xMat_metalness;
-				materialArray[totalMaterials].emissive = mat.g_xMat_emissive;
-				materialArray[totalMaterials].refractionIndex = mat.g_xMat_refractionIndex;
-				materialArray[totalMaterials].subsurfaceScattering = mat.g_xMat_subsurfaceScattering;
-				materialArray[totalMaterials].normalMapStrength = mat.g_xMat_normalMapStrength;
-				materialArray[totalMaterials].parallaxOcclusionMapping = mat.g_xMat_normalMapStrength;
+				materialArray[totalMaterials].baseColor = material.baseColor;
+				materialArray[totalMaterials].texMulAdd = material.texMulAdd;
+				materialArray[totalMaterials].roughness = material.roughness;
+				materialArray[totalMaterials].reflectance = material.reflectance;
+				materialArray[totalMaterials].metalness = material.metalness;
+				materialArray[totalMaterials].emissive = material.emissive;
+				materialArray[totalMaterials].refractionIndex = material.refractionIndex;
+				materialArray[totalMaterials].subsurfaceScattering = material.subsurfaceScattering;
+				materialArray[totalMaterials].normalMapStrength = material.normalMapStrength;
+				materialArray[totalMaterials].parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
 				// Add extended properties:
 				const TextureDesc& desc = atlasTexture->GetDesc();
@@ -7993,7 +7986,7 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 			{
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
-				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				const TransformComponent& transform = scene.transforms[object.transformComponentIndex];
 
 				const XMMATRIX objectMat = XMLoadFloat4x4(&transform.world);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
@@ -8001,23 +7994,23 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
+				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
+
 				int subsetCounter = 0;
 				for (auto& subset : mesh.subsets)
 				{
 					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
-						uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
-						uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
-						uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+						const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
+						const uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
+						const uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
 
 						XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
 						XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
 						XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
 
-						if (mesh.IsSkinned())
+						if (armature != nullptr)
 						{
-							const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
 							const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
 							const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
 							const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
@@ -8028,24 +8021,24 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 
 							XMMATRIX sump;
 
-							sump  = XMLoadFloat4x4(&armature.skinningMatrices[ind0.x]) * wei0.x;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind0.y]) * wei0.y;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind0.z]) * wei0.z;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind0.w]) * wei0.w;
+							sump  = armature->boneData[ind0.x].Load() * wei0.x;
+							sump += armature->boneData[ind0.y].Load() * wei0.y;
+							sump += armature->boneData[ind0.z].Load() * wei0.z;
+							sump += armature->boneData[ind0.w].Load() * wei0.w;
 
 							p0 = XMVector3Transform(p0, sump);
 
-							sump  = XMLoadFloat4x4(&armature.skinningMatrices[ind1.x]) * wei1.x;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind1.y]) * wei1.y;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind1.z]) * wei1.z;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind1.w]) * wei1.w;
+							sump  = armature->boneData[ind1.x].Load() * wei1.x;
+							sump += armature->boneData[ind1.y].Load() * wei1.y;
+							sump += armature->boneData[ind1.z].Load() * wei1.z;
+							sump += armature->boneData[ind1.w].Load() * wei1.w;
 
 							p1 = XMVector3Transform(p1, sump);
 
-							sump  = XMLoadFloat4x4(&armature.skinningMatrices[ind2.x]) * wei2.x;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind2.y]) * wei2.y;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind2.z]) * wei2.z;
-							sump += XMLoadFloat4x4(&armature.skinningMatrices[ind2.w]) * wei2.w;
+							sump  = armature->boneData[ind2.x].Load() * wei2.x;
+							sump += armature->boneData[ind2.y].Load() * wei2.y;
+							sump += armature->boneData[ind2.z].Load() * wei2.z;
+							sump += armature->boneData[ind2.w].Load() * wei2.w;
 
 							p2 = XMVector3Transform(p2, sump);
 						}
@@ -8053,12 +8046,12 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 						float distance;
 						if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance))
 						{
-							XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+							const XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
 							distance = wiMath::Distance(pos, rayOrigin);
 
 							if (distance < result.distance)
 							{
-								XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0))), objectMat));
+								const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
 
 								result.entity = entity;
 								XMStoreFloat3(&result.position, pos);
@@ -8096,16 +8089,6 @@ void AddDeferredMIPGen(Texture2D* tex)
 }
 
 
-
-void SetOceanEnabled(bool enabled, const wiOceanParameter& params)
-{
-	SAFE_DELETE(ocean);
-
-	if (enabled)
-	{
-		ocean = new wiOcean(params);
-	}
-}
 
 
 
@@ -8210,6 +8193,16 @@ void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex) { enviroMap = tex; }
 Texture2D* GetEnviromentMap() { return enviroMap; }
 void SetGameSpeed(float value) { GameSpeed = max(0, value); }
 float GetGameSpeed() { return GameSpeed; }
-wiOcean* GetOcean() { return ocean; }
+void SetOceanEnabled(bool enabled)
+{
+	SAFE_DELETE(ocean);
+
+	if (enabled)
+	{
+		Scene& scene = GetScene();
+		ocean = new wiOcean(scene.weather);
+	}
+}
+bool GetOceanEnabled() { return ocean != nullptr; }
 
 }

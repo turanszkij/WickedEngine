@@ -324,6 +324,8 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("HairParticle - Draw", threadID);
 
+	device->BindStencilRef(STENCILREF_DEFAULT, threadID);
+
 	if (wiRenderer::IsWireRender())
 	{
 		if (transparent || shaderType == SHADERTYPE_DEPTHONLY)

@@ -106,15 +106,15 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D** p
 
 
 
-wiOcean::wiOcean(const wiOceanParameter& params)
+wiOcean::wiOcean(const WeatherComponent& weather)
 {
-	m_param = params;
+	auto& params = weather.oceanParameters;
 
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
 	XMFLOAT2* h0_data = new XMFLOAT2[height_map_size * sizeof(XMFLOAT2)];
 	float* omega_data = new float[height_map_size * sizeof(float)];
-	initHeightMap(h0_data, omega_data);
+	initHeightMap(weather, h0_data, omega_data);
 
 	int hmap_dim = params.dmap_dim;
 	int input_full_size = (hmap_dim + 4) * (hmap_dim + 1);
@@ -155,7 +155,7 @@ wiOcean::wiOcean(const wiOceanParameter& params)
 
 
 	// Constant buffers
-	UINT actual_dim = m_param.dmap_dim;
+	UINT actual_dim = params.dmap_dim;
 	UINT input_width = actual_dim + 4;
 	// We use full sized data here. The value "output_width" should be actual_dim/2+1 though.
 	UINT output_width = actual_dim;
@@ -205,19 +205,21 @@ wiOcean::~wiOcean()
 // Initialize the vector field.
 // wlen_x: width of wave tile, in meters
 // wlen_y: length of wave tile, in meters
-void wiOcean::initHeightMap(XMFLOAT2* out_h0, float* out_omega)
+void wiOcean::initHeightMap(const WeatherComponent& weather, XMFLOAT2* out_h0, float* out_omega)
 {
+	auto& params = weather.oceanParameters;
+
 	int i, j;
 	XMFLOAT2 K;
 
 	XMFLOAT2 wind_dir;
-	XMStoreFloat2(&wind_dir, XMVector2Normalize(XMLoadFloat2(&m_param.wind_dir)));
-	float a = m_param.wave_amplitude * 1e-7f;	// It is too small. We must scale it for editing.
-	float v = m_param.wind_speed;
-	float dir_depend = m_param.wind_dependency;
+	XMStoreFloat2(&wind_dir, XMVector2Normalize(XMLoadFloat2(&params.wind_dir)));
+	float a = params.wave_amplitude * 1e-7f;	// It is too small. We must scale it for editing.
+	float v = params.wind_speed;
+	float dir_depend = params.wind_dependency;
 
-	int height_map_dim = m_param.dmap_dim;
-	float patch_length = m_param.patch_length;
+	int height_map_dim = params.dmap_dim;
+	float patch_length = params.patch_length;
 
 
 	for (i = 0; i <= height_map_dim; i++)
@@ -247,8 +249,10 @@ void wiOcean::initHeightMap(XMFLOAT2* out_h0, float* out_omega)
 	}
 }
 
-void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
+void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID)
 {
+	auto& params = weather.oceanParameters;
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("Ocean Simulation", threadID);
@@ -268,17 +272,17 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindUAVs(CS, cs0_uavs, 0, ARRAYSIZE(cs0_uavs), threadID);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
-	perFrameData.g_Time = time * m_param.time_scale;
-	perFrameData.g_ChoppyScale = m_param.choppy_scale;
-	perFrameData.g_GridLen = m_param.dmap_dim / m_param.patch_length;
+	perFrameData.g_Time = time * params.time_scale;
+	perFrameData.g_ChoppyScale = params.choppy_scale;
+	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
 	device->UpdateBuffer(m_pPerFrameCB, &perFrameData, threadID);
 
 	device->BindConstantBuffer(CS, m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
 	device->BindConstantBuffer(CS, m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
 
 	// Run the CS
-	UINT group_count_x = (m_param.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
-	UINT group_count_y = (m_param.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
+	UINT group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
+	UINT group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	device->Dispatch(group_count_x, group_count_y, 1, threadID);
 	device->UAVBarrier(cs0_uavs, ARRAYSIZE(cs0_uavs), threadID);
 
@@ -301,7 +305,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
 	GPUResource* cs_srvs[1] = { m_pBuffer_Float_Dxyz };
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
+	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
 	// Update gradient map:
@@ -310,7 +314,7 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
 	cs_srvs[0] = m_pDisplacementMap;
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-	device->Dispatch(m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, m_param.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
+	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
 
 	// Unbind
@@ -325,8 +329,10 @@ void wiOcean::UpdateDisplacementMap(float time, GRAPHICSTHREAD threadID)
 }
 
 
-void wiOcean::Render(const CameraComponent& camera, float time, GRAPHICSTHREAD threadID)
+void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID)
 {
+	auto& params = weather.oceanParameters;
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("Ocean Rendering", threadID);
@@ -343,16 +349,16 @@ void wiOcean::Render(const CameraComponent& camera, float time, GRAPHICSTHREAD t
 	}
 
 
-	const uint2 dim = uint2(160 * surfaceDetail, 90 * surfaceDetail);
+	const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
 
 	Ocean_RenderCB cb;
-	cb.xOceanWaterColor = waterColor;
-	cb.xOceanTexelLength = m_param.patch_length / m_param.dmap_dim;
+	cb.xOceanWaterColor = params.waterColor;
+	cb.xOceanTexelLength = params.patch_length / params.dmap_dim;
 	cb.xOceanScreenSpaceParams = XMFLOAT4((float)dim.x, (float)dim.y, 1.0f / (float)dim.x, 1.0f / (float)dim.y);
-	cb.xOceanPatchSizeRecip = 1.0f / m_param.patch_length;
-	cb.xOceanMapHalfTexel = 0.5f / m_param.dmap_dim;
-	cb.xOceanWaterHeight = waterHeight;
-	cb.xOceanSurfaceDisplacementTolerance = max(1, surfaceDisplacementTolerance);
+	cb.xOceanPatchSizeRecip = 1.0f / params.patch_length;
+	cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
+	cb.xOceanWaterHeight = params.waterHeight;
+	cb.xOceanSurfaceDisplacementTolerance = max(1, params.surfaceDisplacementTolerance);
 
 	device->UpdateBuffer(g_pShadingCB, &cb, threadID);
 
@@ -487,11 +493,6 @@ void wiOcean::CleanUp()
 	SAFE_DELETE(g_pWireframePS);
 
 	SAFE_DELETE(g_pShadingCB);
-}
-
-const wiOceanParameter& wiOcean::getParameters()
-{
-	return m_param;
 }
 
 Texture2D* wiOcean::getDisplacementMap()

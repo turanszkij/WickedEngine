@@ -60,7 +60,7 @@ void wiWidget::Update(wiGUI* gui, float dt)
 
 	if (parent != nullptr)
 	{
-		this->UpdateParentedTransform(*parent, world_parent_bind);
+		this->UpdateTransform_Parented(*parent, world_parent_bind);
 	}
 
 	XMVECTOR S, R, T;

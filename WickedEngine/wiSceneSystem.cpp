@@ -60,7 +60,7 @@ namespace wiSceneSystem
 			XMStoreFloat4x4(&world, W);
 		}
 	}
-	void TransformComponent::UpdateParentedTransform(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
+	void TransformComponent::UpdateTransform_Parented(const TransformComponent& parent, const XMFLOAT4X4& inverseParentBindMatrix)
 	{
 		XMMATRIX W;
 
@@ -1157,13 +1157,13 @@ namespace wiSceneSystem
 
 		names.Create(entity) = name;
 
-		emitters.Create(entity);
+		emitters.Create(entity).count = 10;
 
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);
 		transform.UpdateTransform();
 
-		materials.Create(entity).blendFlag = BLENDMODE_ALPHA;
+		materials.Create(entity).blendMode = BLENDMODE_ALPHA;
 
 		return entity;
 	}
@@ -1224,7 +1224,7 @@ namespace wiSceneSystem
 			if (transform_child != nullptr)
 			{
 				// Child updated immediately, to that it can be immediately attached to afterwards:
-				transform_child->UpdateParentedTransform(*transform_parent, parentcomponent.world_parent_inverse_bind);
+				transform_child->UpdateTransform_Parented(*transform_parent, parentcomponent.world_parent_inverse_bind);
 			}
 		}
 
@@ -1406,14 +1406,10 @@ namespace wiSceneSystem
 				animation.timer += dt;
 			}
 
-			const float animationLength = animation.GetLength();
-
-			if (animation.IsLooped() && animation.timer > animationLength)
+			if (animation.IsLooped() && animation.timer > animation.end)
 			{
-				animation.timer = 0.0f;
+				animation.timer = animation.start;
 			}
-
-			animation.timer = min(animation.timer, animationLength);
 		}
 	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
@@ -1439,7 +1435,7 @@ namespace wiSceneSystem
 			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
 			if (transform_child != nullptr && transform_parent != nullptr)
 			{
-				transform_child->UpdateParentedTransform(*transform_parent, parentcomponent.world_parent_inverse_bind);
+				transform_child->UpdateTransform_Parented(*transform_parent, parentcomponent.world_parent_inverse_bind);
 			}
 
 
@@ -1461,9 +1457,9 @@ namespace wiSceneSystem
 		{
 			ArmatureComponent& armature = armatures[i];
 
-			if (armature.skinningMatrices.size() != armature.boneCollection.size())
+			if (armature.boneData.size() != armature.boneCollection.size())
 			{
-				armature.skinningMatrices.resize(armature.boneCollection.size());
+				armature.boneData.resize(armature.boneCollection.size());
 			}
 
 			XMMATRIX R = XMLoadFloat4x4(&armature.remapMatrix);
@@ -1477,7 +1473,7 @@ namespace wiSceneSystem
 				XMMATRIX W = XMLoadFloat4x4(&bone.world);
 				XMMATRIX M = B * W * R;
 
-				XMStoreFloat4x4(&armature.skinningMatrices[boneIndex++], M);
+				armature.boneData[boneIndex++].Store(M);
 			}
 
 		}
@@ -1544,17 +1540,20 @@ namespace wiSceneSystem
 			if (object.meshID != INVALID_ENTITY)
 			{
 				Entity entity = objects.GetEntity(i);
-				const TransformComponent* transform = transforms.GetComponent(entity);
+
+				object.transformComponentIndex = transforms.GetIndex(entity);
+
+				const TransformComponent& transform = transforms[object.transformComponentIndex];
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
-				if (mesh != nullptr && transform != nullptr)
+				if (mesh != nullptr)
 				{
-					aabb = mesh->aabb.get(transform->world);
+					aabb = mesh->aabb.get(transform.world);
 					sceneBounds = AABB::Merge(sceneBounds, aabb);
 
 					// This is instance bounding box matrix:
 					XMFLOAT4X4 meshMatrix;
-					XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * XMLoadFloat4x4(&transform->world));
+					XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * XMLoadFloat4x4(&transform.world));
 
 					// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
 					object.center = *((XMFLOAT3*)&meshMatrix._41);
@@ -1583,7 +1582,7 @@ namespace wiSceneSystem
 							{
 								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
 
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(transform->GetPositionV(), XMVectorSet(0, 1, 0, 0));
+								XMVECTOR _refPlane = XMPlaneFromPointNormal(transform.GetPositionV(), XMVectorSet(0, 1, 0, 0));
 								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 

@@ -3,12 +3,12 @@
 #include "objectInputLayoutHF.hlsli"
 
 static const float3 BILLBOARD[] = {
-	float3(-1, -1, 0),	// 0
-	float3(1, -1, 0),	// 1
-	float3(-1, 1, 0),	// 2
-	float3(-1, 1, 0),	// 3
-	float3(1, -1, 0),	// 4
-	float3(1, 1, 0),	// 5
+	float3(-1, -1, 0),
+	float3(1, -1, 0),
+	float3(-1, 1, 0),
+	float3(-1, 1, 0),
+	float3(1, -1, 0),
+	float3(1, 1, 0),
 };
 
 RAWBUFFER(instanceBuffer, TEXSLOT_ONDEMAND0);
@@ -45,9 +45,14 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	tex.z += impostorCaptureAngles * angle;
 
 	VSOut Out;
-	Out.pos = mul(mul(float4(pos, 1), WORLD), g_xCamera_VP);
+	Out.pos3D = mul(float4(pos, 1), WORLD).xyz;
+	Out.pos = mul(float4(Out.pos3D, 1), g_xCamera_VP);
 	Out.tex = tex;
 	Out.dither = instance.color_dither.a;
+	Out.instanceColor = 0xFFFFFFFF; // todo
+	Out.nor = face;
+	Out.pos2D = Out.pos;
+	Out.pos2DPrev = mul(float4(Out.pos3D, 1), g_xFrame_MainCamera_PrevVP);
 
 	return Out;
 }

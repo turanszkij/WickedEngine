@@ -81,7 +81,7 @@ namespace wiSceneSystem
 			archive >> _flags;
 			archive >> (uint8_t&)engineStencilRef;
 			archive >> userStencilRef;
-			archive >> (uint8_t&)blendFlag;
+			archive >> (uint8_t&)blendMode;
 			archive >> baseColor;
 			archive >> texMulAdd;
 			archive >> roughness;
@@ -132,7 +132,7 @@ namespace wiSceneSystem
 			archive << _flags;
 			archive << (uint8_t)engineStencilRef;
 			archive << userStencilRef;
-			archive << (uint8_t)blendFlag;
+			archive << (uint8_t)blendMode;
 			archive << baseColor;
 			archive << texMulAdd;
 			archive << roughness;
@@ -476,6 +476,7 @@ namespace wiSceneSystem
 	{
 		if (archive.IsReadMode())
 		{
+			archive >> _flags;
 			archive >> sunDirection;
 			archive >> sunColor;
 			archive >> horizon;
@@ -490,9 +491,23 @@ namespace wiSceneSystem
 			archive >> windDirection;
 			archive >> windRandomness;
 			archive >> windWaveSize;
+
+			archive >> oceanParameters.dmap_dim;
+			archive >> oceanParameters.patch_length;
+			archive >> oceanParameters.time_scale;
+			archive >> oceanParameters.wave_amplitude;
+			archive >> oceanParameters.wind_dir;
+			archive >> oceanParameters.wind_speed;
+			archive >> oceanParameters.wind_dependency;
+			archive >> oceanParameters.choppy_scale;
+			archive >> oceanParameters.waterColor;
+			archive >> oceanParameters.waterHeight;
+			archive >> oceanParameters.surfaceDetail;
+			archive >> oceanParameters.surfaceDisplacementTolerance;
 		}
 		else
 		{
+			archive << _flags;
 			archive << sunDirection;
 			archive << sunColor;
 			archive << horizon;
@@ -507,6 +522,19 @@ namespace wiSceneSystem
 			archive << windDirection;
 			archive << windRandomness;
 			archive << windWaveSize;
+
+			archive << oceanParameters.dmap_dim;
+			archive << oceanParameters.patch_length;
+			archive << oceanParameters.time_scale;
+			archive << oceanParameters.wave_amplitude;
+			archive << oceanParameters.wind_dir;
+			archive << oceanParameters.wind_speed;
+			archive << oceanParameters.wind_dependency;
+			archive << oceanParameters.choppy_scale;
+			archive << oceanParameters.waterColor;
+			archive << oceanParameters.waterHeight;
+			archive << oceanParameters.surfaceDetail;
+			archive << oceanParameters.surfaceDisplacementTolerance;
 		}
 	}
 

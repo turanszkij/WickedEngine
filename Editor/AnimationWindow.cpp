@@ -112,6 +112,11 @@ void AnimationWindow::Update()
 	
 	Scene& scene = wiRenderer::GetScene();
 
+	if (!scene.animations.Contains(entity))
+	{
+		entity = INVALID_ENTITY;
+	}
+
 	if (scene.animations.GetCount() == 0)
 	{
 		animWindow->SetEnabled(false);
