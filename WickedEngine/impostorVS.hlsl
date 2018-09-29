@@ -13,6 +13,18 @@ static const float3 BILLBOARD[] = {
 
 RAWBUFFER(instanceBuffer, TEXSLOT_ONDEMAND0);
 
+float GetAngle(float2 a, float2 b)
+{
+	float dot = a.x*b.x + a.y*b.y;      // dot product
+	float det = a.x*b.y - a.y*b.x;		// determinant
+	float angle = atan2(det, dot);		// atan2(y, x) or atan2(sin, cos)
+	if (angle < 0)
+	{
+		angle += PI * 2;
+	}
+	return angle;
+}
+
 VSOut main(uint fakeIndex : SV_VERTEXID)
 {
 	const uint vertexID = fakeIndex % 6;
@@ -41,27 +53,8 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	pos = mul(pos, float3x3(right, up, face));
 
 	// Decide which slice to show according to billboard facing direction (todo fix this up!):
-	float angle;
-	bool other_side = cross(face, up).z < 0;
-	if (other_side)
-	{
-		angle = dot(face, float3(0, 0, 1));
-	}
-	else 
-	{
-		angle = dot(face, float3(0, 0, -1));
-	}
-	angle = acos(angle);
-	angle = angle / PI;
-	if (other_side)
-	{
-		tex.z += (impostorCaptureAngles - 1) * 0.5f + angle * impostorCaptureAngles * 0.5f;
-	}
-	else
-	{
-		tex.z += angle * impostorCaptureAngles * 0.5f;
-	}
-	//tex.z = angle;
+	float angle = GetAngle(face.xz, float2(-1, 0)) / PI / 2.0f;
+	tex.z += floor((1 - saturate(angle)) * impostorCaptureAngles);
 
 	VSOut Out;
 	Out.pos3D = mul(float4(pos, 1), WORLD).xyz;
