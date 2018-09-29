@@ -2205,7 +2205,7 @@ void LoadShaders()
 		{
 			GraphicsPSODesc desc;
 			desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
-			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+			desc.rs = rasterizers[RSTYPE_BACK];
 			desc.bs = blendStates[BSTYPE_OPAQUE];
 			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];

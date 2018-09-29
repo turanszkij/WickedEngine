@@ -40,9 +40,28 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	float3 right = normalize(cross(face, up));
 	pos = mul(pos, float3x3(right, up, face));
 
-	// Decide which slice to show according to billboard facing direction:
-	float angle = acos(dot(normalize(face.xz), float2(0, -1))) / (2.0f * PI);
-	tex.z += impostorCaptureAngles * angle;
+	// Decide which slice to show according to billboard facing direction (todo fix this up!):
+	float angle;
+	bool other_side = cross(face, up).z < 0;
+	if (other_side)
+	{
+		angle = dot(face, float3(0, 0, 1));
+	}
+	else 
+	{
+		angle = dot(face, float3(0, 0, -1));
+	}
+	angle = acos(angle);
+	angle = angle / PI;
+	if (other_side)
+	{
+		tex.z += (impostorCaptureAngles - 1) * 0.5f + angle * impostorCaptureAngles * 0.5f;
+	}
+	else
+	{
+		tex.z += angle * impostorCaptureAngles * 0.5f;
+	}
+	//tex.z = angle;
 
 	VSOut Out;
 	Out.pos3D = mul(float4(pos, 1), WORLD).xyz;

@@ -259,7 +259,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	ambientColorPicker->SetVisible(false);
 	ambientColorPicker->SetEnabled(true);
 	ambientColorPicker->OnColorChanged([&](wiEventArgs args) {
-		wiRenderer::GetScene().weathers[0].ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		auto weather = GetWeather();
+		if (weather != nullptr)
+		{
+			weather->ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		}
 	});
 	weatherWindow->AddWidget(ambientColorPicker);
 
@@ -270,7 +274,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	horizonColorPicker->SetVisible(false);
 	horizonColorPicker->SetEnabled(true);
 	horizonColorPicker->OnColorChanged([&](wiEventArgs args) {
-		wiRenderer::GetScene().weathers[0].horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		auto weather = GetWeather();
+		if (weather != nullptr)
+		{
+			weather->horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		}
 	});
 	weatherWindow->AddWidget(horizonColorPicker);
 
@@ -282,7 +290,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	zenithColorPicker->SetVisible(false);
 	zenithColorPicker->SetEnabled(true);
 	zenithColorPicker->OnColorChanged([&](wiEventArgs args) {
-		wiRenderer::GetScene().weathers[0].zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		auto weather = GetWeather();
+		if (weather != nullptr)
+		{
+			weather->zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
+		}
 	});
 	weatherWindow->AddWidget(zenithColorPicker);
 
