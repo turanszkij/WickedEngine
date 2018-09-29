@@ -104,26 +104,22 @@ namespace wiSceneSystem
 
 			SetDirty();
 
-			std::string texturesDir = archive.GetSourceDirectory() + "textures/";
+			std::string texturesDir = archive.GetSourceDirectory();
 			if (!baseColorMapName.empty())
 			{
-				baseColorMapName = texturesDir + baseColorMapName;
-				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(baseColorMapName);
+				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
-				surfaceMapName = texturesDir + surfaceMapName;
-				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(surfaceMapName);
+				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
-				normalMapName = texturesDir + normalMapName;
-				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(normalMapName);
+				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
-				displacementMapName = texturesDir + displacementMapName;
-				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(displacementMapName);
+				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + displacementMapName);
 			}
 
 		}
@@ -148,10 +144,10 @@ namespace wiSceneSystem
 			archive << texAnimFrameRate;
 			archive << texAnimSleep;
 
-			archive << wiHelper::GetFileNameFromPath(baseColorMapName);
-			archive << wiHelper::GetFileNameFromPath(surfaceMapName);
-			archive << wiHelper::GetFileNameFromPath(normalMapName);
-			archive << wiHelper::GetFileNameFromPath(displacementMapName);
+			archive << baseColorMapName;
+			archive << surfaceMapName;
+			archive << normalMapName;
+			archive << displacementMapName;
 		}
 	}
 	void MeshComponent::Serialize(wiArchive& archive, uint32_t seed)

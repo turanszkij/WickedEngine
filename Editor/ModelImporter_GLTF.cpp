@@ -131,15 +131,16 @@ void RegisterTexture2D(tinygltf::Image *image)
 			{
 				wiRenderer::AddDeferredMIPGen(tex);
 
-				if (image->name.empty())
+				if (image->uri.empty())
 				{
 					static UINT imgcounter = 0;
 					stringstream ss("");
 					ss << "gltfLoader_image" << imgcounter++;
-					image->name = ss.str();
+					image->uri = ss.str();
 				}
+
 				// We loaded the texture2d, so register to the resource manager to be retrieved later:
-				wiResourceManager::GetGlobal()->Register(image->name, tex, wiResourceManager::IMAGE);
+				wiResourceManager::GetGlobal()->Register(image->uri, tex, wiResourceManager::IMAGE);
 			}
 		}
 	}
@@ -305,7 +306,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			auto& tex = state.gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img);
-			material.baseColorMapName = img.name;
+			material.baseColorMapName = img.uri;
 		}
 		else if(!state.gltfModel.images.empty())
 		{
@@ -313,7 +314,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			//	I have a problem, because one model viewer displays textures on a model which has no basecolor set in its material...
 			//	This is probably not how it should be (todo)
 			RegisterTexture2D(&state.gltfModel.images[0]);
-			material.baseColorMapName = state.gltfModel.images[0].name;
+			material.baseColorMapName = state.gltfModel.images[0].uri;
 		}
 
 		tinygltf::Image* img_nor = nullptr;
@@ -383,7 +384,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			}
 
 			RegisterTexture2D(img_nor);
-			material.normalMapName = img_nor->name;
+			material.normalMapName = img_nor->uri;
 		}
 
 		if (img_met_rough != nullptr)
@@ -425,7 +426,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			}
 
 			RegisterTexture2D(img_met_rough);
-			material.surfaceMapName = img_met_rough->name;
+			material.surfaceMapName = img_met_rough->uri;
 		}
 		else if (img_emissive != nullptr)
 		{
@@ -457,7 +458,7 @@ void ImportModel_GLTF(const std::string& fileName)
 				}
 
 				RegisterTexture2D(img_emissive);
-				material.surfaceMapName = img_emissive->name;
+				material.surfaceMapName = img_emissive->uri;
 			}
 		}
 
