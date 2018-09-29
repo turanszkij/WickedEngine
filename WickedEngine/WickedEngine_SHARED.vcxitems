@@ -728,7 +728,6 @@
     <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\io_export_wicked_wi_bin.py" />
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
     <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
       <DeploymentContent>true</DeploymentContent>
