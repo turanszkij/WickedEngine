@@ -16,11 +16,15 @@
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
 [do]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master
+[ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
 ### Overview:
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
 The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code shall not contain any parts with other licensing. The code is hosted on GitHub: https://github.com/turanszkij/WickedEngine For any questions, please open an issue there.
+
+From version <b>0.21.0</b> onwards, the engine was changed to use <b>Entity-Component System</b> and the old Object-Oriented system was dropped. It is not backwards-compatible, so assets/scripts made with the old system are unfortunately not usable.
+[You can find a snapshot of the old Object-Oriented codebase (0.20.6) here, but it will not be updated anymore!][ba]
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -28,7 +32,7 @@ The full source code is provided with the MIT license, which means, anyone is fr
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-![Windmill](logo/windmill.png)
+![Emitter](logo/emitter_skinned.gif) ![Drone](logo/drone_anim.gif)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 

@@ -47,13 +47,14 @@ TestsRenderer::TestsRenderer()
 
 	wiComboBox* testSelector = new wiComboBox("TestSelector");
 	testSelector->SetText("Demo: ");
-	testSelector->SetSize(XMFLOAT2(100, 20));
+	testSelector->SetSize(XMFLOAT2(120, 20));
 	testSelector->SetPos(XMFLOAT2(50, 80));
 	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	testSelector->AddItem("HelloWorld");
 	testSelector->AddItem("Model");
-	testSelector->AddItem("EmittedParticle");
+	testSelector->AddItem("EmittedParticle 1");
+	testSelector->AddItem("EmittedParticle 2");
 	testSelector->AddItem("HairParticle");
 	testSelector->AddItem("Lua Script");
 	testSelector->OnSelect([=](wiEventArgs args) {
@@ -78,12 +79,15 @@ TestsRenderer::TestsRenderer()
 			wiRenderer::LoadModel("../models/teapot.wiscene");
 			break;
 		case 2:
-			wiRenderer::LoadModel("../models/emitter_skinned.wiscene");
+			wiRenderer::LoadModel("../models/emitter_smoke.wiscene");
 			break;
 		case 3:
-			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiRenderer::LoadModel("../models/emitter_skinned.wiscene");
 			break;
 		case 4:
+			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			break;
+		case 5:
 			wiLua::GetGlobal()->RunFile("test_script.lua");
 			break;
 		}
@@ -95,7 +99,7 @@ TestsRenderer::TestsRenderer()
 
 	wiButton* audioTest = new wiButton("AudioTest");
 	audioTest->SetText("Play Test Audio");
-	audioTest->SetSize(XMFLOAT2(161, 20));
+	audioTest->SetSize(XMFLOAT2(180, 20));
 	audioTest->SetPos(XMFLOAT2(10, 110));
 	audioTest->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	audioTest->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
