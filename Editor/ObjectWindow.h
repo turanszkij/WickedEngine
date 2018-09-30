@@ -21,6 +21,7 @@ public:
 
 	wiWindow*	objectWindow;
 
+	wiLabel*	nameLabel;
 	wiCheckBox* renderableCheckBox;
 	wiSlider*	ditherSlider;
 	wiSlider*	cascadeMaskSlider;

@@ -43,23 +43,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TEMPLATEWINDOWS));
 
-	wiRenderer::SHADERPATH = "../WickedEngine/shaders/"; // search for shaders elsewhere
-	wiFont::FONTPATH = "../WickedEngine/fonts/"; // search for fonts elsewhere
+	wiRenderer::GetShaderPath() = "../WickedEngine/shaders/"; // search for shaders elsewhere
+	wiFont::GetFontPath() = "../WickedEngine/fonts/"; // search for fonts elsewhere
 	main.Initialize(); // initialize engine systems (mandatory)
 	main.infoDisplay.active = true; // just show some basic info...
-
-	Renderable2DComponent component;
-	main.activateComponent(&component);
-
-	wiButton* button = new wiButton("ASD");
-	button->SetPos(XMFLOAT2(100, 100));
-	button->SetSize(XMFLOAT2(200, 100));
-	component.GetGUI().AddWidget(button);
-
-	wiSlider* slider = new wiSlider(0,1,0,1000,"asaskfas");
-	slider->SetPos(XMFLOAT2(230, 200));
-	slider->SetSize(XMFLOAT2(200, 30));
-	component.GetGUI().AddWidget(slider);
 
 
 	MSG msg = { 0 };
@@ -172,7 +159,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 		{
-			if (wiRenderer::graphicsDevice)
+			if (wiRenderer::GetDevice() != nullptr)
 			{
 				int width = LOWORD(lParam);
 				int height = HIWORD(lParam);

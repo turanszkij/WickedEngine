@@ -26,6 +26,10 @@ namespace wiSceneSystem_BindLua
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
 
+		int Component_CreateName(lua_State* L);
+		int Component_CreateLayer(lua_State* L);
+		int Component_CreateTransform(lua_State* L);
+
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
 		int Component_GetTransform(lua_State* L);

@@ -57,10 +57,49 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
+	int GetScreenWidth(lua_State* L)
+	{
+		wiLua::SSetInt(L, wiRenderer::GetDevice()->GetScreenWidth());
+		return 1;
+	}
+	int GetScreenHeight(lua_State* L)
+	{
+		wiLua::SSetInt(L, wiRenderer::GetDevice()->GetScreenHeight());
+		return 1;
+	}
+
 	int GetScene(lua_State* L)
 	{
 		Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiRenderer::GetScene()));
 		return 1;
+	}
+	int LoadModel(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			string fileName = wiLua::SGetString(L, 1);
+			XMMATRIX transform = XMMatrixIdentity();
+			if (argc > 1)
+			{
+				Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
+				if (matrix != nullptr)
+				{
+					transform = matrix->matrix;
+				}
+				else
+				{
+					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
+				}
+			}
+			wiRenderer::LoadModel(fileName, transform);
+			return 1;
+		}
+		else
+		{
+			wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) not enough arguments!");
+		}
+		return 0;
 	}
 
 	int SetEnvironmentMap(lua_State* L)
@@ -328,7 +367,11 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetGamma", SetGamma);
 			wiLua::GetGlobal()->RegisterFunc("SetGameSpeed", SetGameSpeed);
 
+			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
+			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
+
 			wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
+			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);

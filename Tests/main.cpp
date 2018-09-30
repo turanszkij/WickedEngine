@@ -161,7 +161,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 	{
-		if (wiRenderer::graphicsDevice)
+		if (wiRenderer::GetDevice() != nullptr)
 		{
 			int width = LOWORD(lParam);
 			int height = HIWORD(lParam);

@@ -23,6 +23,12 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	float x = 450;
 	float y = 0;
 
+	nameLabel = new wiLabel("NAMELABEL");
+	nameLabel->SetText("");
+	nameLabel->SetPos(XMFLOAT2(x - 30, y += 30));
+	nameLabel->SetSize(XMFLOAT2(150, 20));
+	objectWindow->AddWidget(nameLabel);
+
 	renderableCheckBox = new wiCheckBox("Renderable: ");
 	renderableCheckBox->SetTooltip("Set object to be participating in rendering.");
 	renderableCheckBox->SetPos(XMFLOAT2(x, y += 30));
@@ -214,6 +220,20 @@ void ObjectWindow::SetEntity(Entity entity)
 
 	if (object != nullptr)
 	{
+		const NameComponent* name = scene.names.GetComponent(entity);
+		if (name != nullptr)
+		{
+			std::stringstream ss("");
+			ss << name->name << " (" << entity << ")";
+			nameLabel->SetText(ss.str());
+		}
+		else
+		{
+			std::stringstream ss("");
+			ss<< "(" << entity << ")";
+			nameLabel->SetText(ss.str());
+		}
+
 		renderableCheckBox->SetCheck(object->IsRenderable());
 		cascadeMaskSlider->SetValue((float)object->cascadeMask);
 		ditherSlider->SetValue(object->GetTransparency());

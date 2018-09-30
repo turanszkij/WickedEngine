@@ -596,6 +596,13 @@ void ClearWorld()
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
+
+
+	for (auto& x : frameCullings)
+	{
+		FrameCulling& culling = x.second;
+		culling.Clear();
+	}
 }
 
 enum OBJECTRENDERING_DOUBLESIDED
@@ -8088,6 +8095,47 @@ void AddDeferredMIPGen(Texture2D* tex)
 }
 
 
+
+void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix)
+{
+	wiArchive archive(fileName, true);
+	if (archive.IsOpen())
+	{
+		// Create new scene
+		Scene scene;
+
+		// Serialize it from file:
+		scene.Serialize(archive);
+
+		if (!XMMatrixIsIdentity(transformMatrix))
+		{
+			// Apply the optional transformation matrix to the new scene:
+
+			// First, create new root parent:
+			Entity parent = CreateEntity();
+			scene.transforms.Create(parent);
+
+			// Then all unparented(root) transforms will be parented to "parent"
+			for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "parent"
+			{
+				Entity entity = scene.transforms.GetEntity(i);
+				if (!scene.hierarchy.Contains(entity))
+				{
+					scene.Component_Attach(entity, parent);
+				}
+			}
+
+			// The parent component is transformed, scene is updated, then parent is deleted:
+			scene.transforms.GetComponent(parent)->MatrixTransform(transformMatrix);
+			scene.Update(0);
+			scene.Component_DetachChildren(parent);
+			scene.Entity_Remove(parent);
+		}
+
+		// Merge with the original scene:
+		GetScene().Merge(scene);
+	}
+}
 
 
 

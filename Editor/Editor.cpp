@@ -46,7 +46,7 @@ void Editor::Initialize()
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
 	// otherwise, shaders will be loaded from the working directory
 	wiRenderer::GetShaderPath() = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/shaders/";
-	wiFont::FONTPATH = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/"; // search for fonts elsewhere
+	wiFont::GetFontPath() = wiHelper::GetOriginalWorkingDirectory() + "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
 
 	infoDisplay.active = true;
@@ -560,13 +560,7 @@ void EditorComponent::Load()
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
-						wiArchive archive(fileName, true);
-						if (archive.IsOpen())
-						{
-							Scene scene;
-							scene.Serialize(archive);
-							wiRenderer::GetScene().Merge(scene);
-						}
+						wiRenderer::LoadModel(fileName);
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{

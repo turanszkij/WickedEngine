@@ -248,5 +248,7 @@ namespace wiRenderer
 
 	void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
 
+	void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity());
+
 };
 

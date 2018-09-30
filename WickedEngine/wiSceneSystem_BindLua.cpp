@@ -12,6 +12,13 @@ using namespace wiSceneSystem;
 namespace wiSceneSystem_BindLua
 {
 
+int CreateEntity_BindLua(lua_State* L)
+{
+	Entity entity = CreateEntity();
+	wiLua::SSetInt(L, (int)entity);
+	return 1;
+}
+
 void Bind()
 {
 	static bool initialized = false;
@@ -20,6 +27,8 @@ void Bind()
 		initialized = true;
 
 		lua_State* L = wiLua::GetGlobal()->GetLuaState();
+
+		wiLua::GetGlobal()->RegisterFunc("CreateEntity", CreateEntity_BindLua);
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);
@@ -38,6 +47,9 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Clear),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
+	lunamethod(Scene_BindLua, Component_CreateName),
+	lunamethod(Scene_BindLua, Component_CreateLayer),
+	lunamethod(Scene_BindLua, Component_CreateTransform),
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
 	lunamethod(Scene_BindLua, Component_GetTransform),
@@ -109,6 +121,58 @@ int Scene_BindLua::Entity_Remove(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "Scene::Entity_Remove(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+
+int Scene_BindLua::Component_CreateName(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		NameComponent& component = scene->names.Create(entity);
+		Luna<NameComponent_BindLua>::push(L, new NameComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_CreateName(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateLayer(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		LayerComponent& component = scene->layers.Create(entity);
+		Luna<LayerComponent_BindLua>::push(L, new LayerComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_CreateLayer(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateTransform(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		TransformComponent& component = scene->transforms.Create(entity);
+		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_CreateTransform(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
