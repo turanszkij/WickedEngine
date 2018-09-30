@@ -32,7 +32,7 @@ From version <b>0.21.0</b> onwards, the engine was changed to use <b>Entity-Comp
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-![Emitter](logo/emitter_skinned.gif) ![Drone](logo/drone_anim.gif)
+![Sponza](logo/sponza.png)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
@@ -87,7 +87,7 @@ This feature is experimental, not tested thoroughly yet.
 - Visual Studio 2017
 - Windows 10 SDK
 
-![Sponza](logo/sponza.png)
+![Emitter](logo/emitter_skinned.gif) ![Drone](logo/drone_anim.gif)
 
 
 ### Getting started: 
