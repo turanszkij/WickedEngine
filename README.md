@@ -1,6 +1,8 @@
 <img align="left" src="logo/logo_small.png" width="128px"/>
 
-# Wicked Engine
+# Wicked Engine 0.20.6 (Old System Backup Version)
+This is a snapshot of the old object-oriented system design. This was replaced by Entity-Component based system in version 0.21.0 (2018.09.30).
+This version is no longer maintained and not forward-compatible with the new version.
 
 [![Build status][s1]][av] [![Download][s4]][do] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
