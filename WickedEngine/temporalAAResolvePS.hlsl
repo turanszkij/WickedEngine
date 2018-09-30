@@ -42,7 +42,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float4 current = neighborhood[4];
 
 	// the linear filtering can cause blurry image, try to account for that:
-	float subpixelCorrection = frac(max(abs(velocity.x)*g_xWorld_InternalResolution.x, abs(velocity.y)*g_xWorld_InternalResolution.y)) * 0.5f;
+	float subpixelCorrection = frac(max(abs(velocity.x)*g_xFrame_InternalResolution.x, abs(velocity.y)*g_xFrame_InternalResolution.y)) * 0.5f;
 
 	// compute a nice blend factor:
 	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));

@@ -222,29 +222,29 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	shadowProps2DComboBox->AddItem("2048");
 	shadowProps2DComboBox->AddItem("4096");
 	shadowProps2DComboBox->OnSelect([&](wiEventArgs args) {
-		wiRenderer::SHADOWCOUNT_2D = 11;
+
 		switch (args.iValue)
 		{
 		case 0:
-			wiRenderer::SetShadowProps2D(128, 0, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(64, 0, -1);
 			break;
 		case 1:
-			wiRenderer::SetShadowProps2D(128, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(128, -1, -1);
 			break;
 		case 2:
-			wiRenderer::SetShadowProps2D(256, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(256, -1, -1);
 			break;
 		case 3:
-			wiRenderer::SetShadowProps2D(512, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(512, -1, -1);
 			break;
 		case 4:
-			wiRenderer::SetShadowProps2D(1024, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(1024, -1, -1);
 			break;
 		case 5:
-			wiRenderer::SetShadowProps2D(2048, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(2048, -1, -1);
 			break;
 		case 6:
-			wiRenderer::SetShadowProps2D(4096, wiRenderer::SHADOWCOUNT_2D, wiRenderer::SOFTSHADOWQUALITY_2D);
+			wiRenderer::SetShadowProps2D(4096, -1, -1);
 			break;
 		default:
 			break;
@@ -267,29 +267,28 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	shadowPropsCubeComboBox->AddItem("2048");
 	shadowPropsCubeComboBox->AddItem("4096");
 	shadowPropsCubeComboBox->OnSelect([&](wiEventArgs args) {
-		wiRenderer::SHADOWCOUNT_CUBE = 5;
 		switch (args.iValue)
 		{
 		case 0:
 			wiRenderer::SetShadowPropsCube(128, 0);
 			break;
 		case 1:
-			wiRenderer::SetShadowPropsCube(128, wiRenderer::SHADOWCOUNT_CUBE);
+			wiRenderer::SetShadowPropsCube(128, -1);
 			break;
 		case 2:
-			wiRenderer::SetShadowPropsCube(256, wiRenderer::SHADOWCOUNT_CUBE);
+			wiRenderer::SetShadowPropsCube(256, -1);
 			break;
 		case 3:
-			wiRenderer::SetShadowPropsCube(512, wiRenderer::SHADOWCOUNT_CUBE);
+			wiRenderer::SetShadowPropsCube(512, -1);
 			break;
 		case 4:
-			wiRenderer::SetShadowPropsCube(1024, wiRenderer::SHADOWCOUNT_CUBE);
+			wiRenderer::SetShadowPropsCube(1024, -1);
 			break;
 		case 5:
-			wiRenderer::SetShadowPropsCube(2048, wiRenderer::SHADOWCOUNT_CUBE);
+			wiRenderer::SetShadowPropsCube(2048, -1);
 			break;
 		case 6:
-			wiRenderer::SetShadowPropsCube(4096, wiRenderer::SHADOWCOUNT_CUBE);
+			wiRenderer::SetShadowPropsCube(4096, -1);
 			break;
 		default:
 			break;
@@ -359,8 +358,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	textureQualityComboBox->AddItem("Trilinear");
 	textureQualityComboBox->AddItem("Anisotropic");
 	textureQualityComboBox->OnSelect([&](wiEventArgs args) {
-		wiGraphicsTypes::SamplerDesc desc = wiRenderer::samplers[SSLOT_OBJECTSHADER]->GetDesc();
-		SAFE_DELETE(wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		wiGraphicsTypes::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
 
 		switch (args.iValue)
 		{
@@ -380,8 +378,8 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 			break;
 		}
 
-		wiRenderer::samplers[SSLOT_OBJECTSHADER] = new wiGraphicsTypes::Sampler;
-		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		wiRenderer::ModifySampler(desc, SSLOT_OBJECTSHADER);
+
 	});
 	textureQualityComboBox->SetSelected(3);
 	textureQualityComboBox->SetEnabled(true);
@@ -393,11 +391,9 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	mipLodBiasSlider->SetSize(XMFLOAT2(100, 30));
 	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += 30));
 	mipLodBiasSlider->OnSlide([&](wiEventArgs args) {
-		wiGraphicsTypes::SamplerDesc desc = wiRenderer::samplers[SSLOT_OBJECTSHADER]->GetDesc();
-		SAFE_DELETE(wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		wiGraphicsTypes::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
 		desc.MipLODBias = args.fValue;
-		wiRenderer::samplers[SSLOT_OBJECTSHADER] = new wiGraphicsTypes::Sampler;
-		wiRenderer::GetDevice()->CreateSamplerState(&desc, wiRenderer::samplers[SSLOT_OBJECTSHADER]);
+		wiRenderer::ModifySampler(desc, SSLOT_OBJECTSHADER);
 	});
 	rendererWindow->AddWidget(mipLodBiasSlider);
 
@@ -414,6 +410,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
 	partitionBoxesCheckBox->SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
+	partitionBoxesCheckBox->SetEnabled(false); // SP tree is not implemented at the moment anymore
 	rendererWindow->AddWidget(partitionBoxesCheckBox);
 
 	boneLinesCheckBox = new wiCheckBox("Bone line visualizer: ");
@@ -510,6 +507,12 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	pickTypeEmitterCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeEmitterCheckBox);
 
+	pickTypeHairCheckBox = new wiCheckBox("Pick Hairs: ");
+	pickTypeHairCheckBox->SetTooltip("Enable if you want to pick hairs with the pointer");
+	pickTypeHairCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeHairCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeHairCheckBox);
+
 	pickTypeCameraCheckBox = new wiCheckBox("Pick Cameras: ");
 	pickTypeCameraCheckBox->SetTooltip("Enable if you want to pick cameras with the pointer");
 	pickTypeCameraCheckBox->SetPos(XMFLOAT2(x, y += step));
@@ -573,6 +576,10 @@ UINT RendererWindow::GetPickType()
 	if (pickTypeEmitterCheckBox->GetCheck())
 	{
 		pickType |= PICK_EMITTER;
+	}
+	if (pickTypeHairCheckBox->GetCheck())
+	{
+		pickType |= PICK_HAIR;
 	}
 	if (pickTypeCameraCheckBox->GetCheck())
 	{

@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "hairparticleHF.hlsli"
 
-float4 main() : SV_TARGET
+float4 main(VertexToPixel input) : SV_TARGET
 {
-	return float4(xColor, 1.0f);
+	return float4(input.color, 1.0f);
 }

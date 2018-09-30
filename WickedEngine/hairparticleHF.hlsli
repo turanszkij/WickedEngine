@@ -1,17 +1,6 @@
 #ifndef _HAIRPARTICLE_HF_
 #define _HAIRPARTICLE_HF_
 
-
-CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
-{
-	float4x4 xWorld;
-	float3 xColor; float __pad0;
-	float LOD0;
-	float LOD1;
-	float LOD2;
-	float __pad1;
-}
-
 struct VertexToPixel
 {
 	float4 pos : SV_POSITION;
@@ -21,6 +10,7 @@ struct VertexToPixel
 	float  fade : DITHERFADE;
 	float4 pos2D : SCREENPOSITION;
 	float4 pos2DPrev : SCREENPOSITIONPREV;
+	float3 color : COLOR;
 };
 
 #endif // _HAIRPARTICLE_HF_

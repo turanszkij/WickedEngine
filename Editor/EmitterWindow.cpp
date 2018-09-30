@@ -1,18 +1,15 @@
 #include "stdafx.h"
 #include "EmitterWindow.h"
-#include "MaterialWindow.h"
 
 #include <sstream>
 
 using namespace std;
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
-
-	object = nullptr;
-	materialWnd = nullptr;
 
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -24,27 +21,58 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	GUI->AddWidget(emitterWindow);
 
 	float x = 150;
-	float y = 10;
+	float y = 20;
 	float step = 35;
 
 
-	emitterComboBox = new wiComboBox("Emitter: ");
-	emitterComboBox->SetPos(XMFLOAT2(x, y += step));
-	emitterComboBox->SetSize(XMFLOAT2(360, 25));
-	emitterComboBox->OnSelect([&](wiEventArgs args) {
-		if (object != nullptr && args.iValue >= 0)
+	addButton = new wiButton("Add Emitter");
+	addButton->SetPos(XMFLOAT2(x, y += step));
+	addButton->SetSize(XMFLOAT2(150, 30));
+	addButton->OnClick([&](wiEventArgs args) {
+		Scene& scene = wiRenderer::GetScene();
+		scene.Entity_CreateEmitter("editorEmitter");
+	});
+	addButton->SetTooltip("Add new emitter particle system.");
+	emitterWindow->AddWidget(addButton);
+
+	restartButton = new wiButton("Restart Emitter");
+	restartButton->SetPos(XMFLOAT2(x + 160, y));
+	restartButton->SetSize(XMFLOAT2(150, 30));
+	restartButton->OnClick([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
 		{
-			SetObject(object);
+			emitter->Restart();
 		}
 	});
-	emitterComboBox->SetEnabled(false);
-	emitterComboBox->SetTooltip("Choose an emitter associated with the selected object");
-	emitterWindow->AddWidget(emitterComboBox);
+	restartButton->SetTooltip("Restart particle system emitter");
+	emitterWindow->AddWidget(restartButton);
 
+	meshComboBox = new wiComboBox("Mesh: ");
+	meshComboBox->SetSize(XMFLOAT2(300, 25));
+	meshComboBox->SetPos(XMFLOAT2(x, y += step));
+	meshComboBox->SetEnabled(false);
+	meshComboBox->OnSelect([&](wiEventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			if (args.iValue == 0)
+			{
+				emitter->meshID = INVALID_ENTITY;
+			}
+			else
+			{
+				Scene& scene = wiRenderer::GetScene();
+				emitter->meshID = scene.meshes.GetEntity(args.iValue - 1);
+			}
+		}
+	});
+	meshComboBox->SetTooltip("Choose an mesh that particles will be emitted from...");
+	emitterWindow->AddWidget(meshComboBox);
 
 	shaderTypeComboBox = new wiComboBox("ShaderType: ");
 	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox->SetSize(XMFLOAT2(200, 25));
+	shaderTypeComboBox->SetSize(XMFLOAT2(300, 25));
 	shaderTypeComboBox->AddItem("SOFT");
 	shaderTypeComboBox->AddItem("SOFT + DISTORTION");
 	shaderTypeComboBox->AddItem("SIMPLEST");
@@ -66,7 +94,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->SORTING = args.bValue;
+			emitter->SetSorted(args.bValue);
 		}
 	});
 	sortCheckBox->SetCheck(false);
@@ -80,7 +108,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->DEPTHCOLLISIONS = args.bValue;
+			emitter->SetDepthCollisionEnabled(args.bValue);
 		}
 	});
 	depthCollisionsCheckBox->SetCheck(false);
@@ -94,7 +122,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->SPH_FLUIDSIMULATION = args.bValue;
+			emitter->SetSPHEnabled(args.bValue);
 		}
 	});
 	sphCheckBox->SetCheck(false);
@@ -108,7 +136,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->PAUSED = args.bValue;
+			emitter->SetPaused(args.bValue);
 		}
 	});
 	pauseCheckBox->SetCheck(false);
@@ -122,7 +150,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->DEBUG = args.bValue;
+			emitter->SetDebug(args.bValue);
 		}
 	});
 	debugCheckBox->SetCheck(false);
@@ -225,7 +253,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitScalingSlider->SetTooltip("Set the scaling of the particles based on their lifetime.");
 	emitterWindow->AddWidget(emitScalingSlider);
 
-	emitLifeSlider = new wiSlider(0.0f, 1000.0f, 1.0f, 100000, "Life span: ");
+	emitLifeSlider = new wiSlider(0.0f, 100.0f, 1.0f, 10000, "Life span: ");
 	emitLifeSlider->SetSize(XMFLOAT2(360, 30));
 	emitLifeSlider->SetPos(XMFLOAT2(x, y += step));
 	emitLifeSlider->OnSlide([&](wiEventArgs args) {
@@ -236,7 +264,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	emitLifeSlider->SetEnabled(false);
-	emitLifeSlider->SetTooltip("Set the lifespan of the emitted particles.");
+	emitLifeSlider->SetTooltip("Set the lifespan of the emitted particles (in seconds).");
 	emitterWindow->AddWidget(emitLifeSlider);
 
 	emitRandomnessSlider = new wiSlider(0.0f, 1.0f, 1.0f, 100000, "Randomness: ");
@@ -379,56 +407,11 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 
 
-
-
-
-	////// UTIL /////////////////
-
-	y += step;
-
-	materialSelectButton = new wiButton("Select Material");
-	materialSelectButton->SetPos(XMFLOAT2(x, y += step));
-	materialSelectButton->SetSize(XMFLOAT2(150, 30));
-	materialSelectButton->OnClick([&](wiEventArgs args) {
-		if (materialWnd != nullptr)
-		{
-			auto emitter = GetEmitter();
-			if (emitter != nullptr)
-			{
-				materialWnd->SetMaterial(emitter->material);
-			}
-		}
-	});
-	materialSelectButton->SetTooltip("Select corresponding material in the Material Window.");
-	emitterWindow->AddWidget(materialSelectButton);
-
-
-
-	restartButton = new wiButton("Restart Emitter");
-	restartButton->SetPos(XMFLOAT2(x + 200, y));
-	restartButton->SetSize(XMFLOAT2(150, 30));
-	restartButton->OnClick([&](wiEventArgs args) {
-		if (materialWnd != nullptr)
-		{
-			auto emitter = GetEmitter();
-			if (emitter != nullptr)
-			{
-				emitter->Restart();
-			}
-		}
-	});
-	restartButton->SetTooltip("Restart particle system emitter");
-	emitterWindow->AddWidget(restartButton);
-
-
-
-
 	emitterWindow->Translate(XMFLOAT3(200, 50, 0));
 	emitterWindow->SetVisible(false);
 
-	SetObject(nullptr);
+	SetEntity(entity);
 }
-
 
 EmitterWindow::~EmitterWindow()
 {
@@ -437,93 +420,70 @@ EmitterWindow::~EmitterWindow()
 	SAFE_DELETE(emitterWindow);
 }
 
-void EmitterWindow::SetObject(Object* obj)
+void EmitterWindow::SetEntity(Entity entity)
 {
-	if (this->object == obj)
+	if (this->entity == entity)
 		return;
+
 
 	// first try to turn off any debug readbacks for emitters:
 	if (GetEmitter() != nullptr)
 	{
-		GetEmitter()->DEBUG = false;
+		GetEmitter()->SetDebug(false);
 	}
 	debugCheckBox->SetCheck(false);
 
-	object = obj;
+	this->entity = entity;
 
-	emitterComboBox->ClearItems();
+	auto emitter = GetEmitter();
 
-	if (object != nullptr)
+	if (emitter != nullptr)
 	{
-		for (auto& x : object->eParticleSystems)
-		{
-			emitterComboBox->AddItem(x->name);
-			emitterComboBox->SetEnabled(true);
-		}
+		sortCheckBox->SetCheck(emitter->IsSorted());
+		depthCollisionsCheckBox->SetCheck(emitter->IsDepthCollisionEnabled());
+		sphCheckBox->SetCheck(emitter->IsSPHEnabled());
+		pauseCheckBox->SetCheck(emitter->IsPaused());
+		maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
 
-		auto emitter = GetEmitter();
-		if (emitter != nullptr)
-		{
-			sortCheckBox->SetCheck(emitter->SORTING);
-			depthCollisionsCheckBox->SetCheck(emitter->DEPTHCOLLISIONS);
-			sphCheckBox->SetCheck(emitter->SPH_FLUIDSIMULATION);
-			pauseCheckBox->SetCheck(emitter->PAUSED);
-			maxParticlesSlider->SetValue((float)emitter->GetMaxParticleCount());
+		emitCountSlider->SetValue(emitter->count);
+		emitSizeSlider->SetValue(emitter->size);
+		emitRotationSlider->SetValue(emitter->rotation);
+		emitNormalSlider->SetValue(emitter->normal_factor);
+		emitScalingSlider->SetValue(emitter->scaleX);
+		emitLifeSlider->SetValue(emitter->life);
+		emitRandomnessSlider->SetValue(emitter->random_factor);
+		emitLifeRandomnessSlider->SetValue(emitter->random_life);
+		emitMotionBlurSlider->SetValue(emitter->motionBlurAmount);
+		emitMassSlider->SetValue(emitter->mass);
+		timestepSlider->SetValue(emitter->FIXED_TIMESTEP);
 
-			emitCountSlider->SetValue(emitter->count);
-			emitSizeSlider->SetValue(emitter->size);
-			emitRotationSlider->SetValue(emitter->rotation);
-			emitNormalSlider->SetValue(emitter->normal_factor);
-			emitScalingSlider->SetValue(emitter->scaleX);
-			emitLifeSlider->SetValue(emitter->life);
-			emitRandomnessSlider->SetValue(emitter->random_factor);
-			emitLifeRandomnessSlider->SetValue(emitter->random_life);
-			emitMotionBlurSlider->SetValue(emitter->motionBlurAmount);
-			emitMassSlider->SetValue(emitter->mass);
-			timestepSlider->SetValue(emitter->FIXED_TIMESTEP);
+		sph_h_Slider->SetValue(emitter->SPH_h);
+		sph_K_Slider->SetValue(emitter->SPH_K);
+		sph_p0_Slider->SetValue(emitter->SPH_p0);
+		sph_e_Slider->SetValue(emitter->SPH_e);
 
-			sph_h_Slider->SetValue(emitter->SPH_h);
-			sph_K_Slider->SetValue(emitter->SPH_K);
-			sph_p0_Slider->SetValue(emitter->SPH_p0);
-			sph_e_Slider->SetValue(emitter->SPH_e);
-		}
-
-		emitterWindow->SetEnabled(true);
+		//emitterWindow->SetEnabled(true);
 	}
 	else
 	{
 		infoLabel->SetText("No emitter object selected.");
 
-		emitterWindow->SetEnabled(false);
+		//emitterWindow->SetEnabled(false);
 	}
 
-}
-
-void EmitterWindow::SetMaterialWnd(MaterialWindow* wnd)
-{
-	materialWnd = wnd;
 }
 
 wiEmittedParticle* EmitterWindow::GetEmitter()
 {
-	if (object == nullptr)
+	if (entity == INVALID_ENTITY)
 	{
 		return nullptr;
 	}
 
-	int sel = emitterComboBox->GetSelected();
+	Scene& scene = wiRenderer::GetScene();
+	wiEmittedParticle* emitter = scene.emitters.GetComponent(entity);
 
-	if (sel < 0)
-	{
-		return nullptr;
-	}
-
-	if ((int)object->eParticleSystems.size() > sel)
-	{
-		return object->eParticleSystems[sel];
-	}
-
-	return nullptr;
+	return emitter;
 }
 
 void EmitterWindow::UpdateData()
@@ -534,12 +494,29 @@ void EmitterWindow::UpdateData()
 		return;
 	}
 
+	Scene& scene = wiRenderer::GetScene();
+
+	meshComboBox->ClearItems();
+	meshComboBox->AddItem("NO MESH");
+	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	{
+		Entity entity = scene.meshes.GetEntity(i);
+		const NameComponent& name = *scene.names.GetComponent(entity);
+		meshComboBox->AddItem(name.name);
+
+		if (emitter->meshID == entity)
+		{
+			meshComboBox->SetSelected((int)i + 1);
+		}
+	}
+
+	NameComponent* name = scene.names.GetComponent(entity);
+	NameComponent* meshName = scene.names.GetComponent(emitter->meshID);
 
 	stringstream ss("");
 	ss.precision(2);
-	ss << "Emitter name: " << emitter->name << endl;
-	ss << "Emitter Object: " << (emitter->object != nullptr ? emitter->object->name : "ERROR: NO EMITTER OBJECT") << endl;
-	ss << "Emitter Material: " << (emitter->material != nullptr ? emitter->material->name : "ERROR: NO EMITTER MATERIAL") << endl;
+	ss << "Emitter name: " << name->name << " (" << entity << ")" << endl;
+	ss << "Emitter Mesh: " << (meshName != nullptr ? meshName->name : "NO EMITTER MESH") << " (" << emitter->meshID << ")" << endl;
 	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << endl;
 	ss << endl;
 

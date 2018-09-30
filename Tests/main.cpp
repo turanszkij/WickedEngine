@@ -161,15 +161,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_SIZE:
 	{
-		if (wiRenderer::graphicsDevice)
+		if (wiRenderer::GetDevice() != nullptr)
 		{
 			int width = LOWORD(lParam);
 			int height = HIWORD(lParam);
 
 			wiRenderer::GetDevice()->SetResolution(width, height);
-			wiRenderer::getCamera()->SetUp((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+			wiRenderer::GetCamera().CreatePerspective((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 		}
 	}
+	break;
 	case WM_KEYDOWN:
 		switch (wParam)
 		{

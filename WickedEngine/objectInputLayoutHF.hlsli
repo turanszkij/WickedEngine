@@ -17,18 +17,18 @@ struct Input_InstancePrev
 
 struct Input_Object_POS
 {
-	float4 pos : POSITION_NORMAL_WIND_MATID;
+	float4 pos : POSITION_NORMAL_SUBSETINDEX;
 	Input_Instance instance;
 };
 struct Input_Object_POS_TEX
 {
-	float4 pos : POSITION_NORMAL_WIND_MATID;
+	float4 pos : POSITION_NORMAL_SUBSETINDEX;
 	float2 tex : TEXCOORD0;
 	Input_Instance instance;
 };
 struct Input_Object_ALL
 {
-	float4 pos : POSITION_NORMAL_WIND_MATID;
+	float4 pos : POSITION_NORMAL_SUBSETINDEX;
 	float2 tex : TEXCOORD;
 	float4 pre : PREVPOS;
 	Input_Instance instance;
@@ -58,7 +58,6 @@ struct VertexSurface
 {
 	float4 position;
 	float3 normal;
-	float wind;
 	uint materialIndex;
 	float2 uv;
 	float4 prevPos;
@@ -73,8 +72,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
 	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.wind = (float)((normal_wind_matID >> 24) & 0x0000000F) / 15.0f;
-	surface.materialIndex = (normal_wind_matID >> 28) & 0x0000000F;
+	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
 	return surface;
 }
@@ -88,8 +86,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.wind = (float)((normal_wind_matID >> 24) & 0x0000000F) / 15.0f;
-	surface.materialIndex = (normal_wind_matID >> 28) & 0x0000000F;
+	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
 	surface.uv = input.tex.xy;
 
@@ -105,8 +102,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.wind = (float)((normal_wind_matID >> 24) & 0x0000000F) / 15.0f;
-	surface.materialIndex = (normal_wind_matID >> 28) & 0x0000000F;
+	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
 	surface.uv = input.tex.xy;
 

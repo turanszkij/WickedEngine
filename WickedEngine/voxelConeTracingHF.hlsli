@@ -36,26 +36,26 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	
 	// We need to offset the cone start position to avoid sampling its own voxel (self-occlusion):
 	//	Unfortunately, it will result in disconnection between nearby surfaces :(
-	float dist = g_xWorld_VoxelRadianceDataSize; // offset by cone dir so that first sample of all cones are not the same
-	float3 startPos = P + N * g_xWorld_VoxelRadianceDataSize * 2 * SQRT2; // sqrt2 is diagonal voxel half-extent
+	float dist = g_xFrame_VoxelRadianceDataSize; // offset by cone dir so that first sample of all cones are not the same
+	float3 startPos = P + N * g_xFrame_VoxelRadianceDataSize * 2 * SQRT2; // sqrt2 is diagonal voxel half-extent
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
-	const float maxDistance = MAX_DIST * g_xWorld_VoxelRadianceDataSize;
+	const float maxDistance = MAX_DIST * g_xFrame_VoxelRadianceDataSize;
 
 	while (dist < maxDistance && alpha < 1)
 	{
-		float diameter = max(g_xWorld_VoxelRadianceDataSize, 2 * coneAperture * dist);
-		float mip = log2(diameter * g_xWorld_VoxelRadianceDataSize_Inverse);
+		float diameter = max(g_xFrame_VoxelRadianceDataSize, 2 * coneAperture * dist);
+		float mip = log2(diameter * g_xFrame_VoxelRadianceDataSize_Inverse);
 
 		// Because we do the ray-marching in world space, we need to remap into 3d texture space before sampling:
 		//	todo: optimization could be doing ray-marching in texture space
 		float3 tc = startPos + coneDirection * dist;
-		tc = (tc - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceDataSize_Inverse;
-		tc *= g_xWorld_VoxelRadianceDataRes_Inverse;
+		tc = (tc - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataSize_Inverse;
+		tc *= g_xFrame_VoxelRadianceDataRes_Inverse;
 		tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 		// break if the ray exits the voxel grid, or we sample from the last mip:
-		if (any(tc - saturate(tc)) || mip >= (float)g_xWorld_VoxelRadianceDataMIPs)
+		if (any(tc - saturate(tc)) || mip >= (float)g_xFrame_VoxelRadianceDataMIPs)
 			break;
 
 		float4 sam = voxels.SampleLevel(sampler_linear_clamp, tc, mip);
@@ -66,7 +66,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 		alpha += a * sam.a;
 
 		// step along ray:
-		dist += diameter * g_xWorld_VoxelRadianceRayStepSize;
+		dist += diameter * g_xFrame_VoxelRadianceRayStepSize;
 	}
 
 	return float4(color, alpha);
@@ -79,7 +79,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 {
 	float4 radiance = 0;
 
-	for (uint cone = 0; cone < g_xWorld_VoxelRadianceNumCones; ++cone) // quality is between 1 and 16 cones
+	for (uint cone = 0; cone < g_xFrame_VoxelRadianceNumCones; ++cone) // quality is between 1 and 16 cones
 	{
 		// approximate a hemisphere from random points inside a sphere:
 		//  (and modulate cone with surface normal, no banding this way)
@@ -91,7 +91,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 	}
 
 	// final radiance is average of all the cones radiances
-	radiance *= g_xWorld_VoxelRadianceNumCones_Inverse;
+	radiance *= g_xFrame_VoxelRadianceNumCones_Inverse;
 	radiance.a = saturate(radiance.a);
 
 	return max(0, radiance);

@@ -1,12 +1,20 @@
 #include "stdafx.h"
 #include "CameraWindow.h"
 
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 void CameraWindow::ResetCam()
 {
-	wiRenderer::getCamera()->ClearTransform();
-	wiRenderer::getCamera()->Translate(XMFLOAT3(0, 2, -10));
+	Scene& scene = wiRenderer::GetScene();
+
+	camera_transform.ClearTransform();
+	camera_transform.Translate(XMFLOAT3(0, 2, -10));
+	camera_transform.UpdateTransform();
+	wiRenderer::GetCamera().UpdateCamera(&camera_transform);
+
+	camera_target.ClearTransform();
+	camera_target.UpdateTransform();
 }
 
 CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
@@ -16,7 +24,8 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	orbitalCamTarget = new Transform;
+	camera_transform.MatrixTransform(wiRenderer::GetCamera().GetInvView());
+	camera_transform.UpdateTransform();
 
 	cameraWindow = new wiWindow(GUI, "Camera Window");
 	cameraWindow->SetSize(XMFLOAT2(600, 420));
@@ -29,20 +38,24 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	farPlaneSlider = new wiSlider(1, 5000, 1000, 100000, "Far Plane: ");
 	farPlaneSlider->SetSize(XMFLOAT2(100, 30));
 	farPlaneSlider->SetPos(XMFLOAT2(x, y += inc));
-	farPlaneSlider->SetValue(wiRenderer::getCamera()->zFarP);
+	farPlaneSlider->SetValue(wiRenderer::GetCamera().zFarP);
 	farPlaneSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::getCamera()->zFarP = args.fValue;
-		wiRenderer::getCamera()->UpdateProjection();
+		Scene& scene = wiRenderer::GetScene();
+		CameraComponent& camera = wiRenderer::GetCamera();
+		camera.zFarP = args.fValue;
+		camera.UpdateProjection();
 	});
 	cameraWindow->AddWidget(farPlaneSlider);
 
 	nearPlaneSlider = new wiSlider(0.01f, 10, 0.1f, 10000, "Near Plane: ");
 	nearPlaneSlider->SetSize(XMFLOAT2(100, 30));
 	nearPlaneSlider->SetPos(XMFLOAT2(x, y += inc));
-	nearPlaneSlider->SetValue(wiRenderer::getCamera()->zNearP);
+	nearPlaneSlider->SetValue(wiRenderer::GetCamera().zNearP);
 	nearPlaneSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::getCamera()->zNearP = args.fValue;
-		wiRenderer::getCamera()->UpdateProjection();
+		Scene& scene = wiRenderer::GetScene();
+		CameraComponent& camera = wiRenderer::GetCamera();
+		camera.zNearP = args.fValue;
+		camera.UpdateProjection();
 	});
 	cameraWindow->AddWidget(nearPlaneSlider);
 
@@ -50,8 +63,10 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	fovSlider->SetSize(XMFLOAT2(100, 30));
 	fovSlider->SetPos(XMFLOAT2(x, y += inc));
 	fovSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::getCamera()->fov = args.fValue / 180.f * XM_PI;
-		wiRenderer::getCamera()->UpdateProjection();
+		Scene& scene = wiRenderer::GetScene();
+		CameraComponent& camera = wiRenderer::GetCamera();
+		camera.fov = args.fValue / 180.f * XM_PI;
+		camera.UpdateProjection();
 	});
 	cameraWindow->AddWidget(fovSlider);
 
@@ -69,7 +84,6 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	resetButton->SetSize(XMFLOAT2(140, 30));
 	resetButton->SetPos(XMFLOAT2(x, y += inc));
 	resetButton->OnClick([&](wiEventArgs args) {
-		orbitalCamTarget->ClearTransform();
 		ResetCam();
 	});
 	cameraWindow->AddWidget(resetButton);
@@ -86,12 +100,15 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyButton->SetSize(XMFLOAT2(140, 30));
 	proxyButton->SetPos(XMFLOAT2(x, y += inc * 2));
 	proxyButton->OnClick([&](wiEventArgs args) {
-		Camera* cam = new Camera(*wiRenderer::getCamera());
-		cam->name = "cam";
 
-		wiRenderer::Add(cam);
+		const CameraComponent& camera = wiRenderer::GetCamera();
 
-		//SetProxy(cam);
+		Scene& scene = wiRenderer::GetScene();
+
+		Entity entity = scene.Entity_CreateCamera("cam", camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
+
+		TransformComponent& transform = *scene.transforms.GetComponent(entity);
+		transform.MatrixTransform(camera.InvView);
 	});
 	cameraWindow->AddWidget(proxyButton);
 
@@ -99,9 +116,11 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	proxyNameField->SetSize(XMFLOAT2(140, 30));
 	proxyNameField->SetPos(XMFLOAT2(x + 200, y));
 	proxyNameField->OnInputAccepted([&](wiEventArgs args) {
-		if (proxy != nullptr)
+		Scene& scene = wiRenderer::GetScene();
+		NameComponent* camera = scene.names.GetComponent(proxy);
+		if (camera != nullptr)
 		{
-			proxy->name = args.sValue;
+			*camera = args.sValue;
 		}
 	});
 	cameraWindow->AddWidget(proxyNameField);
@@ -118,7 +137,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	cameraWindow->AddWidget(followSlider);
 
 
-	SetProxy(nullptr);
+	SetEntity(INVALID_ENTITY);
 
 
 	cameraWindow->Translate(XMFLOAT3(800, 500, 0));
@@ -128,24 +147,26 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 
 CameraWindow::~CameraWindow()
 {
-
-	SAFE_DELETE(orbitalCamTarget);
-
 	cameraWindow->RemoveWidgets(true);
 	GUI->RemoveWidget(cameraWindow);
 	SAFE_DELETE(cameraWindow);
 }
 
-void CameraWindow::SetProxy(Camera* camera)
+void CameraWindow::SetEntity(Entity entity)
 {
-	proxy = camera;
+	proxy = entity;
 
+	Scene& scene = wiRenderer::GetScene();
 
-	if (proxy != nullptr)
+	if (scene.cameras.GetComponent(entity) != nullptr)
 	{
 		followCheckBox->SetEnabled(true);
 		followSlider->SetEnabled(true);
-		proxyNameField->SetValue(proxy->name);
+		NameComponent* camera = scene.names.GetComponent(entity);
+		if (camera != nullptr)
+		{
+			proxyNameField->SetValue(camera->name);
+		}
 	}
 	else
 	{

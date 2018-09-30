@@ -7,11 +7,4 @@ struct VertexToPixel{
 	float4 col			: COLOR;
 };
 
-CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
-{
-	float4x4 lightWorld;
-	float4 lightColor;
-	float4 lightEnerdis;
-};
-
 #endif // _VOLUMELIGHT_HF_

@@ -7,9 +7,10 @@ RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWRAWBUFFER(counterBuffer, 4);
 
-TEXTURE2D(randomTex, float4, TEXSLOT_ONDEMAND0);
-TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
+#ifdef EMIT_FROM_MESH
+TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
+RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+#endif // EMIT_FROM_MESH
 
 
 [numthreads(THREADCOUNT_EMIT, 1, 1)]
@@ -21,10 +22,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		// we can emit:
 
-		const float3 randoms = randomTex.SampleLevel(sampler_linear_wrap, float2((float)DTid.x / (float)THREADCOUNT_EMIT, g_xFrame_Time + xEmitterRandomness), 0).rgb;
+		float2 uv = float2(g_xFrame_Time + xEmitterRandomness, (float)DTid.x / (float)THREADCOUNT_EMIT);
+		float seed = 0.12345;
 		
+#ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
-		uint tri = (uint)(((xEmitterMeshIndexCount - 1) / 3) * randoms.x);
+		uint tri = (uint)((xEmitterMeshIndexCount / 3) * rand(seed, uv));
 
 		// load indices of triangle from index buffer
 		uint i0 = meshIndexBuffer[tri * 3 + 0];
@@ -59,8 +62,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 
 		// random barycentric coords:
-		float f = randoms.x;
-		float g = randoms.y;
+		float f = rand(seed, uv);
+		float g = rand(seed, uv);
 		[flatten]
 		if (f + g > 1)
 		{
@@ -74,22 +77,36 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		pos = mul(xEmitterWorld, float4(pos, 1)).xyz;
 		nor = normalize(mul((float3x3)xEmitterWorld, nor));
 
-		float particleStartingSize = xParticleSize + xParticleSize * (randoms.y - 0.5f) * xParticleRandomFactor;
+#else
+
+		// Just emit from center point:
+		float3 pos = mul(xEmitterWorld, float4(0, 0, 0, 1)).xyz;
+		float3 nor = 0;
+
+#endif // EMIT_FROM_MESH
+
+		float particleStartingSize = xParticleSize + xParticleSize * (rand(seed, uv) - 0.5f) * xParticleRandomFactor;
 
 		// create new particle:
 		Particle particle;
 		particle.position = pos;
 		particle.force = 0;
 		particle.mass = xParticleMass;
-		particle.velocity = (nor + (randoms.xyz - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
-		particle.rotationalVelocity = xParticleRotation * (randoms.z - 0.5f) * xParticleRandomFactor;
-		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (randoms.x - 0.5f) * xParticleLifeSpanRandomness;
+		particle.velocity = (nor + (float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
+		particle.rotationalVelocity = xParticleRotation * (rand(seed, uv) - 0.5f) * xParticleRandomFactor;
+		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rand(seed, uv) - 0.5f) * xParticleLifeSpanRandomness;
 		particle.life = particle.maxLife;
 		particle.sizeBeginEnd = float2(particleStartingSize, particleStartingSize * xParticleScaling);
 		particle.color_mirror = 0;
-		particle.color_mirror |= ((randoms.x > 0.5f) << 31) & 0x10000000;
-		particle.color_mirror |= ((randoms.y < 0.5f) << 30) & 0x20000000;
-		particle.color_mirror |= xParticleColor & 0x00FFFFFF;
+		particle.color_mirror |= ((rand(seed, uv) > 0.5f) << 31) & 0x10000000;
+		particle.color_mirror |= ((rand(seed, uv) < 0.5f) << 30) & 0x20000000;
+
+		uint color_modifier = 0;
+		//color_modifier |= (uint)(255.0f * lerp(1, rand(seed, uv), xParticleRandomFactor)) << 0;
+		//color_modifier |= (uint)(255.0f * lerp(1, rand(seed, uv), xParticleRandomFactor)) << 8;
+		//color_modifier |= (uint)(255.0f * lerp(1, rand(seed, uv), xParticleRandomFactor)) << 16;
+		color_modifier = 0x00FFFFFF;
+		particle.color_mirror |= xParticleColor & color_modifier;
 
 
 		// new particle index retrieved from dead list (pop):

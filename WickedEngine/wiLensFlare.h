@@ -2,7 +2,6 @@
 #define LENSFLARE
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
-#include "ShaderInterop.h"
 
 class wiLensFlare
 {
@@ -17,12 +16,6 @@ private:
 	static wiGraphicsTypes::Sampler				*samplercmp;
 	static wiGraphicsTypes::GraphicsPSO			PSO;
 
-	CBUFFER(ConstantBuffer, CBSLOT_OTHER_LENSFLARE)
-	{
-		XMVECTOR mSunPos;
-		XMFLOAT4 mScreen;
-	};
-
 public:
 	static void LoadShaders();
 private:
@@ -31,7 +24,7 @@ private:
 public:
 	static void Initialize();
 	static void CleanUp();
-	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<wiGraphicsTypes::Texture2D*>& rims);
+	static void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<wiGraphicsTypes::Texture2D*>& rims);
 };
 
 #endif

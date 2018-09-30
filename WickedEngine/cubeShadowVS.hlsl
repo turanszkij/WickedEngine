@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
-#include "windHF.hlsli"
 
 
 struct GS_CUBEMAP_IN
@@ -16,7 +15,6 @@ GS_CUBEMAP_IN main(Input_Object_POS input)
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
 	Out.Pos = mul(surface.position, WORLD);
-	affectWind(Out.Pos.xyz, surface.wind, g_xFrame_Time);
 
 	return Out;
 }

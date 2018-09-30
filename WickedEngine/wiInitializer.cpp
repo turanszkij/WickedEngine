@@ -11,6 +11,7 @@
 #include "wiHelper.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
+#include "wiPhysicsEngine.h"
 
 using namespace std;
 
@@ -23,19 +24,16 @@ namespace wiInitializer
 		wiFrameRate::Initialize();
 		wiCpuInfo::Initialize();
 
-		wiRenderer::SetUpStaticComponents();
+		wiRenderer::Initialize();
 		wiLensFlare::Initialize();
-
-		wiImage::Load();
-
+		wiImage::Initialize();
 		wiFont::Initialize();
-		wiFont::SetUpStaticComponents();
-
-		wiOcean::SetUpStatic();
+		wiOcean::Initialize();
 
 		wiWidget::LoadShaders();
-
 		wiGPUSortLib::LoadShaders();
+
+		wiPhysicsEngine::Initialize();
 
 		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
 		{
@@ -44,4 +42,5 @@ namespace wiInitializer
 			wiHelper::messageBox(ss.str());
 		}
 	}
+
 }

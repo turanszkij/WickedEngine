@@ -2,11 +2,6 @@
 
 #define g_f4Eye				g_xCamera_CamPos
 
-CBUFFER(TessellationCB, CBSLOT_RENDERER_TESSELLATION)
-{
-	float4 g_f4TessFactors;
-};
-
 struct HullInputType
 {
 	float3 f3Position						: POSITION;

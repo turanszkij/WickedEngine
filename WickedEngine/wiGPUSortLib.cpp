@@ -41,14 +41,15 @@ void wiGPUSortLib::Initialize()
 
 void wiGPUSortLib::LoadShaders()
 {
+	std::string path = wiRenderer::GetShaderPath();
+
+	kickoffSortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "gpusortlib_kickoffSortCS.cso", wiResourceManager::COMPUTESHADER));
+	sortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "gpusortlib_sortCS.cso", wiResourceManager::COMPUTESHADER));
+	sortInnerCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "gpusortlib_sortInnerCS.cso", wiResourceManager::COMPUTESHADER));
+	sortStepCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "gpusortlib_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
+
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	kickoffSortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "gpusortlib_kickoffSortCS.cso", wiResourceManager::COMPUTESHADER));
-	sortCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "gpusortlib_sortCS.cso", wiResourceManager::COMPUTESHADER));
-	sortInnerCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "gpusortlib_sortInnerCS.cso", wiResourceManager::COMPUTESHADER));
-	sortStepCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "gpusortlib_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
-
-
 
 	ComputePSODesc desc;
 

@@ -19,9 +19,6 @@ PixelInputType main(Input_Object_ALL input)
 	surface.normal = normalize(mul(surface.normal, (float3x3)WORLD));
 
 	Out.clip = dot(surface.position, g_xClipPlane);
-		
-	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
-	affectWind(surface.prevPos.xyz, surface.wind, g_xFrame_TimePrev);
 
 	Out.pos = Out.pos2D = mul(surface.position, g_xCamera_VP);
 	Out.pos2DPrev = mul(surface.prevPos, g_xFrame_MainCamera_PrevVP);

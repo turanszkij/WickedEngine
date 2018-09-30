@@ -1,10 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Mesh;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -20,13 +15,13 @@ public:
 
 	wiGUI* GUI;
 
-	void SetMesh(wiSceneComponents::Mesh* mesh);
-
-	wiSceneComponents::Mesh* mesh;
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
 
 	wiWindow*	meshWindow;
 	wiLabel*	meshInfoLabel;
 	wiCheckBox* doubleSidedCheckBox;
+	wiCheckBox* softbodyCheckBox;
 	wiSlider*	massSlider;
 	wiSlider*	frictionSlider;
 	wiButton*	impostorCreateButton;

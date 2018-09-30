@@ -1,10 +1,10 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiTransform.h"
 #include "wiHashString.h"
 #include "wiColor.h"
 #include "wiGraphicsAPI.h"
 #include "wiIntersectables.h"
+#include "wiSceneSystem.h"
 
 #include <string>
 #include <list>
@@ -25,7 +25,7 @@ struct wiEventArgs
 	std::string sValue;
 };
 
-class wiWidget : public wiSceneComponents::Transform
+class wiWidget : public wiSceneSystem::TransformComponent
 {
 	friend class wiGUI;
 public:
@@ -88,7 +88,15 @@ public:
 	virtual void Render(wiGUI* gui) = 0;
 	void RenderTooltip(wiGUI* gui);
 
-	wiWidget* container;
+	XMFLOAT3 translation;
+	XMFLOAT3 scale;
+
+	Hitbox2D hitBox;
+
+	wiSceneSystem::TransformComponent* parent;
+	XMFLOAT4X4 world_parent_bind;
+	void AttachTo(wiSceneSystem::TransformComponent* parent);
+	void Detach();
 
 	static void LoadShaders();
 };
@@ -103,7 +111,6 @@ protected:
 	std::function<void(wiEventArgs args)> onDragEnd;
 	XMFLOAT2 dragStart;
 	XMFLOAT2 prevPos;
-	Hitbox2D hitBox;
 public:
 	wiButton(const std::string& name = "");
 	virtual ~wiButton();
@@ -134,7 +141,6 @@ class wiTextInputField : public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onInputAccepted;
-	Hitbox2D hitBox;
 
 	std::string value;
 	static std::string value_new;
@@ -162,7 +168,6 @@ class wiSlider : public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onSlide;
-	Hitbox2D hitBox;
 	float start, end;
 	float step;
 	float value;
@@ -178,6 +183,7 @@ public:
 
 	void SetValue(float value);
 	float GetValue();
+	void SetRange(float start, float end);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(wiGUI* gui) override;
@@ -190,7 +196,6 @@ class wiCheckBox :public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onClick;
-	Hitbox2D hitBox;
 	bool checked;
 public:
 	wiCheckBox(const std::string& name = "");
@@ -210,7 +215,6 @@ class wiComboBox :public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onSelect;
-	Hitbox2D hitBox;
 	int selected;
 	int maxVisibleItemCount;
 	int firstItemVisible;

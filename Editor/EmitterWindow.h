@@ -1,12 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Object;
-}
-
-class wiEmittedParticle;
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -14,6 +7,7 @@ class wiCheckBox;
 class wiSlider;
 class wiComboBox;
 class wiColorPicker;
+class wiButton;
 
 class MaterialWindow;
 
@@ -23,19 +17,20 @@ public:
 	EmitterWindow(wiGUI* gui);
 	~EmitterWindow();
 
-	void SetObject(wiSceneComponents::Object* obj);
-	void SetMaterialWnd(MaterialWindow* wnd);
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
+
 	void UpdateData();
 
-	wiSceneComponents::Object* object;
-	wiEmittedParticle* GetEmitter();
+	wiSceneSystem::wiEmittedParticle* GetEmitter();
 
 	wiGUI* GUI;
-	MaterialWindow* materialWnd;
 
 	wiWindow*	emitterWindow;
 
-	wiComboBox* emitterComboBox;
+	wiButton* addButton;
+	wiButton* restartButton;
+	wiComboBox*	meshComboBox;
 	wiComboBox* shaderTypeComboBox;
 	wiLabel* infoLabel;
 	wiSlider* maxParticlesSlider;
@@ -59,8 +54,6 @@ public:
 	wiSlider* sph_K_Slider;
 	wiSlider* sph_p0_Slider;
 	wiSlider* sph_e_Slider;
-	wiButton* materialSelectButton;
-	wiButton* restartButton;
 
 };
 

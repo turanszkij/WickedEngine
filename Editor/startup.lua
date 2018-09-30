@@ -28,6 +28,11 @@
 -- 	end
 -- end)
 
+--LoadModel("C:/PROJECTS/glTF-Sample-Models-master/2.0/CesiumMan/glTF/CesiumMan.gltf")
+--LoadModel("C:/PROJECTS/WickedEngine/models/girl/girl.wimf", matrix.Translation(Vector(5)))
+--LoadModel("C:/PROJECTS/WickedEngine/models/girl/girl", matrix.Translation(Vector(10)))
+--SetDebugBonesEnabled(true)
+
 main.SetResolutionDisplay(true);
 runProcess(function()
 	while true do

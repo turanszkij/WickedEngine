@@ -5,7 +5,7 @@
 
 float3 GetDynamicSkyColor(in float3 normal)
 {
-	float aboveHorizon = saturate(pow(saturate(normal.y), 0.25f + g_xWorld_Fog.z) / (g_xWorld_Fog.z + 1));
+	float aboveHorizon = saturate(pow(saturate(normal.y), 0.25f + g_xFrame_Fog.z) / (g_xFrame_Fog.z + 1));
 	float3 sky = lerp(GetHorizonColor(), GetZenithColor(), aboveHorizon);
 
 #ifdef NOSUN
@@ -13,17 +13,7 @@ float3 GetDynamicSkyColor(in float3 normal)
 
 #else
 
-#ifdef SHADERCOMPILER_SPIRV
-	//compiler bug workaround:
-	uint ucol = EntityArray[g_xFrame_SunEntityArrayIndex].color;
-	float3 sunc;
-
-	sunc.x = (float)((ucol >> 0) & 0x000000FF) / 255.0f;
-	sunc.y = (float)((ucol >> 8) & 0x000000FF) / 255.0f;
-	sunc.z = (float)((ucol >> 16) & 0x000000FF) / 255.0f;
-#else
 	float3 sunc = GetSunColor();
-#endif // SHADERCOMPILER_SPIRV
 
 	float3 sun = normal.y > 0 ? max(saturate(dot(GetSunDirection(), normal) > 0.9998 ? 1 : 0)*sunc * 1000, 0) : 0;
 	return sky + sun;
@@ -45,10 +35,10 @@ void AddCloudLayer(inout float4 color, in float3 normal, bool dark)
 
 	float3 cloudPos = o + d * t;
 	float2 cloudUV = planeOrigin.xz - cloudPos.xz;
-	cloudUV *= g_xWorld_CloudScale;
+	cloudUV *= g_xFrame_CloudScale;
 
 	float clouds1 = texture_0.SampleLevel(sampler_linear_mirror, cloudUV, 0).r;
-	clouds1 = saturate(clouds1 - (1 - g_xWorld_Cloudiness)) /** pow(saturate(normal.y), 0.5)*/;
+	clouds1 = saturate(clouds1 - (1 - g_xFrame_Cloudiness)) /** pow(saturate(normal.y), 0.5)*/;
 
 	float clouds2 = texture_0.SampleLevel(sampler_linear_clamp, normal.xz * 0.5 + 0.5, 0).g;
 	clouds2 *= pow(saturate(normal.y), 0.25);

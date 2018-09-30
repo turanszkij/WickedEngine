@@ -10,6 +10,7 @@ GBUFFEROutputType main(VertexToPixel input)
 #endif
 
 	float4 color = texture_0.Sample(sampler_linear_clamp, input.tex);
+	color.rgb *= input.color;
 	ALPHATEST(color.a)
 	color = DEGAMMA(color);
 	float emissive = 0;

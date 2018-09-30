@@ -22,17 +22,7 @@ The documentation completion is still pending....
 	5. Vector
 	6. Matrix
 	7. Scene
-		1. Node
-		2. Transform
-		3. Cullable
-		4. Object
-		5. Armature
-		6. Ray
-		7. AABB
-		8. Emitter
-		9. Decal
-		10. Material
-		11. Camera
+		TODO
 	8. MainComponent
 	9. RenderableComponent
 		1. Renderable2DComponent
@@ -116,7 +106,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderHeight(): float result
 - GetCameras() : string result
 - GetCamera(opt String name) : Camera result		-- If string is provided, it will search a camera by name, otherwise, returns the main camera
-- LoadModel(string fileName, opt Matrix transform) : Model? result		-- Returns the model that was loaded
+- LoadModel(string fileName, opt Matrix transform)	-- Load Model from file
 - LoadWorldInfo(string fileName)		-- Loads world information from file
 - DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
 - SetEnvironmentMap(Texture cubemap)
@@ -312,134 +302,8 @@ A four by four matrix, efficient calculations with SIMD support.
 - Inverse(Matrix m) : Matrix result, float determinant
 
 ### Scene
-Manipulate the 3D scene with these objects. 
+Manipulate the 3D scene with these components. TODO: rewrite this section
 
-#### Node
-The basic entity in the scene. It has a name.
-- [constructor]Node()
-- GetName() : string
-- SetName(string name)
-- SetLayerMask(uint value)
-- GetLayerMask() : uint result
-
-#### Transform
-Everything in the scene is a transform. It defines a point in the space by location, size, and rotation.
-It provides several key features of parenting. 
-It inherits functions from Node.
-- [constructor]Transform()
-- AttachTo(Transform parent, opt boolean translation,rotation,scale)
-- Detach()
-- Scale(Vector vector)
-- Rotate(Vector vectorRollPitchYaw)
-- Translate(Vector vector)
-- Lerp(Transform a,b, float t)
-- CatmullRom(Transform a,b,c,d, float t)
-- MatrixTransform(Matrix matrix)
-- GetMatrix() : Matrix result
-- ClearTransform()
-- SetTransform(Transform t)
-- GetPosition() : Vector result
-- GetRotation() : Vector resultQuaternion
-- GetScale() : Vector resultXYZ
-
-#### Cullable
-Can be tested againt the view frustum, AABBs, rays, space partitioning trees. 
-It inherits functions from Transform.
-- [constructor]Cullable()
-- Intersects(Cullable cullable) : boolean result
-- Intersects(Ray cullable) : boolean result
-- Intersects(Vector cullable) : boolean result
-- GetAABB() : AABB result
-- SetAABB(AABB aabb)
-
-#### Object
-It is a renderable entity (optionally), which contains a Mesh.
-It inherits functions from Cullable.
-- [void-constructor]Object()
-- EmitTrail(Vector color, opt float fadeSpeed=0.06)
-- SetTrailTex(Texture tex)
-- SetTrailDistortTex(Texture tex)
-- SetTransparency(float value)
-- GetTransparency() : float? result
-- SetColor(Vector rgb)
-- GetColor() : Vector? rgb
-- IsValid() : boolean result
-
-#### Armature
-It animates meshes.
-It inherits functions from Transform.
-- [void-constructor]Armature()
-- GetAction(opt string animLayer = "") : string? result
-- GetActions() : string? result
-- GetBones() : string? result
-- GetBone(string name) : Transform? result
-- GetFrame(opt string animLayer = "") : float? result
-- GetFrameCount(opt string animLayer = "") : float? result
-- IsValid() : boolean result
-- ChangeAction(opt string name = "", opt float blendFrames = 0, opt string animLayer = "", opt float weight = 1.0)
-- StopAction(opt string animLayer = "")
-- PauseAction(opt string animLayer = "")
-- PlayAction(opt string animLayer = "")
-- ResetAction(opt string animLayer = "")
-- AddAnimLayer(string animLayer)
-- DeleteAnimLayer(string animLayer)
-- SetAnimLayerWeight(float weight, opt string animLayer="")
-- SetAnimLayerLooped(float weight, opt string animLayer="")
-
-#### Ray
-Can intersect with AABBs, Cullables.
-- [constructor]Ray(opt Vector origin, direction)
-- GetOrigin() : Vector result
-- GetDirection() : Vector result
-
-#### AABB
-Axis Aligned Bounding Box. Can be intersected with any shape, or ray.
-- [constructor]AABB(opt Vector min,max)
-- Intersects(AABB aabb)
-- Transform(Matrix mat)
-- GetMin() : Vector result
-- GetMax() : Vector result
-
-#### Emitter
-Emitter particlesystem.
-- [void-constructor]Emitter()
-- GetName() : string? name
-- SetName(string name)
-- GetMotionBlur() : float? amount
-- SetMotionBlur(float amount)
-- Burst(float amount)
-- IsValid() : bool value
-
-#### Decal
-Decal is a texture sticker placeable onto any surface. It is a Transform and a Cullable.
-- [constructor]Decal(opt Vector tra=Vector(0,0,0), sca=Vector(1,1,1), rotQuaternion=Vector(0,0,0,1), opt string tex="", nor="")
-- SetTexture(string tex)
-- SetNormal(string tex)
-- SetLife(float life)
-- GetLife() : float result
-- SetFadeStart(float start)
-- GetFadeStart() : float result
-
-#### Material
-- [constructor]Material(opt string name="")
-- GetName() : string name
-- SetName(string value)
-
-#### Camera
-Main camera looking at the scene. It is a Transform.
-- [constructor]Camera()
-- SetFarPlane(float val)
-- SetNearPlane(float val)
-- SetFOV(float val)
-- GetFarPlane() : float result
-- GetNearPlane() : float result
-- GetFOV() : float result
-- Lerp(Camera a,b, float t)
-- CatmullRom(Camera a,b,c,d, float t)
-
-#### Model
-Collection of Objects, Armatures, Lights, Decals. Also a transform by itself
-- [constructor]Model()
 
 ### MainComponent
 The main component which holds information and manages the running of the current program.

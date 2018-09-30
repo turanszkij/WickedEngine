@@ -47,18 +47,13 @@ MainComponent::MainComponent()
 MainComponent::~MainComponent()
 {
 	wiRenderer::GetDevice()->WaitForGPU();
-
-	if (activeComponent != nullptr)
-	{
-		activeComponent->Unload();
-	}
 }
 
 void MainComponent::Initialize()
 {
 
 	// User can also create a graphics device if custom logic is desired, but he must do before this function!
-	if (wiRenderer::graphicsDevice == nullptr)
+	if (wiRenderer::GetDevice() == nullptr)
 	{
 
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
@@ -66,8 +61,8 @@ void MainComponent::Initialize()
 		if (wiStartupArguments::HasArgument("vulkan"))
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			wiRenderer::SHADERPATH += "spirv/";
-			wiRenderer::graphicsDevice = new GraphicsDevice_Vulkan(window, fullscreen, debugdevice);
+			wiRenderer::GetShaderPath() += "spirv/";
+			wiRenderer::SetDevice(new GraphicsDevice_Vulkan(window, fullscreen, debugdevice));
 #else
 			wiHelper::messageBox("Vulkan SDK not found during building the application! Vulkan API disabled!", "Error");
 #endif
@@ -76,13 +71,13 @@ void MainComponent::Initialize()
 		{
 			if (wiStartupArguments::HasArgument("hlsl6"))
 			{
-				wiRenderer::SHADERPATH += "hlsl6/";
+				wiRenderer::GetShaderPath() += "hlsl6/";
 			}
-			wiRenderer::graphicsDevice = new GraphicsDevice_DX12(window, fullscreen, debugdevice);
+			wiRenderer::SetDevice(new GraphicsDevice_DX12(window, fullscreen, debugdevice));
 		}
 		else
 		{
-			wiRenderer::graphicsDevice = new GraphicsDevice_DX11(window, fullscreen, debugdevice);
+			wiRenderer::SetDevice(new GraphicsDevice_DX11(window, fullscreen, debugdevice));
 		}
 
 	}
@@ -153,10 +148,6 @@ void MainComponent::Run()
 	}
 	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
-	wiProfiler::GetInstance().BeginRange("Physics", wiProfiler::DOMAIN_CPU);
-	wiRenderer::SynchronizeWithPhysicsEngine((float)elapsedTime);
-	wiProfiler::GetInstance().EndRange(); // Physics
-
 	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
 
 	// Variable-timed update:
@@ -164,13 +155,21 @@ void MainComponent::Run()
 	Update((float)elapsedTime);
 	wiProfiler::GetInstance().EndRange(); // Update
 
+
 	wiProfiler::GetInstance().BeginRange("Render", wiProfiler::DOMAIN_CPU);
 	Render();
 	wiProfiler::GetInstance().EndRange(); // Render
 
 	wiProfiler::GetInstance().EndRange(); // CPU Frame
 
-	wiRenderer::Present(bind(&MainComponent::Compose, this));
+
+	wiProfiler::GetInstance().BeginRange("Compose", wiProfiler::DOMAIN_CPU);
+	wiRenderer::GetDevice()->PresentBegin();
+	Compose();
+	wiRenderer::GetDevice()->PresentEnd();
+	wiProfiler::GetInstance().EndRange(); // Compose
+
+	wiRenderer::EndFrame();
 
 	static bool startupScriptProcessed = false;
 	if (!startupScriptProcessed) {

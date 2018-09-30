@@ -7,9 +7,10 @@
 #include "wiSprite.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
 
 using namespace wiGraphicsTypes;
+using namespace wiSceneSystem;
 
 PathTracingRenderableComponent::PathTracingRenderableComponent()
 {
@@ -99,9 +100,24 @@ void PathTracingRenderableComponent::Render()
 
 void PathTracingRenderableComponent::Update(float dt)
 {
-	if (wiRenderer::getCamera()->hasChanged)
+	const Scene& scene = wiRenderer::GetScene();
+
+	if (wiRenderer::GetCamera().IsDirty())
 	{
 		sam = -1;
+	}
+	else
+	{
+		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+		{
+			const TransformComponent& transform = scene.transforms[i];
+
+			if (transform.IsDirty())
+			{
+				sam = -1;
+				break;
+			}
+		}
 	}
 	sam++;
 
@@ -123,9 +139,9 @@ void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	wiRenderer::DrawTracedScene(wiRenderer::getCamera(), traceResult, threadID);
+	wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult, threadID);
 
 
 

@@ -3,9 +3,11 @@
 #include "wiRenderer.h"
 #include "wiInputManager.h"
 #include "wiMath.h"
+#include "ShaderInterop_Renderer.h"
 
 using namespace wiGraphicsTypes;
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 GraphicsPSO* pso_solidpart = nullptr;
 GraphicsPSO* pso_wirepart = nullptr;
@@ -16,9 +18,48 @@ int vertexCount_Axis = 0;
 int vertexCount_Plane = 0;
 int vertexCount_Origin = 0;
 
-
-Translator::Translator() :Transform()
+void Translator::LoadShaders()
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	SAFE_DELETE(pso_solidpart);
+	SAFE_DELETE(pso_wirepart);
+
+	{
+		GraphicsPSODesc desc;
+
+		desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
+		desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
+		desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
+		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+		desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
+		desc.pt = TRIANGLELIST;
+
+		pso_solidpart = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, pso_solidpart);
+	}
+
+	{
+		GraphicsPSODesc desc;
+
+		desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
+		desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
+		desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
+		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
+		desc.pt = LINELIST;
+
+		pso_wirepart = new GraphicsPSO;
+		device->CreateGraphicsPSO(&desc, pso_wirepart);
+	}
+}
+
+Translator::Translator()
+{
+	entityID = CreateEntity();
+
 	prevPointer = XMFLOAT4(0, 0, 0, 0);
 
 	XMStoreFloat4x4(&dragStart, XMMatrixIdentity());
@@ -34,42 +75,12 @@ Translator::Translator() :Transform()
 
 	dist = 1;
 
-	isTranslator = true; isScalator = false; isRotator = false;
+	isTranslator = true; 
+	isScalator = false; 
+	isRotator = false;
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	if (pso_solidpart == nullptr)
-	{
-		GraphicsPSODesc desc;
-
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = wiRenderer::blendStates[BSTYPE_ADDITIVE];
-		desc.pt = TRIANGLELIST;
-
-		pso_solidpart = new GraphicsPSO;
-		device->CreateGraphicsPSO(&desc, pso_solidpart);
-	}
-
-	if (pso_wirepart == nullptr)
-	{
-		GraphicsPSODesc desc;
-
-		desc.vs = wiRenderer::vertexShaders[VSTYPE_LINE];
-		desc.ps = wiRenderer::pixelShaders[PSTYPE_LINE];
-		desc.il = wiRenderer::vertexLayouts[VLTYPE_LINE];
-		desc.dss = wiRenderer::depthStencils[DSSTYPE_XRAY];
-		desc.rs = wiRenderer::rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-		desc.bs = wiRenderer::blendStates[BSTYPE_TRANSPARENT];
-		desc.pt = LINELIST;
-
-		pso_wirepart = new GraphicsPSO;
-		device->CreateGraphicsPSO(&desc, pso_wirepart);
-	}
 
 	if (vertexBuffer_Axis == nullptr)
 	{
@@ -187,23 +198,32 @@ Translator::~Translator()
 
 void Translator::Update()
 {
+	Scene& scene = wiRenderer::GetScene();
+
+	if (!scene.transforms.Contains(entityID))
+	{
+		return;
+	}
+
+	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
+
 	dragStarted = false;
 	dragEnded = false;
 
 	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
-	Camera* cam = wiRenderer::getCamera();
-	XMVECTOR pos = XMLoadFloat3(&translation);
+	const CameraComponent& cam = wiRenderer::GetCamera();
+	XMVECTOR pos = transform.GetPositionV();
 
 	if (enabled)
 	{
 
 		if (!dragging)
 		{
-			XMMATRIX P = cam->GetProjection();
-			XMMATRIX V = cam->GetView();
+			XMMATRIX P = cam.GetProjection();
+			XMMATRIX V = cam.GetView();
 			XMMATRIX W = XMMatrixIdentity();
 
-			dist = wiMath::Distance(translation, cam->translation) * 0.05f;
+			dist = wiMath::Distance(transform.GetPosition(), cam.Eye) * 0.05f;
 
 			XMVECTOR o, x, y, z, p, xy, xz, yz;
 
@@ -217,13 +237,13 @@ void Translator::Update()
 			yz = o + XMVectorSet(0, 0.5f, 0.5f, 0) * dist;
 
 
-			o = XMVector3Project(o, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			x = XMVector3Project(x, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			y = XMVector3Project(y, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			z = XMVector3Project(z, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			xy = XMVector3Project(xy, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			xz = XMVector3Project(xz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
-			yz = XMVector3Project(yz, 0, 0, cam->width, cam->height, 0, 1, P, V, W);
+			o = XMVector3Project(o, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			x = XMVector3Project(x, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			y = XMVector3Project(y, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			z = XMVector3Project(z, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			xy = XMVector3Project(xy, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			xz = XMVector3Project(xz, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
+			yz = XMVector3Project(yz, 0, 0, cam.width, cam.height, 0, 1, P, V, W);
 
 			XMVECTOR oDisV = XMVector3Length(o - p);
 			XMVECTOR xyDisV = XMVector3Length(xy - p);
@@ -278,19 +298,19 @@ void Translator::Update()
 			if (state == TRANSLATOR_X)
 			{
 				XMVECTOR axis = XMVectorSet(1, 0, 0, 0);
-				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
 			}
 			else if (state == TRANSLATOR_Y)
 			{
 				XMVECTOR axis = XMVectorSet(0, 1, 0, 0);
-				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
 			}
 			else if (state == TRANSLATOR_Z)
 			{
 				XMVECTOR axis = XMVectorSet(0, 0, 1, 0);
-				XMVECTOR wrong = XMVector3Cross(cam->GetAt(), axis);
+				XMVECTOR wrong = XMVector3Cross(cam.GetAt(), axis);
 				planeNormal = XMVector3Cross(wrong, axis);
 			}
 			else if (state == TRANSLATOR_XY)
@@ -308,19 +328,19 @@ void Translator::Update()
 			else
 			{
 				// xyz
-				planeNormal = cam->GetAt();
+				planeNormal = cam.GetAt();
 			}
 			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-			RAY ray = wiRenderer::getPickRay((long)pointer.x, (long)pointer.y);
+			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
-			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
-			ray = wiRenderer::getPickRay((long)prevPointer.x, (long)prevPointer.y);
+			ray = wiRenderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y);
 			rayOrigin = XMLoadFloat3(&ray.origin);
 			rayDir = XMLoadFloat3(&ray.direction);
-			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam->zFarP);
+			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
 			XMVECTOR deltaV;
 			if (state == TRANSLATOR_X)
@@ -375,17 +395,16 @@ void Translator::Update()
 			}
 			if (isScalator)
 			{
+				XMFLOAT3 scale = transform.GetScale();
 				transf *= XMMatrixScaling((1.0f / scale.x) * (scale.x + delta.x), (1.0f / scale.y) * (scale.y + delta.y), (1.0f / scale.z) * (scale.z + delta.z));
 			}
 
-			Transform::transform(transf);
-
-			Transform::applyTransform();
+			transform.MatrixTransform(transf);
 
 			if (!dragging)
 			{
 				dragStarted = true;
-				dragStart = world;
+				dragStart = transform.world;
 			}
 
 			dragging = true;
@@ -396,10 +415,9 @@ void Translator::Update()
 			if (dragging)
 			{
 				dragEnded = true;
-				dragEnd = world;
+				dragEnd = transform.world;
 			}
 			dragging = false;
-			Transform::UpdateTransform();
 		}
 
 	}
@@ -408,25 +426,33 @@ void Translator::Update()
 		if (dragging)
 		{
 			dragEnded = true;
-			dragEnd = world;
+			dragEnd = transform.world;
 		}
 		dragging = false;
-		Transform::UpdateTransform();
 	}
 
 	prevPointer = pointer;
 }
-void Translator::Draw(Camera* camera, GRAPHICSTHREAD threadID)
+void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
+	Scene& scene = wiRenderer::GetScene();
+
+	if (!scene.transforms.Contains(entityID))
+	{
+		return;
+	}
+
+	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("Editor - Translator", threadID);
 
-	XMMATRIX VP = camera->GetViewProjection();
+	XMMATRIX VP = camera.GetViewProjection();
 
-	wiRenderer::MiscCB sb;
+	MiscCB sb;
 
-	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslation(translation.x, translation.y, translation.z) * VP;
+	XMMATRIX mat = XMMatrixScaling(dist, dist, dist)*XMMatrixTranslationFromVector(transform.GetPositionV()) * VP;
 	XMMATRIX matX = XMMatrixTranspose(mat);
 	XMMATRIX matY = XMMatrixTranspose(XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2)*mat);
 	XMMATRIX matZ = XMMatrixTranspose(XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2)*mat);
@@ -444,21 +470,21 @@ void Translator::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 	}
 
 	// xy
-	sb.mTransform = matX;
-	sb.mColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	XMStoreFloat4x4(&sb.g_xTransform, matX);
+	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// xz
-	sb.mTransform = matZ;
-	sb.mColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	XMStoreFloat4x4(&sb.g_xTransform, matZ);
+	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// yz
-	sb.mTransform = matY;
-	sb.mColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	XMStoreFloat4x4(&sb.g_xTransform, matY);
+	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// Lines:
@@ -474,21 +500,21 @@ void Translator::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 	}
 
 	// x
-	sb.mTransform = matX;
-	sb.mColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	XMStoreFloat4x4(&sb.g_xTransform, matX);
+	sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// y
-	sb.mTransform = matY;
-	sb.mColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	XMStoreFloat4x4(&sb.g_xTransform, matY);
+	sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// z
-	sb.mTransform = matZ;
-	sb.mColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+	XMStoreFloat4x4(&sb.g_xTransform, matZ);
+	sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// Origin:
@@ -501,9 +527,9 @@ void Translator::Draw(Camera* camera, GRAPHICSTHREAD threadID)
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		sb.mTransform = XMMatrixTranspose(mat);
-		sb.mColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
-		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &sb, threadID);
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(mat));
+		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
+		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
 		device->Draw(vertexCount_Origin, 0, threadID);
 	}
 

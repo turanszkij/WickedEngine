@@ -1,11 +1,5 @@
 #pragma once
 
-
-namespace wiSceneComponents
-{
-	struct Light;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -23,14 +17,14 @@ public:
 
 	wiGUI* GUI;
 
-	void SetLight(wiSceneComponents::Light* light);
-	void SetLightType(wiSceneComponents::Light::LightType type);
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
 
-	wiSceneComponents::Light* light;
+	void SetLightType(wiSceneSystem::LightComponent::LightType type);
 
 	wiWindow*	lightWindow;
 	wiSlider*	energySlider;
-	wiSlider*	distanceSlider;
+	wiSlider*	rangeSlider;
 	wiSlider*	radiusSlider;
 	wiSlider*	widthSlider;
 	wiSlider*	heightSlider;

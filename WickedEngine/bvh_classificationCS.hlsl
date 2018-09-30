@@ -97,7 +97,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 			nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 			nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-			materialIndex = (nor_u >> 28) & 0x0000000F;
+			materialIndex = (nor_u >> 24) & 0x000000FF;
 		}
 		nor_u = asuint(pos_nor1.w);
 		float3 nor1;

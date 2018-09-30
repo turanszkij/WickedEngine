@@ -2,62 +2,47 @@
 #include "wiMath.h"
 
 
-AABB::AABB() {
-	for (int i = 0; i<8; ++i) corners[i] = XMFLOAT3(0, 0, 0);
+void AABB::createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth) 
+{
+	_min = XMFLOAT3(center.x - halfwidth.x, center.y - halfwidth.y, center.z - halfwidth.z);
+	_max = XMFLOAT3(center.x + halfwidth.x, center.y + halfwidth.y, center.z + halfwidth.z);
 }
-AABB::AABB(const XMFLOAT3& min, const XMFLOAT3& max) {
-	create(min, max);
-}
-void AABB::createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth) {
-	XMFLOAT3 min = XMFLOAT3(center.x - halfwidth.x, center.y - halfwidth.y, center.z - halfwidth.z);
-	XMFLOAT3 max = XMFLOAT3(center.x + halfwidth.x, center.y + halfwidth.y, center.z + halfwidth.z);
-	create(min, max);
-}
-void AABB::create(const XMFLOAT3& min, const XMFLOAT3& max) {
-	corners[0] = min;
-	corners[1] = XMFLOAT3(min.x, max.y, min.z);
-	corners[2] = XMFLOAT3(min.x, max.y, max.z);
-	corners[3] = XMFLOAT3(min.x, min.y, max.z);
-	corners[4] = XMFLOAT3(max.x, min.y, min.z);
-	corners[5] = XMFLOAT3(max.x, max.y, min.z);
-	corners[6] = max;
-	corners[7] = XMFLOAT3(max.x, min.y, max.z);
-}
-AABB AABB::get(const XMMATRIX& mat) {
-	AABB ret;
-	XMFLOAT3 min, max;
-	for (int i = 0; i<8; ++i) {
-		XMVECTOR point = XMVector3Transform(XMLoadFloat3(&corners[i]), mat);
-		XMStoreFloat3(&ret.corners[i], point);
+AABB AABB::get(const XMMATRIX& mat) const 
+{
+	XMFLOAT3 corners[8];
+	for (int i = 0; i < 8; ++i)
+	{
+		XMVECTOR point = XMVector3Transform(XMLoadFloat3(&corner(i)), mat);
+		XMStoreFloat3(&corners[i], point);
 	}
-	min = ret.corners[0];
-	max = ret.corners[6];
-	for (int i = 0; i<8; ++i) {
-		XMFLOAT3& p = ret.corners[i];
+	XMFLOAT3 min = corners[0];
+	XMFLOAT3 max = corners[6];
+	for (int i = 0; i < 8; ++i)
+	{
+		const XMFLOAT3& p = corners[i];
 
-		if (p.x<min.x) min.x = p.x;
-		if (p.y<min.y) min.y = p.y;
-		if (p.z<min.z) min.z = p.z;
+		if (p.x < min.x) min.x = p.x;
+		if (p.y < min.y) min.y = p.y;
+		if (p.z < min.z) min.z = p.z;
 
-		if (p.x>max.x) max.x = p.x;
-		if (p.y>max.y) max.y = p.y;
-		if (p.z>max.z) max.z = p.z;
+		if (p.x > max.x) max.x = p.x;
+		if (p.y > max.y) max.y = p.y;
+		if (p.z > max.z) max.z = p.z;
 	}
 
-	ret.create(min, max);
-
-	return ret;
+	return AABB(min, max);
 }
-AABB AABB::get(const XMFLOAT4X4& mat) {
+AABB AABB::get(const XMFLOAT4X4& mat) const 
+{
 	return get(XMLoadFloat4x4(&mat));
 }
-XMFLOAT3 AABB::getMin()const { return corners[0]; }
-XMFLOAT3 AABB::getMax() const { return corners[6]; }
-XMFLOAT3 AABB::getCenter() const {
+XMFLOAT3 AABB::getCenter() const 
+{
 	XMFLOAT3 min = getMin(), max = getMax();
 	return XMFLOAT3((min.x + max.x)*0.5f, (min.y + max.y)*0.5f, (min.z + max.z)*0.5f);
 }
-XMFLOAT3 AABB::getHalfWidth() const {
+XMFLOAT3 AABB::getHalfWidth() const 
+{
 	XMFLOAT3 max = getMax(), center = getCenter();
 	return XMFLOAT3(abs(max.x - center.x), abs(max.y - center.y), abs(max.z - center.z));
 }
@@ -70,7 +55,8 @@ XMMATRIX AABB::AABB::getAsBoxMatrix() const
 
 	return sca*tra;
 }
-float AABB::getArea() const {
+float AABB::getArea() const
+{
 	XMFLOAT3 _min = getMin();
 	XMFLOAT3 _max = getMax();
 	return (_max.x - _min.x)*(_max.y - _min.y)*(_max.z - _min.z);
@@ -154,29 +140,17 @@ AABB AABB::Merge(const AABB& a, const AABB& b)
 {
 	return AABB(wiMath::Min(a.getMin(), b.getMin()), wiMath::Max(a.getMax(), b.getMax()));
 }
-void AABB::Serialize(wiArchive& archive)
+void AABB::Serialize(wiArchive& archive, uint32_t seed)
 {
 	if (archive.IsReadMode())
 	{
-		archive >> corners[0];
-		archive >> corners[1];
-		archive >> corners[2];
-		archive >> corners[3];
-		archive >> corners[4];
-		archive >> corners[5];
-		archive >> corners[6];
-		archive >> corners[7];
+		archive >> _min;
+		archive >> _max;
 	}
 	else
 	{
-		archive << corners[0];
-		archive << corners[1];
-		archive << corners[2];
-		archive << corners[3];
-		archive << corners[4];
-		archive << corners[5];
-		archive << corners[6];
-		archive << corners[7];
+		archive << _min;
+		archive << _max;
 	}
 }
 

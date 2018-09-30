@@ -16,8 +16,9 @@ enum PICKTYPE
 	PICK_ENVPROBE			= 32,
 	PICK_FORCEFIELD			= 64,
 	PICK_EMITTER			= 128,
-	PICK_CAMERA				= 256,
-	PICK_ARMATURE			= 512,
+	PICK_HAIR				= 256,
+	PICK_CAMERA				= 512,
+	PICK_ARMATURE			= 1024,
 };
 
 class RendererWindow
@@ -60,6 +61,7 @@ public:
 	wiCheckBox* pickTypeDecalCheckBox;
 	wiCheckBox* pickTypeForceFieldCheckBox;
 	wiCheckBox* pickTypeEmitterCheckBox;
+	wiCheckBox* pickTypeHairCheckBox;
 	wiCheckBox* pickTypeCameraCheckBox;
 	wiCheckBox* pickTypeArmatureCheckBox;
 	wiSlider*	speedMultiplierSlider;

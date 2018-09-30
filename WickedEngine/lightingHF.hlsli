@@ -4,15 +4,6 @@
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
 
-inline float3 GetSunColor()
-{
-	return EntityArray[g_xFrame_SunEntityArrayIndex].GetColor().rgb * EntityArray[g_xFrame_SunEntityArrayIndex].energy;
-}
-inline float3 GetSunDirection()
-{
-	return EntityArray[g_xFrame_SunEntityArrayIndex].directionWS;
-}
-
 struct LightingResult
 {
 	float3 diffuse;
@@ -42,7 +33,7 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 #endif
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	if (g_xWorld_TransparentShadowsEnabled)
+	if (g_xFrame_TransparentShadowsEnabled)
 	{
 		// unfortunately transparents will not receive transparent shadow map
 		// because we cannot distinguish without using secondary depth buffer for transparents
@@ -408,7 +399,7 @@ inline LightingResult SphereLight(in ShaderEntityType light, in Surface surface)
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -459,7 +450,7 @@ inline LightingResult DiscLight(in ShaderEntityType light, in Surface surface)
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (light.GetRadius() * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -530,7 +521,7 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in Surface surfa
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (max(light.GetWidth(),light.GetHeight()) * 100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -654,7 +645,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
 	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / (max(light.GetRadius(),light.GetWidth())*100) * (1 - light.shadowBias)).r;
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -698,12 +689,12 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specular, inout float ao)
 {
-	[branch]if (g_xWorld_VoxelRadianceDataRes != 0)
+	[branch]if (g_xFrame_VoxelRadianceDataRes != 0)
 	{
 		// determine blending factor (we will blend out voxel GI on grid edges):
-		float3 voxelSpacePos = surface.P - g_xWorld_VoxelRadianceDataCenter;
-		voxelSpacePos *= g_xWorld_VoxelRadianceDataSize_Inverse;
-		voxelSpacePos *= g_xWorld_VoxelRadianceDataRes_Inverse;
+		float3 voxelSpacePos = surface.P - g_xFrame_VoxelRadianceDataCenter;
+		voxelSpacePos *= g_xFrame_VoxelRadianceDataSize_Inverse;
+		voxelSpacePos *= g_xFrame_VoxelRadianceDataRes_Inverse;
 		voxelSpacePos = saturate(abs(voxelSpacePos));
 		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
@@ -712,7 +703,7 @@ inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specu
 		ao *= 1 - lerp(0, radiance.a, blend);
 
 		[branch]
-		if (g_xWorld_VoxelRadianceReflectionsEnabled)
+		if (g_xFrame_VoxelRadianceReflectionsEnabled)
 		{
 			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
 			specular = lerp(specular, reflection.rgb, reflection.a * blend);
@@ -733,10 +724,10 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 
 #ifndef ENVMAPRENDERING
 	[branch]
-	if (g_xWorld_GlobalEnvProbeIndex >= 0)
+	if (g_xFrame_GlobalEnvProbeIndex >= 0)
 	{
 		// We have envmap information in a texture:
-		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xWorld_GlobalEnvProbeIndex), MIP).rgb;
+		envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame_GlobalEnvProbeIndex), MIP).rgb;
 	}
 	else
 #endif // ENVMAPRENDERING
@@ -744,7 +735,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 		// There are no envmaps, approximate sky color:
 		float3 realSkyColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(surface.R.y), 0.25f));
 		float3 roughSkyColor = (GetHorizonColor() + GetZenithColor()) * 0.5f;
-		float blendSkyByRoughness = saturate(MIP * g_xWorld_EnvProbeMipCount_Inverse);
+		float blendSkyByRoughness = saturate(MIP * g_xFrame_EnvProbeMipCount_Inverse);
 		envColor = lerp(realSkyColor, roughSkyColor, blendSkyByRoughness);
 	}
 

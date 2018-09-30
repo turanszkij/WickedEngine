@@ -230,9 +230,10 @@ void fft512x512_destroy_plan(CSFFT512x512_Plan* plan)
 
 void CSFFT_512x512_Data_t::LoadShaders()
 {
+	std::string path = wiRenderer::GetShaderPath();
 
-	pRadix008A_CS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fft_512x512_c2c_CS.cso", wiResourceManager::COMPUTESHADER));
-	pRadix008A_CS2 = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fft_512x512_c2c_v2_CS.cso", wiResourceManager::COMPUTESHADER));
+	pRadix008A_CS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path+ "fft_512x512_c2c_CS.cso", wiResourceManager::COMPUTESHADER));
+	pRadix008A_CS2 = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "fft_512x512_c2c_v2_CS.cso", wiResourceManager::COMPUTESHADER));
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 

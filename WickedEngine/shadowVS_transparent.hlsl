@@ -20,8 +20,6 @@ VertexOut main(Input_Object_POS_TEX input)
 
 	surface.position = mul(surface.position, WORLD);
 
-	affectWind(surface.position.xyz, surface.wind, g_xFrame_Time);
-
 	Out.pos = mul(surface.position, g_xCamera_VP);
 	Out.tex = surface.uv;
 

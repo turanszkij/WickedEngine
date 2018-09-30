@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Tests.h"
 
+using namespace wiSceneSystem;
 
 Tests::Tests()
 {
@@ -13,11 +14,9 @@ void Tests::Initialize()
 {
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
 	// otherwise, shaders will be loaded from the working directory
-	wiRenderer::SHADERPATH = "../WickedEngine/shaders/";
-	wiFont::FONTPATH = "../WickedEngine/fonts/"; // search for fonts elsewhere
+	wiRenderer::GetShaderPath() = "../WickedEngine/shaders/";
+	wiFont::GetFontPath() = "../WickedEngine/fonts/"; // search for fonts elsewhere
 	MainComponent::Initialize();
-
-	wiRenderer::physicsEngine = new wiBULLET;
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -34,7 +33,10 @@ TestsRenderer::TestsRenderer()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	wiRenderer::getCamera()->Translate(XMFLOAT3(0, 2.f, -4.5f));
+	TransformComponent transform;
+	transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
+	transform.UpdateTransform();
+	wiRenderer::GetCamera().UpdateCamera(&transform);
 
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
@@ -45,15 +47,16 @@ TestsRenderer::TestsRenderer()
 
 	wiComboBox* testSelector = new wiComboBox("TestSelector");
 	testSelector->SetText("Demo: ");
-	testSelector->SetSize(XMFLOAT2(100, 20));
+	testSelector->SetSize(XMFLOAT2(120, 20));
 	testSelector->SetPos(XMFLOAT2(50, 80));
 	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	testSelector->AddItem("HelloWorld");
 	testSelector->AddItem("Model");
+	testSelector->AddItem("EmittedParticle 1");
+	testSelector->AddItem("EmittedParticle 2");
+	testSelector->AddItem("HairParticle");
 	testSelector->AddItem("Lua Script");
-	testSelector->AddItem("Soft Body");
-	testSelector->AddItem("Emitter");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
 		wiRenderer::ClearWorld();
@@ -73,16 +76,19 @@ TestsRenderer::TestsRenderer()
 			break;
 		}
 		case 1:
-			wiRenderer::LoadModel("../models/Stormtrooper/Stormtrooper.wimf");
+			wiRenderer::LoadModel("../models/teapot.wiscene");
 			break;
 		case 2:
-			wiLua::GetGlobal()->RunFile("test_script.lua");
+			wiRenderer::LoadModel("../models/emitter_smoke.wiscene");
 			break;
 		case 3:
-			wiRenderer::LoadModel("../models/SoftBody/flag.wimf")->Translate(XMFLOAT3(0, -1, 2));
+			wiRenderer::LoadModel("../models/emitter_skinned.wiscene");
 			break;
 		case 4:
-			wiRenderer::LoadModel("../models/Emitter/emitter.wimf")->Translate(XMFLOAT3(0, 2, 2));
+			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			break;
+		case 5:
+			wiLua::GetGlobal()->RunFile("test_script.lua");
 			break;
 		}
 
@@ -93,7 +99,7 @@ TestsRenderer::TestsRenderer()
 
 	wiButton* audioTest = new wiButton("AudioTest");
 	audioTest->SetText("Play Test Audio");
-	audioTest->SetSize(XMFLOAT2(161, 20));
+	audioTest->SetSize(XMFLOAT2(180, 20));
 	audioTest->SetPos(XMFLOAT2(10, 110));
 	audioTest->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	audioTest->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);

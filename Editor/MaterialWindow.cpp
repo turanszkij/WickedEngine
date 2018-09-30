@@ -1,24 +1,25 @@
 #include "stdafx.h"
 #include "MaterialWindow.h"
 
+#include <sstream>
+
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
 using namespace std;
 using namespace wiGraphicsTypes;
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
-	material = nullptr;
-
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(760, 700));
+	materialWindow->SetSize(XMFLOAT2(760, 720));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
@@ -26,8 +27,11 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialNameField->SetPos(XMFLOAT2(10, 30));
 	materialNameField->SetSize(XMFLOAT2(300, 20));
 	materialNameField->OnInputAccepted([&](wiEventArgs args) {
-		if (material != nullptr)
-			material->name = args.sValue;
+		NameComponent* name = wiRenderer::GetScene().names.GetComponent(entity);
+		if (name != nullptr)
+		{
+			*name = args.sValue;
+		}
 	});
 	materialWindow->AddWidget(materialNameField);
 
@@ -38,8 +42,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	waterCheckBox->SetTooltip("Set material as special water material.");
 	waterCheckBox->SetPos(XMFLOAT2(570, y += step));
 	waterCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->water = args.bValue;
+			material->SetWater(args.bValue);
 	});
 	materialWindow->AddWidget(waterCheckBox);
 
@@ -47,8 +52,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	planarReflCheckBox->SetTooltip("Enable planar reflections. The mesh should be a single plane for best results.");
 	planarReflCheckBox->SetPos(XMFLOAT2(570, y += step));
 	planarReflCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->planar_reflections = args.bValue;
+			material->SetPlanarReflections(args.bValue);
 	});
 	materialWindow->AddWidget(planarReflCheckBox);
 
@@ -56,8 +62,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	shadowCasterCheckBox->SetTooltip("The subset will contribute to the scene shadows if enabled.");
 	shadowCasterCheckBox->SetPos(XMFLOAT2(570, y += step));
 	shadowCasterCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->cast_shadow = args.bValue;
+			material->SetCastShadow(args.bValue);
 	});
 	materialWindow->AddWidget(shadowCasterCheckBox);
 
@@ -66,8 +73,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	normalMapSlider->SetSize(XMFLOAT2(100, 30));
 	normalMapSlider->SetPos(XMFLOAT2(x, y += step));
 	normalMapSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->normalMapStrength = args.fValue;
+			material->SetNormalMapStrength(args.fValue);
 	});
 	materialWindow->AddWidget(normalMapSlider);
 
@@ -76,8 +84,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	roughnessSlider->SetSize(XMFLOAT2(100, 30));
 	roughnessSlider->SetPos(XMFLOAT2(x, y += step));
 	roughnessSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->roughness = args.fValue;
+			material->SetRoughness(args.fValue);
 	});
 	materialWindow->AddWidget(roughnessSlider);
 
@@ -86,8 +95,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	reflectanceSlider->SetSize(XMFLOAT2(100, 30));
 	reflectanceSlider->SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->reflectance = args.fValue;
+			material->SetReflectance(args.fValue);
 	});
 	materialWindow->AddWidget(reflectanceSlider);
 
@@ -96,8 +106,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	metalnessSlider->SetSize(XMFLOAT2(100, 30));
 	metalnessSlider->SetPos(XMFLOAT2(x, y += step));
 	metalnessSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->metalness = args.fValue;
+			material->SetMetalness(args.fValue);
 	});
 	materialWindow->AddWidget(metalnessSlider);
 
@@ -106,8 +117,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	alphaSlider->SetSize(XMFLOAT2(100, 30));
 	alphaSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->alpha = args.fValue;
+			material->SetOpacity(args.fValue);
 	});
 	materialWindow->AddWidget(alphaSlider);
 
@@ -116,8 +128,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	alphaRefSlider->SetSize(XMFLOAT2(100, 30));
 	alphaRefSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->alphaRef = args.fValue;
+			material->SetAlphaRef(args.fValue);
 	});
 	materialWindow->AddWidget(alphaRefSlider);
 
@@ -126,8 +139,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	refractionIndexSlider->SetSize(XMFLOAT2(100, 30));
 	refractionIndexSlider->SetPos(XMFLOAT2(x, y += step));
 	refractionIndexSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->refractionIndex = args.fValue;
+			material->SetRefractionIndex(args.fValue);
 	});
 	materialWindow->AddWidget(refractionIndexSlider);
 
@@ -136,8 +150,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	emissiveSlider->SetSize(XMFLOAT2(100, 30));
 	emissiveSlider->SetPos(XMFLOAT2(x, y += step));
 	emissiveSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->emissive = args.fValue;
+			material->SetEmissive(args.fValue);
 	});
 	materialWindow->AddWidget(emissiveSlider);
 
@@ -146,8 +161,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	sssSlider->SetSize(XMFLOAT2(100, 30));
 	sssSlider->SetPos(XMFLOAT2(x, y += step));
 	sssSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->subsurfaceScattering = args.fValue;
+			material->SetSubsurfaceScattering(args.fValue);
 	});
 	materialWindow->AddWidget(sssSlider);
 
@@ -156,38 +172,62 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	pomSlider->SetSize(XMFLOAT2(100, 30));
 	pomSlider->SetPos(XMFLOAT2(x, y += step));
 	pomSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->parallaxOcclusionMapping = args.fValue;
 	});
 	materialWindow->AddWidget(pomSlider);
 
-	movingTexSliderU = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim U: ");
-	movingTexSliderU->SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
-	movingTexSliderU->SetSize(XMFLOAT2(100, 30));
-	movingTexSliderU->SetPos(XMFLOAT2(x, y += step));
-	movingTexSliderU->OnSlide([&](wiEventArgs args) {
+	texAnimFrameRateSlider = new wiSlider(0, 60, 0, 60, "Texcoord anim FPS: ");
+	texAnimFrameRateSlider->SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
+	texAnimFrameRateSlider->SetSize(XMFLOAT2(100, 30));
+	texAnimFrameRateSlider->SetPos(XMFLOAT2(x, y += step));
+	texAnimFrameRateSlider->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->movingTex.x = args.fValue;
+		{
+			material->texAnimFrameRate = args.fValue;
+		}
 	});
-	materialWindow->AddWidget(movingTexSliderU);
+	materialWindow->AddWidget(texAnimFrameRateSlider);
 
-	movingTexSliderV = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim V: ");
-	movingTexSliderV->SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
-	movingTexSliderV->SetSize(XMFLOAT2(100, 30));
-	movingTexSliderV->SetPos(XMFLOAT2(x, y += step));
-	movingTexSliderV->OnSlide([&](wiEventArgs args) {
+	texAnimDirectionSliderU = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim U: ");
+	texAnimDirectionSliderU->SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
+	texAnimDirectionSliderU->SetSize(XMFLOAT2(100, 30));
+	texAnimDirectionSliderU->SetPos(XMFLOAT2(x, y += step));
+	texAnimDirectionSliderU->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->movingTex.y = args.fValue;
+		{
+			material->texAnimDirection.x = args.fValue;
+		}
 	});
-	materialWindow->AddWidget(movingTexSliderV);
+	materialWindow->AddWidget(texAnimDirectionSliderU);
+
+	texAnimDirectionSliderV = new wiSlider(-0.05f, 0.05f, 0, 1000, "Texcoord anim V: ");
+	texAnimDirectionSliderV->SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
+	texAnimDirectionSliderV->SetSize(XMFLOAT2(100, 30));
+	texAnimDirectionSliderV->SetPos(XMFLOAT2(x, y += step));
+	texAnimDirectionSliderV->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->texAnimDirection.y = args.fValue;
+		}
+	});
+	materialWindow->AddWidget(texAnimDirectionSliderV);
 
 	texMulSliderX = new wiSlider(0.01f, 10.0f, 0, 1000, "Texture TileSize X: ");
 	texMulSliderX->SetTooltip("Adjust the texture mapping size.");
 	texMulSliderX->SetSize(XMFLOAT2(100, 30));
 	texMulSliderX->SetPos(XMFLOAT2(x, y += step));
 	texMulSliderX->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
+		{
+			material->SetDirty();
 			material->texMulAdd.x = args.fValue;
+		}
 	});
 	materialWindow->AddWidget(texMulSliderX);
 
@@ -196,8 +236,12 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	texMulSliderY->SetSize(XMFLOAT2(100, 30));
 	texMulSliderY->SetPos(XMFLOAT2(x, y += step));
 	texMulSliderY->OnSlide([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
+		{
+			material->SetDirty();
 			material->texMulAdd.y = args.fValue;
+		}
 	});
 	materialWindow->AddWidget(texMulSliderY);
 
@@ -208,8 +252,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->baseColor = XMFLOAT3(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f));
+			material->SetBaseColor(XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), material->GetOpacity()));
 	});
 	materialWindow->AddWidget(colorPicker);
 
@@ -218,9 +263,10 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	blendModeComboBox->SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox->SetSize(XMFLOAT2(100, 25));
 	blendModeComboBox->OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->blendFlag = static_cast<BLENDMODE>(args.iValue);
+			material->blendMode = static_cast<BLENDMODE>(args.iValue);
 		}
 	});
 	blendModeComboBox->AddItem("Opaque");
@@ -232,30 +278,31 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(blendModeComboBox);
 
 
-	shaderTypeComboBox = new wiComboBox("Custom Shader: ");
-	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	shaderTypeComboBox->SetSize(XMFLOAT2(100, 25));
-	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
-		if (material != nullptr)
-		{
-			if (args.iValue == 0)
-			{
-				material->customShader = nullptr;
-			}
-			else if (args.iValue > 0)
-			{
-				material->customShader = Material::customShaderPresets[args.iValue - 1];
-			}
-		}
-	});
-	shaderTypeComboBox->AddItem("None");
-	for (auto& x : Material::customShaderPresets)
-	{
-		shaderTypeComboBox->AddItem(x->name);
-	}
-	shaderTypeComboBox->SetEnabled(false);
-	shaderTypeComboBox->SetTooltip("Set the custom shader of the material.");
-	materialWindow->AddWidget(shaderTypeComboBox);
+	//shaderTypeComboBox = new wiComboBox("Custom Shader: ");
+	//shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	//shaderTypeComboBox->SetSize(XMFLOAT2(100, 25));
+	//shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
+	//	MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+	//	if (material != nullptr)
+	//	{
+	//		if (args.iValue == 0)
+	//		{
+	//			material->customShader = nullptr;
+	//		}
+	//		else if (args.iValue > 0)
+	//		{
+	//			material->customShader = Material::customShaderPresets[args.iValue - 1];
+	//		}
+	//	}
+	//});
+	//shaderTypeComboBox->AddItem("None");
+	//for (auto& x : Material::customShaderPresets)
+	//{
+	//	shaderTypeComboBox->AddItem(x->name);
+	//}
+	//shaderTypeComboBox->SetEnabled(false);
+	//shaderTypeComboBox->SetTooltip("Set the custom shader of the material.");
+	//materialWindow->AddWidget(shaderTypeComboBox);
 
 
 	// Textures:
@@ -274,13 +321,14 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	texture_baseColor_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_baseColor_Button->SetSize(XMFLOAT2(260, 20));
 	texture_baseColor_Button->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
-		if (material->texture != nullptr)
+		if (material->baseColorMap != nullptr)
 		{
-			material->texture = nullptr;
-			material->textureName = "";
+			material->baseColorMap = nullptr;
+			material->baseColorMapName = "";
 			texture_baseColor_Button->SetText("");
 		}
 		else
@@ -304,9 +352,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = 0;
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				material->texture = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->textureName = fileName;
-				texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->textureName));
+				material->baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
+				material->baseColorMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_baseColor_Button->SetText(material->baseColorMapName);
 			}
 		}
 	});
@@ -325,6 +373,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	texture_normal_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_normal_Button->SetSize(XMFLOAT2(260, 20));
 	texture_normal_Button->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
@@ -356,8 +405,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->normalMapName = fileName;
-				texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
+				material->normalMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_normal_Button->SetText(material->normalMapName);
 			}
 		}
 	});
@@ -376,6 +425,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	texture_surface_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_surface_Button->SetSize(XMFLOAT2(260, 20));
 	texture_surface_Button->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
@@ -407,8 +457,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->surfaceMapName = fileName;
-				texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
+				material->surfaceMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_surface_Button->SetText(material->surfaceMapName);
 			}
 		}
 	});
@@ -427,6 +477,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	texture_displacement_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_displacement_Button->SetSize(XMFLOAT2(260, 20));
 	texture_displacement_Button->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
@@ -458,8 +509,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->displacementMapName = fileName;
-				texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));
+				material->displacementMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_displacement_Button->SetText(material->displacementMapName);
 			}
 		}
 	});
@@ -469,7 +520,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->Translate(XMFLOAT3(screenW - 760, 50, 0));
 	materialWindow->SetVisible(false);
 
-	SetMaterial(nullptr);
+	SetEntity(INVALID_ENTITY);
 }
 
 MaterialWindow::~MaterialWindow()
@@ -481,42 +532,48 @@ MaterialWindow::~MaterialWindow()
 
 
 
-void MaterialWindow::SetMaterial(Material* mat)
+void MaterialWindow::SetEntity(Entity entity)
 {
-	if (this->material == mat)
+	if (this->entity == entity)
 		return;
+
+	this->entity = entity;
+
+	Scene& scene = wiRenderer::GetScene();
+	MaterialComponent* material = scene.materials.GetComponent(entity);
 
 	if (material != nullptr)
 	{
 		material->SetUserStencilRef(0);
-	}
 
-	material = mat;
-	if (material != nullptr)
-	{
-		materialNameField->SetValue(material->name);
-		waterCheckBox->SetCheck(material->water);
-		planarReflCheckBox->SetCheck(material->planar_reflections);
-		shadowCasterCheckBox->SetCheck(material->cast_shadow);
+		const NameComponent& name = *scene.names.GetComponent(entity);
+		stringstream ss("");
+		ss << name.name << " (" << entity << ")";
+
+		materialNameField->SetValue(ss.str());
+		waterCheckBox->SetCheck(material->IsWater());
+		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
+		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());
 		normalMapSlider->SetValue(material->normalMapStrength);
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);
 		metalnessSlider->SetValue(material->metalness);
-		alphaSlider->SetValue(material->alpha);
+		alphaSlider->SetValue(material->GetOpacity());
 		refractionIndexSlider->SetValue(material->refractionIndex);
 		emissiveSlider->SetValue(material->emissive);
 		sssSlider->SetValue(material->subsurfaceScattering);
 		pomSlider->SetValue(material->parallaxOcclusionMapping);
-		movingTexSliderU->SetValue(material->movingTex.x);
-		movingTexSliderU->SetValue(material->movingTex.x);
+		texAnimFrameRateSlider->SetValue(material->texAnimFrameRate);
+		texAnimDirectionSliderU->SetValue(material->texAnimDirection.x);
+		texAnimDirectionSliderV->SetValue(material->texAnimDirection.y);
 		texMulSliderX->SetValue(material->texMulAdd.x);
 		texMulSliderY->SetValue(material->texMulAdd.y);
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		colorPicker->SetEnabled(true);
-		blendModeComboBox->SetSelected((int)material->blendFlag);
+		blendModeComboBox->SetSelected((int)material->blendMode);
 
-		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->textureName));
+		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
 		texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
 		texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));

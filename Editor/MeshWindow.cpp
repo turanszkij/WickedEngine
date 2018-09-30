@@ -4,7 +4,8 @@
 #include <sstream>
 
 using namespace std;
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 {
@@ -15,7 +16,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
-	meshWindow->SetSize(XMFLOAT2(800, 600));
+	meshWindow->SetSize(XMFLOAT2(800, 640));
 	meshWindow->SetEnabled(false);
 	GUI->AddWidget(meshWindow);
 
@@ -34,21 +35,51 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	doubleSidedCheckBox->SetTooltip("If enabled, the inside of the mesh will be visible.");
 	doubleSidedCheckBox->SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			mesh->doubleSided = args.bValue;
+			mesh->SetDoubleSided(args.bValue);
 		}
 	});
 	meshWindow->AddWidget(doubleSidedCheckBox);
+
+	softbodyCheckBox = new wiCheckBox("Soft body: ");
+	softbodyCheckBox->SetTooltip("Enable soft body simulation.");
+	softbodyCheckBox->SetPos(XMFLOAT2(x, y += step));
+	softbodyCheckBox->OnClick([&](wiEventArgs args) {
+
+		Scene& scene = wiRenderer::GetScene();
+		SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
+
+		if (args.bValue)
+		{
+			if (physicscomponent == nullptr)
+			{
+				SoftBodyPhysicsComponent& softbody = scene.softbodies.Create(entity);
+				softbody.friction = frictionSlider->GetValue();
+				softbody.mass = massSlider->GetValue();
+			}
+		}
+		else
+		{
+			if (physicscomponent != nullptr)
+			{
+				scene.softbodies.Remove(entity);
+			}
+		}
+
+	});
+	meshWindow->AddWidget(softbodyCheckBox);
 
 	massSlider = new wiSlider(0, 5000, 0, 100000, "Mass: ");
 	massSlider->SetTooltip("Set the mass amount for the physics engine.");
 	massSlider->SetSize(XMFLOAT2(100, 30));
 	massSlider->SetPos(XMFLOAT2(x, y += step));
 	massSlider->OnSlide([&](wiEventArgs args) {
-		if (mesh != nullptr)
+		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
 		{
-			mesh->mass = args.fValue;
+			physicscomponent->mass = args.fValue;
 		}
 	});
 	meshWindow->AddWidget(massSlider);
@@ -58,9 +89,10 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	frictionSlider->SetSize(XMFLOAT2(100, 30));
 	frictionSlider->SetPos(XMFLOAT2(x, y += step));
 	frictionSlider->OnSlide([&](wiEventArgs args) {
-		if (mesh != nullptr)
+		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
 		{
-			mesh->friction = args.fValue;
+			physicscomponent->friction = args.fValue;
 		}
 	});
 	meshWindow->AddWidget(frictionSlider);
@@ -70,9 +102,11 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorCreateButton->SetSize(XMFLOAT2(240, 30));
 	impostorCreateButton->SetPos(XMFLOAT2(x - 50, y += step));
 	impostorCreateButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			wiRenderer::CreateImpostor(mesh, GRAPHICSTHREAD_IMMEDIATE);
+			Scene& scene = wiRenderer::GetScene();
+			scene.impostors.Create(entity).swapInDistance = impostorDistanceSlider->GetValue();
 		}
 	});
 	meshWindow->AddWidget(impostorCreateButton);
@@ -82,9 +116,10 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	impostorDistanceSlider->SetSize(XMFLOAT2(100, 30));
 	impostorDistanceSlider->SetPos(XMFLOAT2(x, y += step));
 	impostorDistanceSlider->OnSlide([&](wiEventArgs args) {
-		if (mesh != nullptr)
+		ImpostorComponent* impostor = wiRenderer::GetScene().impostors.GetComponent(entity);
+		if (impostor != nullptr)
 		{
-			mesh->impostorDistance = args.fValue;
+			impostor->swapInDistance = args.fValue;
 		}
 	});
 	meshWindow->AddWidget(impostorDistanceSlider);
@@ -94,6 +129,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	tessellationFactorSlider->SetSize(XMFLOAT2(100, 30));
 	tessellationFactorSlider->SetPos(XMFLOAT2(x, y += step));
 	tessellationFactorSlider->OnSlide([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->tessellationFactor = args.fValue;
@@ -106,10 +142,11 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	flipCullingButton->SetSize(XMFLOAT2(240, 30));
 	flipCullingButton->SetPos(XMFLOAT2(x - 50, y += step));
 	flipCullingButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->FlipCulling();
-			SetMesh(mesh);
+			SetEntity(entity);
 		}
 	});
 	meshWindow->AddWidget(flipCullingButton);
@@ -119,10 +156,11 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	flipNormalsButton->SetSize(XMFLOAT2(240, 30));
 	flipNormalsButton->SetPos(XMFLOAT2(x - 50, y += step));
 	flipNormalsButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->FlipNormals();
-			SetMesh(mesh);
+			SetEntity(entity);
 		}
 	});
 	meshWindow->AddWidget(flipNormalsButton);
@@ -132,10 +170,11 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	computeNormalsSmoothButton->SetSize(XMFLOAT2(240, 30));
 	computeNormalsSmoothButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsSmoothButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(true);
-			SetMesh(mesh);
+			SetEntity(entity);
 		}
 	});
 	meshWindow->AddWidget(computeNormalsSmoothButton);
@@ -145,10 +184,11 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	computeNormalsHardButton->SetSize(XMFLOAT2(240, 30));
 	computeNormalsHardButton->SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsHardButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(false);
-			SetMesh(mesh);
+			SetEntity(entity);
 		}
 	});
 	meshWindow->AddWidget(computeNormalsHardButton);
@@ -159,7 +199,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	meshWindow->Translate(XMFLOAT3(1300, 520, 0));
 	meshWindow->SetVisible(false);
 
-	SetMesh(nullptr);
+	SetEntity(INVALID_ENTITY);
 }
 
 
@@ -170,23 +210,40 @@ MeshWindow::~MeshWindow()
 	SAFE_DELETE(meshWindow);
 }
 
-void MeshWindow::SetMesh(Mesh* mesh)
+void MeshWindow::SetEntity(Entity entity)
 {
-	this->mesh = mesh;
+	this->entity = entity;
+
+	Scene&scene = wiRenderer::GetScene();
+
+	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
+
 	if (mesh != nullptr)
 	{
+		const NameComponent& name = *scene.names.GetComponent(entity);
+
 		stringstream ss("");
-		ss << "Mesh name: " << mesh->name << endl;
-		ss << "Vertex count: " << mesh->vertices_POS.size() << endl;
+		ss << "Mesh name: " << name.name << endl;
+		ss << "Vertex count: " << mesh->vertex_positions.size() << endl;
 		ss << "Index count: " << mesh->indices.size() << endl;
 		ss << "Subset count: " << mesh->subsets.size() << endl;
 		meshInfoLabel->SetText(ss.str());
 
-		doubleSidedCheckBox->SetCheck(mesh->doubleSided);
-		massSlider->SetValue(mesh->mass);
-		frictionSlider->SetValue(mesh->friction);
-		impostorDistanceSlider->SetValue(mesh->impostorDistance);
-		tessellationFactorSlider->SetValue(mesh->getTessellationFactor());
+		doubleSidedCheckBox->SetCheck(mesh->IsDoubleSided());
+
+		const ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
+		if (impostor != nullptr)
+		{
+			impostorDistanceSlider->SetValue(impostor->swapInDistance);
+		}
+		tessellationFactorSlider->SetValue(mesh->GetTessellationFactor());
+
+		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
+		if (physicscomponent != nullptr)
+		{
+			massSlider->SetValue(physicscomponent->mass);
+			frictionSlider->SetValue(physicscomponent->friction);
+		}
 		meshWindow->SetEnabled(true);
 	}
 	else

@@ -37,9 +37,8 @@ public:
 
 class wiFont
 {
-public:
-	static std::string FONTPATH;
 protected:
+	static std::string FONTPATH;
 	struct Vertex
 	{
 		XMFLOAT2 Pos;
@@ -57,8 +56,6 @@ protected:
 	static wiGraphicsTypes::GraphicsPSO			*PSO;
 	
 	static void SetUpStates();
-public:
-	static void LoadShaders();
 private:
 	static void LoadVertexBuffer();
 	static void LoadIndices();
@@ -91,8 +88,9 @@ private:
 
 public:
 	static void Initialize();
-	static void SetUpStaticComponents();
-	static void CleanUpStatic();
+	static void CleanUp();
+
+	static void LoadShaders();
 
 	std::wstring text;
 	wiFontProps props;
@@ -117,5 +115,5 @@ public:
 	std::wstring GetText();
 	std::string GetTextA();
 
-	void CleanUp();
+	static std::string& GetFontPath() { return FONTPATH; }
 };

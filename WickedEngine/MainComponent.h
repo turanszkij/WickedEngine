@@ -7,7 +7,6 @@
 
 class RenderableComponent;
 
-
 class MainComponent
 {
 private:
@@ -15,7 +14,7 @@ private:
 	bool frameskip;
 	int targetFrameRate;
 	double targetFrameRateInv;
-	int applicationControlLostThreshold;
+	int applicationControlLostThreshold; 
 
 	wiFadeManager fadeManager;
 public:

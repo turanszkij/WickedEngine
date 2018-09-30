@@ -2,10 +2,11 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
-#include "wiSceneComponents.h"
 #include "ResourceMapping.h"
+#include "ShaderInterop_Renderer.h"
 
 #include <fstream>
+#include <sstream>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -36,11 +37,33 @@ wiFont::wiFont(const std::wstring& text, wiFontProps props, int style) : text(te
 }
 wiFont::~wiFont()
 {
-
 }
 
 void wiFont::Initialize()
 {
+	SetUpStates();
+	LoadShaders();
+	LoadVertexBuffer();
+	LoadIndices();
+
+	// add default font:
+	addFontStyle("default_font");
+}
+void wiFont::CleanUp()
+{
+	for (unsigned int i = 0; i<fontStyles.size(); ++i)
+		fontStyles[i].CleanUp();
+	fontStyles.clear();
+
+	SAFE_DELETE(vertexBuffer);
+	SAFE_DELETE(indexBuffer);
+	SAFE_DELETE(vertexLayout);
+	SAFE_DELETE(vertexShader);
+	SAFE_DELETE(pixelShader);
+	SAFE_DELETE(blendState);
+	SAFE_DELETE(rasterizerState);
+	SAFE_DELETE(depthStencilState);
+	SAFE_DELETE(vertexBuffer);
 }
 
 
@@ -122,19 +145,20 @@ void wiFont::SetUpStates()
 }
 void wiFont::LoadShaders()
 {
+	std::string path = wiRenderer::GetShaderPath();
 
 	VertexLayoutDesc layout[] =
 	{
 		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
-	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
 	
 	vertexLayout = new VertexLayout;
 	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShader->code.data, vertexShader->code.size, vertexLayout);
 
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsPSODesc desc;
@@ -149,32 +173,6 @@ void wiFont::LoadShaders()
 	SAFE_DELETE(PSO);
 	PSO = new GraphicsPSO;
 	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO);
-}
-void wiFont::SetUpStaticComponents()
-{
-	SetUpStates();
-	LoadShaders();
-	LoadVertexBuffer();
-	LoadIndices();
-
-	// add default font:
-	addFontStyle("default_font");
-}
-void wiFont::CleanUpStatic()
-{
-	for(unsigned int i=0;i<fontStyles.size();++i) 
-		fontStyles[i].CleanUp();
-	fontStyles.clear();
-
-	SAFE_DELETE(vertexBuffer);
-	SAFE_DELETE(indexBuffer);
-	SAFE_DELETE(vertexLayout);
-	SAFE_DELETE(vertexShader);
-	SAFE_DELETE(pixelShader);
-	SAFE_DELETE(blendState);
-	SAFE_DELETE(rasterizerState);
-	SAFE_DELETE(depthStencilState);
-	SAFE_DELETE(vertexBuffer);
 }
 
 
@@ -314,28 +312,28 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 	device->BindResource(PS, fontStyles[style].texture, TEXSLOT_ONDEMAND1, threadID);
 
-	wiRenderer::MiscCB cb;
+	MiscCB cb;
 
 	if (newProps.shadowColor.a > 0)
 	{
 		// font shadow render:
-		cb.mTransform = XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 			* device->GetScreenProjection()
-		);
-		cb.mColor = XMFLOAT4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
-		device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+		));
+		cb.g_xColor = float4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
+		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 
 		device->DrawIndexed((int)text.length() * 6, 0, 0, threadID);
 	}
 
 	// font base render:
-	cb.mTransform = XMMatrixTranspose(
+	XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
 		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 		* device->GetScreenProjection()
-	);
-	cb.mColor = XMFLOAT4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
-	device->UpdateBuffer(wiRenderer::constantBuffers[CBTYPE_MISC], &cb, threadID);
+	));
+	cb.g_xColor = float4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
 
 	device->DrawIndexed((int)text.length() * 6, 0, 0, threadID);
 
@@ -465,7 +463,3 @@ int wiFont::getFontStyleByName( const std::string& get ){
 	return 0;
 }
 
-void wiFont::CleanUp()
-{
-
-}

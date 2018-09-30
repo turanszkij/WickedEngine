@@ -6,14 +6,6 @@
 
 #define	xSSR texture_9
 
-CBUFFER(DispatchParams, CBSLOT_RENDERER_DISPATCHPARAMS)
-{
-	uint3	xDispatchParams_numThreadGroups;
-	uint	xDispatchParams_value0;
-	uint3	xDispatchParams_numThreads;
-	uint	xDispatchParams_value1;
-}
-
 #ifdef DEBUG_TILEDLIGHTCULLING
 RWTEXTURE2D(DebugTexture, unorm float4, UAVSLOT_DEBUGTEXTURE);
 #endif
@@ -471,7 +463,7 @@ void main(ComputeShaderInput IN)
 	float reflectance = g3.y;
 	float metalness = g3.z;
 	float ao = g3.w;
-	float3 P = getPosition((float2)pixel * g_xWorld_InternalResolution_Inverse, depth);
+	float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth);
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 	Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
 
@@ -484,7 +476,7 @@ void main(ComputeShaderInput IN)
 	// Apply environment maps:
 
 	float4 envmapAccumulation = 0;
-	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
+	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 
 #ifdef DISABLE_LOCALENVPMAPS
 	// local envmaps are disabled, set iterator to skip:
@@ -580,7 +572,7 @@ void main(ComputeShaderInput IN)
 
 	VoxelGI(surface, diffuse, reflection, ao);
 
-	float2 ScreenCoord = (float2)pixel * g_xWorld_ScreenWidthHeight_Inverse;
+	float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
 	float2 velocity = g1.zw;
 	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);

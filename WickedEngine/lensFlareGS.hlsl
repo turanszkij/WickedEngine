@@ -1,11 +1,5 @@
 #include "globals.hlsli"
 
-// constant buffer
-CBUFFER(LensFlareCB, CBSLOT_OTHER_LENSFLARE)
-{
-	float4		xSunPos; // light position
-	float4		xScreen; // screen dimensions
-};
 SAMPLERCOMPARISONSTATE(samplercmp, SSLOT_ONDEMAND0)
 
 struct InVert

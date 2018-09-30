@@ -1,13 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiSceneComponents.h"
+#include "wiECS.h"
 
-namespace wiSceneComponents
-{
-	struct Camera;
-}
-
-class Translator : public wiSceneComponents::Transform
+class Translator
 {
 private:
 	XMFLOAT4 prevPointer;
@@ -20,7 +15,9 @@ public:
 	~Translator();
 
 	void Update();
-	void Draw(wiSceneComponents::Camera* camera, GRAPHICSTHREAD threadID);
+	void Draw(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+
+	wiECS::Entity entityID = wiECS::INVALID_ENTITY;
 
 	bool enabled;
 
@@ -47,5 +44,7 @@ public:
 	// Check if the drag ended in this exact frame
 	bool IsDragEnded();
 	XMFLOAT4X4 GetDragEnd();
+
+	static void LoadShaders();
 };
 

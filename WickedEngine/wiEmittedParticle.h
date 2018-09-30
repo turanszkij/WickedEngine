@@ -4,14 +4,13 @@
 #include "wiIntersectables.h"
 #include "ShaderInterop_EmittedParticle.h"
 #include "wiImageEffects.h"
+#include "wiSceneSystem_Decl.h"
+#include "wiECS.h"
 
 class wiArchive;
 
-namespace wiSceneComponents
+namespace wiSceneSystem
 {
-	struct Object;
-	struct Material;
-}
 
 class wiEmittedParticle
 {
@@ -22,27 +21,28 @@ public:
 		SOFT_DISTORTION,
 		SIMPLEST,
 		PARTICLESHADERTYPE_COUNT,
+		ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 	};
 
 private:
 	ParticleCounters debugData = {};
-	wiGraphicsTypes::GPUBuffer* debugDataReadbackBuffer = nullptr;
-	wiGraphicsTypes::GPUBuffer* debugDataReadbackIndexBuffer = nullptr;
-	wiGraphicsTypes::GPUBuffer* debugDataReadbackDistanceBuffer = nullptr;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> debugDataReadbackBuffer;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> debugDataReadbackIndexBuffer;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> debugDataReadbackDistanceBuffer;
 
-	wiGraphicsTypes::GPUBuffer* particleBuffer = nullptr;
-	wiGraphicsTypes::GPUBuffer* aliveList[2] = { nullptr, nullptr };
-	wiGraphicsTypes::GPUBuffer* deadList = nullptr;
-	wiGraphicsTypes::GPUBuffer* distanceBuffer = nullptr; // for sorting
-	wiGraphicsTypes::GPUBuffer* sphPartitionCellIndices = nullptr; // for SPH
-	wiGraphicsTypes::GPUBuffer* sphPartitionCellOffsets = nullptr; // for SPH
-	wiGraphicsTypes::GPUBuffer* densityBuffer = nullptr; // for SPH
-	wiGraphicsTypes::GPUBuffer* counterBuffer = nullptr;
-	wiGraphicsTypes::GPUBuffer* indirectBuffers = nullptr; // kickoffUpdate, simulation, draw
-	wiGraphicsTypes::GPUBuffer* constantBuffer = nullptr;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> aliveList[2];
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> deadList;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> distanceBuffer; // for sorting
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> sphPartitionCellIndices; // for SPH
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> sphPartitionCellOffsets; // for SPH
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> densityBuffer; // for SPH
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> counterBuffer;
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> indirectBuffers; // kickoffUpdate, simulation, draw
+	std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 	void CreateSelfBuffers();
 
-	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *finishUpdateCS, *emitCS, *sphpartitionCS, *sphpartitionoffsetsCS, *sphpartitionoffsetsresetCS, *sphdensityCS, *sphforceCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
+	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *finishUpdateCS, *emitCS, *emitCS_FROMMESH, *sphpartitionCS, *sphpartitionoffsetsCS, *sphpartitionoffsetsresetCS, *sphdensityCS, *sphforceCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
 	static wiGraphicsTypes::VertexShader		*vertexShader;
 	static wiGraphicsTypes::PixelShader			*pixelShader[PARTICLESHADERTYPE_COUNT];
 	static wiGraphicsTypes::BlendState			blendStates[BLENDMODE_COUNT];
@@ -51,56 +51,59 @@ private:
 
 	static wiGraphicsTypes::GraphicsPSO			PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 	static wiGraphicsTypes::GraphicsPSO			PSO_wire;
-	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_finishUpdate, CPSO_emit, CPSO_sphpartition, CPSO_sphpartitionoffsets, CPSO_sphpartitionoffsetsreset, CPSO_sphdensity, CPSO_sphforce, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
+	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_finishUpdate, CPSO_emit, CPSO_emit_FROMMESH, CPSO_sphpartition, CPSO_sphpartitionoffsets, CPSO_sphpartitionoffsetsreset, CPSO_sphdensity, CPSO_sphforce, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
 
 public:
 	static void LoadShaders();
+	static void SetUpStatic();
+	static void CleanUpStatic();
 private:
 	static void LoadBuffers();
 	static void SetUpStates();
 
-	float emit;
+	float emit = 0.0f;
 
 	bool buffersUpToDate = false;
-	uint32_t MAX_PARTICLES;
+	uint32_t MAX_PARTICLES = 1000;
 
 public:
-	wiEmittedParticle();
-	wiEmittedParticle(const std::string& newName, const std::string& newMat, wiSceneComponents::Object* newObject, float newSize, float newRandomFac, float newNormalFac
-		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot);
-	wiEmittedParticle(const wiEmittedParticle& other);
-	static void SetUpStatic();
-	static void CleanUpStatic();
-
 	void Update(float dt);
 	void Burst(float num);
 	void Restart();
 
-	void UpdateRenderData(GRAPHICSTHREAD threadID);
+	// Must have a transform and material component, but mesh is optional
+	void UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID);
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID);
 
-	void Draw(GRAPHICSTHREAD threadID);
-	void CleanUp();
-
-	bool DEBUG = false;
 	ParticleCounters GetDebugData() { return debugData; }
-	bool PAUSED = false;
 
-	bool SORTING = false;
-	bool DEPTHCOLLISIONS = false;
-	bool SPH_FLUIDSIMULATION = false;
-	float FIXED_TIMESTEP = -1.0f; // -1 : variable timestep; >=0 : fixed timestep
+	enum FLAGS
+	{
+		EMPTY = 0,
+		DEBUG = 1 << 0,
+		PAUSED = 1 << 1,
+		SORTING = 1 << 2,
+		DEPTHCOLLISION = 1 << 3,
+		SPH_FLUIDSIMULATION = 1 << 4,
+	};
+	uint32_t _flags = EMPTY;
 
 	PARTICLESHADERTYPE shaderType = SOFT;
 
-	std::string name;
-	wiSceneComponents::Object* object;
-	std::string materialName;
-	wiSceneComponents::Material* material;
+	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
 
-	float size,random_factor,normal_factor;
-	float count,life,random_life;
-	float scaleX,scaleY,rotation;
-	float motionBlurAmount;
+	float FIXED_TIMESTEP = -1.0f; // -1 : variable timestep; >=0 : fixed timestep
+
+	float size = 1.0f;
+	float random_factor = 1.0f;
+	float normal_factor = 1.0f;
+	float count = 0.0f;
+	float life = 1.0f;
+	float random_life = 1.0f;
+	float scaleX = 1.0f;
+	float scaleY = 1.0f;
+	float rotation = 0.0f;
+	float motionBlurAmount = 0.0f;
 	float mass = 1.0f;
 
 	float SPH_h = 1.0f;		// smoothing radius
@@ -112,8 +115,23 @@ public:
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
 	uint32_t GetMemorySizeInBytes() const;
 
-	XMFLOAT3 GetPosition() const;
+	// Non-serialized attributes:
+	XMFLOAT3 center;
 
-	void Serialize(wiArchive& archive);
+	inline bool IsDebug() const { return _flags & DEBUG; }
+	inline bool IsPaused() const { return _flags & PAUSED; }
+	inline bool IsSorted() const { return _flags & SORTING; }
+	inline bool IsDepthCollisionEnabled() const { return _flags & DEPTHCOLLISION; }
+	inline bool IsSPHEnabled() const { return _flags & SPH_FLUIDSIMULATION; }
+
+	inline void SetDebug(bool value) { if (value) { _flags |= DEBUG; } else { _flags &= ~DEBUG; } }
+	inline void SetPaused(bool value) { if (value) { _flags |= PAUSED; } else { _flags &= ~PAUSED; } }
+	inline void SetSorted(bool value) { if (value) { _flags |= SORTING; } else { _flags &= ~SORTING; } }
+	inline void SetDepthCollisionEnabled(bool value) { if (value) { _flags |= DEPTHCOLLISION; } else { _flags &= ~DEPTHCOLLISION; } }
+	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
+
+	void Serialize(wiArchive& archive, uint32_t seed = 0);
 };
+
+}
 

@@ -105,8 +105,9 @@ int Frustum::CheckBox(const AABB& box) const
 		int iInCount = 8;
 		int iPtIn = 1;
 
-		for (int i = 0; i < 8; ++i) {
-			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[p]), XMLoadFloat3(&box.corners[i]))) < 0.0f)
+		for (int i = 0; i < 8; ++i)
+		{
+			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[p]), XMLoadFloat3(&box.corner(i)))) < 0.0f)
 			{
 				iPtIn = 0;
 				--iInCount;

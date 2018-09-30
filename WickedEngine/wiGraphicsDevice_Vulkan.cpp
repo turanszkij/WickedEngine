@@ -2500,7 +2500,7 @@ namespace wiGraphicsTypes
 
 		// Allocate resource backing memory:
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan), &memRequirements);
+		vkGetBufferMemoryRequirements(device, (VkBuffer)ppBuffer->resource_Vulkan, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -2511,7 +2511,7 @@ namespace wiGraphicsTypes
 			throw std::runtime_error("failed to allocate buffer memory!");
 		}
 
-		res = vkBindBufferMemory(device, reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan), reinterpret_cast<VkDeviceMemory>(ppBuffer->resourceMemory_Vulkan), 0);
+		res = vkBindBufferMemory(device, (VkBuffer)ppBuffer->resource_Vulkan, (VkDeviceMemory)ppBuffer->resourceMemory_Vulkan, 0);
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
 
@@ -2532,7 +2532,7 @@ namespace wiGraphicsTypes
 
 				VkBufferMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-				barrier.buffer = reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan);
+				barrier.buffer = (VkBuffer)ppBuffer->resource_Vulkan;
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
@@ -2550,7 +2550,7 @@ namespace wiGraphicsTypes
 				);
 
 
-				vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan), 1, &copyRegion);
+				vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, (VkBuffer)ppBuffer->resource_Vulkan, 1, &copyRegion);
 
 
 				VkAccessFlags tmp = barrier.srcAccessMask;
@@ -2595,7 +2595,7 @@ namespace wiGraphicsTypes
 		{
 			VkBufferViewCreateInfo srv_desc = {};
 			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			srv_desc.buffer = reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan);
+			srv_desc.buffer = (VkBuffer)ppBuffer->resource_Vulkan;
 			srv_desc.flags = 0;
 			srv_desc.format = _ConvertFormat(ppBuffer->desc.Format);
 			srv_desc.offset = 0;
@@ -2609,7 +2609,7 @@ namespace wiGraphicsTypes
 		{
 			VkBufferViewCreateInfo uav_desc = {};
 			uav_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			uav_desc.buffer = reinterpret_cast<VkBuffer>(ppBuffer->resource_Vulkan);
+			uav_desc.buffer = (VkBuffer)ppBuffer->resource_Vulkan;
 			uav_desc.flags = 0;
 			uav_desc.format = _ConvertFormat(ppBuffer->desc.Format);
 			uav_desc.offset = 0;
@@ -2700,7 +2700,7 @@ namespace wiGraphicsTypes
 
 		// Allocate resource backing memory:
 		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(device, reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan), &memRequirements);
+		vkGetImageMemoryRequirements(device, (VkImage)(*ppTexture2D)->resource_Vulkan, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -2711,7 +2711,7 @@ namespace wiGraphicsTypes
 			throw std::runtime_error("failed to allocate image memory!");
 		}
 
-		res = vkBindImageMemory(device, reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan), reinterpret_cast<VkDeviceMemory>((*ppTexture2D)->resourceMemory_Vulkan), 0);
+		res = vkBindImageMemory(device, (VkImage)(*ppTexture2D)->resource_Vulkan, (VkDeviceMemory)(*ppTexture2D)->resourceMemory_Vulkan, 0);
 		hr = res == VK_SUCCESS; 
 		assert(SUCCEEDED(hr));
 
@@ -2770,7 +2770,7 @@ namespace wiGraphicsTypes
 
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.image = reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+				barrier.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
 				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.srcAccessMask = 0;
@@ -2795,7 +2795,7 @@ namespace wiGraphicsTypes
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
+				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)(*ppTexture2D)->resource_Vulkan, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
 
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -2832,7 +2832,7 @@ namespace wiGraphicsTypes
 			VkImageViewCreateInfo rtv_desc = {};
 			rtv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			rtv_desc.flags = 0;
-			rtv_desc.image = reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+			rtv_desc.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
 			rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			rtv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -2972,7 +2972,7 @@ namespace wiGraphicsTypes
 			VkImageViewCreateInfo dsv_desc = {};
 			dsv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			dsv_desc.flags = 0;
-			dsv_desc.image = reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+			dsv_desc.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
 			dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			dsv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
@@ -3038,7 +3038,7 @@ namespace wiGraphicsTypes
 			VkImageViewCreateInfo srv_desc = {};
 			srv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			srv_desc.flags = 0;
-			srv_desc.image = reinterpret_cast<VkImage>((*ppTexture2D)->resource_Vulkan);
+			srv_desc.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
 			srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -4441,7 +4441,7 @@ namespace wiGraphicsTypes
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			renderPass[threadID].attachments[i] = reinterpret_cast<VkImageView>(ppRenderTargets[i]->RTV_Vulkan);
+			renderPass[threadID].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV_Vulkan;
 
 			renderPass[threadID].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
 			renderPass[threadID].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
@@ -4451,7 +4451,7 @@ namespace wiGraphicsTypes
 
 		if (depthStencilTexture != nullptr)
 		{
-			renderPass[threadID].attachments[renderPass[threadID].attachmentCount] = reinterpret_cast<VkImageView>(depthStencilTexture->DSV_Vulkan);
+			renderPass[threadID].attachments[renderPass[threadID].attachmentCount] = (VkImageView)depthStencilTexture->DSV_Vulkan;
 			renderPass[threadID].attachmentCount++;
 
 			renderPass[threadID].attachmentsExtents.width = depthStencilTexture->desc.Width;
@@ -4466,7 +4466,7 @@ namespace wiGraphicsTypes
 	{
 		RenderPassManager::ClearRequest clear;
 
-		clear.attachment = reinterpret_cast<VkImageView>(pTexture->RTV_Vulkan);
+		clear.attachment = (VkImageView)pTexture->RTV_Vulkan;
 		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
 
 		renderPass[threadID].clearRequests.push_back(clear);
@@ -4475,7 +4475,7 @@ namespace wiGraphicsTypes
 	{
 		RenderPassManager::ClearRequest clear;
 
-		clear.attachment = reinterpret_cast<VkImageView>(pTexture->DSV_Vulkan);
+		clear.attachment = (VkImageView)pTexture->DSV_Vulkan;
 		clear.clearValue.depthStencil.depth = Depth;
 		clear.clearValue.depthStencil.stencil = Stencil;
 		clear.clearFlags = ClearFlags;
@@ -4504,7 +4504,7 @@ namespace wiGraphicsTypes
 					}
 
 					VkDescriptorImageInfo imageInfo = {};
-					imageInfo.imageView = reinterpret_cast<VkImageView>(tex->SRV_Vulkan);
+					imageInfo.imageView = (VkImageView)tex->SRV_Vulkan;
 					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					VkWriteDescriptorSet descriptorWrite = {};
@@ -4540,7 +4540,7 @@ namespace wiGraphicsTypes
 							}
 
 							VkDescriptorBufferInfo bufferInfo = {};
-							bufferInfo.buffer = reinterpret_cast<VkBuffer>(buffer->resource_Vulkan);
+							bufferInfo.buffer = (VkBuffer)buffer->resource_Vulkan;
 							bufferInfo.offset = 0;
 							bufferInfo.range = buffer->desc.ByteWidth;
 
@@ -4629,7 +4629,7 @@ namespace wiGraphicsTypes
 					}
 
 					VkDescriptorImageInfo imageInfo = {};
-					imageInfo.imageView = reinterpret_cast<VkImageView>(tex->UAV_Vulkan);
+					imageInfo.imageView = (VkImageView)tex->UAV_Vulkan;
 					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					VkWriteDescriptorSet descriptorWrite = {};
@@ -4665,7 +4665,7 @@ namespace wiGraphicsTypes
 							}
 
 							VkDescriptorBufferInfo bufferInfo = {};
-							bufferInfo.buffer = reinterpret_cast<VkBuffer>(buffer->resource_Vulkan);
+							bufferInfo.buffer = (VkBuffer)buffer->resource_Vulkan;
 							bufferInfo.offset = 0;
 							bufferInfo.range = buffer->desc.ByteWidth;
 
@@ -4754,7 +4754,7 @@ namespace wiGraphicsTypes
 			}
 
 			VkDescriptorImageInfo imageInfo = {};
-			imageInfo.sampler = reinterpret_cast<VkSampler>(sampler->resource_Vulkan);
+			imageInfo.sampler = (VkSampler)sampler->resource_Vulkan;
 			imageInfo.imageView = VK_NULL_HANDLE;
 
 			VkWriteDescriptorSet descriptorWrite = {};
@@ -4787,7 +4787,7 @@ namespace wiGraphicsTypes
 			}
 
 			VkDescriptorBufferInfo bufferInfo = {};
-			bufferInfo.buffer = reinterpret_cast<VkBuffer>(buffer->resource_Vulkan);
+			bufferInfo.buffer = (VkBuffer)buffer->resource_Vulkan;
 			bufferInfo.offset = 0;
 			bufferInfo.range = buffer->desc.ByteWidth;
 
@@ -4818,7 +4818,7 @@ namespace wiGraphicsTypes
 			if (vertexBuffers[i] != nullptr)
 			{
 				valid = true;
-				vbuffers[i] = reinterpret_cast<VkBuffer>(vertexBuffers[i]->resource_Vulkan);
+				vbuffers[i] = (VkBuffer)vertexBuffers[i]->resource_Vulkan;
 			}
 			if (offsets != nullptr)
 			{
@@ -4835,7 +4835,7 @@ namespace wiGraphicsTypes
 	{
 		if (indexBuffer != nullptr)
 		{
-			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), reinterpret_cast<VkBuffer>(indexBuffer->resource_Vulkan), offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), (VkBuffer)indexBuffer->resource_Vulkan, offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
@@ -4849,12 +4849,12 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, reinterpret_cast<VkPipeline>(pso->pipeline_Vulkan));
+		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pso->pipeline_Vulkan);
 		renderPass[threadID].pDesc = &pso->desc;
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, reinterpret_cast<VkPipeline>(pso->pipeline_Vulkan));
+		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pso->pipeline_Vulkan);
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
@@ -4936,8 +4936,8 @@ namespace wiGraphicsTypes
 		copy.dstSubresource.mipLevel = 0;
 
 		vkCmdCopyImage(GetDirectCommandList(threadID),
-			reinterpret_cast<VkImage>(pSrc->resource_Vulkan), VK_IMAGE_LAYOUT_GENERAL,
-			reinterpret_cast<VkImage>(pDst->resource_Vulkan), VK_IMAGE_LAYOUT_GENERAL,
+			(VkImage)pSrc->resource_Vulkan, VK_IMAGE_LAYOUT_GENERAL,
+			(VkImage)pDst->resource_Vulkan, VK_IMAGE_LAYOUT_GENERAL,
 			1, &copy);
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
@@ -4970,7 +4970,7 @@ namespace wiGraphicsTypes
 
 		VkBufferMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.buffer = reinterpret_cast<VkBuffer>(buffer->resource_Vulkan);
+		barrier.buffer = (VkBuffer)buffer->resource_Vulkan;
 		barrier.srcAccessMask = 0;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
@@ -5017,7 +5017,7 @@ namespace wiGraphicsTypes
 		copyRegion.dstOffset = 0;
 
 		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, 
-			reinterpret_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
+			(VkBuffer)buffer->resource_Vulkan, 1, &copyRegion);
 
 
 
@@ -5073,7 +5073,7 @@ namespace wiGraphicsTypes
 
 		VkBufferMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.buffer = reinterpret_cast<VkBuffer>(buffer->resource_Vulkan);
+		barrier.buffer = (VkBuffer)buffer->resource_Vulkan;
 		barrier.srcAccessMask = 0;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
@@ -5120,7 +5120,7 @@ namespace wiGraphicsTypes
 		copyRegion.dstOffset = position;
 
 		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, 
-			reinterpret_cast<VkBuffer>(buffer->resource_Vulkan), 1, &copyRegion);
+			(VkBuffer)buffer->resource_Vulkan, 1, &copyRegion);
 
 
 

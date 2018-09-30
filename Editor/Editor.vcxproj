@@ -172,6 +172,7 @@
     <ClInclude Include="EmitterWindow.h" />
     <ClInclude Include="EnvProbeWindow.h" />
     <ClInclude Include="ForceFieldWindow.h" />
+    <ClInclude Include="HairParticleWindow.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="LightWindow.h" />
     <ClInclude Include="main.h" />
@@ -188,7 +189,7 @@
     <ClInclude Include="tiny_gltf.h" />
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="Translator.h" />
-    <ClInclude Include="WorldWindow.h" />
+    <ClInclude Include="WeatherWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AnimationWindow.cpp" />
@@ -198,13 +199,13 @@
     <ClCompile Include="EmitterWindow.cpp" />
     <ClCompile Include="EnvProbeWindow.cpp" />
     <ClCompile Include="ForceFieldWindow.cpp" />
+    <ClCompile Include="HairParticleWindow.cpp" />
     <ClCompile Include="LightWindow.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MaterialWindow.cpp" />
     <ClCompile Include="MeshWindow.cpp" />
     <ClCompile Include="ModelImporter_GLTF.cpp" />
     <ClCompile Include="ModelImporter_OBJ.cpp" />
-    <ClCompile Include="ModelImporter_WIO.cpp" />
     <ClCompile Include="ObjectWindow.cpp" />
     <ClCompile Include="OceanWindow.cpp" />
     <ClCompile Include="PostprocessWindow.cpp" />
@@ -216,7 +217,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Translator.cpp" />
-    <ClCompile Include="WorldWindow.cpp" />
+    <ClCompile Include="WeatherWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="images\arealight.dds">

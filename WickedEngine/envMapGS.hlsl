@@ -1,10 +1,5 @@
 #include "envMapHF.hlsli"
 
-CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
-{
-	float4x4 xCubeShadowVP[6];
-}
-
 [maxvertexcount(18)]
 void main(triangle VSOut_EnvmapRendering input[3], inout TriangleStream<PSIn_EnvmapRendering> CubeMapStream)
 {

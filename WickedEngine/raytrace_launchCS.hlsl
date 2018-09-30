@@ -10,7 +10,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	if (DTid.x < (uint)GetInternalResolution().x && DTid.y < (uint)GetInternalResolution().y)
 	{
 		// Compute screen coordinates:
-		float2 uv = float2((DTid.xy + xTracePixelOffset) * g_xWorld_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+		float2 uv = float2((DTid.xy + xTracePixelOffset) * g_xFrame_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
 
 		// Target pixel:
 		uint pixelID = flatten2D(DTid.xy, GetInternalResolution());

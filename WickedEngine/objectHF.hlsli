@@ -18,7 +18,6 @@
 
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
-#include "windHF.hlsli"
 #include "ditherHF.hlsli"
 #include "tangentComputeHF.hlsli"
 #include "depthConvertHF.hlsli"
@@ -26,23 +25,6 @@
 #include "brdf.hlsli"
 #include "packHF.hlsli"
 #include "lightingHF.hlsli"
-
-// UNIFORMS
-//////////////////
-
-CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
-{
-	float4		g_xMat_baseColor;
-	float4		g_xMat_texMulAdd;
-	float		g_xMat_roughness;
-	float		g_xMat_reflectance;
-	float		g_xMat_metalness;
-	float		g_xMat_emissive;
-	float		g_xMat_refractionIndex;
-	float		g_xMat_subsurfaceScattering;
-	float		g_xMat_normalMapStrength;
-	float		g_xMat_parallaxOcclusionMapping;
-};
 
 // DEFINITIONS
 //////////////////
@@ -130,11 +112,11 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3
 inline void SpecularAA(in float3 N, inout float roughness)
 {
 	[branch]
-	if (g_xWorld_SpecularAA > 0)
+	if (g_xFrame_SpecularAA > 0)
 	{
 		float3 ddxN = ddx_coarse(N);
 		float3 ddyN = ddy_coarse(N);
-		float curve = pow(max(dot(ddxN, ddxN), dot(ddyN, ddyN)), 1 - g_xWorld_SpecularAA);
+		float curve = pow(max(dot(ddxN, ddxN), dot(ddyN, ddyN)), 1 - g_xFrame_SpecularAA);
 		roughness = max(roughness, curve);
 	}
 }
@@ -178,7 +160,7 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	float mipLevels;
 	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
-	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xWorld_AdvancedRefractions ? surface.roughness * mipLevels : 0));
+	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0));
 	surface.albedo.rgb *= lerp(refractiveColor.rgb, 1, color.a);
 	color.a = 1;
 }
@@ -193,7 +175,7 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out flo
 	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
 
 #ifndef DISABLE_ENVMAPS
-	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
+	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 	reflection = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 #endif // DISABLE_ENVMAPS
 
@@ -252,7 +234,7 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out flo
 inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, out float3 specular, out float3 reflection)
 {
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	uint startOffset = flatten2D(tileIndex, g_xWorld_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
+	uint startOffset = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
 	uint arrayProperties = EntityIndexList[startOffset];
 	uint arrayLength = arrayProperties & 0x000FFFFF; // count of every element in the tile
 	uint decalCount = (arrayProperties & 0xFF000000) >> 24; // count of just the decals in the tile
@@ -313,7 +295,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 	// Apply environment maps:
 
 	float4 envmapAccumulation = 0;
-	float envMapMIP = surface.roughness * g_xWorld_EnvProbeMipCount;
+	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 
 #ifdef DISABLE_LOCALENVPMAPS
 	// local envmaps are disabled, set iterator to skip:

@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "LightWindow.h"
 
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 
-LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
+LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -24,32 +25,35 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	energySlider->SetSize(XMFLOAT2(100, 30));
 	energySlider->SetPos(XMFLOAT2(x, y += step));
 	energySlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->enerDis.x = args.fValue;
+			light->energy = args.fValue;
 		}
 	});
 	energySlider->SetEnabled(false);
 	energySlider->SetTooltip("Adjust the light radiation amount inside the maximum range");
 	lightWindow->AddWidget(energySlider);
 
-	distanceSlider = new wiSlider(1, 1000, 0, 100000, "Distance: ");
-	distanceSlider->SetSize(XMFLOAT2(100, 30));
-	distanceSlider->SetPos(XMFLOAT2(x, y += step));
-	distanceSlider->OnSlide([&](wiEventArgs args) {
+	rangeSlider = new wiSlider(1, 1000, 0, 100000, "Range: ");
+	rangeSlider->SetSize(XMFLOAT2(100, 30));
+	rangeSlider->SetPos(XMFLOAT2(x, y += step));
+	rangeSlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->enerDis.y = args.fValue;
+			light->range = args.fValue;
 		}
 	});
-	distanceSlider->SetEnabled(false);
-	distanceSlider->SetTooltip("Adjust the maximum range the light can affect.");
-	lightWindow->AddWidget(distanceSlider);
+	rangeSlider->SetEnabled(false);
+	rangeSlider->SetTooltip("Adjust the maximum range the light can affect.");
+	lightWindow->AddWidget(rangeSlider);
 
 	radiusSlider = new wiSlider(0.01f, 10, 0, 100000, "Radius: ");
 	radiusSlider->SetSize(XMFLOAT2(100, 30));
 	radiusSlider->SetPos(XMFLOAT2(x, y += step));
 	radiusSlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->radius = args.fValue;
@@ -63,6 +67,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	widthSlider->SetSize(XMFLOAT2(100, 30));
 	widthSlider->SetPos(XMFLOAT2(x, y += step));
 	widthSlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->width = args.fValue;
@@ -76,6 +81,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	heightSlider->SetSize(XMFLOAT2(100, 30));
 	heightSlider->SetPos(XMFLOAT2(x, y += step));
 	heightSlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->height = args.fValue;
@@ -89,9 +95,10 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	fovSlider->SetSize(XMFLOAT2(100, 30));
 	fovSlider->SetPos(XMFLOAT2(x, y += step));
 	fovSlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->enerDis.z = args.fValue;
+			light->fov = args.fValue;
 		}
 	});
 	fovSlider->SetEnabled(false);
@@ -102,6 +109,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	biasSlider->SetSize(XMFLOAT2(100, 30));
 	biasSlider->SetPos(XMFLOAT2(x, y += step));
 	biasSlider->OnSlide([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
 			light->shadowBias = args.fValue;
@@ -114,9 +122,10 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	shadowCheckBox = new wiCheckBox("Shadow: ");
 	shadowCheckBox->SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox->OnClick([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->shadow = args.bValue;
+			light->SetCastShadow(args.bValue);
 		}
 	});
 	shadowCheckBox->SetEnabled(false);
@@ -126,9 +135,10 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	volumetricsCheckBox = new wiCheckBox("Volumetric Scattering: ");
 	volumetricsCheckBox->SetPos(XMFLOAT2(x, y += step));
 	volumetricsCheckBox->OnClick([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->volumetrics = args.bValue;
+			light->SetVolumetricsEnabled(args.bValue);
 		}
 	});
 	volumetricsCheckBox->SetEnabled(false);
@@ -138,9 +148,10 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	haloCheckBox = new wiCheckBox("Visualizer: ");
 	haloCheckBox->SetPos(XMFLOAT2(x, y += step));
 	haloCheckBox->OnClick([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->noHalo = !args.bValue;
+			light->SetVisualizerEnabled(args.bValue);
 		}
 	});
 	haloCheckBox->SetEnabled(false);
@@ -151,12 +162,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(150, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
-		Light* light = new Light;
-		light->enerDis = XMFLOAT4(2, 60, XM_PIDIV4, 0);
-		light->color = XMFLOAT4(1, 1, 1, 1);
-		light->Translate(XMFLOAT3(0, 3, 0));
-		light->SetType(Light::POINT);
-		wiRenderer::Add(light);
+		wiRenderer::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 	});
 	addLightButton->SetTooltip("Add a light to the scene.");
 	lightWindow->AddWidget(addLightButton);
@@ -168,17 +174,21 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		if(light!=nullptr)
-			light->color = XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), 1);
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->color = XMFLOAT3(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f));
+		}
 	});
 	lightWindow->AddWidget(colorPicker);
 
 	typeSelectorComboBox = new wiComboBox("Type: ");
 	typeSelectorComboBox->SetPos(XMFLOAT2(x, y += step));
 	typeSelectorComboBox->OnSelect([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr && args.iValue >= 0)
 		{
-			light->SetType((Light::LightType)args.iValue);
+			light->SetType((LightComponent::LightType)args.iValue);
 			SetLightType(light->GetType());
 			biasSlider->SetValue(light->shadowBias);
 		}
@@ -198,7 +208,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui), light(nullptr)
 	lightWindow->Translate(XMFLOAT3(30, 30, 0));
 	lightWindow->SetVisible(false);
 
-	SetLight(nullptr);
+	SetEntity(INVALID_ENTITY);
 }
 
 
@@ -209,30 +219,33 @@ LightWindow::~LightWindow()
 	SAFE_DELETE(lightWindow);
 }
 
-void LightWindow::SetLight(Light* light)
+void LightWindow::SetEntity(Entity entity)
 {
-	if (this->light == light)
+	if (this->entity == entity)
 		return;
 
-	this->light = light;
+	this->entity = entity;
+
+	const LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
+
 	if (light != nullptr)
 	{
 		//lightWindow->SetEnabled(true);
 		energySlider->SetEnabled(true);
-		energySlider->SetValue(light->enerDis.x);
-		distanceSlider->SetValue(light->enerDis.y);
+		energySlider->SetValue(light->energy);
+		rangeSlider->SetValue(light->range);
 		radiusSlider->SetValue(light->radius);
 		widthSlider->SetValue(light->width);
 		heightSlider->SetValue(light->height);
-		fovSlider->SetValue(light->enerDis.z);
+		fovSlider->SetValue(light->fov);
 		biasSlider->SetEnabled(true);
 		biasSlider->SetValue(light->shadowBias);
 		shadowCheckBox->SetEnabled(true);
-		shadowCheckBox->SetCheck(light->shadow);
+		shadowCheckBox->SetCheck(light->IsCastingShadow());
 		haloCheckBox->SetEnabled(true);
-		haloCheckBox->SetCheck(!light->noHalo);
+		haloCheckBox->SetCheck(light->IsVisualizerEnabled());
 		volumetricsCheckBox->SetEnabled(true);
-		volumetricsCheckBox->SetCheck(light->volumetrics);
+		volumetricsCheckBox->SetCheck(light->IsVolumetricsEnabled());
 		colorPicker->SetEnabled(true);
 		typeSelectorComboBox->SetEnabled(true);
 		typeSelectorComboBox->SetSelected((int)light->GetType());
@@ -241,7 +254,7 @@ void LightWindow::SetLight(Light* light)
 	}
 	else
 	{
-		distanceSlider->SetEnabled(false);
+		rangeSlider->SetEnabled(false);
 		radiusSlider->SetEnabled(false);
 		widthSlider->SetEnabled(false);
 		heightSlider->SetEnabled(false);
@@ -256,18 +269,18 @@ void LightWindow::SetLight(Light* light)
 		//lightWindow->SetEnabled(false);
 	}
 }
-void LightWindow::SetLightType(Light::LightType type)
+void LightWindow::SetLightType(LightComponent::LightType type)
 {
-	if (type == Light::DIRECTIONAL)
+	if (type == LightComponent::DIRECTIONAL)
 	{
-		distanceSlider->SetEnabled(false);
+		rangeSlider->SetEnabled(false);
 		fovSlider->SetEnabled(false);
 	}
 	else
 	{
-		if (type == Light::SPHERE || type == Light::DISC || type == Light::RECTANGLE || type == Light::TUBE)
+		if (type == LightComponent::SPHERE || type == LightComponent::DISC || type == LightComponent::RECTANGLE || type == LightComponent::TUBE)
 		{
-			distanceSlider->SetEnabled(false);
+			rangeSlider->SetEnabled(false);
 			radiusSlider->SetEnabled(true);
 			widthSlider->SetEnabled(true);
 			heightSlider->SetEnabled(true);
@@ -275,11 +288,11 @@ void LightWindow::SetLightType(Light::LightType type)
 		}
 		else
 		{
-			distanceSlider->SetEnabled(true);
+			rangeSlider->SetEnabled(true);
 			radiusSlider->SetEnabled(false);
 			widthSlider->SetEnabled(false);
 			heightSlider->SetEnabled(false);
-			if (type == Light::SPOT)
+			if (type == LightComponent::SPOT)
 			{
 				fovSlider->SetEnabled(true);
 			}

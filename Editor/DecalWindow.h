@@ -1,10 +1,5 @@
 #pragma once
 
-namespace wiSceneComponents
-{
-	struct Decal;
-}
-
 class wiGUI;
 class wiWindow;
 class wiLabel;
@@ -19,12 +14,11 @@ public:
 
 	wiGUI* GUI;
 
-	void SetDecal(wiSceneComponents::Decal* decal);
+	wiECS::Entity entity;
+	void SetEntity(wiECS::Entity entity);
 
-	wiSceneComponents::Decal* decal;
+	wiTextInputField*	decalNameField;
 
 	wiWindow*	decalWindow;
-	wiSlider*	opacitySlider;
-	wiSlider*	emissiveSlider;
 };
 

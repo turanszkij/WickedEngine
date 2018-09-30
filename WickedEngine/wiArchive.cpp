@@ -7,9 +7,9 @@
 using namespace std;
 
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-uint64_t __archiveVersion = 21;
+uint64_t __archiveVersion = 22;
 // this is the version number of which below the archive is not compatible with the current version
-uint64_t __archiveVersionBarrier = 1;
+uint64_t __archiveVersionBarrier = 22;
 
 // version history is logged in ArchiveVersionHistory.txt file!
 

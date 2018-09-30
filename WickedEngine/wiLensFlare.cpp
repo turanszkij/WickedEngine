@@ -2,6 +2,7 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "ResourceMapping.h"
+#include "ShaderInterop_Renderer.h"
 
 using namespace wiGraphicsTypes;
 
@@ -27,7 +28,7 @@ void wiLensFlare::CleanUp(){
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(samplercmp);
 }
-void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::vector<Texture2D*>& rims){
+void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<Texture2D*>& rims){
 
 	if(!rims.empty())
 	{
@@ -36,12 +37,12 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 
 		device->BindGraphicsPSO(&PSO, threadID);
 
-		ConstantBuffer cb;
-		cb.mSunPos = lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1);
-		cb.mScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
+		LensFlareCB cb;
+		XMStoreFloat4(&cb.xSunPos, lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1));
+		cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
 		device->UpdateBuffer(constantBuffer,&cb,threadID);
-		device->BindConstantBuffer(GS, constantBuffer, CB_GETBINDSLOT(ConstantBuffer),threadID);
+		device->BindConstantBuffer(GS, constantBuffer, CB_GETBINDSLOT(LensFlareCB),threadID);
 
 
 		int i=0;
@@ -67,12 +68,13 @@ void wiLensFlare::Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, std::v
 
 void wiLensFlare::LoadShaders()
 {
-	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
+	std::string path = wiRenderer::GetShaderPath();
+
+	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path+ "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
 	
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
-
-	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(path + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -94,7 +96,7 @@ void wiLensFlare::SetUpCB()
 	GPUBufferDesc bd;
 	ZeroMemory( &bd, sizeof(bd) );
 	bd.Usage = USAGE_DYNAMIC;
-	bd.ByteWidth = sizeof(ConstantBuffer);
+	bd.ByteWidth = sizeof(LensFlareCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	constantBuffer = new GPUBuffer;

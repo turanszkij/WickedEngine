@@ -4,7 +4,7 @@
 #include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
 #include "ResourceMapping.h"
 #include "wiProfiler.h"
 
@@ -203,9 +203,6 @@ void Renderable3DComponent::Initialize()
 void Renderable3DComponent::Load()
 {
 	Renderable2DComponent::Load();
-
-	wiRenderer::HAIRPARTICLEENABLED = getHairParticlesEnabled();
-	wiRenderer::EMITTERSENABLED = getEmittedParticlesEnabled();
 }
 
 void Renderable3DComponent::Start()
@@ -233,7 +230,7 @@ void Renderable3DComponent::Compose()
 
 	if (wiRenderer::GetDebugLightCulling())
 	{
-		wiImage::Draw((Texture2D*)wiRenderer::textures[TEXTYPE_2D_DEBUGUAV], wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	Renderable2DComponent::Compose();
@@ -275,12 +272,12 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 	if (wiRenderer::IsRequestedReflectionRendering())
 	{
-		wiRenderer::UpdateCameraCB(wiRenderer::getRefCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), threadID);
 
 		rtReflection.Activate(threadID); {
 			// reverse clipping if underwater
 			XMFLOAT4 water = wiRenderer::GetWaterPlane();
-			if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&water), wiRenderer::getCamera()->GetEye())) < 0)
+			if (XMVectorGetX(XMPlaneDot(XMLoadFloat4(&water), wiRenderer::GetCamera().GetEye())) < 0)
 			{
 				water.x *= -1;
 				water.y *= -1;
@@ -289,7 +286,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 
 			wiRenderer::SetClipPlane(water, threadID);
 
-			wiRenderer::DrawWorld(wiRenderer::getRefCamera(), false, threadID, SHADERTYPE_TEXTURE, getHairParticlesReflectionEnabled(), false, getLayerMask());
+			wiRenderer::DrawWorld(wiRenderer::GetRefCamera(), false, threadID, SHADERTYPE_TEXTURE, getHairParticlesReflectionEnabled(), false, getLayerMask());
 			wiRenderer::DrawSky(threadID);
 
 			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
@@ -341,7 +338,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 	wiRenderer::GetDevice()->EventEnd(threadID);
 
-	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
 	if (getStereogramEnabled())
 	{
@@ -350,7 +347,8 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	}
 	wiProfiler::GetInstance().BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(wiRenderer::GetSunPosition(), wiRenderer::getCamera()->GetAt())) > 0)
+	XMVECTOR sunDirection = XMLoadFloat3(&wiRenderer::GetScene().weather.sunDirection);
+	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
 	{
 		wiRenderer::GetDevice()->EventBegin("Light Shafts", threadID);
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
@@ -361,9 +359,9 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		rtSun[1].Activate(threadID); {
 			wiImageEffects fxs = fx;
 			fxs.blendFlag = BLENDMODE_OPAQUE;
-			XMVECTOR sunPos = XMVector3Project(wiRenderer::GetSunPosition() * 100000, 0, 0, 
+			XMVECTOR sunPos = XMVector3Project(sunDirection * 100000, 0, 0, 
 				(float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 1.0f, 
-				wiRenderer::getCamera()->GetProjection(), wiRenderer::getCamera()->GetView(), XMMatrixIdentity());
+				wiRenderer::GetCamera().GetProjection(), wiRenderer::GetCamera().GetView(), XMMatrixIdentity());
 			{
 				XMStoreFloat2(&fxs.sunPos, sunPos);
 				wiImage::Draw(rtSun[0].GetTextureResolvedMSAA(threadID), fxs, threadID);
@@ -375,13 +373,13 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	if (getVolumeLightsEnabled())
 	{
 		rtVolumetricLights.Activate(threadID, 0, 0, 0, 0);
-		wiRenderer::DrawVolumeLights(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), threadID);
 	}
 
 	if (getEmittedParticlesEnabled())
 	{
 		rtParticle.Activate(threadID, 0, 0, 0, 0);
-		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), false, threadID);
+		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), false, threadID);
 	}
 
 	rtWaterRipple.Activate(threadID, 0, 0, 0, 0); {
@@ -407,7 +405,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		RenderTransparentScene(rtSceneCopy, threadID);
 
 		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
-		wiRenderer::DrawLightVisualizers(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), threadID);
 
 		fx.presentFullScreen = true;
 
@@ -438,14 +436,14 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 				wiRenderer::DrawLensFlares(threadID);
 		}
 
-		wiRenderer::DrawDebugWorld(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), threadID);
 	}
 
 	if (getEmittedParticlesEnabled())
 	{
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		rtParticle.Activate(threadID, 0, 0, 0, 0);
-		wiRenderer::DrawSoftParticles(wiRenderer::getCamera(), true, threadID);
+		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), true, threadID);
 	}
 
 	wiProfiler::GetInstance().EndRange(threadID); // Secondary Scene
@@ -457,7 +455,7 @@ void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT,
 	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
-	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_FORWARD, threadID, false, true, getLayerMask());
+	wiRenderer::DrawWorldTransparent(wiRenderer::GetCamera(), SHADERTYPE_FORWARD, threadID, false, true, getLayerMask());
 
 	wiProfiler::GetInstance().EndRange(threadID); // Transparent Scene
 }

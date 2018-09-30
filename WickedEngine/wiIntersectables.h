@@ -2,29 +2,29 @@
 #define _INTERSECTABLES_H_
 #include "CommonInclude.h"
 #include "wiArchive.h"
+#include "wiECS.h"
 
 struct SPHERE;
 struct RAY;
 struct AABB;
 
 
-struct AABB {
-	enum INTERSECTION_TYPE {
+struct AABB 
+{
+	enum INTERSECTION_TYPE 
+	{
 		OUTSIDE,
 		INTERSECTS,
 		INSIDE,
 	};
 
-	XMFLOAT3 corners[8];
+	XMFLOAT3 _min;
+	XMFLOAT3 _max;
 
-	AABB();
-	AABB(const XMFLOAT3& min, const XMFLOAT3& max);
-	void create(const XMFLOAT3& min, const XMFLOAT3& max);
+	AABB(const XMFLOAT3& _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX)) : _min(_min), _max(_max) {}
 	void createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth);
-	AABB get(const XMMATRIX& mat);
-	AABB get(const XMFLOAT4X4& mat);
-	XMFLOAT3 getMin() const;
-	XMFLOAT3 getMax() const;
+	AABB get(const XMMATRIX& mat) const;
+	AABB get(const XMFLOAT4X4& mat) const;
 	XMFLOAT3 getCenter() const;
 	XMFLOAT3 getHalfWidth() const;
 	XMMATRIX getAsBoxMatrix() const;
@@ -35,9 +35,30 @@ struct AABB {
 	bool intersects(const RAY& ray) const;
 	AABB operator* (float a);
 	static AABB Merge(const AABB& a, const AABB& b);
-	void Serialize(wiArchive& archive);
+
+	inline XMFLOAT3 getMin() const { return _min; }
+	inline XMFLOAT3 getMax() const { return _max; }
+	inline XMFLOAT3 corner(int index) const
+	{
+		switch (index)
+		{
+		case 0: return _min;
+		case 1: return XMFLOAT3(_min.x, _max.y, _min.z);
+		case 2: return XMFLOAT3(_min.x, _max.y, _max.z);
+		case 3: return XMFLOAT3(_min.x, _min.y, _max.z);
+		case 4: return XMFLOAT3(_max.x, _min.y, _min.z);
+		case 5: return XMFLOAT3(_max.x, _max.y, _min.z);
+		case 6: return _max;
+		case 7: return XMFLOAT3(_max.x, _min.y, _max.z);
+		}
+		assert(0);
+		return XMFLOAT3(0, 0, 0);
+	}
+
+	void Serialize(wiArchive& archive, uint32_t seed = 0);
 };
-struct SPHERE {
+struct SPHERE 
+{
 	float radius;
 	XMFLOAT3 center;
 	SPHERE() :center(XMFLOAT3(0, 0, 0)), radius(0) {}
@@ -46,7 +67,8 @@ struct SPHERE {
 	bool intersects(const SPHERE& b) const;
 	bool intersects(const RAY& b) const;
 };
-struct RAY {
+struct RAY 
+{
 	XMFLOAT3 origin, direction, direction_inverse;
 
 	RAY(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1)) :origin(newOrigin), direction(newDirection) {}

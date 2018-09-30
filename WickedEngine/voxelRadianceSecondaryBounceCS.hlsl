@@ -11,7 +11,7 @@ RWTEXTURE3D(output, float4, 0);
 [numthreads(64, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	const uint3 writecoord = unflatten3D(DTid.x, g_xWorld_VoxelRadianceDataRes);
+	const uint3 writecoord = unflatten3D(DTid.x, g_xFrame_VoxelRadianceDataRes);
 
 	float4 emission = input_emission[writecoord];
 
@@ -19,12 +19,12 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	{
 		float3 N = DecodeNormal(input_voxelscene[DTid.x].normalMask);
 
-		float3 P = ((float3)writecoord + 0.5f) * g_xWorld_VoxelRadianceDataRes_Inverse;
+		float3 P = ((float3)writecoord + 0.5f) * g_xFrame_VoxelRadianceDataRes_Inverse;
 		P = P * 2 - 1;
 		P.y *= -1;
-		P *= g_xWorld_VoxelRadianceDataSize;
-		P *= g_xWorld_VoxelRadianceDataRes;
-		P += g_xWorld_VoxelRadianceDataCenter;
+		P *= g_xFrame_VoxelRadianceDataSize;
+		P *= g_xFrame_VoxelRadianceDataRes;
+		P += g_xFrame_VoxelRadianceDataCenter;
 
 		float4 radiance = ConeTraceRadiance(input_emission, P, N);
 

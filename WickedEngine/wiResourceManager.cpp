@@ -188,7 +188,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 						}
 					}
 
-					wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), &image);
+					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), &image);
+					assert(SUCCEEDED(hr));
+					wiRenderer::GetDevice()->SetName(image, nameStr);
 
 				}
 
@@ -228,6 +230,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &image);
 					assert(SUCCEEDED(hr));
+					wiRenderer::GetDevice()->SetName(image, nameStr);
 
 					if (image != nullptr)
 					{

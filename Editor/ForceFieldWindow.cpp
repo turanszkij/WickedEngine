@@ -1,14 +1,13 @@
 #include "stdafx.h"
 #include "ForceFieldWindow.h"
 
-using namespace wiSceneComponents;
+using namespace wiECS;
+using namespace wiSceneSystem;
 
 
 ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
-
-	force = nullptr;
 
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
@@ -27,6 +26,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	typeComboBox->SetPos(XMFLOAT2(x, y += step));
 	typeComboBox->SetSize(XMFLOAT2(300, 25));
 	typeComboBox->OnSelect([&](wiEventArgs args) {
+		ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
 		{
 			switch (args.iValue)
@@ -54,6 +54,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	gravitySlider->SetSize(XMFLOAT2(200, 30));
 	gravitySlider->SetPos(XMFLOAT2(x, y += step));
 	gravitySlider->OnSlide([&](wiEventArgs args) {
+		ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->gravity = args.fValue;
@@ -68,6 +69,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	rangeSlider->SetSize(XMFLOAT2(200, 30));
 	rangeSlider->SetPos(XMFLOAT2(x, y += step));
 	rangeSlider->OnSlide([&](wiEventArgs args) {
+		ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->range = args.fValue;
@@ -82,7 +84,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetSize(XMFLOAT2(150, 30));
 	addButton->SetPos(XMFLOAT2(x, y += step * 2));
 	addButton->OnClick([](wiEventArgs args) {
-		wiRenderer::Add(new ForceField);
+		wiRenderer::GetScene().Entity_CreateForce("editorForce");
 	});
 	addButton->SetEnabled(true);
 	addButton->SetTooltip("Add new Force Field to the simulation.");
@@ -93,7 +95,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	forceFieldWindow->Translate(XMFLOAT3(810, 50, 0));
 	forceFieldWindow->SetVisible(false);
 
-	SetForceField(nullptr);
+	SetEntity(INVALID_ENTITY);
 }
 
 
@@ -101,12 +103,14 @@ ForceFieldWindow::~ForceFieldWindow()
 {
 }
 
-void ForceFieldWindow::SetForceField(ForceField* force)
+void ForceFieldWindow::SetEntity(Entity entity)
 {
-	if (this->force == force)
+	if (this->entity == entity)
 		return;
 
-	this->force = force;
+	this->entity = entity;
+
+	const ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
 
 	if (force != nullptr)
 	{

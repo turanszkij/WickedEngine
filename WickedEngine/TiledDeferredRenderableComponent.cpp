@@ -27,7 +27,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
 	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::UpdateCameraCB(wiRenderer::getCamera(), threadID);
+	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
@@ -37,7 +37,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
 		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-		wiRenderer::DrawWorld(wiRenderer::getCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
+		wiRenderer::DrawWorld(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
 	}
 
 
@@ -69,7 +69,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	rtGBuffer.Set(threadID); {
-		wiRenderer::DrawDecals(wiRenderer::getCamera(), threadID);
+		wiRenderer::DrawDecals(wiRenderer::GetCamera(), threadID);
 	}
 	rtGBuffer.Deactivate(threadID);
 
@@ -139,7 +139,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.setSSSS(dir);
 			if (i == 0)
 			{
-				wiImage::Draw(static_cast<Texture2D*>(wiRenderer::textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]), fx, threadID);
+				wiImage::Draw(static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV)), fx, threadID);
 			}
 			else
 			{
@@ -157,7 +157,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.presentFullScreen = true;
 			fx.hdr = true;
-			wiImage::Draw(static_cast<Texture2D*>(wiRenderer::textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]), fx, threadID);
+			wiImage::Draw(static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV)), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;
 			wiImage::Draw(rtSSS[1].GetTexture(), fx, threadID);
@@ -169,8 +169,8 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
-		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : static_cast<Texture2D*>(wiRenderer::textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV])), 
-			static_cast<Texture2D*>(wiRenderer::textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV])
+		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV))), 
+			static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV))
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
 			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);
@@ -200,7 +200,7 @@ void TiledDeferredRenderableComponent::RenderTransparentScene(wiRenderTarget& re
 	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
-	wiRenderer::DrawWorldTransparent(wiRenderer::getCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled(), true, getLayerMask());
+	wiRenderer::DrawWorldTransparent(wiRenderer::GetCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled(), true, getLayerMask());
 
 	wiProfiler::GetInstance().EndRange(); // Transparent Scene
 }

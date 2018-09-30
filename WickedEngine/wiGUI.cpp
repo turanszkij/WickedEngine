@@ -8,9 +8,10 @@ using namespace std;
 
 wiGUI::wiGUI(GRAPHICSTHREAD threadID) :threadID(threadID), activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
-	Transform::scale_rest.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
-	Transform::scale_rest.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
-	Transform::UpdateTransform();
+	SetDirty();
+	scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+	scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+	UpdateTransform();
 }
 
 
@@ -28,9 +29,10 @@ void wiGUI::Update(float dt)
 
 	if (wiRenderer::GetDevice()->ResolutionChanged())
 	{
-		Transform::scale_rest.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
-		Transform::scale_rest.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
-		Transform::UpdateTransform();
+		SetDirty();
+		scale_local.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
+		scale_local.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
+		UpdateTransform();
 	}
 
 	XMFLOAT4 _p = wiInputManager::GetInstance()->getpointer();
@@ -49,7 +51,7 @@ void wiGUI::Update(float dt)
 	focus = false;
 	for (list<wiWidget*>::reverse_iterator it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
-		if ((*it)->container == nullptr)
+		if ((*it)->parent == this)
 		{
 			// the contained child widgets will be updated by the containers
 			(*it)->Update(this, dt);
@@ -72,7 +74,7 @@ void wiGUI::Render()
 	wiRenderer::GetDevice()->EventBegin("GUI", GetGraphicsThread());
 	for (auto&x : widgets)
 	{
-		if (x->container == nullptr && x != activeWidget)
+		if (x->parent == this && x != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
 			x->Render(this);
@@ -105,13 +107,13 @@ void wiGUI::ResetScissor()
 
 void wiGUI::AddWidget(wiWidget* widget)
 {
-	widget->attachTo(this);
+	widget->AttachTo(this);
 	widgets.push_back(widget);
 }
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
-	this->detachChild(widget);
+	widget->Detach();
 	widgets.remove(widget);
 }
 

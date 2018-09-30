@@ -1,6 +1,6 @@
 #include "wiEmittedParticle.h"
 #include "wiMath.h"
-#include "wiSceneComponents.h"
+#include "wiSceneSystem.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiFrustum.h"
@@ -13,11 +13,13 @@
 
 using namespace std;
 using namespace wiGraphicsTypes;
-using namespace wiSceneComponents;
+
+namespace wiSceneSystem
+{
 
 VertexShader  *wiEmittedParticle::vertexShader = nullptr;
 PixelShader   *wiEmittedParticle::pixelShader[PARTICLESHADERTYPE_COUNT] = {};
-ComputeShader   *wiEmittedParticle::kickoffUpdateCS = nullptr, *wiEmittedParticle::finishUpdateCS = nullptr, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::sphpartitionCS = nullptr, 
+ComputeShader   *wiEmittedParticle::kickoffUpdateCS = nullptr, *wiEmittedParticle::finishUpdateCS = nullptr, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::emitCS_FROMMESH = nullptr, *wiEmittedParticle::sphpartitionCS = nullptr,
 				*wiEmittedParticle::sphpartitionoffsetsCS = nullptr, *wiEmittedParticle::sphpartitionoffsetsresetCS = nullptr, *wiEmittedParticle::sphdensityCS = nullptr, *wiEmittedParticle::sphforceCS = nullptr, 
 				*wiEmittedParticle::simulateCS = nullptr, *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
 
@@ -26,85 +28,10 @@ RasterizerState		wiEmittedParticle::rasterizerState, wiEmittedParticle::wireFram
 DepthStencilState	wiEmittedParticle::depthStencilState;
 GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
 GraphicsPSO wiEmittedParticle::PSO_wire;
-ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finishUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_sphpartition, wiEmittedParticle::CPSO_sphpartitionoffsets, 
+ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finishUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_emit_FROMMESH, wiEmittedParticle::CPSO_sphpartition, wiEmittedParticle::CPSO_sphpartitionoffsets,
 				wiEmittedParticle::CPSO_sphpartitionoffsetsreset, wiEmittedParticle::CPSO_sphdensity, wiEmittedParticle::CPSO_sphforce, wiEmittedParticle::CPSO_simulate,
 				wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
 
-wiEmittedParticle::wiEmittedParticle()
-{
-	name = "";
-	object = nullptr;
-	materialName = "";
-	material = nullptr;
-
-	size = 1;
-	random_factor = 0;
-	normal_factor = 1;
-
-	count = 1;
-	life = 60;
-	random_life = 0;
-	emit = 0;
-
-	scaleX = 1;
-	scaleY = 1;
-	rotation = 0;
-
-	motionBlurAmount = 0.0f;
-
-	SetMaxParticleCount(10000);
-}
-wiEmittedParticle::wiEmittedParticle(const std::string& newName, const std::string& newMat, Object* newObject, float newSize, float newRandomFac, float newNormalFac
-		,float newCount, float newLife, float newRandLife, float newScaleX, float newScaleY, float newRot)
-{
-	name=newName;
-	object=newObject;
-	materialName = newMat;
-	for (MeshSubset& subset : object->mesh->subsets)
-	{
-		if (!newMat.compare(subset.material->name)) {
-			material = subset.material;
-			break;
-		}
-	}
-
-	size=newSize;
-	random_factor=newRandomFac;
-	normal_factor=newNormalFac;
-
-	count=newCount;
-	life=newLife;
-	random_life=newRandLife;
-	emit=0;
-	
-	scaleX=newScaleX;
-	scaleY=newScaleY;
-	rotation = newRot;
-
-	motionBlurAmount = 0.0f;
-
-	SetMaxParticleCount(10000);
-}
-wiEmittedParticle::wiEmittedParticle(const wiEmittedParticle& other)
-{
-	name = other.name + "0";
-	object = other.object;
-	materialName = other.materialName;
-	material = other.material;
-	size = other.size;
-	random_factor = other.random_factor;
-	normal_factor = other.normal_factor;
-	count = other.count;
-	life = other.life;
-	random_life = other.random_life;
-	emit = 0;
-	scaleX = other.scaleX;
-	scaleY = other.scaleY;
-	rotation = other.rotation;
-	motionBlurAmount = other.motionBlurAmount;
-
-	SetMaxParticleCount(other.GetMaxParticleCount());
-}
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 {
@@ -120,35 +47,20 @@ void wiEmittedParticle::CreateSelfBuffers()
 	}
 	buffersUpToDate = true;
 
-	SAFE_DELETE(particleBuffer);
-	SAFE_DELETE(aliveList[0]);
-	SAFE_DELETE(aliveList[1]);
-	SAFE_DELETE(deadList);
-	SAFE_DELETE(distanceBuffer);
-	SAFE_DELETE(sphPartitionCellIndices);
-	SAFE_DELETE(sphPartitionCellOffsets);
-	SAFE_DELETE(densityBuffer);
-	SAFE_DELETE(counterBuffer);
-	SAFE_DELETE(indirectBuffers);
-	SAFE_DELETE(constantBuffer);
-	SAFE_DELETE(debugDataReadbackBuffer);
-	SAFE_DELETE(debugDataReadbackIndexBuffer);
-	SAFE_DELETE(debugDataReadbackDistanceBuffer);
-
-	particleBuffer = new GPUBuffer;
-	aliveList[0] = new GPUBuffer;
-	aliveList[1] = new GPUBuffer;
-	deadList = new GPUBuffer;
-	distanceBuffer = new GPUBuffer;
-	sphPartitionCellIndices = new GPUBuffer;
-	sphPartitionCellOffsets = new GPUBuffer;
-	densityBuffer = new GPUBuffer;
-	counterBuffer = new GPUBuffer;
-	indirectBuffers = new GPUBuffer;
-	constantBuffer = new GPUBuffer;
-	debugDataReadbackBuffer = new GPUBuffer;
-	debugDataReadbackIndexBuffer = new GPUBuffer;
-	debugDataReadbackDistanceBuffer = new GPUBuffer;
+	particleBuffer.reset(new GPUBuffer);
+	aliveList[0].reset(new GPUBuffer);
+	aliveList[1].reset(new GPUBuffer);
+	deadList.reset(new GPUBuffer);
+	distanceBuffer.reset(new GPUBuffer);
+	sphPartitionCellIndices.reset(new GPUBuffer);
+	sphPartitionCellOffsets.reset(new GPUBuffer);
+	densityBuffer.reset(new GPUBuffer);
+	counterBuffer.reset(new GPUBuffer);
+	indirectBuffers.reset(new GPUBuffer);
+	constantBuffer.reset(new GPUBuffer);
+	debugDataReadbackBuffer.reset(new GPUBuffer);
+	debugDataReadbackIndexBuffer.reset(new GPUBuffer);
+	debugDataReadbackDistanceBuffer.reset(new GPUBuffer);
 
 
 	// GPU-local buffer descriptors:
@@ -162,13 +74,13 @@ void wiEmittedParticle::CreateSelfBuffers()
 	// Particle buffer:
 	bd.StructureByteStride = sizeof(Particle);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer.get());
 
 	// Alive index lists (double buffered):
 	bd.StructureByteStride = sizeof(uint32_t);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[0]);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[1]);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[0].get());
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, aliveList[1].get());
 
 	// Dead index list:
 	uint32_t* indices = new uint32_t[MAX_PARTICLES];
@@ -177,7 +89,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		indices[i] = i;
 	}
 	data.pSysMem = indices;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, deadList);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, deadList.get());
 	SAFE_DELETE_ARRAY(indices);
 	data.pSysMem = nullptr;
 
@@ -190,24 +102,24 @@ void wiEmittedParticle::CreateSelfBuffers()
 		distances[i] = 0;
 	}
 	data.pSysMem = distances;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, distanceBuffer.get());
 	SAFE_DELETE_ARRAY(distances);
 	data.pSysMem = nullptr;
 
 	// SPH Partitioning grid indices per particle:
 	bd.StructureByteStride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellIndices);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellIndices.get());
 
 	// SPH Partitioning grid cell offsets into particle index list:
 	bd.StructureByteStride = sizeof(uint32_t);
 	bd.ByteWidth = bd.StructureByteStride * SPH_PARTITION_BUCKET_COUNT;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellOffsets);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sphPartitionCellOffsets.get());
 
 	// Density buffer (for SPH simulation):
 	bd.StructureByteStride = sizeof(float);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, densityBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, densityBuffer.get());
 
 	// Particle System statistics:
 	ParticleCounters counters;
@@ -220,7 +132,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, counterBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, counterBuffer.get());
 	data.pSysMem = nullptr;
 
 	// Indirect Execution buffer:
@@ -230,7 +142,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
 		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
 		sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers.get());
 
 	// Constant buffer:
 	bd.Usage = USAGE_DYNAMIC;
@@ -238,7 +150,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer);
+	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer.get());
 
 	// Debug information CPU-readback buffer:
 	{
@@ -247,7 +159,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackBuffer);
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackBuffer.get());
 	}
 
 	// Sorting debug buffers:
@@ -257,7 +169,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackIndexBuffer);
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackIndexBuffer.get());
 	}
 	{
 		GPUBufferDesc debugBufDesc = distanceBuffer->GetDesc();
@@ -265,7 +177,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		debugBufDesc.CPUAccessFlags = CPU_ACCESS_READ;
 		debugBufDesc.BindFlags = 0;
 		debugBufDesc.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackDistanceBuffer);
+		wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, debugDataReadbackDistanceBuffer.get());
 	}
 }
 
@@ -291,21 +203,16 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 	return retVal;
 }
 
-XMFLOAT3 wiEmittedParticle::GetPosition() const
-{
-	return object == nullptr ? XMFLOAT3(0, 0, 0) : object->translation;
-}
-
 void wiEmittedParticle::Update(float dt)
 {
-	if (PAUSED)
+	if (IsPaused())
 		return;
 
 	emit += (float)count*dt;
 }
 void wiEmittedParticle::Burst(float num)
 {
-	if (PAUSED)
+	if (IsPaused())
 		return;
 
 	emit += num;
@@ -313,29 +220,31 @@ void wiEmittedParticle::Burst(float num)
 void wiEmittedParticle::Restart()
 {
 	buffersUpToDate = false;
-	PAUSED = false;
+	SetPaused(false);
 }
 
 //#define DEBUG_SORTING // slow but great for debug!!
-void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
+void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID)
 {
+	center = transform.GetPosition();
+
 	CreateSelfBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 
-	if (!PAUSED)
+	if (!IsPaused())
 	{
 
 		device->EventBegin("UpdateEmittedParticles", threadID);
 
 		EmittedParticleCB cb;
-		cb.xEmitterWorld = object->world;
+		cb.xEmitterWorld = transform.world;
 		cb.xEmitCount = (UINT)emit;
-		cb.xEmitterMeshIndexCount = (UINT)object->mesh->indices.size();
-		cb.xEmitterMeshVertexPositionStride = sizeof(Mesh::Vertex_POS);
+		cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (UINT)mesh->indices.size();
+		cb.xEmitterMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 		cb.xEmitterRandomness = wiRandom::getRandom(0, 1000) * 0.001f;
-		cb.xParticleLifeSpan = life / 60.0f;
+		cb.xParticleLifeSpan = life;
 		cb.xParticleLifeSpanRandomness = random_life;
 		cb.xParticleNormalFactor = normal_factor;
 		cb.xParticleRandomFactor = random_factor;
@@ -343,8 +252,8 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		cb.xParticleSize = size;
 		cb.xParticleMotionBlurAmount = motionBlurAmount;
 		cb.xParticleRotation = rotation * XM_PI * 60;
-		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material->baseColor.x, material->baseColor.y, material->baseColor.z, 1));
-		cb.xEmitterOpacity = material->alpha;
+		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material.baseColor.x, material.baseColor.y, material.baseColor.z, 1));
+		cb.xEmitterOpacity = material.GetOpacity();
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
@@ -361,31 +270,30 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		cb.xSPH_K = SPH_K;
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;
-		cb.xSPH_ENABLED = SPH_FLUIDSIMULATION ? 1 : 0;
+		cb.xSPH_ENABLED = IsSPHEnabled() ? 1 : 0;
 
-		device->UpdateBuffer(constantBuffer, &cb, threadID);
-		device->BindConstantBuffer(CS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+		device->UpdateBuffer(constantBuffer.get(), &cb, threadID);
+		device->BindConstantBuffer(CS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 		GPUResource* uavs[] = {
-			particleBuffer,
-			aliveList[0], // CURRENT alivelist
-			aliveList[1], // NEW alivelist
-			deadList,
-			counterBuffer,
-			indirectBuffers,
-			distanceBuffer,
+			particleBuffer.get(),
+			aliveList[0].get(), // CURRENT alivelist
+			aliveList[1].get(), // NEW alivelist
+			deadList.get(),
+			counterBuffer.get(),
+			indirectBuffers.get(),
+			distanceBuffer.get(),
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
 		GPUResource* resources[] = {
-			wiTextureHelper::getInstance()->getRandom64x64(),
-			object->mesh->indexBuffer,
-			object->mesh->vertexBuffer_POS,
+			mesh == nullptr ? nullptr : mesh->indexBuffer.get(),
+			mesh == nullptr ? nullptr : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get()),
 		};
 		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 		GPUResource* indres[] = {
-			indirectBuffers
+			indirectBuffers.get()
 		};
 		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
 
@@ -400,12 +308,12 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		// emit the required amount if there are free slots in dead list
 		device->EventBegin("Emit", threadID);
-		device->BindComputePSO(&CPSO_emit, threadID);
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
+		device->BindComputePSO(mesh == nullptr ? &CPSO_emit : &CPSO_emit_FROMMESH, threadID);
+		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		device->EventEnd(threadID);
 
-		if (SPH_FLUIDSIMULATION)
+		if (IsSPHEnabled())
 		{
 			wiProfiler::GetInstance().BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
 
@@ -418,28 +326,28 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->BindComputePSO(&CPSO_sphpartition, threadID);
 			device->UnbindUAVs(0, 8, threadID);
 			GPUResource* res_partition[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				particleBuffer,
+				aliveList[0].get(), // CURRENT alivelist
+				counterBuffer.get(),
+				particleBuffer.get(),
 			};
 			device->BindResources(CS, res_partition, 0, ARRAYSIZE(res_partition), threadID);
 			GPUResource* uav_partition[] = {
-				sphPartitionCellIndices,
+				sphPartitionCellIndices.get(),
 			};
 			device->BindUAVs(CS, uav_partition, 0, ARRAYSIZE(uav_partition), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), threadID);
 			device->EventEnd(threadID);
 
 			// 2.) Sort particle index list based on partition grid cell index:
-			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0], threadID);
+			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices.get(), counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0].get(), threadID);
 
 			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
 			device->EventBegin("PartitionOffsetsReset", threadID);
 			device->BindComputePSO(&CPSO_sphpartitionoffsetsreset, threadID);
 			device->UnbindUAVs(0, 8, threadID);
 			GPUResource* uav_partitionoffsets[] = {
-				sphPartitionCellOffsets,
+				sphPartitionCellOffsets.get(),
 			};
 			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), threadID);
 			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, threadID);
@@ -450,12 +358,12 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->EventBegin("PartitionOffsets", threadID);
 			device->BindComputePSO(&CPSO_sphpartitionoffsets, threadID);
 			GPUResource* res_partitionoffsets[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				sphPartitionCellIndices,
+				aliveList[0].get(), // CURRENT alivelist
+				counterBuffer.get(),
+				sphPartitionCellIndices.get(),
 			};
 			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
 			device->EventEnd(threadID);
 
@@ -466,18 +374,18 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->BindComputePSO(&CPSO_sphdensity, threadID);
 			device->UnbindUAVs(0, 8, threadID);
 			GPUResource* res_density[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				particleBuffer,
-				sphPartitionCellIndices,
-				sphPartitionCellOffsets,
+				aliveList[0].get(), // CURRENT alivelist
+				counterBuffer.get(),
+				particleBuffer.get(),
+				sphPartitionCellIndices.get(),
+				sphPartitionCellOffsets.get(),
 			};
 			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
 			GPUResource* uav_density[] = {
-				densityBuffer
+				densityBuffer.get()
 			};
 			device->BindUAVs(CS, uav_density, 0, ARRAYSIZE(uav_density), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), threadID);
 			device->EventEnd(threadID);
 
@@ -486,18 +394,18 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			device->BindComputePSO(&CPSO_sphforce, threadID);
 			device->UnbindUAVs(0, 8, threadID);
 			GPUResource* res_force[] = {
-				aliveList[0], // CURRENT alivelist
-				counterBuffer,
-				densityBuffer,
-				sphPartitionCellIndices,
-				sphPartitionCellOffsets,
+				aliveList[0].get(), // CURRENT alivelist
+				counterBuffer.get(),
+				densityBuffer.get(),
+				sphPartitionCellIndices.get(),
+				sphPartitionCellOffsets.get(),
 			};
 			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
 			GPUResource* uav_force[] = {
-				particleBuffer,
+				particleBuffer.get(),
 			};
 			device->BindUAVs(CS, uav_force, 0, ARRAYSIZE(uav_force), threadID);
-			device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), threadID);
 			device->EventEnd(threadID);
 
@@ -514,9 +422,9 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
 
 		// update CURRENT alive list, write NEW alive list
-		if (SORTING)
+		if (IsSorted())
 		{
-			if (DEPTHCOLLISIONS)
+			if (IsDepthCollisionEnabled())
 			{
 				device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
 			}
@@ -527,7 +435,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 		else
 		{
-			if (DEPTHCOLLISIONS)
+			if (IsDepthCollisionEnabled())
 			{
 				device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
 			}
@@ -536,7 +444,7 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 				device->BindComputePSO(&CPSO_simulate, threadID);
 			}
 		}
-		device->DispatchIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
+		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		device->EventEnd(threadID);
 
@@ -548,26 +456,26 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	}
 
-	if (SORTING)
+	if (IsSorted())
 	{
 #ifdef DEBUG_SORTING
-		vector<uint32_t> before(maxCount);
-		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, before.data(), threadID);
+		vector<uint32_t> before(MAX_PARTICLES);
+		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), before.data(), threadID);
 
-		device->DownloadBuffer(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
+		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, threadID);
 		uint32_t particleCount = debugData.aliveCount_afterSimulation;
 #endif // DEBUG_SORTING
 
 
-		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], threadID);
+		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer.get(), counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1].get(), threadID);
 
 
 #ifdef DEBUG_SORTING
-		vector<uint32_t> after(maxCount);
-		device->DownloadBuffer(aliveList[1], debugDataReadbackIndexBuffer, after.data(), threadID);
+		vector<uint32_t> after(MAX_PARTICLES);
+		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), after.data(), threadID);
 
-		vector<float> distances(maxCount);
-		device->DownloadBuffer(distanceBuffer, debugDataReadbackDistanceBuffer, distances.data(), threadID);
+		vector<float> distances(MAX_PARTICLES);
+		device->DownloadResource(distanceBuffer.get(), debugDataReadbackDistanceBuffer.get(), distances.data(), threadID);
 
 		if (particleCount > 1)
 		{
@@ -610,25 +518,25 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 			// Also we can reupload CPU sorted particles to verify:
 			if (!valid)
 			{
-				device->UpdateBuffer(aliveList[1], before.data(), threadID);
+				device->UpdateBuffer(aliveList[1].get(), before.data(), threadID);
 			}
 		}
 #endif // DEBUG_SORTING
 	}
 
-	if (!PAUSED)
+	if (!IsPaused())
 	{
 		// finish updating, update draw argument buffer:
 		device->EventBegin("FinishUpdate", threadID);
 		device->BindComputePSO(&CPSO_finishUpdate, threadID);
 
 		GPUResource* res[] = {
-			counterBuffer,
+			counterBuffer.get(),
 		};
 		device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
 
 		GPUResource* uavs[] = {
-			indirectBuffers,
+			indirectBuffers.get(),
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -641,18 +549,18 @@ void wiEmittedParticle::UpdateRenderData(GRAPHICSTHREAD threadID)
 
 
 		// Swap CURRENT alivelist with NEW alivelist
-		SwapPtr(aliveList[0], aliveList[1]);
+		aliveList[0].swap(aliveList[1]);
 		emit -= (UINT)emit;
 	}
 
-	if (DEBUG)
+	if (IsDebug())
 	{
-		device->DownloadResource(counterBuffer, debugDataReadbackBuffer, &debugData, threadID);
+		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, threadID);
 	}
 }
 
 
-void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
+void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", threadID);
@@ -663,70 +571,49 @@ void wiEmittedParticle::Draw(GRAPHICSTHREAD threadID)
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO[material->blendFlag][shaderType], threadID);
+		device->BindGraphicsPSO(&PSO[material.blendMode][shaderType], threadID);
+		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 	}
 
-	device->BindConstantBuffer(VS, constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 	GPUResource* res[] = {
-		particleBuffer,
-		aliveList[0]
+		particleBuffer.get(),
+		aliveList[0].get()
 	};
 	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
 	device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);
 
-	if (!wiRenderer::IsWireRender() && material->texture)
-	{
-		device->BindResource(PS, material->texture, TEXSLOT_ONDEMAND0, threadID);
-	}
-
-	device->DrawInstancedIndirect(indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
+	device->DrawInstancedIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
 
 	device->EventEnd(threadID);
-}
-
-
-void wiEmittedParticle::CleanUp()
-{
-	SAFE_DELETE(particleBuffer);
-	SAFE_DELETE(aliveList[0]);
-	SAFE_DELETE(aliveList[1]);
-	SAFE_DELETE(deadList);
-	SAFE_DELETE(distanceBuffer);
-	SAFE_DELETE(densityBuffer);
-	SAFE_DELETE(counterBuffer);
-	SAFE_DELETE(indirectBuffers);
-	SAFE_DELETE(constantBuffer);
-	SAFE_DELETE(debugDataReadbackBuffer);
-	SAFE_DELETE(debugDataReadbackIndexBuffer);
-	SAFE_DELETE(debugDataReadbackDistanceBuffer);
 }
 
 
 
 void wiEmittedParticle::LoadShaders()
 {
-	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticleVS.cso", wiResourceManager::VERTEXSHADER));
-	
+	std::string path = wiRenderer::GetShaderPath();
 
-
-	pixelShader[SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_soft.cso", wiResourceManager::PIXELSHADER));
-	pixelShader[SOFT_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_soft_distortion.cso", wiResourceManager::PIXELSHADER));
-	pixelShader[SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
+	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticleVS.cso", wiResourceManager::VERTEXSHADER));
 	
+	pixelShader[SOFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticlePS_soft.cso", wiResourceManager::PIXELSHADER));
+	pixelShader[SOFT_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticlePS_soft_distortion.cso", wiResourceManager::PIXELSHADER));
+	pixelShader[SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 	
-	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
-	finishUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_finishUpdateCS.cso", wiResourceManager::COMPUTESHADER));
-	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
-	sphpartitionCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphpartitionCS.cso", wiResourceManager::COMPUTESHADER));
-	sphpartitionoffsetsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphpartitionoffsetsCS.cso", wiResourceManager::COMPUTESHADER));
-	sphpartitionoffsetsresetCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphpartitionoffsetsresetCS.cso", wiResourceManager::COMPUTESHADER));
-	sphdensityCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphdensityCS.cso", wiResourceManager::COMPUTESHADER));
-	sphforceCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_sphforceCS.cso", wiResourceManager::COMPUTESHADER));
-	simulateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
-	simulateCS_SORTING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_SORTING.cso", wiResourceManager::COMPUTESHADER));
-	simulateCS_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
-	simulateCS_SORTING_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(wiRenderer::SHADERPATH + "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
+	kickoffUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_kickoffUpdateCS.cso", wiResourceManager::COMPUTESHADER));
+	finishUpdateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_finishUpdateCS.cso", wiResourceManager::COMPUTESHADER));
+	emitCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_emitCS.cso", wiResourceManager::COMPUTESHADER));
+	emitCS_FROMMESH = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_emitCS_FROMMESH.cso", wiResourceManager::COMPUTESHADER));
+	sphpartitionCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_sphpartitionCS.cso", wiResourceManager::COMPUTESHADER));
+	sphpartitionoffsetsCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_sphpartitionoffsetsCS.cso", wiResourceManager::COMPUTESHADER));
+	sphpartitionoffsetsresetCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_sphpartitionoffsetsresetCS.cso", wiResourceManager::COMPUTESHADER));
+	sphdensityCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_sphdensityCS.cso", wiResourceManager::COMPUTESHADER));
+	sphforceCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_sphforceCS.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS_SORTING = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_simulateCS_SORTING.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
+	simulateCS_SORTING_DEPTHCOLLISIONS = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -773,6 +660,9 @@ void wiEmittedParticle::LoadShaders()
 
 		desc.cs = emitCS;
 		device->CreateComputePSO(&desc, &CPSO_emit);
+
+		desc.cs = emitCS_FROMMESH;
+		device->CreateComputePSO(&desc, &CPSO_emit_FROMMESH);
 
 		desc.cs = sphpartitionCS;
 		device->CreateComputePSO(&desc, &CPSO_sphpartition);
@@ -890,26 +780,23 @@ void wiEmittedParticle::CleanUpStatic()
 		SAFE_DELETE(pixelShader[i]);
 	}
 	SAFE_DELETE(emitCS);
+	SAFE_DELETE(emitCS_FROMMESH);
 	SAFE_DELETE(simulateCS);
 	SAFE_DELETE(simulateCS_SORTING);
 	SAFE_DELETE(simulateCS_DEPTHCOLLISIONS);
 	SAFE_DELETE(simulateCS_SORTING_DEPTHCOLLISIONS);
 }
 
-void wiEmittedParticle::Serialize(wiArchive& archive)
+
+void wiEmittedParticle::Serialize(wiArchive& archive, uint32_t seed)
 {
 	if (archive.IsReadMode())
 	{
-		archive >> emit;
-		if (archive.GetVersion() < 9)
-		{
-			XMFLOAT4X4 transform4;
-			XMFLOAT3X3 transform3;
-			archive >> transform4;
-			archive >> transform3;
-		}
-		archive >> name;
-		archive >> materialName;
+		archive >> _flags;
+		archive >> (uint32_t&)shaderType;
+		wiECS::SerializeEntity(archive, meshID, seed);
+		archive >> MAX_PARTICLES;
+		archive >> FIXED_TIMESTEP;
 		archive >> size;
 		archive >> random_factor;
 		archive >> normal_factor;
@@ -920,43 +807,19 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		archive >> scaleY;
 		archive >> rotation;
 		archive >> motionBlurAmount;
-		if (archive.GetVersion() < 9)
-		{
-			string lightName;
-			archive >> lightName;
-		}
-		if (archive.GetVersion() >= 11)
-		{
-			archive >> MAX_PARTICLES;
-			archive >> SORTING;
-		}
-		if (archive.GetVersion() >= 12)
-		{
-			archive >> DEPTHCOLLISIONS;
-		}
-		if (archive.GetVersion() >= 14)
-		{
-			int tmp;
-			archive >> tmp;
-			shaderType = (PARTICLESHADERTYPE)tmp;
-		}
-		if (archive.GetVersion() >= 18)
-		{
-			archive >> mass;
-			archive >> FIXED_TIMESTEP;
-			archive >> SPH_FLUIDSIMULATION;
-			archive >> SPH_h;
-			archive >> SPH_K;
-			archive >> SPH_p0;
-			archive >> SPH_e;
-		}
-
+		archive >> mass;
+		archive >> SPH_h;
+		archive >> SPH_K;
+		archive >> SPH_p0;
+		archive >> SPH_e;
 	}
 	else
 	{
-		archive << emit;
-		archive << name;
-		archive << materialName;
+		archive << _flags;
+		archive << (uint32_t)shaderType;
+		wiECS::SerializeEntity(archive, meshID, seed);
+		archive << MAX_PARTICLES;
+		archive << FIXED_TIMESTEP;
 		archive << size;
 		archive << random_factor;
 		archive << normal_factor;
@@ -967,29 +830,12 @@ void wiEmittedParticle::Serialize(wiArchive& archive)
 		archive << scaleY;
 		archive << rotation;
 		archive << motionBlurAmount;
-		if (archive.GetVersion() >= 11)
-		{
-			archive << MAX_PARTICLES;
-			archive << SORTING;
-		}
-		if (archive.GetVersion() >= 12)
-		{
-			archive << DEPTHCOLLISIONS;
-		}
-		if (archive.GetVersion() >= 14)
-		{
-			archive << (int)shaderType;
-		}
-		if (archive.GetVersion() >= 18)
-		{
-			archive << mass;
-			archive << FIXED_TIMESTEP;
-			archive << SPH_FLUIDSIMULATION;
-			archive << SPH_h;
-			archive << SPH_K;
-			archive << SPH_p0;
-			archive << SPH_e;
-		}
-
+		archive << mass;
+		archive << SPH_h;
+		archive << SPH_K;
+		archive << SPH_p0;
+		archive << SPH_e;
 	}
+}
+
 }

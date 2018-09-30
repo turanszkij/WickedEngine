@@ -25,7 +25,7 @@ struct ID3D11DepthStencilView;
 struct ID3D11Query;
 struct ID3D11Predicate;
 
-typedef size_t wiCPUHandle;
+typedef uint64_t wiCPUHandle;
 #define WI_NULL_HANDLE (0)
 
 

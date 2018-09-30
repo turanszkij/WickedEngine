@@ -33,7 +33,7 @@ void main(
 	for (uint i = 0; i < 3; ++i)
 	{
 		// World space -> Voxel grid space:
-		output[i].pos.xyz = (input[i].pos.xyz - g_xWorld_VoxelRadianceDataCenter) * g_xWorld_VoxelRadianceDataSize_Inverse;
+		output[i].pos.xyz = (input[i].pos.xyz - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataSize_Inverse;
 
 		// Project onto dominant axis:
 		[flatten]
@@ -61,7 +61,7 @@ void main(
 	for (uint j = 0; j < 3; j++)
 	{
 		// Voxel grid space -> Clip space
-		output[j].pos.xy *= g_xWorld_VoxelRadianceDataRes_Inverse;
+		output[j].pos.xy *= g_xFrame_VoxelRadianceDataRes_Inverse;
 		output[j].pos.zw = 1;
 
 		// Append the rest of the parameters as is:
