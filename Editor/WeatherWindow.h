@@ -14,19 +14,14 @@ public:
 	WeatherWindow(wiGUI* gui);
 	~WeatherWindow();
 
-	wiECS::Entity entity = wiECS::INVALID_ENTITY;
-
 	void UpdateFromRenderer();
 
-	void SetEntity(wiECS::Entity entity);
-
-	wiSceneSystem::WeatherComponent* GetWeather() const;
+	wiSceneSystem::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
 	wiGUI* GUI;
 
 	wiWindow*		weatherWindow;
-	wiButton*		newWeatherButton;
 	wiSlider*		fogStartSlider;
 	wiSlider*		fogEndSlider;
 	wiSlider*		fogHeightSlider;
