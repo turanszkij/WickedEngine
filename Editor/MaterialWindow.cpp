@@ -353,8 +353,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->baseColorMapName = fileName;
-				texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
+				material->baseColorMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_baseColor_Button->SetText(material->baseColorMapName);
 			}
 		}
 	});
@@ -405,8 +405,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->normalMapName = fileName;
-				texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
+				material->normalMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_normal_Button->SetText(material->normalMapName);
 			}
 		}
 	});
@@ -457,8 +457,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->surfaceMapName = fileName;
-				texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
+				material->surfaceMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_surface_Button->SetText(material->surfaceMapName);
 			}
 		}
 	});
@@ -509,8 +509,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
-				material->displacementMapName = fileName;
-				texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));
+				material->displacementMapName = wiHelper::GetFileNameFromPath(fileName);
+				texture_displacement_Button->SetText(material->displacementMapName);
 			}
 		}
 	});

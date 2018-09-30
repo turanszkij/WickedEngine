@@ -53,7 +53,8 @@ TestsRenderer::TestsRenderer()
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	testSelector->AddItem("HelloWorld");
 	testSelector->AddItem("Model");
-	testSelector->AddItem("Emitter");
+	testSelector->AddItem("EmittedParticle");
+	testSelector->AddItem("HairParticle");
 	testSelector->AddItem("Lua Script");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -80,6 +81,9 @@ TestsRenderer::TestsRenderer()
 			wiRenderer::LoadModel("../models/emitter_skinned.wiscene");
 			break;
 		case 3:
+			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			break;
+		case 4:
 			wiLua::GetGlobal()->RunFile("test_script.lua");
 			break;
 		}

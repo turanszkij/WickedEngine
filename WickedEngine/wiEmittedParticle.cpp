@@ -795,6 +795,7 @@ void wiEmittedParticle::Serialize(wiArchive& archive, uint32_t seed)
 		archive >> _flags;
 		archive >> (uint32_t&)shaderType;
 		wiECS::SerializeEntity(archive, meshID, seed);
+		archive >> MAX_PARTICLES;
 		archive >> FIXED_TIMESTEP;
 		archive >> size;
 		archive >> random_factor;
@@ -817,6 +818,7 @@ void wiEmittedParticle::Serialize(wiArchive& archive, uint32_t seed)
 		archive << _flags;
 		archive << (uint32_t)shaderType;
 		wiECS::SerializeEntity(archive, meshID, seed);
+		archive << MAX_PARTICLES;
 		archive << FIXED_TIMESTEP;
 		archive << size;
 		archive << random_factor;
