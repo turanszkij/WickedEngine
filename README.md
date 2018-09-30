@@ -128,7 +128,6 @@ When everything is initialized properly, you should see a black screen. From thi
 - ./Tests/								- Testing framework project
 - ./Template_Windows					- Template project for Windows applications
 - ./WickedEngine.sln 					- Visual Studio Solution
-- ./io_export_wicked_wi_bin.py 			- Blender 2.72+ script to export scene
 
 ### Scripting API:
 
@@ -137,44 +136,10 @@ contain a scripting input method toggled by the "Home" key. A blue screen will b
 For further details, please check the scripting API documentation: [Wicked Engine Scripting API](Documentation/ScriptingAPI-Documentation.md)
 
 
-### Editor:
-
-The editor is now available but also work in progress. Just build the editor project and run it, then you will be presented with a blank scene.
-You can import files exported from Blender (.wio) with the scipt described below. You can also save models into the .wimf format from the Editor
-and open them. You can also open OBJ format models, which are very simple model files, not supporting many features provided by the engine.
-Test model and scene files are now available in the WickedEngine/models directory.
-
-
 ### Model import/export:
 
 The Editor supports the importing of some common model formats (the list will potentially grow): <b>OBJ</b>, <b>GLTF 2.0</b> <br/>
-The Engine itself can open the serialized model format (<b>WIMF</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WIMF</b>, then any WickedEngine application can open them.<br/>
-
-There is an additional model format designed for Blender supporting like skeletal animations, particle systems, physics, etc... Use the provided Blender exporter python script: <b>io_export_wicked_wi_bin.py</b> <br/>
-The Editor can open <b>WIO</b> files exported from Blender, and save them as <b>WIMF</b> models.<br/><br/>
-
-Notes on exporting:
-- Names should not contain spaces inside Blender<br/>
-	The problem is the c++ side code which parses the text files such as it breaks parsing on spaces. 
-	Mesh files are already exported as binary, so those are okay
-	Suggested fix: write binary export for everything
-- Separate files generated<br/>
-	I've written the exporter to write different categories of the scene to different files for easier debugging
-	from a text editor. If the exporter is rewritten to write binary for everything, such debugging will
-	not be possible so might as well merge the files (except mesh files and error message file)
-- Only animation supported is skeletal animation<br/>
-- Animation Action names should contain their armature's name so that the exporter matches them correctly<br/>
-	Suggested fix: find a better way of matching armatures and actions
-- Animation only with linear curves (so no curves)<br/>
-	Suggested fix: implement curves support into the engine and the exporter
-- Only one uv map support<br/>
-	Light maps and other effects requiring multiple uv maps are not possible yet.
+The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
+The old Blender exporter script is now not supported! (from version 0.21.0)
 	
-
-### Graphics:
-
-Please feel free to learn/copy/use any shaders or rendering techniques that you can find here. General information about the engine that might help you port these to your own solution
-is summarized in the image below:
-
-![InformationSheet](Documentation/information_sheet.png)
 
