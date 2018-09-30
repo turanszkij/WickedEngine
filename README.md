@@ -23,8 +23,8 @@
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
 The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code shall not contain any parts with other licensing. The code is hosted on GitHub: https://github.com/turanszkij/WickedEngine For any questions, please open an issue there.
 
-From version <b>0.21.0</b> onwards, the engine was changed to use <b>Entity-Component System</b> and the old Object-Oriented system was dropped. It is not backwards-compatible, so assets/scripts made with the old system are unfortunately not usable.
-[You can find a snapshot of the old Object-Oriented codebase (0.20.6) here, but it will not be updated anymore!][ba]
+From version <b>0.21.0</b> onwards, the engine was changed to use Entity-Component System and the old Object-Oriented system was dropped. <b>It is not backwards-compatible</b>, so assets/scripts made with the old system are unfortunately not usable.
+You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba], but it will not be updated anymore.
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
