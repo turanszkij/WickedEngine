@@ -305,7 +305,7 @@ void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 
 	if (getShadowsEnabled())
 	{
-		wiRenderer::DrawForShadowMap(threadID, getLayerMask());
+		wiRenderer::DrawForShadowMap(wiRenderer::GetCamera(), threadID, getLayerMask());
 	}
 
 	wiRenderer::VoxelRadiance(threadID);

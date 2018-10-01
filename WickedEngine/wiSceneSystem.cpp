@@ -836,7 +836,7 @@ namespace wiSceneSystem
 
 		RunForceUpdateSystem(transforms, forces);
 
-		RunLightUpdateSystem(wiRenderer::GetCamera(), transforms, aabb_lights, lights, &weather);
+		RunLightUpdateSystem(transforms, aabb_lights, lights, &weather);
 
 		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
 	}
@@ -1707,7 +1707,6 @@ namespace wiSceneSystem
 		}
 	}
 	void RunLightUpdateSystem(
-		const CameraComponent& cascadeCamera,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<AABB>& aabb_lights,
 		ComponentManager<LightComponent>& lights,
@@ -1741,89 +1740,11 @@ namespace wiSceneSystem
 					weather->sunDirection = light.direction;
 				}
 
-				if (light.IsCastingShadow())
-				{
-					XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-					float nearPlane = cascadeCamera.zNearP;
-					float farPlane = cascadeCamera.zFarP;
-					XMMATRIX view = cascadeCamera.GetView();
-					XMMATRIX projection = cascadeCamera.GetRealProjection();
-					XMMATRIX world = XMMatrixIdentity();
-
-					// Set up three shadow cascades (far - mid - near):
-					const float referenceFrustumDepth = 800.0f;									// this was the frustum depth used for reference
-					const float currentFrustumDepth = farPlane - nearPlane;						// current frustum depth
-					const float lerp0 = referenceFrustumDepth / currentFrustumDepth * 0.5f;		// third slice distance from cam (percentage)
-					const float lerp1 = referenceFrustumDepth / currentFrustumDepth * 0.12f;	// second slice distance from cam (percentage)
-					const float lerp2 = referenceFrustumDepth / currentFrustumDepth * 0.016f;	// first slice distance from cam (percentage)
-
-					// Create shadow cascades for main camera:
-					if (light.shadowCam_dirLight.empty())
-					{
-						light.shadowCam_dirLight.resize(3);
-					}
-
-					// Place the shadow cascades inside the viewport:
-					if (!light.shadowCam_dirLight.empty())
-					{
-						// frustum top left - near
-						XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum top left - far
-						XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum bottom right - near
-						XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum bottom right - far
-						XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-
-						// calculate cascade projection sizes:
-						float size0 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp0), XMVectorLerp(a0, a1, lerp0))));
-						float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp1), XMVectorLerp(a0, a1, lerp1))));
-						float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp2), XMVectorLerp(a0, a1, lerp2))));
-
-						XMVECTOR rotDefault = XMQuaternionIdentity();
-
-						// create shadow cascade projections:
-						light.shadowCam_dirLight[0] = LightComponent::SHCAM(size0, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
-						light.shadowCam_dirLight[1] = LightComponent::SHCAM(size1, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
-						light.shadowCam_dirLight[2] = LightComponent::SHCAM(size2, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
-
-						// frustum center - near
-						XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-						// frustum center - far
-						XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
-
-						// Avoid shadowmap texel swimming by aligning them to a discrete grid:
-						float f0 = light.shadowCam_dirLight[0].size / (float)wiRenderer::GetShadowRes2D();
-						float f1 = light.shadowCam_dirLight[1].size / (float)wiRenderer::GetShadowRes2D();
-						float f2 = light.shadowCam_dirLight[2].size / (float)wiRenderer::GetShadowRes2D();
-						XMVECTOR e0 = XMVectorFloor(XMVectorLerp(c, d, lerp0) / f0) * f0;
-						XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
-						XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;
-
-						XMMATRIX rrr = XMMatrixRotationQuaternion(R);
-
-						light.shadowCam_dirLight[0].Update(rrr, e0);
-						light.shadowCam_dirLight[1].Update(rrr, e1);
-						light.shadowCam_dirLight[2].Update(rrr, e2);
-					}
-				}
-
 				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 			}
 			break;
 			case LightComponent::SPOT:
 			{
-				if (light.IsCastingShadow())
-				{
-					if (light.shadowCam_spotLight.empty())
-					{
-						light.shadowCam_spotLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, 1), 0.1f, 1000.0f, light.fov));
-					}
-					light.shadowCam_spotLight[0].Update(W);
-					light.shadowCam_spotLight[0].farplane = light.range;
-					light.shadowCam_spotLight[0].Create_Perspective(light.fov);
-				}
-
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
 			}
 			break;
@@ -1833,27 +1754,6 @@ namespace wiSceneSystem
 			case LightComponent::RECTANGLE:
 			case LightComponent::TUBE:
 			{
-				if (light.IsCastingShadow())
-				{
-					if (light.shadowCam_pointLight.empty())
-					{
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //+x
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), 0.1f, 1000.0f, XM_PIDIV2)); //-x
-
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(1, 0, 0, -0), 0.1f, 1000.0f, XM_PIDIV2)); //+y
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, -1), 0.1f, 1000.0f, XM_PIDIV2)); //-y
-
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), 0.1f, 1000.0f, XM_PIDIV2)); //+z
-						light.shadowCam_pointLight.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), 0.1f, 1000.0f, XM_PIDIV2)); //-z
-					}
-					for (auto& x : light.shadowCam_pointLight) 
-					{
-						x.Update(T);
-						x.farplane = max(1.0f, light.range);
-						x.Create_Perspective(XM_PIDIV2);
-					}
-				}
-
 				if (light.type == LightComponent::POINT)
 				{
 					aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));

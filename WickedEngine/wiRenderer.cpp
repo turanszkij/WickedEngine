@@ -1182,6 +1182,164 @@ enum TILEDLIGHTING_DEBUG
 ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
 ComputePSO* CPSO[CSTYPE_LAST] = {};
 
+
+
+struct SHCAM
+{
+	XMFLOAT4X4 View, Projection;
+	XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
+	XMFLOAT3 Eye, At, Up;
+	float nearplane, farplane, size;
+
+	SHCAM() {
+		nearplane = 0.1f; farplane = 200, size = 0;
+		Init(XMQuaternionIdentity());
+		Create_Perspective(XM_PI / 2.0f);
+	}
+	//orthographic
+	SHCAM(float size, const XMVECTOR& dir, float nearP, float farP) {
+		nearplane = nearP;
+		farplane = farP;
+		Init(dir);
+		Create_Ortho(size);
+	};
+	//perspective
+	SHCAM(const XMFLOAT4& dir, float newNear, float newFar, float newFov) {
+		size = 0;
+		nearplane = newNear;
+		farplane = newFar;
+		Init(XMLoadFloat4(&dir));
+		Create_Perspective(newFov);
+	};
+	void Init(const XMVECTOR& dir) {
+		XMMATRIX rot = XMMatrixRotationQuaternion(dir);
+		XMVECTOR rEye = XMVectorSet(0, 0, 0, 0);
+		XMVECTOR rAt = XMVector3Transform(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), rot);
+		XMVECTOR rUp = XMVector3Transform(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
+		XMMATRIX rView = XMMatrixLookAtLH(rEye, rAt, rUp);
+
+		XMStoreFloat3(&Eye, rEye);
+		XMStoreFloat3(&At, rAt);
+		XMStoreFloat3(&Up, rUp);
+		XMStoreFloat4x4(&View, rView);
+	}
+	void Create_Ortho(float size) {
+		XMMATRIX rProjection = XMMatrixOrthographicOffCenterLH(-size * 0.5f, size*0.5f, -size * 0.5f, size*0.5f, farplane, nearplane);
+		XMStoreFloat4x4(&Projection, rProjection);
+		rProjection = XMMatrixOrthographicOffCenterLH(-size * 0.5f, size*0.5f, -size * 0.5f, size*0.5f, nearplane, farplane);
+		XMStoreFloat4x4(&realProjection, rProjection);
+		this->size = size;
+	}
+	void Create_Perspective(float fov) {
+		XMMATRIX rProjection = XMMatrixPerspectiveFovLH(fov, 1, farplane, nearplane);
+		XMStoreFloat4x4(&Projection, rProjection);
+		rProjection = XMMatrixPerspectiveFovLH(fov, 1, nearplane, farplane);
+		XMStoreFloat4x4(&realProjection, rProjection);
+	}
+	void Update(const XMVECTOR& pos) {
+		XMStoreFloat4x4(&View, XMMatrixTranslationFromVector(-pos)
+			* XMMatrixLookAtLH(XMLoadFloat3(&Eye), XMLoadFloat3(&At), XMLoadFloat3(&Up))
+		);
+	}
+	void Update(const XMMATRIX& mat) {
+		XMVECTOR sca, rot, tra;
+		XMMatrixDecompose(&sca, &rot, &tra, mat);
+
+		XMMATRIX mRot = XMMatrixRotationQuaternion(rot);
+
+		XMVECTOR rEye = XMVectorAdd(XMLoadFloat3(&Eye), tra);
+		XMVECTOR rAt = XMVectorAdd(XMVector3Transform(XMLoadFloat3(&At), mRot), tra);
+		XMVECTOR rUp = XMVector3Transform(XMLoadFloat3(&Up), mRot);
+
+		XMStoreFloat4x4(&View,
+			XMMatrixLookAtLH(rEye, rAt, rUp)
+		);
+	}
+	void Update(const XMMATRIX& rot, const XMVECTOR& tra)
+	{
+		XMVECTOR rEye = XMVectorAdd(XMLoadFloat3(&Eye), tra);
+		XMVECTOR rAt = XMVectorAdd(XMVector3Transform(XMLoadFloat3(&At), rot), tra);
+		XMVECTOR rUp = XMVector3Transform(XMLoadFloat3(&Up), rot);
+
+		XMStoreFloat4x4(&View,
+			XMMatrixLookAtLH(rEye, rAt, rUp)
+		);
+	}
+	XMMATRIX getVP() const {
+		return XMMatrixTranspose(XMLoadFloat4x4(&View)*XMLoadFloat4x4(&Projection));
+	}
+};
+void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
+{
+	const float zNearP = 0.1f;
+	const float zFarP = max(1.0f, light.range);
+	shcam = SHCAM(XMFLOAT4(0, 0, 0, 1), zNearP, zFarP, light.fov);
+	shcam.Update(XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+		XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)));
+}
+void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent& camera, SHCAM* shcams /*[3]*/)
+{
+
+	XMFLOAT2 screen = XMFLOAT2((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	float nearPlane = camera.zNearP;
+	float farPlane = camera.zFarP;
+	XMMATRIX view = camera.GetView();
+	XMMATRIX projection = camera.GetRealProjection();
+	XMMATRIX world = XMMatrixIdentity();
+
+	// Set up three shadow cascades (far - mid - near):
+	const float referenceFrustumDepth = 800.0f;									// this was the frustum depth used for reference
+	const float currentFrustumDepth = farPlane - nearPlane;						// current frustum depth
+	const float lerp0 = referenceFrustumDepth / currentFrustumDepth * 0.5f;		// third slice distance from cam (percentage)
+	const float lerp1 = referenceFrustumDepth / currentFrustumDepth * 0.12f;	// second slice distance from cam (percentage)
+	const float lerp2 = referenceFrustumDepth / currentFrustumDepth * 0.016f;	// first slice distance from cam (percentage)
+
+
+																				// Place the shadow cascades inside the viewport:
+
+																				// frustum top left - near
+	XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	// frustum top left - far
+	XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	// frustum bottom right - near
+	XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	// frustum bottom right - far
+	XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+
+	// calculate cascade projection sizes:
+	float size0 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp0), XMVectorLerp(a0, a1, lerp0))));
+	float size1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp1), XMVectorLerp(a0, a1, lerp1))));
+	float size2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp2), XMVectorLerp(a0, a1, lerp2))));
+
+	XMVECTOR rotDefault = XMQuaternionIdentity();
+
+	// create shadow cascade projections:
+	shcams[0] = SHCAM(size0, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+	shcams[1] = SHCAM(size1, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+	shcams[2] = SHCAM(size2, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
+
+	// frustum center - near
+	XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	// frustum center - far
+	XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+
+	// Avoid shadowmap texel swimming by aligning them to a discrete grid:
+	float f0 = shcams[0].size / (float)wiRenderer::GetShadowRes2D();
+	float f1 = shcams[1].size / (float)wiRenderer::GetShadowRes2D();
+	float f2 = shcams[2].size / (float)wiRenderer::GetShadowRes2D();
+	XMVECTOR e0 = XMVectorFloor(XMVectorLerp(c, d, lerp0) / f0) * f0;
+	XMVECTOR e1 = XMVectorFloor(XMVectorLerp(c, d, lerp1) / f1) * f1;
+	XMVECTOR e2 = XMVectorFloor(XMVectorLerp(c, d, lerp2) / f2) * f2;
+
+	XMMATRIX rrr = XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation));
+
+	shcams[0].Update(rrr, e0);
+	shcams[1].Update(rrr, e1);
+	shcams[2].Update(rrr, e2);
+}
+
+
+
 void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
 	bool tessellation = false)
 {
@@ -3312,14 +3470,14 @@ void UpdatePerFrameData(float dt)
 						switch (light.GetType())
 						{
 						case LightComponent::DIRECTIONAL:
-							if (!light.shadowCam_dirLight.empty() && (shadowCounter_2D + 2) < SHADOWCOUNT_2D)
+							if ((shadowCounter_2D + 2) < SHADOWCOUNT_2D)
 							{
 								light.shadowMap_index = shadowCounter_2D;
 								shadowCounter_2D += 3;
 							}
 							break;
 						case LightComponent::SPOT:
-							if (!light.shadowCam_spotLight.empty() && shadowCounter_2D < SHADOWCOUNT_2D)
+							if (shadowCounter_2D < SHADOWCOUNT_2D)
 							{
 								light.shadowMap_index = shadowCounter_2D;
 								shadowCounter_2D++;
@@ -3330,7 +3488,7 @@ void UpdatePerFrameData(float dt)
 						case LightComponent::DISC:
 						case LightComponent::RECTANGLE:
 						case LightComponent::TUBE:
-							if (!light.shadowCam_pointLight.empty() && shadowCounter_Cube < SHADOWCOUNT_CUBE)
+							if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
 							{
 								light.shadowMap_index = shadowCounter_Cube;
 								shadowCounter_Cube++;
@@ -3496,11 +3654,13 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				entityArray[entityCounter].directionWS = light.direction;
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (light.IsCastingShadow() && shadowIndex >= 0 && !light.shadowCam_dirLight.empty())
+				if (light.IsCastingShadow() && shadowIndex >= 0)
 				{
-					matrixArray[shadowIndex + 0] = light.shadowCam_dirLight[0].getVP();
-					matrixArray[shadowIndex + 1] = light.shadowCam_dirLight[1].getVP();
-					matrixArray[shadowIndex + 2] = light.shadowCam_dirLight[2].getVP();
+					SHCAM shcams[3];
+					CreateDirLightShadowCams(light, GetCamera(), shcams);
+					matrixArray[shadowIndex + 0] = shcams[0].getVP();
+					matrixArray[shadowIndex + 1] = shcams[1].getVP();
+					matrixArray[shadowIndex + 2] = shcams[2].getVP();
 					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 3);
 				}
 			}
@@ -3512,9 +3672,11 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (light.IsCastingShadow() && shadowIndex >= 0 && !light.shadowCam_spotLight.empty())
+				if (light.IsCastingShadow() && shadowIndex >= 0)
 				{
-					matrixArray[shadowIndex + 0] = light.shadowCam_spotLight[0].getVP();
+					SHCAM shcam;
+					CreateSpotLightShadowCam(light, shcam);
+					matrixArray[shadowIndex + 0] = shcam.getVP();
 					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 1);
 				}
 			}
@@ -4428,6 +4590,7 @@ void DrawLensFlares(GRAPHICSTHREAD threadID)
 	}
 }
 
+
 void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 {
 	if (resolution >= 0)
@@ -4511,7 +4674,7 @@ void SetShadowPropsCube(int resolution, int count)
 	}
 
 }
-void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
+void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask)
 {
 	if (IsWireRender())
 		return;
@@ -4589,14 +4752,17 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 				{
 				case LightComponent::DIRECTIONAL:
 				{
-					if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_dirLight.empty())
+					if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || light.shadowMap_index < 0)
 						break;
 					shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
+					SHCAM shcams[3];
+					CreateDirLightShadowCams(light, camera, shcams);
+
 					for (uint32_t cascade = 0; cascade < 3; ++cascade)
 					{
-						const float siz = light.shadowCam_dirLight[cascade].size * 0.5f;
-						const float f = light.shadowCam_dirLight[cascade].farplane * 0.5f;
+						const float siz = shcams[cascade].size * 0.5f;
+						const float f = shcams[cascade].farplane * 0.5f;
 						AABB boundingbox;
 						boundingbox.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(siz, siz, f));
 
@@ -4605,7 +4771,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 						for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 						{
 							const AABB& aabb = scene.aabb_objects[i];
-							if (boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&light.shadowCam_dirLight[cascade].View))).intersects(aabb))
+							if (boundingbox.get(XMMatrixInverse(0, XMLoadFloat4x4(&shcams[cascade].View))).intersects(aabb))
 							{
 								const ObjectComponent& object = scene.objects[i];
 								if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
@@ -4635,7 +4801,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 						if (!renderQueue.empty())
 						{
 							CameraCB cb;
-							XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_dirLight[cascade].getVP());
+							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
 							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
 							GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
@@ -4645,7 +4811,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 
 							// render opaque shadowmap:
 							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-							RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+							RenderMeshes(shcams[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
@@ -4654,7 +4820,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 									shadowMapArray_Transparent
 								};
 								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-								RenderMeshes(light.shadowCam_dirLight[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								RenderMeshes(shcams[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 							}
 							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
@@ -4664,12 +4830,16 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 				break;
 				case LightComponent::SPOT:
 				{
-					if (shadowCounter_2D >= SHADOWCOUNT_2D || light.shadowMap_index < 0 || light.shadowCam_spotLight.empty())
+					if (shadowCounter_2D >= SHADOWCOUNT_2D || light.shadowMap_index < 0)
 						break;
 					shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
+					SHCAM shcam;
+					CreateSpotLightShadowCam(light, shcam);
+
+					const float zFarP = max(1.0f, light.range);
 					Frustum frustum;
-					frustum.ConstructFrustum(light.shadowCam_spotLight[0].farplane, light.shadowCam_spotLight[0].realProjection, light.shadowCam_spotLight[0].View);
+					frustum.ConstructFrustum(zFarP, shcam.realProjection, shcam.View);
 
 					RenderQueue renderQueue;
 					bool transparentShadowsRequested = false;
@@ -4705,7 +4875,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
-						XMStoreFloat4x4(&cb.g_xCamera_VP, light.shadowCam_spotLight[0].getVP());
+						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
 						GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
@@ -4737,7 +4907,7 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 				case LightComponent::RECTANGLE:
 				case LightComponent::TUBE:
 				{
-					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || light.shadowMap_index < 0 || light.shadowCam_pointLight.empty())
+					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || light.shadowMap_index < 0)
 						break;
 					shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
@@ -4776,10 +4946,22 @@ void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask)
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
+						const float zNearP = 0.1f;
+						const float zFarP = max(1.0f, light.range);
+						SHCAM cameras[] = {
+							SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
+							SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
+							SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
+							SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
+							SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
+							SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
+						};
+
 						CubemapRenderCB cb;
-						for (size_t shcam = 0; shcam < light.shadowCam_pointLight.size(); ++shcam)
+						for (int shcam = 0; shcam < ARRAYSIZE(cameras); ++shcam)
 						{
-							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], light.shadowCam_pointLight[shcam].getVP());
+							cameras[shcam].Update(XMLoadFloat3(&light.position));
+							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].getVP());
 						}
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
@@ -5604,26 +5786,20 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		device->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe.textureIndex);
 		device->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
 
-
-		std::vector<LightComponent::SHCAM> cameras;
-		{
-			cameras.clear();
-
-			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //+x
-			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PI / 2.0f)); //-x
-
-			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PI / 2.0f)); //+y
-			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PI / 2.0f)); //-y
-
-			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PI / 2.0f)); //+z
-			cameras.push_back(LightComponent::SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PI / 2.0f)); //-z
-		}
+		SHCAM cameras[] = {
+			SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
+			SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
+			SHCAM(XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2), //+y
+			SHCAM(XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2), //-y
+			SHCAM(XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2), //+z
+			SHCAM(XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2), //-z
+		};
 
 		XMFLOAT3 center = probe.position;
 		XMVECTOR vCenter = XMLoadFloat3(&center);
 
 		CubemapRenderCB cb;
-		for (unsigned int i = 0; i < cameras.size(); ++i)
+		for (int i = 0; i < ARRAYSIZE(cameras); ++i)
 		{
 			cameras[i].Update(vCenter);
 			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].getVP());

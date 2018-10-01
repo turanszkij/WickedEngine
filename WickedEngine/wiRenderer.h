@@ -84,7 +84,7 @@ namespace wiRenderer
 	void DrawSky(GRAPHICSTHREAD threadID);
 	void DrawSun(GRAPHICSTHREAD threadID);
 	void DrawWorld(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
-	void DrawForShadowMap(GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
 	void DrawWorldTransparent(const wiSceneSystem::CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	void DrawDebugWorld(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	void DrawSoftParticles(const wiSceneSystem::CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID);
