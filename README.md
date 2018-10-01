@@ -75,7 +75,7 @@ Python script which will generate the SPIR-V shader building program "build_SPIR
 is automatic if you start the application with Vulkan support.
 This feature is experimental, not tested thoroughly yet.
 
-* **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the pyhton script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
+* **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the python script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
 This feature is experimental, not tested thoroughly yet.
 
 ### Platforms:
