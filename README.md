@@ -2,7 +2,7 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![Download][s4]][do] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
+[![Build status][s1]][av] [![DownloadEditor][s4]][do] [![DownloadTests][s5]][dt] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
             alt="follow on Twitter"></a>
@@ -11,11 +11,13 @@
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
 [s3]: https://img.shields.io/badge/License-MIT-yellow.svg
 [s4]: https://img.shields.io/badge/download%20build-editor-blue.svg
+[s5]: https://img.shields.io/badge/download%20build-samples-blue.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
 [do]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master
+[dt]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
 ### Overview:
@@ -123,6 +125,7 @@ When everything is initialized properly, you should see a black screen. From thi
 - ./Documentation/						- Documentation files
 - ./logo/								- Logo artwork images
 - ./models/								- Sample model files
+- ./scripts/							- Sample LUA script files
 - ./WickedEngine/						- Wicked Engine Library project
 - ./Editor/								- Editor project
 - ./Tests/								- Testing framework project

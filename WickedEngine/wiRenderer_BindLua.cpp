@@ -68,6 +68,11 @@ namespace wiRenderer_BindLua
 		return 1;
 	}
 
+	int GetCamera(lua_State* L)
+	{
+		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wiRenderer::GetCamera()));
+		return 1;
+	}
 	int GetScene(lua_State* L)
 	{
 		Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiRenderer::GetScene()));
@@ -370,6 +375,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetScreenWidth", GetScreenWidth);
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 
+			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
 			wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
 			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 

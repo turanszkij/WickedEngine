@@ -29,11 +29,13 @@ void Bind()
 		lua_State* L = wiLua::GetGlobal()->GetLuaState();
 
 		wiLua::GetGlobal()->RegisterFunc("CreateEntity", CreateEntity_BindLua);
+		wiLua::GetGlobal()->RunText("INVALID_ENTITY = 0");
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);
 		Luna<LayerComponent_BindLua>::Register(L);
 		Luna<TransformComponent_BindLua>::Register(L);
+		Luna<CameraComponent_BindLua>::Register(L);
 		Luna<AnimationComponent_BindLua>::Register(L);
 	}
 }
@@ -53,6 +55,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
 	lunamethod(Scene_BindLua, Component_GetTransform),
+	lunamethod(Scene_BindLua, Component_GetCamera),
 	lunamethod(Scene_BindLua, Component_GetAnimation),
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
@@ -225,6 +228,23 @@ int Scene_BindLua::Component_GetTransform(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "Scene::Component_GetTransform(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_GetCamera(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		CameraComponent* component = scene->cameras.GetComponent(entity);
+		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetCamera(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -406,6 +426,7 @@ Luna<TransformComponent_BindLua>::FunctionType TransformComponent_BindLua::metho
 	lunamethod(TransformComponent_BindLua, MatrixTransform),
 	lunamethod(TransformComponent_BindLua, GetMatrix),
 	lunamethod(TransformComponent_BindLua, ClearTransform),
+	lunamethod(TransformComponent_BindLua, UpdateTransform),
 	lunamethod(TransformComponent_BindLua, GetPosition),
 	lunamethod(TransformComponent_BindLua, GetRotation),
 	lunamethod(TransformComponent_BindLua, GetScale),
@@ -614,6 +635,11 @@ int TransformComponent_BindLua::ClearTransform(lua_State* L)
 	component->ClearTransform();
 	return 0;
 }
+int TransformComponent_BindLua::UpdateTransform(lua_State* L)
+{
+	component->UpdateTransform();
+	return 0;
+}
 int TransformComponent_BindLua::GetPosition(lua_State* L)
 {
 	XMVECTOR V = component->GetPositionV();
@@ -631,6 +657,58 @@ int TransformComponent_BindLua::GetScale(lua_State* L)
 	XMVECTOR V = component->GetScaleV();
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(V));
 	return 1;
+}
+
+
+
+
+
+
+
+
+
+
+const char CameraComponent_BindLua::className[] = "CameraComponent";
+
+Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] = {
+	lunamethod(CameraComponent_BindLua, UpdateCamera),
+	{ NULL, NULL }
+};
+Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+CameraComponent_BindLua::CameraComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new CameraComponent;
+}
+CameraComponent_BindLua::~CameraComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int CameraComponent_BindLua::UpdateCamera(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		TransformComponent_BindLua* transform = Luna<TransformComponent_BindLua>::lightcheck(L, 1);
+		if (transform != nullptr)
+		{
+			component->UpdateCamera(transform->component);
+			return 0;
+		}
+		else
+		{
+			wiLua::SError(L, "UpdateCamera(opt TransformComponent transform) invalid argument!");
+		}
+	}
+	component->UpdateCamera();
+	return 0;
 }
 
 

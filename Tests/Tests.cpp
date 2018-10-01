@@ -30,6 +30,11 @@ void Tests::Initialize()
 
 TestsRenderer::TestsRenderer()
 {
+	setSSREnabled(false);
+	setSSAOEnabled(false);
+	setReflectionsEnabled(true);
+	setFXAAEnabled(false);
+
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
@@ -57,9 +62,13 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("EmittedParticle 2");
 	testSelector->AddItem("HairParticle");
 	testSelector->AddItem("Lua Script");
+	testSelector->AddItem("Water Test");
+	testSelector->AddItem("Shadows Test");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
+		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld();
+		wiRenderer::GetScene().weather = WeatherComponent();
 		this->clearSprites();
 		wiLua::GetGlobal()->KillProcesses();
 
@@ -76,6 +85,7 @@ TestsRenderer::TestsRenderer()
 			break;
 		}
 		case 1:
+			wiRenderer::SetTemporalAAEnabled(true);
 			wiRenderer::LoadModel("../models/teapot.wiscene");
 			break;
 		case 2:
@@ -88,7 +98,16 @@ TestsRenderer::TestsRenderer()
 			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 5:
+			wiRenderer::SetTemporalAAEnabled(true);
 			wiLua::GetGlobal()->RunFile("test_script.lua");
+			break;
+		case 6:
+			wiRenderer::SetTemporalAAEnabled(true);
+			wiRenderer::LoadModel("../models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			break;
+		case 7:
+			wiRenderer::SetTemporalAAEnabled(true);
+			wiRenderer::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		}
 

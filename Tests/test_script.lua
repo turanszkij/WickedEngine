@@ -64,7 +64,7 @@ runProcess(function()
 
 		-- Rotate teapot by parent transform:
 		local transform = scene.Component_GetTransform(parent);
-		transform.Rotate(Vector(0, 0.01, 0.001));
+		transform.Rotate(Vector(0, 0.01, 0));
 		
 		
 		fixedupdate(); -- wait for new frame

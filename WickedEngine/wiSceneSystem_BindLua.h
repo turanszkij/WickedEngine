@@ -33,6 +33,7 @@ namespace wiSceneSystem_BindLua
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
 		int Component_GetTransform(lua_State* L);
+		int Component_GetCamera(lua_State* L);
 		int Component_GetAnimation(lua_State* L);
 
 		int Component_Attach(lua_State* L);
@@ -98,9 +99,27 @@ namespace wiSceneSystem_BindLua
 		int MatrixTransform(lua_State* L);
 		int GetMatrix(lua_State* L);
 		int ClearTransform(lua_State* L);
+		int UpdateTransform(lua_State* L);
 		int GetPosition(lua_State* L);
 		int GetRotation(lua_State* L);
 		int GetScale(lua_State* L);
+	};
+
+	class CameraComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiSceneSystem::CameraComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<CameraComponent_BindLua>::FunctionType methods[];
+		static Luna<CameraComponent_BindLua>::PropertyType properties[];
+
+		CameraComponent_BindLua(wiSceneSystem::CameraComponent* component) :component(component) {}
+		CameraComponent_BindLua(lua_State *L);
+		~CameraComponent_BindLua();
+
+		int UpdateCamera(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua
