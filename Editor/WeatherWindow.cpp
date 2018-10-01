@@ -26,21 +26,11 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	float y = 20;
 	float step = 32;
 
-
-	newWeatherButton = new wiButton("New Weather");
-	newWeatherButton->SetPos(XMFLOAT2(x, y += step));
-	newWeatherButton->OnClick([&](wiEventArgs args) {
-		Entity entity = CreateEntity();
-		wiRenderer::GetScene().weathers.Create(entity);
-		SetEntity(entity);
-	});
-	weatherWindow->AddWidget(newWeatherButton);
-
 	fogStartSlider = new wiSlider(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider->SetSize(XMFLOAT2(100, 30));
 	fogStartSlider->SetPos(XMFLOAT2(x, y += step));
 	fogStartSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->fogStart = args.fValue;
+		GetWeather().fogStart = args.fValue;
 	});
 	weatherWindow->AddWidget(fogStartSlider);
 
@@ -48,7 +38,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	fogEndSlider->SetSize(XMFLOAT2(100, 30));
 	fogEndSlider->SetPos(XMFLOAT2(x, y += step));
 	fogEndSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->fogEnd = args.fValue;
+		GetWeather().fogEnd = args.fValue;
 	});
 	weatherWindow->AddWidget(fogEndSlider);
 
@@ -56,7 +46,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	fogHeightSlider->SetSize(XMFLOAT2(100, 30));
 	fogHeightSlider->SetPos(XMFLOAT2(x, y += step));
 	fogHeightSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->fogHeight = args.fValue;
+		GetWeather().fogHeight = args.fValue;
 	});
 	weatherWindow->AddWidget(fogHeightSlider);
 
@@ -64,7 +54,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	cloudinessSlider->SetSize(XMFLOAT2(100, 30));
 	cloudinessSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudinessSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->cloudiness = args.fValue;
+		GetWeather().cloudiness = args.fValue;
 	});
 	weatherWindow->AddWidget(cloudinessSlider);
 
@@ -72,7 +62,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	cloudScaleSlider->SetSize(XMFLOAT2(100, 30));
 	cloudScaleSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudScaleSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->cloudScale = args.fValue;
+		GetWeather().cloudScale = args.fValue;
 	});
 	weatherWindow->AddWidget(cloudScaleSlider);
 
@@ -80,7 +70,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	cloudSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	cloudSpeedSlider->SetPos(XMFLOAT2(x, y += step));
 	cloudSpeedSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->cloudSpeed = args.fValue;
+		GetWeather().cloudSpeed = args.fValue;
 	});
 	weatherWindow->AddWidget(cloudSpeedSlider);
 
@@ -88,7 +78,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	windSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	windSpeedSlider->SetPos(XMFLOAT2(x, y += step));
 	windSpeedSlider->OnSlide([&](wiEventArgs args) {
-		if (GetWeather() != nullptr) GetWeather()->windDirection = XMFLOAT3(args.fValue, 0, 0);
+		GetWeather().windDirection = XMFLOAT3(args.fValue, 0, 0);
 	});
 	weatherWindow->AddWidget(windSpeedSlider);
 
@@ -148,17 +138,14 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	preset1Button->SetPos(XMFLOAT2(x - 100, y += step * 2));
 	preset1Button->OnClick([=](wiEventArgs args) {
 
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-			weather->horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
-			weather->zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
-			weather->cloudiness = 0.4f;
-			weather->fogStart = 100;
-			weather->fogEnd = 1000;
-			weather->fogHeight = 0;
-		}
+		auto& weather = GetWeather();
+		weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		weather.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
+		weather.zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
+		weather.cloudiness = 0.4f;
+		weather.fogStart = 100;
+		weather.fogEnd = 1000;
+		weather.fogHeight = 0;
 
 		InvalidateProbes();
 
@@ -171,17 +158,14 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	preset2Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset2Button->OnClick([=](wiEventArgs args) {
 
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
-			weather->horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
-			weather->zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
-			weather->cloudiness = 0.36f;
-			weather->fogStart = 50;
-			weather->fogEnd = 600;
-			weather->fogHeight = 0;
-		}
+		auto& weather = GetWeather();
+		weather.ambient = XMFLOAT3(0.02f, 0.02f, 0.02f);
+		weather.horizon = XMFLOAT3(0.2f, 0.05f, 0.15f);
+		weather.zenith = XMFLOAT3(0.4f, 0.05f, 0.1f);
+		weather.cloudiness = 0.36f;
+		weather.fogStart = 50;
+		weather.fogEnd = 600;
+		weather.fogHeight = 0;
 
 		InvalidateProbes();
 
@@ -194,17 +178,14 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	preset3Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset3Button->OnClick([=](wiEventArgs args) {
 
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
-			weather->horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
-			weather->zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
-			weather->cloudiness = 0.75f;
-			weather->fogStart = 0;
-			weather->fogEnd = 500;
-			weather->fogHeight = 0;
-		}
+		auto& weather = GetWeather();
+		weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
+		weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
+		weather.cloudiness = 0.75f;
+		weather.fogStart = 0;
+		weather.fogEnd = 500;
+		weather.fogHeight = 0;
 
 		InvalidateProbes();
 
@@ -217,17 +198,14 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	preset4Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset4Button->OnClick([=](wiEventArgs args) {
 
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
-			weather->horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
-			weather->zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
-			weather->cloudiness = 0.28f;
-			weather->fogStart = 10;
-			weather->fogEnd = 400;
-			weather->fogHeight = 0;
-		}
+		auto& weather = GetWeather();
+		weather.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
+		weather.horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
+		weather.zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
+		weather.cloudiness = 0.28f;
+		weather.fogStart = 10;
+		weather.fogEnd = 400;
+		weather.fogHeight = 0;
 
 		InvalidateProbes();
 
@@ -259,11 +237,8 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	ambientColorPicker->SetVisible(false);
 	ambientColorPicker->SetEnabled(true);
 	ambientColorPicker->OnColorChanged([&](wiEventArgs args) {
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
-		}
+		auto& weather = GetWeather();
+		weather.ambient = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	weatherWindow->AddWidget(ambientColorPicker);
 
@@ -274,11 +249,8 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	horizonColorPicker->SetVisible(false);
 	horizonColorPicker->SetEnabled(true);
 	horizonColorPicker->OnColorChanged([&](wiEventArgs args) {
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
-		}
+		auto& weather = GetWeather();
+		weather.horizon = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	weatherWindow->AddWidget(horizonColorPicker);
 
@@ -290,16 +262,10 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	zenithColorPicker->SetVisible(false);
 	zenithColorPicker->SetEnabled(true);
 	zenithColorPicker->OnColorChanged([&](wiEventArgs args) {
-		auto weather = GetWeather();
-		if (weather != nullptr)
-		{
-			weather->zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
-		}
+		auto& weather = GetWeather();
+		weather.zenith = XMFLOAT3(args.color.x, args.color.y, args.color.z);
 	});
 	weatherWindow->AddWidget(zenithColorPicker);
-
-
-	SetEntity(INVALID_ENTITY);
 
 
 	weatherWindow->Translate(XMFLOAT3(30, 30, 0));
@@ -316,60 +282,25 @@ WeatherWindow::~WeatherWindow()
 
 void WeatherWindow::UpdateFromRenderer()
 {
-	WeatherComponent* weather = GetWeather();
+	auto& weather = GetWeather();
 
-	if (weather != nullptr)
-	{
-		fogStartSlider->SetValue(weather->fogStart);
-		fogEndSlider->SetValue(weather->fogEnd);
-		fogHeightSlider->SetValue(weather->fogHeight);
-		cloudinessSlider->SetValue(weather->cloudiness);
-		cloudScaleSlider->SetValue(weather->cloudScale);
-		cloudSpeedSlider->SetValue(weather->cloudSpeed);
-		windSpeedSlider->SetValue(weather->windDirection.x);
-	}
+	fogStartSlider->SetValue(weather.fogStart);
+	fogEndSlider->SetValue(weather.fogEnd);
+	fogHeightSlider->SetValue(weather.fogHeight);
+	cloudinessSlider->SetValue(weather.cloudiness);
+	cloudScaleSlider->SetValue(weather.cloudScale);
+	cloudSpeedSlider->SetValue(weather.cloudSpeed);
+	windSpeedSlider->SetValue(weather.windDirection.x);
 }
 
-void WeatherWindow::SetEntity(Entity entity)
-{
-	this->entity = entity;
-
-	WeatherComponent* weather = GetWeather();
-
-	if (weather != nullptr)
-	{
-		fogStartSlider->SetEnabled(true);
-		fogEndSlider->SetEnabled(true);
-		fogHeightSlider->SetEnabled(true);
-		cloudinessSlider->SetEnabled(true);
-		cloudScaleSlider->SetEnabled(true);
-		cloudSpeedSlider->SetEnabled(true);
-		windSpeedSlider->SetEnabled(true);
-		skyButton->SetEnabled(true);
-		ambientColorPicker->SetEnabled(true);
-		horizonColorPicker->SetEnabled(true);
-		zenithColorPicker->SetEnabled(true);
-	}
-	else
-	{
-		fogStartSlider->SetEnabled(false);
-		fogEndSlider->SetEnabled(false);
-		fogHeightSlider->SetEnabled(false);
-		cloudinessSlider->SetEnabled(false);
-		cloudScaleSlider->SetEnabled(false);
-		cloudSpeedSlider->SetEnabled(false);
-		windSpeedSlider->SetEnabled(false);
-		skyButton->SetEnabled(false);
-		ambientColorPicker->SetEnabled(false);
-		horizonColorPicker->SetEnabled(false);
-		zenithColorPicker->SetEnabled(false);
-	}
-}
-
-WeatherComponent* WeatherWindow::GetWeather() const
+WeatherComponent& WeatherWindow::GetWeather() const
 {
 	Scene& scene = wiRenderer::GetScene();
-	return scene.weathers.GetComponent(entity);
+	if (scene.weathers.GetCount() == 0)
+	{
+		scene.weathers.Create(CreateEntity());
+	}
+	return scene.weathers[0];
 }
 
 void WeatherWindow::InvalidateProbes() const
