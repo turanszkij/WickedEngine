@@ -710,7 +710,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.png" />
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\information_sheet.png" />
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png" />
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
@@ -718,7 +717,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />

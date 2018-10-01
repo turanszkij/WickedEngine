@@ -1939,9 +1939,6 @@
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
       <Filter>fonts</Filter>
     </Image>
-    <Image Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.png">
-      <Filter>Documentation</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png">
       <Filter>Documentation</Filter>
     </Image>
@@ -1954,9 +1951,6 @@
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)..\Documentation\classdiagram.txt">
-      <Filter>Documentation</Filter>
-    </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
