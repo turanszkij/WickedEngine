@@ -47,16 +47,21 @@ void ImportModel_OBJ(const std::string& fileName)
 			material.baseColor = XMFLOAT4(obj_material.diffuse[0], obj_material.diffuse[1], obj_material.diffuse[2], 1);
 			material.baseColorMapName = obj_material.diffuse_texname;
 			material.displacementMapName = obj_material.displacement_texname;
-			if (material.displacementMapName.empty())
-			{
-				material.displacementMapName = obj_material.bump_texname;
-			}
 			material.emissive = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
 			material.refractionIndex = obj_material.ior;
 			material.metalness = obj_material.metallic;
 			material.normalMapName = obj_material.normal_texname;
-			material.surfaceMapName = obj_material.reflection_texname;
+			material.surfaceMapName = obj_material.specular_texname;
 			material.roughness = obj_material.roughness;
+
+			if (material.normalMapName.empty())
+			{
+				material.normalMapName = obj_material.bump_texname;
+			}
+			if (material.surfaceMapName.empty())
+			{
+				material.surfaceMapName = obj_material.specular_highlight_texname;
+			}
 
 			if (!material.surfaceMapName.empty())
 			{
