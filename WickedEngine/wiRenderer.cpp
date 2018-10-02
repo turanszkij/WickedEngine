@@ -3608,8 +3608,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// Fill Light Array with lights + envprobes + decals in the frustum:
 	{
-		static ShaderEntityType* entityArray = (ShaderEntityType*)_mm_malloc(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT, 16);
-		static XMMATRIX* matrixArray = (XMMATRIX*)_mm_malloc(sizeof(XMMATRIX)*MATRIXARRAY_COUNT, 16);
+		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[threadID].allocate(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
+		XMMATRIX* matrixArray = (XMMATRIX*)frameAllocators[threadID].allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
 		const XMMATRIX viewMatrix = GetCamera().GetView();
 
@@ -3799,6 +3799,10 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		device->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
 		device->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
+
+
+		frameAllocators[threadID].free(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
+		frameAllocators[threadID].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
 		GPUResource* resources[] = {
 			resourceBuffers[RBTYPE_ENTITYARRAY],
