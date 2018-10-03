@@ -41,7 +41,7 @@ TestsRenderer::TestsRenderer()
 	TransformComponent transform;
 	transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
 	transform.UpdateTransform();
-	wiRenderer::GetCamera().UpdateCamera(&transform);
+	wiRenderer::GetCamera().TransformCamera(transform);
 
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
