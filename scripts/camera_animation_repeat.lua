@@ -51,7 +51,7 @@ runProcess(function()
 			local d = scene.Component_GetTransform(proxies[(rot + 2) % count + 1])
 			target.CatmullRom(a, b, c, d, tt)
 			target.UpdateTransform()
-			cam.UpdateCamera(target)
+			cam.TransformCamera(target)
 
 			-- Advance animation state:
 			tt = tt + scriptableCameraSpeed * getDeltaTime()

@@ -6066,8 +6066,9 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * (float)i / (float)impostorCaptureAngles, 0));
 
 					camera_transform.UpdateTransform();
-					impostorcamera.UpdateCamera(&camera_transform);
+					impostorcamera.TransformCamera(camera_transform);
 					impostorcamera.UpdateProjection();
+					impostorcamera.UpdateCamera();
 					UpdateCameraCB(impostorcamera, threadID);
 
 					for (auto& subset : mesh.subsets)

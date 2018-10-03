@@ -672,6 +672,7 @@ const char CameraComponent_BindLua::className[] = "CameraComponent";
 
 Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] = {
 	lunamethod(CameraComponent_BindLua, UpdateCamera),
+	lunamethod(CameraComponent_BindLua, TransformCamera),
 	{ NULL, NULL }
 };
 Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
@@ -693,21 +694,29 @@ CameraComponent_BindLua::~CameraComponent_BindLua()
 
 int CameraComponent_BindLua::UpdateCamera(lua_State* L)
 {
+	component->UpdateCamera();
+	return 0;
+}
+int CameraComponent_BindLua::TransformCamera(lua_State* L)
+{
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		TransformComponent_BindLua* transform = Luna<TransformComponent_BindLua>::lightcheck(L, 1);
 		if (transform != nullptr)
 		{
-			component->UpdateCamera(transform->component);
+			component->TransformCamera(*transform->component);
 			return 0;
 		}
 		else
 		{
-			wiLua::SError(L, "UpdateCamera(opt TransformComponent transform) invalid argument!");
+			wiLua::SError(L, "TransformCamera(TransformComponent transform) invalid argument!");
 		}
 	}
-	component->UpdateCamera();
+	else
+	{
+		wiLua::SError(L, "TransformCamera(TransformComponent transform) not enough arguments!");
+	}
 	return 0;
 }
 

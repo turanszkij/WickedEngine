@@ -247,6 +247,8 @@ namespace wiSceneSystem
 		void ComputeNormals(bool smooth);
 		void FlipCulling();
 		void FlipNormals();
+		void Recenter();
+		void RecenterToBottom();
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 
@@ -646,7 +648,8 @@ namespace wiSceneSystem
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateProjection();
-		void UpdateCamera(const TransformComponent* transform = nullptr);
+		void UpdateCamera();
+		void TransformCamera(const TransformComponent& transform);
 		void Reflect(const XMFLOAT4& plane = XMFLOAT4(0, 1, 0, 0));
 
 		inline XMVECTOR GetEye() const { return XMLoadFloat3(&Eye); }

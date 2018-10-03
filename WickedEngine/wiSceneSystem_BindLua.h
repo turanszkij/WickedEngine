@@ -120,6 +120,7 @@ namespace wiSceneSystem_BindLua
 		~CameraComponent_BindLua();
 
 		int UpdateCamera(lua_State* L);
+		int TransformCamera(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua

@@ -31,5 +31,7 @@ public:
 	wiButton*	flipNormalsButton;
 	wiButton*	computeNormalsSmoothButton;
 	wiButton*	computeNormalsHardButton;
+	wiButton*	recenterButton;
+	wiButton*	recenterToBottomButton;
 };
 

@@ -56,7 +56,6 @@ void Editor::Initialize()
 	infoDisplay.resolution = true;
 
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
-	//wiRenderer::physicsEngine = new wiBULLET();
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
 	wiInputManager::GetInstance()->addXInput(new wiXInput());
@@ -753,16 +752,6 @@ void EditorComponent::Update(float dt)
 	Scene& scene = wiRenderer::GetScene();
 	CameraComponent& camera = wiRenderer::GetCamera();
 
-	// Follow camera proxy:
-	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
-	{
-		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->proxy);
-		if (proxy != nullptr)
-		{
-			cameraWnd->camera_transform.Lerp(cameraWnd->camera_transform, *proxy, 1.0f - cameraWnd->followSlider->GetValue());
-		}
-	}
-
 	animWnd->Update();
 
 	// Exit cinema mode:
@@ -1322,7 +1311,19 @@ void EditorComponent::Update(float dt)
 
 	renderPath->Update(dt);
 
-	camera.UpdateCamera(&cameraWnd->camera_transform);
+	// Follow camera proxy:
+	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
+	{
+		TransformComponent* proxy = scene.transforms.GetComponent(cameraWnd->proxy);
+		if (proxy != nullptr)
+		{
+			cameraWnd->camera_transform.Lerp(cameraWnd->camera_transform, *proxy, 1.0f - cameraWnd->followSlider->GetValue());
+			cameraWnd->camera_transform.UpdateTransform();
+		}
+	}
+
+	camera.TransformCamera(cameraWnd->camera_transform);
+	camera.UpdateCamera();
 }
 void EditorComponent::Render()
 {

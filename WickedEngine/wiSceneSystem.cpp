@@ -716,6 +716,33 @@ namespace wiSceneSystem
 
 		CreateRenderData();
 	}
+	void MeshComponent::Recenter()
+	{
+		XMFLOAT3 center = aabb.getCenter();
+
+		for (auto& pos : vertex_positions)
+		{
+			pos.x -= center.x;
+			pos.y -= center.y;
+			pos.z -= center.z;
+		}
+
+		CreateRenderData();
+	}
+	void MeshComponent::RecenterToBottom()
+	{
+		XMFLOAT3 center = aabb.getCenter();
+		center.y -= aabb.getHalfWidth().y;
+
+		for (auto& pos : vertex_positions)
+		{
+			pos.x -= center.x;
+			pos.y -= center.y;
+			pos.z -= center.z;
+		}
+
+		CreateRenderData();
+	}
 	
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
 	{
@@ -736,40 +763,15 @@ namespace wiSceneSystem
 		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
 		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP)); // normal zbuffer!
 	}
-	void CameraComponent::UpdateCamera(const TransformComponent* transform)
+	void CameraComponent::UpdateCamera()
 	{
 		SetDirty(false);
-
-		XMVECTOR _Eye;
-		XMVECTOR _At;
-		XMVECTOR _Up;
-
-		if (transform != nullptr)
-		{
-			XMVECTOR S, R, T;
-			XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&transform->world));
-
-			_Eye = T;
-			_At = XMVectorSet(0, 0, 1, 0);
-			_Up = XMVectorSet(0, 1, 0, 0);
-
-			XMMATRIX _Rot = XMMatrixRotationQuaternion(R);
-			_At = XMVector3TransformNormal(_At, _Rot);
-			_Up = XMVector3TransformNormal(_Up, _Rot);
-			XMStoreFloat3x3(&rotationMatrix, _Rot);
-		}
-		else
-		{
-			_Eye = XMLoadFloat3(&Eye);
-			_At = XMLoadFloat3(&At);
-			_Up = XMLoadFloat3(&Up);
-		}
 
 		XMMATRIX _P = XMLoadFloat4x4(&Projection);
 		XMMATRIX _InvP = XMMatrixInverse(nullptr, _P);
 		XMStoreFloat4x4(&InvProjection, _InvP);
 
-		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
+		XMMATRIX _V = XMLoadFloat4x4(&View);
 		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
 		XMStoreFloat4x4(&View, _V);
 		XMStoreFloat4x4(&VP, _VP);
@@ -778,11 +780,30 @@ namespace wiSceneSystem
 		XMStoreFloat4x4(&Projection, _P);
 		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
 
+		frustum.ConstructFrustum(zFarP, realProjection, View);
+	}
+	void CameraComponent::TransformCamera(const TransformComponent& transform)
+	{
+		SetDirty();
+
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&transform.world));
+
+		XMVECTOR _Eye = T;
+		XMVECTOR _At = XMVectorSet(0, 0, 1, 0);
+		XMVECTOR _Up = XMVectorSet(0, 1, 0, 0);
+
+		XMMATRIX _Rot = XMMatrixRotationQuaternion(R);
+		_At = XMVector3TransformNormal(_At, _Rot);
+		_Up = XMVector3TransformNormal(_Up, _Rot);
+		XMStoreFloat3x3(&rotationMatrix, _Rot);
+
+		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
+		XMStoreFloat4x4(&View, _V);
+
 		XMStoreFloat3(&Eye, _Eye);
 		XMStoreFloat3(&At, _At);
 		XMStoreFloat3(&Up, _Up);
-
-		frustum.ConstructFrustum(zFarP, realProjection, View);
 	}
 	void CameraComponent::Reflect(const XMFLOAT4& plane)
 	{
@@ -1620,7 +1641,11 @@ namespace wiSceneSystem
 			CameraComponent& camera = cameras[i];
 			Entity entity = cameras.GetEntity(i);
 			const TransformComponent* transform = transforms.GetComponent(entity);
-			camera.UpdateCamera(transform);
+			if (transform != nullptr)
+			{
+				camera.TransformCamera(*transform);
+			}
+			camera.UpdateCamera();
 		}
 	}
 	void RunDecalUpdateSystem(
@@ -1733,40 +1758,28 @@ namespace wiSceneSystem
 			switch (light.type)
 			{
 			case LightComponent::DIRECTIONAL:
-			{
 				if (weather != nullptr)
 				{
 					weather->sunColor = light.color;
 					weather->sunDirection = light.direction;
 				}
-
 				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
-			}
-			break;
+				break;
 			case LightComponent::SPOT:
-			{
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
-			}
-			break;
+				break;
 			case LightComponent::POINT:
+				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
+				break;
 			case LightComponent::SPHERE:
 			case LightComponent::DISC:
 			case LightComponent::RECTANGLE:
 			case LightComponent::TUBE:
-			{
-				if (light.type == LightComponent::POINT)
-				{
-					aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
-				}
-				else
-				{
-					XMStoreFloat3(&light.right, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), W));
-					XMStoreFloat3(&light.front, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W));
-					// area lights have no bounds, just like directional lights (maybe todo)
-					aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
-				}
-			}
-			break;
+				XMStoreFloat3(&light.right, XMVector3TransformNormal(XMVectorSet(-1, 0, 0, 0), W));
+				XMStoreFloat3(&light.front, XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W));
+				// area lights have no bounds, just like directional lights (todo: but they should have real bounds)
+				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
+				break;
 			}
 
 		}

@@ -16,7 +16,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
-	meshWindow->SetSize(XMFLOAT2(800, 640));
+	meshWindow->SetSize(XMFLOAT2(800, 700));
 	meshWindow->SetEnabled(false);
 	GUI->AddWidget(meshWindow);
 
@@ -192,6 +192,34 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	meshWindow->AddWidget(computeNormalsHardButton);
+
+	recenterButton = new wiButton("Recenter");
+	recenterButton->SetTooltip("Recenter mesh to AABB center.");
+	recenterButton->SetSize(XMFLOAT2(240, 30));
+	recenterButton->SetPos(XMFLOAT2(x - 50, y += step));
+	recenterButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			mesh->Recenter();
+			SetEntity(entity);
+		}
+	});
+	meshWindow->AddWidget(recenterButton);
+
+	recenterToBottomButton = new wiButton("RecenterToBottom");
+	recenterToBottomButton->SetTooltip("Recenter mesh to AABB bottom.");
+	recenterToBottomButton->SetSize(XMFLOAT2(240, 30));
+	recenterToBottomButton->SetPos(XMFLOAT2(x - 50, y += step));
+	recenterToBottomButton->OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiRenderer::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			mesh->RecenterToBottom();
+			SetEntity(entity);
+		}
+	});
+	meshWindow->AddWidget(recenterToBottomButton);
 
 
 

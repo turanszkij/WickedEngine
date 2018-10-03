@@ -222,10 +222,31 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 	{
 		transform.translation_local = XMFLOAT3((float)node->translation[0], (float)node->translation[1], (float)node->translation[2]);
 	}
+	if (!node->matrix.empty())
+	{
+		transform.world._11 = (float)node->matrix[0];
+		transform.world._12 = (float)node->matrix[1];
+		transform.world._13 = (float)node->matrix[2];
+		transform.world._14 = (float)node->matrix[3];
+		transform.world._21 = (float)node->matrix[4];
+		transform.world._22 = (float)node->matrix[5];
+		transform.world._23 = (float)node->matrix[6];
+		transform.world._24 = (float)node->matrix[7];
+		transform.world._31 = (float)node->matrix[8];
+		transform.world._32 = (float)node->matrix[9];
+		transform.world._33 = (float)node->matrix[10];
+		transform.world._34 = (float)node->matrix[11];
+		transform.world._41 = (float)node->matrix[12];
+		transform.world._42 = (float)node->matrix[13];
+		transform.world._43 = (float)node->matrix[14];
+		transform.world._44 = (float)node->matrix[15];
+		transform.ApplyTransform(); // this creates S, R, T vectors from world matrix
+	}
 
 	// Important:
 	//	Do NOT call UpdateTransform, because Attach will query parent world matrix, and invert it for bind matrix
 	//	But here we load everything in bind space (relative to parent) already, so it must be IDENTITY!
+	transform.world = IDENTITYMATRIX;
 
 	if (parent != INVALID_ENTITY)
 	{
@@ -608,6 +629,18 @@ void ImportModel_GLTF(const std::string& fileName)
 
 						mesh.vertex_texcoords[vertexOffset + i].x = tex.x;
 						mesh.vertex_texcoords[vertexOffset + i].y = tex.y;
+					}
+				}
+				else if (!attr_name.compare("TEXCOORD_1"))
+				{
+					mesh.vertex_atlas.resize(vertexOffset + vertexCount);
+					assert(stride == 8);
+					for (size_t i = 0; i < vertexCount; ++i)
+					{
+						const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
+
+						mesh.vertex_atlas[vertexOffset + i].x = tex.x;
+						mesh.vertex_atlas[vertexOffset + i].y = tex.y;
 					}
 				}
 				else if (!attr_name.compare("JOINTS_0"))

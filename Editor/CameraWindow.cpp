@@ -11,7 +11,7 @@ void CameraWindow::ResetCam()
 	camera_transform.ClearTransform();
 	camera_transform.Translate(XMFLOAT3(0, 2, -10));
 	camera_transform.UpdateTransform();
-	wiRenderer::GetCamera().UpdateCamera(&camera_transform);
+	wiRenderer::GetCamera().TransformCamera(camera_transform);
 
 	camera_target.ClearTransform();
 	camera_target.UpdateTransform();
