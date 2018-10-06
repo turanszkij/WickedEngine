@@ -7818,40 +7818,21 @@ void BindPersistentState(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	for (int i = 0; i < SSLOT_COUNT; ++i)
+	for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
 	{
-		device->BindSampler(PS, samplers[i], i, threadID);
-		device->BindSampler(VS, samplers[i], i, threadID);
-		device->BindSampler(GS, samplers[i], i, threadID);
-		device->BindSampler(DS, samplers[i], i, threadID);
-		device->BindSampler(HS, samplers[i], i, threadID);
-		device->BindSampler(CS, samplers[i], i, threadID);
+		SHADERSTAGE stage = (SHADERSTAGE)i;
+
+		for (int i = 0; i < SSLOT_COUNT; ++i)
+		{
+			device->BindSampler(stage, samplers[i], i, threadID);
+		}
+
+		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	}
 
-
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(GS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(DS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(HS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 }
 void UpdateFrameCB(GRAPHICSTHREAD threadID)
 {
