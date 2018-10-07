@@ -686,6 +686,7 @@ void EditorComponent::Load()
 			ss << "Copy: Ctrl + C" << endl;
 			ss << "Paste: Ctrl + V" << endl;
 			ss << "Delete: DELETE button" << endl;
+			ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
 			ss << "You can find sample scenes in the models directory. Try to load one." << endl;
@@ -749,13 +750,14 @@ void EditorComponent::FixedUpdate()
 }
 void EditorComponent::Update(float dt)
 {
+	wiInputManager& input = *wiInputManager::GetInstance();
 	Scene& scene = wiRenderer::GetScene();
 	CameraComponent& camera = wiRenderer::GetCamera();
 
 	animWnd->Update();
 
 	// Exit cinema mode:
-	if (wiInputManager::GetInstance()->down(VK_ESCAPE))
+	if (input.down(VK_ESCAPE))
 	{
 		if (renderPath != nullptr)
 		{
@@ -773,35 +775,35 @@ void EditorComponent::Update(float dt)
 
 		// Camera control:
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
-		XMFLOAT4 currentMouse = wiInputManager::GetInstance()->getpointer();
+		XMFLOAT4 currentMouse = input.getpointer();
 		float xDif = 0, yDif = 0;
-		if (wiInputManager::GetInstance()->down(VK_MBUTTON))
+		if (input.down(VK_MBUTTON))
 		{
 			xDif = currentMouse.x - originalMouse.x;
 			yDif = currentMouse.y - originalMouse.y;
 			xDif = 0.1f*xDif*(1.0f / 60.0f);
 			yDif = 0.1f*yDif*(1.0f / 60.0f);
-			wiInputManager::GetInstance()->setpointer(originalMouse);
+			input.setpointer(originalMouse);
 		}
 		else
 		{
-			originalMouse = wiInputManager::GetInstance()->getpointer();
+			originalMouse = input.getpointer();
 		}
 
 		const float buttonrotSpeed = 2.0f / 60.0f;
-		if (wiInputManager::GetInstance()->down(VK_LEFT))
+		if (input.down(VK_LEFT))
 		{
 			xDif -= buttonrotSpeed;
 		}
-		if (wiInputManager::GetInstance()->down(VK_RIGHT))
+		if (input.down(VK_RIGHT))
 		{
 			xDif += buttonrotSpeed;
 		}
-		if (wiInputManager::GetInstance()->down(VK_UP))
+		if (input.down(VK_UP))
 		{
 			yDif -= buttonrotSpeed;
 		}
-		if (wiInputManager::GetInstance()->down(VK_DOWN))
+		if (input.down(VK_DOWN))
 		{
 			yDif += buttonrotSpeed;
 		}
@@ -815,20 +817,20 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-			const float speed = (wiInputManager::GetInstance()->down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
+			const float speed = (input.down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
 
-			if (!wiInputManager::GetInstance()->down(VK_CONTROL))
+			if (!input.down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wiInputManager::GetInstance()->down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (wiInputManager::GetInstance()->down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
-				if (wiInputManager::GetInstance()->down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
-				if (wiInputManager::GetInstance()->down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (wiInputManager::GetInstance()->down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
-				if (wiInputManager::GetInstance()->down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (input.down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (input.down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (input.down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (input.down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (input.down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (input.down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 
@@ -857,14 +859,14 @@ void EditorComponent::Update(float dt)
 		{
 			// Orbital Camera
 
-			if (wiInputManager::GetInstance()->down(VK_LSHIFT))
+			if (input.down(VK_LSHIFT))
 			{
 				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
 				cameraWnd->camera_target.Translate(vec);
 			}
-			else if (wiInputManager::GetInstance()->down(VK_LCONTROL))
+			else if (input.down(VK_LCONTROL))
 			{
 				cameraWnd->camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4));
 				camera.SetDirty();
@@ -1049,7 +1051,7 @@ void EditorComponent::Update(float dt)
 			{
 				if (object->GetRenderTypes() & RENDERTYPE_WATER)
 				{
-					if (wiInputManager::GetInstance()->down(VK_LBUTTON))
+					if (input.down(VK_LBUTTON))
 					{
 						// if water, then put a water ripple onto it:
 						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
@@ -1057,7 +1059,7 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					if (wiInputManager::GetInstance()->press(VK_LBUTTON))
+					if (input.press(VK_LBUTTON))
 					{
 						// if not water, put a decal instead:
 						static int decalselector = 0;
@@ -1076,7 +1078,7 @@ void EditorComponent::Update(float dt)
 
 		// Select...
 		static bool selectAll = false;
-		if (wiInputManager::GetInstance()->press(VK_RBUTTON) || selectAll)
+		if (input.press(VK_RBUTTON) || selectAll)
 		{
 
 			wiArchive* archive = AdvanceHistory();
@@ -1114,7 +1116,7 @@ void EditorComponent::Update(float dt)
 			{
 				// Add the hovered item to the selection:
 
-				if (!selected.empty() && wiInputManager::GetInstance()->down(VK_LSHIFT))
+				if (!selected.empty() && input.down(VK_LSHIFT))
 				{
 					// Union selection:
 					list<Picked> saved = selected;
@@ -1206,7 +1208,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Delete
-		if (wiInputManager::GetInstance()->press(VK_DELETE))
+		if (input.press(VK_DELETE))
 		{
 
 			wiArchive* archive = AdvanceHistory();
@@ -1231,15 +1233,15 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Control operations...
-		if (wiInputManager::GetInstance()->down(VK_CONTROL))
+		if (input.down(VK_CONTROL))
 		{
 			// Select All
-			if (wiInputManager::GetInstance()->press('A'))
+			if (input.press('A'))
 			{
 				selectAll = true;
 			}
 			// Copy
-			if (wiInputManager::GetInstance()->press('C'))
+			if (input.press('C'))
 			{
 				SAFE_DELETE(clipboard);
 				clipboard = new wiArchive();
@@ -1250,7 +1252,7 @@ void EditorComponent::Update(float dt)
 				}
 			}
 			// Paste
-			if (wiInputManager::GetInstance()->press('V'))
+			if (input.press('V'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1268,7 +1270,7 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Duplicate Instances
-			if (wiInputManager::GetInstance()->press('D'))
+			if (input.press('D'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1280,13 +1282,38 @@ void EditorComponent::Update(float dt)
 				}
 				BeginTranslate();
 			}
+			// Put Instances
+			if (clipboard != nullptr && hovered.subsetIndex >= 0 && input.down(VK_LSHIFT) && input.press(VK_LBUTTON))
+			{
+				// Construct a matrix that will put the instance to hovered position (P) and orientation according to hovered normal (N):
+				XMVECTOR N = XMLoadFloat3(&hovered.normal);
+				XMVECTOR P = XMLoadFloat3(&hovered.position);
+				XMVECTOR E = camera.GetEye();
+				XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+				XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+				XMMATRIX M = { T, N, B, P };
+
+				clipboard->SetReadModeAndResetPos(true);
+				size_t count;
+				*clipboard >> count;
+				for (size_t i = 0; i < count; ++i)
+				{
+					Entity entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
+					TransformComponent* transform = scene.transforms.GetComponent(entity);
+					if (transform != nullptr)
+					{
+						transform->ClearTransform();
+						transform->MatrixTransform(M);
+					}
+				}
+			}
 			// Undo
-			if (wiInputManager::GetInstance()->press('Z'))
+			if (input.press('Z'))
 			{
 				ConsumeHistoryOperation(true);
 			}
 			// Redo
-			if (wiInputManager::GetInstance()->press('Y'))
+			if (input.press('Y'))
 			{
 				ConsumeHistoryOperation(false);
 			}
