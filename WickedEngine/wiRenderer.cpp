@@ -2370,7 +2370,7 @@ void LoadShaders()
 		{
 			GraphicsPSODesc desc;
 			desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
-			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+			desc.rs = rasterizers[RSTYPE_FRONT];
 			desc.bs = blendStates[BSTYPE_OPAQUE];
 			desc.dss = depthStencils[DSSTYPE_DEFAULT];
 			desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
@@ -2745,6 +2745,8 @@ void LoadShaders()
 }
 void LoadBuffers()
 {
+	GraphicsDevice* device = GetDevice();
+
 	GPUBufferDesc bd;
 
 	// Ring buffer allows fast allocation of dynamic buffers for one frame:
@@ -2755,8 +2757,8 @@ void LoadBuffers()
 		bd.Usage = USAGE_DYNAMIC;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		GetDevice()->CreateBuffer(&bd, nullptr, &dynamicVertexBufferPools[threadID]);
-		GetDevice()->SetName(&dynamicVertexBufferPools[threadID], "DynamicVertexBufferPool");
+		device->CreateBuffer(&bd, nullptr, &dynamicVertexBufferPools[threadID]);
+		device->SetName(&dynamicVertexBufferPools[threadID], "DynamicVertexBufferPool");
 	}
 
 
@@ -2770,64 +2772,75 @@ void LoadBuffers()
 
 	//Persistent buffers...
 
-	// Per World Constant buffer will be updated occasionally, so it should reside in DEFAULT GPU memory!
+	// Per Frame Constant buffer will be updated only once per frame, but used by many shaders, so it should reside in DEFAULT GPU memory!
 	bd.CPUAccessFlags = 0;
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(FrameCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
+	device->SetName(constantBuffers[CBTYPE_FRAME], "FrameCB");
 
-	// The other constant buffers will be updated frequently (> per frame) so they should reside in DYNAMIC GPU memory!
+	// The other constant buffers will be updated frequently (more than once per frame) so they should reside in DYNAMIC GPU memory!
 	bd.Usage = USAGE_DYNAMIC;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	bd.ByteWidth = sizeof(CameraCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_FRAME], "PerFrameConstantBuffer");
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
+	device->SetName(constantBuffers[CBTYPE_CAMERA], "CameraCB");
 
 	bd.ByteWidth = sizeof(MiscCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_MISC], "MiscConstantBuffer");
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
+	device->SetName(constantBuffers[CBTYPE_MISC], "MiscCB");
 
 	bd.ByteWidth = sizeof(APICB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
-	GetDevice()->SetName(constantBuffers[CBTYPE_API], "APIConstantBuffer");
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
+	device->SetName(constantBuffers[CBTYPE_API], "APICB");
 
 
 	// On demand buffers...
 
 	bd.ByteWidth = sizeof(VolumeLightCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
+	device->SetName(constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
 
 	bd.ByteWidth = sizeof(DecalCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DECAL]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DECAL]);
+	device->SetName(constantBuffers[CBTYPE_DECAL], "DecalCB");
 
 	bd.ByteWidth = sizeof(CubemapRenderCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CUBEMAPRENDER]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CUBEMAPRENDER]);
+	device->SetName(constantBuffers[CBTYPE_CUBEMAPRENDER], "CubemapRenderCB");
 
 	bd.ByteWidth = sizeof(TessellationCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TESSELLATION]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TESSELLATION]);
+	device->SetName(constantBuffers[CBTYPE_TESSELLATION], "TessellationCB");
 
 	bd.ByteWidth = sizeof(DispatchParamsCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
+	device->SetName(constantBuffers[CBTYPE_DISPATCHPARAMS], "DispatchParamsCB");
 
 	bd.ByteWidth = sizeof(CloudGeneratorCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
+	device->SetName(constantBuffers[CBTYPE_CLOUDGENERATOR], "CloudGeneratorCB");
 
 	bd.ByteWidth = sizeof(TracedRenderingCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
+	device->SetName(constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
 
 	bd.ByteWidth = sizeof(BVHCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_BVH]);
+	device->SetName(constantBuffers[CBTYPE_BVH], "BVHGeneratorCB");
 
 	bd.ByteWidth = sizeof(GenerateMIPChainCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MIPGEN]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MIPGEN]);
+	device->SetName(constantBuffers[CBTYPE_MIPGEN], "MipGeneratorCB");
 
 	bd.ByteWidth = sizeof(FilterEnvmapCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FILTERENVMAP]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FILTERENVMAP]);
+	device->SetName(constantBuffers[CBTYPE_FILTERENVMAP], "FilterEnvmapCB");
 
 	bd.ByteWidth = sizeof(CopyTextureCB);
-	GetDevice()->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
+	device->SetName(constantBuffers[CBTYPE_COPYTEXTURE], "CopyTextureCB");
 
 
 
@@ -2840,6 +2853,7 @@ void LoadBuffers()
 		resourceBuffers[i] = new GPUBuffer;
 	}
 
+	// These will be used intensively by multiple shaders, so better to place them in GPU-only (USAGE_DEFAULT) memory:
 	bd.Usage = USAGE_DEFAULT;
 	bd.CPUAccessFlags = 0;
 
@@ -2848,13 +2862,15 @@ void LoadBuffers()
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntityType);
-	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
+	device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
+	device->SetName(resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
 	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(XMMATRIX);
-	GetDevice()->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_MATRIXARRAY]);
+	device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_MATRIXARRAY]);
+	device->SetName(resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
 
 	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
 }
@@ -5983,12 +5999,9 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 
 			if (!state_set)
 			{
-				BindPersistentState(threadID);
-
-				const XMFLOAT4X4 __identity = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 				volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
-				buff->instance.Create(__identity);
-				buff->instancePrev.Create(__identity);
+				buff->instance.Create(IDENTITYMATRIX);
+				buff->instancePrev.Create(IDENTITYMATRIX);
 				device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 				state_set = true;
@@ -6061,13 +6074,12 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 					camera_transform.ClearTransform();
 					camera_transform.Translate(bbox.getCenter());
 
-					XMMATRIX ortho = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
-					XMStoreFloat4x4(&impostorcamera.Projection, ortho);
+					XMMATRIX P = XMMatrixOrthographicOffCenterLH(-extents.x, extents.x, -extents.y, extents.y, -extents.z, extents.z);
+					XMStoreFloat4x4(&impostorcamera.Projection, P);
 					camera_transform.RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * (float)i / (float)impostorCaptureAngles, 0));
 
 					camera_transform.UpdateTransform();
 					impostorcamera.TransformCamera(camera_transform);
-					impostorcamera.UpdateProjection();
 					impostorcamera.UpdateCamera();
 					UpdateCameraCB(impostorcamera, threadID);
 
