@@ -1340,8 +1340,7 @@ void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent
 
 
 
-void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID,
-	bool tessellation = false)
+void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false)
 {
 	if (!renderQueue.empty())
 	{
@@ -1461,7 +1460,7 @@ void RenderMeshes(const XMFLOAT3& eye, const RenderQueue& renderQueue, SHADERTYP
 		{
 			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
 			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
-			bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
+			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
@@ -4831,7 +4830,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 							// render opaque shadowmap:
 							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-							RenderMeshes(shcams[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+							RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
@@ -4840,7 +4839,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 									shadowMapArray_Transparent
 								};
 								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-								RenderMeshes(shcams[cascade].Eye, renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 							}
 							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
@@ -4905,7 +4904,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 						// render opaque shadowmap:
 						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index);
-						RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+						RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
@@ -4914,7 +4913,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 								shadowMapArray_Transparent
 							};
 							GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index);
-							RenderMeshes(frustum.getCamPos(), renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+							RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 						}
 						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -4985,7 +4984,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						}
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
-						RenderMeshes(light.position, renderQueue, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+						RenderMeshes(renderQueue, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
 
 						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -5082,7 +5081,7 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
+		RenderMeshes(renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
 
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
@@ -5155,7 +5154,7 @@ void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, 
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
-		RenderMeshes(camera.Eye, renderQueue, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
+		RenderMeshes(renderQueue, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
 
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
@@ -5862,7 +5861,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		if (!renderQueue.empty())
 		{
-			RenderMeshes(center, renderQueue, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
+			RenderMeshes(renderQueue, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
 
 			frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
@@ -6211,7 +6210,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
-		RenderMeshes(center, renderQueue, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+		RenderMeshes(renderQueue, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
