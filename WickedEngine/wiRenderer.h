@@ -9,6 +9,7 @@ struct RAY;
 
 namespace wiRenderer
 {
+	// Common render target formats:
 	static const wiGraphicsTypes::FORMAT RTFormat_ldr = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
 	static const wiGraphicsTypes::FORMAT RTFormat_hdr = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
 	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_0 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
@@ -56,54 +57,91 @@ namespace wiRenderer
 	void SetUpStates();
 	void ClearWorld();
 
+	// Set the main graphics device globally:
 	void SetDevice(wiGraphicsTypes::GraphicsDevice* newDevice);
+	// Retrieve the main graphics device:
 	wiGraphicsTypes::GraphicsDevice* GetDevice();
 
+	// Returns the shader path that you can also modify
 	std::string& GetShaderPath();
+	// Reload shaders, use the argument to modify the shader path. If the argument is empty, the shader path will not be modified
 	void ReloadShaders(const std::string& path = "");
 
+	// Returns the main scene which is currently being used in rendering
 	wiSceneSystem::Scene& GetScene();
+	// Returns the main camera that is currently being used in rendering (and also for post processing)
 	wiSceneSystem::CameraComponent& GetCamera();
+	// Returns the previous frame's camera that is currently being used in rendering to reproject
 	wiSceneSystem::CameraComponent& GetPrevCamera();
+	// Returns the planar reflection camera that is currently being used in rendering
 	wiSceneSystem::CameraComponent& GetRefCamera();
 
-	void FixedUpdate();
+	// Updates the main scene, performs frustum culling for main camera and other tasks that are only done once per frame
 	void UpdatePerFrameData(float dt);
+	// Updates the GPU state according to the previously called UpatePerFrameData()
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
-
+	// Binds all persistent constant buffers, samplers that can used globally in all shaders for a whole frame
 	void BindPersistentState(GRAPHICSTHREAD threadID);
+	// Updates the per frame constant buffer (need to call at least once per frame)
 	void UpdateFrameCB(GRAPHICSTHREAD threadID);
+	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawWorld() and the like
 	void UpdateCameraCB(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+	// Set a global clipping plane state that is available to use in any shader (access as float4 g_xClipPlane)
 	void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
+	// Set a global alpha reference value that can be used by any shaders to perform alpha-testing (access as float g_xAlphaRef)
 	void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID);
+	// Resets the global shader alpha reference value to float g_xAlphaRef = 0.75f
 	inline void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
+	// Binds the gbuffer textures that will be used in deferred rendering, or thin gbuffer in case of forward rendering
 	void BindGBufferTextures(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, wiGraphicsTypes::Texture2D* slot3, wiGraphicsTypes::Texture2D* slot4, GRAPHICSTHREAD threadID);
+	// Binds the hardware depth buffer and a linear depth buffer to be read by shaders
 	void BindDepthTextures(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
 
+	// Draw skydome centered to camera. Its color will be either dynamically computed, or the global environment map will be used if you called SetEnvironmentMap()
 	void DrawSky(GRAPHICSTHREAD threadID);
+	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(GRAPHICSTHREAD threadID);
+	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
 	void DrawWorld(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
-	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
+	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
 	void DrawWorldTransparent(const wiSceneSystem::CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	// Draw shadow maps for each visible light that has associated shadow maps
+	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
+	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
 	void DrawDebugWorld(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+	// Draw Soft offscreen particles. Linear depth should be already readable (see BindDepthTextures())
 	void DrawSoftParticles(const wiSceneSystem::CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID);
-	void DrawTrails(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* refracRes);
+	// Draw deferred lights. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
 	void DrawLights(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+	// Draw simple light visualizer geometries
 	void DrawLightVisualizers(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+	// Draw volumetric light scattering effects. Linear depth should be already readable (see BindDepthTextures())
 	void DrawVolumeLights(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+	// Draw Lens Flares for lights that have them enabled. Linear depth should be already readable (see BindDepthTextures())
 	void DrawLensFlares(GRAPHICSTHREAD threadID);
+	// Draw deferred decals. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
 	void DrawDecals(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
+	// Call once per frame to re-render out of date environment probes
 	void RefreshEnvProbes(GRAPHICSTHREAD threadID);
+	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(GRAPHICSTHREAD threadID);
+	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(GRAPHICSTHREAD threadID);
+	// Compute light grid tiles for tiled rendering paths
 	void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID);
+	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
+	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(GRAPHICSTHREAD threadID);
+	// Render the scene with ray tracing only
 	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
 
+	// Render occluders against a depth buffer
 	void OcclusionCulling_Render(GRAPHICSTHREAD threadID);
+	// Read the occlusion culling results of the previous call to OcclusionCulling_Render. This must be done on the main thread!
 	void OcclusionCulling_Read();
+	// Issue end-of frame operations
 	void EndFrame();
 
 
@@ -134,6 +172,7 @@ namespace wiRenderer
 	// randomness: random seed
 	void GenerateClouds(wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
 
+	// New decals will be packed into a texture atlas
 	void ManageDecalAtlas(GRAPHICSTHREAD threadID);
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
@@ -147,7 +186,9 @@ namespace wiRenderer
 	// Set any param to -1 if don't want to modify
 	void SetShadowPropsCube(int resolution, int count);
 
+	// Returns the resolution that is used for all spotlight and directional light shadow maps
 	int GetShadowRes2D();
+	// Returns the resolution that is used for all pointlight and area light shadow maps
 	int GetShadowResCube();
 
 
@@ -212,8 +253,8 @@ namespace wiRenderer
 	void SetAdvancedRefractionsEnabled(bool value);
 	bool GetAdvancedRefractionsEnabled();
 	bool IsRequestedReflectionRendering();
-	void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex);
-	wiGraphicsTypes::Texture2D* GetEnviromentMap();
+	void SetEnvironmentMap(wiGraphicsTypes::Texture2D* tex);
+	wiGraphicsTypes::Texture2D* GetEnvironmentMap();
 	wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
@@ -221,7 +262,7 @@ namespace wiRenderer
 	void SetOceanEnabled(bool enabled);
 	bool GetOceanEnabled();
 
-
+	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY);
 
 	struct RayIntersectWorldResult
@@ -232,10 +273,11 @@ namespace wiRenderer
 		float distance = FLT_MAX;
 		int subsetIndex = -1;
 	};
+	// Given a ray, finds the closest intersection point against all instances
 	RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);
 
 
-	// Add box to render in next frame
+	// Add box to render in next frame. It will be rendered in DrawDebugWorld()
 	void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 
 	struct RenderableLine
@@ -244,10 +286,13 @@ namespace wiRenderer
 		XMFLOAT3 end = XMFLOAT3(0, 0, 0);
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 	};
+	// Add line to render in the next frame. It will be rendered in DrawDebugWorld()
 	void AddRenderableLine(const RenderableLine& line);
 
+	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
 
+	// Helper function to open a wiscene file and add the contents to the current scene
 	void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity());
 
 };

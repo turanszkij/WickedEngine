@@ -88,7 +88,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	skyButton->SetSize(XMFLOAT2(240, 30));
 	skyButton->SetPos(XMFLOAT2(x-100, y += step));
 	skyButton->OnClick([=](wiEventArgs args) {
-		auto x = wiRenderer::GetEnviromentMap();
+		auto x = wiRenderer::GetEnvironmentMap();
 
 		if (x == nullptr)
 		{
@@ -111,13 +111,13 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 			if (GetOpenFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				wiRenderer::SetEnviromentMap((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+				wiRenderer::SetEnvironmentMap((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
 				skyButton->SetText(fileName);
 			}
 		}
 		else
 		{
-			wiRenderer::SetEnviromentMap(nullptr);
+			wiRenderer::SetEnvironmentMap(nullptr);
 			skyButton->SetText("Load Sky");
 		}
 

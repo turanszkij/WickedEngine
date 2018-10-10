@@ -3369,9 +3369,6 @@ void SetUpStates()
 }
 
 
-void FixedUpdate()
-{
-}
 void UpdatePerFrameData(float dt)
 {
 	Scene& scene = GetScene();
@@ -4201,100 +4198,6 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 
 	frameAllocators[threadID].free(sizeof(uint32_t) * emitterCount);
 
-}
-void DrawTrails(GRAPHICSTHREAD threadID, Texture2D* refracRes)
-{
-	//if (objectsWithTrails.empty())
-	//{
-	//	return;
-	//}
-
-	//GetDevice()->EventBegin("RibbonTrails", threadID);
-
-	//GetDevice()->BindPrimitiveTopology(TRIANGLESTRIP,threadID);
-	//GetDevice()->BindVertexLayout(vertexLayouts[VLTYPE_TRAIL],threadID);
-
-	//GetDevice()->BindRasterizerState(wireRender?rasterizers[RSTYPE_WIRE_DOUBLESIDED]:rasterizers[RSTYPE_DOUBLESIDED],threadID);
-	//GetDevice()->BindDepthStencilState(depthStencils[DSSTYPE_DEFAULT],STENCILREF_EMPTY,threadID);
-	//GetDevice()->BindBlendState(blendStates[BSTYPE_OPAQUE],threadID);
-
-	//GetDevice()->BindPS(pixelShaders[PSTYPE_TRAIL],threadID);
-	//GetDevice()->BindVS(vertexShaders[VSTYPE_TRAIL],threadID);
-	//
-	//GetDevice()->BindResource(PS, refracRes,TEXSLOT_ONDEMAND0,threadID);
-
-	//for (Object* o : objectsWithTrails)
-	//{
-	//	if (o->trail.size() >= 4)
-	//	{
-
-	//		GetDevice()->BindResource(PS, o->trailDistortTex, TEXSLOT_ONDEMAND1, threadID);
-	//		GetDevice()->BindResource(PS, o->trailTex, TEXSLOT_ONDEMAND2, threadID);
-
-	//		std::vector<RibbonVertex> trails;
-
-	//		int bounds = (int)o->trail.size();
-	//		trails.reserve(bounds * 10);
-	//		int req = bounds - 3;
-	//		for (int k = 0; k < req; k += 2)
-	//		{
-	//			static const float trailres = 10.f;
-	//			for (float r = 0.0f; r <= 1.0f; r += 1.0f / trailres)
-	//			{
-	//				XMVECTOR point0 = XMVectorCatmullRom(
-	//					XMLoadFloat3(&o->trail[k ? (k - 2) : 0].pos)
-	//					, XMLoadFloat3(&o->trail[k].pos)
-	//					, XMLoadFloat3(&o->trail[k + 2].pos)
-	//					, XMLoadFloat3(&o->trail[k + 6 < bounds ? (k + 6) : (bounds - 2)].pos)
-	//					, r
-	//				),
-	//					point1 = XMVectorCatmullRom(
-	//						XMLoadFloat3(&o->trail[k ? (k - 1) : 1].pos)
-	//						, XMLoadFloat3(&o->trail[k + 1].pos)
-	//						, XMLoadFloat3(&o->trail[k + 3].pos)
-	//						, XMLoadFloat3(&o->trail[k + 5 < bounds ? (k + 5) : (bounds - 1)].pos)
-	//						, r
-	//					);
-	//				XMFLOAT3 xpoint0, xpoint1;
-	//				XMStoreFloat3(&xpoint0, point0);
-	//				XMStoreFloat3(&xpoint1, point1);
-	//				trails.push_back(RibbonVertex(xpoint0
-	//					, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 0), XMFLOAT2((float)(k + 1) / (float)bounds, 0), r)
-	//					, wiMath::Lerp(o->trail[k].col, o->trail[k + 2].col, r)
-	//					, 1
-	//				));
-	//				trails.push_back(RibbonVertex(xpoint1
-	//					, wiMath::Lerp(XMFLOAT2((float)k / (float)bounds, 1), XMFLOAT2((float)(k + 1) / (float)bounds, 1), r)
-	//					, wiMath::Lerp(o->trail[k + 1].col, o->trail[k + 3].col, r)
-	//					, 1
-	//				));
-	//			}
-	//		}
-	//		if (!trails.empty())
-	//		{
-	//			UINT trailOffset;
-	//			void* buffer = GetDevice()->AllocateFromRingBuffer(dynamicVertexBufferPool, sizeof(RibbonVertex)*trails.size(), trailOffset, threadID);
-	//			memcpy(buffer, trails.data(), sizeof(RibbonVertex)*trails.size());
-	//			GetDevice()->InvalidateBufferAccess(dynamicVertexBufferPool, threadID);
-
-	//			const GPUBuffer* vbs[] = {
-	//				dynamicVertexBufferPool
-	//			};
-	//			const UINT strides[] = {
-	//				sizeof(RibbonVertex)
-	//			};
-	//			const UINT offsets[] = {
-	//				trailOffset
-	//			};
-	//			GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-	//			GetDevice()->Draw((int)trails.size(), 0, threadID);
-
-	//			trails.clear();
-	//		}
-	//	}
-	//}
-
-	//GetDevice()->EventEnd(threadID);
 }
 void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
@@ -8409,8 +8312,8 @@ float GetSpecularAAParam() { return SPECULARAA; }
 void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
 bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
-void SetEnviromentMap(wiGraphicsTypes::Texture2D* tex) { enviroMap = tex; }
-Texture2D* GetEnviromentMap() { return enviroMap; }
+void SetEnvironmentMap(wiGraphicsTypes::Texture2D* tex) { enviroMap = tex; }
+Texture2D* GetEnvironmentMap() { return enviroMap; }
 void SetGameSpeed(float value) { GameSpeed = max(0, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetOceanEnabled(bool enabled)

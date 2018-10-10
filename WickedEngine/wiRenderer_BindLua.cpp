@@ -115,7 +115,7 @@ namespace wiRenderer_BindLua
 			Texture_BindLua* tex = Luna<Texture_BindLua>::lightcheck(L, 1);
 			if (tex != nullptr)
 			{
-				wiRenderer::SetEnviromentMap(tex->texture);
+				wiRenderer::SetEnvironmentMap(tex->texture);
 			}
 			else
 				wiLua::SError(L, "SetEnvironmentMap(Texture cubemap) argument is not a texture!");

@@ -212,8 +212,6 @@ void Renderable3DComponent::Start()
 
 void Renderable3DComponent::FixedUpdate()
 {
-	wiRenderer::FixedUpdate();
-
 	Renderable2DComponent::FixedUpdate();
 }
 
@@ -404,7 +402,6 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 	shadedSceneRT.Set(threadID, mainRT.depth, false, 0);{
 		RenderTransparentScene(rtSceneCopy, threadID);
 
-		wiRenderer::DrawTrails(threadID, rtSceneCopy.GetTexture());
 		wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), threadID);
 
 		fx.presentFullScreen = true;
