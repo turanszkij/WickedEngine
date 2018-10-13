@@ -1645,6 +1645,11 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 				};
 				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
 
+				if (tessellatorRequested)
+				{
+					device->BindResources(DS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				}
+
 				SetAlphaRef(material.alphaRef, threadID);
 
 				device->DrawIndexedInstanced((int)subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, threadID);

@@ -106,6 +106,13 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	vertexPositionPrev = float4(PhongGeometryPrev(fU, fV, fW, input), 1);
     // Compute normal
 	vertexNormal = PhongNormal(fU, fV, fW, input);
+
+	// Displacement
+	float3 displacement = 1 - xDisplacementMap.SampleLevel(sampler_linear_wrap, vertexTex.xy, 0).rrr;
+	displacement *= vertexNormal.xyz;
+	displacement *= 0.1f; // todo: param
+	vertexPosition.xyz += displacement;
+	vertexPositionPrev.xyz += displacement;
 	
 	Out.clip = dot(vertexPosition, g_xClipPlane);
 	
