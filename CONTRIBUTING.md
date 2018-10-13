@@ -21,6 +21,8 @@ You should be familiar with the following few guidelines before you contribute a
 - use namespaces
 - avoid "using namespace xyz" in header (.h) files
 - prefer "using namespace xyz" in source (.cpp) files
+- use assert()
+- do not use c++ exceptions, instead prefer to return error codes or bool
 - avoid using geometry shaders if possible
 - when writing shaders, use the resource declaration macros and define proper named bind-points at compile time. See examples in ShaderInterop.h, ShaderInterop_Renderer.h, etc...
 - speaking of macros, I don't have a problem if you use them wisely (use short and simple macros)
