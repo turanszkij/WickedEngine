@@ -123,6 +123,8 @@ void MainComponent::Run()
 	wiProfiler::GetInstance().BeginFrame();
 	wiProfiler::GetInstance().BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
+	wiInputManager::GetInstance()->Update();
+
 	static wiTimer timer = wiTimer();
 	static double accumulator = 0.0;
 	const double elapsedTime = max(0, timer.elapsed() / 1000.0);

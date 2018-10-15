@@ -22,16 +22,6 @@ wiInputManager::wiInputManager()
 	xinput = nullptr;
 	dinput = nullptr;
 	rawinput = nullptr;
-	
-	thread([&] {
-
-		while (true)
-		{
-			Update();
-			wiHelper::Sleep(16.f);
-		}
-
-	}).detach();
 }
 wiInputManager::~wiInputManager()
 {
