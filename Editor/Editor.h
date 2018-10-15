@@ -92,6 +92,7 @@ public:
 		XMFLOAT3 position, normal;
 		float distance;
 		int subsetIndex;
+		XMFLOAT4X4 orientation;
 
 		Picked()
 		{

@@ -272,6 +272,7 @@ namespace wiRenderer
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float distance = FLT_MAX;
 		int subsetIndex = -1;
+		XMFLOAT4X4 orientation;
 	};
 	// Given a ray, finds the closest intersection point against all instances
 	RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);

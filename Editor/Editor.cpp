@@ -897,6 +897,7 @@ void EditorComponent::Update(float dt)
 				hovered.subsetIndex = picked.subsetIndex;
 				hovered.position = picked.position;
 				hovered.normal = picked.normal;
+				hovered.orientation = picked.orientation;
 			}
 
 			if (pickMask & PICK_LIGHT)
@@ -1066,9 +1067,9 @@ void EditorComponent::Update(float dt)
 						decalselector = (decalselector + 1) % 2;
 						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
 						TransformComponent& transform = *scene.transforms.GetComponent(entity);
-						transform.Translate(hovered.position);
-						transform.Scale(XMFLOAT3(4, 4, 4));
-						transform.MatrixTransform(XMLoadFloat3x3(&wiRenderer::GetCamera().rotationMatrix));
+						transform.MatrixTransform(hovered.orientation);
+						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+						transform.Scale(XMFLOAT3(2, 2, 2));
 						scene.Component_Attach(entity, hovered.entity);
 					}
 				}
@@ -1285,13 +1286,7 @@ void EditorComponent::Update(float dt)
 			// Put Instances
 			if (clipboard != nullptr && hovered.subsetIndex >= 0 && input.down(VK_LSHIFT) && input.press(VK_LBUTTON))
 			{
-				// Construct a matrix that will put the instance to hovered position (P) and orientation according to hovered normal (N):
-				XMVECTOR N = XMLoadFloat3(&hovered.normal);
-				XMVECTOR P = XMLoadFloat3(&hovered.position);
-				XMVECTOR E = camera.GetEye();
-				XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
-				XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
-				XMMATRIX M = { T, N, B, P };
+				XMMATRIX M = XMLoadFloat4x4(&hovered.orientation);
 
 				clipboard->SetReadModeAndResetPos(true);
 				size_t count;

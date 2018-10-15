@@ -8156,6 +8156,15 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 		}
 	}
 
+	// Construct a matrix that will orient to position (P) according to surface normal (N):
+	XMVECTOR N = XMLoadFloat3(&result.normal);
+	XMVECTOR P = XMLoadFloat3(&result.position);
+	XMVECTOR E = XMLoadFloat3(&ray.origin);
+	XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+	XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+	XMMATRIX M = { T, N, B, P };
+	XMStoreFloat4x4(&result.orientation, M);
+
 	return result;
 }
 
