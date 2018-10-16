@@ -1143,6 +1143,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1933,6 +1936,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">
+      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

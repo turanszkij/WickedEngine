@@ -11,6 +11,7 @@
 #include "wiHelper.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
+#include "wiGPUBVH.h"
 #include "wiPhysicsEngine.h"
 
 using namespace std;
@@ -32,6 +33,7 @@ namespace wiInitializer
 
 		wiWidget::LoadShaders();
 		wiGPUSortLib::LoadShaders();
+		wiGPUBVH::LoadShaders();
 
 		wiPhysicsEngine::Initialize();
 

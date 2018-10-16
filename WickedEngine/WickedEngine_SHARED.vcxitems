@@ -260,6 +260,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h" />
@@ -528,6 +529,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp" />
