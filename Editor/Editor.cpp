@@ -225,70 +225,6 @@ void EditorComponent::Load()
 
 	float step = 105, x = -step;
 
-	Scene& scene = wiRenderer::GetScene();
-
-	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
-	cinemaModeCheckBox->SetSize(XMFLOAT2(18, 18));
-	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 55 - 860 - 120, 0));
-	cinemaModeCheckBox->SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
-	cinemaModeCheckBox->OnClick([&](wiEventArgs args) {
-		if (renderPath != nullptr)
-		{
-			renderPath->GetGUI().SetVisible(false);
-		}
-		GetGUI().SetVisible(false);
-		wiProfiler::GetInstance().ENABLED = false;
-		main->infoDisplay.active = false;
-	});
-	GetGUI().AddWidget(cinemaModeCheckBox);
-
-	wiCheckBox* physicsEnabledCheckBox = new wiCheckBox("Physics Enabled: ");
-	physicsEnabledCheckBox->SetSize(XMFLOAT2(18, 18));
-	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 55 - 860 - 120, 22));
-	physicsEnabledCheckBox->SetTooltip("Toggle Physics Engine On/Off");
-	physicsEnabledCheckBox->OnClick([&](wiEventArgs args) {
-		Scene& scene = wiRenderer::GetScene();
-		scene.SetPhysicsEnabled(args.bValue);
-	});
-	physicsEnabledCheckBox->SetCheck(wiRenderer::GetScene().IsPhysicsEnabled());
-	GetGUI().AddWidget(physicsEnabledCheckBox);
-
-
-	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
-	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
-	renderPathComboBox->SetPos(XMFLOAT2(screenW - 55 - 860, 0));
-	renderPathComboBox->AddItem("Forward");
-	renderPathComboBox->AddItem("Deferred");
-	renderPathComboBox->AddItem("Tiled Forward");
-	renderPathComboBox->AddItem("Tiled Deferred");
-	renderPathComboBox->AddItem("Path Tracing");
-	renderPathComboBox->OnSelect([&](wiEventArgs args) {
-		switch (args.iValue)
-		{
-		case 0:
-			ChangeRenderPath(RENDERPATH_FORWARD);
-			break;
-		case 1:
-			ChangeRenderPath(RENDERPATH_DEFERRED);
-			break;
-		case 2:
-			ChangeRenderPath(RENDERPATH_TILEDFORWARD);
-			break;
-		case 3:
-			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
-			break;
-		case 4:
-			ChangeRenderPath(RENDERPATH_PATHTRACING);
-			break;
-		default:
-			break;
-		}
-	});
-	renderPathComboBox->SetSelected(2);
-	renderPathComboBox->SetEnabled(true);
-	renderPathComboBox->SetTooltip("Choose a render path...");
-	GetGUI().AddWidget(renderPathComboBox);
-
 
 
 
@@ -732,6 +668,70 @@ void EditorComponent::Load()
 		exit(0);
 	});
 	GetGUI().AddWidget(exitButton);
+
+
+
+	wiCheckBox* physicsEnabledCheckBox = new wiCheckBox("Physics Enabled: ");
+	physicsEnabledCheckBox->SetSize(XMFLOAT2(18, 18));
+	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 25, 50));
+	physicsEnabledCheckBox->SetTooltip("Toggle Physics Engine On/Off");
+	physicsEnabledCheckBox->OnClick([&](wiEventArgs args) {
+		Scene& scene = wiRenderer::GetScene();
+		scene.SetPhysicsEnabled(args.bValue);
+	});
+	physicsEnabledCheckBox->SetCheck(wiRenderer::GetScene().IsPhysicsEnabled());
+	GetGUI().AddWidget(physicsEnabledCheckBox);
+
+	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
+	cinemaModeCheckBox->SetSize(XMFLOAT2(18, 18));
+	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 25, 72));
+	cinemaModeCheckBox->SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
+	cinemaModeCheckBox->OnClick([&](wiEventArgs args) {
+		if (renderPath != nullptr)
+		{
+			renderPath->GetGUI().SetVisible(false);
+		}
+		GetGUI().SetVisible(false);
+		wiProfiler::GetInstance().ENABLED = false;
+		main->infoDisplay.active = false;
+	});
+	GetGUI().AddWidget(cinemaModeCheckBox);
+
+
+	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");
+	renderPathComboBox->SetSize(XMFLOAT2(100, 20));
+	renderPathComboBox->SetPos(XMFLOAT2(screenW - 128, 94));
+	renderPathComboBox->AddItem("Forward");
+	renderPathComboBox->AddItem("Deferred");
+	renderPathComboBox->AddItem("Tiled Forward");
+	renderPathComboBox->AddItem("Tiled Deferred");
+	renderPathComboBox->AddItem("Path Tracing");
+	renderPathComboBox->OnSelect([&](wiEventArgs args) {
+		switch (args.iValue)
+		{
+		case 0:
+			ChangeRenderPath(RENDERPATH_FORWARD);
+			break;
+		case 1:
+			ChangeRenderPath(RENDERPATH_DEFERRED);
+			break;
+		case 2:
+			ChangeRenderPath(RENDERPATH_TILEDFORWARD);
+			break;
+		case 3:
+			ChangeRenderPath(RENDERPATH_TILEDDEFERRED);
+			break;
+		case 4:
+			ChangeRenderPath(RENDERPATH_PATHTRACING);
+			break;
+		default:
+			break;
+		}
+	});
+	renderPathComboBox->SetSelected(2);
+	renderPathComboBox->SetEnabled(true);
+	renderPathComboBox->SetTooltip("Choose a render path...");
+	GetGUI().AddWidget(renderPathComboBox);
 
 
 	cameraWnd->ResetCam();

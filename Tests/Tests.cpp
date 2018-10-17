@@ -64,6 +64,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Lua Script");
 	testSelector->AddItem("Water Test");
 	testSelector->AddItem("Shadows Test");
+	testSelector->AddItem("Physics Test");
 	testSelector->OnSelect([=](wiEventArgs args) {
 
 		wiRenderer::SetTemporalAAEnabled(false);
@@ -108,6 +109,10 @@ TestsRenderer::TestsRenderer()
 		case 7:
 			wiRenderer::SetTemporalAAEnabled(true);
 			wiRenderer::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			break;
+		case 8:
+			wiRenderer::SetTemporalAAEnabled(true);
+			wiRenderer::LoadModel("../models/physics_test.wiscene");
 			break;
 		}
 
