@@ -21,7 +21,7 @@ using namespace wiSceneSystem;
 
 namespace wiPhysicsEngine
 {
-	btVector3 gravity(0, -110, 0);
+	btVector3 gravity(0, -10, 0);
 	int softbodyIterationCount = 5;
 	btCollisionConfiguration* collisionConfiguration = nullptr;
 	btCollisionDispatcher* dispatcher = nullptr;
@@ -39,17 +39,18 @@ namespace wiPhysicsEngine
 	void Initialize()
 	{
 		// collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
-		collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration();
+		collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration;
 
 		// use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
 		dispatcher = new btCollisionDispatcher(collisionConfiguration);
 
 		// btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
-		overlappingPairCache = new btDbvtBroadphase();
+		overlappingPairCache = new btDbvtBroadphase;
 
 		// the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
 		solver = new btSequentialImpulseConstraintSolver;
 
+		//dynamicsWorld = new btSimpleDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 		//dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
 		dynamicsWorld = new btSoftRigidDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration, softBodySolver);
 
@@ -59,12 +60,14 @@ namespace wiPhysicsEngine
 
 		dynamicsWorld->setGravity(gravity);
 
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().air_density = (btScalar)0.0;
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().water_density = 0;
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().water_offset = 0;
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().water_normal = btVector3(0, 0, 0);
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().m_gravity.setValue(gravity.x(), gravity.y(), gravity.z());
-		((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo().m_sparsesdf.Initialize();
+		btSoftRigidDynamicsWorld* softRigidWorld = (btSoftRigidDynamicsWorld*)dynamicsWorld;
+		btSoftBodyWorldInfo& softWorldInfo = softRigidWorld->getWorldInfo();
+		softWorldInfo.air_density = (btScalar)0.0;
+		softWorldInfo.water_density = 0;
+		softWorldInfo.water_offset = 0;
+		softWorldInfo.water_normal = btVector3(0, 0, 0);
+		softWorldInfo.m_gravity.setValue(gravity.x(), gravity.y(), gravity.z());
+		softWorldInfo.m_sparsesdf.Initialize();
 
 	}
 	void CleanUp()
@@ -114,7 +117,7 @@ namespace wiPhysicsEngine
 		switch (physicscomponent.shape)
 		{
 		case RigidBodyPhysicsComponent::CollisionShape::BOX:
-			shape = new btBoxShape(S * 0.5f);
+			shape = new btBoxShape(S);
 			break;
 
 		case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
@@ -176,9 +179,10 @@ namespace wiPhysicsEngine
 
 		if (shape != nullptr)
 		{
-			shape->setMargin(btScalar(0.01));
+			// Use default margin for now
+			//shape->setMargin(btScalar(0.01));
 
-			btScalar mass(physicscomponent.mass);
+			btScalar mass = physicscomponent.mass;
 
 			bool isDynamic = (mass != 0.f && !physicscomponent.IsKinematic());
 
@@ -455,7 +459,8 @@ namespace wiPhysicsEngine
 			}
 		}
 
-		dynamicsWorld->stepSimulation(dt, 10);
+		// Scale dt, otherwise simulation is just too slow (todo: review)
+		dynamicsWorld->stepSimulation(dt * 60, 10);
 
 		wiProfiler::GetInstance().EndRange(); // Physics
 	}

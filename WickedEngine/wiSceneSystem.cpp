@@ -835,7 +835,10 @@ namespace wiSceneSystem
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
+		if (IsPhysicsEnabled())
+		{
+			wiPhysicsEngine::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
+		}
 
 		RunTransformUpdateSystem(transforms);
 

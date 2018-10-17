@@ -228,7 +228,7 @@ void EditorComponent::Load()
 	Scene& scene = wiRenderer::GetScene();
 
 	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");
-	cinemaModeCheckBox->SetSize(XMFLOAT2(20, 20));
+	cinemaModeCheckBox->SetSize(XMFLOAT2(18, 18));
 	cinemaModeCheckBox->SetPos(XMFLOAT2(screenW - 55 - 860 - 120, 0));
 	cinemaModeCheckBox->SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
 	cinemaModeCheckBox->OnClick([&](wiEventArgs args) {
@@ -241,6 +241,17 @@ void EditorComponent::Load()
 		main->infoDisplay.active = false;
 	});
 	GetGUI().AddWidget(cinemaModeCheckBox);
+
+	wiCheckBox* physicsEnabledCheckBox = new wiCheckBox("Physics Enabled: ");
+	physicsEnabledCheckBox->SetSize(XMFLOAT2(18, 18));
+	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 55 - 860 - 120, 22));
+	physicsEnabledCheckBox->SetTooltip("Toggle Physics Engine On/Off");
+	physicsEnabledCheckBox->OnClick([&](wiEventArgs args) {
+		Scene& scene = wiRenderer::GetScene();
+		scene.SetPhysicsEnabled(args.bValue);
+	});
+	physicsEnabledCheckBox->SetCheck(wiRenderer::GetScene().IsPhysicsEnabled());
+	GetGUI().AddWidget(physicsEnabledCheckBox);
 
 
 	wiComboBox* renderPathComboBox = new wiComboBox("Render Path: ");

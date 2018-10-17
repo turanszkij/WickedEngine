@@ -894,6 +894,17 @@ namespace wiSceneSystem
 		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 		WeatherComponent weather;
 
+		enum FLAGS
+		{
+			EMPTY = 0,
+			PHYSICS_ENABLED = 1 << 0,
+		};
+		uint32_t _flags = PHYSICS_ENABLED;
+
+		inline void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS_ENABLED; } else { _flags &= ~PHYSICS_ENABLED; } }
+
+		inline bool IsPhysicsEnabled() const { return _flags & PHYSICS_ENABLED; }
+
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);
 		// Remove everything from the scene that it owns:
