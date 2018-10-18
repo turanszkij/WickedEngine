@@ -676,10 +676,9 @@ void EditorComponent::Load()
 	physicsEnabledCheckBox->SetPos(XMFLOAT2(screenW - 25, 50));
 	physicsEnabledCheckBox->SetTooltip("Toggle Physics Engine On/Off");
 	physicsEnabledCheckBox->OnClick([&](wiEventArgs args) {
-		Scene& scene = wiRenderer::GetScene();
-		scene.SetPhysicsEnabled(args.bValue);
+		wiPhysicsEngine::SetEnabled(args.bValue);
 	});
-	physicsEnabledCheckBox->SetCheck(wiRenderer::GetScene().IsPhysicsEnabled());
+	physicsEnabledCheckBox->SetCheck(wiPhysicsEngine::IsEnabled());
 	GetGUI().AddWidget(physicsEnabledCheckBox);
 
 	cinemaModeCheckBox = new wiCheckBox("Cinema Mode: ");

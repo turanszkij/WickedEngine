@@ -268,7 +268,7 @@ namespace wiSceneSystem
 			archive >> mass;
 			archive >> friction;
 			archive >> physicsvertices;
-			archive >> physicsindices;
+			archive >> graphicsToPhysicsVertexMapping;
 		}
 		else
 		{
@@ -276,7 +276,7 @@ namespace wiSceneSystem
 			archive << mass;
 			archive << friction;
 			archive << physicsvertices;
-			archive << physicsindices;
+			archive << graphicsToPhysicsVertexMapping;
 		}
 	}
 	void ArmatureComponent::Serialize(wiArchive& archive, uint32_t seed)

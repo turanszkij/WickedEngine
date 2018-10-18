@@ -472,6 +472,9 @@ namespace wiSceneSystem
 		float restitution = 1.0f;
 		float damping = 1.0f;
 
+		// Non-serialized attributes:
+		void* physicsobject = nullptr;
+
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		inline void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
 
@@ -493,7 +496,13 @@ namespace wiSceneSystem
 		float mass = 1.0f;
 		float friction = 1.0f;
 		std::vector<XMFLOAT3> physicsvertices;
-		std::vector<uint32_t> physicsindices;
+		std::vector<uint32_t> graphicsToPhysicsVertexMapping;
+
+		// Non-serialized attributes:
+		void* physicsobject = nullptr;
+
+		// Create physics represenation of graphics mesh
+		void CreateFromMesh(const MeshComponent& mesh);
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -893,17 +902,6 @@ namespace wiSceneSystem
 		AABB bounds;
 		XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 		WeatherComponent weather;
-
-		enum FLAGS
-		{
-			EMPTY = 0,
-			PHYSICS_ENABLED = 1 << 0,
-		};
-		uint32_t _flags = PHYSICS_ENABLED;
-
-		inline void SetPhysicsEnabled(bool value) { if (value) { _flags |= PHYSICS_ENABLED; } else { _flags &= ~PHYSICS_ENABLED; } }
-
-		inline bool IsPhysicsEnabled() const { return _flags & PHYSICS_ENABLED; }
 
 		// Update all components by a given timestep (in seconds):
 		void Update(float dt);

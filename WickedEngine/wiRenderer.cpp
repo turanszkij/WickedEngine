@@ -3919,6 +3919,35 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	device->EventEnd(threadID);
 	wiProfiler::GetInstance().EndRange(threadID); // skinning
 
+	// Update soft body vertex buffers:
+	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+	{
+		Entity entity = scene.softbodies.GetEntity(i);
+		MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+
+		const size_t vb_size = sizeof(MeshComponent::Vertex_POS) * mesh.vertex_positions.size();
+		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)frameAllocators[threadID].allocate(vb_size);
+
+		if (mesh.vertex_normals.empty())
+		{
+			for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
+			{
+				vb[ind].FromFULL(mesh.vertex_positions[ind], XMFLOAT3(0, 0, 0), 0); // subsetindex??
+			}
+		}
+		else
+		{
+			for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
+			{
+				vb[ind].FromFULL(mesh.vertex_positions[ind], mesh.vertex_normals[ind], 0); // subsetindex??
+			}
+		}
+
+		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, threadID, (UINT)vb_size);
+
+		frameAllocators[threadID].free(vb_size);
+	}
+
 	// GPU Particle systems simulation/sorting/culling:
 	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 	{

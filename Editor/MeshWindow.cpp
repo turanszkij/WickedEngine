@@ -71,7 +71,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	});
 	meshWindow->AddWidget(softbodyCheckBox);
 
-	massSlider = new wiSlider(0, 5000, 0, 100000, "Mass: ");
+	massSlider = new wiSlider(0, 10, 0, 100000, "Mass: ");
 	massSlider->SetTooltip("Set the mass amount for the physics engine.");
 	massSlider->SetSize(XMFLOAT2(100, 30));
 	massSlider->SetPos(XMFLOAT2(x, y += step));
@@ -84,7 +84,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 	});
 	meshWindow->AddWidget(massSlider);
 
-	frictionSlider = new wiSlider(0, 5000, 0, 100000, "Friction: ");
+	frictionSlider = new wiSlider(0, 2, 0, 100000, "Friction: ");
 	frictionSlider->SetTooltip("Set the friction amount for the physics engine.");
 	frictionSlider->SetSize(XMFLOAT2(100, 30));
 	frictionSlider->SetPos(XMFLOAT2(x, y += step));

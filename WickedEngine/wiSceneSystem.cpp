@@ -5,6 +5,9 @@
 #include "wiPhysicsEngine.h"
 #include "wiArchive.h"
 
+#include <functional>
+#include <unordered_map>
+
 using namespace wiECS;
 using namespace wiGraphicsTypes;
 
@@ -336,7 +339,7 @@ namespace wiSceneSystem
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
+			bd.Usage = USAGE_DEFAULT;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -743,6 +746,32 @@ namespace wiSceneSystem
 
 		CreateRenderData();
 	}
+
+	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
+	{
+		// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
+		std::unordered_map<size_t, size_t> uniquePositions;
+		graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
+
+		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+		{
+			const XMFLOAT3& position = mesh.vertex_positions[i];
+
+			size_t hashes[] = {
+				std::hash<float>{}(position.x),
+				std::hash<float>{}(position.y),
+				std::hash<float>{}(position.z),
+			};
+			size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
+
+			if (uniquePositions.count(vertexHash) == 0)
+			{
+				uniquePositions[vertexHash] = i;
+				physicsvertices.push_back(position);
+			}
+			graphicsToPhysicsVertexMapping[i] = (uint32_t)uniquePositions[vertexHash];
+		}
+	}
 	
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
 	{
@@ -835,10 +864,7 @@ namespace wiSceneSystem
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
 
-		if (IsPhysicsEnabled())
-		{
-			wiPhysicsEngine::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
-		}
+		wiPhysicsEngine::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
 
 		RunTransformUpdateSystem(transforms);
 

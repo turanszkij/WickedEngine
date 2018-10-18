@@ -7,6 +7,9 @@ namespace wiPhysicsEngine
 	void Initialize();
 	void CleanUp();
 
+	bool IsEnabled();
+	void SetEnabled(bool value);
+
 	void RunPhysicsUpdateSystem(
 		const wiSceneSystem::WeatherComponent& weather,
 		wiECS::ComponentManager<wiSceneSystem::TransformComponent>& transforms,
