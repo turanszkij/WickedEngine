@@ -766,8 +766,8 @@ namespace wiSceneSystem
 
 			if (uniquePositions.count(vertexHash) == 0)
 			{
-				uniquePositions[vertexHash] = i;
 				physicsvertices.push_back(position);
+				uniquePositions[vertexHash] = physicsvertices.size();
 			}
 			graphicsToPhysicsVertexMapping[i] = (uint32_t)uniquePositions[vertexHash];
 		}

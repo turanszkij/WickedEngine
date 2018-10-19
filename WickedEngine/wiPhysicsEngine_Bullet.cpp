@@ -81,27 +81,6 @@ namespace wiPhysicsEngine
 	bool IsEnabled() { return ENABLED; }
 	void SetEnabled(bool value) { ENABLED = value; }
 
-	void Remove(int id)
-	{
-		btCollisionObject* collisionobject = dynamicsWorld->getCollisionObjectArray()[id];
-
-		btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
-		if (rigidbody != nullptr)
-		{
-			dynamicsWorld->removeRigidBody(rigidbody);
-		}
-		else
-		{
-			btSoftBody* softbody = btSoftBody::upcast(collisionobject);
-
-			if (softbody != nullptr)
-			{
-				((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softbody);
-			}
-		}
-
-		dynamicsWorld->removeCollisionObject(collisionobject);
-	}
 	void AddRigidBody(Entity entity, wiSceneSystem::RigidBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh, const wiSceneSystem::TransformComponent& transform)
 	{
 		btVector3 S(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
@@ -306,39 +285,14 @@ namespace wiPhysicsEngine
 			softBody->m_cfg.kSS_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
 
 
-			btScalar mass = btScalar(physicscomponent.mass);
-			softBody->setTotalMass(mass);
-
-			//int mvg = physicscomponent.massVG;
-			//if (mvg >= 0) {
-			//	for (auto it = mesh.vertexGroups[mvg].vertex_weights.begin(); it != mesh.vertexGroups[mvg].vertex_weights.end(); ++it) {
-			//		int vi = (*it).first;
-			//		float wei = (*it).second;
-			//		int index = physicscomponent.physicalmapGP[vi];
-			//		softBody->setMass(index, softBody->getMass(index)*btScalar(wei));
-			//	}
-			//}
-
-
-			//int gvg = physicscomponent.goalVG;
-			//if (gvg >= 0) {
-			//	for (auto it = mesh.vertexGroups[gvg].vertex_weights.begin(); it != mesh.vertexGroups[gvg].vertex_weights.end(); ++it) {
-			//		int vi = (*it).first;
-			//		int index = physicscomponent.physicalmapGP[vi];
-			//		float weight = (*it).second;
-			//		if (weight == 1)
-			//			softBody->setMass(index, 0);
-			//	}
-			//}
+			softBody->setTotalMass(physicscomponent.mass * physicscomponent.physicsvertices.size());
 
 			for (size_t i = 0; i < physicscomponent.physicsvertices.size(); ++i)
 			{
 				softBody->setMass((int)i, physicscomponent.mass);
 			}
 
-			softBody->getCollisionShape()->setMargin(btScalar(0.2));
-
-			//softBody->setWindVelocity(wind);
+			//softBody->getCollisionShape()->setMargin(btScalar(0.2));
 
 			softBody->setPose(true, true);
 
@@ -359,7 +313,7 @@ namespace wiPhysicsEngine
 		float dt
 	)
 	{
-		if (!IsEnabled())
+		if (!IsEnabled() || dt <= 0)
 		{
 			return;
 		}
@@ -411,8 +365,9 @@ namespace wiPhysicsEngine
 				RigidBodyPhysicsComponent* physicscomponent = rigidbodies.GetComponent(entity);
 				if (physicscomponent == nullptr)
 				{
-					Remove(i);
-					break;
+					dynamicsWorld->removeRigidBody(rigidbody);
+					i--;
+					continue;
 				}
 
 				TransformComponent& transform = *transforms.GetComponent(entity);
@@ -448,8 +403,9 @@ namespace wiPhysicsEngine
 					SoftBodyPhysicsComponent* physicscomponent = softbodies.GetComponent(entity);
 					if (physicscomponent == nullptr)
 					{
-						Remove(i);
-						break;
+						((btSoftRigidDynamicsWorld*)dynamicsWorld)->removeSoftBody(softbody);
+						i--;
+						continue;
 					}
 
 					softbody->setWindVelocity(wind);
@@ -461,7 +417,6 @@ namespace wiPhysicsEngine
 					softbody->getAabb(aabb_min, aabb_max);
 					mesh.aabb = AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
 
-					btSoftBody::tNodeArray& nodes(softbody->m_nodes);
 					for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
 					{
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
