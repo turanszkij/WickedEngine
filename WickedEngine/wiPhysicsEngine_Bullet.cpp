@@ -198,24 +198,29 @@ namespace wiPhysicsEngine
 			physicscomponent.physicsobject = body;
 		}
 	}
-	void AddSoftBody(Entity entity, wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh, const wiSceneSystem::TransformComponent& transform)
+	void AddSoftBody(Entity entity, wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh)
 	{
-		btVector3 S = btVector3(transform.scale_local.x, transform.scale_local.y, transform.scale_local.z);
-		btQuaternion R = btQuaternion(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.z);
-		btVector3 T = btVector3(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z);
-
-		if (physicscomponent.physicsvertices.empty())
+		if (physicscomponent.physicsToGraphicsVertexMapping.empty())
 		{
 			physicscomponent.CreateFromMesh(mesh);
 		}
 
-		const int vCount = (int)physicscomponent.physicsvertices.size();
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
+
+		const int vCount = (int)physicscomponent.physicsToGraphicsVertexMapping.size();
 		btScalar* btVerts = new btScalar[vCount * 3];
 		for (int i = 0; i < vCount; ++i) 
 		{
-			btVerts[i * 3 + 0] = btScalar(physicscomponent.physicsvertices[i].x);
-			btVerts[i * 3 + 1] = btScalar(physicscomponent.physicsvertices[i].y);
-			btVerts[i * 3 + 2] = btScalar(physicscomponent.physicsvertices[i].z);
+			uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
+
+			XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
+			XMVECTOR P = XMLoadFloat3(&position);
+			P = XMVector3Transform(P, worldMatrix);
+			XMStoreFloat3(&position, P);
+
+			btVerts[i * 3 + 0] = btScalar(position.x);
+			btVerts[i * 3 + 1] = btScalar(position.y);
+			btVerts[i * 3 + 2] = btScalar(position.z);
 		}
 
 		const int iCount = (int)mesh.indices.size();
@@ -253,20 +258,12 @@ namespace wiPhysicsEngine
 			softBody->generateBendingConstraints(2, pm);
 			softBody->randomizeConstraints();
 
-			//btTransform shapeTransform;
-			//shapeTransform.setIdentity();
-			//shapeTransform.setOrigin(T);
-			//shapeTransform.setRotation(R);
-			//softBody->scale(S);
-			//softBody->transform(shapeTransform);
-
-
 			softBody->m_cfg.piterations = softbodyIterationCount;
 			softBody->m_cfg.aeromodel = btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
 
 			softBody->m_cfg.kAHR = btScalar(.69); //0.69		Anchor hardness  [0,1]
 			softBody->m_cfg.kCHR = btScalar(1.0); //1			Rigid contact hardness  [0,1]
-			softBody->m_cfg.kDF = btScalar(physicscomponent.friction); //0.2			Dynamic friction coefficient  [0,1]
+			softBody->m_cfg.kDF = btScalar(0.2); //0.2			Dynamic friction coefficient  [0,1]
 			softBody->m_cfg.kDG = btScalar(0.01); //0			Drag coefficient  [0,+inf]
 			softBody->m_cfg.kDP = btScalar(0.0); //0			Damping coefficient  [0,1]
 			softBody->m_cfg.kKHR = btScalar(0.1); //0.1			Kinetic contact hardness  [0,1]
@@ -285,18 +282,20 @@ namespace wiPhysicsEngine
 			softBody->m_cfg.kSS_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
 
 
-			softBody->setTotalMass(physicscomponent.mass * physicscomponent.physicsvertices.size());
+			softBody->setTotalMass(physicscomponent.mass);
 
-			for (size_t i = 0; i < physicscomponent.physicsvertices.size(); ++i)
+			for (size_t i = 0; i < physicscomponent.physicsToGraphicsVertexMapping.size(); ++i)
 			{
-				softBody->setMass((int)i, physicscomponent.mass);
+				float weight = physicscomponent.weights[i];
+				softBody->setMass((int)i, weight);
 			}
-
-			//softBody->getCollisionShape()->setMargin(btScalar(0.2));
 
 			softBody->setPose(true, true);
 
-			softBody->setActivationState(DISABLE_DEACTIVATION);
+			if (physicscomponent.IsDisableDeactivation())
+			{
+				softBody->setActivationState(DISABLE_DEACTIVATION);
+			}
 
 			((btSoftRigidDynamicsWorld*)dynamicsWorld)->addSoftBody(softBody);
 			physicscomponent.physicsobject = softBody;
@@ -340,19 +339,21 @@ namespace wiPhysicsEngine
 		// Try to register softbodies to Meshes:
 		for (size_t i = 0; i < softbodies.GetCount(); ++i)
 		{
-			Entity entity = softbodies.GetEntity(i);
 			SoftBodyPhysicsComponent& physicscomponent = softbodies[i];
+			Entity entity = softbodies.GetEntity(i);
 			MeshComponent& mesh = *meshes.GetComponent(entity);
 			mesh.SetDynamic(true);
 
-			if (physicscomponent.physicsobject == nullptr)
+			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
-				TransformComponent transform;
-				AddSoftBody(entity, physicscomponent, mesh, transform);
+				AddSoftBody(entity, physicscomponent, mesh);
 			}
 		}
 
-		// Update all physics components and remove from simulation if components no longer exist:
+		// Perform internal simulation step:
+		dynamicsWorld->stepSimulation(dt, 10);
+
+		// Synchronize scene entities with physics engine:
 		for (int i = 0; i < dynamicsWorld->getCollisionObjectArray().size(); ++i)
 		{
 			btCollisionObject* collisionobject = dynamicsWorld->getCollisionObjectArray()[i];
@@ -375,10 +376,13 @@ namespace wiPhysicsEngine
 				btMotionState* motionState = rigidbody->getMotionState();
 				btTransform physicsTransform;
 
+				// For kinematic object, system updates physics state, else the physics updates system state:
 				if (physicscomponent->IsKinematic())
 				{
-					btVector3 T(transform.translation_local.x, transform.translation_local.y, transform.translation_local.z);
-					btQuaternion R(transform.rotation_local.x, transform.rotation_local.y, transform.rotation_local.z, transform.rotation_local.w);
+					XMFLOAT3 position = transform.GetPosition();
+					XMFLOAT4 rotation = transform.GetRotation();
+					btVector3 T(position.x, position.y, position.z);
+					btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
 					physicsTransform.setOrigin(T);
 					physicsTransform.setRotation(R);
 					motionState->setWorldTransform(physicsTransform);
@@ -417,29 +421,53 @@ namespace wiPhysicsEngine
 					softbody->getAabb(aabb_min, aabb_max);
 					mesh.aabb = AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
 
+					// This is different from rigid bodies, because soft body is a per mesh component. World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
+					XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent->worldMatrix);
+
+					// System can control zero weight soft body nodes:
+					for (size_t ind = 0; ind < physicscomponent->weights.size(); ++ind)
+					{
+						float weight = physicscomponent->weights[ind];
+
+						if (weight == 0)
+						{
+							btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
+							uint32_t graphicsInd = physicscomponent->physicsToGraphicsVertexMapping[ind];
+							XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
+							XMVECTOR P = XMLoadFloat3(&position);
+							P = XMVector3Transform(P, worldMatrix);
+							XMStoreFloat3(&position, P);
+							node.m_x = btVector3(position.x, position.y, position.z);
+						}
+					}
+
+					// Soft body simulation nodes will update graphics mesh:
 					for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
 					{
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
-						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
+						float weight = physicscomponent->weights[physicsInd];
 
-						XMFLOAT3& position = mesh.vertex_positions[ind];
-						position.x = node.m_x.getX();
-						position.y = node.m_x.getY();
-						position.z = node.m_x.getZ();
-
-						if (!mesh.vertex_normals.empty())
+						if (weight > 0)
 						{
-							XMFLOAT3& normal = mesh.vertex_normals[ind];
-							normal.x = -node.m_n.getX();
-							normal.y = -node.m_n.getY();
-							normal.z = -node.m_n.getZ();
+							btSoftBody::Node& node = softbody->m_nodes[physicsInd];
+
+							XMFLOAT3& position = mesh.vertex_positions[ind];
+							position.x = node.m_x.getX();
+							position.y = node.m_x.getY();
+							position.z = node.m_x.getZ();
+
+							if (!mesh.vertex_normals.empty())
+							{
+								XMFLOAT3& normal = mesh.vertex_normals[ind];
+								normal.x = -node.m_n.getX();
+								normal.y = -node.m_n.getY();
+								normal.z = -node.m_n.getZ();
+							}
 						}
 					}
 				}
 			}
 		}
-
-		dynamicsWorld->stepSimulation(dt, 10);
 
 		wiProfiler::GetInstance().EndRange(); // Physics
 	}

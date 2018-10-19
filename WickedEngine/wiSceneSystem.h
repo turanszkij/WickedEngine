@@ -227,8 +227,8 @@ namespace wiSceneSystem
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_COL;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_ATL;
+		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_PRE;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_PRE;
 
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
@@ -412,8 +412,9 @@ namespace wiSceneSystem
 		float impostorFadeThresholdRadius;
 		float impostorSwapDistance;
 
-		// single frame-lifetime, to directly index transform component:
-		uint32_t transformComponentIndex;
+		// these will only be valid for a single frame:
+		int transform_index = -1;
+		int prev_transform_index = -1;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
@@ -489,17 +490,24 @@ namespace wiSceneSystem
 		enum FLAGS
 		{
 			EMPTY = 0,
-			DISABLE_DEACTIVATION = 1 << 0,
+			SAFE_TO_REGISTER = 1 << 0,
+			DISABLE_DEACTIVATION = 1 << 1,
 		};
-		uint32_t _flags = EMPTY;
+		uint32_t _flags = DISABLE_DEACTIVATION;
 
 		float mass = 1.0f;
 		float friction = 1.0f;
-		std::vector<XMFLOAT3> physicsvertices;
-		std::vector<uint32_t> graphicsToPhysicsVertexMapping;
+		std::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
+		std::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
+		std::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
+		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
+
+		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
+
+		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 
 		// Create physics represenation of graphics mesh
 		void CreateFromMesh(const MeshComponent& mesh);
@@ -999,12 +1007,14 @@ namespace wiSceneSystem
 	void RunMaterialUpdateSystem(wiECS::ComponentManager<MaterialComponent>& materials, float dt);
 	void RunImpostorUpdateSystem(wiECS::ComponentManager<ImpostorComponent>& impostors);
 	void RunObjectUpdateSystem(
+		const wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		const wiECS::ComponentManager<MeshComponent>& meshes,
 		const wiECS::ComponentManager<MaterialComponent>& materials,
 		wiECS::ComponentManager<ObjectComponent>& objects,
 		wiECS::ComponentManager<AABB>& aabb_objects,
 		wiECS::ComponentManager<ImpostorComponent>& impostors,
+		wiECS::ComponentManager<SoftBodyPhysicsComponent>& softbodies,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	);

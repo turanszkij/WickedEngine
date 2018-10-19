@@ -266,9 +266,14 @@ void MeshWindow::SetEntity(Entity entity)
 		}
 		tessellationFactorSlider->SetValue(mesh->GetTessellationFactor());
 
+		softbodyCheckBox->SetEnabled(false);
+		massSlider->SetValue(0);
+		frictionSlider->SetValue(0);
+
 		SoftBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
+			softbodyCheckBox->SetEnabled(true);
 			massSlider->SetValue(physicscomponent->mass);
 			frictionSlider->SetValue(physicscomponent->friction);
 		}

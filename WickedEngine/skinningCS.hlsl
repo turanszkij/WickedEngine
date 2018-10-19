@@ -20,8 +20,6 @@ RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
 RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
 
 RWRAWBUFFER(streamoutBuffer_POS, SKINNINGSLOT_OUT_VERTEX_POS);
-RWRAWBUFFER(streamoutBuffer_PRE, SKINNINGSLOT_OUT_VERTEX_PRE);
-
 
 
 inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in float4 inWei)
@@ -131,6 +129,5 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	}
 
 	// Store data:
-	streamoutBuffer_PRE.Store4(fetchAddress_POS_NOR, streamoutBuffer_POS.Load4(fetchAddress_POS_NOR)); // copy prev frame current pos to current frame prev pos
 	streamoutBuffer_POS.Store4(fetchAddress_POS_NOR, pos_nor_u);
 }

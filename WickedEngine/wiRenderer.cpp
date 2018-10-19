@@ -1433,21 +1433,19 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 				instancedBatchArray[instancedBatchCount - 1].forceAlphatestForDithering = 1;
 			}
 
-			const TransformComponent& transform = scene.transforms[instance.transformComponentIndex];
+			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
 
 			// Write into actual GPU-buffer:
 			if (advancedVBRequest)
 			{
-				((volatile InstBuf*)instances)[batchID].instance.Create(transform.world, instance.color, dither);
+				((volatile InstBuf*)instances)[batchID].instance.Create(worldMatrix, instance.color, dither);
 
-				// The following GetComponent() is going to be a map lookup in this hot loop, but ideally just once per frame per object. Might need to optimize later if it becomes a problem:
-				Entity objectEntity = scene.objects.GetEntity(instanceIndex);
-				const PreviousFrameTransformComponent& prev_transform = *scene.prev_transforms.GetComponent(objectEntity);
-				((volatile InstBuf*)instances)[batchID].instancePrev.Create(prev_transform.world_prev);
+				const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
+				((volatile InstBuf*)instances)[batchID].instancePrev.Create(prev_worldMatrix);
 			}
 			else
 			{
-				((volatile Instance*)instances)[batchID].Create(transform.world, instance.color, dither);
+				((volatile Instance*)instances)[batchID].Create(worldMatrix, instance.color, dither);
 			}
 
 			instancedBatchArray[instancedBatchCount - 1].instanceCount++; // next instance in current InstancedBatch
@@ -1608,7 +1606,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 						GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
-							mesh.streamoutBuffer_PRE.get() != nullptr ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
+							mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
 							&dynamicVertexBufferPools[threadID]
 						};
 						UINT strides[] = {
@@ -3367,9 +3365,42 @@ void SetUpStates()
 
 void UpdatePerFrameData(float dt)
 {
+	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
 
 	scene.Update(dt * GetGameSpeed());
+
+	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked:
+	{
+		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+		{
+			MeshComponent& mesh = scene.meshes[i];
+
+			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
+			{
+				if (mesh.vertexBuffer_PRE == nullptr)
+				{
+					mesh.vertexBuffer_PRE.reset(new GPUBuffer);
+					HRESULT hr = device->CreateBuffer(&mesh.streamoutBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
+					assert(SUCCEEDED(hr));
+				}
+				mesh.streamoutBuffer_POS.swap(mesh.vertexBuffer_PRE);
+			}
+		}
+		for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+		{
+			Entity entity = scene.softbodies.GetEntity(i);
+			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+
+			if (mesh.vertexBuffer_PRE == nullptr)
+			{
+				mesh.vertexBuffer_PRE.reset(new GPUBuffer);
+				HRESULT hr = device->CreateBuffer(&mesh.vertexBuffer_POS->GetDesc(), nullptr, mesh.vertexBuffer_PRE.get());
+				assert(SUCCEEDED(hr));
+			}
+			mesh.vertexBuffer_POS.swap(mesh.vertexBuffer_PRE);
+		}
+	}
 
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
@@ -3895,16 +3926,15 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 					mesh.vertexBuffer_POS.get(),
 					mesh.vertexBuffer_BON.get(),
 				};
-				GPUResource* sos[] = {
+				GPUResource* so[] = {
 					mesh.streamoutBuffer_POS.get(),
-					mesh.streamoutBuffer_PRE.get(),
 				};
 
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
-				device->BindUAVs(CS, sos, 0, ARRAYSIZE(sos), threadID);
+				device->BindUAVs(CS, so, 0, ARRAYSIZE(so), threadID);
 
 				device->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
-				device->UAVBarrier(sos, ARRAYSIZE(sos), threadID); // todo: defer, to gain from async compute
+				device->UAVBarrier(so, ARRAYSIZE(so), threadID); // todo: defer, to gain from async compute
 			}
 
 		}
@@ -3925,6 +3955,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		Entity entity = scene.softbodies.GetEntity(i);
 		MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
+		// Copy new simulation data to vertex buffer
 		const size_t vb_size = sizeof(MeshComponent::Vertex_POS) * mesh.vertex_positions.size();
 		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)frameAllocators[threadID].allocate(vb_size);
 
@@ -5943,7 +5974,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			GPUBuffer* vbs[] = {
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mesh.vertexBuffer_TEX.get(),
-				mesh.IsSkinned() ? mesh.streamoutBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
+				mesh.vertexBuffer_POS.get(),
 				&dynamicVertexBufferPools[threadID]
 			};
 			UINT strides[] = {
@@ -7719,8 +7750,7 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 			if (layer.GetLayerMask() & layerMask)
 			{
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-				const TransformComponent& transform = scene.transforms[object.transformComponentIndex];
+				const TransformComponent& transform = scene.transforms[object.transform_index];
 
 				const XMMATRIX objectMat = XMLoadFloat4x4(&transform.world);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);

@@ -267,16 +267,20 @@ namespace wiSceneSystem
 			archive >> _flags;
 			archive >> mass;
 			archive >> friction;
-			archive >> physicsvertices;
+			archive >> physicsToGraphicsVertexMapping;
 			archive >> graphicsToPhysicsVertexMapping;
+			archive >> weights;
+
+			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
 		{
 			archive << _flags;
 			archive << mass;
 			archive << friction;
-			archive << physicsvertices;
+			archive << physicsToGraphicsVertexMapping;
 			archive << graphicsToPhysicsVertexMapping;
+			archive << weights;
 		}
 	}
 	void ArmatureComponent::Serialize(wiArchive& archive, uint32_t seed)

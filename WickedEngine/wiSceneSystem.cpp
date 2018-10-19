@@ -395,11 +395,6 @@ namespace wiSceneSystem
 			streamoutBuffer_POS.reset(new GPUBuffer);
 			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS.get());
 			assert(SUCCEEDED(hr));
-
-			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertex_positions.size());
-			streamoutBuffer_PRE.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_PRE.get());
-			assert(SUCCEEDED(hr));
 		}
 
 		// vertexBuffer - TEXCOORDS
@@ -470,6 +465,8 @@ namespace wiSceneSystem
 			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_ATL.get());
 			assert(SUCCEEDED(hr));
 		}
+
+		// vertexBuffer_PRE will be created on demand later!
 
 	}
 	void MeshComponent::ComputeNormals(bool smooth)
@@ -750,8 +747,10 @@ namespace wiSceneSystem
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
 		// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
-		std::unordered_map<size_t, size_t> uniquePositions;
+		std::unordered_map<size_t, uint32_t> uniquePositions;
 		graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
+		physicsToGraphicsVertexMapping.clear();
+		weights.clear();
 
 		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 		{
@@ -766,11 +765,14 @@ namespace wiSceneSystem
 
 			if (uniquePositions.count(vertexHash) == 0)
 			{
-				physicsvertices.push_back(position);
-				uniquePositions[vertexHash] = physicsvertices.size();
+				uniquePositions[vertexHash] = (uint32_t)physicsToGraphicsVertexMapping.size();
+				physicsToGraphicsVertexMapping.push_back((uint32_t)i);
 			}
-			graphicsToPhysicsVertexMapping[i] = (uint32_t)uniquePositions[vertexHash];
+			graphicsToPhysicsVertexMapping[i] = uniquePositions[vertexHash];
 		}
+
+		weights.resize(physicsToGraphicsVertexMapping.size());
+		std::fill(weights.begin(), weights.end(), 1.0f);
 	}
 	
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
@@ -876,7 +878,7 @@ namespace wiSceneSystem
 
 		RunImpostorUpdateSystem(impostors);
 
-		RunObjectUpdateSystem(transforms, meshes, materials, objects, aabb_objects, impostors, bounds, waterPlane);
+		RunObjectUpdateSystem(prev_transforms, transforms, meshes, materials, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
 
 		RunCameraUpdateSystem(transforms, cameras);
 
@@ -1562,12 +1564,14 @@ namespace wiSceneSystem
 		}
 	}
 	void RunObjectUpdateSystem(
+		const wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MeshComponent>& meshes,
 		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<ObjectComponent>& objects,
 		ComponentManager<AABB>& aabb_objects,
 		ComponentManager<ImpostorComponent>& impostors,
+		ComponentManager<SoftBodyPhysicsComponent>& softbodies,
 		AABB& sceneBounds,
 		XMFLOAT4& waterPlane
 	)
@@ -1591,16 +1595,17 @@ namespace wiSceneSystem
 			if (object.meshID != INVALID_ENTITY)
 			{
 				Entity entity = objects.GetEntity(i);
-
-				object.transformComponentIndex = (uint32_t)transforms.GetIndex(entity);
-
-				const TransformComponent& transform = transforms[object.transformComponentIndex];
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+
+				// These will only be valid for a single frame:
+				object.transform_index = (int)transforms.GetIndex(entity);
+				object.prev_transform_index = (int)prev_transforms.GetIndex(entity);
+
+				const TransformComponent& transform = transforms[object.transform_index];
 
 				if (mesh != nullptr)
 				{
 					aabb = mesh->aabb.get(transform.world);
-					sceneBounds = AABB::Merge(sceneBounds, aabb);
 
 					// This is instance bounding box matrix:
 					XMFLOAT4X4 meshMatrix;
@@ -1656,6 +1661,26 @@ namespace wiSceneSystem
 						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
 						impostor->instanceMatrices.push_back(meshMatrix);
 					}
+
+					SoftBodyPhysicsComponent* softBody = softbodies.GetComponent(object.meshID);
+					if (softBody != nullptr)
+					{
+						softBody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER; // this will be registered as soft body in the next frame
+						softBody->worldMatrix = transform.world;
+
+						if (wiPhysicsEngine::IsEnabled() && softBody->physicsobject != nullptr)
+						{
+							// If physics engine is enabled and this object was registered, it will update soft body vertices in world space, so after that they no longer need to be transformed:
+							object.transform_index = -1;
+							object.prev_transform_index = -1;
+
+							// mesh aabb will be used for soft bodies
+							aabb = mesh->aabb;
+						}
+
+					}
+
+					sceneBounds = AABB::Merge(sceneBounds, aabb);
 				}
 			}
 		}

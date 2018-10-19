@@ -261,11 +261,9 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 			if (object.meshID != INVALID_ENTITY)
 			{
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-				Entity entity = scene.objects.GetEntity(i);
-				const TransformComponent& transform = scene.transforms[object.transformComponentIndex];
 
 				BVHCB cb;
-				cb.xTraceBVHWorld = transform.world;
+				cb.xTraceBVHWorld = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
 				cb.xTraceBVHMaterialOffset = materialCount;
 				cb.xTraceBVHMeshTriangleOffset = triangleCount;
 				cb.xTraceBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
