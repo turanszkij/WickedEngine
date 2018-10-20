@@ -782,9 +782,6 @@ namespace wiSceneSystem
 		width = newWidth;
 		height = newHeight;
 		fov = newFOV;
-		Eye = XMFLOAT3(0, 0, 0);
-		At = XMFLOAT3(0, 0, 1);
-		Up = XMFLOAT3(0, 1, 0);
 
 		UpdateProjection();
 		UpdateCamera();

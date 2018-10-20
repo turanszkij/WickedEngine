@@ -656,7 +656,9 @@ namespace wiSceneSystem
 		float fov = XM_PI / 3.0f;
 
 		// Non-serialized attributes:
-		XMFLOAT3 Eye, At, Up;
+		XMFLOAT3 Eye = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 At = XMFLOAT3(0, 0, 1);
+		XMFLOAT3 Up = XMFLOAT3(0, 1, 0);
 		XMFLOAT3X3 rotationMatrix;
 		XMFLOAT4X4 View, Projection, VP;
 		Frustum frustum;
