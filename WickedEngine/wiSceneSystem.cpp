@@ -773,9 +773,6 @@ namespace wiSceneSystem
 
 		weights.resize(physicsToGraphicsVertexMapping.size());
 		std::fill(weights.begin(), weights.end(), 1.0f);
-
-		for (int i = 0; i < 10; ++i)
-			weights[i] = 0;
 	}
 	
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)
