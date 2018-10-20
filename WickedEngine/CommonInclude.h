@@ -49,5 +49,7 @@ inline void RECREATE(T*& myObject)
 	myObject = new T;
 }
 
+static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

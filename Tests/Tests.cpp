@@ -65,6 +65,8 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Water Test");
 	testSelector->AddItem("Shadows Test");
 	testSelector->AddItem("Physics Test");
+	testSelector->AddItem("Cloth Physics Test");
+	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
 		wiRenderer::SetTemporalAAEnabled(false);
@@ -113,6 +115,9 @@ TestsRenderer::TestsRenderer()
 		case 8:
 			wiRenderer::SetTemporalAAEnabled(true);
 			wiRenderer::LoadModel("../models/physics_test.wiscene");
+			break;
+		case 9:
+			wiRenderer::LoadModel("../models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
 		}
 

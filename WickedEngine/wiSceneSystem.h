@@ -19,8 +19,6 @@ class wiArchive;
 
 namespace wiSceneSystem
 {
-	static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-
 	struct NameComponent
 	{
 		char name[128];
@@ -504,6 +502,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
 		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
+		std::vector<XMFLOAT3> saved_vertex_positions;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 

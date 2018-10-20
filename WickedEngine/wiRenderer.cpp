@@ -7821,6 +7821,9 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 								XMStoreFloat3(&result.normal, nor);
 								result.distance = distance;
 								result.subsetIndex = subsetCounter;
+								result.vertexID0 = (int)i0;
+								result.vertexID1 = (int)i1;
+								result.vertexID2 = (int)i2;
 							}
 						}
 					}

@@ -85,41 +85,14 @@ public:
 		EDITORSTENCILREF_LAST = 0x0F,
 	};
 
-
-	struct Picked
-	{
-		wiECS::Entity entity;
-		XMFLOAT3 position, normal;
-		float distance;
-		int subsetIndex;
-		XMFLOAT4X4 orientation;
-
-		Picked()
-		{
-			Clear();
-		}
-
-		// Subset index, position, normal, distance don't distinguish between pickeds! 
-		bool operator==(const Picked& other)
-		{
-			return entity == other.entity;
-		}
-		void Clear()
-		{
-			distance = FLT_MAX;
-			subsetIndex = -1;
-			entity = wiECS::INVALID_ENTITY;
-		}
-	};
-
 	Translator translator;
-	std::list<Picked> selected;
+	std::list<wiRenderer::RayIntersectWorldResult> selected;
 	wiECS::ComponentManager<wiSceneSystem::HierarchyComponent> savedHierarchy;
-	Picked hovered;
+	wiRenderer::RayIntersectWorldResult hovered;
 
 	void BeginTranslate();
 	void EndTranslate();
-	void AddSelected(const Picked& picked);
+	void AddSelected(const wiRenderer::RayIntersectWorldResult& picked);
 
 
 

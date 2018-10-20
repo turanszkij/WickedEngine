@@ -634,6 +634,7 @@ void EditorComponent::Load()
 			ss << "Paste: Ctrl + V" << endl;
 			ss << "Delete: DELETE button" << endl;
 			ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
+			ss << "Pin soft body triangle: Hold P while nothing is selected and click on soft body with Left mouse button" << endl;
 			ss << "Script Console / backlog: HOME button" << endl;
 			ss << endl;
 			ss << "You can find sample scenes in the models directory. Try to load one." << endl;
@@ -895,19 +896,12 @@ void EditorComponent::Update(float dt)
 		UINT pickMask = rendererWnd->GetPickType();
 		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y);
 		{
-			hovered.Clear();
+			hovered = wiRenderer::RayIntersectWorldResult();
 
 			// Try to pick objects-meshes:
 			if (pickMask & PICK_OBJECT)
 			{
-				auto& picked = wiRenderer::RayIntersectWorld(pickRay, pickMask);
-
-				hovered.entity = picked.entity;
-				hovered.distance = picked.distance;
-				hovered.subsetIndex = picked.subsetIndex;
-				hovered.position = picked.position;
-				hovered.normal = picked.normal;
-				hovered.orientation = picked.orientation;
+				hovered = wiRenderer::RayIntersectWorld(pickRay, pickMask);
 			}
 
 			if (pickMask & PICK_LIGHT)
@@ -921,7 +915,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -938,7 +932,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -955,7 +949,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -972,7 +966,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -989,7 +983,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1007,7 +1001,7 @@ void EditorComponent::Update(float dt)
 						float dis = wiMath::Distance(transform.GetPosition(), pickRay.origin);
 						if (dis < hovered.distance)
 						{
-							hovered.Clear();
+							hovered = wiRenderer::RayIntersectWorldResult();
 							hovered.entity = entity;
 							hovered.distance = dis;
 						}
@@ -1026,7 +1020,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1043,7 +1037,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered.Clear();
+						hovered = wiRenderer::RayIntersectWorldResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1072,15 +1066,34 @@ void EditorComponent::Update(float dt)
 				{
 					if (input.press(VK_LBUTTON))
 					{
-						// if not water, put a decal instead:
-						static int decalselector = 0;
-						decalselector = (decalselector + 1) % 2;
-						Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
-						TransformComponent& transform = *scene.transforms.GetComponent(entity);
-						transform.MatrixTransform(hovered.orientation);
-						transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-						transform.Scale(XMFLOAT3(2, 2, 2));
-						scene.Component_Attach(entity, hovered.entity);
+						SoftBodyPhysicsComponent* softBody = scene.softbodies.GetComponent(object->meshID);
+						if (softBody != nullptr && input.down('P'))
+						{
+							// If softbody, pin the triangle:
+							if (softBody->graphicsToPhysicsVertexMapping.empty())
+							{
+								MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+								softBody->CreateFromMesh(*mesh);
+							}
+							uint32_t physicsIndex0 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID0];
+							uint32_t physicsIndex1 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID1];
+							uint32_t physicsIndex2 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID2];
+							softBody->weights[physicsIndex0] = 0;
+							softBody->weights[physicsIndex1] = 0;
+							softBody->weights[physicsIndex2] = 0;
+						}
+						else
+						{
+							// if not water or softbody, put a decal on it:
+							static int decalselector = 0;
+							decalselector = (decalselector + 1) % 2;
+							Entity entity = scene.Entity_CreateDecal("editorDecal", wiHelper::GetOriginalWorkingDirectory() + (decalselector == 0 ? "images/leaf.dds" : "images/blood1.png"));
+							TransformComponent& transform = *scene.transforms.GetComponent(entity);
+							transform.MatrixTransform(hovered.orientation);
+							transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+							transform.Scale(XMFLOAT3(2, 2, 2));
+							scene.Component_Attach(entity, hovered.entity);
+						}
 					}
 				}
 			}
@@ -1116,7 +1129,7 @@ void EditorComponent::Update(float dt)
 				{
 					Entity entity = scene.names.GetEntity(i);
 
-					Picked picked;
+					wiRenderer::RayIntersectWorldResult picked;
 					picked.entity = entity;
 					AddSelected(picked);
 				}
@@ -1130,9 +1143,9 @@ void EditorComponent::Update(float dt)
 				if (!selected.empty() && input.down(VK_LSHIFT))
 				{
 					// Union selection:
-					list<Picked> saved = selected;
+					list<wiRenderer::RayIntersectWorldResult> saved = selected;
 					EndTranslate();
-					for (const Picked& picked : saved)
+					for (const wiRenderer::RayIntersectWorldResult& picked : saved)
 					{
 						AddSelected(picked);
 					}
@@ -1184,7 +1197,7 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			const Picked& picked = selected.back();
+			const wiRenderer::RayIntersectWorldResult& picked = selected.back();
 
 			assert(picked.entity != INVALID_ENTITY);
 
@@ -1273,7 +1286,7 @@ void EditorComponent::Update(float dt)
 				*clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					Picked picked;
+					wiRenderer::RayIntersectWorldResult picked;
 					picked.entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
 					AddSelected(picked);
 				}
@@ -1287,7 +1300,7 @@ void EditorComponent::Update(float dt)
 				EndTranslate();
 				for (auto& x : prevSel)
 				{
-					Picked picked;
+					wiRenderer::RayIntersectWorldResult picked;
 					picked.entity = scene.Entity_Duplicate(x.entity);
 					AddSelected(picked);
 				}
@@ -1839,7 +1852,7 @@ void EditorComponent::EndTranslate()
 
 	// If an attached entity got moved, then the world transform was applied to it (**),
 	//	so we need to reattach it properly to the parent matrix:
-	for (const Picked& x : selected)
+	for (const wiRenderer::RayIntersectWorldResult& x : selected)
 	{
 		HierarchyComponent* parent = scene.hierarchy.GetComponent(x.entity);
 		if (parent != nullptr)
@@ -1863,7 +1876,7 @@ void EditorComponent::EndTranslate()
 
 	selected.clear();
 }
-void EditorComponent::AddSelected(const Picked& picked)
+void EditorComponent::AddSelected(const wiRenderer::RayIntersectWorldResult& picked)
 {
 	for (auto it = selected.begin(); it != selected.end(); ++it)
 	{
@@ -1977,12 +1990,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 				// Read selections states from archive:
 
-				list<Picked> selectedBEFORE;
+				list<wiRenderer::RayIntersectWorldResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				*archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
 				{
-					Picked sel;
+					wiRenderer::RayIntersectWorldResult sel;
 					*archive >> sel.entity;
 					*archive >> sel.position;
 					*archive >> sel.normal;
@@ -1994,12 +2007,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				ComponentManager<HierarchyComponent> savedHierarchyBEFORE;
 				savedHierarchyBEFORE.Serialize(*archive);
 
-				list<Picked> selectedAFTER;
+				list<wiRenderer::RayIntersectWorldResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				*archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
 				{
-					Picked sel;
+					wiRenderer::RayIntersectWorldResult sel;
 					*archive >> sel.entity;
 					*archive >> sel.position;
 					*archive >> sel.normal;

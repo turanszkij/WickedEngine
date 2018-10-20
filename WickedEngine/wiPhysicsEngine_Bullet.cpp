@@ -205,6 +205,8 @@ namespace wiPhysicsEngine
 			physicscomponent.CreateFromMesh(mesh);
 		}
 
+		physicscomponent.saved_vertex_positions = mesh.vertex_positions;
+
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
 
 		const int vCount = (int)physicscomponent.physicsToGraphicsVertexMapping.size();
@@ -433,7 +435,7 @@ namespace wiPhysicsEngine
 						{
 							btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
 							uint32_t graphicsInd = physicscomponent->physicsToGraphicsVertexMapping[ind];
-							XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
+							XMFLOAT3 position = physicscomponent->saved_vertex_positions[graphicsInd];
 							XMVECTOR P = XMLoadFloat3(&position);
 							P = XMVector3Transform(P, worldMatrix);
 							XMStoreFloat3(&position, P);
@@ -447,22 +449,19 @@ namespace wiPhysicsEngine
 						uint32_t physicsInd = physicscomponent->graphicsToPhysicsVertexMapping[ind];
 						float weight = physicscomponent->weights[physicsInd];
 
-						if (weight > 0)
+						btSoftBody::Node& node = softbody->m_nodes[physicsInd];
+
+						XMFLOAT3& position = mesh.vertex_positions[ind];
+						position.x = node.m_x.getX();
+						position.y = node.m_x.getY();
+						position.z = node.m_x.getZ();
+
+						if (!mesh.vertex_normals.empty())
 						{
-							btSoftBody::Node& node = softbody->m_nodes[physicsInd];
-
-							XMFLOAT3& position = mesh.vertex_positions[ind];
-							position.x = node.m_x.getX();
-							position.y = node.m_x.getY();
-							position.z = node.m_x.getZ();
-
-							if (!mesh.vertex_normals.empty())
-							{
-								XMFLOAT3& normal = mesh.vertex_normals[ind];
-								normal.x = -node.m_n.getX();
-								normal.y = -node.m_n.getY();
-								normal.z = -node.m_n.getZ();
-							}
+							XMFLOAT3& normal = mesh.vertex_normals[ind];
+							normal.x = -node.m_n.getX();
+							normal.y = -node.m_n.getY();
+							normal.z = -node.m_n.getZ();
 						}
 					}
 				}
