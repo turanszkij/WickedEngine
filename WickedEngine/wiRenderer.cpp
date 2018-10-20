@@ -7750,9 +7750,8 @@ RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, u
 			if (layer.GetLayerMask() & layerMask)
 			{
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-				const TransformComponent& transform = scene.transforms[object.transform_index];
 
-				const XMMATRIX objectMat = XMLoadFloat4x4(&transform.world);
+				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
