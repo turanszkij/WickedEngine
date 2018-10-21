@@ -52,6 +52,7 @@ runProcess(function()
 			target.CatmullRom(a, b, c, d, tt)
 			target.UpdateTransform()
 			cam.TransformCamera(target)
+			cam.UpdateCamera()
 
 			-- Advance animation state:
 			tt = tt + scriptableCameraSpeed * getDeltaTime()

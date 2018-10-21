@@ -373,6 +373,17 @@ namespace wiPhysicsEngine
 					continue;
 				}
 
+				int activationState = rigidbody->getActivationState();
+				if (physicscomponent->IsDisableDeactivation())
+				{
+					activationState |= DISABLE_DEACTIVATION;
+				}
+				else
+				{
+					activationState &= ~DISABLE_DEACTIVATION;
+				}
+				rigidbody->setActivationState(activationState);
+
 				TransformComponent& transform = *transforms.GetComponent(entity);
 
 				btMotionState* motionState = rigidbody->getMotionState();
@@ -414,6 +425,8 @@ namespace wiPhysicsEngine
 						continue;
 					}
 
+					softbody->m_cfg.kDF = physicscomponent->friction;
+					//softbody->setTotalMass(physicscomponent->mass);
 					softbody->setWindVelocity(wind);
 
 					MeshComponent& mesh = *meshes.GetComponent(entity);
