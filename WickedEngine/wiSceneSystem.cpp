@@ -795,11 +795,17 @@ namespace wiSceneSystem
 	{
 		SetDirty(false);
 
+		XMVECTOR _Eye = XMLoadFloat3(&Eye);
+		XMVECTOR _At = XMLoadFloat3(&At);
+		XMVECTOR _Up = XMLoadFloat3(&Up);
+
+		XMMATRIX _V = XMMatrixLookToLH(_Eye, _At, _Up);
+		XMStoreFloat4x4(&View, _V);
+
 		XMMATRIX _P = XMLoadFloat4x4(&Projection);
 		XMMATRIX _InvP = XMMatrixInverse(nullptr, _P);
 		XMStoreFloat4x4(&InvProjection, _InvP);
 
-		XMMATRIX _V = XMLoadFloat4x4(&View);
 		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
 		XMStoreFloat4x4(&View, _V);
 		XMStoreFloat4x4(&VP, _VP);
@@ -1639,7 +1645,10 @@ namespace wiSceneSystem
 							if (material->HasPlanarReflection())
 							{
 								object.SetRequestPlanarReflection(true);
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(XMLoadFloat3(&object.center), XMVectorSet(0, 1, 0, 0));
+								XMVECTOR P = transform.GetPositionV();
+								XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+								N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+								XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 								XMStoreFloat4(&waterPlane, _refPlane);
 							}
 
