@@ -12,6 +12,7 @@ namespace wiPhysicsEngine
 
 	void RunPhysicsUpdateSystem(
 		const wiSceneSystem::WeatherComponent& weather,
+		const wiECS::ComponentManager<wiSceneSystem::ArmatureComponent>& armatures,
 		wiECS::ComponentManager<wiSceneSystem::TransformComponent>& transforms,
 		wiECS::ComponentManager<wiSceneSystem::MeshComponent>& meshes,
 		wiECS::ComponentManager<wiSceneSystem::ObjectComponent>& objects,

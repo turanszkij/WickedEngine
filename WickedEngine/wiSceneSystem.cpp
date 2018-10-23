@@ -869,7 +869,7 @@ namespace wiSceneSystem
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(weather, transforms, meshes, objects, rigidbodies, softbodies, dt);
+		wiPhysicsEngine::RunPhysicsUpdateSystem(weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
 
 		RunTransformUpdateSystem(transforms);
 
@@ -1567,7 +1567,7 @@ namespace wiSceneSystem
 		}
 	}
 	void RunObjectUpdateSystem(
-		const wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
+		const ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MeshComponent>& meshes,
 		const ComponentManager<MaterialComponent>& materials,

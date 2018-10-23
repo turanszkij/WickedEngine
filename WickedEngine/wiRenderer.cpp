@@ -139,6 +139,7 @@ deque<wiSprite*> waterRipples;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 std::vector<RenderableLine> renderableLines;
+std::vector<RenderablePoint> renderablePoints;
 
 XMFLOAT4 waterPlane = XMFLOAT4(0, 1, 0, 0);
 
@@ -5247,6 +5248,72 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 
+	if (!renderablePoints.empty())
+	{
+		device->EventBegin("DebugPoints", threadID);
+
+		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+
+		MiscCB sb;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetProjection())); // only projection, we will expand in view space on CPU below to be camera facing!
+		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+		// Will generate 2 line segments for each point forming a cross section:
+		struct LineSegment
+		{
+			XMFLOAT4 a, colorA, b, colorB;
+		};
+		UINT offset;
+		void* mem = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(LineSegment) * renderablePoints.size() * 2, offset, threadID);
+
+		XMMATRIX V = camera.GetView();
+
+		int i = 0;
+		for (auto& point : renderablePoints)
+		{
+			LineSegment segment;
+			segment.colorA = segment.colorB = point.color;
+
+			// the cross section will be transformed to view space and expanded here:
+			XMVECTOR _c = XMLoadFloat3(&point.position);
+			_c = XMVector3Transform(_c, V);
+
+			XMVECTOR _a = _c + XMVectorSet(-1, -1, 0, 0) * point.size;
+			XMVECTOR _b = _c + XMVectorSet(1, 1, 0, 0) * point.size;
+			XMStoreFloat4(&segment.a, _a);
+			XMStoreFloat4(&segment.b, _b);
+			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			i++;
+
+			_a = _c + XMVectorSet(-1, 1, 0, 0) * point.size;
+			_b = _c + XMVectorSet(1, -1, 0, 0) * point.size;
+			XMStoreFloat4(&segment.a, _a);
+			XMStoreFloat4(&segment.b, _b);
+			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			i++;
+		}
+
+		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
+
+		GPUBuffer* vbs[] = {
+			&dynamicVertexBufferPools[threadID],
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		const UINT offsets[] = {
+			offset,
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+
+		device->Draw(2 * i, 0, threadID);
+
+		renderablePoints.clear();
+
+		device->EventEnd(threadID);
+	}
+
 	if (!renderableBoxes.empty())
 	{
 		device->EventBegin("DebugBoxes", threadID);
@@ -7854,6 +7921,10 @@ void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 void AddRenderableLine(const RenderableLine& line)
 {
 	renderableLines.push_back(line);
+}
+void AddRenderablePoint(const RenderablePoint& point)
+{
+	renderablePoints.push_back(point);
 }
 
 void AddDeferredMIPGen(Texture2D* tex)

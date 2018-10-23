@@ -1069,10 +1069,11 @@ void EditorComponent::Update(float dt)
 						SoftBodyPhysicsComponent* softBody = scene.softbodies.GetComponent(object->meshID);
 						if (softBody != nullptr && input.down('P'))
 						{
+							MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+
 							// If softbody, pin the triangle:
 							if (softBody->graphicsToPhysicsVertexMapping.empty())
 							{
-								MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 								softBody->CreateFromMesh(*mesh);
 							}
 							uint32_t physicsIndex0 = softBody->graphicsToPhysicsVertexMapping[hovered.vertexID0];
@@ -1098,6 +1099,35 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
+		}
+
+		// Visualize soft body pinning:
+		if (input.down('P'))
+		{
+			for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
+			{
+				const SoftBodyPhysicsComponent& softbody = scene.softbodies[i];
+				Entity entity = scene.softbodies.GetEntity(i);
+				const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+
+				XMMATRIX W = XMLoadFloat4x4(&softbody.worldMatrix);
+				int physicsIndex = 0;
+				for (auto& weight : softbody.weights)
+				{
+					if (weight == 0)
+					{
+						wiRenderer::RenderablePoint point;
+						point.color = XMFLOAT4(1, 0, 0, 1);
+						point.size = 0.2f;
+						point.position = mesh.vertex_positions[softbody.physicsToGraphicsVertexMapping[physicsIndex]];
+						XMVECTOR P = XMLoadFloat3(&point.position);
+						P = XMVector3Transform(P, W);
+						XMStoreFloat3(&point.position, P);
+						wiRenderer::AddRenderablePoint(point);
+					}
+					++physicsIndex;
+				}
+			}
 		}
 
 		// Select...

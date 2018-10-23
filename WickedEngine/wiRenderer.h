@@ -298,6 +298,14 @@ namespace wiRenderer
 	// Add line to render in the next frame. It will be rendered in DrawDebugWorld()
 	void AddRenderableLine(const RenderableLine& line);
 
+	struct RenderablePoint
+	{
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		float size = 1.0f;
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+	};
+	void AddRenderablePoint(const RenderablePoint& point);
+
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
 

@@ -4,16 +4,11 @@
 
 
 #include "btBulletDynamicsCommon.h"
-
-#include "LinearMath/btHashMap.h"
-#include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
 #include "BulletSoftBody/btSoftBodyHelpers.h"
-
-#include "BulletSoftBody/btSoftBodySolvers.h"
 #include "BulletSoftBody/btDefaultSoftBodySolver.h"
+#include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
-#include <unordered_map>
 
 using namespace std;
 using namespace wiECS;
@@ -30,9 +25,6 @@ namespace wiPhysicsEngine
 	btBroadphaseInterface* overlappingPairCache = nullptr;
 	btSequentialImpulseConstraintSolver* solver = nullptr;
 	btDynamicsWorld* dynamicsWorld = nullptr;
-
-	btSoftBodySolver* softBodySolver = nullptr;
-	btSoftBodySolverOutput* softBodySolverOutput = nullptr;
 
 
 	void Initialize()
@@ -51,7 +43,7 @@ namespace wiPhysicsEngine
 
 		//dynamicsWorld = new btSimpleDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 		//dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher,overlappingPairCache,solver,collisionConfiguration);
-		dynamicsWorld = new btSoftRigidDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration, softBodySolver);
+		dynamicsWorld = new btSoftRigidDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
 
 		dynamicsWorld->getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
 		dynamicsWorld->getDispatchInfo().m_enableSatConvex = true;
@@ -61,7 +53,7 @@ namespace wiPhysicsEngine
 
 		btSoftRigidDynamicsWorld* softRigidWorld = (btSoftRigidDynamicsWorld*)dynamicsWorld;
 		btSoftBodyWorldInfo& softWorldInfo = softRigidWorld->getWorldInfo();
-		softWorldInfo.air_density = (btScalar)0.0;
+		softWorldInfo.air_density = btScalar(1.2f);
 		softWorldInfo.water_density = 0;
 		softWorldInfo.water_offset = 0;
 		softWorldInfo.water_normal = btVector3(0, 0, 0);
@@ -182,20 +174,20 @@ namespace wiPhysicsEngine
 			//rbInfo.m_linearDamping = physicscomponent.damping;
 			//rbInfo.m_angularDamping = physicscomponent.damping;
 
-			btRigidBody* body = new btRigidBody(rbInfo);
-			body->setUserIndex(*(int*)&entity);
+			btRigidBody* rigidbody = new btRigidBody(rbInfo);
+			rigidbody->setUserIndex(*(int*)&entity);
 
 			if (physicscomponent.IsKinematic())
 			{
-				body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 			}
 			if (physicscomponent.IsDisableDeactivation())
 			{
-				body->setActivationState(DISABLE_DEACTIVATION);
+				rigidbody->setActivationState(DISABLE_DEACTIVATION);
 			}
 
-			dynamicsWorld->addRigidBody(body);
-			physicscomponent.physicsobject = body;
+			dynamicsWorld->addRigidBody(rigidbody);
+			physicscomponent.physicsobject = rigidbody;
 		}
 	}
 	void AddSoftBody(Entity entity, wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh)
@@ -235,77 +227,74 @@ namespace wiPhysicsEngine
 			btInd[i] = (int)mappedIndex;
 		}
 
-
-		btSoftBody* softBody = btSoftBodyHelpers::CreateFromTriMesh(
+		btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
 			((btSoftRigidDynamicsWorld*)dynamicsWorld)->getWorldInfo()
 			, btVerts
 			, btInd
 			, tCount
 			, false
 		);
-
-
 		delete[] btVerts;
 		delete[] btInd;
 
-		if (softBody)
+		if (softbody)
 		{
-			softBody->setUserIndex(*(int*)&entity);
+			softbody->setUserIndex(*(int*)&entity);
 
-			btSoftBody::Material* pm = softBody->appendMaterial();
-			pm->m_kLST = 0.5;
-			pm->m_kVST = 0.5;
-			pm->m_kAST = 0.5;
+			//btSoftBody::Material* pm = softbody->appendMaterial();
+			btSoftBody::Material* pm = softbody->m_materials[0];
+			pm->m_kLST = btScalar(0.9f);
+			pm->m_kVST = btScalar(0.9f);
+			pm->m_kAST = btScalar(0.9f);
 			pm->m_flags = 0;
-			softBody->generateBendingConstraints(2, pm);
-			softBody->randomizeConstraints();
+			softbody->generateBendingConstraints(2, pm);
+			softbody->randomizeConstraints();
 
-			softBody->m_cfg.piterations = softbodyIterationCount;
-			softBody->m_cfg.aeromodel = btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
+			softbody->m_cfg.piterations = softbodyIterationCount;
+			softbody->m_cfg.aeromodel = btSoftBody::eAeroModel::F_TwoSidedLiftDrag;
 
-			softBody->m_cfg.kAHR = btScalar(.69); //0.69		Anchor hardness  [0,1]
-			softBody->m_cfg.kCHR = btScalar(1.0); //1			Rigid contact hardness  [0,1]
-			softBody->m_cfg.kDF = btScalar(0.2); //0.2			Dynamic friction coefficient  [0,1]
-			softBody->m_cfg.kDG = btScalar(0.01); //0			Drag coefficient  [0,+inf]
-			softBody->m_cfg.kDP = btScalar(0.0); //0			Damping coefficient  [0,1]
-			softBody->m_cfg.kKHR = btScalar(0.1); //0.1			Kinetic contact hardness  [0,1]
-			softBody->m_cfg.kLF = btScalar(0.1); //0			Lift coefficient  [0,+inf]
-			softBody->m_cfg.kMT = btScalar(0.0); //0			Pose matching coefficient  [0,1]
-			softBody->m_cfg.kPR = btScalar(0.0); //0			Pressure coefficient  [-1,1]
-			softBody->m_cfg.kSHR = btScalar(1.0); //1			Soft contacts hardness  [0,1]
-			softBody->m_cfg.kVC = btScalar(0.0); //0			Volume conseration coefficient  [0,+inf]
-			softBody->m_cfg.kVCF = btScalar(1.0); //1			Velocities correction factor (Baumgarte)
+			softbody->m_cfg.kAHR = btScalar(.69); //0.69		Anchor hardness  [0,1]
+			softbody->m_cfg.kCHR = btScalar(1.0); //1			Rigid contact hardness  [0,1]
+			softbody->m_cfg.kDF = btScalar(0.2); //0.2			Dynamic friction coefficient  [0,1]
+			softbody->m_cfg.kDG = btScalar(0.01); //0			Drag coefficient  [0,+inf]
+			softbody->m_cfg.kDP = btScalar(0.0); //0			Damping coefficient  [0,1]
+			softbody->m_cfg.kKHR = btScalar(0.1); //0.1			Kinetic contact hardness  [0,1]
+			softbody->m_cfg.kLF = btScalar(0.1); //0			Lift coefficient  [0,+inf]
+			softbody->m_cfg.kMT = btScalar(0.0); //0			Pose matching coefficient  [0,1]
+			softbody->m_cfg.kPR = btScalar(0.0); //0			Pressure coefficient  [-1,1]
+			softbody->m_cfg.kSHR = btScalar(1.0); //1			Soft contacts hardness  [0,1]
+			softbody->m_cfg.kVC = btScalar(0.0); //0			Volume conseration coefficient  [0,+inf]
+			softbody->m_cfg.kVCF = btScalar(1.0); //1			Velocities correction factor (Baumgarte)
 
-			softBody->m_cfg.kSKHR_CL = btScalar(1.0); //1			Soft vs. kinetic hardness   [0,1]
-			softBody->m_cfg.kSK_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-			softBody->m_cfg.kSRHR_CL = btScalar(0.1); //0.1			Soft vs. rigid hardness  [0,1]
-			softBody->m_cfg.kSR_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-			softBody->m_cfg.kSSHR_CL = btScalar(0.5); //0.5			Soft vs. soft hardness  [0,1]
-			softBody->m_cfg.kSS_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
-
-
-			softBody->setTotalMass(physicscomponent.mass);
+			softbody->m_cfg.kSKHR_CL = btScalar(1.0); //1			Soft vs. kinetic hardness   [0,1]
+			softbody->m_cfg.kSK_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			softbody->m_cfg.kSRHR_CL = btScalar(0.1); //0.1			Soft vs. rigid hardness  [0,1]
+			softbody->m_cfg.kSR_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
+			softbody->m_cfg.kSSHR_CL = btScalar(0.5); //0.5			Soft vs. soft hardness  [0,1]
+			softbody->m_cfg.kSS_SPLT_CL = btScalar(0.5); //0.5		Soft vs. rigid impulse split  [0,1]
 
 			for (size_t i = 0; i < physicscomponent.physicsToGraphicsVertexMapping.size(); ++i)
 			{
 				float weight = physicscomponent.weights[i];
-				softBody->setMass((int)i, weight);
+				softbody->setMass((int)i, weight);
 			}
-
-			softBody->setPose(true, true);
+			softbody->setTotalMass(physicscomponent.mass); // this must be AFTER softbody->setMass(), so that weights will be averaged
 
 			if (physicscomponent.IsDisableDeactivation())
 			{
-				softBody->setActivationState(DISABLE_DEACTIVATION);
+				softbody->setActivationState(DISABLE_DEACTIVATION);
 			}
 
-			((btSoftRigidDynamicsWorld*)dynamicsWorld)->addSoftBody(softBody);
-			physicscomponent.physicsobject = softBody;
+			softbody->setPose(true, true);
+
+			((btSoftRigidDynamicsWorld*)dynamicsWorld)->addSoftBody(softbody);
+			physicscomponent.physicsobject = softbody;
 		}
 	}
 
 	void RunPhysicsUpdateSystem(
 		const WeatherComponent& weather,
+		const ComponentManager<ArmatureComponent>& armatures,
 		ComponentManager<TransformComponent>& transforms,
 		ComponentManager<MeshComponent>& meshes,
 		ComponentManager<ObjectComponent>& objects,
@@ -323,22 +312,55 @@ namespace wiPhysicsEngine
 
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
-		// Try to register rigidbodies to Objects:
+		// System will register rigidbodies to objects, and update physics engine state for kinematics:
 		for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
 		{
 			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[i];
+			Entity entity = rigidbodies.GetEntity(i);
 
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				Entity entity = rigidbodies.GetEntity(i);
 				TransformComponent& transform = *transforms.GetComponent(entity);
 				const ObjectComponent& object = *objects.GetComponent(entity);
 				const MeshComponent& mesh = *meshes.GetComponent(object.meshID);
 				AddRigidBody(entity, physicscomponent, mesh, transform);
 			}
+
+			if (physicscomponent.physicsobject != nullptr)
+			{
+				btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
+
+				int activationState = rigidbody->getActivationState();
+				if (physicscomponent.IsDisableDeactivation())
+				{
+					activationState |= DISABLE_DEACTIVATION;
+				}
+				else
+				{
+					activationState &= ~DISABLE_DEACTIVATION;
+				}
+				rigidbody->setActivationState(activationState);
+
+				// For kinematic object, system updates physics state, else the physics updates system state:
+				if (physicscomponent.IsKinematic())
+				{
+					TransformComponent& transform = *transforms.GetComponent(entity);
+
+					btMotionState* motionState = rigidbody->getMotionState();
+					btTransform physicsTransform;
+
+					XMFLOAT3 position = transform.GetPosition();
+					XMFLOAT4 rotation = transform.GetRotation();
+					btVector3 T(position.x, position.y, position.z);
+					btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
+					physicsTransform.setOrigin(T);
+					physicsTransform.setRotation(R);
+					motionState->setWorldTransform(physicsTransform);
+				}
+			}
 		}
 
-		// Try to register softbodies to Meshes:
+		// System will register softbodies to meshes and update physics engine state:
 		for (size_t i = 0; i < softbodies.GetCount(); ++i)
 		{
 			SoftBodyPhysicsComponent& physicscomponent = softbodies[i];
@@ -350,12 +372,40 @@ namespace wiPhysicsEngine
 			{
 				AddSoftBody(entity, physicscomponent, mesh);
 			}
+
+			if (physicscomponent.physicsobject != nullptr)
+			{
+				btSoftBody* softbody = (btSoftBody*)physicscomponent.physicsobject;
+				softbody->m_cfg.kDF = physicscomponent.friction;
+				softbody->setWindVelocity(wind);
+
+				// This is different from rigid bodies, because soft body is a per mesh component (no TransformComponent). World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
+				XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
+
+				// System controls zero weight soft body nodes:
+				for (size_t ind = 0; ind < physicscomponent.weights.size(); ++ind)
+				{
+					float weight = physicscomponent.weights[ind];
+
+					if (weight == 0)
+					{
+						btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
+						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
+						XMFLOAT3 position = physicscomponent.saved_vertex_positions[graphicsInd];
+						XMVECTOR P = XMLoadFloat3(&position);
+						P = XMVector3Transform(P, worldMatrix);
+						// todo: here goes skinning...
+						XMStoreFloat3(&position, P);
+						node.m_x = btVector3(position.x, position.y, position.z);
+					}
+				}
+			}
 		}
 
 		// Perform internal simulation step:
 		dynamicsWorld->stepSimulation(dt, 10);
 
-		// Synchronize scene entities with physics engine:
+		// Feedback physics engine state to system:
 		for (int i = 0; i < dynamicsWorld->getCollisionObjectArray().size(); ++i)
 		{
 			btCollisionObject* collisionobject = dynamicsWorld->getCollisionObjectArray()[i];
@@ -373,35 +423,14 @@ namespace wiPhysicsEngine
 					continue;
 				}
 
-				int activationState = rigidbody->getActivationState();
-				if (physicscomponent->IsDisableDeactivation())
+				// Feedback non-kinematic objects to system:
+				if(!physicscomponent->IsKinematic())
 				{
-					activationState |= DISABLE_DEACTIVATION;
-				}
-				else
-				{
-					activationState &= ~DISABLE_DEACTIVATION;
-				}
-				rigidbody->setActivationState(activationState);
+					TransformComponent& transform = *transforms.GetComponent(entity);
 
-				TransformComponent& transform = *transforms.GetComponent(entity);
+					btMotionState* motionState = rigidbody->getMotionState();
+					btTransform physicsTransform;
 
-				btMotionState* motionState = rigidbody->getMotionState();
-				btTransform physicsTransform;
-
-				// For kinematic object, system updates physics state, else the physics updates system state:
-				if (physicscomponent->IsKinematic())
-				{
-					XMFLOAT3 position = transform.GetPosition();
-					XMFLOAT4 rotation = transform.GetRotation();
-					btVector3 T(position.x, position.y, position.z);
-					btQuaternion R(rotation.x, rotation.y, rotation.z, rotation.w);
-					physicsTransform.setOrigin(T);
-					physicsTransform.setRotation(R);
-					motionState->setWorldTransform(physicsTransform);
-				}
-				else
-				{
 					motionState->getWorldTransform(physicsTransform);
 					btVector3 T = physicsTransform.getOrigin();
 					btQuaternion R = physicsTransform.getRotation();
@@ -425,36 +454,13 @@ namespace wiPhysicsEngine
 						continue;
 					}
 
-					softbody->m_cfg.kDF = physicscomponent->friction;
-					//softbody->setTotalMass(physicscomponent->mass);
-					softbody->setWindVelocity(wind);
-
 					MeshComponent& mesh = *meshes.GetComponent(entity);
 
+					// System mesh aabb will be queried from physics engine soft body:
 					btVector3 aabb_min;
 					btVector3 aabb_max;
 					softbody->getAabb(aabb_min, aabb_max);
 					mesh.aabb = AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
-
-					// This is different from rigid bodies, because soft body is a per mesh component. World matrix is propagated down from single mesh instance (ObjectUpdateSystem).
-					XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent->worldMatrix);
-
-					// System can control zero weight soft body nodes:
-					for (size_t ind = 0; ind < physicscomponent->weights.size(); ++ind)
-					{
-						float weight = physicscomponent->weights[ind];
-
-						if (weight == 0)
-						{
-							btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
-							uint32_t graphicsInd = physicscomponent->physicsToGraphicsVertexMapping[ind];
-							XMFLOAT3 position = physicscomponent->saved_vertex_positions[graphicsInd];
-							XMVECTOR P = XMLoadFloat3(&position);
-							P = XMVector3Transform(P, worldMatrix);
-							XMStoreFloat3(&position, P);
-							node.m_x = btVector3(position.x, position.y, position.z);
-						}
-					}
 
 					// Soft body simulation nodes will update graphics mesh:
 					for (size_t ind = 0; ind < mesh.vertex_positions.size(); ++ind)
