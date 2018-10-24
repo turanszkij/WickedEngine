@@ -1120,9 +1120,12 @@ void EditorComponent::Update(float dt)
 						point.color = XMFLOAT4(1, 0, 0, 1);
 						point.size = 0.2f;
 						point.position = mesh.vertex_positions[softbody.physicsToGraphicsVertexMapping[physicsIndex]];
-						XMVECTOR P = XMLoadFloat3(&point.position);
-						P = XMVector3Transform(P, W);
-						XMStoreFloat3(&point.position, P);
+						if (!wiPhysicsEngine::IsEnabled()) // todo: better
+						{
+							XMVECTOR P = XMLoadFloat3(&point.position);
+							P = XMVector3Transform(P, W);
+							XMStoreFloat3(&point.position, P);
+						}
 						wiRenderer::AddRenderablePoint(point);
 					}
 					++physicsIndex;
