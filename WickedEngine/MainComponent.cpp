@@ -28,19 +28,7 @@ MainComponent::MainComponent()
 	// This call also saves the current working dir as the original one on this first call
 	wiHelper::GetOriginalWorkingDirectory();
 
-	screenW = 0;
-	screenH = 0;
-	fullscreen = false;
-
 	activeComponent = new RenderableComponent();
-
-	setFrameSkip(true);
-	setTargetFrameRate(60);
-	setApplicationControlLostThreshold(10);
-
-	infoDisplay = InfoDisplayer();
-
-	fadeManager.Clear();
 }
 
 
@@ -83,43 +71,41 @@ void MainComponent::Initialize()
 	}
 
 
-	wiInitializer::InitializeComponents();
+	wiInitializer::InitializeComponentsAsync();
 
 	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
 }
 
-void MainComponent::activateComponent(RenderableComponent* component, int fadeFrames, const wiColor& fadeColor)
+void MainComponent::activateComponent(RenderableComponent* component, float fadeSeconds, const wiColor& fadeColor)
 {
 	if (component == nullptr)
 	{
 		return;
 	}
 
-	if (fadeFrames > 0)
-	{
-		// Fade
-		fadeManager.Clear();
-		fadeManager.Start(fadeFrames, fadeColor, [this,component]() {
-			if (component == nullptr)
-				return;
-			activeComponent->Stop();
-			component->Start();
-			activeComponent = component;
-		});
-	}
-	else
-	{
-		// No fade
-		fadeManager.Clear();
-
+	// Fade manager will activate on fadeout
+	fadeManager.Clear();
+	fadeManager.Start(fadeSeconds, fadeColor, [this,component]() {
+		if (component == nullptr)
+			return;
 		activeComponent->Stop();
 		component->Start();
 		activeComponent = component;
-	}
+	});
 }
 
 void MainComponent::Run()
 {
+	if (!wiInitializer::IsInitializeFinished())
+	{
+		// Until engine is not loaded, present initialization screen...
+		wiRenderer::GetDevice()->PresentBegin();
+		wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+		wiFont("Initializing Wicked Engine, please wait...", wiFontProps(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->PresentEnd();
+		return;
+	}
+
 	wiProfiler::GetInstance().BeginFrame();
 	wiProfiler::GetInstance().BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
@@ -129,6 +115,8 @@ void MainComponent::Run()
 	static double accumulator = 0.0;
 	const double elapsedTime = max(0, timer.elapsed() / 1000.0);
 	timer.record();
+
+	fadeManager.Update((float)elapsedTime);
 
 	// Fixed time update:
 	wiProfiler::GetInstance().BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
@@ -196,8 +184,6 @@ void MainComponent::FixedUpdate()
 	wiLua::GetGlobal()->FixedUpdate();
 
 	getActiveComponent()->FixedUpdate();
-
-	fadeManager.Update();
 }
 
 void MainComponent::Render()
@@ -205,8 +191,8 @@ void MainComponent::Render()
 	wiLua::GetGlobal()->Render();
 
 	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
-	wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
+	wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	getActiveComponent()->Render();
 	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
 }
@@ -252,6 +238,10 @@ void MainComponent::Compose()
 			ss << "[DEBUG]";
 #endif
 			ss << endl;
+		}
+		if (infoDisplay.initstats)
+		{
+			ss << "System init time: " << wiInitializer::GetInitializationTimeInSeconds() << " sec" << endl;
 		}
 		if (infoDisplay.resolution)
 		{

@@ -5,6 +5,11 @@ debugout("Begin script: test_script.lua");
 
 -- Load a model:
 LoadModel("../models/teapot.wiscene");
+LoadModel("../models/cameras.wiscene");
+
+-- Load camera sample script:
+dofile("../scripts/camera_animation_repeat.lua");
+ToggleCameraAnimation();
 
 -- Load an image:
 local sprite = Sprite("images/HelloWorld.png");
@@ -64,7 +69,7 @@ runProcess(function()
 
 		-- Rotate teapot by parent transform:
 		local transform = scene.Component_GetTransform(parent);
-		transform.Rotate(Vector(0, 0.01, 0));
+		transform.Rotate(Vector(0, 0, 0.01));
 		
 		
 		fixedupdate(); -- wait for new frame

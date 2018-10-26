@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "ShaderInterop_Font.h"
 
 struct VertextoPixel
 {
@@ -8,5 +9,5 @@ struct VertextoPixel
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	return texture_1.Sample(sampler_linear_clamp, PSIn.tex) * g_xColor;
+	return texture_1.Sample(sampler_linear_clamp, PSIn.tex) * g_xFont_Color;
 }

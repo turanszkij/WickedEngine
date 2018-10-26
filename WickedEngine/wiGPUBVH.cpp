@@ -23,10 +23,10 @@ enum CSTYPES_BVH
 	CSTYPE_BVH_PROPAGATEAABB,
 	CSTYPE_BVH_COUNT
 };
-ComputeShader* computeShaders[CSTYPE_BVH_COUNT] = {};
-ComputePSO* CPSO[CSTYPE_BVH_COUNT] = {};
+static ComputeShader* computeShaders[CSTYPE_BVH_COUNT] = {};
+static ComputePSO* CPSO[CSTYPE_BVH_COUNT] = {};
 
-GPUBuffer* constantBuffer = nullptr;
+static GPUBuffer* constantBuffer = nullptr;
 
 wiGPUBVH::wiGPUBVH()
 {

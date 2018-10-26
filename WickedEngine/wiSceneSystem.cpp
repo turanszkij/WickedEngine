@@ -860,10 +860,7 @@ namespace wiSceneSystem
 
 	void Scene::Update(float dt)
 	{
-		if (weathers.GetCount() > 0)
-		{
-			weather = weathers[0];
-		}
+		RunWeatherUpdateSystem(weathers, weather);
 
 		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
 
@@ -1330,6 +1327,15 @@ namespace wiSceneSystem
 
 
 
+	void RunWeatherUpdateSystem(
+		const ComponentManager<WeatherComponent>& weathers, 
+		WeatherComponent& weather)
+	{
+		if (weathers.GetCount() > 0)
+		{
+			weather = weathers[0];
+		}
+	}
 	void RunPreviousFrameTransformUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<PreviousFrameTransformComponent>& prev_transforms

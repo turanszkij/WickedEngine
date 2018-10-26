@@ -986,6 +986,10 @@ namespace wiSceneSystem
 		void Serialize(wiArchive& archive);
 	};
 
+	void RunWeatherUpdateSystem(
+		const wiECS::ComponentManager<WeatherComponent>& weathers, 
+		WeatherComponent& weather
+	);
 	void RunPreviousFrameTransformUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms

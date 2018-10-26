@@ -10,16 +10,17 @@ class wiFadeManager
 {
 public:
 
-	float opacity;
-	int frame, targetFrames;
+	float opacity = 0;
+	float timer = 0;
+	float targetFadeTimeInSeconds = 1.0f;
 	enum FADE_STATE
 	{
 		FADE_IN,	// no fade -> faded
 		FADE_MID,	// completely faded
 		FADE_OUT,	// faded -> no fade
 		FADE_FINISHED,
-	} state;
-	wiColor color;
+	} state = FADE_FINISHED;
+	wiColor color = wiColor(0, 0, 0, 255);
 	std::function<void()> onFade;
 
 	wiFadeManager()
@@ -27,15 +28,15 @@ public:
 		Clear();
 	}
 	void Clear();
-	void Start(int targetFrames, const wiColor& color, std::function<void()> onFadeFunction)
+	void Start(float seconds, const wiColor& color, std::function<void()> onFadeFunction)
 	{
-		this->targetFrames = targetFrames;
+		targetFadeTimeInSeconds = seconds;
 		this->color = color;
-		frame = 0;
+		timer = 0;
 		state = FADE_IN;
 		onFade = onFadeFunction;
 	}
-	void Update();
+	void Update(float dt);
 	bool IsFaded()
 	{
 		return state == FADE_MID;

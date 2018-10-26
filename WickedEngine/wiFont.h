@@ -38,50 +38,14 @@ public:
 class wiFont
 {
 protected:
-	static std::string FONTPATH;
 	struct Vertex
 	{
 		XMFLOAT2 Pos;
 		XMHALF2 Tex;
 	};
-	static wiGraphicsTypes::GPURingBuffer       *vertexBuffer;
-	static wiGraphicsTypes::GPUBuffer           *indexBuffer;
-
-	static wiGraphicsTypes::VertexLayout		*vertexLayout;
-	static wiGraphicsTypes::VertexShader		*vertexShader;
-	static wiGraphicsTypes::PixelShader			*pixelShader;
-	static wiGraphicsTypes::BlendState			*blendState;
-	static wiGraphicsTypes::RasterizerState		*rasterizerState;
-	static wiGraphicsTypes::DepthStencilState	*depthStencilState;
-	static wiGraphicsTypes::GraphicsPSO			*PSO;
 	
-	static void SetUpStates();
 private:
-	static void LoadVertexBuffer();
-	static void LoadIndices();
 
-
-
-	struct wiFontStyle{
-		std::string name;
-		wiGraphicsTypes::Texture2D* texture;
-		
-		struct LookUp{
-			int ascii;
-			char character;
-			float left;
-			float right;
-			int pixelWidth;
-		};
-		LookUp lookup[128];
-		int texWidth, texHeight;
-		int lineHeight;
-
-		wiFontStyle(){}
-		wiFontStyle(const std::string& newName);
-		void CleanUp();
-	};
-	static std::vector<wiFontStyle> fontStyles;
 
 
 	static void ModifyGeo(volatile Vertex* vertexList, const std::wstring& text, wiFontProps props, int style);
@@ -91,6 +55,7 @@ public:
 	static void CleanUp();
 
 	static void LoadShaders();
+	static void BindPersistentState(GRAPHICSTHREAD threadID);
 
 	std::wstring text;
 	wiFontProps props;
@@ -115,5 +80,5 @@ public:
 	std::wstring GetText();
 	std::string GetTextA();
 
-	static std::string& GetFontPath() { return FONTPATH; }
+	static std::string& GetFontPath();
 };

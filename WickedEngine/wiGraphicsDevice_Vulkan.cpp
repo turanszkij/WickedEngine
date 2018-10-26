@@ -1556,7 +1556,7 @@ namespace wiGraphicsTypes
 	// Engine functions
 	VkCommandBuffer GraphicsDevice_Vulkan::GetDirectCommandList(GRAPHICSTHREAD threadID) { return GetFrameResources().commandBuffers[threadID]; }
 
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
 		BACKBUFFER_FORMAT = FORMAT::FORMAT_B8G8R8A8_UNORM;
 

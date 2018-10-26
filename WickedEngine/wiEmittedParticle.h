@@ -42,25 +42,6 @@ private:
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 	void CreateSelfBuffers();
 
-	static wiGraphicsTypes::ComputeShader		*kickoffUpdateCS, *finishUpdateCS, *emitCS, *emitCS_FROMMESH, *sphpartitionCS, *sphpartitionoffsetsCS, *sphpartitionoffsetsresetCS, *sphdensityCS, *sphforceCS, *simulateCS, *simulateCS_SORTING, *simulateCS_DEPTHCOLLISIONS, *simulateCS_SORTING_DEPTHCOLLISIONS;
-	static wiGraphicsTypes::VertexShader		*vertexShader;
-	static wiGraphicsTypes::PixelShader			*pixelShader[PARTICLESHADERTYPE_COUNT];
-	static wiGraphicsTypes::BlendState			blendStates[BLENDMODE_COUNT];
-	static wiGraphicsTypes::RasterizerState		rasterizerState,wireFrameRS;
-	static wiGraphicsTypes::DepthStencilState	depthStencilState;
-
-	static wiGraphicsTypes::GraphicsPSO			PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
-	static wiGraphicsTypes::GraphicsPSO			PSO_wire;
-	static wiGraphicsTypes::ComputePSO			CPSO_kickoffUpdate, CPSO_finishUpdate, CPSO_emit, CPSO_emit_FROMMESH, CPSO_sphpartition, CPSO_sphpartitionoffsets, CPSO_sphpartitionoffsetsreset, CPSO_sphdensity, CPSO_sphforce, CPSO_simulate, CPSO_simulate_SORTING, CPSO_simulate_DEPTHCOLLISIONS, CPSO_simulate_SORTING_DEPTHCOLLISIONS;
-
-public:
-	static void LoadShaders();
-	static void SetUpStatic();
-	static void CleanUpStatic();
-private:
-	static void LoadBuffers();
-	static void SetUpStates();
-
 	float emit = 0.0f;
 
 	bool buffersUpToDate = false;
@@ -131,6 +112,10 @@ public:
 	inline void SetSPHEnabled(bool value) { if (value) { _flags |= SPH_FLUIDSIMULATION; } else { _flags &= ~SPH_FLUIDSIMULATION; } }
 
 	void Serialize(wiArchive& archive, uint32_t seed = 0);
+
+	static void LoadShaders();
+	static void Initialize();
+	static void CleanUp();
 };
 
 }

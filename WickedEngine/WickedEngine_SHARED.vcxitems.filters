@@ -1146,6 +1146,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1970,6 +1973,8 @@
       <Filter>Documentation</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
+    <None Include="$(MSBuildThisFileDirectory)..\CODE_OF_CONDUCT.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">

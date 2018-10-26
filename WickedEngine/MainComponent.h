@@ -10,24 +10,26 @@ class RenderableComponent;
 class MainComponent
 {
 private:
-	RenderableComponent* activeComponent;
-	bool frameskip;
-	int targetFrameRate;
-	double targetFrameRateInv;
-	int applicationControlLostThreshold; 
+	RenderableComponent* activeComponent = nullptr;
+	bool frameskip = true;
+	int targetFrameRate = 60;
+	double targetFrameRateInv = 1.0f / 60.0f;
+	int applicationControlLostThreshold = 10;
 
+	bool component_dirty = true;
 	wiFadeManager fadeManager;
 public:
 	MainComponent();
 	virtual ~MainComponent();
 
-	int screenW, screenH;
-	bool fullscreen;
+	int screenW = 0;
+	int screenH = 0;
+	bool fullscreen = false;
 
 	// Runs the main engine loop
 	void Run();
 
-	void activateComponent(RenderableComponent* component, int fadeFrames = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
+	void activateComponent(RenderableComponent* component, float fadeSeconds = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
 	RenderableComponent* getActiveComponent(){ return activeComponent; }
 
 	wiResourceManager Content;
@@ -67,6 +69,8 @@ public:
 		bool cpuinfo;
 		// display resolution info
 		bool resolution;
+		// display engine initialization time
+		bool initstats;
 		// text size
 		int size;
 

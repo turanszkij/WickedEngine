@@ -18,6 +18,11 @@ scriptableCameraSpeed = 0.4
 local tt = 0.0
 local play = false
 local rot = 0
+ToggleCameraAnimation = function()
+	tt = 0.0
+	play = not play
+	rot = 0
+end
 
 -- Gather camera proxy entities in the scene from "cam0" to "cam1", "cam2", ... "camN":
 local proxies={}
@@ -35,10 +40,7 @@ runProcess(function()
 	while true do
 
 		if(input.Press(VK_F8)) then
-			-- Reset animation:
-			tt = 0.0
-			play = not play
-			rot = 0
+			ToggleCameraAnimation()
 		end
 		if(play) then
 			-- Play animation:

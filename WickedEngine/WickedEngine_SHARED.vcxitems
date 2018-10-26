@@ -234,6 +234,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h" />
@@ -726,6 +727,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
+    <None Include="$(MSBuildThisFileDirectory)..\CODE_OF_CONDUCT.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />

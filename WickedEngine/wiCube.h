@@ -22,7 +22,6 @@ private:
 				);
 		};
 	};
-	static void SetUpVertices();
 public:
 	Cube(const XMFLOAT3& center=XMFLOAT3(0,0,0), const XMFLOAT3& halfwidth=XMFLOAT3(1,1,1), const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 
@@ -31,11 +30,11 @@ public:
 
 	Description desc;
 	
-	static wiGraphicsTypes::GPUBuffer vertexBuffer;
-	static wiGraphicsTypes::GPUBuffer indexBuffer;
-	static void LoadStatic();
-	static void CleanUpStatic();
+	static wiGraphicsTypes::GPUBuffer* GetVertexBuffer();
+	static wiGraphicsTypes::GPUBuffer* GetIndexBuffer();
 
-	ALIGN_16
+	static void Initialize();
+	static void CleanUp();
+
 };
 

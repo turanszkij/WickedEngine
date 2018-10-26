@@ -17,20 +17,41 @@ using namespace wiGraphicsTypes;
 namespace wiSceneSystem
 {
 
-VertexShader  *wiEmittedParticle::vertexShader = nullptr;
-PixelShader   *wiEmittedParticle::pixelShader[PARTICLESHADERTYPE_COUNT] = {};
-ComputeShader   *wiEmittedParticle::kickoffUpdateCS = nullptr, *wiEmittedParticle::finishUpdateCS = nullptr, *wiEmittedParticle::emitCS = nullptr, *wiEmittedParticle::emitCS_FROMMESH = nullptr, *wiEmittedParticle::sphpartitionCS = nullptr,
-				*wiEmittedParticle::sphpartitionoffsetsCS = nullptr, *wiEmittedParticle::sphpartitionoffsetsresetCS = nullptr, *wiEmittedParticle::sphdensityCS = nullptr, *wiEmittedParticle::sphforceCS = nullptr, 
-				*wiEmittedParticle::simulateCS = nullptr, *wiEmittedParticle::simulateCS_SORTING = nullptr, *wiEmittedParticle::simulateCS_DEPTHCOLLISIONS = nullptr, *wiEmittedParticle::simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
+static VertexShader*		vertexShader = nullptr;
+static PixelShader*			pixelShader[wiEmittedParticle::PARTICLESHADERTYPE_COUNT] = {};
+static ComputeShader*		kickoffUpdateCS = nullptr;
+static ComputeShader*		finishUpdateCS = nullptr;
+static ComputeShader*		emitCS = nullptr;
+static ComputeShader*		emitCS_FROMMESH = nullptr;
+static ComputeShader*		sphpartitionCS = nullptr;
+static ComputeShader*		sphpartitionoffsetsCS = nullptr;
+static ComputeShader*		sphpartitionoffsetsresetCS = nullptr;
+static ComputeShader*		sphdensityCS = nullptr;
+static ComputeShader*		sphforceCS = nullptr;
+static ComputeShader*		simulateCS = nullptr;
+static ComputeShader*		simulateCS_SORTING = nullptr;
+static ComputeShader*		simulateCS_DEPTHCOLLISIONS = nullptr;
+static ComputeShader*		simulateCS_SORTING_DEPTHCOLLISIONS = nullptr;
 
-BlendState		wiEmittedParticle::blendStates[BLENDMODE_COUNT];
-RasterizerState		wiEmittedParticle::rasterizerState, wiEmittedParticle::wireFrameRS;
-DepthStencilState	wiEmittedParticle::depthStencilState;
-GraphicsPSO wiEmittedParticle::PSO[BLENDMODE_COUNT][PARTICLESHADERTYPE_COUNT];
-GraphicsPSO wiEmittedParticle::PSO_wire;
-ComputePSO wiEmittedParticle::CPSO_kickoffUpdate, wiEmittedParticle::CPSO_finishUpdate, wiEmittedParticle::CPSO_emit, wiEmittedParticle::CPSO_emit_FROMMESH, wiEmittedParticle::CPSO_sphpartition, wiEmittedParticle::CPSO_sphpartitionoffsets,
-				wiEmittedParticle::CPSO_sphpartitionoffsetsreset, wiEmittedParticle::CPSO_sphdensity, wiEmittedParticle::CPSO_sphforce, wiEmittedParticle::CPSO_simulate,
-				wiEmittedParticle::CPSO_simulate_SORTING, wiEmittedParticle::CPSO_simulate_DEPTHCOLLISIONS, wiEmittedParticle::CPSO_simulate_SORTING_DEPTHCOLLISIONS;
+static BlendState			blendStates[BLENDMODE_COUNT];
+static RasterizerState		rasterizerState;
+static RasterizerState		wireFrameRS;
+static DepthStencilState	depthStencilState;
+static GraphicsPSO			PSO[BLENDMODE_COUNT][wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
+static GraphicsPSO			PSO_wire;
+static ComputePSO			CPSO_kickoffUpdate;
+static ComputePSO			CPSO_finishUpdate;
+static ComputePSO			CPSO_emit;
+static ComputePSO			CPSO_emit_FROMMESH;
+static ComputePSO			CPSO_sphpartition;
+static ComputePSO			CPSO_sphpartitionoffsets;
+static ComputePSO			CPSO_sphpartitionoffsetsreset;
+static ComputePSO			CPSO_sphdensity;
+static ComputePSO			CPSO_sphforce;
+static ComputePSO			CPSO_simulate;
+static ComputePSO			CPSO_simulate_SORTING;
+static ComputePSO			CPSO_simulate_DEPTHCOLLISIONS;
+static ComputePSO			CPSO_simulate_SORTING_DEPTHCOLLISIONS;
 
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
@@ -693,44 +714,44 @@ void wiEmittedParticle::LoadShaders()
 	}
 
 }
-void wiEmittedParticle::LoadBuffers()
+void wiEmittedParticle::Initialize()
 {
-}
-void wiEmittedParticle::SetUpStates()
-{
+	LoadShaders();
+
+
 	RasterizerStateDesc rs;
-	rs.FillMode=FILL_SOLID;
-	rs.CullMode=CULL_BACK;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=false;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&rasterizerState);
+	rs.FillMode = FILL_SOLID;
+	rs.CullMode = CULL_BACK;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs, &rasterizerState);
 
-	
-	rs.FillMode=FILL_WIREFRAME;
-	rs.CullMode=CULL_NONE;
-	rs.FrontCounterClockwise=true;
-	rs.DepthBias=0;
-	rs.DepthBiasClamp=0;
-	rs.SlopeScaledDepthBias=0;
-	rs.DepthClipEnable=false;
-	rs.MultisampleEnable=false;
-	rs.AntialiasedLineEnable=false;
-	wiRenderer::GetDevice()->CreateRasterizerState(&rs,&wireFrameRS);
 
-	
+	rs.FillMode = FILL_WIREFRAME;
+	rs.CullMode = CULL_NONE;
+	rs.FrontCounterClockwise = true;
+	rs.DepthBias = 0;
+	rs.DepthBiasClamp = 0;
+	rs.SlopeScaledDepthBias = 0;
+	rs.DepthClipEnable = false;
+	rs.MultisampleEnable = false;
+	rs.AntialiasedLineEnable = false;
+	wiRenderer::GetDevice()->CreateRasterizerState(&rs, &wireFrameRS);
+
+
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = false;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
 
-	
+
 	BlendStateDesc bd;
-	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
@@ -738,10 +759,10 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable=false;
-	wiRenderer::GetDevice()->CreateBlendState(&bd,&blendStates[BLENDMODE_ALPHA]);
+	bd.IndependentBlendEnable = false;
+	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_ALPHA]);
 
-	bd.RenderTarget[0].BlendEnable=true;
+	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_ONE;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
@@ -749,7 +770,7 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable=false;
+	bd.IndependentBlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -766,13 +787,7 @@ void wiEmittedParticle::SetUpStates()
 	bd.RenderTarget[0].BlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 }
-void wiEmittedParticle::SetUpStatic()
-{
-	LoadBuffers();
-	SetUpStates();
-	LoadShaders();
-}
-void wiEmittedParticle::CleanUpStatic()
+void wiEmittedParticle::CleanUp()
 {
 	SAFE_DELETE(vertexShader);
 	for (int i = 0; i < ARRAYSIZE(pixelShader); ++i)

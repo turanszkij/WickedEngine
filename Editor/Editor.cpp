@@ -522,10 +522,10 @@ void EditorComponent::Load()
 					}
 				});
 				loader->onFinished([=] {
-					main->activateComponent(this, 10, wiColor::Black);
+					main->activateComponent(this, 0.2f, wiColor::Black);
 					weatherWnd->UpdateFromRenderer();
 				});
-				main->activateComponent(loader, 10, wiColor::Black);
+				main->activateComponent(loader, 0.2f, wiColor::Black);
 				ResetHistory();
 			}
 		}).detach();

@@ -1526,7 +1526,7 @@ namespace wiGraphicsTypes
 	// Engine functions
 	ID3D12GraphicsCommandList* GraphicsDevice_DX12::GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
 
-	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
+	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
 		FULLSCREEN = fullscreen;
 

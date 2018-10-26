@@ -7,16 +7,16 @@ using namespace wiGraphicsTypes;
 
 namespace wiGPUSortLib
 {
-	GPUBuffer* indirectBuffer = nullptr;
-	GPUBuffer* sortCB = nullptr;
-	ComputeShader* kickoffSortCS = nullptr;
-	ComputeShader* sortCS = nullptr;
-	ComputeShader* sortInnerCS = nullptr;
-	ComputeShader* sortStepCS = nullptr;
-	ComputePSO CPSO_kickoffSort;
-	ComputePSO CPSO_sort;
-	ComputePSO CPSO_sortInner;
-	ComputePSO CPSO_sortStep;
+	static GPUBuffer* indirectBuffer = nullptr;
+	static GPUBuffer* sortCB = nullptr;
+	static ComputeShader* kickoffSortCS = nullptr;
+	static ComputeShader* sortCS = nullptr;
+	static ComputeShader* sortInnerCS = nullptr;
+	static ComputeShader* sortStepCS = nullptr;
+	static ComputePSO CPSO_kickoffSort;
+	static ComputePSO CPSO_sort;
+	static ComputePSO CPSO_sortInner;
+	static ComputePSO CPSO_sortStep;
 
 	void Initialize()
 	{

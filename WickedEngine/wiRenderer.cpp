@@ -48,23 +48,23 @@ namespace wiRenderer
 
 GraphicsDevice* graphicsDevice = nullptr;
 
-Sampler				*samplers[SSLOT_COUNT] = {};
-VertexShader		*vertexShaders[VSTYPE_LAST] = {};
-PixelShader			*pixelShaders[PSTYPE_LAST] = {};
-GeometryShader		*geometryShaders[GSTYPE_LAST] = {};
-HullShader			*hullShaders[HSTYPE_LAST] = {};
-DomainShader		*domainShaders[DSTYPE_LAST] = {};
-ComputeShader		*computeShaders[CSTYPE_LAST] = {};
-VertexLayout		*vertexLayouts[VLTYPE_LAST] = {};
-RasterizerState		*rasterizers[RSTYPE_LAST] = {};
-DepthStencilState	*depthStencils[DSSTYPE_LAST] = {};
-BlendState			*blendStates[BSTYPE_LAST] = {};
-GPUBuffer			*constantBuffers[CBTYPE_LAST] = {};
-GPUBuffer			*resourceBuffers[RBTYPE_LAST] = {};
-Texture				*textures[TEXTYPE_LAST] = {};
-Sampler				*customsamplers[SSTYPE_LAST] = {};
+static Sampler				*samplers[SSLOT_COUNT] = {};
+static VertexShader			*vertexShaders[VSTYPE_LAST] = {};
+static PixelShader			*pixelShaders[PSTYPE_LAST] = {};
+static GeometryShader		*geometryShaders[GSTYPE_LAST] = {};
+static HullShader			*hullShaders[HSTYPE_LAST] = {};
+static DomainShader			*domainShaders[DSTYPE_LAST] = {};
+static ComputeShader		*computeShaders[CSTYPE_LAST] = {};
+static VertexLayout			*vertexLayouts[VLTYPE_LAST] = {};
+static RasterizerState		*rasterizers[RSTYPE_LAST] = {};
+static DepthStencilState	*depthStencils[DSSTYPE_LAST] = {};
+static BlendState			*blendStates[BSTYPE_LAST] = {};
+static GPUBuffer			*constantBuffers[CBTYPE_LAST] = {};
+static GPUBuffer			*resourceBuffers[RBTYPE_LAST] = {};
+static Texture				*textures[TEXTYPE_LAST] = {};
+static Sampler				*customsamplers[SSTYPE_LAST] = {};
 
-string SHADERPATH = "shaders/";
+static string SHADERPATH = "shaders/";
 
 LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
 GPURingBuffer	dynamicVertexBufferPools[GRAPHICSTHREAD_COUNT] = {};
@@ -507,10 +507,10 @@ void Initialize()
 	LoadBuffers();
 	LoadShaders();
 	
-	wiHairParticle::SetUpStatic();
-	wiEmittedParticle::SetUpStatic();
+	wiHairParticle::Initialize();
+	wiEmittedParticle::Initialize();
 
-	Cube::LoadStatic();
+	Cube::Initialize();
 
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
@@ -518,9 +518,9 @@ void Initialize()
 }
 void CleanUp()
 {
-	wiHairParticle::CleanUpStatic();
-	wiEmittedParticle::CleanUpStatic();
-	Cube::CleanUpStatic();
+	wiHairParticle::CleanUp();
+	wiEmittedParticle::CleanUp();
+	Cube::CleanUp();
 
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
@@ -5321,13 +5321,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
+			Cube::GetVertexBuffer(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+		device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
 
@@ -5356,7 +5356,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		MiscCB sb;
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			EnvironmentProbeComponent& probe = scene.probes[i];
+			const EnvironmentProbeComponent& probe = scene.probes[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position))));
 			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
@@ -5379,17 +5379,17 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
+			Cube::GetVertexBuffer(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+		device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
-			EnvironmentProbeComponent& probe = scene.probes[i];
+			const EnvironmentProbeComponent& probe = scene.probes[i];
 
 			if (probe.textureIndex < 0)
 			{
@@ -5516,13 +5516,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				// No mesh, just draw a box:
 				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 				GPUBuffer* vbs[] = {
-					&Cube::vertexBuffer,
+					Cube::GetVertexBuffer(),
 				};
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
 				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+				device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 				device->DrawIndexed(24, 0, 0, threadID);
 			}
 			else
@@ -5585,13 +5585,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
-			&Cube::vertexBuffer,
+			Cube::GetVertexBuffer(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(&Cube::indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+		device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);

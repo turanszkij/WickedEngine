@@ -10,12 +10,12 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-static const std::map<std::string, wiResourceManager::Data_Type> types = {
-	std::pair<string, wiResourceManager::Data_Type>("JPG", wiResourceManager::IMAGE),
-	std::pair<string, wiResourceManager::Data_Type>("PNG", wiResourceManager::IMAGE),
-	std::pair<string, wiResourceManager::Data_Type>("DDS", wiResourceManager::IMAGE),
-	std::pair<string, wiResourceManager::Data_Type>("TGA", wiResourceManager::IMAGE),
-	std::pair<string, wiResourceManager::Data_Type>("WAV", wiResourceManager::SOUND)
+static const std::unordered_map<std::string, wiResourceManager::Data_Type> types = {
+	make_pair("JPG", wiResourceManager::IMAGE),
+	make_pair("PNG", wiResourceManager::IMAGE),
+	make_pair("DDS", wiResourceManager::IMAGE),
+	make_pair("TGA", wiResourceManager::IMAGE),
+	make_pair("WAV", wiResourceManager::SOUND)
 };
 
 wiResourceManager* wiResourceManager::globalResources = nullptr;

@@ -3,34 +3,31 @@
 void wiFadeManager::Clear()
 {
 	opacity = 0;
-	frame = 0;
 	state = FADE_FINISHED;
-	color = wiColor(0, 0, 0, 1);
 }
 
-void wiFadeManager::Update()
+void wiFadeManager::Update(float dt)
 {
 	if (!IsActive())
 		return;
 
-	opacity = wiMath::Lerp(0.0f, 1.0f, (float)frame / (float)targetFrames);
+	if (targetFadeTimeInSeconds <= 0)
+	{
+		// skip fade, just launch the job
+		onFade();
+		state = FADE_FINISHED;
+	}
+
+	float t = timer / targetFadeTimeInSeconds;
+	timer += wiMath::Clamp(dt, 0, 0.033f);
 
 	if (state == FADE_IN)
 	{
-		frame++;
-		if (frame >= targetFrames)
+		opacity = wiMath::Lerp(0.0f, 1.0f, t);
+		if (t >= 1.0f)
 		{
 			state = FADE_MID;
 			opacity = 1.0f;
-		}
-	}
-	else if (state == FADE_OUT)
-	{
-		frame--;
-		if (frame <= 0)
-		{
-			state = FADE_FINISHED;
-			opacity = 0.0f;
 		}
 	}
 	else if (state == FADE_MID)
@@ -38,6 +35,16 @@ void wiFadeManager::Update()
 		state = FADE_OUT;
 		opacity = 1.0f;
 		onFade();
+		timer = 0;
+	}
+	else if (state == FADE_OUT)
+	{
+		opacity = wiMath::Lerp(1.0f, 0.0f, t);
+		if (t >= 1.0f)
+		{
+			state = FADE_FINISHED;
+			opacity = 0.0f;
+		}
 	}
 	else if (state == FADE_FINISHED)
 	{

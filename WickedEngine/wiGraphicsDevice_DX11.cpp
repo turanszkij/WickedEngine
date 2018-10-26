@@ -1380,7 +1380,7 @@ const void* const __nullBlob[1024] = {}; // this is initialized to nullptrs!
 
 // Engine functions
 
-GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer) : GraphicsDevice()
+GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 {
 	FULLSCREEN = fullscreen;
 

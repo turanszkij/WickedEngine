@@ -137,11 +137,11 @@ int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int fadeFrames = 0;
+		float fadeSeconds = 0;
 		wiColor fadeColor = wiColor(0, 0, 0, 255);
 		if (argc > 1)
 		{
-			fadeFrames = wiLua::SGetInt(L, 2);
+			fadeSeconds = wiLua::SGetFloat(L, 2);
 			if (argc > 2)
 			{
 				fadeColor.r = wiLua::SGetInt(L, 3);
@@ -159,56 +159,56 @@ int MainComponent_BindLua::SetActiveComponent(lua_State *L)
 		ForwardRenderableComponent_BindLua* compFwd3D = Luna<ForwardRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compFwd3D != nullptr)
 		{
-			component->activateComponent(compFwd3D->component, fadeFrames, fadeColor);
+			component->activateComponent(compFwd3D->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		DeferredRenderableComponent_BindLua* compDef3D = Luna<DeferredRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compDef3D != nullptr)
 		{
-			component->activateComponent(compDef3D->component, fadeFrames, fadeColor);
+			component->activateComponent(compDef3D->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		TiledDeferredRenderableComponent_BindLua* compTDef3D = Luna<TiledDeferredRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compTDef3D != nullptr)
 		{
-			component->activateComponent(compTDef3D->component, fadeFrames, fadeColor);
+			component->activateComponent(compTDef3D->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		TiledForwardRenderableComponent_BindLua* compTFwd3D = Luna<TiledForwardRenderableComponent_BindLua>::lightcheck(L, 1);
 		if (compTFwd3D != nullptr)
 		{
-			component->activateComponent(compTFwd3D->component, fadeFrames, fadeColor);
+			component->activateComponent(compTFwd3D->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		Renderable3DComponent_BindLua* comp3D = Luna<Renderable3DComponent_BindLua>::lightcheck(L, 1);
 		if (comp3D != nullptr)
 		{
-			component->activateComponent(comp3D->component, fadeFrames, fadeColor);
+			component->activateComponent(comp3D->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		LoadingScreenComponent_BindLua* compLoad = Luna<LoadingScreenComponent_BindLua>::lightcheck(L, 1);
 		if (compLoad != nullptr)
 		{
-			component->activateComponent(compLoad->component, fadeFrames, fadeColor);
+			component->activateComponent(compLoad->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		Renderable2DComponent_BindLua* comp2D = Luna<Renderable2DComponent_BindLua>::lightcheck(L, 1);
 		if (comp2D != nullptr)
 		{
-			component->activateComponent(comp2D->component, fadeFrames, fadeColor);
+			component->activateComponent(comp2D->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 
 		RenderableComponent_BindLua* comp = Luna<RenderableComponent_BindLua>::lightcheck(L, 1);
 		if (comp != nullptr)
 		{
-			component->activateComponent(comp->component, fadeFrames, fadeColor);
+			component->activateComponent(comp->component, fadeSeconds, fadeColor);
 			return 0;
 		}
 	}

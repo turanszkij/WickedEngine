@@ -69,6 +69,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
+		wiRenderer::SetToDrawGridHelper(false);
 		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld();
 		wiRenderer::GetScene().weather = WeatherComponent();
@@ -101,7 +102,7 @@ TestsRenderer::TestsRenderer()
 			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 5:
-			wiRenderer::SetTemporalAAEnabled(true);
+			wiRenderer::SetToDrawGridHelper(true);
 			wiLua::GetGlobal()->RunFile("test_script.lua");
 			break;
 		case 6:

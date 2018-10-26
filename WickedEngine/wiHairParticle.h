@@ -17,25 +17,10 @@ private:
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> cb;
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> simulationBuffer;
-
-	static wiGraphicsTypes::VertexShader *vs;
-	static wiGraphicsTypes::PixelShader *ps[SHADERTYPE_COUNT];
-	static wiGraphicsTypes::PixelShader *ps_simplest;
-	static wiGraphicsTypes::ComputeShader *cs_simulate;
-	static wiGraphicsTypes::DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
-	static wiGraphicsTypes::RasterizerState rs, ncrs, wirers;
-	static wiGraphicsTypes::BlendState bs[2]; // opaque, transparent
-	static wiGraphicsTypes::GraphicsPSO PSO[SHADERTYPE_COUNT][2]; // shadertype * transparency
-	static wiGraphicsTypes::GraphicsPSO PSO_wire;
-	static wiGraphicsTypes::ComputePSO CPSO_simulate;
 public:
-	static void LoadShaders();
 
 	void UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID);
 	void Draw(const CameraComponent& camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const;
-
-	static void CleanUpStatic();
-	static void SetUpStatic();
 
 	enum FLAGS
 	{
@@ -58,6 +43,10 @@ public:
 	AABB aabb;
 
 	void Serialize(wiArchive& archive, uint32_t seed = 0);
+
+	static void LoadShaders();
+	static void Initialize();
+	static void CleanUp();
 };
 
 }

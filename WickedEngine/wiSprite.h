@@ -5,7 +5,7 @@
 
 class wiResourceManager;
 
-class wiSprite : public wiImage
+class wiSprite
 {
 private:
 	std::string texture, mask, normal;
