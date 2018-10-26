@@ -1,15 +1,20 @@
 # Contributions are welcome!
-You should be familiar with the following few guidelines before you contribute any code. These are not set in stone, if there is a good argument, I am very much open to change. You can submit a pull request with your changes, briefly describe them and I will review as soon as I can!
+Here are some guidelines how to contribute code. You can submit a pull request with your changes, briefly describe them and I will review as soon as I can!
 
-## Some guidelines, which can be broken if you have a good reason:
+## Some guidelines to what kind of code to write:
 - use the default Visual Studio 2017 formatting
+- all engine source and header files are in the project root directory
+- all engine header files have .h extension, while compiled source files have .cpp extension
+- all third party libraries are in their respective folders within the project directory
 - generally, function names start with Uppercase, variable names with lowercase
 - Very short, inline function names can start with lowercase
 - member and global variables usually use camelCase formatting: int myGlobalVariable;
 - temporary variables on stack sometimes use lowercase formatting like this: int tmp_variable_on_stack;
 - prefer having braces on their own line when writing loops, branches, functions or whatever
+- unit of time should be seconds
+- use std::string to store strings
 - avoid using c++ stl containers if possible (std::vector is acceptable, or unordered_map, but use them sparingly)
-- avoid new and malloc and generally allocating on heap wherever you can. Especially avoid it in frequently called code! Note that by default, c++ std:: lib will allocate on heap.
+- avoid new and malloc and allocating on general purpose heap wherever you can. Especially avoid it in frequently called code! Note that by default, c++ std:: lib will allocate on heap.
 - you can use auto keyword, but aim for as small scope as possible
 - using auto keyword for iterators is encouraged
 - aim to write const-correct code
