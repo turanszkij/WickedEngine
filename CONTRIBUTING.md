@@ -1,5 +1,5 @@
 # Contributions are welcome!
-Here are some guidelines how to contribute code. You can submit a pull request with your changes, briefly describe them and I will review as soon as I can!
+Here are some guidelines on contributing. You can submit a pull request with your changes, briefly describe them and I will review as soon as I can!
 
 ## Some guidelines to what kind of code to write:
 - use the default Visual Studio 2017 formatting
@@ -7,7 +7,7 @@ Here are some guidelines how to contribute code. You can submit a pull request w
 - all engine header files have .h extension, while compiled source files have .cpp extension
 - all third party libraries are in their respective folders within the project directory
 - generally, function names start with Uppercase, variable names with lowercase
-- Very short, inline function names can start with lowercase
+- very short, inline function names can start with lowercase
 - member and global variables usually use camelCase formatting: int myGlobalVariable;
 - temporary variables on stack sometimes use lowercase formatting like this: int tmp_variable_on_stack;
 - prefer having braces on their own line when writing loops, branches, functions or whatever
@@ -26,6 +26,8 @@ Here are some guidelines how to contribute code. You can submit a pull request w
 - prefer "using namespace xyz" in source (.cpp) files
 - use assert()
 - do not use c++ exceptions, instead prefer to return error codes or bool
-- avoid using geometry shaders if possible
+- avoid using geometry shaders, if possible
 - when writing shaders, use the resource declaration macros and define proper named bind-points at compile time. See examples in ShaderInterop.h, ShaderInterop_Renderer.h, etc...
-- speaking of macros, I don't have a problem if you use them wisely (use short and simple macros)
+- speaking of macros; use them, but use them wisely (use short and simple macros)
+
+I am open to discussion about any of these
