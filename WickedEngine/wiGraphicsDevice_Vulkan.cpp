@@ -2492,7 +2492,7 @@ namespace wiGraphicsTypes
 
 
 		VkResult res;
-		res = vkCreateBuffer(device, &bufferInfo, nullptr, reinterpret_cast<VkBuffer*>(&ppBuffer->resource_Vulkan));
+		res = vkCreateBuffer(device, &bufferInfo, nullptr, reinterpret_cast<VkBuffer*>(&ppBuffer->resource));
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
 
@@ -2500,18 +2500,18 @@ namespace wiGraphicsTypes
 
 		// Allocate resource backing memory:
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, (VkBuffer)ppBuffer->resource_Vulkan, &memRequirements);
+		vkGetBufferMemoryRequirements(device, (VkBuffer)ppBuffer->resource, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT /*| VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&ppBuffer->resourceMemory_Vulkan)) != VK_SUCCESS) {
+		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&ppBuffer->resourceMemory)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate buffer memory!");
 		}
 
-		res = vkBindBufferMemory(device, (VkBuffer)ppBuffer->resource_Vulkan, (VkDeviceMemory)ppBuffer->resourceMemory_Vulkan, 0);
+		res = vkBindBufferMemory(device, (VkBuffer)ppBuffer->resource, (VkDeviceMemory)ppBuffer->resourceMemory, 0);
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
 
@@ -2532,7 +2532,7 @@ namespace wiGraphicsTypes
 
 				VkBufferMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-				barrier.buffer = (VkBuffer)ppBuffer->resource_Vulkan;
+				barrier.buffer = (VkBuffer)ppBuffer->resource;
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
@@ -2550,7 +2550,7 @@ namespace wiGraphicsTypes
 				);
 
 
-				vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, (VkBuffer)ppBuffer->resource_Vulkan, 1, &copyRegion);
+				vkCmdCopyBuffer(copyCommandBuffer, bufferUploader->resource, (VkBuffer)ppBuffer->resource, 1, &copyRegion);
 
 
 				VkAccessFlags tmp = barrier.srcAccessMask;
@@ -2595,13 +2595,13 @@ namespace wiGraphicsTypes
 		{
 			VkBufferViewCreateInfo srv_desc = {};
 			srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			srv_desc.buffer = (VkBuffer)ppBuffer->resource_Vulkan;
+			srv_desc.buffer = (VkBuffer)ppBuffer->resource;
 			srv_desc.flags = 0;
 			srv_desc.format = _ConvertFormat(ppBuffer->desc.Format);
 			srv_desc.offset = 0;
 			srv_desc.range = ppBuffer->desc.ByteWidth;
 
-			res = vkCreateBufferView(device, &srv_desc, nullptr, reinterpret_cast<VkBufferView*>(&ppBuffer->SRV_Vulkan));
+			res = vkCreateBufferView(device, &srv_desc, nullptr, reinterpret_cast<VkBufferView*>(&ppBuffer->SRV));
 			assert(res == VK_SUCCESS);
 		}
 
@@ -2609,13 +2609,13 @@ namespace wiGraphicsTypes
 		{
 			VkBufferViewCreateInfo uav_desc = {};
 			uav_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
-			uav_desc.buffer = (VkBuffer)ppBuffer->resource_Vulkan;
+			uav_desc.buffer = (VkBuffer)ppBuffer->resource;
 			uav_desc.flags = 0;
 			uav_desc.format = _ConvertFormat(ppBuffer->desc.Format);
 			uav_desc.offset = 0;
 			uav_desc.range = ppBuffer->desc.ByteWidth;
 
-			res = vkCreateBufferView(device, &uav_desc, nullptr, reinterpret_cast<VkBufferView*>(&ppBuffer->UAV_Vulkan));
+			res = vkCreateBufferView(device, &uav_desc, nullptr, reinterpret_cast<VkBufferView*>(&ppBuffer->UAV));
 			assert(res == VK_SUCCESS);
 		}
 
@@ -2692,7 +2692,7 @@ namespace wiGraphicsTypes
 		}
 
 		VkResult res;
-		res = vkCreateImage(device, &imageInfo, nullptr, reinterpret_cast<VkImage*>(&(*ppTexture2D)->resource_Vulkan));
+		res = vkCreateImage(device, &imageInfo, nullptr, reinterpret_cast<VkImage*>(&(*ppTexture2D)->resource));
 		hr = res == VK_SUCCESS;
 		assert(SUCCEEDED(hr));
 
@@ -2700,18 +2700,18 @@ namespace wiGraphicsTypes
 
 		// Allocate resource backing memory:
 		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(device, (VkImage)(*ppTexture2D)->resource_Vulkan, &memRequirements);
+		vkGetImageMemoryRequirements(device, (VkImage)(*ppTexture2D)->resource, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&(*ppTexture2D)->resourceMemory_Vulkan)) != VK_SUCCESS) {
+		if (vkAllocateMemory(device, &allocInfo, nullptr, reinterpret_cast<VkDeviceMemory*>(&(*ppTexture2D)->resourceMemory)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate image memory!");
 		}
 
-		res = vkBindImageMemory(device, (VkImage)(*ppTexture2D)->resource_Vulkan, (VkDeviceMemory)(*ppTexture2D)->resourceMemory_Vulkan, 0);
+		res = vkBindImageMemory(device, (VkImage)(*ppTexture2D)->resource, (VkDeviceMemory)(*ppTexture2D)->resourceMemory, 0);
 		hr = res == VK_SUCCESS; 
 		assert(SUCCEEDED(hr));
 
@@ -2770,7 +2770,7 @@ namespace wiGraphicsTypes
 
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
+				barrier.image = (VkImage)(*ppTexture2D)->resource;
 				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.srcAccessMask = 0;
@@ -2795,7 +2795,7 @@ namespace wiGraphicsTypes
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)(*ppTexture2D)->resource_Vulkan, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
+				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)(*ppTexture2D)->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
 
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -2832,7 +2832,7 @@ namespace wiGraphicsTypes
 			VkImageViewCreateInfo rtv_desc = {};
 			rtv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			rtv_desc.flags = 0;
-			rtv_desc.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
+			rtv_desc.image = (VkImage)(*ppTexture2D)->resource;
 			rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			rtv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -2866,8 +2866,8 @@ namespace wiGraphicsTypes
 						rtv_desc.subresourceRange.baseArrayLayer = i;
 						rtv_desc.subresourceRange.layerCount = 1;
 
-						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
+						(*ppTexture2D)->additionalRTVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs.back()));
 						assert(res == VK_SUCCESS);
 					}
 				}
@@ -2879,8 +2879,8 @@ namespace wiGraphicsTypes
 						rtv_desc.subresourceRange.baseArrayLayer = i * 6;
 						rtv_desc.subresourceRange.layerCount = 6;
 
-						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
+						(*ppTexture2D)->additionalRTVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs.back()));
 						assert(res == VK_SUCCESS);
 					}
 				}
@@ -2892,7 +2892,7 @@ namespace wiGraphicsTypes
 					rtv_desc.subresourceRange.baseMipLevel = 0;
 					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
 
-					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->RTV_Vulkan));
+					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->RTV));
 					hr = res == VK_SUCCESS;
 					assert(SUCCEEDED(hr));
 				}
@@ -2917,8 +2917,8 @@ namespace wiGraphicsTypes
 						rtv_desc.subresourceRange.baseArrayLayer = i;
 						rtv_desc.subresourceRange.layerCount = 1;
 
-						(*ppTexture2D)->additionalRTVs_Vulkan.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs_Vulkan.back()));
+						(*ppTexture2D)->additionalRTVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalRTVs.back()));
 						assert(res == VK_SUCCESS);
 					}
 				}
@@ -2954,7 +2954,7 @@ namespace wiGraphicsTypes
 					rtv_desc.subresourceRange.baseMipLevel = 0;
 					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
 
-					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->RTV_Vulkan));
+					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->RTV));
 					hr = res == VK_SUCCESS;
 					assert(SUCCEEDED(hr));
 				}
@@ -2972,7 +2972,7 @@ namespace wiGraphicsTypes
 			VkImageViewCreateInfo dsv_desc = {};
 			dsv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			dsv_desc.flags = 0;
-			dsv_desc.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
+			dsv_desc.image = (VkImage)(*ppTexture2D)->resource;
 			dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			dsv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
@@ -3023,7 +3023,7 @@ namespace wiGraphicsTypes
 			dsv_desc.subresourceRange.baseMipLevel = 0;
 			dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
 
-			res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->DSV_Vulkan));
+			res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->DSV));
 			hr = res == VK_SUCCESS;
 			assert(SUCCEEDED(hr));
 		}
@@ -3038,7 +3038,7 @@ namespace wiGraphicsTypes
 			VkImageViewCreateInfo srv_desc = {};
 			srv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			srv_desc.flags = 0;
-			srv_desc.image = (VkImage)(*ppTexture2D)->resource_Vulkan;
+			srv_desc.image = (VkImage)(*ppTexture2D)->resource;
 			srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -3092,8 +3092,8 @@ namespace wiGraphicsTypes
 							srv_desc.subresourceRange.baseArrayLayer = i * 6;
 							srv_desc.subresourceRange.layerCount = 6;
 
-							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(VK_NULL_HANDLE);
-							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs_Vulkan.back()));
+							(*ppTexture2D)->additionalSRVs.push_back(VK_NULL_HANDLE);
+							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs.back()));
 							assert(res == VK_SUCCESS);
 						}
 					}
@@ -3107,8 +3107,8 @@ namespace wiGraphicsTypes
 							srv_desc.subresourceRange.baseArrayLayer = i;
 							srv_desc.subresourceRange.layerCount = 1;
 
-							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(VK_NULL_HANDLE);
-							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs_Vulkan.back()));
+							(*ppTexture2D)->additionalSRVs.push_back(VK_NULL_HANDLE);
+							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs.back()));
 							assert(res == VK_SUCCESS);
 						}
 					}
@@ -3133,8 +3133,8 @@ namespace wiGraphicsTypes
 							srv_desc.subresourceRange.baseMipLevel = i;
 							srv_desc.subresourceRange.levelCount = 1;
 
-							(*ppTexture2D)->additionalSRVs_Vulkan.push_back(VK_NULL_HANDLE);
-							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs_Vulkan.back()));
+							(*ppTexture2D)->additionalSRVs.push_back(VK_NULL_HANDLE);
+							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->additionalSRVs.back()));
 							assert(res == VK_SUCCESS);
 						}
 					}
@@ -3147,7 +3147,7 @@ namespace wiGraphicsTypes
 			srv_desc.subresourceRange.baseMipLevel = 0;
 			srv_desc.subresourceRange.levelCount = (*ppTexture2D)->desc.MipLevels;
 
-			res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->SRV_Vulkan));
+			res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&(*ppTexture2D)->SRV));
 			hr = res == VK_SUCCESS;
 			assert(SUCCEEDED(hr));
 		}
@@ -3443,7 +3443,7 @@ namespace wiGraphicsTypes
 		createInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 
-		if (vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource_Vulkan)) != VK_SUCCESS) {
+		if (vkCreateSampler(device, &createInfo, nullptr, reinterpret_cast<VkSampler*>(&pSamplerState->resource)) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create sampler!");
 		}
 
@@ -3927,7 +3927,7 @@ namespace wiGraphicsTypes
 		pipelineInfo.pDynamicState = &dynamicState;
 
 
-		VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline_Vulkan));
+		VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline));
 		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
 		assert(SUCCEEDED(hr));
 
@@ -3974,7 +3974,7 @@ namespace wiGraphicsTypes
 		}
 
 
-		VkResult res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline_Vulkan));
+		VkResult res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, reinterpret_cast<VkPipeline*>(&pso->pipeline));
 		HRESULT hr = res == VK_SUCCESS ? S_OK : E_FAIL;
 		assert(SUCCEEDED(hr));
 
@@ -3984,92 +3984,92 @@ namespace wiGraphicsTypes
 
 	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
 	{
-		vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory_Vulkan, nullptr);
+		vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyBuffer(GPUBuffer *pBuffer)
 	{
-		vkDestroyBuffer(device, (VkBuffer)pBuffer->resource_Vulkan, nullptr);
+		vkDestroyBuffer(device, (VkBuffer)pBuffer->resource, nullptr);
 
-		vkDestroyBufferView(device, (VkBufferView)pBuffer->SRV_Vulkan, nullptr);
-		for (auto& x : pBuffer->additionalSRVs_Vulkan)
+		vkDestroyBufferView(device, (VkBufferView)pBuffer->SRV, nullptr);
+		for (auto& x : pBuffer->additionalSRVs)
 		{
 			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
 		}
 
-		vkDestroyBufferView(device, (VkBufferView)pBuffer->UAV_Vulkan, nullptr);
-		for (auto& x : pBuffer->additionalUAVs_Vulkan)
+		vkDestroyBufferView(device, (VkBufferView)pBuffer->UAV, nullptr);
+		for (auto& x : pBuffer->additionalUAVs)
 		{
 			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
 		}
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
 	{
-		vkDestroyImage(device, (VkImage)pTexture1D->resource_Vulkan, nullptr);
+		vkDestroyImage(device, (VkImage)pTexture1D->resource, nullptr);
 
-		vkDestroyImageView(device, (VkImageView)pTexture1D->RTV_Vulkan, nullptr);
-		for (auto& x : pTexture1D->additionalRTVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture1D->RTV, nullptr);
+		for (auto& x : pTexture1D->additionalRTVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture1D->SRV_Vulkan, nullptr);
-		for (auto& x : pTexture1D->additionalSRVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture1D->SRV, nullptr);
+		for (auto& x : pTexture1D->additionalSRVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture1D->UAV_Vulkan, nullptr);
-		for (auto& x : pTexture1D->additionalUAVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture1D->UAV, nullptr);
+		for (auto& x : pTexture1D->additionalUAVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
 	{
-		vkDestroyImage(device, (VkImage)pTexture2D->resource_Vulkan, nullptr);
+		vkDestroyImage(device, (VkImage)pTexture2D->resource, nullptr);
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->RTV_Vulkan, nullptr);
-		for (auto& x : pTexture2D->additionalRTVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture2D->RTV, nullptr);
+		for (auto& x : pTexture2D->additionalRTVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->DSV_Vulkan, nullptr);
-		for (auto& x : pTexture2D->additionalDSVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture2D->DSV, nullptr);
+		for (auto& x : pTexture2D->additionalDSVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->SRV_Vulkan, nullptr);
-		for (auto& x : pTexture2D->additionalSRVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture2D->SRV, nullptr);
+		for (auto& x : pTexture2D->additionalSRVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->UAV_Vulkan, nullptr);
-		for (auto& x : pTexture2D->additionalUAVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture2D->UAV, nullptr);
+		for (auto& x : pTexture2D->additionalUAVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
 	{
-		vkDestroyImage(device, (VkImage)pTexture3D->resource_Vulkan, nullptr);
+		vkDestroyImage(device, (VkImage)pTexture3D->resource, nullptr);
 
-		vkDestroyImageView(device, (VkImageView)pTexture3D->RTV_Vulkan, nullptr);
-		for (auto& x : pTexture3D->additionalRTVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture3D->RTV, nullptr);
+		for (auto& x : pTexture3D->additionalRTVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture3D->SRV_Vulkan, nullptr);
-		for (auto& x : pTexture3D->additionalSRVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture3D->SRV, nullptr);
+		for (auto& x : pTexture3D->additionalSRVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
 
-		vkDestroyImageView(device, (VkImageView)pTexture3D->UAV_Vulkan, nullptr);
-		for (auto& x : pTexture3D->additionalUAVs_Vulkan)
+		vkDestroyImageView(device, (VkImageView)pTexture3D->UAV, nullptr);
+		for (auto& x : pTexture3D->additionalUAVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
@@ -4116,7 +4116,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::DestroySamplerState(Sampler *pSamplerState)
 	{
-		vkDestroySampler(device, (VkSampler)pSamplerState->resource_Vulkan, nullptr);
+		vkDestroySampler(device, (VkSampler)pSamplerState->resource, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyQuery(GPUQuery *pQuery)
 	{
@@ -4124,11 +4124,11 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::DestroyGraphicsPSO(GraphicsPSO* pso)
 	{
-		vkDestroyPipeline(device, (VkPipeline)pso->pipeline_Vulkan, nullptr);
+		vkDestroyPipeline(device, (VkPipeline)pso->pipeline, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DestroyComputePSO(ComputePSO* pso)
 	{
-		vkDestroyPipeline(device, (VkPipeline)pso->pipeline_Vulkan, nullptr);
+		vkDestroyPipeline(device, (VkPipeline)pso->pipeline, nullptr);
 	}
 
 
@@ -4441,7 +4441,7 @@ namespace wiGraphicsTypes
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			renderPass[threadID].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV_Vulkan;
+			renderPass[threadID].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
 
 			renderPass[threadID].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
 			renderPass[threadID].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
@@ -4451,7 +4451,7 @@ namespace wiGraphicsTypes
 
 		if (depthStencilTexture != nullptr)
 		{
-			renderPass[threadID].attachments[renderPass[threadID].attachmentCount] = (VkImageView)depthStencilTexture->DSV_Vulkan;
+			renderPass[threadID].attachments[renderPass[threadID].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
 			renderPass[threadID].attachmentCount++;
 
 			renderPass[threadID].attachmentsExtents.width = depthStencilTexture->desc.Width;
@@ -4466,7 +4466,7 @@ namespace wiGraphicsTypes
 	{
 		RenderPassManager::ClearRequest clear;
 
-		clear.attachment = (VkImageView)pTexture->RTV_Vulkan;
+		clear.attachment = (VkImageView)pTexture->RTV;
 		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
 
 		renderPass[threadID].clearRequests.push_back(clear);
@@ -4475,7 +4475,7 @@ namespace wiGraphicsTypes
 	{
 		RenderPassManager::ClearRequest clear;
 
-		clear.attachment = (VkImageView)pTexture->DSV_Vulkan;
+		clear.attachment = (VkImageView)pTexture->DSV;
 		clear.clearValue.depthStencil.depth = Depth;
 		clear.clearValue.depthStencil.stencil = Stencil;
 		clear.clearFlags = ClearFlags;
@@ -4486,25 +4486,25 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 
-		if (resource != nullptr && resource->resource_Vulkan != VK_NULL_HANDLE)
+		if (resource != nullptr && resource->resource != VK_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
 			{
 				Texture* tex = dynamic_cast<Texture*>(resource);
 
-				if (tex != nullptr && resource->SRV_Vulkan != VK_NULL_HANDLE)
+				if (tex != nullptr && resource->SRV != VK_NULL_HANDLE)
 				{
 					// Texture:
 
 					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
 
-					if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == tex->SRV_Vulkan)
+					if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == tex->SRV)
 					{
 						return;
 					}
 
 					VkDescriptorImageInfo imageInfo = {};
-					imageInfo.imageView = (VkImageView)tex->SRV_Vulkan;
+					imageInfo.imageView = (VkImageView)tex->SRV;
 					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					VkWriteDescriptorSet descriptorWrite = {};
@@ -4520,7 +4520,7 @@ namespace wiGraphicsTypes
 
 					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-					GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = tex->SRV_Vulkan;
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = tex->SRV;
 				}
 				else
 				{
@@ -4534,13 +4534,13 @@ namespace wiGraphicsTypes
 
 							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot;
 
-							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource_Vulkan)
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource)
 							{
 								return;
 							}
 
 							VkDescriptorBufferInfo bufferInfo = {};
-							bufferInfo.buffer = (VkBuffer)buffer->resource_Vulkan;
+							bufferInfo.buffer = (VkBuffer)buffer->resource;
 							bufferInfo.offset = 0;
 							bufferInfo.range = buffer->desc.ByteWidth;
 
@@ -4557,16 +4557,16 @@ namespace wiGraphicsTypes
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource;
 
 						}
-						else if(resource->SRV_Vulkan != VK_NULL_HANDLE)
+						else if(resource->SRV != VK_NULL_HANDLE)
 						{
 							// typed buffer:
 
 							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot;
 
-							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->SRV_Vulkan)
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->SRV)
 							{
 								return;
 							}
@@ -4580,11 +4580,11 @@ namespace wiGraphicsTypes
 							descriptorWrite.descriptorCount = 1;
 							descriptorWrite.pBufferInfo = nullptr;
 							descriptorWrite.pImageInfo = nullptr;
-							descriptorWrite.pTexelBufferView = reinterpret_cast<VkBufferView*>(&buffer->SRV_Vulkan);
+							descriptorWrite.pTexelBufferView = reinterpret_cast<VkBufferView*>(&buffer->SRV);
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->SRV_Vulkan;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->SRV;
 						}
 					}
 
@@ -4593,7 +4593,7 @@ namespace wiGraphicsTypes
 			}
 			else
 			{
-				assert(resource->additionalSRVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+				assert(resource->additionalSRVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 
 			}
 		}
@@ -4612,24 +4612,24 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 
-		if (resource != nullptr && resource->resource_Vulkan != VK_NULL_HANDLE)
+		if (resource != nullptr && resource->resource != VK_NULL_HANDLE)
 		{
 			if (arrayIndex < 0)
 			{
 				Texture* tex = dynamic_cast<Texture*>(resource);
 
-				if (tex != nullptr && resource->UAV_Vulkan != VK_NULL_HANDLE)
+				if (tex != nullptr && resource->UAV != VK_NULL_HANDLE)
 				{
 					// Texture:
 					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
 
-					if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == tex->UAV_Vulkan)
+					if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == tex->UAV)
 					{
 						return;
 					}
 
 					VkDescriptorImageInfo imageInfo = {};
-					imageInfo.imageView = (VkImageView)tex->UAV_Vulkan;
+					imageInfo.imageView = (VkImageView)tex->UAV;
 					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					VkWriteDescriptorSet descriptorWrite = {};
@@ -4645,7 +4645,7 @@ namespace wiGraphicsTypes
 
 					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 					GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-					GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = tex->UAV_Vulkan;
+					GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = tex->UAV;
 				}
 				else
 				{
@@ -4659,13 +4659,13 @@ namespace wiGraphicsTypes
 
 							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot;
 
-							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource_Vulkan)
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource)
 							{
 								return;
 							}
 
 							VkDescriptorBufferInfo bufferInfo = {};
-							bufferInfo.buffer = (VkBuffer)buffer->resource_Vulkan;
+							bufferInfo.buffer = (VkBuffer)buffer->resource;
 							bufferInfo.offset = 0;
 							bufferInfo.range = buffer->desc.ByteWidth;
 
@@ -4682,16 +4682,16 @@ namespace wiGraphicsTypes
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource;
 
 						}
-						else if (resource->UAV_Vulkan != VK_NULL_HANDLE)
+						else if (resource->UAV != VK_NULL_HANDLE)
 						{
 							// typed buffer:
 
 							uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot;
 
-							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->UAV_Vulkan)
+							if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->UAV)
 							{
 								return;
 							}
@@ -4705,11 +4705,11 @@ namespace wiGraphicsTypes
 							descriptorWrite.descriptorCount = 1;
 							descriptorWrite.pBufferInfo = nullptr;
 							descriptorWrite.pImageInfo = nullptr;
-							descriptorWrite.pTexelBufferView = reinterpret_cast<VkBufferView*>(&buffer->UAV_Vulkan);
+							descriptorWrite.pTexelBufferView = reinterpret_cast<VkBufferView*>(&buffer->UAV);
 
 							vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 							GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->UAV_Vulkan;
+							GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->UAV;
 
 						}
 					}
@@ -4719,7 +4719,7 @@ namespace wiGraphicsTypes
 			}
 			else
 			{
-				//assert(resource->additionalUAVs_Vulkan.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+				//assert(resource->additionalUAVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 
 			}
 		}
@@ -4744,17 +4744,17 @@ namespace wiGraphicsTypes
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
 
-		if (sampler != nullptr && sampler->resource_Vulkan != VK_NULL_HANDLE)
+		if (sampler != nullptr && sampler->resource != VK_NULL_HANDLE)
 		{
 			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot;
 
-			if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == sampler->resource_Vulkan)
+			if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == sampler->resource)
 			{
 				return;
 			}
 
 			VkDescriptorImageInfo imageInfo = {};
-			imageInfo.sampler = (VkSampler)sampler->resource_Vulkan;
+			imageInfo.sampler = (VkSampler)sampler->resource;
 			imageInfo.imageView = VK_NULL_HANDLE;
 
 			VkWriteDescriptorSet descriptorWrite = {};
@@ -4770,24 +4770,24 @@ namespace wiGraphicsTypes
 
 			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = sampler->resource_Vulkan;
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = sampler->resource;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 
-		if (buffer != nullptr && buffer->resource_Vulkan != VK_NULL_HANDLE)
+		if (buffer != nullptr && buffer->resource != VK_NULL_HANDLE)
 		{
 			uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_CBV + slot;
 
-			if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource_Vulkan)
+			if (GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] == buffer->resource)
 			{
 				return;
 			}
 
 			VkDescriptorBufferInfo bufferInfo = {};
-			bufferInfo.buffer = (VkBuffer)buffer->resource_Vulkan;
+			bufferInfo.buffer = (VkBuffer)buffer->resource;
 			bufferInfo.offset = 0;
 			bufferInfo.range = buffer->desc.ByteWidth;
 
@@ -4804,7 +4804,7 @@ namespace wiGraphicsTypes
 
 			vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->dirty[stage] = true;
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource_Vulkan;
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->boundDescriptors[stage][binding] = buffer->resource;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
@@ -4818,7 +4818,7 @@ namespace wiGraphicsTypes
 			if (vertexBuffers[i] != nullptr)
 			{
 				valid = true;
-				vbuffers[i] = (VkBuffer)vertexBuffers[i]->resource_Vulkan;
+				vbuffers[i] = (VkBuffer)vertexBuffers[i]->resource;
 			}
 			if (offsets != nullptr)
 			{
@@ -4835,7 +4835,7 @@ namespace wiGraphicsTypes
 	{
 		if (indexBuffer != nullptr)
 		{
-			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), (VkBuffer)indexBuffer->resource_Vulkan, offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetDirectCommandList(threadID), (VkBuffer)indexBuffer->resource, offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
@@ -4849,12 +4849,12 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pso->pipeline_Vulkan);
+		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pso->pipeline);
 		renderPass[threadID].pDesc = &pso->desc;
 	}
 	void GraphicsDevice_Vulkan::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
 	{
-		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pso->pipeline_Vulkan);
+		vkCmdBindPipeline(GetDirectCommandList(threadID), VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pso->pipeline);
 	}
 	void GraphicsDevice_Vulkan::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
 	{
@@ -4936,8 +4936,8 @@ namespace wiGraphicsTypes
 		copy.dstSubresource.mipLevel = 0;
 
 		vkCmdCopyImage(GetDirectCommandList(threadID),
-			(VkImage)pSrc->resource_Vulkan, VK_IMAGE_LAYOUT_GENERAL,
-			(VkImage)pDst->resource_Vulkan, VK_IMAGE_LAYOUT_GENERAL,
+			(VkImage)pSrc->resource, VK_IMAGE_LAYOUT_GENERAL,
+			(VkImage)pDst->resource, VK_IMAGE_LAYOUT_GENERAL,
 			1, &copy);
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
@@ -4970,7 +4970,7 @@ namespace wiGraphicsTypes
 
 		VkBufferMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.buffer = (VkBuffer)buffer->resource_Vulkan;
+		barrier.buffer = (VkBuffer)buffer->resource;
 		barrier.srcAccessMask = 0;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
@@ -5017,7 +5017,7 @@ namespace wiGraphicsTypes
 		copyRegion.dstOffset = 0;
 
 		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, 
-			(VkBuffer)buffer->resource_Vulkan, 1, &copyRegion);
+			(VkBuffer)buffer->resource, 1, &copyRegion);
 
 
 
@@ -5073,7 +5073,7 @@ namespace wiGraphicsTypes
 
 		VkBufferMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.buffer = (VkBuffer)buffer->resource_Vulkan;
+		barrier.buffer = (VkBuffer)buffer->resource;
 		barrier.srcAccessMask = 0;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
@@ -5120,7 +5120,7 @@ namespace wiGraphicsTypes
 		copyRegion.dstOffset = position;
 
 		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, 
-			(VkBuffer)buffer->resource_Vulkan, 1, &copyRegion);
+			(VkBuffer)buffer->resource, 1, &copyRegion);
 
 
 
@@ -5155,7 +5155,7 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
 	{
-		//vkUnmapMemory(device, static_cast<VkDeviceMemory>(buffer->resourceMemory_Vulkan));
+		//vkUnmapMemory(device, static_cast<VkDeviceMemory>(buffer->resourceMemory));
 	}
 	bool GraphicsDevice_Vulkan::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
@@ -5190,7 +5190,7 @@ namespace wiGraphicsTypes
 		//	VkBufferMemoryBarrier barrier = {};
 		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		//	barrier.pNext = nullptr;
-		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource_Vulkan);
+		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource);
 		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
 		//	barrier.offset = 0;
 		//	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -5210,7 +5210,7 @@ namespace wiGraphicsTypes
 		//	VkBufferMemoryBarrier barrier = {};
 		//	barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 		//	barrier.pNext = nullptr;
-		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource_Vulkan);
+		//	barrier.buffer = static_cast<VkBuffer>(resources[0]->resource);
 		//	barrier.size = ((GPUBuffer*)resources[0])->desc.ByteWidth;
 		//	barrier.offset = 0;
 		//	barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -5237,7 +5237,7 @@ namespace wiGraphicsTypes
 		//		{
 		//			VkImageMemoryBarrier barrier = {};
 		//			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		//			barrier.image = static_cast<VkImage>(tex->resource_Vulkan);
+		//			barrier.image = static_cast<VkImage>(tex->resource);
 		//			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		//			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 		//			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;

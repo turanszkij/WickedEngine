@@ -5,17 +5,17 @@
 
 namespace wiGraphicsTypes
 {
-	class VertexShader;
-	class PixelShader;
-	class HullShader;
-	class DomainShader;
-	class GeometryShader;
-	class ComputeShader;
-	class BlendState;
-	class RasterizerState;
-	class DepthStencilState;
-	class VertexLayout;
-	class Texture;
+	struct VertexShader;
+	struct PixelShader;
+	struct HullShader;
+	struct DomainShader;
+	struct GeometryShader;
+	struct ComputeShader;
+	struct BlendState;
+	struct RasterizerState;
+	struct DepthStencilState;
+	struct VertexLayout;
+	struct Texture;
 
 	enum SHADERSTAGE
 	{
@@ -594,53 +594,25 @@ namespace wiGraphicsTypes
 	};
 	struct GraphicsPSODesc
 	{
-		VertexShader*			vs;
-		PixelShader*			ps;
-		HullShader*				hs;
-		DomainShader*			ds;
-		GeometryShader*			gs;
-		BlendState*				bs;
-		RasterizerState*		rs;
-		DepthStencilState*		dss;
-		VertexLayout*			il;
-		PRIMITIVETOPOLOGY		pt;
-		UINT					numRTs;
-		FORMAT					RTFormats[8];
-		FORMAT					DSFormat;
+		VertexShader*			vs = nullptr;
+		PixelShader*			ps = nullptr;
+		HullShader*				hs = nullptr;
+		DomainShader*			ds = nullptr;
+		GeometryShader*			gs = nullptr;
+		BlendState*				bs = nullptr;
+		RasterizerState*		rs = nullptr;
+		DepthStencilState*		dss = nullptr;
+		VertexLayout*			il = nullptr;
+		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
+		UINT					numRTs = 0;
+		FORMAT					RTFormats[8] = {};
+		FORMAT					DSFormat = FORMAT_UNKNOWN;
 		SampleDesc				sampleDesc; 
-		UINT					sampleMask;
-
-		GraphicsPSODesc()
-		{
-			SAFE_INIT(vs);
-			SAFE_INIT(ps);
-			SAFE_INIT(hs);
-			SAFE_INIT(ds);
-			SAFE_INIT(gs);
-			SAFE_INIT(bs);
-			SAFE_INIT(rs);
-			SAFE_INIT(dss);
-			SAFE_INIT(il);
-			pt = TRIANGLELIST;
-			numRTs = 0;
-			for (int i = 0; i < ARRAYSIZE(RTFormats); ++i)
-			{
-				RTFormats[i] = FORMAT_UNKNOWN;
-			}
-			DSFormat = FORMAT_UNKNOWN;
-			sampleDesc.Count = 1;
-			sampleDesc.Quality = 0;
-			sampleMask = 0xFFFFFFFF;
-		}
+		UINT					sampleMask = 0xFFFFFFFF;
 	};
 	struct ComputePSODesc
 	{
-		ComputeShader*			cs;
-
-		ComputePSODesc()
-		{
-			SAFE_INIT(cs);
-		}
+		ComputeShader*			cs = nullptr;
 	};
 	struct IndirectDrawArgsInstanced
 	{

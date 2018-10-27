@@ -5,15 +5,8 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 
-struct ID3D11Device;
-struct IDXGISwapChain1;
-struct ID3D11DeviceContext;
-struct ID3D11CommandList;
-struct ID3DUserDefinedAnnotation;
-enum D3D_DRIVER_TYPE;
-enum D3D_FEATURE_LEVEL;
-
-struct ID3D11Texture2D;
+#include <d3d11_3.h>
+#include <DXGI1_3.h>
 
 namespace wiGraphicsTypes
 {

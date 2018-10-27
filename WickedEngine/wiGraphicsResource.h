@@ -6,25 +6,6 @@
 
 #include <vector>
 
-struct ID3D11VertexShader;
-struct ID3D11PixelShader;
-struct ID3D11GeometryShader;
-struct ID3D11DomainShader;
-struct ID3D11HullShader;
-struct ID3D11ComputeShader;
-struct ID3D11SamplerState;
-struct ID3D11ShaderResourceView;
-struct ID3D11UnorderedAccessView;
-struct ID3D11InputLayout;
-struct ID3D11BlendState;
-struct ID3D11DepthStencilState;
-struct ID3D11RasterizerState;
-struct ID3D11RasterizerState2;
-struct ID3D11RenderTargetView;
-struct ID3D11DepthStencilView;
-struct ID3D11Query;
-struct ID3D11Predicate;
-
 typedef uint64_t wiCPUHandle;
 #define WI_NULL_HANDLE (0)
 
@@ -47,247 +28,162 @@ namespace wiGraphicsTypes
 		~ShaderByteCode() { SAFE_DELETE_ARRAY(data); }
 	};
 
-	class VertexShader : public GraphicsDeviceChild
+	struct VertexShader : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11VertexShader*		resource_DX11;
-	public:
 		VertexShader();
 		~VertexShader();
 
 		ShaderByteCode code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
-	class PixelShader : public GraphicsDeviceChild
+	struct PixelShader : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11PixelShader*		resource_DX11;
-	public:
 		PixelShader();
 		~PixelShader();
 
 		ShaderByteCode code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
-	class GeometryShader : public GraphicsDeviceChild
+	struct GeometryShader : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11GeometryShader*	resource_DX11;
-	public:
 		GeometryShader();
 		~GeometryShader();
 
 		ShaderByteCode code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
-	class HullShader : public GraphicsDeviceChild
+	struct HullShader : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11HullShader*		resource_DX11;
-	public:
 		HullShader();
 		~HullShader();
 
 		ShaderByteCode code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
-	class DomainShader : public GraphicsDeviceChild
+	struct DomainShader : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11DomainShader*		resource_DX11;
-	public:
 		DomainShader();
 		~DomainShader();
 
 		ShaderByteCode code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
-	class ComputeShader : public GraphicsDeviceChild
+	struct ComputeShader : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11ComputeShader*	resource_DX11;
-	public:
 		ComputeShader();
 		~ComputeShader();
 
 		ShaderByteCode code;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 	};
 
-	class Sampler : public GraphicsDeviceChild
+	struct Sampler : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11SamplerState*				resource_DX11;
-		wiCPUHandle						resource_DX12;
-		wiCPUHandle						resource_Vulkan;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 		SamplerDesc desc;
-	public:
+
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource_DX11 != nullptr || resource_DX12 != WI_NULL_HANDLE || resource_Vulkan != WI_NULL_HANDLE; }
+		bool IsValid() { return resource != WI_NULL_HANDLE; }
 		SamplerDesc GetDesc() { return desc; }
 	};
 
-	class GPUResource : public GraphicsDeviceChild
+	struct GPUResource : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	protected:
-		ID3D11ShaderResourceView*					SRV_DX11;					// main resource SRV
-		std::vector<ID3D11ShaderResourceView*>		additionalSRVs_DX11;		// can be used for sub-resources if requested
-		wiCPUHandle									SRV_DX12;					// main resource SRV
-		std::vector<wiCPUHandle>					additionalSRVs_DX12;		// can be used for sub-resources if requested
-		wiCPUHandle									SRV_Vulkan;					// main resource SRV
-		std::vector<wiCPUHandle>					additionalSRVs_Vulkan;		// can be used for sub-resources if requested
+		wiCPUHandle SRV = WI_NULL_HANDLE;			// main resource SRV
+		std::vector<wiCPUHandle> additionalSRVs;	// can be used for sub-resources if requested
 
-		ID3D11UnorderedAccessView*					UAV_DX11;					// main resource UAV
-		std::vector<ID3D11UnorderedAccessView*>		additionalUAVs_DX11;		// can be used for sub-resources if requested
-		wiCPUHandle									UAV_DX12;					// main resource UAV
-		std::vector<wiCPUHandle>					additionalUAVs_DX12;		// can be used for sub-resources if requested
-		wiCPUHandle									UAV_Vulkan;					// main resource UAV
-		std::vector<wiCPUHandle>					additionalUAVs_Vulkan;		// can be used for sub-resources if requested
+		wiCPUHandle UAV = WI_NULL_HANDLE;			// main resource UAV
+		std::vector<wiCPUHandle> additionalUAVs;	// can be used for sub-resources if requested
 
-		wiCPUHandle									resource_DX11;
-		wiCPUHandle									resource_DX12;
-		wiCPUHandle									resource_Vulkan;
-		wiCPUHandle									resourceMemory_Vulkan;
+		wiCPUHandle resource;
+		wiCPUHandle resourceMemory;
 
 		GPUResource();
 		virtual ~GPUResource();
 	};
 
-	class GPUBuffer : public GPUResource
+	struct GPUBuffer : public GPUResource
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		wiCPUHandle									CBV_DX12;
+		wiCPUHandle CBV = WI_NULL_HANDLE;
 		GPUBufferDesc desc;
-	public:
+
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource_DX11 != WI_NULL_HANDLE || resource_DX12 != WI_NULL_HANDLE || resource_Vulkan != WI_NULL_HANDLE; }
+		bool IsValid() { return resource != WI_NULL_HANDLE; }
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
-	class GPURingBuffer : public GPUBuffer
+	struct GPURingBuffer : public GPUBuffer
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		size_t byteOffset;
-		uint64_t residentFrame;
-	public:
-		GPURingBuffer() : byteOffset(0), residentFrame(0) {}
-		virtual ~GPURingBuffer() {}
+		size_t byteOffset = 0;
+		uint64_t residentFrame = 0;
 
 		// The next appending to buffer will start at this offset
 		size_t GetByteOffset() { return byteOffset; }
 	};
 
-	class VertexLayout : public GraphicsDeviceChild
+	struct VertexLayout : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11InputLayout*	resource_DX11;
+		wiCPUHandle	resource = WI_NULL_HANDLE;
 
 		std::vector<VertexLayoutDesc> desc;
-	public:
+
 		VertexLayout();
 		~VertexLayout();
 	};
 
-	class BlendState : public GraphicsDeviceChild
+	struct BlendState : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11BlendState*	resource_DX11;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 		BlendStateDesc desc;
-	public:
+
 		BlendState();
 		~BlendState();
 
 		BlendStateDesc GetDesc() { return desc; }
 	};
 
-	class DepthStencilState : public GraphicsDeviceChild
+	struct DepthStencilState : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11DepthStencilState*	resource_DX11;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 		DepthStencilStateDesc desc;
-	public:
+
 		DepthStencilState();
 		~DepthStencilState();
 
 		DepthStencilStateDesc GetDesc() { return desc; }
 	};
 
-	class RasterizerState : public GraphicsDeviceChild
+	struct RasterizerState : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11RasterizerState*	resource_DX11;
+		wiCPUHandle resource = WI_NULL_HANDLE;
 		RasterizerStateDesc desc;
-	public:
+
 		RasterizerState();
 		~RasterizerState();
 
 		RasterizerStateDesc GetDesc() { return desc; }
 	};
 
-	class Texture : public GPUResource
+	struct Texture : public GPUResource
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		TextureDesc									desc;
-		ID3D11RenderTargetView*						RTV_DX11;
-		std::vector<ID3D11RenderTargetView*>		additionalRTVs_DX11;
-		wiCPUHandle									RTV_DX12;
-		std::vector<wiCPUHandle>					additionalRTVs_DX12;
-		wiCPUHandle									RTV_Vulkan;
-		std::vector<wiCPUHandle>					additionalRTVs_Vulkan;
-		bool										independentRTVArraySlices;
-		bool										independentRTVCubemapFaces;
-		bool										independentSRVArraySlices;
-		bool										independentSRVMIPs;
-		bool										independentUAVMIPs;
-	public:
+		TextureDesc	desc;
+		wiCPUHandle	RTV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> additionalRTVs;
+		bool independentRTVArraySlices = false;
+		bool independentRTVCubemapFaces = false;
+		bool independentSRVArraySlices = false;
+		bool independentSRVMIPs = false;
+		bool independentUAVMIPs = false;
+
 		const TextureDesc& GetDesc() const { return desc; }
 
 		Texture();
@@ -305,42 +201,23 @@ namespace wiGraphicsTypes
 		void RequestIndependentUnorderedAccessResourcesForMIPs(bool value);
 	};
 
-	class Texture1D : public Texture
+	struct Texture1D : public Texture
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-	public:
 		Texture1D();
 		virtual ~Texture1D();
 	};
 
-	class Texture2D : public Texture
+	struct Texture2D : public Texture
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		ID3D11DepthStencilView*						DSV_DX11;
-		std::vector<ID3D11DepthStencilView*>		additionalDSVs_DX11;
-		wiCPUHandle									DSV_DX12;
-		std::vector<wiCPUHandle>					additionalDSVs_DX12;
-		wiCPUHandle									DSV_Vulkan;
-		std::vector<wiCPUHandle>					additionalDSVs_Vulkan;
+		wiCPUHandle	DSV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> additionalDSVs;
 
-	public:
 		Texture2D();
 		virtual ~Texture2D();
 	};
 
-	class Texture3D : public Texture
+	struct Texture3D : public Texture
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-	public:
 		Texture3D();
 		virtual ~Texture3D();
 	};
@@ -348,21 +225,17 @@ namespace wiGraphicsTypes
 
 
 
-	class GPUQuery : public GraphicsDeviceChild
+	struct GPUQuery : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		std::vector<ID3D11Query*>	resource_DX11;
+		std::vector<wiCPUHandle>	resource;
 		std::vector<int>			active;
 		GPUQueryDesc				desc;
 		int							async_frameshift;
-	public:
+
 		GPUQuery();
 		virtual ~GPUQuery();
 
-		bool IsValid() { return !resource_DX11.empty() && resource_DX11[0] != nullptr; }
+		bool IsValid() { return !resource.empty() && resource[0] != WI_NULL_HANDLE; }
 		GPUQueryDesc GetDesc() const { return desc; }
 
 		BOOL	result_passed;
@@ -373,33 +246,21 @@ namespace wiGraphicsTypes
 	};
 
 
-	class GraphicsPSO : public GraphicsDeviceChild
+	struct GraphicsPSO : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		wiCPUHandle						pipeline_DX12;
-		wiCPUHandle						pipeline_Vulkan;
+		wiCPUHandle	pipeline;
 		GraphicsPSODesc desc;
 
-	public:
 		const GraphicsPSODesc& GetDesc() const { return desc; }
 
 		GraphicsPSO();
 		~GraphicsPSO();
 	};
-	class ComputePSO : public GraphicsDeviceChild
+	struct ComputePSO : public GraphicsDeviceChild
 	{
-		friend class GraphicsDevice_DX11;
-		friend class GraphicsDevice_DX12;
-		friend class GraphicsDevice_Vulkan;
-	private:
-		wiCPUHandle						pipeline_DX12;
-		wiCPUHandle						pipeline_Vulkan;
+		wiCPUHandle	pipeline;
 		ComputePSODesc desc;
 
-	public:
 		const ComputePSODesc& GetDesc() const { return desc; }
 
 		ComputePSO();

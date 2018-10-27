@@ -5,7 +5,6 @@ namespace wiGraphicsTypes
 {
 	VertexShader::VertexShader()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	VertexShader::~VertexShader()
 	{
@@ -17,7 +16,6 @@ namespace wiGraphicsTypes
 
 	PixelShader::PixelShader()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	PixelShader::~PixelShader()
 	{
@@ -29,7 +27,6 @@ namespace wiGraphicsTypes
 
 	GeometryShader::GeometryShader()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	GeometryShader::~GeometryShader()
 	{
@@ -41,7 +38,6 @@ namespace wiGraphicsTypes
 
 	DomainShader::DomainShader()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	DomainShader::~DomainShader()
 	{
@@ -53,7 +49,6 @@ namespace wiGraphicsTypes
 
 	HullShader::HullShader()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	HullShader::~HullShader()
 	{
@@ -65,7 +60,6 @@ namespace wiGraphicsTypes
 
 	ComputeShader::ComputeShader()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	ComputeShader::~ComputeShader()
 	{
@@ -77,9 +71,6 @@ namespace wiGraphicsTypes
 
 	Sampler::Sampler()
 	{
-		SAFE_INIT(resource_DX11);
-		resource_DX12 = WI_NULL_HANDLE;
-		resource_Vulkan = WI_NULL_HANDLE;
 	}
 	Sampler::~Sampler()
 	{
@@ -91,16 +82,6 @@ namespace wiGraphicsTypes
 
 	GPUResource::GPUResource()
 	{
-		SAFE_INIT(SRV_DX11);
-		SRV_DX12 = WI_NULL_HANDLE;
-		SRV_Vulkan = WI_NULL_HANDLE;
-		SAFE_INIT(UAV_DX11);
-		UAV_DX12 = WI_NULL_HANDLE;
-		UAV_Vulkan = WI_NULL_HANDLE;
-		resource_DX11 = WI_NULL_HANDLE;
-		resource_DX12 = WI_NULL_HANDLE;
-		resource_Vulkan = WI_NULL_HANDLE;
-		resourceMemory_Vulkan = WI_NULL_HANDLE;
 	}
 	GPUResource::~GPUResource()
 	{
@@ -112,7 +93,6 @@ namespace wiGraphicsTypes
 
 	GPUBuffer::GPUBuffer() : GPUResource()
 	{
-		CBV_DX12 = WI_NULL_HANDLE;
 	}
 	GPUBuffer::~GPUBuffer()
 	{
@@ -124,7 +104,6 @@ namespace wiGraphicsTypes
 
 	VertexLayout::VertexLayout()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	VertexLayout::~VertexLayout()
 	{
@@ -136,7 +115,6 @@ namespace wiGraphicsTypes
 
 	BlendState::BlendState()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	BlendState::~BlendState()
 	{
@@ -148,7 +126,6 @@ namespace wiGraphicsTypes
 
 	DepthStencilState::DepthStencilState()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	DepthStencilState::~DepthStencilState()
 	{
@@ -160,7 +137,6 @@ namespace wiGraphicsTypes
 
 	RasterizerState::RasterizerState()
 	{
-		SAFE_INIT(resource_DX11);
 	}
 	RasterizerState::~RasterizerState()
 	{
@@ -171,12 +147,7 @@ namespace wiGraphicsTypes
 	}
 
 	Texture::Texture() : GPUResource()
-		, independentRTVArraySlices(false), independentRTVCubemapFaces(false), independentSRVArraySlices(false)
-		, independentSRVMIPs(false), independentUAVMIPs(false)
 	{
-		SAFE_INIT(RTV_DX11);
-		RTV_DX12 = WI_NULL_HANDLE;
-		RTV_Vulkan = WI_NULL_HANDLE;
 	}
 	Texture::~Texture()
 	{
@@ -215,9 +186,6 @@ namespace wiGraphicsTypes
 
 	Texture2D::Texture2D() :Texture()
 	{
-		SAFE_INIT(DSV_DX11);
-		DSV_DX12 = WI_NULL_HANDLE;
-		DSV_Vulkan = WI_NULL_HANDLE;
 	}
 	Texture2D::~Texture2D()
 	{
@@ -253,8 +221,6 @@ namespace wiGraphicsTypes
 
 	GraphicsPSO::GraphicsPSO()
 	{
-		pipeline_DX12 = WI_NULL_HANDLE;
-		pipeline_Vulkan = WI_NULL_HANDLE;
 	}
 	GraphicsPSO::~GraphicsPSO()
 	{
@@ -266,8 +232,6 @@ namespace wiGraphicsTypes
 
 	ComputePSO::ComputePSO()
 	{
-		pipeline_DX12 = WI_NULL_HANDLE;
-		pipeline_Vulkan = WI_NULL_HANDLE;
 	}
 	ComputePSO::~ComputePSO()
 	{
