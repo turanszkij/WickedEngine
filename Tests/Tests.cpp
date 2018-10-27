@@ -38,11 +38,6 @@ TestsRenderer::TestsRenderer()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	TransformComponent transform;
-	transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
-	transform.UpdateTransform();
-	wiRenderer::GetCamera().TransformCamera(transform);
-
 	wiLabel* label = new wiLabel("Label1");
 	label->SetText("Wicked Engine Test Framework");
 	label->SetSize(XMFLOAT2(200,15));
@@ -75,6 +70,11 @@ TestsRenderer::TestsRenderer()
 		wiRenderer::GetScene().weather = WeatherComponent();
 		this->clearSprites();
 		wiLua::GetGlobal()->KillProcesses();
+
+		TransformComponent transform;
+		transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
+		transform.UpdateTransform();
+		wiRenderer::GetCamera().TransformCamera(transform);
 
 		switch (args.iValue)
 		{
