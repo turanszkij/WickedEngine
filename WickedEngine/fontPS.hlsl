@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Font.h"
 
+SAMPLERSTATE(sampler_font, SSLOT_ONDEMAND1)
+
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
@@ -9,5 +11,5 @@ struct VertextoPixel
 
 float4 main(VertextoPixel PSIn) : SV_TARGET
 {
-	return texture_1.Sample(sampler_linear_clamp, PSIn.tex) * g_xFont_Color;
+	return texture_1.Sample(sampler_font, PSIn.tex) * g_xFont_Color;
 }

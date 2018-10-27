@@ -1,96 +1,105 @@
 #include "wiCpuInfo.h"
+#include "wiBackLog.h"
+
+
+#ifndef WINSTORE_SUPPORT
+#include <Pdh.h>
+#pragma comment(lib,"pdh.lib")
+#endif
+
+namespace wiCpuInfo
+{
 
 #ifndef WINSTORE_SUPPORT
 
-bool wiCpuInfo::m_canReadCpu;
-HQUERY wiCpuInfo::m_queryHandle;
-HCOUNTER wiCpuInfo::m_counterHandle;
-unsigned long wiCpuInfo::m_lastSampleTime;
-long wiCpuInfo::m_cpuUsage;
+	static bool m_canReadCpu;
+	static HQUERY m_queryHandle;
+	static HCOUNTER m_counterHandle;
+	static unsigned long m_lastSampleTime;
+	static long m_cpuUsage;
 
-wiCpuInfo::wiCpuInfo()
-{
-}
-
-
-wiCpuInfo::~wiCpuInfo()
-{
-}
-
-void wiCpuInfo::Initialize()
-{
-	PDH_STATUS status;
-
-
-	// Initialize the flag indicating whether this object can read the system cpu usage or not.
-	m_canReadCpu = true;
-
-	// Create a query object to poll cpu usage.
-	status = PdhOpenQuery(NULL, 0, &m_queryHandle);
-	if(status != ERROR_SUCCESS)
+	void Initialize()
 	{
-		m_canReadCpu = false;
-	}
+		PDH_STATUS status;
 
-	// Set query object to poll all cpus in the system.
-	status = PdhAddCounter(m_queryHandle, TEXT("\\Processor(_Total)\\% processor time"), 0, &m_counterHandle);
-	if(status != ERROR_SUCCESS)
-	{
-		m_canReadCpu = false;
-	}
 
-	m_lastSampleTime = GetTickCount(); 
+		// Initialize the flag indicating whether this object can read the system cpu usage or not.
+		m_canReadCpu = true;
 
-	m_cpuUsage = 0;
-
-	return;
-}
-
-void wiCpuInfo::Shutdown()
-{
-	if(m_canReadCpu)
-	{
-		PdhCloseQuery(m_queryHandle);
-	}
-
-	return;
-}
-
-void wiCpuInfo::Frame()
-{
-	PDH_FMT_COUNTERVALUE value; 
-
-	if(m_canReadCpu)
-	{
-		if((m_lastSampleTime + 1000) < GetTickCount())
+		// Create a query object to poll cpu usage.
+		status = PdhOpenQuery(NULL, 0, &m_queryHandle);
+		if (status != ERROR_SUCCESS)
 		{
-			m_lastSampleTime = GetTickCount(); 
-
-			PdhCollectQueryData(m_queryHandle);
-        
-			PdhGetFormattedCounterValue(m_counterHandle, PDH_FMT_LONG, NULL, &value);
-
-			m_cpuUsage = value.longValue;
+			m_canReadCpu = false;
 		}
+
+		// Set query object to poll all cpus in the system.
+		status = PdhAddCounter(m_queryHandle, TEXT("\\Processor(_Total)\\% processor time"), 0, &m_counterHandle);
+		if (status != ERROR_SUCCESS)
+		{
+			m_canReadCpu = false;
+		}
+
+		m_lastSampleTime = GetTickCount();
+
+		m_cpuUsage = 0;
+
+		wiBackLog::post("wiCPUInfo Initialized");
 	}
 
-	return;
-}
-
-int wiCpuInfo::GetCpuPercentage()
-{
-	int usage;
-
-	if(m_canReadCpu)
+	void CleanUp()
 	{
-		usage = (int)m_cpuUsage;
+		if (m_canReadCpu)
+		{
+			PdhCloseQuery(m_queryHandle);
+		}
+
+		return;
 	}
-	else
+
+	void UpdateFrame()
 	{
-		usage = -1;
+		PDH_FMT_COUNTERVALUE value;
+
+		if (m_canReadCpu)
+		{
+			if ((m_lastSampleTime + 1000) < GetTickCount())
+			{
+				m_lastSampleTime = GetTickCount();
+
+				PdhCollectQueryData(m_queryHandle);
+
+				PdhGetFormattedCounterValue(m_counterHandle, PDH_FMT_LONG, NULL, &value);
+
+				m_cpuUsage = value.longValue;
+			}
+		}
+
+		return;
 	}
 
-	return usage;
-}
+	float GetCPUPercentage()
+	{
+		float usage;
 
-#endif
+		if (m_canReadCpu)
+		{
+			usage = (float)m_cpuUsage;
+		}
+		else
+		{
+			usage = -1;
+		}
+
+		return usage;
+	}
+
+#else
+
+	void Initialize() {}
+	void CleanUp() {}
+	void UpdateFrame() {}
+	float GetCPUPercentage() { return -1; }
+
+#endif // WINSTORE_SUPPORT
+}

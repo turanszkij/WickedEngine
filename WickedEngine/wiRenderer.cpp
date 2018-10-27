@@ -506,21 +506,19 @@ void Initialize()
 	SetUpStates();
 	LoadBuffers();
 	LoadShaders();
-	
-	wiHairParticle::Initialize();
-	wiEmittedParticle::Initialize();
-
-	Cube::Initialize();
 
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
+	wiCube::Initialize();
+
+	wiBackLog::post("wiRenderer Initialized");
 }
 void CleanUp()
 {
 	wiHairParticle::CleanUp();
 	wiEmittedParticle::CleanUp();
-	Cube::CleanUp();
+	wiCube::CleanUp();
 
 	for (int i = 0; i < VSTYPE_LAST; ++i)
 	{
@@ -2870,6 +2868,8 @@ void LoadBuffers()
 }
 void SetUpStates()
 {
+	GraphicsDevice* device = GetDevice();
+
 	for (int i = 0; i < SSLOT_COUNT; ++i)
 	{
 		samplers[i] = new Sampler;
@@ -2889,66 +2889,66 @@ void SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLOAT32_MAX;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_MIRROR]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_CLAMP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_WRAP]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_WRAP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_MIRROR]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_WRAP]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_WRAP]);
 
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_CLAMP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MaxAnisotropy = 16;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_CLAMP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_WRAP]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_WRAP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.MaxAnisotropy = 16;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_MIRROR]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_MIRROR]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_OBJECTSHADER]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_OBJECTSHADER]);
 
 	ZeroMemory(&samplerDesc, sizeof(SamplerDesc));
 	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
@@ -2958,7 +2958,7 @@ void SetUpStates()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
 	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
-	GetDevice()->CreateSamplerState(&samplerDesc, samplers[SSLOT_CMP_DEPTH]);
+	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_CMP_DEPTH]);
 
 	for (int i = 0; i < SSTYPE_LAST; ++i)
 	{
@@ -2978,7 +2978,7 @@ void SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLOAT32_MAX;
-	GetDevice()->CreateSamplerState(&samplerDesc, customsamplers[SSTYPE_MAXIMUM_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, customsamplers[SSTYPE_MAXIMUM_CLAMP]);
 
 
 	for (int i = 0; i < RSTYPE_LAST; ++i)
@@ -2997,7 +2997,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_FRONT]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_FRONT]);
 
 
 	rs.FillMode = FILL_SOLID;
@@ -3010,7 +3010,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -3022,7 +3022,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
 	rs.FillMode = FILL_WIREFRAME;
 	rs.CullMode = CULL_BACK;
@@ -3034,9 +3034,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE]);
 	rs.AntialiasedLineEnable = true;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_SMOOTH]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_SMOOTH]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -3048,7 +3048,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_DOUBLESIDED]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_DOUBLESIDED]);
 
 	rs.FillMode = FILL_WIREFRAME;
 	rs.CullMode = CULL_NONE;
@@ -3060,9 +3060,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	rs.AntialiasedLineEnable = true;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -3074,7 +3074,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_BACK]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_BACK]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -3086,7 +3086,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_OCCLUDEE]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_OCCLUDEE]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -3098,7 +3098,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_SKY]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_SKY]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -3110,7 +3110,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false; // do it in the shader for now...
-	GetDevice()->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
+	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
 
 	for (int i = 0; i < DSSTYPE_LAST; ++i)
 	{
@@ -3133,13 +3133,13 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEFAULT]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEFAULT]);
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_SHADOW]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_SHADOW]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3156,7 +3156,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DIRLIGHT]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DIRLIGHT]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3173,7 +3173,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3190,7 +3190,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DECAL]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DECAL]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
@@ -3207,30 +3207,30 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_STENCILREAD_MATCH]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_STENCILREAD_MATCH]);
 
 
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = false;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_XRAY]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_XRAY]);
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREADEQUAL]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREADEQUAL]);
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
-	GetDevice()->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_ENVMAP]);
+	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_ENVMAP]);
 
 
 	for (int i = 0; i < BSTYPE_LAST; ++i)
@@ -3250,7 +3250,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_OPAQUE]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_OPAQUE]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -3262,7 +3262,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENT]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENT]);
 
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -3275,14 +3275,14 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_ADDITIVE]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_ADDITIVE]);
 
 
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_COLORWRITEDISABLE]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_COLORWRITEDISABLE]);
 
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -3295,7 +3295,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_DEFERREDLIGHT]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_DEFERREDLIGHT]);
 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -3307,7 +3307,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_SRC_COLOR;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_DEST_COLOR;
@@ -3319,7 +3319,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_INVERSE]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_INVERSE]);
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -3334,7 +3334,7 @@ void SetUpStates()
 	bd.RenderTarget[1].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = true;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_DECAL]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_DECAL]);
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
@@ -3347,7 +3347,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_MULTIPLY]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_MULTIPLY]);
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
@@ -3360,7 +3360,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	GetDevice()->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
+	device->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
 }
 
 
@@ -4176,7 +4176,7 @@ void OcclusionCulling_Read()
 void EndFrame()
 {
 	OcclusionCulling_Read();
-	wiFrameRate::Frame();
+	wiFrameRate::UpdateFrame();
 
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 	{
@@ -5321,13 +5321,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
-			Cube::GetVertexBuffer(),
+			wiCube::GetVertexBuffer(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
 
@@ -5379,13 +5379,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
-			Cube::GetVertexBuffer(),
+			wiCube::GetVertexBuffer(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
@@ -5516,13 +5516,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				// No mesh, just draw a box:
 				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 				GPUBuffer* vbs[] = {
-					Cube::GetVertexBuffer(),
+					wiCube::GetVertexBuffer(),
 				};
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
 				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+				device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 				device->DrawIndexed(24, 0, 0, threadID);
 			}
 			else
@@ -5585,13 +5585,13 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
-			Cube::GetVertexBuffer(),
+			wiCube::GetVertexBuffer(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(Cube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
 
 		MiscCB sb;
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);

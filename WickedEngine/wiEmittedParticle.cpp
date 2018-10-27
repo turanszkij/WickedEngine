@@ -10,6 +10,7 @@
 #include "wiTextureHelper.h"
 #include "wiGPUSortLib.h"
 #include "wiProfiler.h"
+#include "wiBackLog.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -786,6 +787,9 @@ void wiEmittedParticle::Initialize()
 
 	bd.RenderTarget[0].BlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
+
+
+	wiBackLog::post("wiEmittedParticle Initialized");
 }
 void wiEmittedParticle::CleanUp()
 {

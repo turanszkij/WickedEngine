@@ -1,5 +1,8 @@
 #include "wiBackLog_BindLua.h"
 #include "wiBackLog.h"
+#include "wiLua.h"
+
+#include <sstream>
 
 using namespace std;
 
@@ -32,7 +35,7 @@ namespace wiBackLog_BindLua
 
 		if (argc > 0)
 		{
-			wiBackLog::font.props.size = wiLua::SGetInt(L, 1);
+			wiBackLog::setFontSize(wiLua::SGetInt(L, 1));
 		}
 		else
 			wiLua::SError(L, "backlog_fontsize(int val) not enough arguments!");
@@ -49,7 +52,7 @@ namespace wiBackLog_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiBackLog::font.props.spacingY = wiLua::SGetInt(L, 1);
+			wiBackLog::setFontRowspacing(wiLua::SGetInt(L, 1));
 		}
 		else
 			wiLua::SError(L, "backlog_fontrowspacing(int val) not enough arguments!");

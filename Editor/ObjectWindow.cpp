@@ -2,6 +2,7 @@
 #include "ObjectWindow.h"
 #include "wiSceneSystem.h"
 
+#include <sstream>
 
 using namespace wiECS;
 using namespace wiSceneSystem;

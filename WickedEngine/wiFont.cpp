@@ -4,6 +4,7 @@
 #include "wiHelper.h"
 #include "ResourceMapping.h"
 #include "ShaderInterop_Font.h"
+#include "wiBackLog.h"
 
 #include <fstream>
 #include <sstream>
@@ -22,6 +23,7 @@ static GPUBuffer			constantBuffer;
 static BlendState			blendState;
 static RasterizerState		rasterizerState;
 static DepthStencilState	depthStencilState;
+static Sampler				sampler;
 
 static VertexLayout			*vertexLayout = nullptr;
 static VertexShader			*vertexShader = nullptr;
@@ -109,6 +111,8 @@ void wiFont::Initialize()
 		return;
 	}
 
+	LoadShaders();
+
 	// add default font:
 	addFontStyle("default_font");
 
@@ -190,8 +194,23 @@ void wiFont::Initialize()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	device->CreateBlendState(&bd, &blendState);
 
-	LoadShaders();
+	SamplerDesc samplerDesc;
+	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 0;
+	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
+	samplerDesc.BorderColor[0] = 0;
+	samplerDesc.BorderColor[1] = 0;
+	samplerDesc.BorderColor[2] = 0;
+	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.MinLOD = 0;
+	samplerDesc.MaxLOD = FLOAT32_MAX;
+	device->CreateSamplerState(&samplerDesc, &sampler);
 
+	wiBackLog::post("wiFont Initialized");
 	initialized = true;
 }
 void wiFont::CleanUp()
@@ -353,9 +372,6 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("Font", threadID);
-
-	device->BindGraphicsPSO(PSO, threadID);
 
 	UINT vboffset;
 	volatile Vertex* textBuffer = (volatile Vertex*)device->AllocateFromRingBuffer(&vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);
@@ -365,6 +381,11 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	}
 	ModifyGeo(textBuffer, text, newProps, style);
 	device->InvalidateBufferAccess(&vertexBuffer, threadID);
+
+	device->EventBegin("Font", threadID);
+
+	device->BindGraphicsPSO(PSO, threadID);
+	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
 
 	GPUBuffer* vbs[] = {
 		&vertexBuffer,

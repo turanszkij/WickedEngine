@@ -3,6 +3,7 @@
 #include "wiResourceManager.h"
 #include "ShaderInterop_Ocean.h"
 #include "wiSceneSystem.h"
+#include "wiBackLog.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -478,6 +479,8 @@ void wiOcean::Initialize()
 	LoadShaders();
 	CSFFT_512x512_Data_t::LoadShaders();
 	fft512x512_create_plan(&m_fft_plan, 3);
+
+	wiBackLog::post("wiOcean Initialized");
 }
 
 void wiOcean::CleanUp()

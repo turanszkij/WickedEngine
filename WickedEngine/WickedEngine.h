@@ -53,6 +53,8 @@
 #include "wiProfiler.h"
 #include "wiOcean.h"
 #include "wiStartupArguments.h"
+#include "wiGPUBVH.h"
+#include "wiGPUSortLib.h"
 
 #include "RenderableComponent.h"
 #include "Renderable2DComponent.h"

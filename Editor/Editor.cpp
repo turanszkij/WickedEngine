@@ -23,6 +23,8 @@
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
 
+#include <sstream>
+
 using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiRectPacker;

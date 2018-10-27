@@ -7,6 +7,7 @@
 #include "ResourceMapping.h"
 #include "wiSceneSystem.h"
 #include "ShaderInterop_Image.h"
+#include "wiBackLog.h"
 
 #include <thread>
 
@@ -72,9 +73,16 @@ namespace wiImage
 	static GraphicsPSO			postprocessPSO[POSTPROCESS_COUNT];
 	static GraphicsPSO			deferredPSO;
 
+	static bool initialized = false;
+
 
 	void Draw(Texture2D* texture, const wiImageEffects& effects, GRAPHICSTHREAD threadID)
 	{
+		if (!initialized)
+		{
+			return;
+		}
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("Image", threadID);
 
@@ -384,6 +392,11 @@ namespace wiImage
 	void DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_specular, Texture2D* ao,
 		GRAPHICSTHREAD threadID, int stencilRef)
 	{
+		if (!initialized)
+		{
+			return;
+		}
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->EventBegin("DeferredComposition", threadID);
@@ -561,6 +574,11 @@ namespace wiImage
 
 	void BindPersistentState(GRAPHICSTHREAD threadID)
 	{
+		if (!initialized)
+		{
+			return;
+		}
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
@@ -710,6 +728,9 @@ namespace wiImage
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStateDisableColor);
+
+		wiBackLog::post("wiImage Initialized");
+		initialized = true;
 	}
 	void CleanUp()
 	{

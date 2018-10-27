@@ -1,60 +1,31 @@
-#ifndef WIBACKLOG
-#define WIBACKLOG
+#pragma once
 #include "CommonInclude.h"
-#include "wiFont.h"
-#include "wiImage.h"
-#include "wiLua.h"
+#include "wiGraphicsAPI.h"
 
-#include <mutex>
 #include <string>
-#include <sstream>
-#include <deque>
 #include <fstream>
 
-class wiBackLog
+namespace wiBackLog
 {
-private:
-	static std::deque<std::string> stream;
-	static unsigned int deletefromline;
-	static std::mutex logMutex;
-	static const float speed;
-	static float pos;
-	static int scroll;
-	static std::stringstream inputArea;
-	enum State{
-		DISABLED,
-		IDLE,
-		ACTIVATING,
-		DEACTIVATING,
-	};
-	static State state;
-public:
-	static void Initialize();
-	static void CleanUp();
-	static void Toggle();
-	static void Scroll(int direction);
-	static void Update();
-	static void Draw();
+	void Toggle();
+	void Scroll(int direction);
+	void Update();
+	void Draw();
 
-	static std::string getText();
-	static void clear();
-	static void post(const char* input);
-	static void input(const char& input);
-	static void acceptInput();
-	static void deletefromInput();
-	static void save(std::ofstream& file);
+	std::string getText();
+	void clear();
+	void post(const char* input);
+	void input(const char& input);
+	void acceptInput();
+	void deletefromInput();
+	void save(std::ofstream& file);
 
-	static std::deque<std::string> history;
-	static int historyPos;
-	static void historyPrev();
-	static void historyNext();
+	void historyPrev();
+	void historyNext();
 
-	static bool isActive(){return state==IDLE;}
+	bool isActive();
 
-	static void setBackground(wiGraphicsTypes::Texture2D* texture);
-
-	static wiGraphicsTypes::Texture2D* backgroundTex;
-	static wiFont font;
+	void setBackground(wiGraphicsTypes::Texture2D* texture);
+	void setFontSize(int value);
+	void setFontRowspacing(int value);
 };
-
-#endif

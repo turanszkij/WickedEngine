@@ -10,6 +10,7 @@
 #include "wiTextureHelper.h"
 #include "wiSceneSystem.h"
 #include "ShaderInterop_HairParticle.h"
+#include "wiBackLog.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -301,6 +302,9 @@ void wiHairParticle::CleanUp()
 }
 void wiHairParticle::Initialize()
 {
+	LoadShaders();
+
+
 	RasterizerStateDesc rsd;
 	rsd.FillMode = FILL_SOLID;
 	rsd.CullMode = CULL_BACK;
@@ -379,10 +383,7 @@ void wiHairParticle::Initialize()
 	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
 
 
-
-
-
-	LoadShaders();
+	wiBackLog::post("wiHairParticle Initialized");
 }
 
 }

@@ -1,18 +1,5 @@
 #include "wiInitializer.h"
-#include "wiRenderer.h"
-#include "wiImage.h"
-#include "wiLensFlare.h"
-#include "wiResourceManager.h"
-#include "wiFrameRate.h"
-#include "wiBackLog.h"
-#include "wiCpuInfo.h"
-#include "wiSound.h"
-#include "wiOcean.h"
-#include "wiHelper.h"
-#include "wiWidget.h"
-#include "wiGPUSortLib.h"
-#include "wiGPUBVH.h"
-#include "wiPhysicsEngine.h"
+#include "WickedEngine.h"
 
 #include <thread>
 #include <sstream>
@@ -34,29 +21,22 @@ namespace wiInitializer
 		wiTimer timer;
 		timer.record();
 
+		wiBackLog::post("Initializing Wicked Engine, please wait...\n");
+
 		wiFont::Initialize();
 		wiImage::Initialize();
-
-		wiBackLog::Initialize();
-		wiFrameRate::Initialize();
-		wiCpuInfo::Initialize();
-
 		wiRenderer::Initialize();
+		wiSceneSystem::wiHairParticle::Initialize();
+		wiSceneSystem::wiEmittedParticle::Initialize();
+		wiCpuInfo::Initialize();
 		wiLensFlare::Initialize();
 		wiOcean::Initialize();
-
 		wiWidget::LoadShaders();
 		wiGPUSortLib::LoadShaders();
 		wiGPUBVH::LoadShaders();
-
 		wiPhysicsEngine::Initialize();
-
-		if (FAILED(wiSoundEffect::Initialize()) || FAILED(wiMusic::Initialize()))
-		{
-			stringstream ss("");
-			ss << "Failed to Initialize Audio Device!";
-			wiHelper::messageBox(ss.str());
-		}
+		wiSoundEffect::Initialize();
+		wiMusic::Initialize();
 
 		initializationTime = (float)(timer.elapsed() / 1000.0);
 

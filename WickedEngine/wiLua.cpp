@@ -25,6 +25,8 @@
 #include "wiBackLog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 
+#include <sstream>
+
 using namespace std;
 
 wiLua *wiLua::globalLua = nullptr;

@@ -1,32 +1,31 @@
 #include "wiFrameRate.h"
+#include "wiTimer.h"
 
-wiTimer wiFrameRate::timer;
-double wiFrameRate::dt=0.0;
-
-void wiFrameRate::Initialize()
+namespace wiFrameRate
 {
-	timer = wiTimer();
-}
-
-void wiFrameRate::Frame(){
-	dt=timer.elapsed();
-	timer.record();
-}
-
-double wiFrameRate::FPS() {
+	static wiTimer timer;
+	static float dt = 0.0;
 	static const int NUM_FPS_SAMPLES = 20;
-	static const double INV_NUM_FPS_SAMPLES = 1.0 / NUM_FPS_SAMPLES;
-	static double fpsSamples[NUM_FPS_SAMPLES];
+	static const float INV_NUM_FPS_SAMPLES = 1.0f / NUM_FPS_SAMPLES;
+	static float fpsSamples[NUM_FPS_SAMPLES];
 	static int currentSample = 0;
 
-
-	fpsSamples[currentSample] = 1000.0 / dt;
-    double fps = 0;
-    for (int i = 0; i < NUM_FPS_SAMPLES; i++){
-        fps += fpsSamples[i];
+	void UpdateFrame() 
+	{
+		dt = (float)timer.elapsed();
+		timer.record();
 	}
-    fps *= INV_NUM_FPS_SAMPLES;
-	currentSample = (currentSample + 1) % NUM_FPS_SAMPLES;
 
-    return fps;
+	float GetFPS() 
+	{
+		fpsSamples[currentSample] = 1000.0f / dt;
+		float fps = 0;
+		for (int i = 0; i < NUM_FPS_SAMPLES; i++) {
+			fps += fpsSamples[i];
+		}
+		fps *= INV_NUM_FPS_SAMPLES;
+		currentSample = (currentSample + 1) % NUM_FPS_SAMPLES;
+
+		return fps;
+	}
 }

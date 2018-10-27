@@ -1,4 +1,5 @@
 #include "wiSound.h"
+#include "wiBackLog.h"
 
 using namespace std;
 
@@ -271,7 +272,17 @@ HRESULT wiSoundEffect::Initialize()
 	{
 		audioEngine = new wiAudioEngine;
 	}
-	return audioEngine->INITIALIZED ? S_OK : E_FAIL;
+
+	if (audioEngine->INITIALIZED)
+	{
+		wiBackLog::post("wiSoundEffect Initialized");
+		return S_OK;
+	}
+	else
+	{
+		wiBackLog::post("wiSoundEffect Initialization FAILED!");
+		return E_FAIL;
+	}
 }
 HRESULT wiSoundEffect::Play(DWORD delay)
 {
@@ -320,7 +331,17 @@ HRESULT wiMusic::Initialize()
 	{
 		audioEngine = new wiAudioEngine;
 	}
-	return audioEngine->INITIALIZED ? S_OK : E_FAIL;
+
+	if (audioEngine->INITIALIZED)
+	{
+		wiBackLog::post("wiMusic Initialized");
+		return S_OK;
+	}
+	else
+	{
+		wiBackLog::post("wiMusic Initialization FAILED!");
+		return E_FAIL;
+	}
 }
 HRESULT wiMusic::Play(DWORD delay)
 {

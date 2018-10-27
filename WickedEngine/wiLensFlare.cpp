@@ -3,6 +3,7 @@
 #include "wiResourceManager.h"
 #include "ResourceMapping.h"
 #include "ShaderInterop_Renderer.h"
+#include "wiBackLog.h"
 
 using namespace wiGraphicsTypes;
 
@@ -160,6 +161,8 @@ namespace wiLensFlare
 			samplercmp = new Sampler;
 			wiRenderer::GetDevice()->CreateSamplerState(&samplerDesc, samplercmp);
 		}
+
+		wiBackLog::post("wiLensFlare Initialized");
 	}
 	void CleanUp() {
 		SAFE_DELETE(constantBuffer);

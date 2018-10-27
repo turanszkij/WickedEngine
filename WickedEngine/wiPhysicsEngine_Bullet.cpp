@@ -1,7 +1,7 @@
 #include "wiPhysicsEngine.h"
 #include "wiSceneSystem.h"
 #include "wiProfiler.h"
-
+#include "wiBackLog.h"
 
 #include "btBulletDynamicsCommon.h"
 #include "BulletSoftBody/btSoftBodyHelpers.h"
@@ -9,10 +9,10 @@
 #include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
-
 using namespace std;
 using namespace wiECS;
 using namespace wiSceneSystem;
+
 
 namespace wiPhysicsEngine
 {
@@ -60,6 +60,7 @@ namespace wiPhysicsEngine
 		softWorldInfo.m_gravity.setValue(gravity.x(), gravity.y(), gravity.z());
 		softWorldInfo.m_sparsesdf.Initialize();
 
+		wiBackLog::post("wiPhysicsEngine_Bullet Initialized");
 	}
 	void CleanUp()
 	{

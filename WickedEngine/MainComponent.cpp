@@ -14,11 +14,14 @@
 #include "wiProfiler.h"
 #include "wiInitializer.h"
 #include "wiStartupArguments.h"
+#include "wiFont.h"
+#include "wiImage.h"
 
 #include "wiGraphicsDevice_DX11.h"
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
+#include <sstream>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -101,7 +104,7 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		wiRenderer::GetDevice()->PresentBegin();
 		wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-		wiFont("Initializing Wicked Engine, please wait...", wiFontProps(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+		wiFont(wiBackLog::getText(), wiFontProps(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		wiRenderer::GetDevice()->PresentEnd();
 		return;
 	}
@@ -172,7 +175,7 @@ void MainComponent::Run()
 
 void MainComponent::Update(float dt)
 {
-	wiCpuInfo::Frame();
+	wiCpuInfo::UpdateFrame();
 	getActiveComponent()->Update(dt);
 
 	wiLua::GetGlobal()->Update();
@@ -250,11 +253,11 @@ void MainComponent::Compose()
 		if (infoDisplay.fpsinfo)
 		{
 			ss.precision(2);
-			ss << fixed << wiFrameRate::FPS() << " FPS" << endl;
+			ss << fixed << wiFrameRate::GetFPS() << " FPS" << endl;
 		}
 		if (infoDisplay.cpuinfo)
 		{
-			int cpupercentage = wiCpuInfo::GetCpuPercentage();
+			float cpupercentage = wiCpuInfo::GetCPUPercentage();
 			ss << "CPU: ";
 			if (cpupercentage >= 0)
 			{

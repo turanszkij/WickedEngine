@@ -1,19 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiTimer.h"
 
-class wiTimer;
-
-class wiFrameRate
+namespace wiFrameRate
 {
-protected:
-	static wiTimer timer;
-	static double dt;
-public:
-	static void Initialize();
-
-	static void Frame();
-
-	static double FPS();
+	void UpdateFrame();
+	float GetFPS();
 };
 

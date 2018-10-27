@@ -1,12 +1,13 @@
 #include "wiCube.h"
 #include "wiRenderer.h"
+#include "wiBackLog.h"
 
 using namespace wiGraphicsTypes;
 
 static GPUBuffer vertexBuffer;
 static GPUBuffer indexBuffer;
 
-Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& color)
+wiCube::wiCube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& color)
 {
 	desc=Description();
 	desc.center=center;
@@ -16,26 +17,26 @@ Cube::Cube(const XMFLOAT3& center, const XMFLOAT3& halfwidth, const XMFLOAT4& co
 }
 
 
-void Cube::Transform(const XMFLOAT4X4& mat)
+void wiCube::Transform(const XMFLOAT4X4& mat)
 {
 	desc.transform=mat;
 }
-void Cube::Transform(const XMMATRIX& mat)
+void wiCube::Transform(const XMMATRIX& mat)
 {
 	XMStoreFloat4x4( &desc.transform,mat );
 }
 
 
-GPUBuffer* Cube::GetVertexBuffer()
+GPUBuffer* wiCube::GetVertexBuffer()
 {
 	return &vertexBuffer;
 }
-GPUBuffer* Cube::GetIndexBuffer()
+GPUBuffer* wiCube::GetIndexBuffer()
 {
 	return &indexBuffer;
 }
 
-void Cube::Initialize()
+void wiCube::Initialize()
 {
 	XMFLOAT4 min = XMFLOAT4(-1, -1, -1, 1);
 	XMFLOAT4 max = XMFLOAT4(1, 1, 1, 1);
@@ -75,8 +76,12 @@ void Cube::Initialize()
 	ZeroMemory(&InitData, sizeof(InitData));
 	InitData.pSysMem = indices;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
+
+
+	wiBackLog::post("wiCube Initialized");
+
 }
-void Cube::CleanUp()
+void wiCube::CleanUp()
 {
 	
 }

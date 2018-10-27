@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsAPI.h"
 
-class Cube
+class wiCube
 {
 private:
 	struct Description{
@@ -23,7 +23,7 @@ private:
 		};
 	};
 public:
-	Cube(const XMFLOAT3& center=XMFLOAT3(0,0,0), const XMFLOAT3& halfwidth=XMFLOAT3(1,1,1), const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
+	wiCube(const XMFLOAT3& center=XMFLOAT3(0,0,0), const XMFLOAT3& halfwidth=XMFLOAT3(1,1,1), const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 
 	void Transform(const XMFLOAT4X4& mat);
 	void Transform(const XMMATRIX& mat);
