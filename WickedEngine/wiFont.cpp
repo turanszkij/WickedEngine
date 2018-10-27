@@ -111,8 +111,6 @@ void wiFont::Initialize()
 		return;
 	}
 
-	LoadShaders();
-
 	// add default font:
 	addFontStyle("default_font");
 
@@ -209,6 +207,8 @@ void wiFont::Initialize()
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLOAT32_MAX;
 	device->CreateSamplerState(&samplerDesc, &sampler);
+
+	LoadShaders();
 
 	wiBackLog::post("wiFont Initialized");
 	initialized = true;

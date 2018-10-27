@@ -302,8 +302,6 @@ void wiHairParticle::CleanUp()
 }
 void wiHairParticle::Initialize()
 {
-	LoadShaders();
-
 
 	RasterizerStateDesc rsd;
 	rsd.FillMode = FILL_SOLID;
@@ -382,6 +380,7 @@ void wiHairParticle::Initialize()
 	bld.IndependentBlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bld, &bs[1]);
 
+	LoadShaders();
 
 	wiBackLog::post("wiHairParticle Initialized");
 }

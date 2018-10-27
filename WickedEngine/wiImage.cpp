@@ -454,121 +454,110 @@ namespace wiImage
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		vector<thread> thread_pool(0);
-
-		thread_pool.push_back(thread([&] {
-			for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
+		for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
+		{
+			GraphicsPSODesc desc;
+			desc.vs = vertexShader;
+			if (i == IMAGE_SHADER_FULLSCREEN)
 			{
-				GraphicsPSODesc desc;
-				desc.vs = vertexShader;
-				if (i == IMAGE_SHADER_FULLSCREEN)
-				{
-					desc.vs = screenVS;
-				}
-				desc.ps = imagePS[i];
-				desc.rs = &rasterizerState;
-				desc.pt = TRIANGLESTRIP;
-
-				for (int j = 0; j < BLENDMODE_COUNT; ++j)
-				{
-					desc.bs = &blendStates[j];
-					for (int k = 0; k < STENCILMODE_COUNT; ++k)
-					{
-						desc.dss = &depthStencilStates[k];
-
-						if (k == STENCILMODE_DISABLED)
-						{
-							desc.DSFormat = FORMAT_UNKNOWN;
-						}
-						else
-						{
-							desc.DSFormat = wiRenderer::DSFormat_full;
-						}
-
-						desc.numRTs = 1;
-
-						desc.RTFormats[0] = device->GetBackBufferFormat();
-						device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0]);
-
-						desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-						device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][1]);
-					}
-				}
-			}
-		}));
-
-		thread_pool.push_back(thread([&] {
-			for (int i = 0; i < POSTPROCESS_COUNT; ++i)
-			{
-				GraphicsPSODesc desc;
 				desc.vs = screenVS;
-				desc.ps = postprocessPS[i];
-				desc.bs = &blendStates[BLENDMODE_OPAQUE];
-				desc.dss = &depthStencilStates[STENCILMODE_DISABLED];
-				desc.rs = &rasterizerState;
-				desc.pt = TRIANGLELIST;
-
-				if (i == POSTPROCESS_DOWNSAMPLEDEPTHBUFFER || i == POSTPROCESS_REPROJECTDEPTHBUFFER)
-				{
-					desc.dss = &depthStencilStateDepthWrite;
-					desc.DSFormat = wiRenderer::DSFormat_small;
-					desc.numRTs = 0;
-				}
-				else if (i == POSTPROCESS_SSSS)
-				{
-					desc.dss = &depthStencilStates[STENCILMODE_LESS];
-					desc.numRTs = 1;
-					desc.RTFormats[0] = wiRenderer::RTFormat_deferred_lightbuffer;
-					desc.DSFormat = wiRenderer::DSFormat_full;
-				}
-				else if (i == POSTPROCESS_SSAO)
-				{
-					desc.numRTs = 1;
-					desc.RTFormats[0] = wiRenderer::RTFormat_ssao;
-				}
-				else if (i == POSTPROCESS_LINEARDEPTH)
-				{
-					desc.numRTs = 1;
-					desc.RTFormats[0] = wiRenderer::RTFormat_lineardepth;
-				}
-				else if (i == POSTPROCESS_TONEMAP)
-				{
-					desc.numRTs = 1;
-					desc.RTFormats[0] = device->GetBackBufferFormat();
-				}
-				else if (i == POSTPROCESS_BLOOMSEPARATE || i == POSTPROCESS_BLUR_H || POSTPROCESS_BLUR_V)
-				{
-					// todo: bloom and DoF blur should really be HDR lol...
-					desc.numRTs = 1;
-					desc.RTFormats[0] = device->GetBackBufferFormat();
-				}
-				else
-				{
-					desc.numRTs = 1;
-					desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-				}
-
-				device->CreateGraphicsPSO(&desc, &postprocessPSO[i]);
 			}
+			desc.ps = imagePS[i];
+			desc.rs = &rasterizerState;
+			desc.pt = TRIANGLESTRIP;
 
+			for (int j = 0; j < BLENDMODE_COUNT; ++j)
+			{
+				desc.bs = &blendStates[j];
+				for (int k = 0; k < STENCILMODE_COUNT; ++k)
+				{
+					desc.dss = &depthStencilStates[k];
+
+					if (k == STENCILMODE_DISABLED)
+					{
+						desc.DSFormat = FORMAT_UNKNOWN;
+					}
+					else
+					{
+						desc.DSFormat = wiRenderer::DSFormat_full;
+					}
+
+					desc.numRTs = 1;
+
+					desc.RTFormats[0] = device->GetBackBufferFormat();
+					device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0]);
+
+					desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+					device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][1]);
+				}
+			}
+		}
+
+		for (int i = 0; i < POSTPROCESS_COUNT; ++i)
+		{
 			GraphicsPSODesc desc;
 			desc.vs = screenVS;
-			desc.ps = deferredPS;
+			desc.ps = postprocessPS[i];
 			desc.bs = &blendStates[BLENDMODE_OPAQUE];
-			desc.dss = &depthStencilStates[STENCILMODE_LESS];
+			desc.dss = &depthStencilStates[STENCILMODE_DISABLED];
 			desc.rs = &rasterizerState;
-			desc.numRTs = 1;
-			desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-			desc.DSFormat = wiRenderer::DSFormat_full;
 			desc.pt = TRIANGLELIST;
-			device->CreateGraphicsPSO(&desc, &deferredPSO);
-		}));
 
+			if (i == POSTPROCESS_DOWNSAMPLEDEPTHBUFFER || i == POSTPROCESS_REPROJECTDEPTHBUFFER)
+			{
+				desc.dss = &depthStencilStateDepthWrite;
+				desc.DSFormat = wiRenderer::DSFormat_small;
+				desc.numRTs = 0;
+			}
+			else if (i == POSTPROCESS_SSSS)
+			{
+				desc.dss = &depthStencilStates[STENCILMODE_LESS];
+				desc.numRTs = 1;
+				desc.RTFormats[0] = wiRenderer::RTFormat_deferred_lightbuffer;
+				desc.DSFormat = wiRenderer::DSFormat_full;
+			}
+			else if (i == POSTPROCESS_SSAO)
+			{
+				desc.numRTs = 1;
+				desc.RTFormats[0] = wiRenderer::RTFormat_ssao;
+			}
+			else if (i == POSTPROCESS_LINEARDEPTH)
+			{
+				desc.numRTs = 1;
+				desc.RTFormats[0] = wiRenderer::RTFormat_lineardepth;
+			}
+			else if (i == POSTPROCESS_TONEMAP)
+			{
+				desc.numRTs = 1;
+				desc.RTFormats[0] = device->GetBackBufferFormat();
+			}
+			else if (i == POSTPROCESS_BLOOMSEPARATE || i == POSTPROCESS_BLUR_H || POSTPROCESS_BLUR_V)
+			{
+				// todo: bloom and DoF blur should really be HDR lol...
+				desc.numRTs = 1;
+				desc.RTFormats[0] = device->GetBackBufferFormat();
+			}
+			else
+			{
+				desc.numRTs = 1;
+				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+			}
 
-		for (auto& x : thread_pool)
-		{
-			x.join();
+			device->CreateGraphicsPSO(&desc, &postprocessPSO[i]);
 		}
+
+		GraphicsPSODesc desc;
+		desc.vs = screenVS;
+		desc.ps = deferredPS;
+		desc.bs = &blendStates[BLENDMODE_OPAQUE];
+		desc.dss = &depthStencilStates[STENCILMODE_LESS];
+		desc.rs = &rasterizerState;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+		desc.DSFormat = wiRenderer::DSFormat_full;
+		desc.pt = TRIANGLELIST;
+		device->CreateGraphicsPSO(&desc, &deferredPSO);
+
 
 	}
 
@@ -590,8 +579,6 @@ namespace wiImage
 	void Initialize()
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		LoadShaders();
 
 		{
 			GPUBufferDesc bd;
@@ -728,6 +715,8 @@ namespace wiImage
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStateDisableColor);
+
+		LoadShaders();
 
 		wiBackLog::post("wiImage Initialized");
 		initialized = true;

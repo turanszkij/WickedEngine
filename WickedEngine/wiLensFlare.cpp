@@ -84,7 +84,6 @@ namespace wiLensFlare
 	}
 	void Initialize() 
 	{
-		LoadShaders();
 
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_DYNAMIC;
@@ -161,6 +160,10 @@ namespace wiLensFlare
 			samplercmp = new Sampler;
 			wiRenderer::GetDevice()->CreateSamplerState(&samplerDesc, samplercmp);
 		}
+
+
+
+		LoadShaders();
 
 		wiBackLog::post("wiLensFlare Initialized");
 	}

@@ -717,8 +717,6 @@ void wiEmittedParticle::LoadShaders()
 }
 void wiEmittedParticle::Initialize()
 {
-	LoadShaders();
-
 
 	RasterizerStateDesc rs;
 	rs.FillMode = FILL_SOLID;
@@ -788,6 +786,7 @@ void wiEmittedParticle::Initialize()
 	bd.RenderTarget[0].BlendEnable = false;
 	wiRenderer::GetDevice()->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 
+	LoadShaders();
 
 	wiBackLog::post("wiEmittedParticle Initialized");
 }

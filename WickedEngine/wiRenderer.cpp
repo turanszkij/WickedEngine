@@ -2015,175 +2015,171 @@ void LoadShaders()
 	domainShaders[DSTYPE_OBJECT] = static_cast<DomainShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
 
 
-	vector<thread> thread_pool(0);
-
-	thread_pool.push_back(thread([&] {
-		// default objectshaders:
-		for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	// default objectshaders:
+	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	{
+		for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
 		{
-			for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
+			for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
 			{
-				for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+				for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 				{
-					for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+					for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
 					{
-						for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
+						for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
 						{
-							for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+							for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
 							{
-								for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 								{
-									for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
+									VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
+									VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
+									HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
+									DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
+									GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
+									PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
+
+									if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
 									{
-										VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
-										VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
-										HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
-										DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
-										GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
-										PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
+										continue;
+									}
 
-										if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
+									GraphicsPSODesc desc;
+									desc.vs = vertexShaders[realVS];
+									desc.il = vertexLayouts[realVL];
+									desc.hs = hullShaders[realHS];
+									desc.ds = domainShaders[realDS];
+									desc.gs = geometryShaders[realGS];
+									desc.ps = pixelShaders[realPS];
+
+									switch (shaderType)
+									{
+									case SHADERTYPE_DEPTHONLY:
+									case SHADERTYPE_SHADOW:
+									case SHADERTYPE_SHADOWCUBE:
+										desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+										break;
+									default:
+										desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
+										break;
+									}
+
+									switch (shaderType)
+									{
+									case SHADERTYPE_SHADOW:
+									case SHADERTYPE_SHADOWCUBE:
+										desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+										break;
+									case SHADERTYPE_TILEDFORWARD:
+										desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+										break;
+									case SHADERTYPE_ENVMAPCAPTURE:
+										desc.dss = depthStencils[DSSTYPE_ENVMAP];
+										break;
+									case SHADERTYPE_VOXELIZE:
+										desc.dss = depthStencils[DSSTYPE_XRAY];
+										break;
+									default:
+										desc.dss = depthStencils[DSSTYPE_DEFAULT];
+										break;
+									}
+
+									switch (shaderType)
+									{
+									case SHADERTYPE_SHADOW:
+									case SHADERTYPE_SHADOWCUBE:
+										desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+										break;
+									case SHADERTYPE_VOXELIZE:
+										desc.rs = rasterizers[RSTYPE_VOXELIZE];
+										break;
+									default:
+										desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+										break;
+									}
+
+									switch (shaderType)
+									{
+									case SHADERTYPE_TEXTURE:
+										desc.numRTs = 1;
+										desc.RTFormats[0] = RTFormat_hdr;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_DEFERRED:
+										desc.numRTs = 4;
+										desc.RTFormats[0] = RTFormat_gbuffer_0;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.RTFormats[2] = RTFormat_gbuffer_2;
+										desc.RTFormats[3] = RTFormat_gbuffer_3;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_FORWARD:
+										if (transparency)
 										{
-											continue;
-										}
-
-										GraphicsPSODesc desc;
-										desc.vs = vertexShaders[realVS];
-										desc.il = vertexLayouts[realVL];
-										desc.hs = hullShaders[realHS];
-										desc.ds = domainShaders[realDS];
-										desc.gs = geometryShaders[realGS];
-										desc.ps = pixelShaders[realPS];
-
-										switch (shaderType)
-										{
-										case SHADERTYPE_DEPTHONLY:
-										case SHADERTYPE_SHADOW:
-										case SHADERTYPE_SHADOWCUBE:
-											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
-											break;
-										default:
-											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
-											break;
-										}
-
-										switch (shaderType)
-										{
-										case SHADERTYPE_SHADOW:
-										case SHADERTYPE_SHADOWCUBE:
-											desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-											break;
-										case SHADERTYPE_TILEDFORWARD:
-											desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-											break;
-										case SHADERTYPE_ENVMAPCAPTURE:
-											desc.dss = depthStencils[DSSTYPE_ENVMAP];
-											break;
-										case SHADERTYPE_VOXELIZE:
-											desc.dss = depthStencils[DSSTYPE_XRAY];
-											break;
-										default:
-											desc.dss = depthStencils[DSSTYPE_DEFAULT];
-											break;
-										}
-
-										switch (shaderType)
-										{
-										case SHADERTYPE_SHADOW:
-										case SHADERTYPE_SHADOWCUBE:
-											desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-											break;
-										case SHADERTYPE_VOXELIZE:
-											desc.rs = rasterizers[RSTYPE_VOXELIZE];
-											break;
-										default:
-											desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
-											break;
-										}
-
-										switch (shaderType)
-										{
-										case SHADERTYPE_TEXTURE:
 											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case SHADERTYPE_DEFERRED:
-											desc.numRTs = 4;
-											desc.RTFormats[0] = RTFormat_gbuffer_0;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.RTFormats[2] = RTFormat_gbuffer_2;
-											desc.RTFormats[3] = RTFormat_gbuffer_3;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case SHADERTYPE_FORWARD:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-											}
-											else
-											{
-												desc.numRTs = 2;
-											}
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case SHADERTYPE_TILEDFORWARD:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-											}
-											else
-											{
-												desc.numRTs = 2;
-											}
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case SHADERTYPE_DEPTHONLY:
-											desc.numRTs = 0;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case SHADERTYPE_ENVMAPCAPTURE:
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_envprobe;
-											desc.DSFormat = DSFormat_small;
-											break;
-										case SHADERTYPE_SHADOW:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-												desc.RTFormats[0] = RTFormat_ldr;
-											}
-											else
-											{
-												desc.numRTs = 0;
-											}
-											desc.DSFormat = DSFormat_small;
-											break;
-										case SHADERTYPE_SHADOWCUBE:
-											desc.numRTs = 0;
-											desc.DSFormat = DSFormat_small;
-											break;
-										case SHADERTYPE_VOXELIZE:
-											desc.numRTs = 0;
-											break;
-										}
-
-										if (tessellation)
-										{
-											desc.pt = PATCHLIST;
 										}
 										else
 										{
-											desc.pt = TRIANGLELIST;
+											desc.numRTs = 2;
 										}
-
-										RECREATE(PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
-										device->CreateGraphicsPSO(&desc, PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										desc.RTFormats[0] = RTFormat_hdr;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_TILEDFORWARD:
+										if (transparency)
+										{
+											desc.numRTs = 1;
+										}
+										else
+										{
+											desc.numRTs = 2;
+										}
+										desc.RTFormats[0] = RTFormat_hdr;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_DEPTHONLY:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case SHADERTYPE_ENVMAPCAPTURE:
+										desc.numRTs = 1;
+										desc.RTFormats[0] = RTFormat_envprobe;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case SHADERTYPE_SHADOW:
+										if (transparency)
+										{
+											desc.numRTs = 1;
+											desc.RTFormats[0] = RTFormat_ldr;
+										}
+										else
+										{
+											desc.numRTs = 0;
+										}
+										desc.DSFormat = DSFormat_small;
+										break;
+									case SHADERTYPE_SHADOWCUBE:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case SHADERTYPE_VOXELIZE:
+										desc.numRTs = 0;
+										break;
 									}
+
+									if (tessellation)
+									{
+										desc.pt = PATCHLIST;
+									}
+									else
+									{
+										desc.pt = TRIANGLELIST;
+									}
+
+									RECREATE(PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+									device->CreateGraphicsPSO(&desc, PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
 								}
 							}
 						}
@@ -2191,553 +2187,541 @@ void LoadShaders()
 				}
 			}
 		}
+	}
 
-		//// Custom objectshader presets:
-		//for (auto& x : Material::customShaderPresets)
-		//{
-		//	SAFE_DELETE(x);
-		//}
-		//Material::customShaderPresets.clear();
+	//// Custom objectshader presets:
+	//for (auto& x : Material::customShaderPresets)
+	//{
+	//	SAFE_DELETE(x);
+	//}
+	//Material::customShaderPresets.clear();
 
-		//// Hologram:
-		//{
-		//	VSTYPES realVS = GetVSTYPE(SHADERTYPE_FORWARD, false, false, true);
-		//	VLTYPES realVL = GetVLTYPE(SHADERTYPE_FORWARD, false, false, true);
+	//// Hologram:
+	//{
+	//	VSTYPES realVS = GetVSTYPE(SHADERTYPE_FORWARD, false, false, true);
+	//	VLTYPES realVL = GetVLTYPE(SHADERTYPE_FORWARD, false, false, true);
 
-		//	GraphicsPSODesc desc;
-		//	desc.vs = vertexShaders[realVS];
-		//	desc.il = vertexLayouts[realVL];
-		//	desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
+	//	GraphicsPSODesc desc;
+	//	desc.vs = vertexShaders[realVS];
+	//	desc.il = vertexLayouts[realVL];
+	//	desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
-		//	desc.bs = blendStates[BSTYPE_ADDITIVE];
-		//	desc.rs = rasterizers[DSSTYPE_DEFAULT];
-		//	desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-		//	desc.pt = TRIANGLELIST;
+	//	desc.bs = blendStates[BSTYPE_ADDITIVE];
+	//	desc.rs = rasterizers[DSSTYPE_DEFAULT];
+	//	desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+	//	desc.pt = TRIANGLELIST;
 
-		//	desc.numRTs = 1;
-		//	desc.RTFormats[0] = RTFormat_hdr;
-		//	desc.DSFormat = DSFormat_full;
+	//	desc.numRTs = 1;
+	//	desc.RTFormats[0] = RTFormat_hdr;
+	//	desc.DSFormat = DSFormat_full;
 
-		//	Material::CustomShader* customShader = new Material::CustomShader;
-		//	customShader->name = "Hologram";
-		//	customShader->passes[SHADERTYPE_FORWARD].pso = new GraphicsPSO;
-		//	device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_FORWARD].pso);
-		//	customShader->passes[SHADERTYPE_TILEDFORWARD].pso = new GraphicsPSO;
-		//	device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_TILEDFORWARD].pso);
-		//	Material::customShaderPresets.push_back(customShader);
-		//}
+	//	Material::CustomShader* customShader = new Material::CustomShader;
+	//	customShader->name = "Hologram";
+	//	customShader->passes[SHADERTYPE_FORWARD].pso = new GraphicsPSO;
+	//	device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_FORWARD].pso);
+	//	customShader->passes[SHADERTYPE_TILEDFORWARD].pso = new GraphicsPSO;
+	//	device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_TILEDFORWARD].pso);
+	//	Material::customShaderPresets.push_back(customShader);
+	//}
 
 
-	}));
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_WATER];
+		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
-	thread_pool.push_back(thread([&] {
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
+		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
+		RECREATE(PSO_object_water[SHADERTYPE_FORWARD]);
+		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_FORWARD]);
+
+		desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
+		RECREATE(PSO_object_water[SHADERTYPE_TILEDFORWARD]);
+		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_TILEDFORWARD]);
+
+		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.rs = rasterizers[RSTYPE_SHADOW];
+		desc.bs = blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
+		desc.vs = vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
+		desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
+		RECREATE(PSO_object_water[SHADERTYPE_SHADOW]);
+		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_SHADOW]);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
+		desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
+		desc.rs = rasterizers[RSTYPE_WIRE];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
+		RECREATE(PSO_object_wire);
+		device->CreateGraphicsPSO(&desc, PSO_object_wire);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_DECAL];
+		desc.ps = pixelShaders[PSTYPE_DECAL];
+		desc.rs = rasterizers[RSTYPE_FRONT];
+		desc.bs = blendStates[BSTYPE_DECAL];
+		desc.dss = depthStencils[DSSTYPE_DECAL];
+		desc.pt = TRIANGLESTRIP;
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_gbuffer_0;
+		//desc.RTFormats[1] = RTFormat_gbuffer_1;
+
+		RECREATE(PSO_decal);
+		device->CreateGraphicsPSO(&desc, PSO_decal);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_CUBE];
+		desc.rs = rasterizers[RSTYPE_OCCLUDEE];
+		desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
+		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.pt = TRIANGLESTRIP;
+
+		desc.DSFormat = DSFormat_small;
+
+		RECREATE(PSO_occlusionquery);
+		device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
+	}
+	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	{
+		const bool impostorRequest =
+			shaderType != SHADERTYPE_VOXELIZE &&
+			shaderType != SHADERTYPE_SHADOW &&
+			shaderType != SHADERTYPE_SHADOWCUBE &&
+			shaderType != SHADERTYPE_ENVMAPCAPTURE;
+		if (!impostorRequest)
 		{
-			GraphicsPSODesc desc;
-			desc.vs = vertexShaders[VSTYPE_WATER];
-			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
-			desc.dss = depthStencils[DSSTYPE_DEFAULT];
-			desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
-
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_full;
-
-			desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
-			RECREATE(PSO_object_water[SHADERTYPE_FORWARD]);
-			device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_FORWARD]);
-
-			desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
-			RECREATE(PSO_object_water[SHADERTYPE_TILEDFORWARD]);
-			device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_TILEDFORWARD]);
-
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.rs = rasterizers[RSTYPE_SHADOW];
-			desc.bs = blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
-			desc.vs = vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
-			desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
-			RECREATE(PSO_object_water[SHADERTYPE_SHADOW]);
-			device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_SHADOW]);
+			continue;
 		}
+
+		GraphicsPSODesc desc;
+		desc.rs = rasterizers[RSTYPE_FRONT];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+		desc.il = nullptr;
+
+		switch (shaderType)
 		{
-			GraphicsPSODesc desc;
-			desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
-			desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
-			desc.rs = rasterizers[RSTYPE_WIRE];
-			desc.bs = blendStates[BSTYPE_OPAQUE];
-			desc.dss = depthStencils[DSSTYPE_DEFAULT];
-			desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
-
-			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_full;
-
-			RECREATE(PSO_object_wire);
-			device->CreateGraphicsPSO(&desc, PSO_object_wire);
-		}
-		{
-			GraphicsPSODesc desc;
-			desc.vs = vertexShaders[VSTYPE_DECAL];
-			desc.ps = pixelShaders[PSTYPE_DECAL];
-			desc.rs = rasterizers[RSTYPE_FRONT];
-			desc.bs = blendStates[BSTYPE_DECAL];
-			desc.dss = depthStencils[DSSTYPE_DECAL];
-			desc.pt = TRIANGLESTRIP;
-
-			desc.numRTs = 1;
+		case SHADERTYPE_DEFERRED:
+			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
+			desc.numRTs = 4;
 			desc.RTFormats[0] = RTFormat_gbuffer_0;
-			//desc.RTFormats[1] = RTFormat_gbuffer_1;
-
-			RECREATE(PSO_decal);
-			device->CreateGraphicsPSO(&desc, PSO_decal);
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			desc.RTFormats[2] = RTFormat_gbuffer_2;
+			desc.RTFormats[3] = RTFormat_gbuffer_3;
+			break;
+		case SHADERTYPE_FORWARD:
+			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			break;
+		case SHADERTYPE_TILEDFORWARD:
+			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			break;
+		case SHADERTYPE_DEPTHONLY:
+			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY];
+			break;
+		default:
+			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_SIMPLE];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_hdr;
+			break;
 		}
+		desc.DSFormat = DSFormat_full;
+
+		RECREATE(PSO_impostor[shaderType]);
+		device->CreateGraphicsPSO(&desc, PSO_impostor[shaderType]);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
+		desc.rs = rasterizers[RSTYPE_FRONT];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_impostor;
+		desc.DSFormat = DSFormat_small;
+
+		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
+		RECREATE(PSO_captureimpostor_albedo);
+		device->CreateGraphicsPSO(&desc, PSO_captureimpostor_albedo);
+
+		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL];
+		RECREATE(PSO_captureimpostor_normal);
+		device->CreateGraphicsPSO(&desc, PSO_captureimpostor_normal);
+
+		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
+		RECREATE(PSO_captureimpostor_surface);
+		device->CreateGraphicsPSO(&desc, PSO_captureimpostor_surface);
+	}
+
+	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+	{
+		GraphicsPSODesc desc;
+
+		// deferred lights:
+
+		desc.pt = TRIANGLELIST;
+		desc.rs = rasterizers[RSTYPE_BACK];
+		desc.bs = blendStates[BSTYPE_DEFERREDLIGHT];
+
+		switch (type)
 		{
-			GraphicsPSODesc desc;
-			desc.vs = vertexShaders[VSTYPE_CUBE];
-			desc.rs = rasterizers[RSTYPE_OCCLUDEE];
-			desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
+		case LightComponent::DIRECTIONAL:
+			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+			desc.ps = pixelShaders[PSTYPE_DIRLIGHT];
+			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			break;
+		case LightComponent::POINT:
+			desc.vs = vertexShaders[VSTYPE_POINTLIGHT];
+			desc.ps = pixelShaders[PSTYPE_POINTLIGHT];
+			desc.dss = depthStencils[DSSTYPE_LIGHT];
+			break;
+		case LightComponent::SPOT:
+			desc.vs = vertexShaders[VSTYPE_SPOTLIGHT];
+			desc.ps = pixelShaders[PSTYPE_SPOTLIGHT];
+			desc.dss = depthStencils[DSSTYPE_LIGHT];
+			break;
+		case LightComponent::SPHERE:
+			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+			desc.ps = pixelShaders[PSTYPE_SPHERELIGHT];
+			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			break;
+		case LightComponent::DISC:
+			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+			desc.ps = pixelShaders[PSTYPE_DISCLIGHT];
+			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			break;
+		case LightComponent::RECTANGLE:
+			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+			desc.ps = pixelShaders[PSTYPE_RECTANGLELIGHT];
+			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			break;
+		case LightComponent::TUBE:
+			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+			desc.ps = pixelShaders[PSTYPE_TUBELIGHT];
+			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			break;
+		}
+
+		desc.numRTs = 2;
+		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
+		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
+		desc.DSFormat = DSFormat_full;
+
+		RECREATE(PSO_deferredlight[type]);
+		device->CreateGraphicsPSO(&desc, PSO_deferredlight[type]);
+
+
+
+		// light visualizers:
+		if (type != LightComponent::DIRECTIONAL)
+		{
+
 			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.pt = TRIANGLESTRIP;
+			desc.ps = pixelShaders[PSTYPE_LIGHTVISUALIZER];
 
-			desc.DSFormat = DSFormat_small;
-
-			RECREATE(PSO_occlusionquery);
-			device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
-		}
-		for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
-		{
-			const bool impostorRequest =
-				shaderType != SHADERTYPE_VOXELIZE &&
-				shaderType != SHADERTYPE_SHADOW &&
-				shaderType != SHADERTYPE_SHADOWCUBE &&
-				shaderType != SHADERTYPE_ENVMAPCAPTURE;
-			if (!impostorRequest)
+			switch (type)
 			{
-				continue;
-			}
-
-			GraphicsPSODesc desc;
-			desc.rs = rasterizers[RSTYPE_FRONT];
-			desc.bs = blendStates[BSTYPE_OPAQUE];
-			desc.dss = depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
-			desc.il = nullptr;
-
-			switch (shaderType)
-			{
-			case SHADERTYPE_DEFERRED:
-				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
-				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
-				desc.numRTs = 4;
-				desc.RTFormats[0] = RTFormat_gbuffer_0;
-				desc.RTFormats[1] = RTFormat_gbuffer_1;
-				desc.RTFormats[2] = RTFormat_gbuffer_2;
-				desc.RTFormats[3] = RTFormat_gbuffer_3;
+			case LightComponent::POINT:
+				desc.bs = blendStates[BSTYPE_ADDITIVE];
+				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT];
+				desc.rs = rasterizers[RSTYPE_FRONT];
 				break;
-			case SHADERTYPE_FORWARD:
-				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
-				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
-				desc.numRTs = 2;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.RTFormats[1] = RTFormat_gbuffer_1;
+			case LightComponent::SPOT:
+				desc.bs = blendStates[BSTYPE_ADDITIVE];
+				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
+				desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
 				break;
-			case SHADERTYPE_TILEDFORWARD:
-				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
-				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
-				desc.numRTs = 2;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.RTFormats[1] = RTFormat_gbuffer_1;
+			case LightComponent::SPHERE:
+				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT];
+				desc.rs = rasterizers[RSTYPE_FRONT];
 				break;
-			case SHADERTYPE_DEPTHONLY:
-				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
-				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY];
+			case LightComponent::DISC:
+				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT];
+				desc.rs = rasterizers[RSTYPE_FRONT];
 				break;
-			default:
-				desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
-				desc.ps = pixelShaders[PSTYPE_IMPOSTOR_SIMPLE];
-				desc.numRTs = 1;
-				desc.RTFormats[0] = RTFormat_hdr;
+			case LightComponent::RECTANGLE:
+				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT];
+				desc.rs = rasterizers[RSTYPE_BACK];
+				break;
+			case LightComponent::TUBE:
+				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT];
+				desc.rs = rasterizers[RSTYPE_FRONT];
 				break;
 			}
-			desc.DSFormat = DSFormat_full;
-
-			RECREATE(PSO_impostor[shaderType]);
-			device->CreateGraphicsPSO(&desc, PSO_impostor[shaderType]);
-		}
-		{
-			GraphicsPSODesc desc;
-			desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
-			desc.rs = rasterizers[RSTYPE_FRONT];
-			desc.bs = blendStates[BSTYPE_OPAQUE];
-			desc.dss = depthStencils[DSSTYPE_DEFAULT];
-			desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
 
 			desc.numRTs = 1;
-			desc.RTFormats[0] = RTFormat_impostor;
-			desc.DSFormat = DSFormat_small;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.DSFormat = DSFormat_full;
 
-			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
-			RECREATE(PSO_captureimpostor_albedo);
-			device->CreateGraphicsPSO(&desc, PSO_captureimpostor_albedo);
-
-			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL];
-			RECREATE(PSO_captureimpostor_normal);
-			device->CreateGraphicsPSO(&desc, PSO_captureimpostor_normal);
-
-			desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
-			RECREATE(PSO_captureimpostor_surface);
-			device->CreateGraphicsPSO(&desc, PSO_captureimpostor_surface);
+			RECREATE(PSO_lightvisualizer[type]);
+			device->CreateGraphicsPSO(&desc, PSO_lightvisualizer[type]);
 		}
-	}));
 
-	thread_pool.push_back(thread([&] {
-		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
+
+		// volumetric lights:
+		if (type <= LightComponent::SPOT)
 		{
-			GraphicsPSODesc desc;
-
-			// deferred lights:
-
-			desc.pt = TRIANGLELIST;
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.bs = blendStates[BSTYPE_ADDITIVE];
 			desc.rs = rasterizers[RSTYPE_BACK];
-			desc.bs = blendStates[BSTYPE_DEFERREDLIGHT];
 
 			switch (type)
 			{
 			case LightComponent::DIRECTIONAL:
 				desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-				desc.ps = pixelShaders[PSTYPE_DIRLIGHT];
-				desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+				desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
 				break;
 			case LightComponent::POINT:
 				desc.vs = vertexShaders[VSTYPE_POINTLIGHT];
-				desc.ps = pixelShaders[PSTYPE_POINTLIGHT];
-				desc.dss = depthStencils[DSSTYPE_LIGHT];
+				desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT];
 				break;
 			case LightComponent::SPOT:
 				desc.vs = vertexShaders[VSTYPE_SPOTLIGHT];
-				desc.ps = pixelShaders[PSTYPE_SPOTLIGHT];
-				desc.dss = depthStencils[DSSTYPE_LIGHT];
-				break;
-			case LightComponent::SPHERE:
-				desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-				desc.ps = pixelShaders[PSTYPE_SPHERELIGHT];
-				desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
-				break;
-			case LightComponent::DISC:
-				desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-				desc.ps = pixelShaders[PSTYPE_DISCLIGHT];
-				desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
-				break;
-			case LightComponent::RECTANGLE:
-				desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-				desc.ps = pixelShaders[PSTYPE_RECTANGLELIGHT];
-				desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
-				break;
-			case LightComponent::TUBE:
-				desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-				desc.ps = pixelShaders[PSTYPE_TUBELIGHT];
-				desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
-				break;
-			}
-
-			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
-			desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
-			desc.DSFormat = DSFormat_full;
-
-			RECREATE(PSO_deferredlight[type]);
-			device->CreateGraphicsPSO(&desc, PSO_deferredlight[type]);
-
-
-
-			// light visualizers:
-			if (type != LightComponent::DIRECTIONAL)
-			{
-
-				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-				desc.ps = pixelShaders[PSTYPE_LIGHTVISUALIZER];
-
-				switch (type)
-				{
-				case LightComponent::POINT:
-					desc.bs = blendStates[BSTYPE_ADDITIVE];
-					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT];
-					desc.rs = rasterizers[RSTYPE_FRONT];
-					break;
-				case LightComponent::SPOT:
-					desc.bs = blendStates[BSTYPE_ADDITIVE];
-					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
-					desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-					break;
-				case LightComponent::SPHERE:
-					desc.bs = blendStates[BSTYPE_OPAQUE];
-					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT];
-					desc.rs = rasterizers[RSTYPE_FRONT];
-					break;
-				case LightComponent::DISC:
-					desc.bs = blendStates[BSTYPE_OPAQUE];
-					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT];
-					desc.rs = rasterizers[RSTYPE_FRONT];
-					break;
-				case LightComponent::RECTANGLE:
-					desc.bs = blendStates[BSTYPE_OPAQUE];
-					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT];
-					desc.rs = rasterizers[RSTYPE_BACK];
-					break;
-				case LightComponent::TUBE:
-					desc.bs = blendStates[BSTYPE_OPAQUE];
-					desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT];
-					desc.rs = rasterizers[RSTYPE_FRONT];
-					break;
-				}
-
-				desc.numRTs = 1;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.DSFormat = DSFormat_full;
-
-				RECREATE(PSO_lightvisualizer[type]);
-				device->CreateGraphicsPSO(&desc, PSO_lightvisualizer[type]);
-			}
-
-
-			// volumetric lights:
-			if (type <= LightComponent::SPOT)
-			{
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.bs = blendStates[BSTYPE_ADDITIVE];
-				desc.rs = rasterizers[RSTYPE_BACK];
-
-				switch (type)
-				{
-				case LightComponent::DIRECTIONAL:
-					desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-					desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL];
-					break;
-				case LightComponent::POINT:
-					desc.vs = vertexShaders[VSTYPE_POINTLIGHT];
-					desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT];
-					break;
-				case LightComponent::SPOT:
-					desc.vs = vertexShaders[VSTYPE_SPOTLIGHT];
-					desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
-					break;
-				}
-
-				desc.numRTs = 1;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.DSFormat = FORMAT_UNKNOWN;
-
-				RECREATE(PSO_volumetriclight[type]);
-				device->CreateGraphicsPSO(&desc, PSO_volumetriclight[type]);
-			}
-
-
-		}
-		{
-			GraphicsPSODesc desc;
-			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
-			desc.ps = pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
-			desc.rs = rasterizers[RSTYPE_BACK];
-			desc.bs = blendStates[BSTYPE_ENVIRONMENTALLIGHT];
-			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
-
-			desc.numRTs = 2;
-			desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
-			desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
-			desc.DSFormat = DSFormat_full;
-
-			RECREATE(PSO_enviromentallight);
-			device->CreateGraphicsPSO(&desc, PSO_enviromentallight);
-		}
-		for (int type = 0; type < SKYRENDERING_COUNT; ++type)
-		{
-			GraphicsPSODesc desc;
-			desc.rs = rasterizers[RSTYPE_SKY];
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-
-			switch (type)
-			{
-			case SKYRENDERING_STATIC:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_SKY];
-				desc.ps = pixelShaders[PSTYPE_SKY_STATIC];
-				desc.numRTs = 2;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.RTFormats[1] = RTFormat_gbuffer_1;
-				desc.DSFormat = DSFormat_full;
-				break;
-			case SKYRENDERING_DYNAMIC:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_SKY];
-				desc.ps = pixelShaders[PSTYPE_SKY_DYNAMIC];
-				desc.numRTs = 2;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.RTFormats[1] = RTFormat_gbuffer_1;
-				desc.DSFormat = DSFormat_full;
-				break;
-			case SKYRENDERING_SUN:
-				desc.bs = blendStates[BSTYPE_ADDITIVE];
-				desc.vs = vertexShaders[VSTYPE_SKY];
-				desc.ps = pixelShaders[PSTYPE_SUN];
-				desc.numRTs = 1;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.DSFormat = DSFormat_full;
-				break;
-			case SKYRENDERING_ENVMAPCAPTURE_STATIC:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
-				desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_STATIC];
-				desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
-				desc.numRTs = 1;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.DSFormat = DSFormat_small;
-				break;
-			case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
-				desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
-				desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
-				desc.numRTs = 1;
-				desc.RTFormats[0] = RTFormat_hdr;
-				desc.DSFormat = DSFormat_small;
-				break;
-			}
-
-			RECREATE(PSO_sky[type]);
-			device->CreateGraphicsPSO(&desc, PSO_sky[type]);
-		}
-		for (int debug = 0; debug < DEBUGRENDERING_COUNT; ++debug)
-		{
-			GraphicsPSODesc desc;
-
-			switch (debug)
-			{
-			case DEBUGRENDERING_ENVPROBE:
-				desc.vs = vertexShaders[VSTYPE_SPHERE];
-				desc.ps = pixelShaders[PSTYPE_CUBEMAP];
-				desc.dss = depthStencils[DSSTYPE_DEFAULT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.pt = TRIANGLELIST;
-				break;
-			case DEBUGRENDERING_GRID:
-				desc.vs = vertexShaders[VSTYPE_LINE];
-				desc.ps = pixelShaders[PSTYPE_LINE];
-				desc.il = vertexLayouts[VLTYPE_LINE];
-				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = LINELIST;
-				break;
-			case DEBUGRENDERING_CUBE:
-				desc.vs = vertexShaders[VSTYPE_LINE];
-				desc.ps = pixelShaders[PSTYPE_LINE];
-				desc.il = vertexLayouts[VLTYPE_LINE];
-				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = LINELIST;
-				break;
-			case DEBUGRENDERING_LINES:
-				desc.vs = vertexShaders[VSTYPE_LINE];
-				desc.ps = pixelShaders[PSTYPE_LINE];
-				desc.il = vertexLayouts[VLTYPE_LINE];
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = LINELIST;
-				break;
-			case DEBUGRENDERING_EMITTER:
-				desc.vs = vertexShaders[VSTYPE_OBJECT_DEBUG];
-				desc.ps = pixelShaders[PSTYPE_OBJECT_DEBUG];
-				desc.il = vertexLayouts[VLTYPE_OBJECT_DEBUG];
-				desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-				desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.pt = TRIANGLELIST;
-				break;
-			case DEBUGRENDERING_VOXEL:
-				desc.vs = vertexShaders[VSTYPE_VOXEL];
-				desc.ps = pixelShaders[PSTYPE_VOXEL];
-				desc.gs = geometryShaders[GSTYPE_VOXEL];
-				desc.dss = depthStencils[DSSTYPE_DEFAULT];
-				desc.rs = rasterizers[RSTYPE_BACK];
-				desc.bs = blendStates[BSTYPE_OPAQUE];
-				desc.pt = POINTLIST;
-				break;
-			case DEBUGRENDERING_FORCEFIELD_POINT:
-				desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT];
-				desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.rs = rasterizers[RSTYPE_BACK];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = TRIANGLELIST;
-				break;
-			case DEBUGRENDERING_FORCEFIELD_PLANE:
-				desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE];
-				desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
-				desc.dss = depthStencils[DSSTYPE_XRAY];
-				desc.rs = rasterizers[RSTYPE_FRONT];
-				desc.bs = blendStates[BSTYPE_TRANSPARENT];
-				desc.pt = TRIANGLESTRIP;
+				desc.ps = pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
 				break;
 			}
 
 			desc.numRTs = 1;
 			desc.RTFormats[0] = RTFormat_hdr;
-			desc.DSFormat = DSFormat_full;
+			desc.DSFormat = FORMAT_UNKNOWN;
 
-			RECREATE(PSO_debug[debug]);
-			HRESULT hr = device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
-			assert(SUCCEEDED(hr));
+			RECREATE(PSO_volumetriclight[type]);
+			device->CreateGraphicsPSO(&desc, PSO_volumetriclight[type]);
 		}
-	}));
 
 
-	thread_pool.push_back(thread([&] {
-		for (int i = 0; i < TILEDLIGHTING_TYPE_COUNT; ++i)
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
+		desc.ps = pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
+		desc.rs = rasterizers[RSTYPE_BACK];
+		desc.bs = blendStates[BSTYPE_ENVIRONMENTALLIGHT];
+		desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+
+		desc.numRTs = 2;
+		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
+		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
+		desc.DSFormat = DSFormat_full;
+
+		RECREATE(PSO_enviromentallight);
+		device->CreateGraphicsPSO(&desc, PSO_enviromentallight);
+	}
+	for (int type = 0; type < SKYRENDERING_COUNT; ++type)
+	{
+		GraphicsPSODesc desc;
+		desc.rs = rasterizers[RSTYPE_SKY];
+		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+
+		switch (type)
 		{
-			for (int j = 0; j < TILEDLIGHTING_CULLING_COUNT; ++j)
-			{
-				for (int k = 0; k < TILEDLIGHTING_DEBUG_COUNT; ++k)
-				{
-					string name = "lightCullingCS";
-					if (i == TILEDLIGHTING_TYPE_DEFERRED)
-					{
-						name += "_DEFERRED";
-					}
-					if (j == TILEDLIGHTING_CULLING_ADVANCED)
-					{
-						name += "_ADVANCED";
-					}
-					if (k == TILEDLIGHTING_DEBUG_ENABLED)
-					{
-						name += "_DEBUG";
-					}
-					name += ".cso";
+		case SKYRENDERING_STATIC:
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.vs = vertexShaders[VSTYPE_SKY];
+			desc.ps = pixelShaders[PSTYPE_SKY_STATIC];
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			desc.DSFormat = DSFormat_full;
+			break;
+		case SKYRENDERING_DYNAMIC:
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.vs = vertexShaders[VSTYPE_SKY];
+			desc.ps = pixelShaders[PSTYPE_SKY_DYNAMIC];
+			desc.numRTs = 2;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.RTFormats[1] = RTFormat_gbuffer_1;
+			desc.DSFormat = DSFormat_full;
+			break;
+		case SKYRENDERING_SUN:
+			desc.bs = blendStates[BSTYPE_ADDITIVE];
+			desc.vs = vertexShaders[VSTYPE_SKY];
+			desc.ps = pixelShaders[PSTYPE_SUN];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.DSFormat = DSFormat_full;
+			break;
+		case SKYRENDERING_ENVMAPCAPTURE_STATIC:
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
+			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_STATIC];
+			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.DSFormat = DSFormat_small;
+			break;
+		case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
+			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
+			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
+			desc.numRTs = 1;
+			desc.RTFormats[0] = RTFormat_hdr;
+			desc.DSFormat = DSFormat_small;
+			break;
+		}
 
-					ComputePSODesc desc;
-					desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
-					RECREATE(CPSO_tiledlighting[i][j][k]);
-					device->CreateComputePSO(&desc, CPSO_tiledlighting[i][j][k]);
+		RECREATE(PSO_sky[type]);
+		device->CreateGraphicsPSO(&desc, PSO_sky[type]);
+	}
+	for (int debug = 0; debug < DEBUGRENDERING_COUNT; ++debug)
+	{
+		GraphicsPSODesc desc;
+
+		switch (debug)
+		{
+		case DEBUGRENDERING_ENVPROBE:
+			desc.vs = vertexShaders[VSTYPE_SPHERE];
+			desc.ps = pixelShaders[PSTYPE_CUBEMAP];
+			desc.dss = depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = rasterizers[RSTYPE_FRONT];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.pt = TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_GRID:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = LINELIST;
+			break;
+		case DEBUGRENDERING_CUBE:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = LINELIST;
+			break;
+		case DEBUGRENDERING_LINES:
+			desc.vs = vertexShaders[VSTYPE_LINE];
+			desc.ps = pixelShaders[PSTYPE_LINE];
+			desc.il = vertexLayouts[VLTYPE_LINE];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = LINELIST;
+			break;
+		case DEBUGRENDERING_EMITTER:
+			desc.vs = vertexShaders[VSTYPE_OBJECT_DEBUG];
+			desc.ps = pixelShaders[PSTYPE_OBJECT_DEBUG];
+			desc.il = vertexLayouts[VLTYPE_OBJECT_DEBUG];
+			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.pt = TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_VOXEL:
+			desc.vs = vertexShaders[VSTYPE_VOXEL];
+			desc.ps = pixelShaders[PSTYPE_VOXEL];
+			desc.gs = geometryShaders[GSTYPE_VOXEL];
+			desc.dss = depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = rasterizers[RSTYPE_BACK];
+			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.pt = POINTLIST;
+			break;
+		case DEBUGRENDERING_FORCEFIELD_POINT:
+			desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT];
+			desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_BACK];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_FORCEFIELD_PLANE:
+			desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE];
+			desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_FRONT];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = TRIANGLESTRIP;
+			break;
+		}
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
+		RECREATE(PSO_debug[debug]);
+		HRESULT hr = device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
+		assert(SUCCEEDED(hr));
+	}
+
+
+	for (int i = 0; i < TILEDLIGHTING_TYPE_COUNT; ++i)
+	{
+		for (int j = 0; j < TILEDLIGHTING_CULLING_COUNT; ++j)
+		{
+			for (int k = 0; k < TILEDLIGHTING_DEBUG_COUNT; ++k)
+			{
+				string name = "lightCullingCS";
+				if (i == TILEDLIGHTING_TYPE_DEFERRED)
+				{
+					name += "_DEFERRED";
 				}
+				if (j == TILEDLIGHTING_CULLING_ADVANCED)
+				{
+					name += "_ADVANCED";
+				}
+				if (k == TILEDLIGHTING_DEBUG_ENABLED)
+				{
+					name += "_DEBUG";
+				}
+				name += ".cso";
+
+				ComputePSODesc desc;
+				desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
+				RECREATE(CPSO_tiledlighting[i][j][k]);
+				device->CreateComputePSO(&desc, CPSO_tiledlighting[i][j][k]);
 			}
 		}
-
-		for (int i = 0; i < CSTYPE_LAST; ++i)
-		{
-			ComputePSODesc desc;
-			desc.cs = computeShaders[i];
-			RECREATE(CPSO[i]);
-			device->CreateComputePSO(&desc, CPSO[i]);
-		}
-	}));
-
-
-	for (auto& x : thread_pool)
-	{
-		x.join();
 	}
-	thread_pool.clear();
+
+	for (int i = 0; i < CSTYPE_LAST; ++i)
+	{
+		ComputePSODesc desc;
+		desc.cs = computeShaders[i];
+		RECREATE(CPSO[i]);
+		device->CreateComputePSO(&desc, CPSO[i]);
+	}
+
+
 }
 void LoadBuffers()
 {
