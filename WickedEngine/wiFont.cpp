@@ -66,7 +66,7 @@ namespace wiFont_Internal
 				return;
 			}
 
-			const int textureWidth = 1024;
+			const int textureWidth = 2048;
 			const int textureHeight = lineHeight;
 
 			// create a bitmap for the phrase
@@ -84,36 +84,34 @@ namespace wiFont_Internal
 			ascent = int(float(ascent) * scale);
 			descent = int(float(descent) * scale);
 
-			ZeroMemory(lookup, sizeof(lookup));
-			const char text[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>(){}[]^&*%$!\"\\/?-_=+.,;:'@~#";
-			for (int i = 0; i < strlen(text); ++i)
+			for (int i = 0; i < ARRAYSIZE(lookup); ++i)
 			{
 				// get bounding box for character (may be offset to account for chars that dip above or below the line
 				int c_x1, c_y1, c_x2, c_y2;
-				stbtt_GetCodepointBitmapBox(&info, text[i], scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
+				stbtt_GetCodepointBitmapBox(&info, i, scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
 
 				// compute y (different characters have different heights
 				int y = ascent + c_y1;
 
 				// render character (stride and offset is important here)
 				int byteOffset = x + (y  * textureWidth);
-				stbtt_MakeCodepointBitmap(&info, bitmap + byteOffset, c_x2 - c_x1, c_y2 - c_y1, textureWidth, scale, scale, text[i]);
+				stbtt_MakeCodepointBitmap(&info, bitmap + byteOffset, c_x2 - c_x1, c_y2 - c_y1, textureWidth, scale, scale, i);
 
-				LookUp& lut = lookup[text[i]];
-				lut.character = text[i];
+				LookUp& lut = lookup[i];
+				lut.character = i;
 				lut.left = (float(x) + float(c_x1) - 0.5f) / float(textureWidth);
 				lut.right = (float(x) + float(c_x2) + 0.5f) / float(textureWidth);
 
 				// how wide is this character
 				int ax;
-				stbtt_GetCodepointHMetrics(&info, text[i], &ax, 0);
+				stbtt_GetCodepointHMetrics(&info, i, &ax, 0);
 				x += int(float(ax) * scale);
 
 				lut.pixelWidth = int(float(ax) * scale);
 
 				// add kerning
 				int kern;
-				kern = stbtt_GetCodepointKernAdvance(&info, text[i], text[i + 1]);
+				kern = stbtt_GetCodepointKernAdvance(&info, i, i + 1);
 				x += int(float(kern) * scale);
 
 				// add slight padding to atlas texture betwwen characters

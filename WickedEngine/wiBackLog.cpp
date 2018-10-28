@@ -35,7 +35,7 @@ namespace wiBackLog
 	static State state = DISABLED;
 	static const float speed = 50.0f;
 	static unsigned int deletefromline = 100;
-	static float pos = 0;
+	static float pos = -FLT_MAX;
 	static int scroll = 0;
 	static stringstream inputArea;
 	static int historyPos = 0;
@@ -76,6 +76,11 @@ namespace wiBackLog
 			state = IDLE;
 			pos = 0;
 		}
+
+		if (scroll + font.textHeight() > int(wiRenderer::GetDevice()->GetScreenHeight() * 0.8f))
+		{
+			scroll -= 1;
+		}
 	}
 	void Draw() 
 	{
@@ -93,9 +98,10 @@ namespace wiBackLog
 			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
 			wiImage::Draw(backgroundTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 			font.SetText(getText());
-			font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() - 75 + (int)pos + (int)scroll;
+			font.props.posX = 50;
+			font.props.posY = (int)pos + (int)scroll;
 			font.Draw(GRAPHICSTHREAD_IMMEDIATE);
-			wiFont(inputArea.str().c_str(), wiFontProps(5, wiRenderer::GetDevice()->GetScreenHeight() - 10, -1, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+			wiFont(inputArea.str().c_str(), wiFontProps(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, -1, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		}
 	}
 
