@@ -9,23 +9,29 @@ using namespace std;
 using namespace wiGraphicsTypes;
 using namespace wiSceneSystem;
 
-ComputeShader*			wiOcean::m_pUpdateSpectrumCS = nullptr;
-ComputeShader*			wiOcean::m_pUpdateDisplacementMapCS = nullptr;
-ComputeShader*			wiOcean::m_pUpdateGradientFoldingCS = nullptr;
-VertexShader*			wiOcean::g_pOceanSurfVS = nullptr;
-PixelShader*			wiOcean::g_pWireframePS = nullptr;
-PixelShader*			wiOcean::g_pOceanSurfPS = nullptr;
+namespace wiOcean_Internal
+{
+	ComputeShader*		m_pUpdateSpectrumCS = nullptr;
+	ComputeShader*		m_pUpdateDisplacementMapCS = nullptr;
+	ComputeShader*		m_pUpdateGradientFoldingCS = nullptr;
+	VertexShader*		g_pOceanSurfVS = nullptr;
+	PixelShader*		g_pWireframePS = nullptr;
+	PixelShader*		g_pOceanSurfPS = nullptr;
 
-GPUBuffer*				wiOcean::g_pShadingCB = nullptr;
-RasterizerState			wiOcean::rasterizerState;
-RasterizerState			wiOcean::wireRS;
-DepthStencilState		wiOcean::depthStencilState;
-BlendState				wiOcean::blendState;
+	GPUBuffer*			g_pShadingCB = nullptr;
+	RasterizerState		rasterizerState;
+	RasterizerState		wireRS;
+	DepthStencilState	depthStencilState;
+	BlendState			blendState;
 
-GraphicsPSO wiOcean::PSO, wiOcean::PSO_wire;
-ComputePSO wiOcean::CPSO_updateSpectrum, wiOcean::CPSO_updateDisplacementMap, wiOcean::CPSO_updateGradientFolding;
+	GraphicsPSO PSO, PSO_wire;
+	ComputePSO CPSO_updateSpectrum;
+	ComputePSO CPSO_updateDisplacementMap;
+	ComputePSO CPSO_updateGradientFolding;
 
-CSFFT512x512_Plan		wiOcean::m_fft_plan;
+	CSFFT512x512_Plan m_fft_plan;
+}
+using namespace wiOcean_Internal;
 
 
 #define HALF_SQRT_2	0.7071068f

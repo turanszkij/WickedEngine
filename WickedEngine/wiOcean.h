@@ -47,26 +47,6 @@ protected:
 
 	wiGraphicsTypes::GPUBuffer* m_pImmutableCB;
 	wiGraphicsTypes::GPUBuffer* m_pPerFrameCB;
-
-
-	static CSFFT512x512_Plan m_fft_plan;
-
-	static wiGraphicsTypes::ComputeShader* m_pUpdateSpectrumCS;
-	static wiGraphicsTypes::ComputeShader* m_pUpdateDisplacementMapCS;
-	static wiGraphicsTypes::ComputeShader* m_pUpdateGradientFoldingCS;
-	static wiGraphicsTypes::VertexShader* g_pOceanSurfVS;
-	static wiGraphicsTypes::PixelShader* g_pOceanSurfPS;
-	static wiGraphicsTypes::PixelShader* g_pWireframePS;
-
-	static wiGraphicsTypes::GPUBuffer* g_pShadingCB;
-
-	static wiGraphicsTypes::RasterizerState rasterizerState;
-	static wiGraphicsTypes::RasterizerState wireRS;
-	static wiGraphicsTypes::DepthStencilState depthStencilState;
-	static wiGraphicsTypes::BlendState blendState;
-
-	static wiGraphicsTypes::GraphicsPSO PSO, PSO_wire;
-	static wiGraphicsTypes::ComputePSO CPSO_updateSpectrum, CPSO_updateDisplacementMap, CPSO_updateGradientFolding;
 };
 
 #endif	// _OCEAN_SIMULATOR_H

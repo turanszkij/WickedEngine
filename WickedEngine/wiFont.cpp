@@ -16,80 +16,176 @@ using namespace wiGraphicsTypes;
 
 #define WHITESPACE_SIZE 3
 
-static std::string			FONTPATH = "fonts/";
-static GPURingBuffer		vertexBuffer;
-static GPUBuffer			indexBuffer;
-static GPUBuffer			constantBuffer;
-static BlendState			blendState;
-static RasterizerState		rasterizerState;
-static DepthStencilState	depthStencilState;
-static Sampler				sampler;
-
-static VertexLayout			*vertexLayout = nullptr;
-static VertexShader			*vertexShader = nullptr;
-static PixelShader			*pixelShader = nullptr;
-static GraphicsPSO			*PSO = nullptr;
-
-static bool initialized = false;
-
-struct wiFontStyle 
+namespace wiFont_Internal
 {
-	std::string name;
-	wiGraphicsTypes::Texture2D* texture = nullptr;
+	std::string			FONTPATH = "fonts/";
+	GPURingBuffer		vertexBuffer;
+	GPUBuffer			indexBuffer;
+	GPUBuffer			constantBuffer;
+	BlendState			blendState;
+	RasterizerState		rasterizerState;
+	DepthStencilState	depthStencilState;
+	Sampler				sampler;
 
-	struct LookUp 
+	VertexLayout		*vertexLayout = nullptr;
+	VertexShader		*vertexShader = nullptr;
+	PixelShader			*pixelShader = nullptr;
+	GraphicsPSO			*PSO = nullptr;
+
+	bool initialized = false;
+
+	struct wiFontStyle
 	{
-		int ascii;
-		char character;
-		float left;
-		float right;
-		int pixelWidth;
-	};
-	LookUp lookup[128];
-	int texWidth, texHeight;
-	int lineHeight;
+		std::string name;
+		wiGraphicsTypes::Texture2D* texture = nullptr;
 
-	wiFontStyle() {}
-	wiFontStyle(const std::string& newName)
-	{
-		name = newName;
-
-		ZeroMemory(lookup, sizeof(lookup));
-
-		std::stringstream ss(""), ss1("");
-		ss << FONTPATH << name << ".wifont";
-		ss1 << FONTPATH << name << ".dds";
-		std::ifstream file(ss.str());
-		if (file.is_open())
+		struct LookUp
 		{
-			texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss1.str());
-			if (texture == nullptr)
+			int ascii;
+			char character;
+			float left;
+			float right;
+			int pixelWidth;
+		};
+		LookUp lookup[128];
+		int texWidth, texHeight;
+		int lineHeight;
+
+		wiFontStyle() {}
+		wiFontStyle(const std::string& newName)
+		{
+			name = newName;
+
+			ZeroMemory(lookup, sizeof(lookup));
+
+			std::stringstream ss(""), ss1("");
+			ss << FONTPATH << name << ".wifont";
+			ss1 << FONTPATH << name << ".dds";
+			std::ifstream file(ss.str());
+			if (file.is_open())
 			{
-				return;
-			}
-			texWidth = texture->GetDesc().Width;
-			texHeight = texture->GetDesc().Height;
+				texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss1.str());
+				if (texture == nullptr)
+				{
+					return;
+				}
+				texWidth = texture->GetDesc().Width;
+				texHeight = texture->GetDesc().Height;
 
-			string voidStr;
-			file >> voidStr >> lineHeight;
-			while (!file.eof())
+				string voidStr;
+				file >> voidStr >> lineHeight;
+				while (!file.eof())
+				{
+					int code = 0;
+					file >> code;
+					lookup[code].ascii = code;
+					file >> lookup[code].character >> lookup[code].left >> lookup[code].right >> lookup[code].pixelWidth;
+				}
+
+
+				file.close();
+			}
+			else
 			{
-				int code = 0;
-				file >> code;
-				lookup[code].ascii = code;
-				file >> lookup[code].character >> lookup[code].left >> lookup[code].right >> lookup[code].pixelWidth;
+				wiHelper::messageBox(name, "Could not load Font Data: " + ss.str());
 			}
-
-
-			file.close();
 		}
-		else
+	};
+	std::vector<wiFontStyle> fontStyles;
+
+	struct FontVertex
+	{
+		XMFLOAT2 Pos;
+		XMHALF2 Tex;
+	};
+
+	void ModifyGeo(volatile FontVertex* vertexList, const std::wstring& text, wiFontProps props, int style)
+	{
+		size_t vertexCount = text.length() * 4;
+
+		const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
+		const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyles[style].lineHeight);
+
+		int line = 0;
+		int pos = 0;
+		for (unsigned int i = 0; i < vertexCount; i += 4)
 		{
-			wiHelper::messageBox(name, "Could not load Font Data: " + ss.str());
+			bool compatible = false;
+			wiFontStyle::LookUp lookup;
+
+			if (text[i / 4] == '\n')
+			{
+				line += lineHeight + props.spacingY;
+				pos = 0;
+			}
+			else if (text[i / 4] == ' ')
+			{
+				pos += WHITESPACE_SIZE + props.spacingX;
+			}
+			else if (text[i / 4] == '\t')
+			{
+				pos += (WHITESPACE_SIZE + props.spacingX) * 5;
+			}
+			else if (text[i / 4] < ARRAYSIZE(fontStyles[style].lookup) && fontStyles[style].lookup[text[i / 4]].character == text[i / 4])
+			{
+				lookup = fontStyles[style].lookup[text[i / 4]];
+				compatible = true;
+			}
+
+			HALF h0 = XMConvertFloatToHalf(0.0f);
+
+			if (compatible)
+			{
+				int characterWidth = (int)(lookup.pixelWidth * relativeSize);
+
+				HALF h1 = XMConvertFloatToHalf(1.0f);
+				HALF hl = XMConvertFloatToHalf(lookup.left);
+				HALF hr = XMConvertFloatToHalf(lookup.right);
+
+				vertexList[i + 0].Pos.x = (float)pos;
+				vertexList[i + 0].Pos.y = (float)line;
+				vertexList[i + 1].Pos.x = (float)pos + (float)characterWidth;
+				vertexList[i + 1].Pos.y = (float)line;
+				vertexList[i + 2].Pos.x = (float)pos;
+				vertexList[i + 2].Pos.y = (float)line + (float)lineHeight;
+				vertexList[i + 3].Pos.x = (float)pos + (float)characterWidth;
+				vertexList[i + 3].Pos.y = (float)line + (float)lineHeight;
+
+				vertexList[i + 0].Tex.x = hl;
+				vertexList[i + 0].Tex.y = h0;
+				vertexList[i + 1].Tex.x = hr;
+				vertexList[i + 1].Tex.y = h0;
+				vertexList[i + 2].Tex.x = hl;
+				vertexList[i + 2].Tex.y = h1;
+				vertexList[i + 3].Tex.x = hr;
+				vertexList[i + 3].Tex.y = h1;
+
+				pos += characterWidth + props.spacingX;
+			}
+			else
+			{
+				vertexList[i + 0].Pos.x = 0;
+				vertexList[i + 0].Pos.y = 0;
+				vertexList[i + 0].Tex.x = h0;
+				vertexList[i + 0].Tex.y = h0;
+				vertexList[i + 1].Pos.x = 0;
+				vertexList[i + 1].Pos.y = 0;
+				vertexList[i + 1].Tex.x = h0;
+				vertexList[i + 1].Tex.y = h0;
+				vertexList[i + 2].Pos.x = 0;
+				vertexList[i + 2].Pos.y = 0;
+				vertexList[i + 2].Tex.x = h0;
+				vertexList[i + 2].Tex.y = h0;
+				vertexList[i + 3].Pos.x = 0;
+				vertexList[i + 3].Pos.y = 0;
+				vertexList[i + 3].Tex.x = h0;
+				vertexList[i + 3].Tex.y = h0;
+			}
 		}
 	}
-};
-static std::vector<wiFontStyle> fontStyles;
+
+}
+using namespace wiFont_Internal;
 
 
 wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
@@ -265,91 +361,6 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
 }
 
-void wiFont::ModifyGeo(volatile Vertex* vertexList, const std::wstring& text, wiFontProps props, int style)
-{
-	size_t vertexCount = text.length() * 4;
-
-	const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
-	const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyles[style].lineHeight);
-
-	int line = 0;
-	int pos = 0;
-	for (unsigned int i = 0; i<vertexCount; i += 4)
-	{
-		bool compatible = false;
-		wiFontStyle::LookUp lookup;
-		
-		if (text[i / 4] == '\n') 
-		{
-			line += lineHeight + props.spacingY;
-			pos = 0;
-		}
-		else if (text[i / 4] == ' ') 
-		{
-			pos += WHITESPACE_SIZE + props.spacingX;
-		}
-		else if (text[i / 4] == '\t') 
-		{
-			pos += (WHITESPACE_SIZE + props.spacingX) * 5;
-		}
-		else if (text[i / 4] < ARRAYSIZE(fontStyles[style].lookup) && fontStyles[style].lookup[text[i / 4]].character == text[i / 4]) 
-		{
-			lookup = fontStyles[style].lookup[text[i / 4]];
-			compatible = true;
-		}
-
-		HALF h0 = XMConvertFloatToHalf(0.0f);
-
-		if (compatible) 
-		{
-			int characterWidth = (int)(lookup.pixelWidth * relativeSize);
-
-			HALF h1 = XMConvertFloatToHalf(1.0f);
-			HALF hl = XMConvertFloatToHalf(lookup.left);
-			HALF hr = XMConvertFloatToHalf(lookup.right);
-
-			vertexList[i + 0].Pos.x = (float)pos;
-			vertexList[i + 0].Pos.y = (float)line;
-			vertexList[i + 1].Pos.x = (float)pos + (float)characterWidth;
-			vertexList[i + 1].Pos.y = (float)line;
-			vertexList[i + 2].Pos.x = (float)pos;
-			vertexList[i + 2].Pos.y = (float)line + (float)lineHeight;
-			vertexList[i + 3].Pos.x = (float)pos + (float)characterWidth;
-			vertexList[i + 3].Pos.y = (float)line + (float)lineHeight;
-
-			vertexList[i + 0].Tex.x = hl;
-			vertexList[i + 0].Tex.y = h0;
-			vertexList[i + 1].Tex.x = hr;
-			vertexList[i + 1].Tex.y = h0;
-			vertexList[i + 2].Tex.x = hl;
-			vertexList[i + 2].Tex.y = h1;
-			vertexList[i + 3].Tex.x = hr;
-			vertexList[i + 3].Tex.y = h1;
-
-			pos += characterWidth + props.spacingX;
-		}
-		else
-		{
-			vertexList[i + 0].Pos.x = 0;
-			vertexList[i + 0].Pos.y = 0;
-			vertexList[i + 0].Tex.x = h0;
-			vertexList[i + 0].Tex.y = h0;
-			vertexList[i + 1].Pos.x = 0;
-			vertexList[i + 1].Pos.y = 0;
-			vertexList[i + 1].Tex.x = h0;
-			vertexList[i + 1].Tex.y = h0;
-			vertexList[i + 2].Pos.x = 0;
-			vertexList[i + 2].Pos.y = 0;
-			vertexList[i + 2].Tex.x = h0;
-			vertexList[i + 2].Tex.y = h0;
-			vertexList[i + 3].Pos.x = 0;
-			vertexList[i + 3].Pos.y = 0;
-			vertexList[i + 3].Tex.x = h0;
-			vertexList[i + 3].Tex.y = h0;
-		}
-	}
-}
-
 
 void wiFont::Draw(GRAPHICSTHREAD threadID)
 {
@@ -374,7 +385,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	UINT vboffset;
-	volatile Vertex* textBuffer = (volatile Vertex*)device->AllocateFromRingBuffer(&vertexBuffer, sizeof(Vertex) * text.length() * 4, vboffset, threadID);
+	volatile FontVertex* textBuffer = (volatile FontVertex*)device->AllocateFromRingBuffer(&vertexBuffer, sizeof(FontVertex) * text.length() * 4, vboffset, threadID);
 	if (textBuffer == nullptr)
 	{
 		return;
@@ -391,7 +402,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 		&vertexBuffer,
 	};
 	const UINT strides[] = {
-		sizeof(Vertex),
+		sizeof(FontVertex),
 	};
 	const UINT offsets[] = {
 		vboffset,

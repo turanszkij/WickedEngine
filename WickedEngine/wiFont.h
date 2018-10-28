@@ -19,9 +19,8 @@ enum wiFontAlign
 	WIFALIGN_COUNT,
 };
 
-class wiFontProps
+struct wiFontProps
 {
-public:
 	int size;
 	int spacingX, spacingY;
 	int posX, posY;
@@ -37,19 +36,6 @@ public:
 
 class wiFont
 {
-protected:
-	struct Vertex
-	{
-		XMFLOAT2 Pos;
-		XMHALF2 Tex;
-	};
-	
-private:
-
-
-
-	static void ModifyGeo(volatile Vertex* vertexList, const std::wstring& text, wiFontProps props, int style);
-
 public:
 	static void Initialize();
 	static void CleanUp();
