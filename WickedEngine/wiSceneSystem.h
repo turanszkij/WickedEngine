@@ -3,7 +3,6 @@
 #include "wiEnums.h"
 #include "wiImageEffects.h"
 #include "wiIntersectables.h"
-#include "ShaderInterop.h"
 #include "wiFrustum.h"
 #include "wiRenderTarget.h"
 #include "wiEmittedParticle.h"
