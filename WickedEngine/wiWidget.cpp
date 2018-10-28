@@ -104,6 +104,14 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		{
 			tooltipFont.SetText(tooltip + "\n" + scriptTip);
 		}
+
+		int textWidth = tooltipFont.textWidth();
+		if (tooltipPos.x > wiRenderer::GetDevice()->GetScreenWidth() - textWidth)
+		{
+			tooltipPos.x -= textWidth + 10;
+			tooltipFont.props.posX = (int)tooltipPos.x;
+		}
+
 		static const float _border = 2;
 		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
 		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
@@ -1272,9 +1280,13 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	moveDragger->SetText("");
 	moveDragger->SetSize(XMFLOAT2(scale.x - windowcontrolSize * 3, windowcontrolSize));
 	moveDragger->SetPos(XMFLOAT2(windowcontrolSize, 0));
-	moveDragger->OnDrag([this](wiEventArgs args) {
+	moveDragger->OnDrag([this, gui](wiEventArgs args) {
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-		this->UpdateTransform();
+		this->wiWidget::Update(gui, 0);
+		for (auto& x : this->childrenWidgets)
+		{
+			x->wiWidget::Update(gui, 0);
+		}
 	});
 	AddWidget(moveDragger);
 
@@ -1305,13 +1317,17 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	resizeDragger_UpperLeft->SetText("");
 	resizeDragger_UpperLeft->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 	resizeDragger_UpperLeft->SetPos(XMFLOAT2(0, 0));
-	resizeDragger_UpperLeft->OnDrag([this](wiEventArgs args) {
+	resizeDragger_UpperLeft->OnDrag([this, gui](wiEventArgs args) {
 		XMFLOAT2 scaleDiff;
 		scaleDiff.x = (scale.x - args.deltaPos.x) / scale.x;
 		scaleDiff.y = (scale.y - args.deltaPos.y) / scale.y;
 		this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-		this->UpdateTransform();
+		this->wiWidget::Update(gui, 0);
+		for (auto& x : this->childrenWidgets)
+		{
+			x->wiWidget::Update(gui, 0);
+		}
 	});
 	AddWidget(resizeDragger_UpperLeft);
 
@@ -1320,12 +1336,16 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	resizeDragger_BottomRight->SetText("");
 	resizeDragger_BottomRight->SetSize(XMFLOAT2(windowcontrolSize, windowcontrolSize));
 	resizeDragger_BottomRight->SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + scale.y - windowcontrolSize));
-	resizeDragger_BottomRight->OnDrag([this](wiEventArgs args) {
+	resizeDragger_BottomRight->OnDrag([this, gui](wiEventArgs args) {
 		XMFLOAT2 scaleDiff;
 		scaleDiff.x = (scale.x + args.deltaPos.x) / scale.x;
 		scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 		this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
-		this->UpdateTransform();
+		this->wiWidget::Update(gui, 0);
+		for (auto& x : this->childrenWidgets)
+		{
+			x->wiWidget::Update(gui, 0);
+		}
 	});
 	AddWidget(resizeDragger_BottomRight);
 
@@ -1404,16 +1424,15 @@ void wiWindow::Update(wiGUI* gui, float dt)
 	//	minimizeButton->scale.y = windowcontrolSize;
 	//}
 
-
-	if (!IsEnabled())
-	{
-		return;
-	}
-
 	for (auto& x : childrenWidgets)
 	{
 		x->Update(gui, dt);
 		x->SetScissorRect(scissorRect);
+	}
+
+	if (!IsEnabled())
+	{
+		return;
 	}
 
 	if (gui->IsWidgetDisabled(this))

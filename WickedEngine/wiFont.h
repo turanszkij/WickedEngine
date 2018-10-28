@@ -72,8 +72,8 @@ public:
 	int textWidth();
 	int textHeight();
 
-	static void addFontStyle( const std::string& toAdd );
-	static int getFontStyleByName( const std::string& get );
+	static void addFontStyle(const std::string& toAdd);
+	static int getFontStyleByName(const std::string& get);
 
 	void SetText(const std::string& text);
 	void SetText(const std::wstring& text);
