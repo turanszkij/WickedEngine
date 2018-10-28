@@ -28,7 +28,7 @@ struct wiFontProps
 	wiColor shadowColor;
 
 	wiFontProps(int posX = 0, int posY = 0, int size = -1, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
-		, int spacingX = 2, int spacingY = 1, const wiColor& color = wiColor(255, 255, 255, 255), const wiColor& shadowColor = wiColor(0,0,0,0))
+		, int spacingX = 0, int spacingY = 0, const wiColor& color = wiColor(255, 255, 255, 255), const wiColor& shadowColor = wiColor(0,0,0,0))
 		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(color), shadowColor(shadowColor)
 	{}
 };
@@ -57,8 +57,8 @@ public:
 	int textWidth();
 	int textHeight();
 
-	static void addFontStyle(const std::string& toAdd);
-	static int getFontStyleByName(const std::string& get);
+	static void addFontStyle(const std::string& fontName, int height = 16);
+	static int getFontStyleByName(const std::string& fontName, int height = 16);
 
 	void SetText(const std::string& text);
 	void SetText(const std::wstring& text);

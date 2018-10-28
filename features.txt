@@ -5,7 +5,7 @@ DirectX 11 renderer
 DirectX 12 renderer
 Vulkan renderer
 Image rendering,animation : 2D,3D space
-Font rendering
+Font rendering (True Type)
 TCP Networking
 Blender-exporter: 3D meshes,objects,armatures,animation,materials,lights,hitspheres,wind,world info,dynamic cameras,ribbon trails,particle systems
 3D vertex mesh rendering

@@ -120,6 +120,9 @@ SOFTWARE.
 ###############################################################################################################################
 
 stb_image
+stb_image_write
+stb_truetype
+stb_rect_pack
 
 Sean Barrett 2010-2015 no warranty implied; use at your own risk
 

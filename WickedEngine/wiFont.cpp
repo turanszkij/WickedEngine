@@ -5,6 +5,9 @@
 #include "ResourceMapping.h"
 #include "ShaderInterop_Font.h"
 #include "wiBackLog.h"
+#include "wiTextureHelper.h"
+
+#include "Utility/stb_truetype.h"
 
 #include <fstream>
 #include <sstream>
@@ -41,54 +44,98 @@ namespace wiFont_Internal
 
 		struct LookUp
 		{
-			int ascii;
 			char character;
 			float left;
 			float right;
 			int pixelWidth;
 		};
 		LookUp lookup[128];
-		int texWidth, texHeight;
 		int lineHeight;
 
 		wiFontStyle() {}
-		wiFontStyle(const std::string& newName)
+		wiFontStyle(const std::string& newName, int height = 16) : name(newName), lineHeight(height)
 		{
-			name = newName;
+			size_t size;
+			unsigned char* fontBuffer;
+			wiHelper::readByteData(FONTPATH + newName + ".ttf", &fontBuffer, size);
+
+			stbtt_fontinfo info;
+			if (!stbtt_InitFont(&info, fontBuffer, 0))
+			{
+				wiHelper::messageBox("Failed to load font!");
+				return;
+			}
+
+			const int textureWidth = 1024;
+			const int textureHeight = lineHeight;
+
+			// create a bitmap for the phrase
+			unsigned char* bitmap = (unsigned char*)calloc(textureWidth * textureHeight, sizeof(unsigned char));
+
+			// calculate font scaling
+			float scale = stbtt_ScaleForPixelHeight(&info, (float)textureHeight);
+
+			const int atlaspadding = 2;
+			int x = 0;
+
+			int ascent, descent, lineGap;
+			stbtt_GetFontVMetrics(&info, &ascent, &descent, &lineGap);
+
+			ascent = int(float(ascent) * scale);
+			descent = int(float(descent) * scale);
 
 			ZeroMemory(lookup, sizeof(lookup));
-
-			std::stringstream ss(""), ss1("");
-			ss << FONTPATH << name << ".wifont";
-			ss1 << FONTPATH << name << ".dds";
-			std::ifstream file(ss.str());
-			if (file.is_open())
+			const char text[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>(){}[]^&*%$!\"\\/?-_=+.,;:'@~#";
+			for (int i = 0; i < strlen(text); ++i)
 			{
-				texture = (Texture2D*)wiResourceManager::GetGlobal()->add(ss1.str());
-				if (texture == nullptr)
-				{
-					return;
-				}
-				texWidth = texture->GetDesc().Width;
-				texHeight = texture->GetDesc().Height;
+				// get bounding box for character (may be offset to account for chars that dip above or below the line
+				int c_x1, c_y1, c_x2, c_y2;
+				stbtt_GetCodepointBitmapBox(&info, text[i], scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
 
-				string voidStr;
-				file >> voidStr >> lineHeight;
-				while (!file.eof())
-				{
-					int code = 0;
-					file >> code;
-					lookup[code].ascii = code;
-					file >> lookup[code].character >> lookup[code].left >> lookup[code].right >> lookup[code].pixelWidth;
-				}
+				// compute y (different characters have different heights
+				int y = ascent + c_y1;
 
+				// render character (stride and offset is important here)
+				int byteOffset = x + (y  * textureWidth);
+				stbtt_MakeCodepointBitmap(&info, bitmap + byteOffset, c_x2 - c_x1, c_y2 - c_y1, textureWidth, scale, scale, text[i]);
 
-				file.close();
+				LookUp& lut = lookup[text[i]];
+				lut.character = text[i];
+				lut.left = (float(x) + float(c_x1) - 0.5f) / float(textureWidth);
+				lut.right = (float(x) + float(c_x2) + 0.5f) / float(textureWidth);
+
+				// how wide is this character
+				int ax;
+				stbtt_GetCodepointHMetrics(&info, text[i], &ax, 0);
+				x += int(float(ax) * scale);
+
+				lut.pixelWidth = int(float(ax) * scale);
+
+				// add kerning
+				int kern;
+				kern = stbtt_GetCodepointKernAdvance(&info, text[i], text[i + 1]);
+				x += int(float(kern) * scale);
+
+				// add slight padding to atlas texture betwwen characters
+				x += atlaspadding;
 			}
-			else
-			{
-				wiHelper::messageBox(name, "Could not load Font Data: " + ss.str());
-			}
+
+			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap, textureWidth, textureHeight, 1, FORMAT_R8_UNORM);
+			assert(SUCCEEDED(hr));
+
+			SAFE_DELETE_ARRAY(bitmap);
+		}
+		wiFontStyle(wiFontStyle&& other)
+		{
+			this->texture = other.texture;
+			this->lineHeight = other.lineHeight;
+			memcpy(this->lookup, other.lookup, sizeof(this->lookup));
+
+			other.texture = nullptr;
+		}
+		~wiFontStyle()
+		{
+			SAFE_DELETE(texture);
 		}
 	};
 	std::vector<wiFontStyle> fontStyles;
@@ -208,7 +255,7 @@ void wiFont::Initialize()
 	}
 
 	// add default font:
-	addFontStyle("default_font");
+	addFontStyle("arial", 16);
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -279,13 +326,14 @@ void wiFont::Initialize()
 
 	BlendStateDesc bd;
 	bd.RenderTarget[0].BlendEnable = true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.IndependentBlendEnable = false;
 	device->CreateBlendState(&bd, &blendState);
 
 	SamplerDesc samplerDesc;
@@ -509,18 +557,26 @@ string wiFont::GetTextA()
 	return string(text.begin(),text.end());
 }
 
-void wiFont::addFontStyle( const std::string& toAdd ){
+void wiFont::addFontStyle(const std::string& fontName, int height)
+{
 	for (auto& x : fontStyles)
 	{
-		if (!x.name.compare(toAdd))
+		if (!x.name.compare(fontName) && x.lineHeight == height)
+		{
 			return;
+		}
 	}
-	fontStyles.push_back(wiFontStyle(toAdd));
+	fontStyles.push_back(wiFontStyle(fontName, height));
 }
-int wiFont::getFontStyleByName( const std::string& get ){
-	for (unsigned int i = 0; i<fontStyles.size(); i++)
-	if(!fontStyles[i].name.compare(get))
-		return i;
+int wiFont::getFontStyleByName(const std::string& fontName, int height)
+{
+	for (size_t i = 0; i < fontStyles.size(); i++)
+	{
+		if (!fontStyles[i].name.compare(fontName) && fontStyles[i].lineHeight == height)
+		{
+			return int(i);
+		}
+	}
 	return 0;
 }
 
