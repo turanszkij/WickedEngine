@@ -1424,15 +1424,15 @@ void wiWindow::Update(wiGUI* gui, float dt)
 	//	minimizeButton->scale.y = windowcontrolSize;
 	//}
 
+	if (!IsEnabled())
+	{
+		return;
+	}
+
 	for (auto& x : childrenWidgets)
 	{
 		x->Update(gui, dt);
 		x->SetScissorRect(scissorRect);
-	}
-
-	if (!IsEnabled())
-	{
-		return;
 	}
 
 	if (gui->IsWidgetDisabled(this))
