@@ -57,8 +57,10 @@ public:
 	int textWidth();
 	int textHeight();
 
-	static void addFontStyle(const std::string& fontName, int height = 16);
-	static int getFontStyleByName(const std::string& fontName, int height = 16);
+	// Create a font. Returns fontStyleID that is reusable. If font already exists, just return its ID
+	static int AddFontStyle(const std::string& fontName, int height = 16);
+	// Returns the style ID that is reusable. If font not found, returns -1
+	static int GetFontStyle(const std::string& fontName, int height = 16);
 
 	void SetText(const std::string& text);
 	void SetText(const std::wstring& text);

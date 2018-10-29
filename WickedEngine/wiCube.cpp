@@ -1,6 +1,5 @@
 #include "wiCube.h"
 #include "wiRenderer.h"
-#include "wiBackLog.h"
 
 using namespace wiGraphicsTypes;
 
@@ -77,8 +76,6 @@ void wiCube::Initialize()
 	InitData.pSysMem = indices;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
 
-
-	wiBackLog::post("wiCube Initialized");
 
 }
 void wiCube::CleanUp()

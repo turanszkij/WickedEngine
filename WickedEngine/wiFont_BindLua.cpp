@@ -57,12 +57,11 @@ int wiFont_BindLua::SetStyle(lua_State* L)
 	if (argc > 0)
 	{
 		string name = wiLua::SGetString(L, 1);
-		wiFont::addFontStyle(name);
-		font->style = wiFont::getFontStyleByName(name);
+		font->style = wiFont::AddFontStyle(name);
 	}
 	else
 	{
-		wiLua::SError(L, "SetStyle(string style) not enough arguments!");
+		wiLua::SError(L, "SetStyle(string style, opt int size = 16) not enough arguments!");
 	}
 	return 0;
 }

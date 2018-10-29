@@ -16,8 +16,8 @@ using namespace std;
 using namespace wiGraphicsTypes;
 
 #define MAX_TEXT 10000
-
 #define WHITESPACE_SIZE 3
+#define TAB_WHITESPACECOUNT 4
 
 namespace wiFont_Internal
 {
@@ -41,10 +41,13 @@ namespace wiFont_Internal
 	{
 		std::string name;
 		wiGraphicsTypes::Texture2D* texture = nullptr;
+		size_t fontBufferSize = 0;
+		unsigned char* fontBuffer = nullptr;
+		stbtt_fontinfo fontInfo;
+		float fontScaling = 1;
 
 		struct LookUp
 		{
-			char character;
 			float left;
 			float right;
 			int pixelWidth;
@@ -55,12 +58,9 @@ namespace wiFont_Internal
 		wiFontStyle() {}
 		wiFontStyle(const std::string& newName, int height = 16) : name(newName), lineHeight(height)
 		{
-			size_t size;
-			unsigned char* fontBuffer;
-			wiHelper::readByteData(FONTPATH + newName + ".ttf", &fontBuffer, size);
+			wiHelper::readByteData(FONTPATH + newName + ".ttf", &fontBuffer, fontBufferSize);
 
-			stbtt_fontinfo info;
-			if (!stbtt_InitFont(&info, fontBuffer, 0))
+			if (!stbtt_InitFont(&fontInfo, fontBuffer, 0))
 			{
 				wiHelper::messageBox("Failed to load font!");
 				return;
@@ -70,51 +70,47 @@ namespace wiFont_Internal
 			const int textureHeight = lineHeight;
 
 			// create a bitmap for the phrase
-			unsigned char* bitmap = (unsigned char*)calloc(textureWidth * textureHeight, sizeof(unsigned char));
+			unsigned char* bitmap = new unsigned char[textureWidth * textureHeight];
+			memset(bitmap, 0, textureWidth * textureHeight * sizeof(unsigned char));
 
 			// calculate font scaling
-			float scale = stbtt_ScaleForPixelHeight(&info, (float)textureHeight);
+			fontScaling = stbtt_ScaleForPixelHeight(&fontInfo, (float)textureHeight);
 
 			const int atlaspadding = 2;
 			int x = 0;
 
 			int ascent, descent, lineGap;
-			stbtt_GetFontVMetrics(&info, &ascent, &descent, &lineGap);
+			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
 
-			ascent = int(float(ascent) * scale);
-			descent = int(float(descent) * scale);
+			ascent = int(float(ascent) * fontScaling);
+			descent = int(float(descent) * fontScaling);
 
 			for (int i = 0; i < ARRAYSIZE(lookup); ++i)
 			{
 				// get bounding box for character (may be offset to account for chars that dip above or below the line
 				int c_x1, c_y1, c_x2, c_y2;
-				stbtt_GetCodepointBitmapBox(&info, i, scale, scale, &c_x1, &c_y1, &c_x2, &c_y2);
+				stbtt_GetCodepointBitmapBox(&fontInfo, i, fontScaling, fontScaling, &c_x1, &c_y1, &c_x2, &c_y2);
 
 				// compute y (different characters have different heights
 				int y = ascent + c_y1;
 
 				// render character (stride and offset is important here)
 				int byteOffset = x + (y  * textureWidth);
-				stbtt_MakeCodepointBitmap(&info, bitmap + byteOffset, c_x2 - c_x1, c_y2 - c_y1, textureWidth, scale, scale, i);
+				stbtt_MakeCodepointBitmap(&fontInfo, bitmap + byteOffset, c_x2 - c_x1, c_y2 - c_y1, textureWidth, fontScaling, fontScaling, i);
 
 				LookUp& lut = lookup[i];
-				lut.character = i;
 				lut.left = (float(x) + float(c_x1) - 0.5f) / float(textureWidth);
 				lut.right = (float(x) + float(c_x2) + 0.5f) / float(textureWidth);
 
 				// how wide is this character
 				int ax;
-				stbtt_GetCodepointHMetrics(&info, i, &ax, 0);
-				x += int(float(ax) * scale);
+				stbtt_GetCodepointHMetrics(&fontInfo, i, &ax, 0);
+				lut.pixelWidth = int(float(ax) * fontScaling);
 
-				lut.pixelWidth = int(float(ax) * scale);
+				// advance to next character packed pos
+				x += lut.pixelWidth;
 
-				// add kerning
-				int kern;
-				kern = stbtt_GetCodepointKernAdvance(&info, i, i + 1);
-				x += int(float(kern) * scale);
-
-				// add slight padding to atlas texture betwwen characters
+				// add slight padding to atlas texture between characters
 				x += atlaspadding;
 			}
 
@@ -128,105 +124,110 @@ namespace wiFont_Internal
 			this->texture = other.texture;
 			this->lineHeight = other.lineHeight;
 			memcpy(this->lookup, other.lookup, sizeof(this->lookup));
+			this->fontBufferSize = other.fontBufferSize;
+			this->fontBuffer = other.fontBuffer;
+			this->fontInfo = std::move(other.fontInfo);
 
 			other.texture = nullptr;
+			other.fontBuffer = nullptr;
 		}
 		~wiFontStyle()
 		{
 			SAFE_DELETE(texture);
+			SAFE_DELETE_ARRAY(fontBuffer);
 		}
 	};
 	std::vector<wiFontStyle> fontStyles;
 
 	struct FontVertex
 	{
-		XMFLOAT2 Pos;
+		XMUSHORT2 Pos;
 		XMHALF2 Tex;
 	};
 
-	void ModifyGeo(volatile FontVertex* vertexList, const std::wstring& text, wiFontProps props, int style)
+	int ModifyGeo(volatile FontVertex* vertexList, const std::wstring& text, wiFontProps props, int style)
 	{
-		size_t vertexCount = text.length() * 4;
+		int quadCount = 0;
 
-		const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
-		const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyles[style].lineHeight);
+		const wiFontStyle& fontStyle = fontStyles[style];
 
-		int line = 0;
-		int pos = 0;
-		for (unsigned int i = 0; i < vertexCount; i += 4)
+		const uint16_t lineHeight = (props.size < 0 ? uint16_t(fontStyle.lineHeight) : uint16_t(props.size));
+		const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyle.lineHeight);
+
+		const HALF hzero = XMConvertFloatToHalf(0.0f);
+		const HALF hone = XMConvertFloatToHalf(1.0f);
+
+		uint16_t line = 0;
+		uint16_t pos = 0;
+		for (size_t i = 0; i < text.length(); ++i)
 		{
-			bool compatible = false;
-			wiFontStyle::LookUp lookup;
+			const wchar_t character = text[i];
 
-			if (text[i / 4] == '\n')
+			if (character == '\n')
 			{
 				line += lineHeight + props.spacingY;
 				pos = 0;
 			}
-			else if (text[i / 4] == ' ')
+			else if (character == ' ')
 			{
 				pos += WHITESPACE_SIZE + props.spacingX;
 			}
-			else if (text[i / 4] == '\t')
+			else if (character == '\t')
 			{
-				pos += (WHITESPACE_SIZE + props.spacingX) * 5;
+				pos += (WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT;
 			}
-			else if (text[i / 4] < ARRAYSIZE(fontStyles[style].lookup) && fontStyles[style].lookup[text[i / 4]].character == text[i / 4])
+			else if (character < ARRAYSIZE(fontStyle.lookup))
 			{
-				lookup = fontStyles[style].lookup[text[i / 4]];
-				compatible = true;
-			}
+				const wiFontStyle::LookUp& lookup = fontStyle.lookup[character];
+				uint16_t characterWidth = uint16_t(lookup.pixelWidth * relativeSize);
 
-			HALF h0 = XMConvertFloatToHalf(0.0f);
+				const size_t vertexID = quadCount * 4;
 
-			if (compatible)
-			{
-				int characterWidth = (int)(lookup.pixelWidth * relativeSize);
+				const uint16_t left = pos;
+				const uint16_t right = pos + characterWidth;
+				const uint16_t top = line;
+				const uint16_t bottom = line + lineHeight;
 
-				HALF h1 = XMConvertFloatToHalf(1.0f);
-				HALF hl = XMConvertFloatToHalf(lookup.left);
-				HALF hr = XMConvertFloatToHalf(lookup.right);
+				vertexList[vertexID + 0].Pos.x = left;
+				vertexList[vertexID + 0].Pos.y = top;
+				vertexList[vertexID + 1].Pos.x = right;
+				vertexList[vertexID + 1].Pos.y = top;
+				vertexList[vertexID + 2].Pos.x = left;
+				vertexList[vertexID + 2].Pos.y = bottom;
+				vertexList[vertexID + 3].Pos.x = right;
+				vertexList[vertexID + 3].Pos.y = bottom;
 
-				vertexList[i + 0].Pos.x = (float)pos;
-				vertexList[i + 0].Pos.y = (float)line;
-				vertexList[i + 1].Pos.x = (float)pos + (float)characterWidth;
-				vertexList[i + 1].Pos.y = (float)line;
-				vertexList[i + 2].Pos.x = (float)pos;
-				vertexList[i + 2].Pos.y = (float)line + (float)lineHeight;
-				vertexList[i + 3].Pos.x = (float)pos + (float)characterWidth;
-				vertexList[i + 3].Pos.y = (float)line + (float)lineHeight;
+				const HALF hleft = XMConvertFloatToHalf(lookup.left);
+				const HALF hright = XMConvertFloatToHalf(lookup.right);
 
-				vertexList[i + 0].Tex.x = hl;
-				vertexList[i + 0].Tex.y = h0;
-				vertexList[i + 1].Tex.x = hr;
-				vertexList[i + 1].Tex.y = h0;
-				vertexList[i + 2].Tex.x = hl;
-				vertexList[i + 2].Tex.y = h1;
-				vertexList[i + 3].Tex.x = hr;
-				vertexList[i + 3].Tex.y = h1;
+				vertexList[vertexID + 0].Tex.x = hleft;
+				vertexList[vertexID + 0].Tex.y = hzero;
+				vertexList[vertexID + 1].Tex.x = hright;
+				vertexList[vertexID + 1].Tex.y = hzero;
+				vertexList[vertexID + 2].Tex.x = hleft;
+				vertexList[vertexID + 2].Tex.y = hone;
+				vertexList[vertexID + 3].Tex.x = hright;
+				vertexList[vertexID + 3].Tex.y = hone;
 
 				pos += characterWidth + props.spacingX;
-			}
-			else
-			{
-				vertexList[i + 0].Pos.x = 0;
-				vertexList[i + 0].Pos.y = 0;
-				vertexList[i + 0].Tex.x = h0;
-				vertexList[i + 0].Tex.y = h0;
-				vertexList[i + 1].Pos.x = 0;
-				vertexList[i + 1].Pos.y = 0;
-				vertexList[i + 1].Tex.x = h0;
-				vertexList[i + 1].Tex.y = h0;
-				vertexList[i + 2].Pos.x = 0;
-				vertexList[i + 2].Pos.y = 0;
-				vertexList[i + 2].Tex.x = h0;
-				vertexList[i + 2].Tex.y = h0;
-				vertexList[i + 3].Pos.x = 0;
-				vertexList[i + 3].Pos.y = 0;
-				vertexList[i + 3].Tex.x = h0;
-				vertexList[i + 3].Tex.y = h0;
+
+				//// add kerning
+				//if (i > 0 && i < text.length() - 1)
+				//{
+				//	const wchar_t next_character = text[i + 1];
+				//	if (next_character != ' ' && next_character != '\t')
+				//	{
+				//		int kern;
+				//		kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, character, next_character);
+				//		pos += int(float(kern) * fontStyle.fontScaling);
+				//	}
+				//}
+
+				quadCount++;
 			}
 		}
+
+		return quadCount;
 	}
 
 }
@@ -252,8 +253,11 @@ void wiFont::Initialize()
 		return;
 	}
 
-	// add default font:
-	addFontStyle("arial", 16);
+	// add default font if there is none yet:
+	if (fontStyles.empty())
+	{
+		AddFontStyle("arial", 16);
+	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -369,7 +373,7 @@ void wiFont::LoadShaders()
 
 	VertexLayoutDesc layout[] =
 	{
-		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, FORMAT_R16G16_UINT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
 	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
@@ -436,7 +440,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	{
 		return;
 	}
-	ModifyGeo(textBuffer, text, newProps, style);
+	const int quadCount = ModifyGeo(textBuffer, text, newProps, style);
 	device->InvalidateBufferAccess(&vertexBuffer, threadID);
 
 	device->EventBegin("Font", threadID);
@@ -472,7 +476,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 		cb.g_xFont_Color = float4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
 		device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
-		device->DrawIndexed((int)text.length() * 6, 0, 0, threadID);
+		device->DrawIndexed(quadCount * 6, 0, 0, threadID);
 	}
 
 	// font base render:
@@ -483,7 +487,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	cb.g_xFont_Color = float4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
 	device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
-	device->DrawIndexed((int)text.length() * 6, 0, 0, threadID);
+	device->DrawIndexed(quadCount * 6, 0, 0, threadID);
 
 	device->EventEnd(threadID);
 }
@@ -507,7 +511,7 @@ int wiFont::textWidth()
 		}
 		else if (text[i] == '\t')
 		{
-			currentLineWidth += (WHITESPACE_SIZE + props.spacingX) * 5;
+			currentLineWidth += (WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT;
 		}
 		else
 		{
@@ -521,12 +525,12 @@ int wiFont::textWidth()
 }
 int wiFont::textHeight()
 {
-	int i=0;
-	int lines=1;
-	int len=(int)text.length();
-	while(i<len)
+	int i = 0;
+	int lines = 1;
+	int len = (int)text.length();
+	while (i < len)
 	{
-		if(text[i]=='\n')
+		if (text[i] == '\n')
 		{
 			lines++;
 		}
@@ -534,7 +538,7 @@ int wiFont::textHeight()
 	}
 
 	const int lineHeight = (props.size < 0 ? fontStyles[style].lineHeight : props.size);
-	return lines*(lineHeight + props.spacingY);
+	return lines * (lineHeight + props.spacingY);
 }
 
 
@@ -555,27 +559,30 @@ string wiFont::GetTextA()
 	return string(text.begin(),text.end());
 }
 
-void wiFont::addFontStyle(const std::string& fontName, int height)
-{
-	for (auto& x : fontStyles)
-	{
-		if (!x.name.compare(fontName) && x.lineHeight == height)
-		{
-			return;
-		}
-	}
-	fontStyles.push_back(wiFontStyle(fontName, height));
-}
-int wiFont::getFontStyleByName(const std::string& fontName, int height)
+int wiFont::AddFontStyle(const std::string& fontName, int height)
 {
 	for (size_t i = 0; i < fontStyles.size(); i++)
 	{
-		if (!fontStyles[i].name.compare(fontName) && fontStyles[i].lineHeight == height)
+		const wiFontStyle& fontStyle = fontStyles[i];
+		if (!fontStyle.name.compare(fontName) && fontStyle.lineHeight == height)
 		{
 			return int(i);
 		}
 	}
-	return 0;
+	fontStyles.push_back(wiFontStyle(fontName, height));
+	return int(fontStyles.size() - 1);
+}
+int wiFont::GetFontStyle(const std::string& fontName, int height)
+{
+	for (size_t i = 0; i < fontStyles.size(); i++)
+	{
+		const wiFontStyle& fontStyle = fontStyles[i];
+		if (!fontStyle.name.compare(fontName) && fontStyle.lineHeight == height)
+		{
+			return int(i);
+		}
+	}
+	return -1; // fontstyle not found
 }
 
 std::string& wiFont::GetFontPath()

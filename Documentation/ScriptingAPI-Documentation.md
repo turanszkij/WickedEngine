@@ -142,7 +142,7 @@ getprops(YourObject) on them (where YourObject is the object which is to be insp
 ### Font
 Gives you the ability to render text with a custom font.
 - [constructor]Font(opt string text)
-- SetStyle(string fontstyle)
+- SetStyle(string fontstyle, opt int size = 16)
 - SetText(opt string text)
 - SetSize(int size)
 - SetPos(Vector pos)
