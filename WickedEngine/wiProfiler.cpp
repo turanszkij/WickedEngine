@@ -153,7 +153,7 @@ void wiProfiler::DrawData(int x, int y, GRAPHICSTHREAD threadID)
 		ss << endl;
 	}
 
-	wiFont(ss.str(), wiFontProps(x, y, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 2, 1, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(threadID);
+	wiFont(ss.str(), wiFontProps(x, y, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(threadID);
 }
 
 
