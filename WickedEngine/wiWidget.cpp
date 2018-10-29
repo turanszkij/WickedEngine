@@ -82,6 +82,11 @@ void wiWidget::Detach()
 }
 void wiWidget::RenderTooltip(wiGUI* gui)
 {
+	if (!IsEnabled() || !IsVisible())
+	{
+		return;
+	}
+
 	assert(gui != nullptr && "Ivalid GUI!");
 
 	if (tooltipTimer > 25)
@@ -1424,15 +1429,15 @@ void wiWindow::Update(wiGUI* gui, float dt)
 	//	minimizeButton->scale.y = windowcontrolSize;
 	//}
 
-	if (!IsEnabled())
-	{
-		return;
-	}
-
 	for (auto& x : childrenWidgets)
 	{
 		x->Update(gui, dt);
 		x->SetScissorRect(scissorRect);
+	}
+
+	if (!IsEnabled())
+	{
+		return;
 	}
 
 	if (gui->IsWidgetDisabled(this))
