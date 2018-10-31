@@ -101,6 +101,9 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 
 ForceFieldWindow::~ForceFieldWindow()
 {
+	forceFieldWindow->RemoveWidgets(true);
+	GUI->RemoveWidget(forceFieldWindow);
+	SAFE_DELETE(forceFieldWindow);
 }
 
 void ForceFieldWindow::SetEntity(Entity entity)
