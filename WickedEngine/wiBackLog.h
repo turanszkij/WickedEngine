@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 
 #include <string>
 #include <fstream>

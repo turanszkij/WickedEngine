@@ -32,8 +32,7 @@ namespace wiGraphicsTypes
 		virtual HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D) = 0;
 		virtual HRESULT CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) = 0;
 		virtual HRESULT CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D) = 0;
-		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
-			const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout) = 0;
+		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) = 0;
 		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) = 0;
 		virtual HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader) = 0;
 		virtual HRESULT CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader) = 0;
@@ -77,13 +76,13 @@ namespace wiGraphicsTypes
 		virtual void ExecuteDeferredContexts() = 0;
 		virtual void FinishCommandList(GRAPHICSTHREAD thread) = 0;
 
-		bool GetVSyncEnabled() { return VSYNC; }
-		void SetVSyncEnabled(bool value) { VSYNC = value; }
-		uint64_t GetFrameCount() { return FRAMECOUNT; }
+		inline bool GetVSyncEnabled() { return VSYNC; }
+		inline void SetVSyncEnabled(bool value) { VSYNC = value; }
+		inline uint64_t GetFrameCount() { return FRAMECOUNT; }
 
-		int GetScreenWidth() { return SCREENWIDTH; }
-		int GetScreenHeight() { return SCREENHEIGHT; }
-		bool ResolutionChanged() { return RESOLUTIONCHANGED; }
+		inline int GetScreenWidth() { return SCREENWIDTH; }
+		inline int GetScreenHeight() { return SCREENHEIGHT; }
+		inline bool ResolutionChanged() { return RESOLUTIONCHANGED; }
 
 
 		virtual void SetResolution(int width, int height) = 0;
@@ -103,12 +102,12 @@ namespace wiGraphicsTypes
 
 		uint32_t GetFormatStride(FORMAT value);
 
-		XMMATRIX GetScreenProjection()
+		inline XMMATRIX GetScreenProjection()
 		{
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
-		FORMAT GetBackBufferFormat() { return BACKBUFFER_FORMAT; }
-		static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
+		inline FORMAT GetBackBufferFormat() { return BACKBUFFER_FORMAT; }
+		inline static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 
 		///////////////Thread-sensitive////////////////////////

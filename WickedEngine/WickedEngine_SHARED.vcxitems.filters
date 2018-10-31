@@ -1026,9 +1026,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>

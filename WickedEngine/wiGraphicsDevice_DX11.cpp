@@ -1,6 +1,7 @@
 #include "wiGraphicsDevice_DX11.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
+#include "wiBackLog.h"
 
 #pragma comment(lib,"d3d11.lib")
 #pragma comment(lib,"Dxgi.lib")
@@ -1533,6 +1534,7 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	CreateBackBufferResources();
 
+	wiBackLog::post("Created GraphicsDevice_DX11");
 }
 GraphicsDevice_DX11::~GraphicsDevice_DX11()
 {
@@ -2560,8 +2562,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
-	const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
+HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 {
 	pInputLayout->Register(this);
 
@@ -2583,7 +2584,7 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 		pInputLayout->desc.push_back(pInputElementDescs[i]);
 	}
 
-	HRESULT hr = device->CreateInputLayout(desc, NumElements, pShaderBytecodeWithInputSignature, BytecodeLength, (ID3D11InputLayout**)&pInputLayout->resource);
+	HRESULT hr = device->CreateInputLayout(desc, NumElements, shaderCode->data, shaderCode->size, (ID3D11InputLayout**)&pInputLayout->resource);
 
 	SAFE_DELETE_ARRAY(desc);
 

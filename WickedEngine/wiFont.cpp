@@ -379,7 +379,7 @@ void wiFont::LoadShaders()
 	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
 	
 	vertexLayout = new VertexLayout;
-	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShader->code.data, vertexShader->code.size, vertexLayout);
+	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, vertexLayout);
 
 
 	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));

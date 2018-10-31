@@ -42,7 +42,7 @@
 #include "wiInitializer.h"
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 #include "wiGUI.h"
 #include "wiWidget.h"
 #include "wiHashString.h"
@@ -66,8 +66,6 @@
 #include "PathTracingRenderableComponent.h"
 #include "LoadingScreenComponent.h"
 #include "MainComponent.h"
-
-#include "wiGraphicsDevice.h"
 
 #ifdef _WIN32
 

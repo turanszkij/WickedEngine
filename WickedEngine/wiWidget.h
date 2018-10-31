@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiHashString.h"
 #include "wiColor.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 #include "wiIntersectables.h"
 #include "wiSceneSystem.h"
 

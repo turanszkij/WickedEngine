@@ -2,7 +2,7 @@
 #define _WI_GPU_BVH_H_
 
 #include "CommonInclude.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 #include "wiSceneSystem_Decl.h"
 
 class wiGPUBVH

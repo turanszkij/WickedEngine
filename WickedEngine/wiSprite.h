@@ -1,7 +1,7 @@
 #pragma once
 #include "wiImage.h"
 #include "wiImageEffects.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 
 class wiResourceManager;
 

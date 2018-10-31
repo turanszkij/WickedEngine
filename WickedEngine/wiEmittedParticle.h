@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 #include "wiIntersectables.h"
 #include "ShaderInterop_EmittedParticle.h"
 #include "wiImageEffects.h"

@@ -30,18 +30,18 @@ namespace wiBackLog
 		DEACTIVATING,
 	};
 
-	static deque<string> stream;
-	static deque<string> history;
-	static State state = DISABLED;
-	static const float speed = 50.0f;
-	static unsigned int deletefromline = 100;
-	static float pos = -FLT_MAX;
-	static int scroll = 0;
-	static stringstream inputArea;
-	static int historyPos = 0;
-	static wiFont font;
+	deque<string> stream;
+	deque<string> history;
+	State state = DISABLED;
+	const float speed = 50.0f;
+	unsigned int deletefromline = 100;
+	float pos = -FLT_MAX;
+	int scroll = 0;
+	stringstream inputArea;
+	int historyPos = 0;
+	wiFont font;
 
-	static Texture2D* backgroundTex = nullptr;
+	Texture2D* backgroundTex = nullptr;
 
 	void Toggle() 
 	{

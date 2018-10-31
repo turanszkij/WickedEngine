@@ -2,7 +2,7 @@
 #define _WI_GPU_SORTLIB_H_
 
 #include "CommonInclude.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 
 namespace wiGPUSortLib
 {

@@ -21,7 +21,7 @@ namespace wiInitializer
 		wiTimer timer;
 		timer.record();
 
-		wiBackLog::post("Initializing Wicked Engine, please wait...\n");
+		wiBackLog::post("\n[wiInitializer] Initializing Wicked Engine, please wait...\n");
 
 		wiFont::Initialize();
 		wiImage::Initialize();

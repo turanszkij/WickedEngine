@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiThreadSafeManager.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 #include "wiHashString.h"
 
 #include <unordered_map>

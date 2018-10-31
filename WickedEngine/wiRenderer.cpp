@@ -1755,7 +1755,7 @@ void LoadShaders()
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_OBJECT_DEBUG] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_DEBUG]->code.data, vertexShaders[VSTYPE_OBJECT_DEBUG]->code.size, vertexLayouts[VLTYPE_OBJECT_DEBUG]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG]->code, vertexLayouts[VLTYPE_OBJECT_DEBUG]);
 	}
 	{
 		VertexLayoutDesc layout[] =
@@ -1773,7 +1773,7 @@ void LoadShaders()
 			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_COMMON]->code.data, vertexShaders[VSTYPE_OBJECT_COMMON]->code.size, vertexLayouts[VLTYPE_OBJECT_ALL]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, vertexLayouts[VLTYPE_OBJECT_ALL]);
 
 	}
 	{
@@ -1787,7 +1787,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code.data, vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code.size, vertexLayouts[VLTYPE_OBJECT_POS]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code, vertexLayouts[VLTYPE_OBJECT_POS]);
 
 	}
 	{
@@ -1802,7 +1802,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_OBJECT_SIMPLE]->code.data, vertexShaders[VSTYPE_OBJECT_SIMPLE]->code.size, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE]->code, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
 
 	}
 	{
@@ -1816,7 +1816,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_SHADOW]->code.data, vertexShaders[VSTYPE_SHADOW]->code.size, vertexLayouts[VLTYPE_SHADOW_POS]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW]->code, vertexLayouts[VLTYPE_SHADOW_POS]);
 
 	}
 	{
@@ -1831,7 +1831,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code.data, vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code.size, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
 
 
 		vertexShaders[VSTYPE_SHADOW_TRANSPARENT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_transparent.cso", wiResourceManager::VERTEXSHADER));
@@ -1845,7 +1845,7 @@ void LoadShaders()
 			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_LINE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_LINE]->code.data, vertexShaders[VSTYPE_LINE]->code.size, vertexLayouts[VLTYPE_LINE]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_LINE]->code, vertexLayouts[VLTYPE_LINE]);
 
 	}
 
@@ -1857,7 +1857,7 @@ void LoadShaders()
 			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), vertexShaders[VSTYPE_TRAIL]->code.data, vertexShaders[VSTYPE_TRAIL]->code.size, vertexLayouts[VLTYPE_TRAIL]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_TRAIL]->code, vertexLayouts[VLTYPE_TRAIL]);
 
 	}
 

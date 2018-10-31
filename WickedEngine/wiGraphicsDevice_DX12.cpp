@@ -2,6 +2,7 @@
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ResourceMapping.h"
+#include "wiBackLog.h"
 
 #include "Utility/d3dx12.h"
 
@@ -1977,6 +1978,7 @@ namespace wiGraphicsTypes
 		}
 		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->RSSetScissorRects(8, pRects);
 
+		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
@@ -2885,8 +2887,7 @@ namespace wiGraphicsTypes
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
-		const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
+	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 	{
 		pInputLayout->Register(this);
 

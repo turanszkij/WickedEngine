@@ -2,7 +2,7 @@
 #define _OCEAN_SIMULATOR_H
 
 #include "CommonInclude.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 #include "wiFFTGenerator.h"
 #include "wiSceneSystem_Decl.h"
 

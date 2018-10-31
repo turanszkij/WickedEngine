@@ -6,12 +6,11 @@
 
 #include <vector>
 
-typedef uint64_t wiCPUHandle;
-#define WI_NULL_HANDLE (0)
-
-
 namespace wiGraphicsTypes
 {
+	typedef uint64_t wiCPUHandle;
+	static const wiCPUHandle WI_NULL_HANDLE = 0;
+
 	class GraphicsDevice;
 
 	struct GraphicsDeviceChild

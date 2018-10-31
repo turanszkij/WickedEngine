@@ -2,13 +2,13 @@
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "ShaderInterop_Vulkan.h"
+#include "wiBackLog.h"
 
 #include <sstream>
 #include <vector>
 #include <cstring>
 #include <iostream>
 #include <set>
-
 
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
@@ -2367,6 +2367,7 @@ namespace wiGraphicsTypes
 			vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
 		}
 
+		wiBackLog::post("Created GraphicsDevice_Vulkan");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
@@ -3171,8 +3172,7 @@ namespace wiGraphicsTypes
 
 		return E_FAIL;
 	}
-	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements,
-		const void *pShaderBytecodeWithInputSignature, SIZE_T BytecodeLength, VertexLayout *pInputLayout)
+	HRESULT GraphicsDevice_Vulkan::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 	{
 		pInputLayout->Register(this);
 

@@ -2,7 +2,7 @@
 #define _FFT_GENERATOR_H_
 
 #include "CommonInclude.h"
-#include "wiGraphicsAPI.h"
+#include "wiGraphicsDevice.h"
 
 
 //Memory access coherency (in threads)

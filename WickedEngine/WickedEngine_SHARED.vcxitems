@@ -328,7 +328,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrameRate.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsAPI.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h" />
