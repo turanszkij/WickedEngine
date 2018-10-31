@@ -49,15 +49,15 @@ void wiGUI::Update(float dt)
 	}
 
 	focus = false;
-	for (list<wiWidget*>::reverse_iterator it = widgets.rbegin(); it != widgets.rend(); ++it)
+	for (auto& widget : widgets)
 	{
-		if ((*it)->parent == this)
+		if (widget->parent == this)
 		{
 			// the contained child widgets will be updated by the containers
-			(*it)->Update(this, dt);
+			widget->Update(this, dt);
 		}
 
-		if ((*it)->IsEnabled() && (*it)->IsVisible() && (*it)->GetState() > wiWidget::WIDGETSTATE::IDLE)
+		if (widget->IsEnabled() && widget->IsVisible() && widget->GetState() > wiWidget::WIDGETSTATE::IDLE)
 		{
 			focus = true;
 		}
