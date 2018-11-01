@@ -11,13 +11,14 @@ class MainComponent
 {
 private:
 	RenderableComponent* activeComponent = nullptr;
+	float targetFrameRate = 60;
 	bool frameskip = true;
-	int targetFrameRate = 60;
-	double targetFrameRateInv = 1.0f / 60.0f;
-	int applicationControlLostThreshold = 10;
 
-	bool component_dirty = true;
 	wiFadeManager fadeManager;
+
+	float deltaTime = 0;
+	float deltaTimeAccumulator = 0;
+	wiTimer timer;
 public:
 	MainComponent();
 	virtual ~MainComponent();
@@ -34,11 +35,14 @@ public:
 
 	wiResourceManager Content;
 
-	void	setFrameSkip(bool value){ frameskip = value; }
-	bool	getFrameSkip(){ return frameskip; }
-	void	setTargetFrameRate(int value){ targetFrameRate = value; targetFrameRateInv = 1.0 / (double)targetFrameRate; }
-	int		getTargetFrameRate(){ return targetFrameRate; }
-	void	setApplicationControlLostThreshold(int value){ applicationControlLostThreshold = value; }
+	// Set the desired target framerate for the FixedUpdate() loop (default = 60)
+	void	setTargetFrameRate(float value) { targetFrameRate = value; }
+	// Get the desired target framerate for the FixedUpdate() loop
+	float	getTargetFrameRate() const { return targetFrameRate; }
+	// Set the desired behaviour of the FixedUpdate() loop (default = true)
+	//	enabled		: the FixedUpdate() loop will run at targetFrameRate frequency
+	//	disabled	: the FixedUpdate() loop will run every frame only once.
+	void	setFrameSkip(bool enabled) { frameskip = enabled; }
 
 	// Initializes all engine components
 	virtual void Initialize();

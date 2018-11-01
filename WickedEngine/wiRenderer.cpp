@@ -402,7 +402,7 @@ void ReloadShaders(const std::string& path)
 
 	GetDevice()->WaitForGPU();
 
-	wiResourceManager::GetShaderManager()->CleanUp();
+	wiResourceManager::GetShaderManager().Clear();
 	LoadShaders();
 	wiHairParticle::LoadShaders();
 	wiEmittedParticle::LoadShaders();
@@ -442,63 +442,6 @@ void Initialize()
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 	{
 		frameAllocators[i].reserve(4 * 1024 * 1024);
-	}
-
-	for (int i = 0; i < VSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(vertexShaders[i]);
-	}
-	for (int i = 0; i < PSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(pixelShaders[i]);
-	}
-	for (int i = 0; i < GSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(geometryShaders[i]);
-	}
-	for (int i = 0; i < HSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(hullShaders[i]);
-	}
-	for (int i = 0; i < DSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(domainShaders[i]);
-	}
-	for (int i = 0; i < CSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(computeShaders[i]);
-	}
-	for (int i = 0; i < VLTYPE_LAST; ++i)
-	{
-		SAFE_INIT(vertexLayouts[i]);
-	}
-	for (int i = 0; i < RSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(rasterizers[i]);
-	}
-	for (int i = 0; i < DSSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(depthStencils[i]);
-	}
-	for (int i = 0; i < CBTYPE_LAST; ++i)
-	{
-		SAFE_INIT(constantBuffers[i]);
-	}
-	for (int i = 0; i < RBTYPE_LAST; ++i)
-	{
-		SAFE_INIT(resourceBuffers[i]);
-	}
-	for (int i = 0; i < TEXTYPE_LAST; ++i)
-	{
-		SAFE_INIT(textures[i]);
-	}
-	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
-	{
-		SAFE_INIT(samplers[i]);
-	}
-	for (int i = 0; i < SSTYPE_LAST; ++i)
-	{
-		SAFE_INIT(customsamplers[i]);
 	}
 
 	GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
@@ -1754,7 +1697,7 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
-		vertexShaders[VSTYPE_OBJECT_DEBUG] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_OBJECT_DEBUG] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG]->code, vertexLayouts[VLTYPE_OBJECT_DEBUG]);
 	}
 	{
@@ -1772,7 +1715,7 @@ void LoadShaders()
 			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, vertexLayouts[VLTYPE_OBJECT_ALL]);
 
 	}
@@ -1786,7 +1729,7 @@ void LoadShaders()
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code, vertexLayouts[VLTYPE_OBJECT_POS]);
 
 	}
@@ -1801,7 +1744,7 @@ void LoadShaders()
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE]->code, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
 
 	}
@@ -1815,7 +1758,7 @@ void LoadShaders()
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW]->code, vertexLayouts[VLTYPE_SHADOW_POS]);
 
 	}
@@ -1830,11 +1773,11 @@ void LoadShaders()
 			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
-		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
 
 
-		vertexShaders[VSTYPE_SHADOW_TRANSPARENT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowVS_transparent.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_SHADOW_TRANSPARENT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS_transparent.cso", wiResourceManager::VERTEXSHADER));
 
 	}
 
@@ -1844,7 +1787,7 @@ void LoadShaders()
 			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
-		vertexShaders[VSTYPE_LINE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_LINE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_LINE]->code, vertexLayouts[VLTYPE_LINE]);
 
 	}
@@ -1856,163 +1799,163 @@ void LoadShaders()
 			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
-		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
+		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_TRAIL]->code, vertexLayouts[VLTYPE_TRAIL]);
 
 	}
 
-	vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_common_tessellation.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_simple_tessellation.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_IMPOSTOR] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vSphereLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vDiscLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vRectangleLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "vTubeLightVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_DECAL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_SPHERE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_CUBE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_SKY] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_WATER] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldPointVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
-	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_OBJECT_COMMON_TESSELLATION] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_common_tessellation.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_simple_tessellation.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_IMPOSTOR] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_DIRLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "dirLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_POINTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "pointLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_SPOTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "spotLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "vSpotLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "vPointLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "vSphereLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "vDiscLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "vRectangleLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "vTubeLightVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_DECAL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "decalVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_ENVMAP] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_ENVMAP_SKY] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_SPHERE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sphereVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_CUBE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_SKY] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skyVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_WATER] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "waterVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_VOXELIZER] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_voxelizer.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPointVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
 
 
-	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_DEFERRED_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_deferred_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_IMPOSTOR_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_deferred.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_deferred.cso", wiResourceManager::PIXELSHADER));
 
-	pixelShaders[PSTYPE_OBJECT_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_FORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_forward_water.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_IMPOSTOR_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_forward.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_FORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward_water.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_forward.cso", wiResourceManager::PIXELSHADER));
 
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_normalmap.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_tiledforward_water.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_transparent_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_transparent_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_TRANSPARENT_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_transparent_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_tiledforward_water.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
-	pixelShaders[PSTYPE_OBJECT_HOLOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_hologram.cso", wiResourceManager::PIXELSHADER));
-
-
-	pixelShaders[PSTYPE_OBJECT_DEBUG] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_debug.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_IMPOSTOR_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "impostorPS_simple.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SPHERELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sphereLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_DISCLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "discLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_RECTANGLELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "rectangleLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_TUBELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tubeLightPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_LIGHTVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "lightVisualizerPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumetricLight_DirectionalPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumetricLight_PointPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "volumetricLight_SpotPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ENVMAP_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_static.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS_albedo.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS_normal.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "captureImpostorPS_surface.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_CUBEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubemapPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_static.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOW_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOW_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_transparent.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOW_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "shadowPS_water.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
-
-	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
-	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
-	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
-	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cubeShadowGS_alphatest.cso", wiResourceManager::GEOMETRYSHADER));
-	geometryShaders[GSTYPE_VOXELIZER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
-	geometryShaders[GSTYPE_VOXEL] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelGS.cso", wiResourceManager::GEOMETRYSHADER));
+	pixelShaders[PSTYPE_OBJECT_HOLOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_hologram.cso", wiResourceManager::PIXELSHADER));
 
 
-	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelRadianceSecondaryBounceCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_VOXELCLEARONLYNORMAL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "voxelClearOnlyNormalCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_unorm4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain2D_float4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_unorm4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChain3D_float4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCube_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCube_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCubeArray_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "generateMIPChainCubeArray_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_FILTERENVMAP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "filterEnvMapCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
+	pixelShaders[PSTYPE_OBJECT_DEBUG] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_debug.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_SIMPLEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_simplest.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_BLACKOUT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_blackout.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_TEXTUREONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_textureonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_simple.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SPOTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "spotLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SPHERELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sphereLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DISCLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "discLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RECTANGLELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "rectangleLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TUBELIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "tubeLightPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_LIGHTVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lightVisualizerPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "volumetricLight_DirectionalPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOLUMETRICLIGHT_POINT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "volumetricLight_PointPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOLUMETRICLIGHT_SPOT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "volumetricLight_SpotPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DECAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "decalPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVMAP_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyPS_static.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "captureImpostorPS_albedo.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "captureImpostorPS_normal.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "captureImpostorPS_surface.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_CUBEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubemapPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_LINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "linesPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SKY_STATIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skyPS_static.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SKY_DYNAMIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skyPS_dynamic.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SUN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sunPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOW_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOW_TRANSPARENT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowPS_transparent.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOW_WATER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowPS_water.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowPS_alphatest.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_TRAIL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "trailPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
+
+	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowGS_alphatest.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_VOXELIZER] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_VOXEL] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
-	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
+	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_LUMINANCE_PASS2] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "luminancePass2CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_TILEFRUSTUMS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "tileFrustumsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "resolveMSAADepthStencilCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelSceneCopyClearCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelSceneCopyClear_TemporalSmoothing.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelRadianceSecondaryBounceCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_VOXELCLEARONLYNORMAL] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelClearOnlyNormalCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_unorm4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_float4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_unorm4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_float4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChainCube_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChainCube_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChainCubeArray_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChainCubeArray_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_FILTERENVMAP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "filterEnvMapCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
 
 
-	domainShaders[DSTYPE_OBJECT] = static_cast<DomainShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
+	hullShaders[HSTYPE_OBJECT] = static_cast<HullShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
+
+
+	domainShaders[DSTYPE_OBJECT] = static_cast<DomainShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
 
 
 	// default objectshaders:
@@ -2706,7 +2649,7 @@ void LoadShaders()
 				name += ".cso";
 
 				ComputePSODesc desc;
-				desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
+				desc.cs = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
 				RECREATE(CPSO_tiledlighting[i][j][k]);
 				device->CreateComputePSO(&desc, CPSO_tiledlighting[i][j][k]);
 			}
@@ -3407,7 +3350,7 @@ void UpdatePerFrameData(float dt)
 
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
-	wiProfiler::GetInstance().BeginRange("Frustum Culling", wiProfiler::DOMAIN_CPU);
+	wiProfiler::BeginRange("Frustum Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
 		{
@@ -3530,7 +3473,7 @@ void UpdatePerFrameData(float dt)
 
 		}
 	}
-	wiProfiler::GetInstance().EndRange(); // Frustum Culling
+	wiProfiler::EndRange(); // Frustum Culling
 
 	// Ocean will override any current reflectors
 	waterPlane = scene.waterPlane;
@@ -3844,7 +3787,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	ManageDecalAtlas(threadID);
 
-	wiProfiler::GetInstance().BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	device->EventBegin("Skinning", threadID);
 	{
 		bool streamOutSetUp = false;
@@ -3932,7 +3875,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	}
 	device->EventEnd(threadID);
-	wiProfiler::GetInstance().EndRange(threadID); // skinning
+	wiProfiler::EndRange(threadID); // skinning
 
 	// Update soft body vertex buffers:
 	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
@@ -4036,7 +3979,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 	const FrameCulling& culling = frameCullings[&GetCamera()];
 
-	wiProfiler::GetInstance().BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
 
 	int queryID = 0;
 
@@ -4100,7 +4043,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		GetDevice()->EventEnd(threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID); // Occlusion Culling Render
+	wiProfiler::EndRange(threadID); // Occlusion Culling Render
 }
 void OcclusionCulling_Read()
 {
@@ -4109,7 +4052,7 @@ void OcclusionCulling_Read()
 		return;
 	}
 
-	wiProfiler::GetInstance().BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
+	wiProfiler::BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
 
 	const FrameCulling& culling = frameCullings[&GetCamera()];
 
@@ -4155,7 +4098,7 @@ void OcclusionCulling_Read()
 		GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
-	wiProfiler::GetInstance().EndRange(); // Occlusion Culling Read
+	wiProfiler::EndRange(); // Occlusion Culling Read
 }
 void EndFrame()
 {
@@ -4247,7 +4190,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	Scene& scene = GetScene();
 
 	GetDevice()->EventBegin("Light Render", threadID);
-	wiProfiler::GetInstance().BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
@@ -4313,7 +4256,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID);
+	wiProfiler::EndRange(threadID);
 	GetDevice()->EventEnd(threadID);
 }
 void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
@@ -4647,7 +4590,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 	if (!culling.culledLights.empty())
 	{
 		GetDevice()->EventBegin("ShadowMap Render", threadID);
-		wiProfiler::GetInstance().BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
+		wiProfiler::BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 		const bool all_layers = layerMask == 0xFFFFFFFF;
 
@@ -4943,7 +4886,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 
-		wiProfiler::GetInstance().EndRange(); // Shadow Rendering
+		wiProfiler::EndRange(); // Shadow Rendering
 		GetDevice()->EventEnd(threadID);
 	}
 
@@ -5347,7 +5290,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			if (probe.textureIndex < 0)
 			{
-				device->BindResource(PS, wiTextureHelper::getInstance()->getBlackCubeMap(), TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(PS, wiTextureHelper::getBlackCubeMap(), TEXSLOT_ONDEMAND0, threadID);
 			}
 			else
 			{
@@ -5616,7 +5559,7 @@ void DrawSky(GRAPHICSTHREAD threadID)
 		}
 		else
 		{
-			GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getBlack(), TEXSLOT_ONDEMAND0, threadID);
+			GetDevice()->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
 		}
 	}
 
@@ -5632,7 +5575,7 @@ void DrawSun(GRAPHICSTHREAD threadID)
 
 	if (enviroMap != nullptr)
 	{
-		GetDevice()->BindResource(PS, wiTextureHelper::getInstance()->getBlack(), TEXSLOT_ONDEMAND0, threadID);
+		GetDevice()->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
 	}
 	else
 	{
@@ -6133,7 +6076,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Voxel Radiance", threadID);
-	wiProfiler::GetInstance().BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 	Scene& scene = GetScene();
 
@@ -6279,7 +6222,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	device->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
 	device->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
 
-	wiProfiler::GetInstance().EndRange(threadID);
+	wiProfiler::EndRange(threadID);
 	device->EventEnd(threadID);
 }
 
@@ -6294,7 +6237,7 @@ inline XMUINT3 GetEntityCullingTileCount()
 }
 void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = GetDevice();
 
 	int _width = GetInternalResolution().x;
@@ -6484,7 +6427,7 @@ void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID);
+	wiProfiler::EndRange(threadID);
 }
 void ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {
@@ -6910,8 +6853,8 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	static unordered_set<Texture2D*> sceneTextures;
 	if (sceneTextures.empty())
 	{
-		sceneTextures.insert(wiTextureHelper::getInstance()->getWhite());
-		sceneTextures.insert(wiTextureHelper::getInstance()->getNormalMapDefault());
+		sceneTextures.insert(wiTextureHelper::getWhite());
+		sceneTextures.insert(wiTextureHelper::getNormalMapDefault());
 	}
 
 	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
@@ -7063,7 +7006,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 				}
 				else
 				{
-					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+					rect = storedTextures[wiTextureHelper::getWhite()];
 				}
 				// eliminate border expansion:
 				rect.x += atlasWrapBorder;
@@ -7081,7 +7024,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 				}
 				else
 				{
-					rect = storedTextures[wiTextureHelper::getInstance()->getWhite()];
+					rect = storedTextures[wiTextureHelper::getWhite()];
 				}
 				// eliminate border expansion:
 				rect.x += atlasWrapBorder;
@@ -7100,7 +7043,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 				else
 				{
 
-					rect = storedTextures[wiTextureHelper::getInstance()->getNormalMapDefault()];
+					rect = storedTextures[wiTextureHelper::getNormalMapDefault()];
 				}
 				// eliminate border expansion:
 				rect.x += atlasWrapBorder;
@@ -7120,7 +7063,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 	// Begin raytrace
 
-	wiProfiler::GetInstance().BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
 	TracedRenderingCB cb;
@@ -7185,7 +7128,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	}
 	else
 	{
-		device->BindResource(CS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND8, threadID);
+		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND8, threadID);
 	}
 
 	for (int bounce = 0; bounce < 8; ++bounce)
@@ -7225,7 +7168,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 		{
 			if (bounce == 1)
 			{
-				wiProfiler::GetInstance().BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+				wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
 			}
 
 			// 2.) Light sampling (any hit) <- only after first bounce has occured
@@ -7253,13 +7196,13 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 			if (bounce == 1)
 			{
-				wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Light Sampling
+				wiProfiler::EndRange(threadID); // RayTrace - First Light Sampling
 			}
 		}
 
 		if (bounce == 0)
 		{
-			wiProfiler::GetInstance().BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
+			wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
 		}
 
 		// 3.) Compute Primary Trace (closest hit)
@@ -7289,12 +7232,12 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 		if (bounce == 0)
 		{
-			wiProfiler::GetInstance().EndRange(threadID); // RayTrace - First Bounce
+			wiProfiler::EndRange(threadID); // RayTrace - First Bounce
 		}
 
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID); // RayTrace - ALL
+	wiProfiler::EndRange(threadID); // RayTrace - ALL
 
 
 
@@ -7306,12 +7249,12 @@ void GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAP
 {
 	GetDevice()->EventBegin("Cloud Generator", threadID);
 
-	TextureDesc src_desc = wiTextureHelper::getInstance()->getRandom64x64()->GetDesc();
+	TextureDesc src_desc = wiTextureHelper::getRandom64x64()->GetDesc();
 
 	TextureDesc dst_desc = dst->GetDesc();
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
-	GetDevice()->BindResource(CS, wiTextureHelper::getInstance()->getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
+	GetDevice()->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
 	GetDevice()->BindUAV(CS, dst, 0, threadID);
 
 	CloudGeneratorCB cb;
@@ -7920,7 +7863,7 @@ void AddDeferredMIPGen(Texture2D* tex)
 
 
 
-void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix)
+Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
 {
 	wiArchive archive(fileName, true);
 	if (archive.IsOpen())
@@ -7931,13 +7874,13 @@ void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix)
 		// Serialize it from file:
 		scene.Serialize(archive);
 
-		if (!XMMatrixIsIdentity(transformMatrix))
+		// First, create new root parent:
+		Entity parent = CreateEntity();
+		scene.transforms.Create(parent);
+		scene.layers.Create(parent).layerMask = ~0;
+
 		{
 			// Apply the optional transformation matrix to the new scene:
-
-			// First, create new root parent:
-			Entity parent = CreateEntity();
-			scene.transforms.Create(parent);
 
 			// Then all unparented(root) transforms will be parented to "parent"
 			for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "parent"
@@ -7952,13 +7895,23 @@ void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix)
 			// The parent component is transformed, scene is updated, then parent is deleted:
 			scene.transforms.GetComponent(parent)->MatrixTransform(transformMatrix);
 			scene.Update(0);
+		}
+
+		if (!attached)
+		{
+			// In this case, we don't care about the root anymore, so delete it. This will simplify overall hierarchy
 			scene.Component_DetachChildren(parent);
 			scene.Entity_Remove(parent);
+			parent = INVALID_ENTITY;
 		}
 
 		// Merge with the original scene:
 		GetScene().Merge(scene);
+
+		return parent;
 	}
+
+	return INVALID_ENTITY;
 }
 
 

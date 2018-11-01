@@ -97,7 +97,7 @@ void DeferredRenderableComponent::Render()
 
 void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -108,7 +108,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 		wiRenderer::DrawWorld(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
 	}
 
@@ -148,7 +148,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	rtLight.Activate(threadID, rtGBuffer.depth); {
-		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 		wiRenderer::DrawLights(wiRenderer::GetCamera(), threadID);
 	}
 
@@ -160,7 +160,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO(true);
-			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
+			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, threadID);
@@ -242,7 +242,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
 		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : rtLight.GetTexture(0)), rtLight.GetTexture(1)
-			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
+			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite()
 			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);
 	}
@@ -262,7 +262,7 @@ void DeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
+	wiProfiler::EndRange(threadID); // Opaque Scene
 }
 
 wiRenderTarget& DeferredRenderableComponent::GetFinalRT()

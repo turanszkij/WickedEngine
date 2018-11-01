@@ -65,19 +65,19 @@ void ImportModel_OBJ(const std::string& fileName)
 
 			if (!material.surfaceMapName.empty())
 			{
-				material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(directory + material.surfaceMapName);
+				material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(directory + material.surfaceMapName);
 			}
 			if (!material.baseColorMapName.empty())
 			{
-				material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(directory + material.baseColorMapName);
+				material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(directory + material.baseColorMapName);
 			}
 			if (!material.normalMapName.empty())
 			{
-				material.normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(directory + material.normalMapName);
+				material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(directory + material.normalMapName);
 			}
 			if (!material.displacementMapName.empty())
 			{
-				material.displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(directory + material.displacementMapName);
+				material.displacementMap = (Texture2D*)wiResourceManager::GetGlobal().add(directory + material.displacementMapName);
 			}
 
 			materialLibrary.push_back(materialEntity); // for subset-indexing...

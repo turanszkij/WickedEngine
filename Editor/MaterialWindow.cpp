@@ -352,7 +352,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = 0;
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				material->baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
+				material->baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
 				material->baseColorMapName = wiHelper::GetFileNameFromPath(fileName);
 				texture_baseColor_Button->SetText(material->baseColorMapName);
 			}
@@ -404,7 +404,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = 0;
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
+				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
 				material->normalMapName = wiHelper::GetFileNameFromPath(fileName);
 				texture_normal_Button->SetText(material->normalMapName);
 			}
@@ -456,7 +456,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = 0;
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
+				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
 				material->surfaceMapName = wiHelper::GetFileNameFromPath(fileName);
 				texture_surface_Button->SetText(material->surfaceMapName);
 			}
@@ -508,7 +508,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = 0;
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal()->add(fileName);
+				material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
 				material->displacementMapName = wiHelper::GetFileNameFromPath(fileName);
 				texture_displacement_Button->SetText(material->displacementMapName);
 			}

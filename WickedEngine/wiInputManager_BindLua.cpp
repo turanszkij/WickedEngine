@@ -28,7 +28,7 @@ int wiInputManager_BindLua::Down(lua_State* L)
 		{
 			type = (wiInputManager::InputType)wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInputManager::GetInstance()->down((DWORD)code, type));
+		wiLua::SSetBool(L, wiInputManager::down((DWORD)code, type));
 		return 1;
 	}
 	else
@@ -46,7 +46,7 @@ int wiInputManager_BindLua::Press(lua_State* L)
 		{
 			type = (wiInputManager::InputType)wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInputManager::GetInstance()->press((DWORD)code, type));
+		wiLua::SSetBool(L, wiInputManager::press((DWORD)code, type));
 		return 1;
 	}
 	else
@@ -74,7 +74,7 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 		{
 			type = (wiInputManager::InputType)wiLua::SGetInt(L, 4);
 		}
-		wiLua::SSetBool(L, wiInputManager::GetInstance()->hold((DWORD)code, (DWORD)duration, continuous, type));
+		wiLua::SSetBool(L, wiInputManager::hold((DWORD)code, (DWORD)duration, continuous, type));
 		return 1;
 	}
 	else
@@ -83,7 +83,7 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 }
 int wiInputManager_BindLua::GetPointer(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInputManager::GetInstance()->getpointer())));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&wiInputManager::getpointer())));
 	return 1;
 }
 int wiInputManager_BindLua::SetPointer(lua_State* L)
@@ -96,7 +96,7 @@ int wiInputManager_BindLua::SetPointer(lua_State* L)
 		{
 			XMFLOAT4 props;
 			XMStoreFloat4(&props, vec->vector);
-			wiInputManager::GetInstance()->setpointer(props);
+			wiInputManager::setpointer(props);
 		}
 		else
 			wiLua::SError(L, "SetPointer(Vector props) argument is not a Vector!");
@@ -110,7 +110,7 @@ int wiInputManager_BindLua::HidePointer(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiInputManager::GetInstance()->hidepointer(wiLua::SGetBool(L, 1));
+		wiInputManager::hidepointer(wiLua::SGetBool(L, 1));
 	}
 	else
 		wiLua::SError(L, "HidePointer(bool value) not enough arguments!");
@@ -118,7 +118,7 @@ int wiInputManager_BindLua::HidePointer(lua_State* L)
 }
 int wiInputManager_BindLua::GetTouches(lua_State* L)
 {
-	auto& touches = wiInputManager::GetInstance()->getTouches();
+	auto& touches = wiInputManager::getTouches();
 	for (auto& touch : touches)
 	{
 		Luna<Touch_BindLua>::push(L, new Touch_BindLua(touch));

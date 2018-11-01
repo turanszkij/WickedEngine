@@ -1943,6 +1943,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiWindowRegistration.cpp">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">

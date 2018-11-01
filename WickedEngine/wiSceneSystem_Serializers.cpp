@@ -107,19 +107,19 @@ namespace wiSceneSystem
 			std::string texturesDir = archive.GetSourceDirectory();
 			if (!baseColorMapName.empty())
 			{
-				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + baseColorMapName);
+				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
-				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + surfaceMapName);
+				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
-				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + normalMapName);
+				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
-				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal()->add(texturesDir + displacementMapName);
+				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + displacementMapName);
 			}
 
 		}

@@ -310,7 +310,11 @@ namespace wiRenderer
 	void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
 
 	// Helper function to open a wiscene file and add the contents to the current scene
-	void LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity());
+	//	transformMatrix	:	everything will be transformed by this matrix (optional)
+	//	attached		:	everything will be attached to a base entity
+	//
+	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
+	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
 };
 

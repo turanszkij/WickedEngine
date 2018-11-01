@@ -97,7 +97,8 @@ namespace wiRenderer_BindLua
 					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
 				}
 			}
-			wiRenderer::LoadModel(fileName, transform);
+			Entity root = wiRenderer::LoadModel(fileName, transform, true);
+			wiLua::SSetInt(L, int(root));
 			return 1;
 		}
 		else

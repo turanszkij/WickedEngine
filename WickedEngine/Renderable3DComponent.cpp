@@ -266,7 +266,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 	{
 		return;
 	}
-	wiProfiler::GetInstance().BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 	if (wiRenderer::IsRequestedReflectionRendering())
 	{
@@ -292,7 +292,7 @@ void Renderable3DComponent::RenderReflections(GRAPHICSTHREAD threadID)
 		}
 	}
 
-	wiProfiler::GetInstance().EndRange(); // Reflection Rendering
+	wiProfiler::EndRange(); // Reflection Rendering
 }
 void Renderable3DComponent::RenderShadows(GRAPHICSTHREAD threadID)
 {
@@ -344,7 +344,7 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		// We don't need the following for stereograms...
 		return;
 	}
-	wiProfiler::GetInstance().BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	XMVECTOR sunDirection = XMLoadFloat3(&wiRenderer::GetScene().weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
@@ -444,18 +444,18 @@ void Renderable3DComponent::RenderSecondaryScene(wiRenderTarget& mainRT, wiRende
 		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), true, threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID); // Secondary Scene
+	wiProfiler::EndRange(threadID); // Secondary Scene
 }
 void Renderable3DComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
 	wiRenderer::DrawWorldTransparent(wiRenderer::GetCamera(), SHADERTYPE_FORWARD, threadID, false, true, getLayerMask());
 
-	wiProfiler::GetInstance().EndRange(threadID); // Transparent Scene
+	wiProfiler::EndRange(threadID); // Transparent Scene
 }
 void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID)
 {
@@ -464,7 +464,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 		// We don't need the following for stereograms...
 		return;
 	}
-	wiProfiler::GetInstance().BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.hdr = true;
@@ -472,7 +472,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
-		wiProfiler::GetInstance().BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+		wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
 		int history = 1 - current;
@@ -492,7 +492,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
 			fx.presentFullScreen = false;
 		}
-		wiProfiler::GetInstance().EndRange(threadID);
+		wiProfiler::EndRange(threadID);
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
@@ -567,7 +567,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	}
 	else
 	{
-		fx.setMaskMap(wiTextureHelper::getInstance()->getColor(wiColor::Gray));
+		fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray));
 	}
 	if (getMotionBlurEnabled())
 	{
@@ -641,7 +641,7 @@ void Renderable3DComponent::RenderComposition(wiRenderTarget& shadedSceneRT, wiR
 	wiRenderer::GetDevice()->EventEnd(threadID);
 
 
-	wiProfiler::GetInstance().EndRange(threadID); // Post Processing 1
+	wiProfiler::EndRange(threadID); // Post Processing 1
 }
 void Renderable3DComponent::RenderColorGradedComposition()
 {
@@ -655,7 +655,7 @@ void Renderable3DComponent::RenderColorGradedComposition()
 		fx.presentFullScreen = false;
 		fx.process.clear();
 		fx.process.setStereogram(true);
-		wiImage::Draw(wiTextureHelper::getInstance()->getRandom64x64(), fx, GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw(wiTextureHelper::getRandom64x64(), fx, GRAPHICSTHREAD_IMMEDIATE);
 		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 		return;
 	}
@@ -670,7 +670,7 @@ void Renderable3DComponent::RenderColorGradedComposition()
 		else
 		{
 			fx.process.setColorGrade(true);
-			fx.setMaskMap(wiTextureHelper::getInstance()->getColorGradeDefault());
+			fx.setMaskMap(wiTextureHelper::getColorGradeDefault());
 		}
 	}
 	else

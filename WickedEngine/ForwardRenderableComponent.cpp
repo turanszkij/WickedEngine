@@ -79,7 +79,7 @@ void ForwardRenderableComponent::Render()
 
 void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -90,9 +90,9 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtMain.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-		wiRenderer::GetDevice()->BindResource(PS, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
-		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 		wiRenderer::DrawWorld(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_FORWARD, getHairParticlesEnabled(), true, getLayerMask());
 		wiRenderer::DrawSky(threadID);
 	}
@@ -125,7 +125,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO(true);
-			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
+			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, threadID);
@@ -163,7 +163,7 @@ void ForwardRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
+	wiProfiler::EndRange(threadID); // Opaque Scene
 }
 
 wiDepthTarget* ForwardRenderableComponent::GetDepthBuffer()

@@ -4,7 +4,7 @@ debugout("Begin script: test_script.lua");
 
 
 -- Load a model:
-LoadModel("../models/teapot.wiscene");
+local parent = LoadModel("../models/teapot.wiscene");
 LoadModel("../models/cameras.wiscene");
 
 -- Load camera sample script:
@@ -29,17 +29,17 @@ runProcess(function()
 
 	-- This shows how to handle attachments:
 
-	-- Create parent transform, this will be rotated:
-	local parent = CreateEntity();
-	scene.Component_CreateTransform(parent);
-
-	-- Retrieve teapot base and lid entity IDs:
-	local teapot_base = scene.Entity_FindByName("Base");
-	local teapot_top = scene.Entity_FindByName("Top");
-
-	-- Attach base to parent, lid to base:
-	scene.Component_Attach(teapot_base, parent);
-	scene.Component_Attach(teapot_top, teapot_base);
+	-- -- Create parent transform, this will be rotated:
+	-- local parent = CreateEntity();
+	-- scene.Component_CreateTransform(parent);
+    -- 
+	-- -- Retrieve teapot base and lid entity IDs:
+	-- local teapot_base = scene.Entity_FindByName("Base");
+	-- local teapot_top = scene.Entity_FindByName("Top");
+    -- 
+	-- -- Attach base to parent, lid to base:
+	-- scene.Component_Attach(teapot_base, parent);
+	-- scene.Component_Attach(teapot_top, teapot_base);
 	
 	while(true) do
 	

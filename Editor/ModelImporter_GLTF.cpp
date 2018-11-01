@@ -140,7 +140,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 				}
 
 				// We loaded the texture2d, so register to the resource manager to be retrieved later:
-				wiResourceManager::GetGlobal()->Register(image->uri, tex, wiResourceManager::IMAGE);
+				wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE);
 			}
 		}
 	}
@@ -172,7 +172,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 		entity = state.scene.Entity_CreateObject(node->name);
 		ObjectComponent& object = *state.scene.objects.GetComponent(entity);
 
-		if (node->mesh < state.meshArray.size())
+		if (node->mesh < (int)state.meshArray.size())
 		{
 			object.meshID = state.meshArray[node->mesh];
 
@@ -485,11 +485,11 @@ void ImportModel_GLTF(const std::string& fileName)
 
 		// Retrieve textures by name:
 		if (!material.baseColorMapName.empty())
-			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.baseColorMapName);
+			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
 		if (!material.normalMapName.empty())
-			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.normalMapName);
+			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
 		if (!material.surfaceMapName.empty())
-			material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.surfaceMapName);
+			material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
 
 		if (baseColorFactor != x.values.end())
 		{

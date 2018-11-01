@@ -258,12 +258,12 @@ public:
 class wiWindow :public wiWidget
 {
 protected:
-	wiGUI* gui;
-	wiButton* closeButton;
-	wiButton* minimizeButton;
-	wiButton* resizeDragger_UpperLeft;
-	wiButton* resizeDragger_BottomRight;
-	wiButton* moveDragger;
+	wiGUI* gui = nullptr;
+	wiButton* closeButton = nullptr;
+	wiButton* minimizeButton = nullptr;
+	wiButton* resizeDragger_UpperLeft = nullptr;
+	wiButton* resizeDragger_BottomRight = nullptr;
+	wiButton* moveDragger = nullptr;
 	std::list<wiWidget*> childrenWidgets;
 	bool minimized;
 public:

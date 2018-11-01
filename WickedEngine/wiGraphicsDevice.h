@@ -76,13 +76,15 @@ namespace wiGraphicsTypes
 		virtual void ExecuteDeferredContexts() = 0;
 		virtual void FinishCommandList(GRAPHICSTHREAD thread) = 0;
 
-		inline bool GetVSyncEnabled() { return VSYNC; }
-		inline void SetVSyncEnabled(bool value) { VSYNC = value; }
-		inline uint64_t GetFrameCount() { return FRAMECOUNT; }
+		virtual void WaitForGPU() = 0;
 
-		inline int GetScreenWidth() { return SCREENWIDTH; }
-		inline int GetScreenHeight() { return SCREENHEIGHT; }
-		inline bool ResolutionChanged() { return RESOLUTIONCHANGED; }
+		inline bool GetVSyncEnabled() const { return VSYNC; }
+		inline void SetVSyncEnabled(bool value) { VSYNC = value; }
+		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
+
+		inline int GetScreenWidth() const { return SCREENWIDTH; }
+		inline int GetScreenHeight() const { return SCREENHEIGHT; }
+		inline bool ResolutionChanged() const { return RESOLUTIONCHANGED; }
 
 
 		virtual void SetResolution(int width, int height) = 0;
@@ -98,15 +100,15 @@ namespace wiGraphicsTypes
 			GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT,
 			GRAPHICSDEVICE_CAPABILITY_COUNT,
 		};
-		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability);
+		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
-		uint32_t GetFormatStride(FORMAT value);
+		uint32_t GetFormatStride(FORMAT value) const;
 
-		inline XMMATRIX GetScreenProjection()
+		inline XMMATRIX GetScreenProjection() const
 		{
 			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
 		}
-		inline FORMAT GetBackBufferFormat() { return BACKBUFFER_FORMAT; }
+		inline FORMAT GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
 		inline static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 
@@ -151,9 +153,7 @@ namespace wiGraphicsTypes
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) = 0;
 		virtual void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) = 0;
-
-		virtual void WaitForGPU() = 0;
-
+		
 		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) = 0;
 		virtual void EventEnd(GRAPHICSTHREAD threadID) = 0;
 		virtual void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) = 0;

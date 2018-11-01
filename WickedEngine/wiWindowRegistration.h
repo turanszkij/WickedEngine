@@ -1,42 +1,15 @@
-#ifndef _WINDOWREGISTRATION_H_
-#define _WINDOWREGISTRATION_H_
+#pragma once
 #include "CommonInclude.h"
 
-
-class wiWindowRegistration
+namespace wiWindowRegistration
 {
-public:
 #ifndef WINSTORE_SUPPORT
 	typedef HWND window_type;
 #else
 	typedef Windows::UI::Core::CoreWindow^ window_type;
 #endif
 
-private:
-	window_type window;
-
-public:
-	wiWindowRegistration() :window(nullptr) {}
-
-	window_type GetRegisteredWindow() {
-		return window;
-	}
-	void RegisterWindow(window_type wnd) {
-		window = wnd;
-	}
-	bool IsWindowActive() {
-#ifndef WINSTORE_SUPPORT
-		HWND fgw = GetForegroundWindow();
-		return fgw == window;
-#else
-		return true;
-#endif
-	}
-
-	static wiWindowRegistration* GetInstance() {
-		static wiWindowRegistration* reg = new wiWindowRegistration;
-		return reg;
-	}
+	window_type GetRegisteredWindow();
+	void RegisterWindow(window_type wnd);
+	bool IsWindowActive();
 };
-
-#endif // _WINDOWREGISTRATION_H_

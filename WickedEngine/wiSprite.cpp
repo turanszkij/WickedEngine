@@ -29,7 +29,7 @@ wiSprite::wiSprite(const std::string& newTexture, wiResourceManager* contentHold
 void wiSprite::Init(){
 	if (ContentHolder == nullptr)
 	{
-		ContentHolder = wiResourceManager::GetGlobal();
+		ContentHolder = &wiResourceManager::GetGlobal();
 	}
 	texture="";
 	mask="";

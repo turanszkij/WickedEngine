@@ -3,30 +3,18 @@
 #include "wiThreadSafeManager.h"
 
 #include <vector>
-#include <map>
 
 class wiXInput;
 class wiDirectInput;
 class wiRawInput;
 
-class wiInputManager : public wiThreadSafeManager
+namespace wiInputManager
 {
-public:
-	wiInputManager();
-	~wiInputManager();
-
-	static wiInputManager* GetInstance();
-
-	wiXInput* xinput;
-	wiDirectInput* dinput;
-	wiRawInput* rawinput;
-
 	void addXInput(wiXInput* input);
 	void addDirectInput(wiDirectInput* input);
 	void addRawInput(wiRawInput* input);
 
 	void Update();
-	void CleanUp();
 
 	enum InputType{
 		DIRECTINPUT_JOYPAD,
@@ -54,8 +42,6 @@ public:
 			}
 		};
 	};
-	typedef std::map<Input,DWORD,Input::LessComparer> InputCollection;
-	InputCollection inputs;
 	
 	//check if a button is down
 	bool down(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
@@ -69,8 +55,6 @@ public:
 	void setpointer(const XMFLOAT4& props);
 	//hide pointer
 	void hidepointer(bool value);
-	//find out which character is pressed on keyboard (if any)
-	char getCharPressed();
 
 	struct Touch
 	{
@@ -84,12 +68,7 @@ public:
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	std::vector<Touch> getTouches();
-
-private:
-	std::vector<Touch> touches;
-
-	friend void AddTouch(const wiInputManager::Touch& touch);
+	const std::vector<Touch>& getTouches();
 
 };
 

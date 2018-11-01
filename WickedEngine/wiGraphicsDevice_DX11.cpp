@@ -1395,8 +1395,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 	{
-		SAFE_INIT(commandLists[i]);
-		SAFE_INIT(deviceContexts[i]);
 		stencilRef[i] = 0;
 		blendFactor[i] = XMFLOAT4(1, 1, 1, 1);
 	}
@@ -3119,6 +3117,10 @@ void GraphicsDevice_DX11::FinishCommandList(GRAPHICSTHREAD thread)
 	deviceContexts[thread]->FinishCommandList(true, &commandLists[thread]);
 }
 
+void GraphicsDevice_DX11::WaitForGPU()
+{
+}
+
 
 void GraphicsDevice_DX11::validate_raster_uavs(GRAPHICSTHREAD threadID) 
 {
@@ -3770,10 +3772,6 @@ bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUR
 	}
 
 	return false;
-}
-
-void GraphicsDevice_DX11::WaitForGPU()
-{
 }
 
 void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

@@ -220,7 +220,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	}
 
 
-	wiProfiler::GetInstance().BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
 
 	device->EventBegin("BVH - Reset", threadID);
 	{
@@ -396,7 +396,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	}
 	device->EventEnd(threadID);
 
-	wiProfiler::GetInstance().EndRange(threadID); // BVH rebuild
+	wiProfiler::EndRange(threadID); // BVH rebuild
 }
 void wiGPUBVH::Bind(GRAPHICSTHREAD threadID)
 {
@@ -420,12 +420,12 @@ void wiGPUBVH::LoadShaders()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	string SHADERPATH = wiRenderer::GetShaderPath();
 
-	computeShaders[CSTYPE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_CLUSTERPROCESSOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_clusterprocessorCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_RESET] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_CLASSIFICATION] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_classificationCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_KICKJOBS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_CLUSTERPROCESSOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_clusterprocessorCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	for (int i = 0; i < CSTYPE_BVH_COUNT; ++i)

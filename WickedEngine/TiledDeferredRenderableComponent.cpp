@@ -25,7 +25,7 @@ TiledDeferredRenderableComponent::~TiledDeferredRenderableComponent()
 
 void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -36,7 +36,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 		wiRenderer::DrawWorld(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
 	}
 
@@ -76,7 +76,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiRenderer::BindGBufferTextures(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
 
 
-	wiRenderer::GetDevice()->BindResource(CS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+	wiRenderer::GetDevice()->BindResource(CS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 
 	wiRenderer::ComputeTiledLightCulling(true, threadID);
 
@@ -88,7 +88,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO(true);
-			fx.setMaskMap(wiTextureHelper::getInstance()->getRandom64x64());
+			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, threadID);
@@ -171,7 +171,7 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
 		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV))), 
 			static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV))
-			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getInstance()->getWhite()
+			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite()
 			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);
 	}
@@ -191,16 +191,16 @@ void TiledDeferredRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 
-	wiProfiler::GetInstance().EndRange(threadID); // Opaque Scene
+	wiProfiler::EndRange(threadID); // Opaque Scene
 }
 void TiledDeferredRenderableComponent::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getInstance()->getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
 	wiRenderer::DrawWorldTransparent(wiRenderer::GetCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled(), true, getLayerMask());
 
-	wiProfiler::GetInstance().EndRange(); // Transparent Scene
+	wiProfiler::EndRange(); // Transparent Scene
 }

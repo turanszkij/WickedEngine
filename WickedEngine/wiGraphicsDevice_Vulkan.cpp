@@ -4408,6 +4408,11 @@ namespace wiGraphicsTypes
 		}
 	}
 
+	void GraphicsDevice_Vulkan::WaitForGPU()
+	{
+		vkQueueWaitIdle(graphicsQueue);
+	}
+
 
 	void GraphicsDevice_Vulkan::BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) {
 		assert(rects != nullptr);
@@ -5160,11 +5165,6 @@ namespace wiGraphicsTypes
 	bool GraphicsDevice_Vulkan::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
-	}
-
-	void GraphicsDevice_Vulkan::WaitForGPU()
-	{
-		vkQueueWaitIdle(graphicsQueue);
 	}
 
 	void GraphicsDevice_Vulkan::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

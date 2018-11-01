@@ -4,6 +4,7 @@
 #include "wiResourceManager.h"
 #include "wiPhysicsEngine.h"
 #include "wiArchive.h"
+#include "wiRenderer.h"
 
 #include <functional>
 #include <unordered_map>
@@ -227,7 +228,7 @@ namespace wiSceneSystem
 		{
 			return baseColorMap;
 		}
-		return wiTextureHelper::getInstance()->getWhite();
+		return wiTextureHelper::getWhite();
 	}
 	Texture2D* MaterialComponent::GetNormalMap() const
 	{
@@ -236,7 +237,7 @@ namespace wiSceneSystem
 		//{
 		//	return normalMap;
 		//}
-		//return wiTextureHelper::getInstance()->getNormalMapDefault();
+		//return wiTextureHelper::getNormalMapDefault();
 	}
 	Texture2D* MaterialComponent::GetSurfaceMap() const
 	{
@@ -244,7 +245,7 @@ namespace wiSceneSystem
 		{
 			return surfaceMap;
 		}
-		return wiTextureHelper::getInstance()->getWhite();
+		return wiTextureHelper::getWhite();
 	}
 	Texture2D* MaterialComponent::GetDisplacementMap() const
 	{
@@ -252,7 +253,7 @@ namespace wiSceneSystem
 		{
 			return displacementMap;
 		}
-		return wiTextureHelper::getInstance()->getWhite();
+		return wiTextureHelper::getWhite();
 	}
 
 	void MeshComponent::CreateRenderData()
@@ -1172,12 +1173,12 @@ namespace wiSceneSystem
 		if (!textureName.empty())
 		{
 			material.baseColorMapName = textureName;
-			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.baseColorMapName);
+			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
 		}
 		if (!normalMapName.empty())
 		{
 			material.normalMapName = normalMapName;
-			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal()->add(material.normalMapName);
+			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
 		}
 
 		return entity;

@@ -309,7 +309,7 @@ namespace wiPhysicsEngine
 			return;
 		}
 
-		wiProfiler::GetInstance().BeginRange("Physics", wiProfiler::DOMAIN_CPU);
+		wiProfiler::BeginRange("Physics", wiProfiler::DOMAIN_CPU);
 
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
@@ -488,6 +488,6 @@ namespace wiPhysicsEngine
 			}
 		}
 
-		wiProfiler::GetInstance().EndRange(); // Physics
+		wiProfiler::EndRange(); // Physics
 	}
 }

@@ -185,8 +185,8 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, Renderable3DComponent* comp) : 
 				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 				if (GetOpenFileNameA(&ofn) == TRUE) {
 					string fileName = ofn.lpstrFile;
-					//wiRenderer::SetColorGrading((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
-					component->setColorGradingTexture((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+					//wiRenderer::SetColorGrading((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
+					component->setColorGradingTexture((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
 					if (component->getColorGradingTexture() != nullptr)
 					{
 						colorGradingButton->SetText(fileName);

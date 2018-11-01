@@ -67,7 +67,7 @@ namespace wiHelper
 
 	void messageBox(const std::string& msg, const std::string& caption){
 #ifndef WINSTORE_SUPPORT
-		MessageBoxA(wiWindowRegistration::GetInstance()->GetRegisteredWindow(), msg.c_str(), caption.c_str(), 0);
+		MessageBoxA(wiWindowRegistration::GetRegisteredWindow(), msg.c_str(), caption.c_str(), 0);
 #else
 		wstring wmsg(msg.begin(), msg.end());
 		wstring wcaption(caption.begin(), caption.end());
@@ -304,7 +304,11 @@ namespace wiHelper
 	
 	void Sleep(float milliseconds)
 	{
-		//::Sleep((DWORD)milliseconds);
+		::Sleep((DWORD)milliseconds);
+	}
+
+	void Spin(float milliseconds)
+	{
 		milliseconds /= 1000.0f;
 		chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 		double ms = 0;

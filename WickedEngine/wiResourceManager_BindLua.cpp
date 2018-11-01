@@ -148,7 +148,7 @@ void wiResourceManager_BindLua::Bind()
 	{
 		Texture_BindLua::Bind();
 		Luna<wiResourceManager_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
-		wiLua::GetGlobal()->RegisterObject(className, "globalResources", new wiResourceManager_BindLua(wiResourceManager::GetGlobal()));
+		wiLua::GetGlobal()->RegisterObject(className, "globalResources", new wiResourceManager_BindLua(&wiResourceManager::GetGlobal()));
 		initialized = true;
 	}
 }

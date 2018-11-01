@@ -34,21 +34,17 @@ public:
 	};
 	std::unordered_map<wiHashString, Resource*> resources;
 
-protected:
-static wiResourceManager* globalResources;
-
 
 public:
-	wiResourceManager();
-	~wiResourceManager();
-	static wiResourceManager* GetGlobal();
-	static wiResourceManager* GetShaderManager();
+	~wiResourceManager() { Clear(); }
+	static wiResourceManager& GetGlobal();
+	static wiResourceManager& GetShaderManager();
 
 	const Resource* get(const wiHashString& name, bool IncRefCount = false);
 	//specify datatype for shaders
 	void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC);
 	bool del(const wiHashString& name, bool forceDelete = false);
 	bool Register(const wiHashString& name, void* resource, Data_Type newType);
-	bool CleanUp();
+	bool Clear();
 };
 

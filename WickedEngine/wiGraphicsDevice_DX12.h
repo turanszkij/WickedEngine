@@ -5,23 +5,8 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 
-struct IDXGISwapChain3;
-enum D3D_DRIVER_TYPE;
-enum D3D_FEATURE_LEVEL;
-enum D3D12_DESCRIPTOR_HEAP_TYPE;
-
-struct ID3D12Device;
-struct ID3D12CommandAllocator;
-struct ID3D12CommandList;
-struct ID3D12GraphicsCommandList;
-struct ID3D12Fence;
-struct ID3D12Resource;
-struct ID3D12PipelineState;
-struct ID3D12DescriptorHeap;
-struct ID3D12CommandQueue;
-struct ID3D12RootSignature;
-struct ID3D12CommandSignature;
-struct D3D12_CPU_DESCRIPTOR_HANDLE;
+#include <dxgi1_4.h>
+#include <d3d12.h>
 
 namespace wiGraphicsTypes
 {
@@ -29,34 +14,34 @@ namespace wiGraphicsTypes
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
 	private:
-		ID3D12Device*				device;
-		ID3D12CommandQueue*			directQueue;
-		ID3D12Fence*				frameFence;
+		ID3D12Device*				device = nullptr;
+		ID3D12CommandQueue*			directQueue = nullptr;
+		ID3D12Fence*				frameFence = nullptr;
 		HANDLE						frameFenceEvent;
 
-		ID3D12CommandQueue*			copyQueue;
-		ID3D12CommandAllocator*		copyAllocator;
-		ID3D12CommandList*			copyCommandList;
-		ID3D12Fence*				copyFence;
+		ID3D12CommandQueue*			copyQueue = nullptr;
+		ID3D12CommandAllocator*		copyAllocator = nullptr;
+		ID3D12CommandList*			copyCommandList = nullptr;
+		ID3D12Fence*				copyFence = nullptr;
 		HANDLE						copyFenceEvent;
 		UINT64						copyFenceValue;
 		wiSpinLock					copyQueueLock;
 
-		ID3D12RootSignature*		graphicsRootSig;
-		ID3D12RootSignature*		computeRootSig;
+		ID3D12RootSignature*		graphicsRootSig = nullptr;
+		ID3D12RootSignature*		computeRootSig = nullptr;
 
-		ID3D12CommandSignature*		dispatchIndirectCommandSignature;
-		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature;
-		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature;
+		ID3D12CommandSignature*		dispatchIndirectCommandSignature = nullptr;
+		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature = nullptr;
+		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature = nullptr;
 
 		struct DescriptorAllocator : public wiThreadSafeManager
 		{
-			ID3D12DescriptorHeap*	heap;
+			ID3D12DescriptorHeap*	heap = nullptr;
 			size_t					heap_begin;
 			uint32_t				itemCount;
 			UINT					maxCount;
 			UINT					itemSize;
-			bool*					itemsAlive;
+			bool*					itemsAlive = nullptr;
 			uint32_t				lastAlloc;
 
 			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount);
@@ -66,29 +51,29 @@ namespace wiGraphicsTypes
 			void clear();
 			void free(wiCPUHandle descriptorHandle);
 		};
-		DescriptorAllocator*		RTAllocator;
-		DescriptorAllocator*		DSAllocator;
-		DescriptorAllocator*		ResourceAllocator;
-		DescriptorAllocator*		SamplerAllocator;
+		DescriptorAllocator*		RTAllocator = nullptr;
+		DescriptorAllocator*		DSAllocator = nullptr;
+		DescriptorAllocator*		ResourceAllocator = nullptr;
+		DescriptorAllocator*		SamplerAllocator = nullptr;
 
 
 		struct FrameResources
 		{
-			ID3D12Resource*					backBuffer;
-			D3D12_CPU_DESCRIPTOR_HANDLE*	backBufferRTV;
-			ID3D12CommandAllocator*			commandAllocators[GRAPHICSTHREAD_COUNT];
-			ID3D12CommandList*				commandLists[GRAPHICSTHREAD_COUNT];
+			ID3D12Resource*					backBuffer = nullptr;
+			D3D12_CPU_DESCRIPTOR_HANDLE		backBufferRTV = {};
+			ID3D12CommandAllocator*			commandAllocators[GRAPHICSTHREAD_COUNT] = {};
+			ID3D12CommandList*				commandLists[GRAPHICSTHREAD_COUNT] = {};
 
 			struct DescriptorTableFrameAllocator
 			{
-				ID3D12DescriptorHeap*	heap_CPU;
-				ID3D12DescriptorHeap*	heap_GPU;
+				ID3D12DescriptorHeap*	heap_CPU = nullptr;
+				ID3D12DescriptorHeap*	heap_GPU = nullptr;
 				UINT descriptorType;
 				UINT itemSize;
 				UINT itemCount;
 				UINT ringOffset;
 				bool dirty[SHADERSTAGE_COUNT];
-				wiCPUHandle* boundDescriptors;
+				wiCPUHandle* boundDescriptors = nullptr;
 
 				DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();
@@ -97,15 +82,15 @@ namespace wiGraphicsTypes
 				void update(SHADERSTAGE stage, UINT slot, wiCPUHandle descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
 				void validate(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
 			};
-			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT];
-			DescriptorTableFrameAllocator*		SamplerDescriptorsGPU[GRAPHICSTHREAD_COUNT];
+			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[GRAPHICSTHREAD_COUNT] = {};
+			DescriptorTableFrameAllocator*		SamplerDescriptorsGPU[GRAPHICSTHREAD_COUNT] = {};
 
 			struct ResourceFrameAllocator
 			{
-				ID3D12Resource*			resource;
-				uint8_t*				dataBegin;
-				uint8_t*				dataCur;
-				uint8_t*				dataEnd;
+				ID3D12Resource*			resource = nullptr;
+				uint8_t*				dataBegin = nullptr;
+				uint8_t*				dataCur = nullptr;
+				uint8_t*				dataEnd = nullptr;
 
 				ResourceFrameAllocator(ID3D12Device* device, size_t size);
 				~ResourceFrameAllocator();
@@ -114,24 +99,24 @@ namespace wiGraphicsTypes
 				void clear();
 				uint64_t calculateOffset(uint8_t* address);
 			};
-			ResourceFrameAllocator* resourceBuffer[GRAPHICSTHREAD_COUNT];
+			ResourceFrameAllocator* resourceBuffer[GRAPHICSTHREAD_COUNT] = {};
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		ID3D12GraphicsCommandList* GetDirectCommandList(GRAPHICSTHREAD threadID);
 
 
-		D3D12_CPU_DESCRIPTOR_HANDLE* nullSampler;
-		D3D12_CPU_DESCRIPTOR_HANDLE* nullCBV;
-		D3D12_CPU_DESCRIPTOR_HANDLE* nullSRV;
-		D3D12_CPU_DESCRIPTOR_HANDLE* nullUAV;
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSampler = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
 
 		struct UploadBuffer : wiThreadSafeManager
 		{
-			ID3D12Resource*			resource;
-			uint8_t*				dataBegin;
-			uint8_t*				dataCur;
-			uint8_t*				dataEnd;
+			ID3D12Resource*			resource = nullptr;
+			uint8_t*				dataBegin = nullptr;
+			uint8_t*				dataCur = nullptr;
+			uint8_t*				dataEnd = nullptr;
 
 			UploadBuffer(ID3D12Device* device, size_t size);
 			~UploadBuffer();
@@ -140,17 +125,16 @@ namespace wiGraphicsTypes
 			void clear();
 			uint64_t calculateOffset(uint8_t* address);
 		};
-		UploadBuffer* bufferUploader;
-		UploadBuffer* textureUploader;
+		UploadBuffer* bufferUploader = nullptr;
+		UploadBuffer* textureUploader = nullptr;
 
-		IDXGISwapChain3*			swapChain;
+		IDXGISwapChain3*			swapChain = nullptr;
 		ViewPort					viewPort;
 
 		PRIMITIVETOPOLOGY prev_pt[GRAPHICSTHREAD_COUNT] = {};
 
 	public:
 		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
-
 		~GraphicsDevice_DX12();
 
 		HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) override;
@@ -201,6 +185,8 @@ namespace wiGraphicsTypes
 		void ExecuteDeferredContexts() override;
 		void FinishCommandList(GRAPHICSTHREAD thread) override;
 
+		void WaitForGPU() override;
+
 		void SetResolution(int width, int height) override;
 
 		Texture2D GetBackBuffer() override;
@@ -246,8 +232,6 @@ namespace wiGraphicsTypes
 		bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		void UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) override;
 		void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) override;
-
-		void WaitForGPU() override;
 
 		void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) override;
 		void EventEnd(GRAPHICSTHREAD threadID) override;

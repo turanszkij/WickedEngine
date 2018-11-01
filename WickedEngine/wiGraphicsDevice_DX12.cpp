@@ -6,9 +6,6 @@
 
 #include "Utility/d3dx12.h"
 
-#include <d3d12.h>
-#include <dxgi1_4.h>
-
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"Dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
@@ -29,7 +26,7 @@ namespace wiGraphicsTypes
 	inline D3D12_CPU_DESCRIPTOR_HANDLE ToNativeHandle(wiCPUHandle handle)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE native;
-		native.ptr = handle;
+		native.ptr = (SIZE_T)handle;
 		return native;
 	}
 
@@ -1650,32 +1647,28 @@ namespace wiGraphicsTypes
 			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 			sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			nullSampler = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			nullSampler->ptr = SamplerAllocator->allocate();
-			device->CreateSampler(&sampler_desc, *nullSampler);
+			nullSampler.ptr = SamplerAllocator->allocate();
+			device->CreateSampler(&sampler_desc, nullSampler);
 
 
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-			nullCBV = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			nullCBV->ptr = ResourceAllocator->allocate();
-			device->CreateConstantBufferView(&cbv_desc, *nullCBV);
+			nullCBV.ptr = ResourceAllocator->allocate();
+			device->CreateConstantBufferView(&cbv_desc, nullCBV);
 
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R32_UINT;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			nullSRV = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			nullSRV->ptr = ResourceAllocator->allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, *nullSRV);
+			nullSRV.ptr = ResourceAllocator->allocate();
+			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV);
 
 
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			nullUAV = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			nullUAV->ptr = ResourceAllocator->allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, *nullUAV);
+			nullUAV.ptr = ResourceAllocator->allocate();
+			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV);
 		}
 
 		// Create resource upload buffer
@@ -1687,9 +1680,8 @@ namespace wiGraphicsTypes
 		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
-			frames[fr].backBufferRTV = new D3D12_CPU_DESCRIPTOR_HANDLE;
-			frames[fr].backBufferRTV->ptr = RTAllocator->allocate(); 
-			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, *frames[fr].backBufferRTV);
+			frames[fr].backBufferRTV.ptr = RTAllocator->allocate(); 
+			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, frames[fr].backBufferRTV);
 
 			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 			{
@@ -1745,8 +1737,6 @@ namespace wiGraphicsTypes
 
 
 		// Generate default root signature:
-		SAFE_INIT(graphicsRootSig);
-		SAFE_INIT(computeRootSig);
 
 		D3D12_DESCRIPTOR_RANGE samplerRange = {};
 		samplerRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
@@ -1962,7 +1952,7 @@ namespace wiGraphicsTypes
 		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetComputeRootSignature(computeRootSig);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-			*nullSampler,*nullCBV,*nullSRV,*nullUAV
+			nullSampler,nullCBV,nullSRV,nullUAV
 		};
 		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
 		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
@@ -1989,7 +1979,6 @@ namespace wiGraphicsTypes
 		for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
 			SAFE_RELEASE(frames[fr].backBuffer);
-			SAFE_DELETE(frames[fr].backBufferRTV);
 
 			for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 			{
@@ -2009,11 +1998,6 @@ namespace wiGraphicsTypes
 		SAFE_RELEASE(copyCommandList);
 		SAFE_RELEASE(copyFence);
 		CloseHandle(copyFenceEvent);
-
-		SAFE_DELETE(nullSampler);
-		SAFE_DELETE(nullCBV);
-		SAFE_DELETE(nullSRV);
-		SAFE_DELETE(nullUAV);
 
 		SAFE_RELEASE(graphicsRootSig);
 		SAFE_RELEASE(computeRootSig);
@@ -2055,7 +2039,7 @@ namespace wiGraphicsTypes
 			{
 				hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
 				assert(SUCCEEDED(hr));
-				device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, *frames[fr].backBufferRTV);
+				device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, frames[fr].backBufferRTV);
 			}
 
 			RESOLUTIONCHANGED = true;
@@ -3350,7 +3334,7 @@ namespace wiGraphicsTypes
 
 
 		// Set the back buffer as the render target.
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->OMSetRenderTargets(1, GetFrameResources().backBufferRTV, FALSE, NULL);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->OMSetRenderTargets(1, &GetFrameResources().backBufferRTV, FALSE, NULL);
 
 
 		// Then set the color to clear the window to.
@@ -3359,7 +3343,7 @@ namespace wiGraphicsTypes
 		color[1] = 0.0;
 		color[2] = 0.0;
 		color[3] = 1.0;
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ClearRenderTargetView(*GetFrameResources().backBufferRTV, color, 0, NULL);
+		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ClearRenderTargetView(GetFrameResources().backBufferRTV, color, 0, NULL);
 
 
 	}
@@ -3427,7 +3411,7 @@ namespace wiGraphicsTypes
 			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetComputeRootSignature(computeRootSig);
 
 			D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-				*nullSampler,*nullCBV,*nullSRV,*nullUAV
+				nullSampler,nullCBV,nullSRV,nullUAV
 			};
 			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
 			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
@@ -3459,6 +3443,15 @@ namespace wiGraphicsTypes
 			return;
 		HRESULT hr = GetDirectCommandList(threadID)->Close();
 		assert(SUCCEEDED(hr));
+	}
+
+	void GraphicsDevice_DX12::WaitForGPU()
+	{
+		if (frameFence->GetCompletedValue() < FRAMECOUNT)
+		{
+			HRESULT result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
+			WaitForSingleObject(frameFenceEvent, INFINITE);
+		}
 	}
 
 
@@ -3629,7 +3622,7 @@ namespace wiGraphicsTypes
 			for (int i = 0; i < num; ++i)
 			{
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
-					nullSRV->ptr, device, GetDirectCommandList(threadID));
+					nullSRV.ptr, device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3640,7 +3633,7 @@ namespace wiGraphicsTypes
 			for (int i = 0; i < num; ++i)
 			{
 				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i,
-					nullUAV->ptr, device, GetDirectCommandList(threadID));
+					nullUAV.ptr, device, GetDirectCommandList(threadID));
 			}
 		}
 	}
@@ -3937,15 +3930,6 @@ namespace wiGraphicsTypes
 	bool GraphicsDevice_DX12::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 	{
 		return false;
-	}
-
-	void GraphicsDevice_DX12::WaitForGPU()
-	{
-		if (frameFence->GetCompletedValue() < FRAMECOUNT)
-		{
-			HRESULT result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
-			WaitForSingleObject(frameFenceEvent, INFINITE);
-		}
 	}
 
 	void GraphicsDevice_DX12::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)

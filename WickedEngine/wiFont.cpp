@@ -22,7 +22,7 @@ using namespace wiGraphicsTypes;
 namespace wiFont_Internal
 {
 	std::string			FONTPATH = "fonts/";
-	GPURingBuffer		vertexBuffer;
+	GPURingBuffer		vertexBuffers[GRAPHICSTHREAD_COUNT];
 	GPUBuffer			indexBuffer;
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
@@ -268,8 +268,11 @@ void wiFont::Initialize()
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-		HRESULT hr = device->CreateBuffer(&bd, nullptr, &vertexBuffer);
-		assert(SUCCEEDED(hr));
+		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+		{
+			HRESULT hr = device->CreateBuffer(&bd, nullptr, &vertexBuffers[i]);
+			assert(SUCCEEDED(hr));
+		}
 	}
 
 	{
@@ -376,13 +379,13 @@ void wiFont::LoadShaders()
 		{ "POSITION", 0, FORMAT_R16G16_UINT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
-	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
 	
 	vertexLayout = new VertexLayout;
 	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, vertexLayout);
 
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsPSODesc desc;
@@ -435,13 +438,13 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	UINT vboffset;
-	volatile FontVertex* textBuffer = (volatile FontVertex*)device->AllocateFromRingBuffer(&vertexBuffer, sizeof(FontVertex) * text.length() * 4, vboffset, threadID);
+	volatile FontVertex* textBuffer = (volatile FontVertex*)device->AllocateFromRingBuffer(&vertexBuffers[threadID], sizeof(FontVertex) * text.length() * 4, vboffset, threadID);
 	if (textBuffer == nullptr)
 	{
 		return;
 	}
 	const int quadCount = ModifyGeo(textBuffer, text, newProps, style);
-	device->InvalidateBufferAccess(&vertexBuffer, threadID);
+	device->InvalidateBufferAccess(&vertexBuffers[threadID], threadID);
 
 	device->EventBegin("Font", threadID);
 
@@ -449,7 +452,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
 
 	GPUBuffer* vbs[] = {
-		&vertexBuffer,
+		&vertexBuffers[threadID],
 	};
 	const UINT strides[] = {
 		sizeof(FontVertex),

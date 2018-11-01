@@ -35,28 +35,28 @@ class EditorComponent : public Renderable2DComponent
 private:
 	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
 public:
-	MaterialWindow*			materialWnd;
-	PostprocessWindow*		postprocessWnd;
-	WeatherWindow*			weatherWnd;
-	ObjectWindow*			objectWnd;
-	MeshWindow*				meshWnd;
-	CameraWindow*			cameraWnd;
-	RendererWindow*			rendererWnd;
-	EnvProbeWindow*			envProbeWnd;
-	DecalWindow*			decalWnd;
-	LightWindow*			lightWnd;
-	AnimationWindow*		animWnd;
-	EmitterWindow*			emitterWnd;
-	HairParticleWindow*		hairWnd;
-	ForceFieldWindow*		forceFieldWnd;
-	OceanWindow*			oceanWnd;
+	std::unique_ptr<MaterialWindow>			materialWnd;
+	std::unique_ptr<PostprocessWindow>		postprocessWnd;
+	std::unique_ptr<WeatherWindow>			weatherWnd;
+	std::unique_ptr<ObjectWindow>			objectWnd;
+	std::unique_ptr<MeshWindow>				meshWnd;
+	std::unique_ptr<CameraWindow>			cameraWnd;
+	std::unique_ptr<RendererWindow>			rendererWnd;
+	std::unique_ptr<EnvProbeWindow>			envProbeWnd;
+	std::unique_ptr<DecalWindow>			decalWnd;
+	std::unique_ptr<LightWindow>			lightWnd;
+	std::unique_ptr<AnimationWindow>		animWnd;
+	std::unique_ptr<EmitterWindow>			emitterWnd;
+	std::unique_ptr<HairParticleWindow>		hairWnd;
+	std::unique_ptr<ForceFieldWindow>		forceFieldWnd;
+	std::unique_ptr<OceanWindow>			oceanWnd;
 
-	Editor*					main;
+	Editor*					main = nullptr;
 
-	wiCheckBox*				cinemaModeCheckBox;
+	wiCheckBox*				cinemaModeCheckBox = nullptr;
 
-	EditorLoadingScreen*	loader;
-	Renderable3DComponent*	renderPath;
+	EditorLoadingScreen*	loader = nullptr;
+	Renderable3DComponent*	renderPath = nullptr;
 	enum RENDERPATH
 	{
 		RENDERPATH_FORWARD,
@@ -66,9 +66,7 @@ public:
 		RENDERPATH_PATHTRACING,
 	};
 	void ChangeRenderPath(RENDERPATH path);
-	void DeleteWindows();
 
-	void Initialize() override;
 	void Load() override;
 	void Start() override;
 	void FixedUpdate() override;
@@ -117,12 +115,12 @@ public:
 class Editor : public MainComponent
 {
 public:
-	Editor();
-	~Editor();
+	Editor() {}
+	~Editor() {}
 
-	EditorComponent*		renderComponent;
-	EditorLoadingScreen*	loader;
+	EditorComponent*		renderComponent = nullptr;
+	EditorLoadingScreen*	loader = nullptr;
 
-	void Initialize();
+	void Initialize() override;
 };
 

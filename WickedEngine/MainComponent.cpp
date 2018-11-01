@@ -66,7 +66,9 @@ void MainComponent::Initialize()
 			}
 			wiRenderer::SetDevice(new GraphicsDevice_DX12(window, fullscreen, debugdevice));
 		}
-		else
+
+		// default graphics device:
+		if (wiRenderer::GetDevice() == nullptr)
 		{
 			wiRenderer::SetDevice(new GraphicsDevice_DX11(window, fullscreen, debugdevice));
 		}
@@ -109,58 +111,72 @@ void MainComponent::Run()
 		return;
 	}
 
-	wiProfiler::GetInstance().BeginFrame();
-	wiProfiler::GetInstance().BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
+	wiProfiler::BeginFrame();
+	wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
-	wiInputManager::GetInstance()->Update();
+	wiInputManager::Update();
 
-	static wiTimer timer = wiTimer();
-	static double accumulator = 0.0;
-	const double elapsedTime = max(0, timer.elapsed() / 1000.0);
+	deltaTime = float(max(0, timer.elapsed() / 1000.0));
 	timer.record();
 
-	fadeManager.Update((float)elapsedTime);
-
-	// Fixed time update:
-	wiProfiler::GetInstance().BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
-	if (frameskip)
+	if (wiWindowRegistration::IsWindowActive())
 	{
-		accumulator += elapsedTime;
-		if (!wiWindowRegistration::GetInstance()->IsWindowActive() || accumulator > applicationControlLostThreshold) //application probably lost control
-			accumulator = 0;
+		// If the application is active, run Update loops:
 
-		while (accumulator >= targetFrameRateInv)
+		fadeManager.Update(deltaTime);
+
+		// Fixed time update:
+		wiProfiler::BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
 		{
-			FixedUpdate();
-			accumulator -= targetFrameRateInv;
+			if (frameskip)
+			{
+				deltaTimeAccumulator += deltaTime;
+				if (deltaTimeAccumulator > 10)
+				{
+					// application probably lost control, fixed update would be take long
+					deltaTimeAccumulator = 0;
+				}
+
+				const float targetFrameRateInv = 1.0f / targetFrameRate;
+				while (deltaTimeAccumulator >= targetFrameRateInv)
+				{
+					FixedUpdate();
+					deltaTimeAccumulator -= targetFrameRateInv;
+				}
+			}
+			else
+			{
+				FixedUpdate();
+			}
 		}
+		wiProfiler::EndRange(); // Fixed Update
+
+		wiLua::GetGlobal()->SetDeltaTime(double(deltaTime));
+
+		// Variable-timed update:
+		wiProfiler::BeginRange("Update", wiProfiler::DOMAIN_CPU);
+		Update(deltaTime);
+		wiProfiler::EndRange(); // Update
 	}
 	else
 	{
-		FixedUpdate();
+		// If the application is not active, disable Update loops:
+		deltaTimeAccumulator = 0;
+		wiLua::GetGlobal()->SetDeltaTime(0);
 	}
-	wiProfiler::GetInstance().EndRange(); // Fixed Update
 
-	wiLua::GetGlobal()->SetDeltaTime(elapsedTime);
-
-	// Variable-timed update:
-	wiProfiler::GetInstance().BeginRange("Update", wiProfiler::DOMAIN_CPU);
-	Update((float)elapsedTime);
-	wiProfiler::GetInstance().EndRange(); // Update
-
-
-	wiProfiler::GetInstance().BeginRange("Render", wiProfiler::DOMAIN_CPU);
+	wiProfiler::BeginRange("Render", wiProfiler::DOMAIN_CPU);
 	Render();
-	wiProfiler::GetInstance().EndRange(); // Render
+	wiProfiler::EndRange(); // Render
 
-	wiProfiler::GetInstance().EndRange(); // CPU Frame
+	wiProfiler::EndRange(); // CPU Frame
 
 
-	wiProfiler::GetInstance().BeginRange("Compose", wiProfiler::DOMAIN_CPU);
+	wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
 	wiRenderer::GetDevice()->PresentBegin();
 	Compose();
 	wiRenderer::GetDevice()->PresentEnd();
-	wiProfiler::GetInstance().EndRange(); // Compose
+	wiProfiler::EndRange(); // Compose
 
 	wiRenderer::EndFrame();
 
@@ -170,7 +186,7 @@ void MainComponent::Run()
 		startupScriptProcessed = true;
 	}
 
-	wiProfiler::GetInstance().EndFrame();
+	wiProfiler::EndFrame();
 }
 
 void MainComponent::Update(float dt)
@@ -193,12 +209,12 @@ void MainComponent::Render()
 {
 	wiLua::GetGlobal()->Render();
 
-	wiProfiler::GetInstance().BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
+	wiProfiler::BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	getActiveComponent()->Render();
-	wiProfiler::GetInstance().EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
+	wiProfiler::EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
 }
 
 void MainComponent::Compose()
@@ -212,7 +228,7 @@ void MainComponent::Compose()
 		fx.siz.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
 		fx.siz.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 		fx.opacity = fadeManager.opacity;
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(fadeManager.color), fx, GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	// Draw the information display
@@ -274,7 +290,7 @@ void MainComponent::Compose()
 		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
-	wiProfiler::GetInstance().DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);
+	wiProfiler::DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);
 
 	wiBackLog::Draw();
 }
@@ -293,7 +309,7 @@ bool MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANC
 		screenH = rect.bottom - rect.top;
 	}
 
-	wiWindowRegistration::GetInstance()->RegisterWindow(window);
+	wiWindowRegistration::RegisterWindow(window);
 
 	return true;
 }
@@ -305,7 +321,7 @@ bool MainComponent::SetWindow(wiWindowRegistration::window_type window)
 
 	this->window = window;
 
-	wiWindowRegistration::GetInstance()->RegisterWindow(window);
+	wiWindowRegistration::RegisterWindow(window);
 
 	return true;
 }

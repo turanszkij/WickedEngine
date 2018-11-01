@@ -50,7 +50,6 @@ namespace wiGraphicsTypes
 
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
-
 		~GraphicsDevice_DX11();
 
 		HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) override;
@@ -98,6 +97,8 @@ namespace wiGraphicsTypes
 
 		void PresentBegin() override;
 		void PresentEnd() override;
+
+		void WaitForGPU() override;
 
 		void ExecuteDeferredContexts() override;
 		void FinishCommandList(GRAPHICSTHREAD thread) override;
@@ -147,8 +148,6 @@ namespace wiGraphicsTypes
 		bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		void UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) override {};
 		void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) override {};
-
-		void WaitForGPU() override;
 
 		void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) override;
 		void EventEnd(GRAPHICSTHREAD threadID) override;

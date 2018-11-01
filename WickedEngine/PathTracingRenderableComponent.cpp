@@ -137,7 +137,7 @@ void PathTracingRenderableComponent::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 
 void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 {
-	wiProfiler::GetInstance().BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
+	wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -158,7 +158,7 @@ void PathTracingRenderableComponent::RenderScene(GRAPHICSTHREAD threadID)
 	wiImage::Draw(traceResult, fx, threadID);
 
 
-	wiProfiler::GetInstance().EndRange(threadID); // Traced Scene
+	wiProfiler::EndRange(threadID); // Traced Scene
 }
 
 void PathTracingRenderableComponent::Compose()
@@ -170,8 +170,8 @@ void PathTracingRenderableComponent::Compose()
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_BILINEAR;
 	fx.process.setToneMap(true);
-	fx.setDistortionMap(wiTextureHelper::getInstance()->getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
-	fx.setMaskMap(wiTextureHelper::getInstance()->getColor(wiColor::Gray));
+	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
+	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray));
 	
 	wiImage::Draw(rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 

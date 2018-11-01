@@ -6,6 +6,7 @@
 #include "wiMath.h"
 #include "wiHelper.h"
 #include "wiInputManager.h"
+#include "wiRenderer.h"
 #include "ShaderInterop_Renderer.h"
 
 #include <DirectXCollision.h>
@@ -120,7 +121,7 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		static const float _border = 2;
 		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
 		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor(255, 234, 165)), wiImageEffects(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), gui->GetGraphicsThread());
+		wiImage::Draw(wiTextureHelper::getColor(wiColor(255, 234, 165)), wiImageEffects(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), gui->GetGraphicsThread());
 		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(gui->GetGraphicsThread());
 		if (!scriptTip.empty())
@@ -333,7 +334,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == FOCUS)
 		{
@@ -342,7 +343,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -387,7 +388,7 @@ void wiButton::Render(wiGUI* gui)
 
 	gui->ResetScissor();
 
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
@@ -458,7 +459,7 @@ void wiLabel::Render(wiGUI* gui)
 
 	gui->ResetScissor();
 
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
@@ -548,7 +549,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == FOCUS)
 		{
@@ -557,7 +558,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -575,7 +576,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 	if (state == ACTIVE)
 	{
-		if (wiInputManager::GetInstance()->press(VK_RETURN, wiInputManager::KEYBOARD))
+		if (wiInputManager::press(VK_RETURN, wiInputManager::KEYBOARD))
 		{
 			// accept input...
 
@@ -590,8 +591,8 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 			gui->DeactivateWidget(this);
 		}
-		else if ((wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD) && !intersectsPointer) ||
-			wiInputManager::GetInstance()->press(VK_ESCAPE, wiInputManager::KEYBOARD))
+		else if ((wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD) && !intersectsPointer) ||
+			wiInputManager::press(VK_ESCAPE, wiInputManager::KEYBOARD))
 		{
 			// cancel input 
 			value_new.clear();
@@ -614,7 +615,7 @@ void wiTextInputField::Render(wiGUI* gui)
 
 	gui->ResetScissor();
 
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
@@ -732,7 +733,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 	}
 	if (state == ACTIVE)
 	{
-		if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+		if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
 		{
 			if (state == ACTIVE)
 			{
@@ -765,7 +766,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == FOCUS)
 		{
@@ -809,11 +810,11 @@ void wiSlider::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	// trail
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), gui->GetGraphicsThread());
 	// head
 	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
 	if (parent != gui)
@@ -899,7 +900,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == FOCUS)
 		{
@@ -908,7 +909,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -942,13 +943,13 @@ void wiCheckBox::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	// control
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 	// check
 	if (GetCheck())
 	{
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(wiColor::lerp(color, wiColor::White, 0.8f))
+		wiImage::Draw(wiTextureHelper::getColor(wiColor::lerp(color, wiColor::White, 0.8f))
 			, wiImageEffects(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
 			, gui->GetGraphicsThread());
 	}
@@ -1041,13 +1042,13 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		// activate
 		clicked = true;
 	}
 
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == DEACTIVATING)
 		{
@@ -1076,7 +1077,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		}
 		else
 		{
-			int scroll = (int)wiInputManager::GetInstance()->getpointer().z;
+			int scroll = (int)wiInputManager::getpointer().z;
 			firstItemVisible -= scroll;
 			firstItemVisible = max(0, min((int)items.size() - maxVisibleItemCount, firstItemVisible));
 
@@ -1132,10 +1133,10 @@ void wiComboBox::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	// control-base
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	// control-arrow
-	wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+	wiImage::Draw(wiTextureHelper::getColor(color)
 		, wiImageEffects(translation.x + scale.x + 1, translation.y, scale.y, scale.y), gui->GetGraphicsThread());
 	wiFont("V", wiFontProps((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
@@ -1181,7 +1182,7 @@ void wiComboBox::Render(wiGUI* gui)
 					col = colors[ACTIVE];
 				}
 			}
-			wiImage::Draw(wiTextureHelper::getInstance()->getColor(col)
+			wiImage::Draw(wiTextureHelper::getColor(col)
 				, wiImageEffects(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), gui->GetGraphicsThread());
 			wiFont(x, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), -1, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 				textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
@@ -1272,13 +1273,6 @@ wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
 	SetSize(XMFLOAT2(640, 480));
 
 	// Add controls
-
-	SAFE_INIT(closeButton);
-	SAFE_INIT(moveDragger);
-	SAFE_INIT(resizeDragger_BottomRight);
-	SAFE_INIT(resizeDragger_UpperLeft);
-
-
 
 	// Add a grabber onto the title bar
 	moveDragger = new wiButton(name + "_move_dragger");
@@ -1461,7 +1455,7 @@ void wiWindow::Render(wiGUI* gui)
 	// body
 	if (!IsMinimized())
 	{
-		wiImage::Draw(wiTextureHelper::getInstance()->getColor(color)
+		wiImage::Draw(wiTextureHelper::getColor(color)
 			, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	}
 
@@ -1613,7 +1607,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 
 	bool dragged = false;
 
-	if (wiInputManager::GetInstance()->press(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::press(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == FOCUS)
 		{
@@ -1622,7 +1616,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		}
 	}
 
-	if (wiInputManager::GetInstance()->down(VK_LBUTTON, wiInputManager::KEYBOARD))
+	if (wiInputManager::down(VK_LBUTTON, wiInputManager::KEYBOARD))
 	{
 		if (state == ACTIVE)
 		{

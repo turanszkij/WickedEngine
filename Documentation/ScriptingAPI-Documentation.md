@@ -106,7 +106,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderHeight(): float result
 - GetCameras() : string result
 - GetCamera(opt String name) : Camera result		-- If string is provided, it will search a camera by name, otherwise, returns the main camera
-- LoadModel(string fileName, opt Matrix transform)	-- Load Model from file
+- LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - LoadWorldInfo(string fileName)		-- Loads world information from file
 - DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
 - SetEnvironmentMap(Texture cubemap)

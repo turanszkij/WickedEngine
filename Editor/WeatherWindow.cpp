@@ -111,7 +111,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 			if (GetOpenFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
-				wiRenderer::SetEnvironmentMap((Texture2D*)wiResourceManager::GetGlobal()->add(fileName));
+				wiRenderer::SetEnvironmentMap((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
 				skyButton->SetText(fileName);
 			}
 		}

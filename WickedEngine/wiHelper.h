@@ -58,7 +58,11 @@ namespace wiHelper
 
 	void RemoveExtensionFromFileName(std::string& filename);
 
+	// Puts the current thread to sleeping state for a given time (OS can overtake)
 	void Sleep(float milliseconds);
+
+	// Spins for the given time and does nothing (OS can not overtake)
+	void Spin(float milliseconds);
 };
 
 #endif

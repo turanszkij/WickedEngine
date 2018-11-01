@@ -323,7 +323,7 @@ int SetProfilerEnabled(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiProfiler::GetInstance().ENABLED = wiLua::SGetBool(L, 1);
+		wiProfiler::SetEnabled(wiLua::SGetBool(L, 1));
 	}
 	else
 		wiLua::SError(L, "SetProfilerEnabled(bool active) not enough arguments!");

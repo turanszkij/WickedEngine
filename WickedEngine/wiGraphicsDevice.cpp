@@ -2,7 +2,7 @@
 
 using namespace wiGraphicsTypes;
 
-bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
+bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 {
 	switch (capability)
 	{
@@ -27,7 +27,7 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability)
 	return false;
 }
 
-uint32_t GraphicsDevice::GetFormatStride(FORMAT value)
+uint32_t GraphicsDevice::GetFormatStride(FORMAT value) const
 {
 	switch (value)
 	{

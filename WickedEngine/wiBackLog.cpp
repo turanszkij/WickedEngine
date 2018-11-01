@@ -88,7 +88,7 @@ namespace wiBackLog
 		{
 			if (backgroundTex == nullptr)
 			{
-				const unsigned char colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
+				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
 				HRESULT hr = wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2, 4);
 				assert(SUCCEEDED(hr));
 			}

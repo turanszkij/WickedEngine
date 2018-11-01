@@ -419,37 +419,37 @@ namespace wiImage
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "imageVS.cso", wiResourceManager::VERTEXSHADER));
-		screenVS = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "screenVS.cso", wiResourceManager::VERTEXSHADER));
+		vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "imageVS.cso", wiResourceManager::VERTEXSHADER));
+		screenVS = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "screenVS.cso", wiResourceManager::VERTEXSHADER));
 
-		imagePS[IMAGE_SHADER_STANDARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "imagePS.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_SEPARATENORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_DISTORTION_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_FULLSCREEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "screenPS.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_STANDARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_SEPARATENORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_DISTORTION_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_FULLSCREEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS.cso", wiResourceManager::PIXELSHADER));
 
-		postprocessPS[POSTPROCESS_BLUR_H] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_BLUR_V] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_LIGHTSHAFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_OUTLINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "outlinePS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_DEPTHOFFIELD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_MOTIONBLUR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "motionBlurPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_BLOOMSEPARATE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_FXAA] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "fxaa.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_SSAO] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "ssao.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_SSSS] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "ssss.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_LINEARDEPTH] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_COLORGRADE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_SSR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "ssr.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_STEREOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_TONEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "toneMapPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_REPROJECTDEPTHBUFFER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_DOWNSAMPLEDEPTHBUFFER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_TEMPORALAA] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "temporalAAResolvePS.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[POSTPROCESS_SHARPEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "sharpenPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_BLUR_H] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "horizontalBlurPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_BLUR_V] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "verticalBlurPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_LIGHTSHAFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_OUTLINE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "outlinePS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_DEPTHOFFIELD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_MOTIONBLUR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "motionBlurPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_BLOOMSEPARATE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "bloomSeparatePS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_FXAA] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fxaa.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_SSAO] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "ssao.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_SSSS] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "ssss.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_LINEARDEPTH] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_COLORGRADE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_SSR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "ssr.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_STEREOGRAM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_TONEMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "toneMapPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_REPROJECTDEPTHBUFFER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_DOWNSAMPLEDEPTHBUFFER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_TEMPORALAA] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "temporalAAResolvePS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[POSTPROCESS_SHARPEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "sharpenPS.cso", wiResourceManager::PIXELSHADER));
 
-		deferredPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "deferredPS.cso", wiResourceManager::PIXELSHADER));
+		deferredPS = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "deferredPS.cso", wiResourceManager::PIXELSHADER));
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();

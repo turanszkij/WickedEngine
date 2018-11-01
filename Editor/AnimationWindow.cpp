@@ -149,7 +149,7 @@ void AnimationWindow::Update()
 	}
 
 	int selected = animationsComboBox->GetSelected();
-	if (selected >= 0 && selected < scene.animations.GetCount())
+	if (selected >= 0 && selected < (int)scene.animations.GetCount())
 	{
 		AnimationComponent& animation = scene.animations[selected];
 

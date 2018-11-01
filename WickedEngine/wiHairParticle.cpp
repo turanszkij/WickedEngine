@@ -132,7 +132,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 			return;
 		}
 		device->BindGraphicsPSO(&PSO_wire, threadID);
-		device->BindResource(VS, wiTextureHelper::getInstance()->getWhite(), TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, threadID);
 	}
 	else
 	{
@@ -188,18 +188,12 @@ void wiHairParticle::LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
-	vs = static_cast<VertexShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
+	vs = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
 
-
-	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
-	{
-		SAFE_INIT(ps[i]);
-	}
-
-	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
+	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -264,8 +258,7 @@ void wiHairParticle::LoadShaders()
 		}
 	}
 
-	SAFE_INIT(ps_simplest);
-	ps_simplest = static_cast<PixelShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
+	ps_simplest = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
 	{
 		GraphicsPSODesc desc;
@@ -280,8 +273,7 @@ void wiHairParticle::LoadShaders()
 		device->CreateGraphicsPSO(&desc, &PSO_wire);
 	}
 
-	SAFE_INIT(cs_simulate);
-	cs_simulate = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager()->add(path + "hairparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
+	cs_simulate = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
 
 	{
 		ComputePSODesc desc;

@@ -31,17 +31,6 @@ using namespace wiRectPacker;
 using namespace wiSceneSystem;
 using namespace wiECS;
 
-Editor::Editor()
-{
-	SAFE_INIT(renderComponent);
-	SAFE_INIT(loader);
-}
-
-Editor::~Editor()
-{
-	//SAFE_DELETE(renderComponent);
-	//SAFE_DELETE(loader);
-}
 
 void Editor::Initialize()
 {
@@ -60,9 +49,9 @@ void Editor::Initialize()
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
-	wiInputManager::GetInstance()->addXInput(new wiXInput());
+	wiInputManager::addXInput(new wiXInput());
 
-	wiProfiler::GetInstance().ENABLED = true;
+	wiProfiler::SetEnabled(true);
 
 	renderComponent = new EditorComponent;
 	renderComponent->Initialize();
@@ -152,68 +141,23 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	renderPath->Initialize();
 	renderPath->Load();
 
-	DeleteWindows();
-
-	materialWnd = new MaterialWindow(&GetGUI());
-	postprocessWnd = new PostprocessWindow(&GetGUI(), renderPath);
-	weatherWnd = new WeatherWindow(&GetGUI());
-	objectWnd = new ObjectWindow(&GetGUI());
-	meshWnd = new MeshWindow(&GetGUI());
-	cameraWnd = new CameraWindow(&GetGUI());
-	rendererWnd = new RendererWindow(&GetGUI(), renderPath);
-	envProbeWnd = new EnvProbeWindow(&GetGUI());
-	decalWnd = new DecalWindow(&GetGUI());
-	lightWnd = new LightWindow(&GetGUI());
-	animWnd = new AnimationWindow(&GetGUI());
-	emitterWnd = new EmitterWindow(&GetGUI());
-	hairWnd = new HairParticleWindow(&GetGUI());
-	forceFieldWnd = new ForceFieldWindow(&GetGUI());
-	oceanWnd = new OceanWindow(&GetGUI());
-}
-void EditorComponent::DeleteWindows()
-{
-	SAFE_DELETE(materialWnd);
-	SAFE_DELETE(postprocessWnd);
-	SAFE_DELETE(weatherWnd);
-	SAFE_DELETE(objectWnd);
-	SAFE_DELETE(meshWnd);
-	SAFE_DELETE(cameraWnd);
-	SAFE_DELETE(rendererWnd);
-	SAFE_DELETE(envProbeWnd);
-	SAFE_DELETE(decalWnd);
-	SAFE_DELETE(lightWnd);
-	SAFE_DELETE(animWnd);
-	SAFE_DELETE(emitterWnd);
-	SAFE_DELETE(hairWnd);
-	SAFE_DELETE(forceFieldWnd);
-	SAFE_DELETE(oceanWnd);
+	materialWnd.reset(new MaterialWindow(&GetGUI()));
+	postprocessWnd.reset(new PostprocessWindow(&GetGUI(), renderPath));
+	weatherWnd.reset(new WeatherWindow(&GetGUI()));
+	objectWnd.reset(new ObjectWindow(&GetGUI()));
+	meshWnd.reset(new MeshWindow(&GetGUI()));
+	cameraWnd.reset(new CameraWindow(&GetGUI()));
+	rendererWnd.reset(new RendererWindow(&GetGUI(), renderPath));
+	envProbeWnd.reset(new EnvProbeWindow(&GetGUI()));
+	decalWnd.reset(new DecalWindow(&GetGUI()));
+	lightWnd.reset(new LightWindow(&GetGUI()));
+	animWnd.reset(new AnimationWindow(&GetGUI()));
+	emitterWnd.reset(new EmitterWindow(&GetGUI()));
+	hairWnd.reset(new HairParticleWindow(&GetGUI()));
+	forceFieldWnd.reset(new ForceFieldWindow(&GetGUI()));
+	oceanWnd.reset(new OceanWindow(&GetGUI()));
 }
 
-void EditorComponent::Initialize()
-{
-	SAFE_INIT(materialWnd);
-	SAFE_INIT(postprocessWnd);
-	SAFE_INIT(weatherWnd);
-	SAFE_INIT(objectWnd);
-	SAFE_INIT(meshWnd);
-	SAFE_INIT(cameraWnd);
-	SAFE_INIT(rendererWnd);
-	SAFE_INIT(envProbeWnd);
-	SAFE_INIT(decalWnd);
-	SAFE_INIT(lightWnd);
-	SAFE_INIT(animWnd);
-	SAFE_INIT(emitterWnd);
-	SAFE_INIT(hairWnd);
-	SAFE_INIT(forceFieldWnd);
-	SAFE_INIT(oceanWnd);
-
-
-	SAFE_INIT(loader);
-	SAFE_INIT(renderPath);
-
-
-	__super::Initialize();
-}
 void EditorComponent::Load()
 {
 	__super::Load();
@@ -694,7 +638,7 @@ void EditorComponent::Load()
 			renderPath->GetGUI().SetVisible(false);
 		}
 		GetGUI().SetVisible(false);
-		wiProfiler::GetInstance().ENABLED = false;
+		wiProfiler::SetEnabled(false);
 		main->infoDisplay.active = false;
 	});
 	GetGUI().AddWidget(cinemaModeCheckBox);
@@ -763,21 +707,20 @@ void EditorComponent::FixedUpdate()
 }
 void EditorComponent::Update(float dt)
 {
-	wiInputManager& input = *wiInputManager::GetInstance();
 	Scene& scene = wiRenderer::GetScene();
 	CameraComponent& camera = wiRenderer::GetCamera();
 
 	animWnd->Update();
 
 	// Exit cinema mode:
-	if (input.down(VK_ESCAPE))
+	if (wiInputManager::down(VK_ESCAPE))
 	{
 		if (renderPath != nullptr)
 		{
 			renderPath->GetGUI().SetVisible(true);
 		}
 		GetGUI().SetVisible(true);
-		wiProfiler::GetInstance().ENABLED = true;
+		wiProfiler::SetEnabled(true);
 		main->infoDisplay.active = true;
 
 		cinemaModeCheckBox->SetCheck(false);
@@ -788,35 +731,35 @@ void EditorComponent::Update(float dt)
 
 		// Camera control:
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
-		XMFLOAT4 currentMouse = input.getpointer();
+		XMFLOAT4 currentMouse = wiInputManager::getpointer();
 		float xDif = 0, yDif = 0;
-		if (input.down(VK_MBUTTON))
+		if (wiInputManager::down(VK_MBUTTON))
 		{
 			xDif = currentMouse.x - originalMouse.x;
 			yDif = currentMouse.y - originalMouse.y;
 			xDif = 0.1f*xDif*(1.0f / 60.0f);
 			yDif = 0.1f*yDif*(1.0f / 60.0f);
-			input.setpointer(originalMouse);
+			wiInputManager::setpointer(originalMouse);
 		}
 		else
 		{
-			originalMouse = input.getpointer();
+			originalMouse = wiInputManager::getpointer();
 		}
 
 		const float buttonrotSpeed = 2.0f / 60.0f;
-		if (input.down(VK_LEFT))
+		if (wiInputManager::down(VK_LEFT))
 		{
 			xDif -= buttonrotSpeed;
 		}
-		if (input.down(VK_RIGHT))
+		if (wiInputManager::down(VK_RIGHT))
 		{
 			xDif += buttonrotSpeed;
 		}
-		if (input.down(VK_UP))
+		if (wiInputManager::down(VK_UP))
 		{
 			yDif -= buttonrotSpeed;
 		}
-		if (input.down(VK_DOWN))
+		if (wiInputManager::down(VK_DOWN))
 		{
 			yDif += buttonrotSpeed;
 		}
@@ -830,20 +773,20 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-			const float speed = (input.down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
+			const float speed = (wiInputManager::down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
 			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
 
 
-			if (!input.down(VK_CONTROL))
+			if (!wiInputManager::down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
-				if (input.down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (input.down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
-				if (input.down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
-				if (input.down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (input.down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
-				if (input.down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (wiInputManager::down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wiInputManager::down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (wiInputManager::down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (wiInputManager::down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wiInputManager::down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (wiInputManager::down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 
@@ -872,14 +815,14 @@ void EditorComponent::Update(float dt)
 		{
 			// Orbital Camera
 
-			if (input.down(VK_LSHIFT))
+			if (wiInputManager::down(VK_LSHIFT))
 			{
 				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
 				cameraWnd->camera_target.Translate(vec);
 			}
-			else if (input.down(VK_LCONTROL))
+			else if (wiInputManager::down(VK_LCONTROL))
 			{
 				cameraWnd->camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4));
 				camera.SetDirty();
@@ -1058,7 +1001,7 @@ void EditorComponent::Update(float dt)
 			{
 				if (object->GetRenderTypes() & RENDERTYPE_WATER)
 				{
-					if (input.down(VK_LBUTTON))
+					if (wiInputManager::down(VK_LBUTTON))
 					{
 						// if water, then put a water ripple onto it:
 						wiRenderer::PutWaterRipple(wiHelper::GetOriginalWorkingDirectory() + "images/ripple.png", hovered.position);
@@ -1066,10 +1009,10 @@ void EditorComponent::Update(float dt)
 				}
 				else
 				{
-					if (input.press(VK_LBUTTON))
+					if (wiInputManager::press(VK_LBUTTON))
 					{
 						SoftBodyPhysicsComponent* softBody = scene.softbodies.GetComponent(object->meshID);
-						if (softBody != nullptr && input.down('P'))
+						if (softBody != nullptr && wiInputManager::down('P'))
 						{
 							MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 
@@ -1104,7 +1047,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Visualize soft body pinning:
-		if (input.down('P'))
+		if (wiInputManager::down('P'))
 		{
 			for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 			{
@@ -1137,7 +1080,7 @@ void EditorComponent::Update(float dt)
 
 		// Select...
 		static bool selectAll = false;
-		if (input.press(VK_RBUTTON) || selectAll)
+		if (wiInputManager::press(VK_RBUTTON) || selectAll)
 		{
 
 			wiArchive* archive = AdvanceHistory();
@@ -1175,7 +1118,7 @@ void EditorComponent::Update(float dt)
 			{
 				// Add the hovered item to the selection:
 
-				if (!selected.empty() && input.down(VK_LSHIFT))
+				if (!selected.empty() && wiInputManager::down(VK_LSHIFT))
 				{
 					// Union selection:
 					list<wiRenderer::RayIntersectWorldResult> saved = selected;
@@ -1253,7 +1196,7 @@ void EditorComponent::Update(float dt)
 					meshWnd->SetEntity(object->meshID);
 
 					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-					if (mesh != nullptr && mesh->subsets.size() > picked.subsetIndex)
+					if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
 					{
 						materialWnd->SetEntity(mesh->subsets[picked.subsetIndex].materialID);
 					}
@@ -1267,7 +1210,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Delete
-		if (input.press(VK_DELETE))
+		if (wiInputManager::press(VK_DELETE))
 		{
 
 			wiArchive* archive = AdvanceHistory();
@@ -1292,15 +1235,15 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Control operations...
-		if (input.down(VK_CONTROL))
+		if (wiInputManager::down(VK_CONTROL))
 		{
 			// Select All
-			if (input.press('A'))
+			if (wiInputManager::press('A'))
 			{
 				selectAll = true;
 			}
 			// Copy
-			if (input.press('C'))
+			if (wiInputManager::press('C'))
 			{
 				SAFE_DELETE(clipboard);
 				clipboard = new wiArchive();
@@ -1311,7 +1254,7 @@ void EditorComponent::Update(float dt)
 				}
 			}
 			// Paste
-			if (input.press('V'))
+			if (wiInputManager::press('V'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1329,7 +1272,7 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Duplicate Instances
-			if (input.press('D'))
+			if (wiInputManager::press('D'))
 			{
 				auto prevSel = selected;
 				EndTranslate();
@@ -1342,7 +1285,7 @@ void EditorComponent::Update(float dt)
 				BeginTranslate();
 			}
 			// Put Instances
-			if (clipboard != nullptr && hovered.subsetIndex >= 0 && input.down(VK_LSHIFT) && input.press(VK_LBUTTON))
+			if (clipboard != nullptr && hovered.subsetIndex >= 0 && wiInputManager::down(VK_LSHIFT) && wiInputManager::press(VK_LBUTTON))
 			{
 				XMMATRIX M = XMLoadFloat4x4(&hovered.orientation);
 
@@ -1361,12 +1304,12 @@ void EditorComponent::Update(float dt)
 				}
 			}
 			// Undo
-			if (input.press('Z'))
+			if (wiInputManager::press('Z'))
 			{
 				ConsumeHistoryOperation(true);
 			}
 			// Redo
-			if (input.press('Y'))
+			if (wiInputManager::press('Y'))
 			{
 				ConsumeHistoryOperation(false);
 			}
@@ -1798,8 +1741,6 @@ void EditorComponent::Compose()
 void EditorComponent::Unload()
 {
 	renderPath->Unload();
-
-	DeleteWindows();
 
 	__super::Unload();
 }

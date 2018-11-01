@@ -18,31 +18,15 @@ static const std::unordered_map<std::string, wiResourceManager::Data_Type> types
 	make_pair("WAV", wiResourceManager::SOUND)
 };
 
-wiResourceManager* wiResourceManager::globalResources = nullptr;
 
-wiResourceManager::wiResourceManager():wiThreadSafeManager()
+wiResourceManager& wiResourceManager::GetGlobal()
 {
-}
-wiResourceManager::~wiResourceManager()
-{
-	CleanUp();
-}
-wiResourceManager* wiResourceManager::GetGlobal()
-{
-	if (globalResources == nullptr)
-	{
-		LOCK_STATIC();
-		if (globalResources == nullptr)
-		{
-			globalResources = new wiResourceManager();
-		}
-		UNLOCK_STATIC();
-	}
+	static wiResourceManager globalResources;
 	return globalResources;
 }
-wiResourceManager* wiResourceManager::GetShaderManager()
+wiResourceManager& wiResourceManager::GetShaderManager()
 {
-	static wiResourceManager* shaderManager = new wiResourceManager;
+	static wiResourceManager shaderManager;
 	return shaderManager;
 }
 
@@ -441,11 +425,12 @@ bool wiResourceManager::Register(const wiHashString& name, void* resource, Data_
 	return false;
 }
 
-bool wiResourceManager::CleanUp()
+bool wiResourceManager::Clear()
 {
 	wiRenderer::GetDevice()->WaitForGPU();
 
-	std::vector<wiHashString>resNames(0);
+	std::vector<wiHashString> resNames;
+	resNames.reserve(resources.size());
 	for (auto& x : resources)
 	{
 		resNames.push_back(x.first);

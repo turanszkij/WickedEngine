@@ -2,71 +2,109 @@
 #include "wiGraphicsDevice.h"
 #include "wiRenderer.h"
 #include "wiFont.h"
+#include "wiTimer.h"
+#include "wiGraphicsResource.h"
 
 #include <sstream>
+#include <unordered_map>
+#include <stack>
 
 using namespace std;
 using namespace wiGraphicsTypes;
 
-void wiProfiler::BeginFrame()
+namespace wiProfiler
 {
-	if (!ENABLED)
-		return;
+	bool ENABLED = false;
+	bool initialized = false;
 
-	wiRenderer::GetDevice()->QueryBegin(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
-}
-void wiProfiler::EndFrame()
-{
-	if (!ENABLED)
-		return;
-
-	wiRenderer::GetDevice()->QueryEnd(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
-	while(!wiRenderer::GetDevice()->QueryRead(&disjoint, GRAPHICSTHREAD_IMMEDIATE));
-
-	assert(rangeStack.empty() && "There was a range which was not ended!");
-
-	if (disjoint.result_disjoint == FALSE)
+	struct Range
 	{
-		for (auto& x : ranges)
+		PROFILER_DOMAIN domain;
+		std::string name;
+		float time;
+
+		wiTimer cpuBegin, cpuEnd;
+		wiGraphicsTypes::GPUQuery gpuBegin, gpuEnd;
+
+		Range() :time(0), domain(DOMAIN_CPU) {}
+		~Range() {}
+	};
+	std::unordered_map<std::string, Range*> ranges;
+	std::stack<std::string> rangeStack;
+	wiGraphicsTypes::GPUQuery disjoint;
+
+	void BeginFrame()
+	{
+		if (!ENABLED)
+			return;
+
+		if (!initialized)
 		{
-			x.second->time = 0;
-			switch (x.second->domain)
+			initialized = true;
+
+			ranges.reserve(100);
+
+			GPUQueryDesc desc;
+			desc.async_latency = 4;
+			desc.MiscFlags = 0;
+			desc.Type = GPU_QUERY_TYPE_TIMESTAMP_DISJOINT;
+			wiRenderer::GetDevice()->CreateQuery(&desc, &disjoint);
+		}
+
+		wiRenderer::GetDevice()->QueryBegin(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
+	}
+	void EndFrame()
+	{
+		if (!ENABLED || !initialized)
+			return;
+
+		wiRenderer::GetDevice()->QueryEnd(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
+		while (!wiRenderer::GetDevice()->QueryRead(&disjoint, GRAPHICSTHREAD_IMMEDIATE));
+
+		assert(rangeStack.empty() && "There was a range which was not ended!");
+
+		if (disjoint.result_disjoint == FALSE)
+		{
+			for (auto& x : ranges)
 			{
-			case wiProfiler::DOMAIN_CPU:
-				x.second->time = (float)abs(x.second->cpuEnd.elapsed() - x.second->cpuBegin.elapsed());
-				break;
-			case wiProfiler::DOMAIN_GPU:
-				while (!wiRenderer::GetDevice()->QueryRead(&x.second->gpuBegin, GRAPHICSTHREAD_IMMEDIATE));
-				while (!wiRenderer::GetDevice()->QueryRead(&x.second->gpuEnd, GRAPHICSTHREAD_IMMEDIATE));
-				x.second->time = abs((float)(x.second->gpuEnd.result_timestamp - x.second->gpuBegin.result_timestamp) / disjoint.result_timestamp_frequency * 1000.0f);
-				break;
-			default:
-				assert(0);
-				break;
+				x.second->time = 0;
+				switch (x.second->domain)
+				{
+				case wiProfiler::DOMAIN_CPU:
+					x.second->time = (float)abs(x.second->cpuEnd.elapsed() - x.second->cpuBegin.elapsed());
+					break;
+				case wiProfiler::DOMAIN_GPU:
+					while (!wiRenderer::GetDevice()->QueryRead(&x.second->gpuBegin, GRAPHICSTHREAD_IMMEDIATE));
+					while (!wiRenderer::GetDevice()->QueryRead(&x.second->gpuEnd, GRAPHICSTHREAD_IMMEDIATE));
+					x.second->time = abs((float)(x.second->gpuEnd.result_timestamp - x.second->gpuBegin.result_timestamp) / disjoint.result_timestamp_frequency * 1000.0f);
+					break;
+				default:
+					assert(0);
+					break;
+				}
 			}
 		}
 	}
-}
 
-void wiProfiler::BeginRange(const std::string& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID)
-{
-	if (!ENABLED)
-		return;
-
-	if (ranges.find(name) == ranges.end())
+	void BeginRange(const std::string& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID)
 	{
-		Range* range = new Range;
-		range->name = name;
-		range->domain = domain;
-		range->time = 0;
+		if (!ENABLED || !initialized)
+			return;
 
-		switch (domain)
+		if (ranges.find(name) == ranges.end())
 		{
-		case wiProfiler::DOMAIN_CPU:
-			range->cpuBegin.Start();
-			range->cpuEnd.Start();
-			break;
-		case wiProfiler::DOMAIN_GPU:
+			Range* range = new Range;
+			range->name = name;
+			range->domain = domain;
+			range->time = 0;
+
+			switch (domain)
+			{
+			case wiProfiler::DOMAIN_CPU:
+				range->cpuBegin.Start();
+				range->cpuEnd.Start();
+				break;
+			case wiProfiler::DOMAIN_GPU:
 			{
 				GPUQueryDesc desc;
 				desc.async_latency = 4;
@@ -76,103 +114,89 @@ void wiProfiler::BeginRange(const std::string& name, PROFILER_DOMAIN domain, GRA
 				wiRenderer::GetDevice()->CreateQuery(&desc, &range->gpuEnd);
 			}
 			break;
-		default:
-			assert(0);
-			break;
+			default:
+				assert(0);
+				break;
+			}
+
+
+			ranges.insert(make_pair(name, range));
 		}
 
-
-		ranges.insert(make_pair(name, range));
-	}
-
-	switch (domain)
-	{
-	case wiProfiler::DOMAIN_CPU:
-		ranges[name]->cpuBegin.record();
-		break;
-	case wiProfiler::DOMAIN_GPU:
-		wiRenderer::GetDevice()->QueryEnd(&ranges[name]->gpuBegin, threadID);
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	rangeStack.push(name);
-}
-void wiProfiler::EndRange(GRAPHICSTHREAD threadID)
-{
-	if (!ENABLED)
-		return;
-
-	assert(!rangeStack.empty() && "There is no range to end!");
-	const std::string& top = rangeStack.top();
-
-	auto& it = ranges.find(top);
-	if (it != ranges.end())
-	{
-		switch (it->second->domain)
+		switch (domain)
 		{
 		case wiProfiler::DOMAIN_CPU:
-			it->second->cpuEnd.record();
+			ranges[name]->cpuBegin.record();
 			break;
 		case wiProfiler::DOMAIN_GPU:
-			wiRenderer::GetDevice()->QueryEnd(&it->second->gpuEnd, threadID);
+			wiRenderer::GetDevice()->QueryEnd(&ranges[name]->gpuBegin, threadID);
 			break;
 		default:
 			assert(0);
 			break;
 		}
+
+		rangeStack.push(name);
 	}
-	else
+	void EndRange(GRAPHICSTHREAD threadID)
 	{
-		assert(0);
-	}
+		if (!ENABLED || !initialized)
+			return;
 
-	rangeStack.pop();
-}
+		assert(!rangeStack.empty() && "There is no range to end!");
+		const std::string& top = rangeStack.top();
 
-void wiProfiler::DrawData(int x, int y, GRAPHICSTHREAD threadID)
-{
-	if (!ENABLED)
-		return;
-
-	stringstream ss("");
-	ss.precision(2);
-	ss << "Frame Profiler Ranges:" << endl << "----------------------------" << endl;
-	
-	for (int domain = DOMAIN_CPU; domain < DOMAIN_COUNT; ++domain)
-	{
-		for (auto& x : ranges)
+		auto& it = ranges.find(top);
+		if (it != ranges.end())
 		{
-			if (x.second->domain == domain)
+			switch (it->second->domain)
 			{
-				ss << x.first << ": " << fixed << x.second->time << " ms" << endl;
+			case wiProfiler::DOMAIN_CPU:
+				it->second->cpuEnd.record();
+				break;
+			case wiProfiler::DOMAIN_GPU:
+				wiRenderer::GetDevice()->QueryEnd(&it->second->gpuEnd, threadID);
+				break;
+			default:
+				assert(0);
+				break;
 			}
 		}
-		ss << endl;
+		else
+		{
+			assert(0);
+		}
+
+		rangeStack.pop();
 	}
 
-	wiFont(ss.str(), wiFontProps(x, y, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(threadID);
-}
-
-
-wiProfiler::wiProfiler()
-{
-	ranges.reserve(100);
-
-	GPUQueryDesc desc;
-	desc.async_latency = 4;
-	desc.MiscFlags = 0;
-	desc.Type = GPU_QUERY_TYPE_TIMESTAMP_DISJOINT;
-	wiRenderer::GetDevice()->CreateQuery(&desc, &disjoint);
-
-	ENABLED = false;
-}
-wiProfiler::~wiProfiler()
-{
-	for (auto& x : ranges)
+	void DrawData(int x, int y, GRAPHICSTHREAD threadID)
 	{
-		SAFE_DELETE(x.second);
+		if (!ENABLED || !initialized)
+			return;
+
+		stringstream ss("");
+		ss.precision(2);
+		ss << "Frame Profiler Ranges:" << endl << "----------------------------" << endl;
+
+		for (int domain = DOMAIN_CPU; domain < DOMAIN_COUNT; ++domain)
+		{
+			for (auto& x : ranges)
+			{
+				if (x.second->domain == domain)
+				{
+					ss << x.first << ": " << fixed << x.second->time << " ms" << endl;
+				}
+			}
+			ss << endl;
+		}
+
+		wiFont(ss.str(), wiFontProps(x, y, -1, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255))).Draw(threadID);
 	}
+
+	void SetEnabled(bool value)
+	{
+		ENABLED = value;
+	}
+
 }

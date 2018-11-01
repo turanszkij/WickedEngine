@@ -210,7 +210,7 @@ void Translator::Update()
 	dragStarted = false;
 	dragEnded = false;
 
-	XMFLOAT4 pointer = wiInputManager::GetInstance()->getpointer();
+	XMFLOAT4 pointer = wiInputManager::getpointer();
 	const CameraComponent& cam = wiRenderer::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
@@ -292,7 +292,7 @@ void Translator::Update()
 			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wiInputManager::GetInstance()->down(VK_LBUTTON)))
+		if (dragging || (state != TRANSLATOR_IDLE && wiInputManager::down(VK_LBUTTON)))
 		{
 			XMVECTOR plane, planeNormal;
 			if (state == TRANSLATOR_X)
@@ -410,7 +410,7 @@ void Translator::Update()
 			dragging = true;
 		}
 
-		if (!wiInputManager::GetInstance()->down(VK_LBUTTON))
+		if (!wiInputManager::down(VK_LBUTTON))
 		{
 			if (dragging)
 			{
