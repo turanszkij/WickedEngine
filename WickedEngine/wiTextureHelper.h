@@ -5,6 +5,8 @@
 
 namespace wiTextureHelper
 {
+	void Initialize();
+
 	wiGraphicsTypes::Texture2D* getRandom64x64();
 	wiGraphicsTypes::Texture2D* getColorGradeDefault();
 	wiGraphicsTypes::Texture2D* getNormalMapDefault();

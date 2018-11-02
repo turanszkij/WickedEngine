@@ -12,7 +12,6 @@
 #include <mutex>
 #include <sstream>
 #include <deque>
-#include <deque>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -79,7 +78,7 @@ namespace wiBackLog
 
 		if (scroll + font.textHeight() > int(wiRenderer::GetDevice()->GetScreenHeight() * 0.8f))
 		{
-			scroll -= 1;
+			scroll -= 2;
 		}
 	}
 	void Draw() 

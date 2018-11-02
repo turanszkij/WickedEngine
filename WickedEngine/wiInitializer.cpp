@@ -25,6 +25,7 @@ namespace wiInitializer
 
 		wiFont::Initialize();
 		wiImage::Initialize();
+		wiTextureHelper::Initialize();
 		wiRenderer::Initialize();
 		wiSceneSystem::wiHairParticle::Initialize();
 		wiSceneSystem::wiEmittedParticle::Initialize();
