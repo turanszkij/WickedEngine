@@ -56,8 +56,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WICKEDENGINEGAME));
 
-	editor.Initialize();
-
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)
@@ -131,8 +129,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   if (enabled != 0)
 	   {
 		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> editor.fullscreen >> voidStr >> borderless;
-		   editor.screenW = w;
-		   editor.screenH = h;
 	   }
    }
    file.close();

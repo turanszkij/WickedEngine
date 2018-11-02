@@ -176,9 +176,9 @@ namespace wiHelper
 		return __appDir;
 	}
 
+	static const string __originalWorkingDir = GetWorkingDirectory();
 	string GetOriginalWorkingDirectory()
 	{
-		static const string __originalWorkingDir = GetWorkingDirectory();
 		return __originalWorkingDir;
 	}
 

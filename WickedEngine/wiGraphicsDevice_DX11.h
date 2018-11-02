@@ -50,7 +50,7 @@ namespace wiGraphicsTypes
 
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
-		~GraphicsDevice_DX11();
+		virtual ~GraphicsDevice_DX11();
 
 		HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) override;
 		HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D) override;

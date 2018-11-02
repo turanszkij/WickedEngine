@@ -45,7 +45,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	wiRenderer::GetShaderPath() = "../WickedEngine/shaders/"; // search for shaders elsewhere
 	wiFont::GetFontPath() = "../WickedEngine/fonts/"; // search for fonts elsewhere
-	main.Initialize(); // initialize engine systems (mandatory)
 	main.infoDisplay.active = true; // just show some basic info...
 
 

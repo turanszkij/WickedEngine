@@ -47,8 +47,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WICKEDENGINETESTS));
 
-	tests.Initialize();
-
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)

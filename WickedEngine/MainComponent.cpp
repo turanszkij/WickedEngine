@@ -26,26 +26,24 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-MainComponent::MainComponent()
-{
-	// This call also saves the current working dir as the original one on this first call
-	wiHelper::GetOriginalWorkingDirectory();
-
-	activeComponent = new RenderableComponent();
-}
-
-
 MainComponent::~MainComponent()
 {
+	// This usually means appllication is terminating. Wait for GPU to finish rendering.
 	wiRenderer::GetDevice()->WaitForGPU();
 }
 
 void MainComponent::Initialize()
 {
+	if (initialized)
+	{
+		return;
+	}
+	initialized = true;
 
 	// User can also create a graphics device if custom logic is desired, but he must do before this function!
 	if (wiRenderer::GetDevice() == nullptr)
 	{
+		auto window = wiWindowRegistration::GetRegisteredWindow();
 
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 
@@ -91,9 +89,17 @@ void MainComponent::activateComponent(RenderableComponent* component, float fade
 	// Fade manager will activate on fadeout
 	fadeManager.Clear();
 	fadeManager.Start(fadeSeconds, fadeColor, [this,component]() {
+
 		if (component == nullptr)
+		{
 			return;
-		activeComponent->Stop();
+		}
+
+		if (activeComponent != nullptr)
+		{
+			activeComponent->Stop();
+		}
+
 		component->Start();
 		activeComponent = component;
 	});
@@ -101,6 +107,12 @@ void MainComponent::activateComponent(RenderableComponent* component, float fade
 
 void MainComponent::Run()
 {
+	if (!initialized)
+	{
+		// Initialize in a lazy way, so the user application doesn't have to call this explicitly
+		Initialize();
+		initialized = true;
+	}
 	if (!wiInitializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
@@ -192,7 +204,11 @@ void MainComponent::Run()
 void MainComponent::Update(float dt)
 {
 	wiCpuInfo::UpdateFrame();
-	getActiveComponent()->Update(dt);
+
+	if (getActiveComponent() != nullptr)
+	{
+		getActiveComponent()->Update(dt);
+	}
 
 	wiLua::GetGlobal()->Update();
 }
@@ -202,7 +218,10 @@ void MainComponent::FixedUpdate()
 	wiBackLog::Update();
 	wiLua::GetGlobal()->FixedUpdate();
 
-	getActiveComponent()->FixedUpdate();
+	if (getActiveComponent() != nullptr)
+	{
+		getActiveComponent()->FixedUpdate();
+	}
 }
 
 void MainComponent::Render()
@@ -213,13 +232,19 @@ void MainComponent::Render()
 	wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-	getActiveComponent()->Render();
+	if (getActiveComponent() != nullptr)
+	{
+		getActiveComponent()->Render();
+	}
 	wiProfiler::EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
 }
 
 void MainComponent::Compose()
 {
-	getActiveComponent()->Compose();
+	if (getActiveComponent() != nullptr)
+	{
+		getActiveComponent()->Compose();
+	}
 
 	if (fadeManager.IsActive())
 	{
@@ -298,16 +323,7 @@ void MainComponent::Compose()
 #ifndef WINSTORE_SUPPORT
 bool MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
 {
-	this->window = window;
-	this->instance = hInst;
-
-	if (screenW == 0 || screenH == 0)
-	{
-		RECT rect = RECT();
-		GetClientRect(window, &rect);
-		screenW = rect.right - rect.left;
-		screenH = rect.bottom - rect.top;
-	}
+	this->hInst = hInst;
 
 	wiWindowRegistration::RegisterWindow(window);
 
@@ -316,11 +332,6 @@ bool MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANC
 #else
 bool MainComponent::SetWindow(wiWindowRegistration::window_type window)
 {
-	screenW = (int)window->Bounds.Width;
-	screenH = (int)window->Bounds.Height;
-
-	this->window = window;
-
 	wiWindowRegistration::RegisterWindow(window);
 
 	return true;

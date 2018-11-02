@@ -9,10 +9,11 @@ class RenderableComponent;
 
 class MainComponent
 {
-private:
+protected:
 	RenderableComponent* activeComponent = nullptr;
 	float targetFrameRate = 60;
 	bool frameskip = true;
+	bool initialized = false;
 
 	wiFadeManager fadeManager;
 
@@ -20,19 +21,19 @@ private:
 	float deltaTimeAccumulator = 0;
 	wiTimer timer;
 public:
-	MainComponent();
 	virtual ~MainComponent();
 
-	int screenW = 0;
-	int screenH = 0;
 	bool fullscreen = false;
 
 	// Runs the main engine loop
 	void Run();
 
+	// This will activate a RenderableComponent as the active one, so it will run its Update, FixedUpdate, Render and Compose functions
+	//	You can set a fade time and fade screen color so that switching components will happen when the screen is faded out. Then it will fade back to the new component
 	void activateComponent(RenderableComponent* component, float fadeSeconds = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
-	RenderableComponent* getActiveComponent(){ return activeComponent; }
+	inline RenderableComponent* getActiveComponent(){ return activeComponent; }
 
+	// You can use this as a self-contained resource manager if you want to avoid using the wiResourceManager::GetGlobal()
 	wiResourceManager Content;
 
 	// Set the desired target framerate for the FixedUpdate() loop (default = 60)
@@ -44,19 +45,26 @@ public:
 	//	disabled	: the FixedUpdate() loop will run every frame only once.
 	void	setFrameSkip(bool enabled) { frameskip = enabled; }
 
-	// Initializes all engine components
+	// This is where the critical initializations happen (before any rendering or anything else)
 	virtual void Initialize();
+	// This is where application-wide updates get executed once per frame. 
+	//  RenderableComponent::Update is also called from here for the active component
 	virtual void Update(float dt);
+	// This is where application-wide updates get executed in a fixed timestep based manner. 
+	//  RenderableComponent::FixedUpdate is also called from here for the active component
 	virtual void FixedUpdate();
+	// This is where application-wide rendering happens to offscreen buffers. 
+	//  RenderableComponent::Render is also called from here for the active component
 	virtual void Render();
+	// This is where the application will render to the screen (backbuffer)
 	virtual void Compose();
 
-	wiWindowRegistration::window_type window;
-
 #ifndef WINSTORE_SUPPORT
-	HINSTANCE instance;
-	bool SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst);
+	HINSTANCE hInst = NULL;
+	// You need to call this before calling Run() or Initialize() if you want to render to a Win32 window handle
+	bool SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst = NULL);
 #else
+	// You need to call this before calling Run() or Initialize() if you want to render to a UWP window
 	bool SetWindow(wiWindowRegistration::window_type window);
 #endif
 
@@ -64,23 +72,19 @@ public:
 	struct InfoDisplayer
 	{
 		// activate the whole display
-		bool active;
+		bool active = false;
 		// display engine version number
-		bool watermark;
+		bool watermark = true;
 		// display framerate
-		bool fpsinfo;
+		bool fpsinfo = false;
 		// display cpu utilization
-		bool cpuinfo;
+		bool cpuinfo = false;
 		// display resolution info
-		bool resolution;
+		bool resolution = false;
 		// display engine initialization time
-		bool initstats;
+		bool initstats = false;
 		// text size
-		int size;
-
-		InfoDisplayer() :active(false), watermark(true), fpsinfo(false), cpuinfo(false), 
-			resolution(false), size(-1)
-		{}
+		int size = -1;
 	};
 	// display all-time engine information text
 	InfoDisplayer infoDisplay;
