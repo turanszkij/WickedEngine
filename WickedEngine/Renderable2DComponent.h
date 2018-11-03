@@ -2,73 +2,63 @@
 #include "RenderableComponent.h"
 #include "wiGUI.h"
 
+#include <string>
+
 class wiSprite;
 class wiFont;
 
-#define DEFAULT_RENDERLAYER "default"
+static const std::string DEFAULT_RENDERLAYER = "default";
 
-struct LayeredRenderEntity
+struct RenderItem2D
 {
 	enum TYPE
 	{
 		SPRITE,
 		FONT,
 	} type;
-	wiSprite* sprite;
-	wiFont* font;
-	int order;
-
-	LayeredRenderEntity()
-	{
-		type = SPRITE;
-		sprite = nullptr;
-		font = nullptr;
-		order = 0;
-	}
+	wiSprite* sprite = nullptr;
+	wiFont* font = nullptr;
+	int order = 0;
 };
-struct RenderLayer
+struct RenderLayer2D
 {
-	std::vector<LayeredRenderEntity> entities;
+	std::vector<RenderItem2D> items;
 	std::string name;
-	int order;
+	int order = 0;
 
-	RenderLayer(const std::string& newName)
-	{
-		name = newName;
-		order = 0;
-	}
+	RenderLayer2D(const std::string& name) :name(name) {}
 };
 
 class Renderable2DComponent :
 	public RenderableComponent
 {
 private:
-	float m_spriteSpeed;
 	static wiRenderTarget rtFinal;
 	wiGUI GUI;
+	float spriteSpeed = 1.0f;
 
 protected:
-	virtual void ResizeBuffers();
+	void ResizeBuffers() override;
 public:
 	Renderable2DComponent();
 	virtual ~Renderable2DComponent();
 
-	virtual void Initialize();
-	virtual void Load();
-	virtual void Unload();
-	virtual void Start();
-	virtual void Update(float dt);
-	virtual void FixedUpdate();
-	virtual void Render();
-	virtual void Compose();
+	void Initialize() override;
+	void Load() override;
+	void Unload() override;
+	void Start() override;
+	void Update(float dt) override;
+	void FixedUpdate() override;
+	void Render() override;
+	void Compose() override;
 
 	wiGraphicsTypes::Texture2D* GetRenderResult() { return rtFinal.GetTexture(); }
 
 	void addSprite(wiSprite* sprite, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeSprite(wiSprite* sprite);
 	void clearSprites();
-	void setSpriteSpeed(float value){ m_spriteSpeed = value; }
-	float getSpriteSpeed(){ return m_spriteSpeed; }
+	void setSpriteSpeed(float value) { spriteSpeed = value; }
+	float getSpriteSpeed() { return spriteSpeed; }
 	int getSpriteOrder(wiSprite* sprite);
 
 	void addFont(wiFont* font, const std::string& layer = DEFAULT_RENDERLAYER);
@@ -76,7 +66,7 @@ public:
 	void clearFonts();
 	int getFontOrder(wiFont* font);
 
-	std::vector<RenderLayer> layers;
+	std::vector<RenderLayer2D> layers;
 	void addLayer(const std::string& name);
 	void setLayerOrder(const std::string& name, int order);
 	void SetSpriteOrder(wiSprite* sprite, int order);

@@ -8,7 +8,6 @@ using namespace wiGraphicsTypes;
 
 Renderable2DComponent::Renderable2DComponent() : RenderableComponent()
 {
-	setSpriteSpeed(1.f);
 	addLayer(DEFAULT_RENDERLAYER);
 	GUI = wiGUI(GRAPHICSTHREAD_IMMEDIATE);
 }
@@ -60,7 +59,7 @@ void Renderable2DComponent::Unload()
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr)
 			{
@@ -92,15 +91,11 @@ void Renderable2DComponent::FixedUpdate()
 	
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr)
 			{
 				y.sprite->Update(getSpriteSpeed());
-			}
-			if (y.font != nullptr)
-			{
-				// this is intentianally left blank
 			}
 		}
 	}
@@ -114,7 +109,7 @@ void Renderable2DComponent::Render()
 	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr)
 			{
@@ -150,10 +145,9 @@ void Renderable2DComponent::addSprite(wiSprite* sprite, const std::string& layer
 	{
 		if (!x.name.compare(layer))
 		{
-			LayeredRenderEntity entity = LayeredRenderEntity();
-			entity.type = LayeredRenderEntity::SPRITE;
-			entity.sprite = sprite;
-			x.entities.push_back(entity);
+			x.items.push_back(RenderItem2D());
+			x.items.back().type = RenderItem2D::SPRITE;
+			x.items.back().sprite = sprite;
 		}
 	}
 	SortLayers();
@@ -162,7 +156,7 @@ void Renderable2DComponent::removeSprite(wiSprite* sprite)
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.sprite == sprite)
 			{
@@ -176,7 +170,7 @@ void Renderable2DComponent::clearSprites()
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			y.sprite = nullptr;
 		}
@@ -187,7 +181,7 @@ int Renderable2DComponent::getSpriteOrder(wiSprite* sprite)
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.sprite == sprite)
 			{
@@ -204,10 +198,9 @@ void Renderable2DComponent::addFont(wiFont* font, const std::string& layer)
 	{
 		if (!x.name.compare(layer))
 		{
-			LayeredRenderEntity entity = LayeredRenderEntity();
-			entity.type = LayeredRenderEntity::FONT;
-			entity.font = font;
-			x.entities.push_back(entity);
+			x.items.push_back(RenderItem2D());
+			x.items.back().type = RenderItem2D::FONT;
+			x.items.back().font = font;
 		}
 	}
 	SortLayers();
@@ -216,7 +209,7 @@ void Renderable2DComponent::removeFont(wiFont* font)
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.font == font)
 			{
@@ -230,7 +223,7 @@ void Renderable2DComponent::clearFonts()
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			y.font = nullptr;
 		}
@@ -241,7 +234,7 @@ int Renderable2DComponent::getFontOrder(wiFont* font)
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
 			if (y.font == font)
 			{
@@ -260,10 +253,10 @@ void Renderable2DComponent::addLayer(const std::string& name)
 		if (!x.name.compare(name))
 			return;
 	}
-	RenderLayer layer = RenderLayer(name);
+	RenderLayer2D layer = RenderLayer2D(name);
 	layer.order = (int)layers.size();
 	layers.push_back(layer);
-	layers.back().entities.clear();
+	layers.back().items.clear();
 }
 void Renderable2DComponent::setLayerOrder(const std::string& name, int order)
 {
@@ -281,9 +274,9 @@ void Renderable2DComponent::SetSpriteOrder(wiSprite* sprite, int order)
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
-			if (y.type == LayeredRenderEntity::SPRITE && y.sprite == sprite)
+			if (y.type == RenderItem2D::SPRITE && y.sprite == sprite)
 			{
 				y.order = order;
 			}
@@ -295,9 +288,9 @@ void Renderable2DComponent::SetFontOrder(wiFont* font, int order)
 {
 	for (auto& x : layers)
 	{
-		for (auto& y : x.entities)
+		for (auto& y : x.items)
 		{
-			if (y.type == LayeredRenderEntity::FONT && y.font == font)
+			if (y.type == RenderItem2D::FONT && y.font == font)
 			{
 				y.order = order;
 			}
@@ -318,7 +311,7 @@ void Renderable2DComponent::SortLayers()
 		{
 			if (layers[i].order > layers[j].order)
 			{
-				RenderLayer swap = layers[i];
+				RenderLayer2D swap = layers[i];
 				layers[i] = layers[j];
 				layers[j] = swap;
 			}
@@ -326,19 +319,19 @@ void Renderable2DComponent::SortLayers()
 	}
 	for (auto& x : layers)
 	{
-		if (x.entities.empty())
+		if (x.items.empty())
 		{
 			continue;
 		}
-		for (size_t i = 0; i < x.entities.size() - 1; ++i)
+		for (size_t i = 0; i < x.items.size() - 1; ++i)
 		{
-			for (size_t j = i + 1; j < x.entities.size(); ++j)
+			for (size_t j = i + 1; j < x.items.size(); ++j)
 			{
-				if (x.entities[i].order > x.entities[j].order)
+				if (x.items[i].order > x.items[j].order)
 				{
-					LayeredRenderEntity swap = x.entities[i];
-					x.entities[i] = x.entities[j];
-					x.entities[j] = swap;
+					RenderItem2D swap = x.items[i];
+					x.items[i] = x.items[j];
+					x.items[j] = swap;
 				}
 			}
 		}
@@ -349,20 +342,20 @@ void Renderable2DComponent::CleanLayers()
 {
 	for (auto& x : layers)
 	{
-		if (x.entities.empty())
+		if (x.items.empty())
 		{
 			continue;
 		}
-		std::vector<LayeredRenderEntity> cleanEntities(0);
-		for (auto& y : x.entities)
+		std::vector<RenderItem2D> itemsToRetain(0);
+		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr || y.font!=nullptr)
 			{
-				cleanEntities.push_back(y);
+				itemsToRetain.push_back(y);
 			}
 		}
-		x.entities.clear();
-		x.entities = cleanEntities;
+		x.items.clear();
+		x.items = itemsToRetain;
 	}
 }
 
