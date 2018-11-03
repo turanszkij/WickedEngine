@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <thread>
+#include <condition_variable>
 #include <deque>
 #include <sstream>
 
@@ -18,12 +19,15 @@ namespace wiJobSystem
 	};
 	std::deque<Job> jobPool;
 	wiSpinLock jobLock;
+	std::condition_variable wakeCondition;
+	std::mutex wakeMutex;
 	std::atomic<uint64_t> executionMask = 0;
+	unsigned int numCores = 0;
 
 	void Initialize()
 	{
-		unsigned int numCores = std::thread::hardware_concurrency();
-		numCores = min(numCores, 64); // execution mask is 64 bits
+		numCores = std::thread::hardware_concurrency();
+		numCores = max(1, min(numCores, 64)); // execution mask is 64 bits
 
 		for (unsigned int threadID = 0; threadID < numCores; ++threadID)
 		{
@@ -54,7 +58,9 @@ namespace wiJobSystem
 					}
 					else
 					{
-						std::this_thread::yield();
+						// no job, put thread to sleep
+						std::unique_lock<std::mutex> lock(wakeMutex);
+						wakeCondition.wait(lock);
 					}
 				}
 
@@ -66,11 +72,18 @@ namespace wiJobSystem
 		wiBackLog::post(ss.str().c_str());
 	}
 
+	unsigned int GetThreadCount()
+	{
+		return numCores;
+	}
+
 	void Execute(const std::function<void()>& func)
 	{
 		jobLock.lock();
 		jobPool.push_back(Job(std::move(func)));
 		jobLock.unlock();
+
+		wakeCondition.notify_one();
 	}
 
 	bool IsBusy()

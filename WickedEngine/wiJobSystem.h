@@ -6,6 +6,8 @@ namespace wiJobSystem
 {
 	void Initialize();
 
+	unsigned int GetThreadCount();
+
 	// Add a job to execute asynchronously
 	void Execute(const std::function<void()>& func);
 
