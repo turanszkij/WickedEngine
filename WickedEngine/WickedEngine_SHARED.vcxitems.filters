@@ -903,9 +903,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -949,9 +946,6 @@
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
@@ -1148,6 +1142,15 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h">
       <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h">
+      <Filter>ENGINE\System</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1814,9 +1817,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
@@ -1892,9 +1892,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiWindowRegistration.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
@@ -1945,6 +1942,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen.cpp">
       <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp">
+      <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp">
+      <Filter>ENGINE\System</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiWindowRegistration.cpp">
+      <Filter>ENGINE\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

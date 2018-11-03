@@ -42,7 +42,7 @@ Order of execution:
 	- Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth.
 
 ## System
-You can find out more about the Entity-Component system under ENGINE/System filter in the solution.
+You can find out more about the Entity-Component system and other engine-level systems under ENGINE/System filter in the solution.
 
 - wiECS
 	- This is the core entity-component relationship handler class: ComponentManager
@@ -51,7 +51,16 @@ You can find out more about the Entity-Component system under ENGINE/System filt
 
 - wiSceneSystem
 	- This contains Scene, a class that is responsible of holding and managing everything in the world
-	- There are also all of the Component types, like TransformComponent, MeshCOmponent, etc.
+	- There are also all of the Component types, like TransformComponent, MeshComponent, etc.
+
+- wiJobSystem
+	- Manages the execution of concurrent tasks
+
+- wiInitializer
+	- Initializes all engine systems
+
+- wiWindowRegistration
+	- This is a platform specific utility to manage the native display window
 
 ## Physics
 You can find the physics system related functionality under ENGINE/Physics filter in the solution.
@@ -83,4 +92,41 @@ You can find the Graphics related classes un der ENGINE/Graphics filter in the s
 You can see a quickstart guide on the following picture regarding the most common rendering resources:
 
 ![InformationSheet](information_sheet.png)
+
+## Helpers
+A collection of engine-level helper classes
+
+- wiArchive
+	- This is used for serializing binary data
+- wiHelper
+	- Many helper utility functions, like screenshot, readfile, messagebox, splitpath, sleep, etc...
+- wiMath
+	- Math related helper functions, like lerp, triangleArea, HueToRGB, etc...
+- wiProfiler
+	- A timer utility that can measure CPU and GPU timings and used across the engine
+- wiRandom
+	- random number generator
+- ...
+
+## Input
+The input interface can be found here
+
+- wiInputManager
+	- This manages all inputs
+	- There are several functions, such as down(), press(), etc. to check button states.
+
+## Network
+TODO: Rewrite the networking systems
+
+## Scripting
+This is the place for the Lua scipt interface. The systems that are bound to Lua have the name of the system prefixed by _BindLua. 
+
+- wiLua
+	- The Lua scripting interface
+
+## Tools
+This is the place for tools that use engine-level systems
+
+- wiBackLog
+	- Used to log any messages by any system, from any thread. It can draw itself to the screen. It can execute Lua scripts.
 

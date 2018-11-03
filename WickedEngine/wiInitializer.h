@@ -9,8 +9,6 @@ namespace wiInitializer
 	void InitializeComponentsAsync();
 	// Check if systems have been initialized or not
 	bool IsInitializeFinished();
-	// Check the time it took to initialize systems
-	float GetInitializationTimeInSeconds();
 }
 
 

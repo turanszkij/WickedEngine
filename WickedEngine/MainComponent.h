@@ -81,8 +81,6 @@ public:
 		bool cpuinfo = false;
 		// display resolution info
 		bool resolution = false;
-		// display engine initialization time
-		bool initstats = false;
 		// text size
 		int size = -1;
 	};

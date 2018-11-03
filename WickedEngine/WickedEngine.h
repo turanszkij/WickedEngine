@@ -8,6 +8,19 @@
 
 #include "CommonInclude.h"
 
+// High-level interface:
+#include "RenderPath.h"
+#include "RenderPath2D.h"
+#include "RenderPath3D.h"
+#include "RenderPath3D_Forward.h"
+#include "RenderPath3D_Deferred.h"
+#include "RenderPath3D_TiledForward.h"
+#include "RenderPath3D_TiledDeferred.h"
+#include "RenderPath3D_PathTracing.h"
+#include "LoadingScreen.h"
+#include "MainComponent.h"
+
+// Engine-level systems
 #include "wiVersion.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
@@ -55,17 +68,7 @@
 #include "wiStartupArguments.h"
 #include "wiGPUBVH.h"
 #include "wiGPUSortLib.h"
-
-#include "RenderPath.h"
-#include "RenderPath2D.h"
-#include "RenderPath3D.h"
-#include "RenderPath3D_Forward.h"
-#include "RenderPath3D_Deferred.h"
-#include "RenderPath3D_TiledForward.h"
-#include "RenderPath3D_TiledDeferred.h"
-#include "RenderPath3D_PathTracing.h"
-#include "LoadingScreen.h"
-#include "MainComponent.h"
+#include "wiJobSystem.h"
 
 #ifdef _WIN32
 

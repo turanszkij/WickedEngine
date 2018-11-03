@@ -48,23 +48,23 @@ namespace wiRenderer
 
 GraphicsDevice* graphicsDevice = nullptr;
 
-static Sampler				*samplers[SSLOT_COUNT] = {};
-static VertexShader			*vertexShaders[VSTYPE_LAST] = {};
-static PixelShader			*pixelShaders[PSTYPE_LAST] = {};
-static GeometryShader		*geometryShaders[GSTYPE_LAST] = {};
-static HullShader			*hullShaders[HSTYPE_LAST] = {};
-static DomainShader			*domainShaders[DSTYPE_LAST] = {};
-static ComputeShader		*computeShaders[CSTYPE_LAST] = {};
-static VertexLayout			*vertexLayouts[VLTYPE_LAST] = {};
-static RasterizerState		*rasterizers[RSTYPE_LAST] = {};
-static DepthStencilState	*depthStencils[DSSTYPE_LAST] = {};
-static BlendState			*blendStates[BSTYPE_LAST] = {};
-static GPUBuffer			*constantBuffers[CBTYPE_LAST] = {};
-static GPUBuffer			*resourceBuffers[RBTYPE_LAST] = {};
-static Texture				*textures[TEXTYPE_LAST] = {};
-static Sampler				*customsamplers[SSTYPE_LAST] = {};
+Sampler				*samplers[SSLOT_COUNT] = {};
+VertexShader		*vertexShaders[VSTYPE_LAST] = {};
+PixelShader			*pixelShaders[PSTYPE_LAST] = {};
+GeometryShader		*geometryShaders[GSTYPE_LAST] = {};
+HullShader			*hullShaders[HSTYPE_LAST] = {};
+DomainShader		*domainShaders[DSTYPE_LAST] = {};
+ComputeShader		*computeShaders[CSTYPE_LAST] = {};
+VertexLayout		*vertexLayouts[VLTYPE_LAST] = {};
+RasterizerState		*rasterizers[RSTYPE_LAST] = {};
+DepthStencilState	*depthStencils[DSSTYPE_LAST] = {};
+BlendState			*blendStates[BSTYPE_LAST] = {};
+GPUBuffer			*constantBuffers[CBTYPE_LAST] = {};
+GPUBuffer			*resourceBuffers[RBTYPE_LAST] = {};
+Texture				*textures[TEXTYPE_LAST] = {};
+Sampler				*customsamplers[SSTYPE_LAST] = {};
 
-static string SHADERPATH = "shaders/";
+string SHADERPATH = "shaders/";
 
 LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
 GPURingBuffer	dynamicVertexBufferPools[GRAPHICSTHREAD_COUNT] = {};

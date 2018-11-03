@@ -13,8 +13,7 @@ Here are some guidelines on contributing. You can submit a pull request with you
 - prefer having braces on their own line when writing loops, branches, functions or whatever
 - unit of time should be seconds
 - use std::string to store strings
-- avoid using c++ stl containers if possible (std::vector is acceptable, or unordered_map, but use them sparingly)
-- avoid new and malloc and allocating on general purpose heap wherever you can. Especially avoid it in frequently called code! Note that by default, c++ std:: lib will allocate on heap.
+- avoid new and malloc and allocating on general purpose heap wherever you can. Especially avoid it in frequently called code
 - you can use auto keyword, but aim for as small scope as possible
 - using auto keyword for iterators is encouraged
 - aim to write const-correct code

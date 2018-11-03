@@ -8,64 +8,40 @@ using namespace std;
 
 namespace wiInitializer
 {
-	static bool finished = false;
-	static float initializationTime = 0;
+	bool initializationStarted = false;
 
 	void InitializeComponentsImmediate()
 	{
-		if (finished)
-		{
-			return;
-		}
-
-		wiTimer timer;
-		timer.record();
-
-		wiBackLog::post("\n[wiInitializer] Initializing Wicked Engine, please wait...\n");
-
-		wiFont::Initialize();
-		wiImage::Initialize();
-		wiTextureHelper::Initialize();
-		wiRenderer::Initialize();
-		wiSceneSystem::wiHairParticle::Initialize();
-		wiSceneSystem::wiEmittedParticle::Initialize();
-		wiCpuInfo::Initialize();
-		wiLensFlare::Initialize();
-		wiOcean::Initialize();
-		wiWidget::LoadShaders();
-		wiGPUSortLib::LoadShaders();
-		wiGPUBVH::LoadShaders();
-		wiPhysicsEngine::Initialize();
-		wiSoundEffect::Initialize();
-		wiMusic::Initialize();
-
-		initializationTime = (float)(timer.elapsed() / 1000.0);
-
-		finished = true;
-
+		InitializeComponentsAsync();
+		wiJobSystem::Wait();
 	}
 	void InitializeComponentsAsync()
 	{
-		if (finished)
-		{
-			return;
-		}
+		initializationStarted = true;
 
-		std::thread([] {
+		wiBackLog::post("\n[wiInitializer] Initializing Wicked Engine, please wait...\n");
 
-			InitializeComponentsImmediate();
+		wiJobSystem::Initialize();
 
-		}).detach();
+		wiJobSystem::Execute([] { wiFont::Initialize(); });
+		wiJobSystem::Execute([] { wiImage::Initialize(); });
+		wiJobSystem::Execute([] { wiRenderer::Initialize(); });
+		wiJobSystem::Execute([] { wiSoundEffect::Initialize(); wiMusic::Initialize(); });
+		wiJobSystem::Execute([] { wiCpuInfo::Initialize(); });
+		wiJobSystem::Execute([] { wiTextureHelper::Initialize(); });
+		wiJobSystem::Execute([] { wiSceneSystem::wiHairParticle::Initialize(); });
+		wiJobSystem::Execute([] { wiSceneSystem::wiEmittedParticle::Initialize(); });
+		wiJobSystem::Execute([] { wiLensFlare::Initialize(); });
+		wiJobSystem::Execute([] { wiOcean::Initialize(); });
+		wiJobSystem::Execute([] { wiWidget::LoadShaders(); });
+		wiJobSystem::Execute([] { wiGPUSortLib::LoadShaders(); });
+		wiJobSystem::Execute([] { wiGPUBVH::LoadShaders(); });
+		wiJobSystem::Execute([] { wiPhysicsEngine::Initialize(); });
 
 	}
 
 	bool IsInitializeFinished()
 	{
-		return finished;
-	}
-
-	float GetInitializationTimeInSeconds()
-	{
-		return initializationTime;
+		return initializationStarted && !wiJobSystem::IsBusy();
 	}
 }

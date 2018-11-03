@@ -284,10 +284,6 @@ void MainComponent::Compose()
 #endif
 			ss << endl;
 		}
-		if (infoDisplay.initstats)
-		{
-			ss << "System init time: " << wiInitializer::GetInitializationTimeInSeconds() << " sec" << endl;
-		}
 		if (infoDisplay.resolution)
 		{
 			ss << "Resolution: " << wiRenderer::GetDevice()->GetScreenWidth() << " x " << wiRenderer::GetDevice()->GetScreenHeight() << endl;
