@@ -2,14 +2,14 @@
 #include "wiLua_Globals.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
-#include "RenderableComponent_BindLua.h"
-#include "Renderable2DComponent_BindLua.h"
-#include "LoadingScreenComponent_BindLua.h"
-#include "Renderable3DComponent_BindLua.h"
-#include "DeferredRenderableComponent_BindLua.h"
-#include "ForwardRenderableComponent_BindLua.h"
-#include "TiledForwardRenderableComponent_BindLua.h"
-#include "TiledDeferredRenderableComponent_BindLua.h"
+#include "RenderPath_BindLua.h"
+#include "RenderPath2D_BindLua.h"
+#include "LoadingScreen_BindLua.h"
+#include "RenderPath3D_BindLua.h"
+#include "RenderPath3D_Deferred_BindLua.h"
+#include "RenderPath3D_Forward_BindLua.h"
+#include "RenderPath3D_TiledForward_BindLua.h"
+#include "RenderPath3D_TiledDeferred_BindLua.h"
 #include "Texture_BindLua.h"
 #include "wiRenderer_BindLua.h"
 #include "wiSound_BindLua.h"
@@ -56,14 +56,14 @@ wiLua* wiLua::GetGlobal()
 		UNLOCK_STATIC();
 
 		MainComponent_BindLua::Bind();
-		RenderableComponent_BindLua::Bind();
-		Renderable2DComponent_BindLua::Bind();
-		LoadingScreenComponent_BindLua::Bind();
-		Renderable3DComponent_BindLua::Bind();
-		DeferredRenderableComponent_BindLua::Bind();
-		ForwardRenderableComponent_BindLua::Bind();
-		TiledForwardRenderableComponent_BindLua::Bind();
-		TiledDeferredRenderableComponent_BindLua::Bind();
+		RenderPath_BindLua::Bind();
+		RenderPath2D_BindLua::Bind();
+		LoadingScreen_BindLua::Bind();
+		RenderPath3D_BindLua::Bind();
+		RenderPath3D_Deferred_BindLua::Bind();
+		RenderPath3D_Forward_BindLua::Bind();
+		RenderPath3D_TiledForward_BindLua::Bind();
+		RenderPath3D_TiledDeferred_BindLua::Bind();
 		Texture_BindLua::Bind();
 		wiRenderer_BindLua::Bind();
 		wiSound_BindLua::Bind();

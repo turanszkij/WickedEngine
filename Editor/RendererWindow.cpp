@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "RendererWindow.h"
-#include "Renderable3DComponent.h"
+#include "RenderPath3D.h"
 
 
-RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : GUI(gui)
+RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 {
 	assert(GUI && "Invalid GUI!");
 
@@ -168,7 +168,7 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 	tessellationCheckBox->SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox->SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox->OnClick([=](wiEventArgs args) {
-		component->setTessellationEnabled(args.bValue);
+		path->setTessellationEnabled(args.bValue);
 	});
 	tessellationCheckBox->SetCheck(false);
 	rendererWindow->AddWidget(tessellationCheckBox);
@@ -311,16 +311,16 @@ RendererWindow::RendererWindow(wiGUI* gui, Renderable3DComponent* component) : G
 		switch (args.iValue)
 		{
 		case 0:
-			component->setMSAASampleCount(1);
+			path->setMSAASampleCount(1);
 			break;
 		case 1:
-			component->setMSAASampleCount(2);
+			path->setMSAASampleCount(2);
 			break;
 		case 2:
-			component->setMSAASampleCount(4);
+			path->setMSAASampleCount(4);
 			break;
 		case 3:
-			component->setMSAASampleCount(8);
+			path->setMSAASampleCount(8);
 			break;
 		default:
 			break;

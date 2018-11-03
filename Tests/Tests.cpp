@@ -24,7 +24,7 @@ void Tests::Initialize()
 	infoDisplay.cpuinfo = false;
 	infoDisplay.resolution = true;
 
-	activateComponent(new TestsRenderer);
+	ActivatePath(new TestsRenderer);
 }
 
 

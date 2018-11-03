@@ -15,7 +15,7 @@ ToggleCameraAnimation();
 local sprite = Sprite("images/HelloWorld.png");
 sprite.SetEffects(ImageEffects(100,100,100,50));
 -- Set this image as renderable to the active component:
-local component = main.GetActiveComponent();
+local component = main.GetActivePath();
 component.AddSprite(sprite);
 
 

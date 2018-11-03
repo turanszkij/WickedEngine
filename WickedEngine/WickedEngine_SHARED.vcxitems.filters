@@ -13,9 +13,6 @@
     <Filter Include="ENGINE">
       <UniqueIdentifier>{2d30408b-f788-42a8-9648-41561036e10a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ENGINE\Components">
-      <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ENGINE\Common">
       <UniqueIdentifier>{3c39405f-ec30-4b72-9c32-68aefb4fb7a5}</UniqueIdentifier>
     </Filter>
@@ -63,6 +60,9 @@
     </Filter>
     <Filter Include="ENGINE\System">
       <UniqueIdentifier>{f9156b5b-9cc8-436c-9faa-536f7dce4f27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ENGINE\High level interface">
+      <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -156,46 +156,13 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
+      <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h">
@@ -1005,14 +972,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h">
       <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSpinLock.h">
       <Filter>ENGINE\Helpers</Filter>
@@ -1037,9 +998,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsResource.h">
       <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_EmittedParticle.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
@@ -1092,20 +1050,11 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.h">
-      <Filter>ENGINE\Components</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
@@ -1148,6 +1097,57 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h">
       <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath2D.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.h">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h">
+      <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1259,46 +1259,13 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
+      <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreenComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)ForwardRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable2DComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Renderable3DComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderableComponent_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp">
@@ -1868,14 +1835,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp">
       <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TiledForwardRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp">
       <Filter>ENGINE\Helpers</Filter>
@@ -1891,9 +1852,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp">
       <Filter>ENGINE\Graphics</Filter>
@@ -1916,15 +1874,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)TiledDeferredRenderableComponent_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)DeferredRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)PathTracingRenderableComponent.cpp">
-      <Filter>ENGINE\Components</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
@@ -1945,6 +1894,57 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWindowRegistration.cpp">
       <Filter>ENGINE\Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.cpp">
+      <Filter>ENGINE\High level interface</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen.cpp">
+      <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -24,12 +24,12 @@ The documentation completion is still pending....
 	7. Scene
 		TODO
 	8. MainComponent
-	9. RenderableComponent
-		1. Renderable2DComponent
-		2. Renderable3DComponent
-			1. ForwardRenderableComponent
-			2. DeferredRenderableComponent
-		4. LoadingScreenComponent
+	9. RenderPath
+		1. RenderPath2D
+		2. RenderPath3D
+			1. RenderPath3D_Forward
+			2. RenderPath3D_Deferred
+		4. LoadingScreen
 	10. Network
 		1. Server
 		2. Client
@@ -310,8 +310,8 @@ The main component which holds information and manages the running of the curren
 - [outer]main : MainComponent
 - [void-constructor]MainComponent()
 - GetContent() : Resource? result
-- GetActiveComponent() : RenderableComponent? result
-- SetActiveComponent(RenderableComponent component, opt float fadeSeconds,fadeColorR,fadeColorG,fadeColorB)
+- GetActivePath() : RenderPath? result
+- SetActivePath(RenderPath path, opt float fadeSeconds,fadeColorR,fadeColorG,fadeColorB)
 - SetFrameSkip(bool enabled)
 - SetInfoDisplay(bool active)
 - SetWatermarkDisplay(bool active)
@@ -319,9 +319,9 @@ The main component which holds information and manages the running of the curren
 - SetCPUDisplay(bool active)
 - [outer]SetProfilerEnabled(bool enabled)
 
-### RenderableComponent
-A RenderableComponent describes a scene wich can render itself.
-- [constructor]RenderableComponent()
+### RenderPath
+A RenderPath describes a scene wich can render itself.
+- [constructor]RenderPath()
 - GetContent() : Resource result
 - Initialize()
 - Load()
@@ -337,9 +337,9 @@ A RenderableComponent describes a scene wich can render itself.
 - GetLayerMask() : uint result
 - SetLayerMask(uint mask)
 
-#### Renderable2DComponent
+#### RenderPath2D
 It can hold Sprites and Fonts and can sort them by layers, update and render them.
-- [constructor]Renderable2DComponent()
+- [constructor]RenderPath2D()
 - AddSprite(Sprite sprite, opt string layer)
 - AddFont(Font font, opt string layer)
 - RemoveFont(Font font)
@@ -353,10 +353,10 @@ It can hold Sprites and Fonts and can sort them by layers, update and render the
 - SetSpriteOrder(Sprite sprite, int order)
 - SetFontOrder(Font font, int order)
 
-#### Renderable3DComponent
+#### RenderPath3D
 A 3D scene can either be rendered by a Forward or Deferred render path. 
-It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
-- [void-constructor]Renderable3DComponent()
+It inherits functions from RenderPath2D, so it can render a 2D overlay.
+- [void-constructor]RenderPath3D()
 - SetSSAOEnabled(bool value)
 - SetSSREnabled(bool value)
 - SetShadowsEnabled(bool value)
@@ -382,28 +382,28 @@ It inherits functions from Renderable2DComponent, so it can render a 2D overlay.
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(bool value)
 
-##### ForwardRenderableComponent
+##### RenderPath3D_Forward
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
-It inherits functions from Renderable3DComponent.
-- [constructor]ForwardRenderableComponent()
+It inherits functions from RenderPath3D.
+- [constructor]RenderPath3D_Forward()
 
-##### TiledForwardRenderableComponent
+##### RenderPath3D_TiledForward
 It renders the scene contained by the Renderer in a tiled forward render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
-It inherits functions from ForwardRenderable3DComponent.
-- [constructor]TiledForwardRenderableComponent()
+It inherits functions from RenderPath3D_Forward3D.
+- [constructor]RenderPath3D_TiledForward()
 
-##### DeferredRenderableComponent
+##### RenderPath3D_Deferred
 It renders the scene contained by the Renderer in a deferred render path. The component does not hold the scene information, 
 only the effects to render the scene. The scene is managed and ultimately rendered by the Renderer.
-It inherits functions from Renderable3DComponent.
-- [constructor]DeferredRenderableComponent()
+It inherits functions from RenderPath3D.
+- [constructor]RenderPath3D_Deferred()
 
-#### LoadingScreenComponent
-It is a Renderable2DComponent but one that internally manages resource loading and can display information about the process.
-It inherits functions from Renderable2DComponent.
-- [constructor]LoadingScreenComponent()
+#### LoadingScreen
+It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
+It inherits functions from RenderPath2D.
+- [constructor]LoadingScreen()
 - AddLoadingTask(string taskScript)
 - OnFinished(string taskScript)
 

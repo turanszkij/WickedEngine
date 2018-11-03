@@ -16,8 +16,6 @@
 using namespace std;
 using namespace wiGraphicsTypes;
 
-wiSpinLock logLock;
-
 
 namespace wiBackLog
 {
@@ -39,6 +37,7 @@ namespace wiBackLog
 	stringstream inputArea;
 	int historyPos = 0;
 	wiFont font;
+	wiSpinLock logLock;
 
 	Texture2D* backgroundTex = nullptr;
 

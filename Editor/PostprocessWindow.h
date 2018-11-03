@@ -1,6 +1,6 @@
 #pragma once
 
-class Renderable3DComponent;
+class RenderPath3D;
 
 class wiGUI;
 class wiWindow;
@@ -12,11 +12,11 @@ class wiButton;
 class PostprocessWindow
 {
 public:
-	PostprocessWindow(wiGUI* gui, Renderable3DComponent* component);
+	PostprocessWindow(wiGUI* gui, RenderPath3D* component);
 	~PostprocessWindow();
 
 	wiGUI* GUI;
-	Renderable3DComponent* component;
+	RenderPath3D* component;
 
 	wiWindow*	ppWindow;
 	wiCheckBox* lensFlareCheckBox;

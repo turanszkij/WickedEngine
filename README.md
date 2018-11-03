@@ -113,8 +113,8 @@ Then set the following dependencies to this library in Visual Studio this way in
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. 
 But this will not render anything for you yet, because first you must initialize the engine. For this, you should create a main program component by deriving from MainComponent class of 
-Wicked Engine and initialize it appropriately by calling its Initialize() and SetWindow() functions, and calling its run() function inside the main message loop. 
-You should also activate a RenderableComponent for the rendering to begin. You can see an example for this inside the Tests and Editor projects.
+Wicked Engine and initialize it appropriately by calling the SetWindow() and Run() functions inside the main message loop. 
+You should also ActivatePath() for the rendering to begin. You can see an example for this inside the Tests and Editor projects.
 
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 

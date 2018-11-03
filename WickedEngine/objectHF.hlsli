@@ -35,7 +35,7 @@
 #define xSurfaceMap				texture_2	// r: reflectance, g: metalness, b: emissive, a: subsurface scattering
 #define xDisplacementMap		texture_3	// r: heightmap
 
-// These are bound by RenderableComponent (based on Render Path):
+// These are bound by RenderPath (based on Render Path):
 #define xReflection				texture_6	// rgba: scene color from reflected camera angle
 #define xRefraction				texture_7	// rgba: scene color from primary camera angle
 #define	xWaterRipples			texture_8	// rgb: snorm8 water ripple normal map

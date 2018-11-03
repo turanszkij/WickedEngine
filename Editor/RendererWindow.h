@@ -24,7 +24,7 @@ enum PICKTYPE
 class RendererWindow
 {
 public:
-	RendererWindow(wiGUI* gui, Renderable3DComponent* component);
+	RendererWindow(wiGUI* gui, RenderPath3D* path);
 	~RendererWindow();
 
 	wiGUI* GUI;

@@ -18,7 +18,7 @@ class HairParticleWindow;
 class ForceFieldWindow;
 class OceanWindow;
 
-class EditorLoadingScreen : public LoadingScreenComponent
+class EditorLoadingScreen : public LoadingScreen
 {
 private:
 	wiSprite sprite;
@@ -30,7 +30,7 @@ public:
 };
 
 class Editor;
-class EditorComponent : public Renderable2DComponent
+class EditorComponent : public RenderPath2D
 {
 private:
 	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
@@ -56,7 +56,7 @@ public:
 	wiCheckBox*				cinemaModeCheckBox = nullptr;
 
 	EditorLoadingScreen*	loader = nullptr;
-	Renderable3DComponent*	renderPath = nullptr;
+	RenderPath3D*	renderPath = nullptr;
 	enum RENDERPATH
 	{
 		RENDERPATH_FORWARD,

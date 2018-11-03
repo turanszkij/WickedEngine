@@ -64,7 +64,7 @@ void Editor::Initialize()
 
 	loader->addLoadingComponent(renderComponent, this);
 
-	activateComponent(loader);
+	ActivatePath(loader);
 
 }
 
@@ -107,19 +107,19 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	switch (path)
 	{
 	case EditorComponent::RENDERPATH_FORWARD:
-		renderPath = new ForwardRenderableComponent;
+		renderPath = new RenderPath3D_Forward;
 		break;
 	case EditorComponent::RENDERPATH_DEFERRED:
-		renderPath = new DeferredRenderableComponent;
+		renderPath = new RenderPath3D_Deferred;
 		break;
 	case EditorComponent::RENDERPATH_TILEDFORWARD:
-		renderPath = new TiledForwardRenderableComponent;
+		renderPath = new RenderPath3D_TiledForward;
 		break;
 	case EditorComponent::RENDERPATH_TILEDDEFERRED:
-		renderPath = new TiledDeferredRenderableComponent;
+		renderPath = new RenderPath3D_TiledDeferred;
 		break;
 	case EditorComponent::RENDERPATH_PATHTRACING:
-		renderPath = new PathTracingRenderableComponent;
+		renderPath = new RenderPath3D_PathTracing;
 		break;
 	default:
 		assert(0);
@@ -468,10 +468,10 @@ void EditorComponent::Load()
 					}
 				});
 				loader->onFinished([=] {
-					main->activateComponent(this, 0.2f, wiColor::Black);
+					main->ActivatePath(this, 0.2f, wiColor::Black);
 					weatherWnd->UpdateFromRenderer();
 				});
-				main->activateComponent(loader, 0.2f, wiColor::Black);
+				main->ActivatePath(loader, 0.2f, wiColor::Black);
 				ResetHistory();
 			}
 		}).detach();

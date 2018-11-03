@@ -5,12 +5,12 @@
 #include "wiFadeManager.h"
 #include "wiWindowRegistration.h"
 
-class RenderableComponent;
+class RenderPath;
 
 class MainComponent
 {
 protected:
-	RenderableComponent* activeComponent = nullptr;
+	RenderPath* activeComponent = nullptr;
 	float targetFrameRate = 60;
 	bool frameskip = true;
 	bool initialized = false;
@@ -28,10 +28,10 @@ public:
 	// Runs the main engine loop
 	void Run();
 
-	// This will activate a RenderableComponent as the active one, so it will run its Update, FixedUpdate, Render and Compose functions
+	// This will activate a RenderPath as the active one, so it will run its Update, FixedUpdate, Render and Compose functions
 	//	You can set a fade time and fade screen color so that switching components will happen when the screen is faded out. Then it will fade back to the new component
-	void activateComponent(RenderableComponent* component, float fadeSeconds = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
-	inline RenderableComponent* getActiveComponent(){ return activeComponent; }
+	void ActivatePath(RenderPath* component, float fadeSeconds = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
+	inline RenderPath* GetActivePath(){ return activeComponent; }
 
 	// You can use this as a self-contained resource manager if you want to avoid using the wiResourceManager::GetGlobal()
 	wiResourceManager Content;
@@ -48,13 +48,13 @@ public:
 	// This is where the critical initializations happen (before any rendering or anything else)
 	virtual void Initialize();
 	// This is where application-wide updates get executed once per frame. 
-	//  RenderableComponent::Update is also called from here for the active component
+	//  RenderPath::Update is also called from here for the active component
 	virtual void Update(float dt);
 	// This is where application-wide updates get executed in a fixed timestep based manner. 
-	//  RenderableComponent::FixedUpdate is also called from here for the active component
+	//  RenderPath::FixedUpdate is also called from here for the active component
 	virtual void FixedUpdate();
 	// This is where application-wide rendering happens to offscreen buffers. 
-	//  RenderableComponent::Render is also called from here for the active component
+	//  RenderPath::Render is also called from here for the active component
 	virtual void Render();
 	// This is where the application will render to the screen (backbuffer)
 	virtual void Compose();

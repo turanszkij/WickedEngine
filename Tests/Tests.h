@@ -11,7 +11,7 @@ public:
 };
 
 
-class TestsRenderer : public DeferredRenderableComponent
+class TestsRenderer : public RenderPath3D_Deferred
 {
 public: 
 	TestsRenderer();

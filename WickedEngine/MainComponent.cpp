@@ -1,5 +1,5 @@
 #include "MainComponent.h"
-#include "RenderableComponent.h"
+#include "RenderPath.h"
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiTimer.h"
@@ -79,7 +79,7 @@ void MainComponent::Initialize()
 	wiLua::GetGlobal()->RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
 }
 
-void MainComponent::activateComponent(RenderableComponent* component, float fadeSeconds, const wiColor& fadeColor)
+void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, const wiColor& fadeColor)
 {
 	if (component == nullptr)
 	{
@@ -205,9 +205,9 @@ void MainComponent::Update(float dt)
 {
 	wiCpuInfo::UpdateFrame();
 
-	if (getActiveComponent() != nullptr)
+	if (GetActivePath() != nullptr)
 	{
-		getActiveComponent()->Update(dt);
+		GetActivePath()->Update(dt);
 	}
 
 	wiLua::GetGlobal()->Update();
@@ -218,9 +218,9 @@ void MainComponent::FixedUpdate()
 	wiBackLog::Update();
 	wiLua::GetGlobal()->FixedUpdate();
 
-	if (getActiveComponent() != nullptr)
+	if (GetActivePath() != nullptr)
 	{
-		getActiveComponent()->FixedUpdate();
+		GetActivePath()->FixedUpdate();
 	}
 }
 
@@ -232,18 +232,18 @@ void MainComponent::Render()
 	wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-	if (getActiveComponent() != nullptr)
+	if (GetActivePath() != nullptr)
 	{
-		getActiveComponent()->Render();
+		GetActivePath()->Render();
 	}
 	wiProfiler::EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
 }
 
 void MainComponent::Compose()
 {
-	if (getActiveComponent() != nullptr)
+	if (GetActivePath() != nullptr)
 	{
-		getActiveComponent()->Compose();
+		GetActivePath()->Compose();
 	}
 
 	if (fadeManager.IsActive())
