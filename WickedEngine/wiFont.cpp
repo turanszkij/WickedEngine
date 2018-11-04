@@ -11,6 +11,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <atomic>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -35,7 +36,7 @@ namespace wiFont_Internal
 	PixelShader			*pixelShader = nullptr;
 	GraphicsPSO			*PSO = nullptr;
 
-	bool initialized = false;
+	std::atomic_bool initialized = false;
 
 	struct wiFontStyle
 	{
@@ -360,7 +361,7 @@ void wiFont::Initialize()
 	LoadShaders();
 
 	wiBackLog::post("wiFont Initialized");
-	initialized = true;
+	initialized.store(true);
 }
 void wiFont::CleanUp()
 {
@@ -417,7 +418,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 
 void wiFont::Draw(GRAPHICSTHREAD threadID)
 {
-	if (!initialized || text.length() <= 0)
+	if (!initialized.load() || text.length() <= 0)
 	{
 		return;
 	}

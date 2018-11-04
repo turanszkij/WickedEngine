@@ -37,7 +37,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
 		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-		wiRenderer::DrawWorld(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
+		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
 	}
 
 
@@ -200,7 +200,7 @@ void RenderPath3D_TiledDeferred::RenderTransparentScene(wiRenderTarget& refracti
 	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
-	wiRenderer::DrawWorldTransparent(wiRenderer::GetCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled(), true, getLayerMask());
+	wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled(), true, getLayerMask());
 
 	wiProfiler::EndRange(); // Transparent Scene
 }

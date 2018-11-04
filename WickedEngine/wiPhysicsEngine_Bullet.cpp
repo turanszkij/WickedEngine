@@ -2,6 +2,7 @@
 #include "wiSceneSystem.h"
 #include "wiProfiler.h"
 #include "wiBackLog.h"
+#include "wiJobSystem.h"
 
 #include "btBulletDynamicsCommon.h"
 #include "BulletSoftBody/btSoftBodyHelpers.h"
@@ -17,6 +18,7 @@ using namespace wiSceneSystem;
 namespace wiPhysicsEngine
 {
 	bool ENABLED = true;
+	wiSpinLock physicsLock;
 
 	btVector3 gravity(0, -10, 0);
 	int softbodyIterationCount = 5;
@@ -314,17 +316,19 @@ namespace wiPhysicsEngine
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
-		for (size_t i = 0; i < rigidbodies.GetCount(); ++i)
-		{
-			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[i];
-			Entity entity = rigidbodies.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)rigidbodies.GetCount(), [&](uint32_t jobIndex) {
+
+			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[jobIndex];
+			Entity entity = rigidbodies.GetEntity(jobIndex);
 
 			if (physicscomponent.physicsobject == nullptr)
 			{
 				TransformComponent& transform = *transforms.GetComponent(entity);
 				const ObjectComponent& object = *objects.GetComponent(entity);
 				const MeshComponent& mesh = *meshes.GetComponent(object.meshID);
+				physicsLock.lock();
 				AddRigidBody(entity, physicscomponent, mesh, transform);
+				physicsLock.unlock();
 			}
 
 			if (physicscomponent.physicsobject != nullptr)
@@ -359,19 +363,21 @@ namespace wiPhysicsEngine
 					motionState->setWorldTransform(physicsTransform);
 				}
 			}
-		}
+		});
 
 		// System will register softbodies to meshes and update physics engine state:
-		for (size_t i = 0; i < softbodies.GetCount(); ++i)
-		{
-			SoftBodyPhysicsComponent& physicscomponent = softbodies[i];
-			Entity entity = softbodies.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)softbodies.GetCount(), [&](uint32_t jobIndex) {
+
+			SoftBodyPhysicsComponent& physicscomponent = softbodies[jobIndex];
+			Entity entity = softbodies.GetEntity(jobIndex);
 			MeshComponent& mesh = *meshes.GetComponent(entity);
 			mesh.SetDynamic(true);
 
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::SAFE_TO_REGISTER && physicscomponent.physicsobject == nullptr)
 			{
+				physicsLock.lock();
 				AddSoftBody(entity, physicscomponent, mesh);
+				physicsLock.unlock();
 			}
 
 			if (physicscomponent.physicsobject != nullptr)
@@ -401,7 +407,9 @@ namespace wiPhysicsEngine
 					}
 				}
 			}
-		}
+		});
+
+		wiJobSystem::Wait();
 
 		// Perform internal simulation step:
 		dynamicsWorld->stepSimulation(dt, 10);

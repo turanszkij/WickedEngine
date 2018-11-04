@@ -77,8 +77,6 @@ public:
 		bool watermark = true;
 		// display framerate
 		bool fpsinfo = false;
-		// display cpu utilization
-		bool cpuinfo = false;
 		// display resolution info
 		bool resolution = false;
 		// text size

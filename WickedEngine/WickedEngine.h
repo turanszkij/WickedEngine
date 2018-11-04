@@ -30,8 +30,6 @@
 #include "wiImage.h"
 #include "wiSprite.h"
 #include "wiFont.h"
-#include "wiFrameRate.h"
-#include "wiCpuInfo.h"
 #include "wiSceneSystem.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"

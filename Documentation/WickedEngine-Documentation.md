@@ -55,6 +55,9 @@ You can find out more about the Entity-Component system and other engine-level s
 
 - wiJobSystem
 	- Manages the execution of concurrent tasks
+	- Execute() function will schedule a task for execution on a separate thread
+	- Dispatch() function will schedule a task for execution on multiple parallel threads
+	- Wait() function will block until all jobs have finished. All scheduling operations are put on hold too
 
 - wiInitializer
 	- Initializes all engine systems
@@ -73,7 +76,7 @@ It uses the entity-component system to perform updating all physics components i
 You can find the Graphics related classes un der ENGINE/Graphics filter in the solution. The most notable classes are the folowing:
 
 - wiRenderer
-	- This is a collection of functions that facilitate an engine-level rendering logic, like RenderScene
+	- This is a collection of functions that facilitate an engine-level rendering logic, like DrawScene, DrawLights, etc...
 
 - wiImage
 	- This can render images to the screen

@@ -985,10 +985,6 @@ namespace wiSceneSystem
 		void Serialize(wiArchive& archive);
 	};
 
-	void RunWeatherUpdateSystem(
-		const wiECS::ComponentManager<WeatherComponent>& weathers, 
-		WeatherComponent& weather
-	);
 	void RunPreviousFrameTransformUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms
@@ -1044,8 +1040,7 @@ namespace wiSceneSystem
 	void RunLightUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<AABB>& aabb_lights,
-		wiECS::ComponentManager<LightComponent>& lights,
-		WeatherComponent* weather = nullptr
+		wiECS::ComponentManager<LightComponent>& lights
 	);
 	void RunParticleUpdateSystem(
 		const wiECS::ComponentManager<TransformComponent>& transforms,
@@ -1053,6 +1048,11 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<wiEmittedParticle>& emitters,
 		wiECS::ComponentManager<wiHairParticle>& hairs,
 		float dt
+	);
+	void RunWeatherUpdateSystem(
+		const wiECS::ComponentManager<WeatherComponent>& weathers,
+		const wiECS::ComponentManager<LightComponent>& lights,
+		WeatherComponent& weather
 	);
 
 }

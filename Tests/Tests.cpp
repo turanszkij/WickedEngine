@@ -21,7 +21,6 @@ void Tests::Initialize()
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
-	infoDisplay.cpuinfo = false;
 	infoDisplay.resolution = true;
 
 	ActivatePath(new TestsRenderer);

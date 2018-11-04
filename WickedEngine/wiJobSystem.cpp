@@ -12,24 +12,35 @@ namespace wiJobSystem
 {
 	struct Job
 	{
-		std::function<void()> func;
+		uint32_t jobIndex = 0;
+		std::function<void(uint32_t jobIndex)> func;
 
 		Job() {}
-		Job(const std::function<void()>& func) :func(func) {}
+		Job(const std::function<void()>& func)
+		{
+			this->func = std::move([func](uint32_t jobIndex) {
+				func();
+			});
+		}
+		Job(uint32_t jobIndex, const std::function<void(uint32_t jobIndex)>& func) : jobIndex(jobIndex), func(func) {}
 	};
 	std::deque<Job> jobPool;
 	wiSpinLock jobLock;
 	std::condition_variable wakeCondition;
 	std::mutex wakeMutex;
-	std::atomic<uint64_t> executionMask = 0;
-	unsigned int numCores = 0;
+	std::atomic<uint32_t> remainingJobs = 0;
+	uint32_t numThreads = 0;
+	std::atomic_bool waitBarrier = false;
 
 	void Initialize()
 	{
-		numCores = std::thread::hardware_concurrency();
-		numCores = max(1, min(numCores, 64)); // execution mask is 64 bits
+		// Retrieve the number of hardware threads in this system:
+		auto numCores = std::thread::hardware_concurrency();
 
-		for (unsigned int threadID = 0; threadID < numCores; ++threadID)
+		// Calculate the actual number of worker threads we want:
+		numThreads = max(1, numCores);
+
+		for (unsigned int threadID = 0; threadID < numThreads; ++threadID)
 		{
 			std::thread([threadID] {
 
@@ -37,13 +48,11 @@ namespace wiJobSystem
 				{
 					Job job;
 					bool working = false;
-					const uint64_t threadMask = 1ull << threadID;
 
 					jobLock.lock();
 					{
 						if (!jobPool.empty())
 						{
-							executionMask.fetch_or(threadMask); // mark this thread as working
 							working = true;
 							job = std::move(jobPool.front());
 							jobPool.pop_front();
@@ -53,8 +62,8 @@ namespace wiJobSystem
 
 					if (working)
 					{
-						job.func(); // execute job
-						executionMask.fetch_and(~threadMask); // mark this thread as idle
+						job.func(job.jobIndex); // execute job
+						remainingJobs.fetch_sub(1);
 					}
 					else
 					{
@@ -68,33 +77,57 @@ namespace wiJobSystem
 		}
 
 		std::stringstream ss("");
-		ss << "wiJobSystem Initialized with " << numCores << " threads";
+		ss << "wiJobSystem Initialized with [" << numCores << " cores] [" << numThreads << " threads]";
 		wiBackLog::post(ss.str().c_str());
 	}
 
 	unsigned int GetThreadCount()
 	{
-		return numCores;
+		return numThreads;
 	}
 
 	void Execute(const std::function<void()>& func)
 	{
+		while (waitBarrier.load() == true) { std::this_thread::yield(); } // can't add jobs while Wait() is in progress
+
+		remainingJobs.fetch_add(1);
+
 		jobLock.lock();
 		jobPool.push_back(Job(std::move(func)));
 		jobLock.unlock();
 
-		wakeCondition.notify_one();
+		wakeCondition.notify_one(); // only wake a single thread
+	}
+
+	void Dispatch(uint32_t jobCount, const std::function<void(uint32_t jobIndex)>& func)
+	{
+		if (jobCount == 0)
+		{
+			return;
+		}
+		while (waitBarrier.load() == true) { std::this_thread::yield(); } // can't add jobs while Wait() is in progress
+
+		remainingJobs.fetch_add(jobCount);
+
+		jobLock.lock();
+		for (uint32_t i = 0; i < jobCount; ++i)
+		{
+			jobPool.push_back(Job(i, std::move(func)));
+		}
+		jobLock.unlock();
+
+		wakeCondition.notify_all(); // wake all threads
 	}
 
 	bool IsBusy()
 	{
-		return executionMask.load() > 0;
+		return remainingJobs.load() > 0;
 	}
 
 	void Wait()
 	{
-		jobLock.lock();
-		while (IsBusy()) {}
-		jobLock.unlock();
+		waitBarrier.store(true); // block any incoming work
+		while (IsBusy()) { std::this_thread::yield(); }
+		waitBarrier.store(false); // release block
 	}
 }

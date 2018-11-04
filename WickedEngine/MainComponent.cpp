@@ -3,14 +3,12 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiTimer.h"
-#include "wiCpuInfo.h"
 #include "wiInputManager.h"
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
 #include "wiVersion.h"
 #include "wiImageEffects.h"
 #include "wiTextureHelper.h"
-#include "wiFrameRate.h"
 #include "wiProfiler.h"
 #include "wiInitializer.h"
 #include "wiStartupArguments.h"
@@ -203,8 +201,6 @@ void MainComponent::Run()
 
 void MainComponent::Update(float dt)
 {
-	wiCpuInfo::UpdateFrame();
-
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Update(dt);
@@ -291,21 +287,7 @@ void MainComponent::Compose()
 		if (infoDisplay.fpsinfo)
 		{
 			ss.precision(2);
-			ss << fixed << wiFrameRate::GetFPS() << " FPS" << endl;
-		}
-		if (infoDisplay.cpuinfo)
-		{
-			float cpupercentage = wiCpuInfo::GetCPUPercentage();
-			ss << "CPU: ";
-			if (cpupercentage >= 0)
-			{
-				ss << cpupercentage << "%";
-			}
-			else
-			{
-				ss << "Query failed";
-			}
-			ss << endl;
+			ss << fixed << 1.0f / deltaTime << " FPS" << endl;
 		}
 		ss.precision(2);
 		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(GRAPHICSTHREAD_IMMEDIATE);

@@ -85,7 +85,7 @@ namespace wiRenderer
 	void BindPersistentState(GRAPHICSTHREAD threadID);
 	// Updates the per frame constant buffer (need to call at least once per frame)
 	void UpdateFrameCB(GRAPHICSTHREAD threadID);
-	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawWorld() and the like
+	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
 	void UpdateCameraCB(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	// Set a global clipping plane state that is available to use in any shader (access as float4 g_xClipPlane)
 	void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID);
@@ -103,9 +103,9 @@ namespace wiRenderer
 	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(GRAPHICSTHREAD threadID);
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawWorld(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawWorldTransparent(const wiSceneSystem::CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.

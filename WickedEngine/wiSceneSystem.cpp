@@ -5,6 +5,7 @@
 #include "wiPhysicsEngine.h"
 #include "wiArchive.h"
 #include "wiRenderer.h"
+#include "wiJobSystem.h"
 
 #include <functional>
 #include <unordered_map>
@@ -861,8 +862,6 @@ namespace wiSceneSystem
 
 	void Scene::Update(float dt)
 	{
-		RunWeatherUpdateSystem(weathers, weather);
-
 		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
 
 		RunAnimationUpdateSystem(animations, transforms, dt);
@@ -871,6 +870,8 @@ namespace wiSceneSystem
 
 		RunTransformUpdateSystem(transforms);
 
+		wiJobSystem::Wait(); // dependecies
+
 		RunHierarchyUpdateSystem(hierarchy, transforms, layers);
 
 		RunArmatureUpdateSystem(transforms, armatures);
@@ -878,6 +879,8 @@ namespace wiSceneSystem
 		RunMaterialUpdateSystem(materials, dt);
 
 		RunImpostorUpdateSystem(impostors);
+
+		wiJobSystem::Wait(); // dependecies
 
 		RunObjectUpdateSystem(prev_transforms, transforms, meshes, materials, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
 
@@ -889,9 +892,13 @@ namespace wiSceneSystem
 
 		RunForceUpdateSystem(transforms, forces);
 
-		RunLightUpdateSystem(transforms, aabb_lights, lights, &weather);
+		RunLightUpdateSystem(transforms, aabb_lights, lights);
 
 		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
+
+		wiJobSystem::Wait(); // dependecies
+
+		RunWeatherUpdateSystem(weathers, lights, weather);
 	}
 	void Scene::Clear()
 	{
@@ -1328,28 +1335,38 @@ namespace wiSceneSystem
 
 
 
-	void RunWeatherUpdateSystem(
-		const ComponentManager<WeatherComponent>& weathers, 
-		WeatherComponent& weather)
-	{
-		if (weathers.GetCount() > 0)
-		{
-			weather = weathers[0];
-		}
-	}
 	void RunPreviousFrameTransformUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<PreviousFrameTransformComponent>& prev_transforms
 	)
 	{
-		for (size_t i = 0; i < prev_transforms.GetCount(); ++i)
-		{
-			PreviousFrameTransformComponent& prev_transform = prev_transforms[i];
-			Entity entity = prev_transforms.GetEntity(i);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
+		//for (size_t i = 0; i < prev_transforms.GetCount(); ++i)
+		//{
+		//	PreviousFrameTransformComponent& prev_transform = prev_transforms[i];
+		//	Entity entity = prev_transforms.GetEntity(i);
+		//	const TransformComponent& transform = *transforms.GetComponent(entity);
 
-			prev_transform.world_prev = transform.world;
-		}
+		//	prev_transform.world_prev = transform.world;
+		//}
+
+		const uint32_t itemsPerThread = 8;
+		const uint32_t jobCount = (uint32_t)ceilf((float)prev_transforms.GetCount() / (float)itemsPerThread);
+
+		wiJobSystem::Dispatch(jobCount, [&](uint32_t jobIndex) {
+			for (uint32_t i = 0; i < itemsPerThread; ++i)
+			{
+				const uint32_t itemIndex = jobIndex * itemsPerThread + i;
+				if (itemIndex >= prev_transforms.GetCount())
+				{
+					break;
+				}
+				PreviousFrameTransformComponent& prev_transform = prev_transforms[itemIndex];
+				Entity entity = prev_transforms.GetEntity(itemIndex);
+				const TransformComponent& transform = *transforms.GetComponent(entity);
+
+				prev_transform.world_prev = transform.world;
+			}
+		});
 	}
 	void RunAnimationUpdateSystem(
 		ComponentManager<AnimationComponent>& animations,
@@ -1476,11 +1493,27 @@ namespace wiSceneSystem
 	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
 	{
-		for (size_t i = 0; i < transforms.GetCount(); ++i)
-		{
-			TransformComponent& transform = transforms[i];
-			transform.UpdateTransform();
-		}
+		//for (size_t i = 0; i < transforms.GetCount(); ++i)
+		//{
+		//	TransformComponent& transform = transforms[i];
+		//	transform.UpdateTransform();
+		//}
+
+		const uint32_t itemsPerThread = 8;
+		const uint32_t jobCount = (uint32_t)ceilf((float)transforms.GetCount() / (float)itemsPerThread);
+
+		wiJobSystem::Dispatch(jobCount, [&](uint32_t jobIndex) {
+			for (uint32_t i = 0; i < itemsPerThread; ++i)
+			{
+				const uint32_t itemIndex = jobIndex * itemsPerThread + i;
+				if (itemIndex >= transforms.GetCount())
+				{
+					break;
+				}
+				TransformComponent& transform = transforms[itemIndex];
+				transform.UpdateTransform();
+			}
+		});
 	}
 	void RunHierarchyUpdateSystem(
 		const ComponentManager<HierarchyComponent>& hierarchy,
@@ -1488,6 +1521,8 @@ namespace wiSceneSystem
 		ComponentManager<LayerComponent>& layers
 		)
 	{
+		// This needs serialized execution because there are dependencies enforced by component order!
+
 		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 		{
 			const HierarchyComponent& parentcomponent = hierarchy[i];
@@ -1515,9 +1550,34 @@ namespace wiSceneSystem
 		ComponentManager<ArmatureComponent>& armatures
 	)
 	{
-		for (size_t i = 0; i < armatures.GetCount(); ++i)
-		{
-			ArmatureComponent& armature = armatures[i];
+		//for (size_t i = 0; i < armatures.GetCount(); ++i)
+		//{
+		//	ArmatureComponent& armature = armatures[i];
+
+		//	if (armature.boneData.size() != armature.boneCollection.size())
+		//	{
+		//		armature.boneData.resize(armature.boneCollection.size());
+		//	}
+
+		//	XMMATRIX R = XMLoadFloat4x4(&armature.remapMatrix);
+
+		//	int boneIndex = 0;
+		//	for (Entity boneEntity : armature.boneCollection)
+		//	{
+		//		const TransformComponent& bone = *transforms.GetComponent(boneEntity);
+
+		//		XMMATRIX B = XMLoadFloat4x4(&armature.inverseBindMatrices[boneIndex]);
+		//		XMMATRIX W = XMLoadFloat4x4(&bone.world);
+		//		XMMATRIX M = B * W * R;
+
+		//		armature.boneData[boneIndex++].Store(M);
+		//	}
+
+		//}
+
+		wiJobSystem::Dispatch((uint32_t)armatures.GetCount(), [&](uint32_t jobIndex) {
+
+			ArmatureComponent& armature = armatures[jobIndex];
 
 			if (armature.boneData.size() != armature.boneCollection.size())
 			{
@@ -1538,40 +1598,71 @@ namespace wiSceneSystem
 				armature.boneData[boneIndex++].Store(M);
 			}
 
-		}
+		});
 	}
 	void RunMaterialUpdateSystem(ComponentManager<MaterialComponent>& materials, float dt)
 	{
-		for (size_t i = 0; i < materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = materials[i];
+		//for (size_t i = 0; i < materials.GetCount(); ++i)
+		//{
+		//	MaterialComponent& material = materials[i];
 
-			material.texAnimSleep -= dt * material.texAnimFrameRate;
-			if (material.texAnimSleep <= 0)
+		//	material.texAnimSleep -= dt * material.texAnimFrameRate;
+		//	if (material.texAnimSleep <= 0)
+		//	{
+		//		material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
+		//		material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
+		//		material.texAnimSleep = 1.0f;
+
+		//		material.SetDirty(); // will trigger constant buffer update!
+		//	}
+
+		//	material.engineStencilRef = STENCILREF_DEFAULT;
+		//	if (material.subsurfaceScattering > 0)
+		//	{
+		//		material.engineStencilRef = STENCILREF_SKIN;
+		//	}
+
+		//}
+
+		const uint32_t itemsPerThread = 64;
+		const uint32_t jobCount = (uint32_t)ceilf((float)materials.GetCount() / (float)itemsPerThread);
+
+		wiJobSystem::Dispatch(jobCount, [&](uint32_t jobIndex) {
+			for (uint32_t i = 0; i < itemsPerThread; ++i)
 			{
-				material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
-				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
-				material.texAnimSleep = 1.0f;
+				const uint32_t itemIndex = jobIndex * itemsPerThread + i;
+				if (itemIndex >= materials.GetCount())
+				{
+					break;
+				}
+				MaterialComponent& material = materials[itemIndex];
 
-				material.SetDirty(); // will trigger constant buffer update!
+				material.texAnimSleep -= dt * material.texAnimFrameRate;
+				if (material.texAnimSleep <= 0)
+				{
+					material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
+					material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
+					material.texAnimSleep = 1.0f;
+
+					material.SetDirty(); // will trigger constant buffer update!
+				}
+
+				material.engineStencilRef = STENCILREF_DEFAULT;
+				if (material.subsurfaceScattering > 0)
+				{
+					material.engineStencilRef = STENCILREF_SKIN;
+				}
 			}
-
-			material.engineStencilRef = STENCILREF_DEFAULT;
-			if (material.subsurfaceScattering > 0)
-			{
-				material.engineStencilRef = STENCILREF_SKIN;
-			}
-
-		}
+		});
 	}
 	void RunImpostorUpdateSystem(ComponentManager<ImpostorComponent>& impostors)
 	{
-		for (size_t i = 0; i < impostors.GetCount(); ++i)
-		{
-			ImpostorComponent& impostor = impostors[i];
+		wiJobSystem::Dispatch((uint32_t)impostors.GetCount(), [&](uint32_t jobIndex) {
+
+			ImpostorComponent& impostor = impostors[jobIndex];
 			impostor.aabb = AABB();
 			impostor.instanceMatrices.clear();
-		}
+		});
 	}
 	void RunObjectUpdateSystem(
 		const ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
@@ -1703,17 +1794,17 @@ namespace wiSceneSystem
 		ComponentManager<CameraComponent>& cameras
 	)
 	{
-		for (size_t i = 0; i < cameras.GetCount(); ++i)
-		{
-			CameraComponent& camera = cameras[i];
-			Entity entity = cameras.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)cameras.GetCount(), [&](uint32_t jobIndex) {
+
+			CameraComponent& camera = cameras[jobIndex];
+			Entity entity = cameras.GetEntity(jobIndex);
 			const TransformComponent* transform = transforms.GetComponent(entity);
 			if (transform != nullptr)
 			{
 				camera.TransformCamera(*transform);
 			}
 			camera.UpdateCamera();
-		}
+		});
 	}
 	void RunDecalUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
@@ -1724,10 +1815,10 @@ namespace wiSceneSystem
 	{
 		assert(decals.GetCount() == aabb_decals.GetCount());
 
-		for (size_t i = 0; i < decals.GetCount(); ++i)
-		{
-			DecalComponent& decal = decals[i];
-			Entity entity = decals.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)decals.GetCount(), [&](uint32_t jobIndex) {
+
+			DecalComponent& decal = decals[jobIndex];
+			Entity entity = decals.GetEntity(jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
 
@@ -1743,7 +1834,7 @@ namespace wiSceneSystem
 			XMStoreFloat3(&scale, S);
 			decal.range = max(scale.x, max(scale.y, scale.z)) * 2;
 
-			AABB& aabb = aabb_decals[i];
+			AABB& aabb = aabb_decals[jobIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.get(transform.world);
 
@@ -1752,7 +1843,7 @@ namespace wiSceneSystem
 			decal.emissive = material.emissive;
 			decal.texture = material.GetBaseColorMap();
 			decal.normal = material.GetNormalMap();
-		}
+		});
 	}
 	void RunProbeUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
@@ -1762,10 +1853,10 @@ namespace wiSceneSystem
 	{
 		assert(probes.GetCount() == aabb_probes.GetCount());
 
-		for (size_t i = 0; i < probes.GetCount(); ++i)
-		{
-			EnvironmentProbeComponent& probe = probes[i];
-			Entity entity = probes.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)probes.GetCount(), [&](uint32_t jobIndex) {
+
+			EnvironmentProbeComponent& probe = probes[jobIndex];
+			Entity entity = probes.GetEntity(jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -1779,40 +1870,39 @@ namespace wiSceneSystem
 			XMStoreFloat3(&scale, S);
 			probe.range = max(scale.x, max(scale.y, scale.z)) * 2;
 
-			AABB& aabb = aabb_probes[i];
+			AABB& aabb = aabb_probes[jobIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.get(transform.world);
-		}
+		});
 	}
 	void RunForceUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<ForceFieldComponent>& forces
 	)
 	{
-		for (size_t i = 0; i < forces.GetCount(); ++i)
-		{
-			ForceFieldComponent& force = forces[i];
-			Entity entity = forces.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)forces.GetCount(), [&](uint32_t jobIndex) {
+
+			ForceFieldComponent& force = forces[jobIndex];
+			Entity entity = forces.GetEntity(jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			force.position = transform.GetPosition();
 			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&transform.world))));
-		}
+		});
 	}
 	void RunLightUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<AABB>& aabb_lights,
-		ComponentManager<LightComponent>& lights,
-		WeatherComponent* weather
+		ComponentManager<LightComponent>& lights
 	)
 	{
 		assert(lights.GetCount() == aabb_lights.GetCount());
 
-		for (size_t i = 0; i < lights.GetCount(); ++i)
-		{
-			LightComponent& light = lights[i];
-			Entity entity = lights.GetEntity(i);
+		wiJobSystem::Dispatch((uint32_t)lights.GetCount(), [&](uint32_t jobIndex) {
+
+			LightComponent& light = lights[jobIndex];
+			Entity entity = lights.GetEntity(jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
-			AABB& aabb = aabb_lights[i];
+			AABB& aabb = aabb_lights[jobIndex];
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
 			XMVECTOR S, R, T;
@@ -1825,11 +1915,6 @@ namespace wiSceneSystem
 			switch (light.type)
 			{
 			case LightComponent::DIRECTIONAL:
-				if (weather != nullptr)
-				{
-					weather->sunColor = light.color;
-					weather->sunDirection = light.direction;
-				}
 				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 				break;
 			case LightComponent::SPOT:
@@ -1849,7 +1934,7 @@ namespace wiSceneSystem
 				break;
 			}
 
-		}
+		});
 	}
 	void RunParticleUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
@@ -1859,16 +1944,16 @@ namespace wiSceneSystem
 		float dt
 	)
 	{
-		for (size_t i = 0; i < emitters.GetCount(); ++i)
-		{
-			wiEmittedParticle& emitter = emitters[i];
-			emitter.Update(dt);
-		}
+		wiJobSystem::Dispatch((uint32_t)emitters.GetCount(), [&](uint32_t jobIndex) {
 
-		for (size_t i = 0; i < hairs.GetCount(); ++i)
-		{
-			wiHairParticle& hair = hairs[i];
-			Entity entity = hairs.GetEntity(i);
+			wiEmittedParticle& emitter = emitters[jobIndex];
+			emitter.Update(dt);
+		});
+
+		wiJobSystem::Dispatch((uint32_t)hairs.GetCount(), [&](uint32_t jobIndex) {
+
+			wiHairParticle& hair = hairs[jobIndex];
+			Entity entity = hairs.GetEntity(jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			hair.world = transform.world;
 
@@ -1894,6 +1979,26 @@ namespace wiSceneSystem
 				}
 			}
 
+		});
+	}
+	void RunWeatherUpdateSystem(
+		const ComponentManager<WeatherComponent>& weathers,
+		const ComponentManager<LightComponent>& lights,
+		WeatherComponent& weather)
+	{
+		if (weathers.GetCount() > 0)
+		{
+			weather = weathers[0];
+		}
+
+		for (size_t i = 0; i < lights.GetCount(); ++i)
+		{
+			const LightComponent& light = lights[i];
+			if (light.GetType() == LightComponent::DIRECTIONAL)
+			{
+				weather.sunColor = light.color;
+				weather.sunDirection = light.direction;
+			}
 		}
 	}
 

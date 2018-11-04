@@ -316,7 +316,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h" />
@@ -325,7 +324,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrameRate.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h" />
@@ -660,7 +658,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiClient.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp" />
@@ -668,7 +665,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp" />

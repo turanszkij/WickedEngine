@@ -1,5 +1,4 @@
 #include "wiRenderer.h"
-#include "wiFrameRate.h"
 #include "wiHairParticle.h"
 #include "wiEmittedParticle.h"
 #include "wiResourceManager.h"
@@ -30,6 +29,7 @@
 #include "wiGPUSortLib.h"
 #include "wiAllocator.h"
 #include "wiGPUBVH.h"
+#include "wiJobSystem.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -3299,7 +3299,7 @@ void UpdatePerFrameData(float dt)
 	scene.Update(dt * GetGameSpeed());
 
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked:
-	{
+	wiJobSystem::Execute([&] {
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
 			MeshComponent& mesh = scene.meshes[i];
@@ -3328,24 +3328,26 @@ void UpdatePerFrameData(float dt)
 			}
 			mesh.vertexBuffer_POS.swap(mesh.vertexBuffer_PRE);
 		}
-	}
+	});
 
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
-		// We don't update it if the scene is empty, this even makes it easier to debug
-		const float f = 0.05f / voxelSceneData.voxelsize;
-		XMFLOAT3 center = XMFLOAT3(floorf(GetCamera().Eye.x * f) / f, floorf(GetCamera().Eye.y * f) / f, floorf(GetCamera().Eye.z * f) / f);
-		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
-		{
-			voxelSceneData.centerChangedThisFrame = true;
-		}
-		else
-		{
-			voxelSceneData.centerChangedThisFrame = false;
-		}
-		voxelSceneData.center = center;
-		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+		wiJobSystem::Execute([&] {
+			// We don't update it if the scene is empty, this even makes it easier to debug
+			const float f = 0.05f / voxelSceneData.voxelsize;
+			XMFLOAT3 center = XMFLOAT3(floorf(GetCamera().Eye.x * f) / f, floorf(GetCamera().Eye.y * f) / f, floorf(GetCamera().Eye.z * f) / f);
+			if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
+			{
+				voxelSceneData.centerChangedThisFrame = true;
+			}
+			else
+			{
+				voxelSceneData.centerChangedThisFrame = false;
+			}
+			voxelSceneData.center = center;
+			voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
+		});
 	}
 
 	// Perform culling and obtain closest reflector:
@@ -3364,61 +3366,71 @@ void UpdatePerFrameData(float dt)
 			}
 
 			// Cull objects for each camera:
-			for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
-			{
-				const AABB& aabb = scene.aabb_objects[i];
-
-				if (culling.frustum.CheckBox(aabb))
+			wiJobSystem::Execute([&] {
+				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 				{
-					culling.culledObjects.push_back((uint32_t)i);
+					const AABB& aabb = scene.aabb_objects[i];
 
-					// Main camera can request reflection rendering:
-					if (camera == &GetCamera())
+					if (culling.frustum.CheckBox(aabb))
 					{
-						const ObjectComponent& object = scene.objects[i];
-						if (object.IsRequestPlanarReflection())
+						culling.culledObjects.push_back((uint32_t)i);
+
+						// Main camera can request reflection rendering:
+						if (camera == &GetCamera())
 						{
-							requestReflectionRendering = true;
+							const ObjectComponent& object = scene.objects[i];
+							if (object.IsRequestPlanarReflection())
+							{
+								requestReflectionRendering = true;
+							}
 						}
 					}
 				}
-			}
+			});
 
 			// the following cullings will be only for the main camera:
 			if (camera == &GetCamera())
 			{
-				// Cull decals:
-				for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
-				{
-					const AABB& aabb = scene.aabb_decals[i];
-
-					if (culling.frustum.CheckBox(aabb))
+				wiJobSystem::Execute([&] {
+					// Cull decals:
+					for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
 					{
-						culling.culledDecals.push_back((uint32_t)i);
+						const AABB& aabb = scene.aabb_decals[i];
+
+						if (culling.frustum.CheckBox(aabb))
+						{
+							culling.culledDecals.push_back((uint32_t)i);
+						}
 					}
-				}
+				});
 
-				// Cull probes:
-				for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
-				{
-					const AABB& aabb = scene.aabb_probes[i];
-
-					if (culling.frustum.CheckBox(aabb))
+				wiJobSystem::Execute([&] {
+					// Cull probes:
+					for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
 					{
-						culling.culledEnvProbes.push_back((uint32_t)i);
+						const AABB& aabb = scene.aabb_probes[i];
+
+						if (culling.frustum.CheckBox(aabb))
+						{
+							culling.culledEnvProbes.push_back((uint32_t)i);
+						}
 					}
-				}
+				});
 
-				// Cull lights:
-				for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
-				{
-					const AABB& aabb = scene.aabb_lights[i];
-
-					if (culling.frustum.CheckBox(aabb))
+				wiJobSystem::Execute([&] {
+					// Cull lights:
+					for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
 					{
-						culling.culledLights.push_back((uint32_t)i);
+						const AABB& aabb = scene.aabb_lights[i];
+
+						if (culling.frustum.CheckBox(aabb))
+						{
+							culling.culledLights.push_back((uint32_t)i);
+						}
 					}
-				}
+				});
+
+				wiJobSystem::Wait();
 
 				int i = 0;
 				int shadowCounter_2D = 0;
@@ -3512,6 +3524,8 @@ void UpdatePerFrameData(float dt)
 	renderTime_Prev = renderTime;
 	renderTime += dt * GetGameSpeed();
 	deltaTime = dt;
+
+	wiJobSystem::Wait();
 }
 void UpdateRenderData(GRAPHICSTHREAD threadID)
 {
@@ -4103,7 +4117,6 @@ void OcclusionCulling_Read()
 void EndFrame()
 {
 	OcclusionCulling_Read();
-	wiFrameRate::UpdateFrame();
 
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 	{
@@ -4898,12 +4911,12 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 	}
 }
 
-void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
 	Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings[&camera];
 
-	GetDevice()->EventBegin("DrawWorld", threadID);
+	GetDevice()->EventBegin("DrawScene", threadID);
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{
@@ -4977,12 +4990,12 @@ void DrawWorld(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 }
 
-void DrawWorldTransparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawScene_Transparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
 	Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings[&camera];
 
-	GetDevice()->EventBegin("DrawWorldTransparent", threadID);
+	GetDevice()->EventBegin("DrawScene_Transparent", threadID);
 
 	if (shaderType == SHADERTYPE_TILEDFORWARD)
 	{

@@ -285,7 +285,7 @@ void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID)
 
 			wiRenderer::SetClipPlane(water, threadID);
 
-			wiRenderer::DrawWorld(wiRenderer::GetRefCamera(), false, threadID, SHADERTYPE_TEXTURE, getHairParticlesReflectionEnabled(), false, getLayerMask());
+			wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, threadID, SHADERTYPE_TEXTURE, getHairParticlesReflectionEnabled(), false, getLayerMask());
 			wiRenderer::DrawSky(threadID);
 
 			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
@@ -453,7 +453,7 @@ void RenderPath3D::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICS
 	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
-	wiRenderer::DrawWorldTransparent(wiRenderer::GetCamera(), SHADERTYPE_FORWARD, threadID, false, true, getLayerMask());
+	wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), SHADERTYPE_FORWARD, threadID, false, true, getLayerMask());
 
 	wiProfiler::EndRange(threadID); // Transparent Scene
 }

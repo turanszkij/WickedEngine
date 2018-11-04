@@ -3,10 +3,11 @@
 
 namespace wiRandom
 {
+	std::random_device           rand_dev;
+	std::mt19937                 generator(rand_dev());
+
 	int wiRandom::getRandom(int minValue, int maxValue)
 	{
-		static std::random_device           rand_dev;
-		static std::mt19937                 generator(rand_dev());
 		std::uniform_int_distribution<int>  distr(minValue, maxValue);
 		return distr(generator);
 	}

@@ -20,7 +20,6 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, SetInfoDisplay),
 	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
-	lunamethod(MainComponent_BindLua, SetCPUDisplay),
 	lunamethod(MainComponent_BindLua, SetResolutionDisplay),
 	{ NULL, NULL }
 };
@@ -282,22 +281,6 @@ int MainComponent_BindLua::SetFPSDisplay(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetFPSDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetCPUDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetCPUDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.cpuinfo = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetCPUDisplay(bool active) not enough arguments!");
 	return 0;
 }
 int MainComponent_BindLua::SetResolutionDisplay(lua_State *L)

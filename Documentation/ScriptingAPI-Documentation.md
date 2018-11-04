@@ -316,7 +316,6 @@ The main component which holds information and manages the running of the curren
 - SetInfoDisplay(bool active)
 - SetWatermarkDisplay(bool active)
 - SetFPSDisplay(bool active)
-- SetCPUDisplay(bool active)
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath

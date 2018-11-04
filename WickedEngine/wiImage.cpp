@@ -9,7 +9,7 @@
 #include "ShaderInterop_Image.h"
 #include "wiBackLog.h"
 
-#include <thread>
+#include <atomic>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -57,28 +57,28 @@ namespace wiImage
 		IMAGE_HDR_COUNT
 	};
 
-	static GPUBuffer			constantBuffer;
-	static GPUBuffer			processCb;
-	static VertexShader*		vertexShader = nullptr;
-	static VertexShader*		screenVS = nullptr;
-	static PixelShader*			imagePS[IMAGE_SHADER_COUNT];
-	static PixelShader*			postprocessPS[POSTPROCESS_COUNT];
-	static PixelShader*			deferredPS = nullptr;
-	static BlendState			blendStates[BLENDMODE_COUNT];
-	static RasterizerState		rasterizerState;
-	static DepthStencilState	depthStencilStates[STENCILMODE_COUNT];
-	static BlendState			blendStateDisableColor;
-	static DepthStencilState	depthStencilStateDepthWrite;
-	static GraphicsPSO			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT];
-	static GraphicsPSO			postprocessPSO[POSTPROCESS_COUNT];
-	static GraphicsPSO			deferredPSO;
+	GPUBuffer			constantBuffer;
+	GPUBuffer			processCb;
+	VertexShader*		vertexShader = nullptr;
+	VertexShader*		screenVS = nullptr;
+	PixelShader*		imagePS[IMAGE_SHADER_COUNT];
+	PixelShader*		postprocessPS[POSTPROCESS_COUNT];
+	PixelShader*		deferredPS = nullptr;
+	BlendState			blendStates[BLENDMODE_COUNT];
+	RasterizerState		rasterizerState;
+	DepthStencilState	depthStencilStates[STENCILMODE_COUNT];
+	BlendState			blendStateDisableColor;
+	DepthStencilState	depthStencilStateDepthWrite;
+	GraphicsPSO			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT];
+	GraphicsPSO			postprocessPSO[POSTPROCESS_COUNT];
+	GraphicsPSO			deferredPSO;
 
-	static bool initialized = false;
+	std::atomic_bool initialized = false;
 
 
 	void Draw(Texture2D* texture, const wiImageEffects& effects, GRAPHICSTHREAD threadID)
 	{
-		if (!initialized)
+		if (!initialized.load())
 		{
 			return;
 		}
@@ -392,7 +392,7 @@ namespace wiImage
 	void DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_specular, Texture2D* ao,
 		GRAPHICSTHREAD threadID, int stencilRef)
 	{
-		if (!initialized)
+		if (!initialized.load())
 		{
 			return;
 		}
@@ -563,7 +563,7 @@ namespace wiImage
 
 	void BindPersistentState(GRAPHICSTHREAD threadID)
 	{
-		if (!initialized)
+		if (!initialized.load())
 		{
 			return;
 		}
@@ -719,7 +719,7 @@ namespace wiImage
 		LoadShaders();
 
 		wiBackLog::post("wiImage Initialized");
-		initialized = true;
+		initialized.store(true);
 	}
 	void CleanUp()
 	{

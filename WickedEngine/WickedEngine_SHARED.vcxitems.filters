@@ -939,13 +939,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrameRate.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCpuInfo.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h">
@@ -1808,13 +1802,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrameRate.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCpuInfo.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp">
