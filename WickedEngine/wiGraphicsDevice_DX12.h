@@ -182,7 +182,8 @@ namespace wiGraphicsTypes
 		void PresentBegin() override;
 		void PresentEnd() override;
 
-		void ExecuteDeferredContexts() override;
+		void CreateCommandLists() override;
+		void ExecuteCommandLists() override;
 		void FinishCommandList(GRAPHICSTHREAD thread) override;
 
 		void WaitForGPU() override;

@@ -73,7 +73,8 @@ namespace wiGraphicsTypes
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;
 
-		virtual void ExecuteDeferredContexts() = 0;
+		virtual void CreateCommandLists() = 0;
+		virtual void ExecuteCommandLists() = 0;
 		virtual void FinishCommandList(GRAPHICSTHREAD thread) = 0;
 
 		virtual void WaitForGPU() = 0;

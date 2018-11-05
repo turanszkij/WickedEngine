@@ -439,6 +439,7 @@ CameraComponent& GetRefCamera()
 
 void Initialize()
 {
+	GetDevice()->CreateCommandLists();
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 	{
 		frameAllocators[i].reserve(4 * 1024 * 1024);

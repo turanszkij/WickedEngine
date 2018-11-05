@@ -4378,7 +4378,11 @@ namespace wiGraphicsTypes
 		RESOLUTIONCHANGED = false;
 	}
 
-	void GraphicsDevice_Vulkan::ExecuteDeferredContexts()
+	void GraphicsDevice_Vulkan::CreateCommandLists()
+	{
+
+	}
+	void GraphicsDevice_Vulkan::ExecuteCommandLists()
 	{
 		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

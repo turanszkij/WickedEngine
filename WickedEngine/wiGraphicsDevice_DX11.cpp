@@ -1491,26 +1491,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 	hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->QueryInterface(__uuidof(userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]),
 		reinterpret_cast<void**>(&userDefinedAnnotations[GRAPHICSTHREAD_IMMEDIATE]));
 
-	D3D11_FEATURE_DATA_THREADING threadingFeature;
-	device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
-	if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists)
-	{
-		MULTITHREADED_RENDERING = true;
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
-		{
-			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
-				continue;
-
-			hr = device->CreateDeferredContext(0, &deviceContexts[i]);
-
-			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
-				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
-		}
-	}
-	else {
-		MULTITHREADED_RENDERING = false;
-	}
-
 
 	D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
 	TESSELLATION = ((aquiredFeatureLevel >= D3D_FEATURE_LEVEL_11_0) ? true : false);
@@ -3096,7 +3076,31 @@ void GraphicsDevice_DX11::PresentEnd()
 	RESOLUTIONCHANGED = false;
 }
 
-void GraphicsDevice_DX11::ExecuteDeferredContexts()
+void GraphicsDevice_DX11::CreateCommandLists()
+{
+	//D3D11_FEATURE_DATA_THREADING threadingFeature;
+	//device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
+	//if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists)
+	{
+		for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
+		{
+			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
+				continue;
+
+			HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[i]);
+
+			if (!SUCCEEDED(hr))
+			{
+				return;
+			}
+
+			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
+				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
+		}
+	}
+	MULTITHREADED_RENDERING = true;
+}
+void GraphicsDevice_DX11::ExecuteCommandLists()
 {
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
 	{

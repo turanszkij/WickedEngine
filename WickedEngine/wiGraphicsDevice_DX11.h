@@ -100,7 +100,8 @@ namespace wiGraphicsTypes
 
 		void WaitForGPU() override;
 
-		void ExecuteDeferredContexts() override;
+		void CreateCommandLists() override;
+		void ExecuteCommandLists() override;
 		void FinishCommandList(GRAPHICSTHREAD thread) override;
 
 		void SetResolution(int width, int height) override;

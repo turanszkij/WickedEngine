@@ -3433,7 +3433,11 @@ namespace wiGraphicsTypes
 		RESOLUTIONCHANGED = false;
 	}
 
-	void GraphicsDevice_DX12::ExecuteDeferredContexts()
+	void GraphicsDevice_DX12::CreateCommandLists()
+	{
+
+	}
+	void GraphicsDevice_DX12::ExecuteCommandLists()
 	{
 		directQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &GetFrameResources().commandLists[1]);
 	}
