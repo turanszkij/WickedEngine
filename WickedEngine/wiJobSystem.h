@@ -2,6 +2,12 @@
 
 #include <functional>
 
+struct JobDispatchArgs
+{
+	uint32_t jobIndex;
+	uint32_t groupIndex;
+};
+
 namespace wiJobSystem
 {
 	void Initialize();
@@ -14,8 +20,8 @@ namespace wiJobSystem
 	// Divide a job onto multiple jobs and execute in parallel.
 	//	jobCount	: how many jobs to generate for this task.
 	//	groupSize	: how many jobs to execute per thread. Jobs inside a group execute serially. It might be worth to increase for small jobs
-	//	func		: receives the job invocation index (0, 1, ... jobCount) as lambda argument
-	void Dispatch(uint32_t jobCount, uint32_t groupSize, const std::function<void(uint32_t jobIndex)>& job);
+	//	func		: receives a JobDispatchArgs as parameter
+	void Dispatch(uint32_t jobCount, uint32_t groupSize, const std::function<void(JobDispatchArgs)>& job);
 
 	// Check if any threads are working currently or not
 	bool IsBusy();

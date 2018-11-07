@@ -28,16 +28,17 @@ namespace wiJobSystem
 		auto numCores = std::thread::hardware_concurrency();
 
 		// Calculate the actual number of worker threads we want:
-		numThreads = max(1, numCores);
+		numThreads = max(1, numCores - 1);
 
 		for (unsigned int threadID = 0; threadID < numThreads; ++threadID)
 		{
-			std::thread([] {
+			std::thread worker([] {
 
 				while (true)
 				{
 					Job job;
 					bool working = false;
+					std::unique_lock<std::mutex> lock(wakeMutex);
 
 					jobLock.lock();
 					{
@@ -58,12 +59,33 @@ namespace wiJobSystem
 					else
 					{
 						// no job, put thread to sleep
-						std::unique_lock<std::mutex> lock(wakeMutex);
 						wakeCondition.wait(lock);
 					}
 				}
 
-			}).detach();
+			});
+
+#ifdef _WIN32
+			// Do Windows-specific thread setup:
+			HANDLE handle = (HANDLE)worker.native_handle();
+
+			// Put each thread on to dedicated core (but leave core 0 to main thread)
+			DWORD_PTR affinityMask = 1ull << (threadID + 1); 
+			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
+			assert(affinity_result > 0);
+
+			// Increase thread priority:
+			BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
+			assert(priority_result != 0);
+
+			// Name the thread:
+			std::wstringstream wss;
+			wss << "wiJobSystem_" << threadID;
+			HRESULT hr = SetThreadDescription(handle, wss.str().c_str());
+			assert(SUCCEEDED(hr));
+#endif // _WIN32
+			
+			worker.detach();
 		}
 
 		std::stringstream ss("");
@@ -71,7 +93,7 @@ namespace wiJobSystem
 		wiBackLog::post(ss.str().c_str());
 	}
 
-	unsigned int GetThreadCount()
+	uint32_t GetThreadCount()
 	{
 		return numThreads;
 	}
@@ -80,56 +102,61 @@ namespace wiJobSystem
 	{
 		while (waitBarrier.load() == true) { std::this_thread::yield(); } // can't add jobs while Wait() is in progress
 
-		// This is important, and acts as a barrier for Wait():
 		remainingJobs.fetch_add(1);
 
 		jobLock.lock();
 		jobPool.push_back(job);
 		jobLock.unlock();
 
-		wakeCondition.notify_one(); // only wake a single thread
+		wakeCondition.notify_one(); // wake one thread
 	}
 
-	void Dispatch(uint32_t jobCount, uint32_t groupSize, const std::function<void(uint32_t jobIndex)>& job)
+	void Dispatch(uint32_t jobCount, uint32_t groupSize, const std::function<void(JobDispatchArgs)>& job)
 	{
 		if (jobCount == 0 || groupSize == 0)
 		{
 			return;
 		}
+
+		// Calculate the amount of job groups to dispatch (overestimate, or "ceil"):
+		const uint32_t groupCount = (jobCount + groupSize - 1) / groupSize;
+
 		while (waitBarrier.load() == true) { std::this_thread::yield(); } // can't add jobs while Wait() is in progress
 
-		// Calculate the amount of job groups to dispatch:
-		const uint32_t jobGroupCount = (uint32_t)ceilf((float)jobCount / (float)groupSize);
+		remainingJobs.fetch_add(groupCount);
 
-		// This is important, and acts as a barrier for Wait():
-		remainingJobs.fetch_add(jobGroupCount);
-
-		jobLock.lock();
-		for (uint32_t i = 0; i < jobGroupCount; ++i)
+		for (uint32_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
 		{
 			// Calculate the current group's offset into the jobs:
-			const uint32_t jobOffset = i * groupSize;
+			const uint32_t jobOffset = groupIndex * groupSize;
 
 			// For each group, generate a real job:
-			jobPool.push_back([jobCount, groupSize, job, jobOffset]() {
+			jobLock.lock();
+			jobPool.push_back([jobCount, groupSize, job, groupIndex, jobOffset]() {
+
+				JobDispatchArgs args;
+				args.groupIndex = groupIndex;
 
 				// Inside the group, loop through all sub-jobs and propagate sub-job index:
 				for (uint32_t j = 0; j < groupSize; ++j)
 				{
-					const uint32_t jobIndex = jobOffset + j;
-					if (jobIndex >= jobCount)
+					args.jobIndex = jobOffset + j;
+					if (args.jobIndex >= jobCount)
 					{
 						// The amount of sub-jobs can be larger than the jobCount, so if that happens, don't issue the sub-job:
-						break;
+						return;
 					}
-					job(jobIndex);
+					// Issue the sub-job:
+					job(args);
 				}
 			});
+			jobLock.unlock();
+
+			wakeCondition.notify_one(); // wake one thread so it can start working immediately
 
 		}
-		jobLock.unlock();
 
-		wakeCondition.notify_all(); // wake all threads
+
 	}
 
 	bool IsBusy()
