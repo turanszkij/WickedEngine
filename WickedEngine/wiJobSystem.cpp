@@ -10,33 +10,31 @@
 
 namespace wiJobSystem
 {
-	typedef std::function<void()> Job;
-	std::deque<Job> jobPool;
+	uint32_t numThreads = 0;
+	std::deque<std::function<void()>> jobPool; // todo: replace std::deque
 	wiSpinLock jobLock;
 	std::condition_variable wakeCondition;
 	std::mutex wakeMutex;
-	std::atomic<uint32_t> remainingJobs;
-	std::atomic_bool waitBarrier;
-	uint32_t numThreads = 0;
+	uint64_t currentLabel = 0;
+	std::atomic<uint64_t> finishedLabel;
 
 	void Initialize()
 	{
-		waitBarrier.store(false);
-		remainingJobs.store(0);
+		finishedLabel.store(0);
 
 		// Retrieve the number of hardware threads in this system:
 		auto numCores = std::thread::hardware_concurrency();
 
 		// Calculate the actual number of worker threads we want:
-		numThreads = max(1, numCores - 1);
+		numThreads = max(1, numCores);
 
-		for (unsigned int threadID = 0; threadID < numThreads; ++threadID)
+		for (uint32_t threadID = 0; threadID < numThreads; ++threadID)
 		{
 			std::thread worker([] {
 
 				while (true)
 				{
-					Job job;
+					std::function<void()> job;
 					bool working = false;
 
 					jobLock.lock();
@@ -53,7 +51,7 @@ namespace wiJobSystem
 					if (working)
 					{
 						job(); // execute job
-						remainingJobs.fetch_sub(1);
+						finishedLabel.fetch_add(1); // update worker label state
 					}
 					else
 					{
@@ -100,10 +98,10 @@ namespace wiJobSystem
 
 	void Execute(const std::function<void()>& job)
 	{
-		while (waitBarrier.load() == true) { std::this_thread::yield(); } // can't add jobs while Wait() is in progress
+		// The main thread label state is updated:
+		currentLabel += 1;
 
-		remainingJobs.fetch_add(1);
-
+		// Lock the job pool and add the new job:
 		jobLock.lock();
 		jobPool.push_back(job);
 		jobLock.unlock();
@@ -121,39 +119,32 @@ namespace wiJobSystem
 		// Calculate the amount of job groups to dispatch (overestimate, or "ceil"):
 		const uint32_t groupCount = (jobCount + groupSize - 1) / groupSize;
 
-		while (waitBarrier.load() == true) { std::this_thread::yield(); } // can't add jobs while Wait() is in progress
-
-		remainingJobs.fetch_add(groupCount);
+		// The main thread label state is updated:
+		currentLabel += groupCount;
 
 		for (uint32_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
 		{
-			// Calculate the current group's offset into the jobs:
-			const uint32_t jobOffset = groupIndex * groupSize;
-
-			// For each group, generate a real job:
+			// For each group, generate one real job:
 			jobLock.lock();
-			jobPool.push_back([jobCount, groupSize, job, groupIndex, jobOffset]() {
+			jobPool.push_back([jobCount, groupSize, job, groupIndex]() {
+
+				// Calculate the current group's offset into the jobs:
+				const uint32_t groupJobOffset = groupIndex * groupSize;
+				const uint32_t groupJobEnd = min(groupJobOffset + groupSize, jobCount);
 
 				JobDispatchArgs args;
 				args.groupIndex = groupIndex;
 
-				// Inside the group, loop through all sub-jobs and propagate sub-job index:
-				for (uint32_t j = 0; j < groupSize; ++j)
+				// Inside the group, loop through all job indices and execute job for each index:
+				for (uint32_t i = groupJobOffset; i < groupJobEnd; ++i)
 				{
-					args.jobIndex = jobOffset + j;
-					if (args.jobIndex >= jobCount)
-					{
-						// The amount of sub-jobs can be larger than the jobCount, so if that happens, don't issue the sub-job:
-						return;
-					}
-					// Issue the sub-job:
+					args.jobIndex = i;
 					job(args);
 				}
 			});
 			jobLock.unlock();
 
-			wakeCondition.notify_one(); // wake one thread so it can start working immediately
-
+			wakeCondition.notify_one(); // wake one thread so it can start working on the new job(group) immediately
 		}
 
 
@@ -161,13 +152,12 @@ namespace wiJobSystem
 
 	bool IsBusy()
 	{
-		return remainingJobs.load() > 0;
+		// Whenever the main thread label is not reached by the workers, it indicates that some worker is still alive
+		return finishedLabel.load() < currentLabel;
 	}
 
 	void Wait()
 	{
-		waitBarrier.store(true); // block any incoming work
 		while (IsBusy()) { std::this_thread::yield(); }
-		waitBarrier.store(false); // release block
 	}
 }
