@@ -38,7 +38,6 @@ namespace wiJobSystem
 				{
 					Job job;
 					bool working = false;
-					std::unique_lock<std::mutex> lock(wakeMutex);
 
 					jobLock.lock();
 					{
@@ -59,6 +58,7 @@ namespace wiJobSystem
 					else
 					{
 						// no job, put thread to sleep
+						std::unique_lock<std::mutex> lock(wakeMutex);
 						wakeCondition.wait(lock);
 					}
 				}
@@ -69,14 +69,14 @@ namespace wiJobSystem
 			// Do Windows-specific thread setup:
 			HANDLE handle = (HANDLE)worker.native_handle();
 
-			// Put each thread on to dedicated core (but leave core 0 to main thread)
-			DWORD_PTR affinityMask = 1ull << (threadID + 1); 
-			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
-			assert(affinity_result > 0);
+			//// Put each thread on to dedicated core (but leave core 0 to main thread)
+			//DWORD_PTR affinityMask = 1ull << (threadID + 1); 
+			//DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
+			//assert(affinity_result > 0);
 
-			// Increase thread priority:
-			BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
-			assert(priority_result != 0);
+			//// Increase thread priority:
+			//BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
+			//assert(priority_result != 0);
 
 			// Name the thread:
 			std::wstringstream wss;
