@@ -27,7 +27,7 @@
 #include "ShaderInterop_Utility.h"
 #include "wiWidget.h"
 #include "wiGPUSortLib.h"
-#include "wiAllocator.h"
+#include "wiAllocators.h"
 #include "wiGPUBVH.h"
 #include "wiJobSystem.h"
 

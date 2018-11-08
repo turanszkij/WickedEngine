@@ -1554,7 +1554,7 @@ namespace wiSceneSystem
 				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
 				material.texAnimSleep = 1.0f;
 
-				material.SetDirty(); // will trigger constant buffer update!
+				material.SetDirty(); // will trigger constant buffer update later on
 			}
 
 			material.engineStencilRef = STENCILREF_DEFAULT;
@@ -1589,118 +1589,118 @@ namespace wiSceneSystem
 		assert(objects.GetCount() == aabb_objects.GetCount());
 
 		sceneBounds = AABB();
-		static wiSpinLock lock; // contention for sceneBounds and waterPlane!
 
-		wiJobSystem::Dispatch((uint32_t)objects.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		// Instead of Dispatching, this will be one big job, because there is contention for several resources (sceneBounds, waterPlane, impostors)
+		wiJobSystem::Execute([&] {
 
-			ObjectComponent& object = objects[args.jobIndex];
-			AABB& aabb = aabb_objects[args.jobIndex];
-
-			aabb = AABB();
-			object.rendertypeMask = 0;
-			object.SetDynamic(false);
-			object.SetCastShadow(false);
-			object.SetImpostorPlacement(false);
-			object.SetRequestPlanarReflection(false);
-
-			if (object.meshID != INVALID_ENTITY)
+			for (size_t i = 0; i < objects.GetCount(); ++i)
 			{
-				Entity entity = objects.GetEntity(args.jobIndex);
-				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+				ObjectComponent& object = objects[i];
+				AABB& aabb = aabb_objects[i];
 
-				// These will only be valid for a single frame:
-				object.transform_index = (int)transforms.GetIndex(entity);
-				object.prev_transform_index = (int)prev_transforms.GetIndex(entity);
+				aabb = AABB();
+				object.rendertypeMask = 0;
+				object.SetDynamic(false);
+				object.SetCastShadow(false);
+				object.SetImpostorPlacement(false);
+				object.SetRequestPlanarReflection(false);
 
-				const TransformComponent& transform = transforms[object.transform_index];
-
-				if (mesh != nullptr)
+				if (object.meshID != INVALID_ENTITY)
 				{
-					aabb = mesh->aabb.get(transform.world);
+					Entity entity = objects.GetEntity(i);
+					const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
-					// This is instance bounding box matrix:
-					XMFLOAT4X4 meshMatrix;
-					XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * XMLoadFloat4x4(&transform.world));
+					// These will only be valid for a single frame:
+					object.transform_index = (int)transforms.GetIndex(entity);
+					object.prev_transform_index = (int)prev_transforms.GetIndex(entity);
 
-					// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
-					object.center = *((XMFLOAT3*)&meshMatrix._41);
+					const TransformComponent& transform = transforms[object.transform_index];
 
-					if (mesh->IsSkinned() || mesh->IsDynamic())
+					if (mesh != nullptr)
 					{
-						object.SetDynamic(true);
-					}
+						aabb = mesh->aabb.get(transform.world);
 
-					for (auto& subset : mesh->subsets)
-					{
-						const MaterialComponent* material = materials.GetComponent(subset.materialID);
+						// This is instance bounding box matrix:
+						XMFLOAT4X4 meshMatrix;
+						XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * XMLoadFloat4x4(&transform.world));
 
-						if (material != nullptr)
+						// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
+						object.center = *((XMFLOAT3*)&meshMatrix._41);
+
+						if (mesh->IsSkinned() || mesh->IsDynamic())
 						{
-							if (material->IsTransparent())
-							{
-								object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
-							}
-							else
-							{
-								object.rendertypeMask |= RENDERTYPE_OPAQUE;
-							}
-
-							if (material->IsWater())
-							{
-								object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
-							}
-
-							if (material->HasPlanarReflection())
-							{
-								object.SetRequestPlanarReflection(true);
-								XMVECTOR P = transform.GetPositionV();
-								XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-								N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-								lock.lock();
-								XMStoreFloat4(&waterPlane, _refPlane);
-								lock.unlock();
-							}
-
-							object.SetCastShadow(material->IsCastingShadow());
-						}
-					}
-
-					ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
-					if (impostor != nullptr)
-					{
-						object.SetImpostorPlacement(true);
-						object.impostorSwapDistance = impostor->swapInDistance;
-						object.impostorFadeThresholdRadius = aabb.getRadius();
-
-						impostor->aabb = AABB::Merge(impostor->aabb, aabb);
-						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
-						impostor->instanceMatrices.push_back(meshMatrix);
-					}
-
-					SoftBodyPhysicsComponent* softBody = softbodies.GetComponent(object.meshID);
-					if (softBody != nullptr)
-					{
-						softBody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER; // this will be registered as soft body in the next frame
-						softBody->worldMatrix = transform.world;
-
-						if (wiPhysicsEngine::IsEnabled() && softBody->physicsobject != nullptr)
-						{
-							// If physics engine is enabled and this object was registered, it will update soft body vertices in world space, so after that they no longer need to be transformed:
-							object.transform_index = -1;
-							object.prev_transform_index = -1;
-
-							// mesh aabb will be used for soft bodies
-							aabb = mesh->aabb;
+							object.SetDynamic(true);
 						}
 
-					}
+						for (auto& subset : mesh->subsets)
+						{
+							const MaterialComponent* material = materials.GetComponent(subset.materialID);
 
-					lock.lock();
-					sceneBounds = AABB::Merge(sceneBounds, aabb);
-					lock.unlock();
+							if (material != nullptr)
+							{
+								if (material->IsTransparent())
+								{
+									object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
+								}
+								else
+								{
+									object.rendertypeMask |= RENDERTYPE_OPAQUE;
+								}
+
+								if (material->IsWater())
+								{
+									object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+								}
+
+								if (material->HasPlanarReflection())
+								{
+									object.SetRequestPlanarReflection(true);
+									XMVECTOR P = transform.GetPositionV();
+									XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+									N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+									XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
+									XMStoreFloat4(&waterPlane, _refPlane);
+								}
+
+								object.SetCastShadow(material->IsCastingShadow());
+							}
+						}
+
+						ImpostorComponent* impostor = impostors.GetComponent(object.meshID);
+						if (impostor != nullptr)
+						{
+							object.SetImpostorPlacement(true);
+							object.impostorSwapDistance = impostor->swapInDistance;
+							object.impostorFadeThresholdRadius = aabb.getRadius();
+
+							impostor->aabb = AABB::Merge(impostor->aabb, aabb);
+							impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
+							impostor->instanceMatrices.push_back(meshMatrix);
+						}
+
+						SoftBodyPhysicsComponent* softBody = softbodies.GetComponent(object.meshID);
+						if (softBody != nullptr)
+						{
+							softBody->_flags |= SoftBodyPhysicsComponent::SAFE_TO_REGISTER; // this will be registered as soft body in the next frame
+							softBody->worldMatrix = transform.world;
+
+							if (wiPhysicsEngine::IsEnabled() && softBody->physicsobject != nullptr)
+							{
+								// If physics engine is enabled and this object was registered, it will update soft body vertices in world space, so after that they no longer need to be transformed:
+								object.transform_index = -1;
+								object.prev_transform_index = -1;
+
+								// mesh aabb will be used for soft bodies
+								aabb = mesh->aabb;
+							}
+
+						}
+
+						sceneBounds = AABB::Merge(sceneBounds, aabb);
+					}
 				}
 			}
+
 		});
 	}
 	void RunCameraUpdateSystem(

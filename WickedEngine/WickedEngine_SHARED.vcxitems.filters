@@ -1065,9 +1065,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Image.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
@@ -1145,6 +1142,12 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWindowRegistration.h">
       <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiContainers.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocators.h">
+      <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

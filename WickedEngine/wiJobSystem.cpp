@@ -1,6 +1,7 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 #include "wiBackLog.h"
+#include "wiContainers.h"
 
 #include <atomic>
 #include <thread>
@@ -11,8 +12,7 @@
 namespace wiJobSystem
 {
 	uint32_t numThreads = 0;
-	std::deque<std::function<void()>> jobPool; // todo: replace std::deque
-	wiSpinLock jobLock;
+	wiContainers::ThreadSafeRingBuffer<std::function<void()>, 256> jobPool;
 	std::condition_variable wakeCondition;
 	std::mutex wakeMutex;
 	uint64_t currentLabel = 0;
@@ -32,23 +32,11 @@ namespace wiJobSystem
 		{
 			std::thread worker([] {
 
+				std::function<void()> job;
+
 				while (true)
 				{
-					std::function<void()> job;
-					bool working = false;
-
-					jobLock.lock();
-					{
-						if (!jobPool.empty())
-						{
-							working = true;
-							job = std::move(jobPool.front());
-							jobPool.pop_front();
-						}
-					}
-					jobLock.unlock();
-
-					if (working)
+					if (jobPool.pop_front(job))
 					{
 						job(); // execute job
 						finishedLabel.fetch_add(1); // update worker label state
@@ -101,10 +89,8 @@ namespace wiJobSystem
 		// The main thread label state is updated:
 		currentLabel += 1;
 
-		// Lock the job pool and add the new job:
-		jobLock.lock();
-		jobPool.push_back(job);
-		jobLock.unlock();
+		// Try to push a new job until it is pushed successfully:
+		while (!jobPool.push_back(job)) { std::this_thread::yield(); }
 
 		wakeCondition.notify_one(); // wake one thread
 	}
@@ -125,8 +111,7 @@ namespace wiJobSystem
 		for (uint32_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
 		{
 			// For each group, generate one real job:
-			jobLock.lock();
-			jobPool.push_back([jobCount, groupSize, job, groupIndex]() {
+			auto& jobGroup = [jobCount, groupSize, job, groupIndex]() {
 
 				// Calculate the current group's offset into the jobs:
 				const uint32_t groupJobOffset = groupIndex * groupSize;
@@ -141,10 +126,12 @@ namespace wiJobSystem
 					args.jobIndex = i;
 					job(args);
 				}
-			});
-			jobLock.unlock();
+			};
 
-			wakeCondition.notify_one(); // wake one thread so it can start working on the new job(group) immediately
+			// Try to push a new job until it is pushed successfully:
+			while (!jobPool.push_back(jobGroup)) { std::this_thread::yield(); }
+
+			wakeCondition.notify_one(); // wake one thread
 		}
 
 
