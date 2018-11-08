@@ -26,7 +26,7 @@ namespace wiJobSystem
 		auto numCores = std::thread::hardware_concurrency();
 
 		// Calculate the actual number of worker threads we want:
-		numThreads = max(1, numCores);
+		numThreads = max(1, numCores - 1);
 
 		for (uint32_t threadID = 0; threadID < numThreads; ++threadID)
 		{
@@ -55,10 +55,10 @@ namespace wiJobSystem
 			// Do Windows-specific thread setup:
 			HANDLE handle = (HANDLE)worker.native_handle();
 
-			//// Put each thread on to dedicated core (but leave core 0 to main thread)
-			//DWORD_PTR affinityMask = 1ull << (threadID + 1); 
-			//DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
-			//assert(affinity_result > 0);
+			// Put each thread on to dedicated core
+			DWORD_PTR affinityMask = 1ull << (threadID + 1); 
+			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
+			assert(affinity_result > 0);
 
 			//// Increase thread priority:
 			//BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
