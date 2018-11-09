@@ -26,7 +26,7 @@ namespace wiJobSystem
 		auto numCores = std::thread::hardware_concurrency();
 
 		// Calculate the actual number of worker threads we want:
-		numThreads = max(1, numCores - 1);
+		numThreads = max(1, numCores);
 
 		for (uint32_t threadID = 0; threadID < numThreads; ++threadID)
 		{
@@ -56,7 +56,7 @@ namespace wiJobSystem
 			HANDLE handle = (HANDLE)worker.native_handle();
 
 			// Put each thread on to dedicated core
-			DWORD_PTR affinityMask = 1ull << (threadID + 1); 
+			DWORD_PTR affinityMask = 1ull << threadID; 
 			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
 			assert(affinity_result > 0);
 
@@ -79,6 +79,13 @@ namespace wiJobSystem
 		wiBackLog::post(ss.str().c_str());
 	}
 
+	// This little function will not let the system to be deadlocked while the main thread is waiting for something
+	inline void poll()
+	{
+		wakeCondition.notify_one(); // wake one worker thread
+		std::this_thread::yield(); // allow this thread to be rescheduled
+	}
+
 	uint32_t GetThreadCount()
 	{
 		return numThreads;
@@ -90,7 +97,7 @@ namespace wiJobSystem
 		currentLabel += 1;
 
 		// Try to push a new job until it is pushed successfully:
-		while (!jobPool.push_back(job)) { std::this_thread::yield(); }
+		while (!jobPool.push_back(job)) { poll(); }
 
 		wakeCondition.notify_one(); // wake one thread
 	}
@@ -129,7 +136,7 @@ namespace wiJobSystem
 			};
 
 			// Try to push a new job until it is pushed successfully:
-			while (!jobPool.push_back(jobGroup)) { std::this_thread::yield(); }
+			while (!jobPool.push_back(jobGroup)) { poll(); }
 
 			wakeCondition.notify_one(); // wake one thread
 		}
@@ -145,6 +152,6 @@ namespace wiJobSystem
 
 	void Wait()
 	{
-		while (IsBusy()) { std::this_thread::yield(); }
+		while (IsBusy()) { poll(); }
 	}
 }
