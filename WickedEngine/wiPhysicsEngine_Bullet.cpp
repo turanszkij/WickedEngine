@@ -10,6 +10,8 @@
 #include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
 #include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
 
+#include <mutex>
+
 using namespace std;
 using namespace wiECS;
 using namespace wiSceneSystem;
@@ -18,7 +20,7 @@ using namespace wiSceneSystem;
 namespace wiPhysicsEngine
 {
 	bool ENABLED = true;
-	wiSpinLock physicsLock;
+	std::mutex physicsLock;
 
 	btVector3 gravity(0, -10, 0);
 	int softbodyIterationCount = 5;
@@ -316,7 +318,7 @@ namespace wiPhysicsEngine
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
-		wiJobSystem::Dispatch((uint32_t)rigidbodies.GetCount(), 8, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)rigidbodies.GetCount(), 256, [&](JobDispatchArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[args.jobIndex];
 			Entity entity = rigidbodies.GetEntity(args.jobIndex);

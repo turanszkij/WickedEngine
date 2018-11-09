@@ -1334,7 +1334,7 @@ namespace wiSceneSystem
 	}
 
 
-	const uint32_t small_subtask_groupsize = 64;
+	const uint32_t small_subtask_groupsize = 1024;
 
 	void RunPreviousFrameTransformUpdateSystem(
 		const ComponentManager<TransformComponent>& transforms,
