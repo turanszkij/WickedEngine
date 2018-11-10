@@ -198,6 +198,8 @@ namespace wiTextureHelper
 			return E_FAIL;
 		}
 
+		SAFE_DELETE(texture);
+
 		TextureDesc textureDesc;
 		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = width;

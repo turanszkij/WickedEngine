@@ -41,6 +41,7 @@ public:
 
 	static void LoadShaders();
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
+	static wiGraphicsTypes::Texture2D* GetAtlas();
 
 	std::wstring text;
 	wiFontProps props;

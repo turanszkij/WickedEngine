@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 
+#define RECTPACK_DISABLE_FLIP // I don't care for now and it complicate things
+
 using namespace std;
 
 namespace wiRectPacker
@@ -344,8 +346,10 @@ namespace wiRectPacker
 	rect_xywhf::rect_xywhf() : flipped(false) {}
 
 	void rect_xywhf::flip() {
+#ifndef RECTPACK_DISABLE_FLIP
 		flipped = !flipped;
 		std::swap(w, h);
+#endif
 	}
 
 }

@@ -47,16 +47,15 @@ namespace wiHelper
 		return result;
 	}
 
-	bool readByteData(const std::string& fileName, BYTE** data, size_t& dataSize){
+	bool readByteData(const std::string& fileName, std::vector<uint8_t>& data, size_t& dataSize){
 		ifstream file(fileName, ios::binary | ios::ate);
 		if (file.is_open()){
 
 			dataSize = (size_t)file.tellg();
 			file.seekg(0, file.beg);
-			*data = new BYTE[dataSize];
-			file.read((char*)*data, dataSize);
+			data.resize(dataSize);
+			file.read((char*)data.data(), dataSize);
 			file.close();
-
 			return true;
 		}
 		stringstream ss("");

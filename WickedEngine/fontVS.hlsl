@@ -7,7 +7,7 @@ struct VertextoPixel
 	float2 tex				: TEXCOORD0;
 };
 
-VertextoPixel main(uint2 inPos : POSITION, float2 inTex : TEXCOORD0)
+VertextoPixel main(int2 inPos : POSITION, float2 inTex : TEXCOORD0)
 {
 	VertextoPixel Out;
 
