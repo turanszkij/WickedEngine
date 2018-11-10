@@ -45,10 +45,11 @@ namespace wiFont_Internal
 
 	Texture2D* texture = nullptr;
 
+	// These won't be thread safe by the way!
 	unordered_map<int64_t, rect_xywhf> rects;
-	inline int64_t glyphhash(int code, int style) { return (int64_t(code) << 32) | int64_t(style); }
-	inline int codefromhash(int64_t hash) { return int((hash >> 32) & 0xFFFFFFFF); }
-	inline int stylefromhash(int64_t hash) { return int(hash & 0xFFFFFFFF); }
+	constexpr int64_t glyphhash(int code, int style) { return (int64_t(code) << 32) | int64_t(style); }
+	constexpr int codefromhash(int64_t hash) { return int((hash >> 32) & 0xFFFFFFFF); }
+	constexpr int stylefromhash(int64_t hash) { return int(hash & 0xFFFFFFFF); }
 	unordered_set<int64_t> pendingGlyphs;
 
 	struct wiFontStyle
@@ -115,9 +116,6 @@ namespace wiFont_Internal
 
 		const int16_t lineHeight = (props.size < 0 ? uint16_t(fontStyle.lineHeight) : uint16_t(props.size));
 		const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyle.lineHeight);
-
-		const HALF hzero = XMConvertFloatToHalf(0.0f);
-		const HALF hone = XMConvertFloatToHalf(1.0f);
 
 		int16_t line = 0;
 		int16_t pos = 0;
@@ -389,8 +387,8 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 	{
 		for (int64_t hash : pendingGlyphs)
 		{
-			int code = codefromhash(hash);
-			int style = stylefromhash(hash);
+			const int code = codefromhash(hash);
+			const int style = stylefromhash(hash);
 			wiFontStyle& fontStyle = *fontStyles[style];
 
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
@@ -433,9 +431,9 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 
 			for (auto it : rects)
 			{
-				int64_t hash = it.first;
-				wchar_t code = codefromhash(hash);
-				int style = stylefromhash(hash);
+				const int64_t hash = it.first;
+				const wchar_t code = codefromhash(hash);
+				const int style = stylefromhash(hash);
 				wiFontStyle& fontStyle = *fontStyles[style];
 				rect_xywhf& rect = it.second;
 
