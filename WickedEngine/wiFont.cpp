@@ -81,7 +81,9 @@ namespace wiFont_Internal
 		{
 			wiHelper::readByteData(newName, fontBuffer, fontBufferSize);
 
-			if (!stbtt_InitFont(&fontInfo, fontBuffer.data(), 0))
+			int offset = stbtt_GetFontOffsetForIndex(fontBuffer.data(), 0);
+
+			if (!stbtt_InitFont(&fontInfo, fontBuffer.data(), offset))
 			{
 				stringstream ss("");
 				ss << "Failed to load font: " << name;
