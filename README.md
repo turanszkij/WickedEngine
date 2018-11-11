@@ -34,7 +34,7 @@ You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba],
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-![Sponza](logo/sponza.png)
+![Sponza](https://turanszkij.files.wordpress.com/2018/11/sponza.png)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
@@ -45,7 +45,7 @@ To test the engine, this solution contains several projects which you can build 
 - There are multiple sample LUA scripts in the "scripts" folder. You can load any of them inside the Editor, but please check how to use them first by reading the first few lines of the scripts.
 - Please open an Issue here on GitHub if you encounter any difficulties.
 
-![Emitter](logo/emitter_skinned.gif) ![Drone](logo/drone_anim.gif)
+![Emitter](https://turanszkij.files.wordpress.com/2018/11/emitter_skinned.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif)
 
 The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
 You can specify command line arguments for each application to switch between render devices or other settings. Currently the list of options:
@@ -79,6 +79,8 @@ This feature is experimental, not tested thoroughly yet.
 
 * **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the python script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
 This feature is experimental, not tested thoroughly yet.
+
+![Softbody](https://turanszkij.files.wordpress.com/2018/11/soft.gif) ![FluidSimulation](https://turanszkij.files.wordpress.com/2018/05/sphinit.gif) ![PathTracing](https://turanszkij.files.wordpress.com/2018/11/trace.gif)
 
 ### Platforms:
 - Windows PC Desktop (x86, x64)
