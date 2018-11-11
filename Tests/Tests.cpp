@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "Tests.h"
 
+#include <string>
 #include <sstream>
+#include <fstream>
 
 using namespace wiSceneSystem;
 
@@ -101,6 +103,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Physics Test");
 	testSelector->AddItem("Cloth Physics Test");
 	testSelector->AddItem("Job System Test");
+	testSelector->AddItem("Font Test");
 	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -168,6 +171,12 @@ TestsRenderer::TestsRenderer()
 		case 10:
 			RunJobSystemTest();
 			break;
+		case 11:
+			RunFontTest();
+			break;
+		default:
+			assert(0);
+			break;
 		}
 
 	});
@@ -225,4 +234,63 @@ void TestsRenderer::RunJobSystemTest()
 	font.props.v_align = WIFALIGN_CENTER;
 	font.props.size = 24;
 	this->addFont(&font);
+}
+void TestsRenderer::RunFontTest()
+{
+	static wiFont font;
+	static wiFont font_upscaled;
+
+	font.SetText("This is Arial, size 32 wiFont");
+	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
+
+	font.props.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6;
+
+	font_upscaled.props = font.props;
+	font_upscaled.props.posY += font.textHeight() + 10;
+
+	font.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf", 32);
+	font_upscaled.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf", 14);
+	font_upscaled.props.size = 32; // upscale
+
+	addFont(&font);
+	addFont(&font_upscaled);
+
+	static wiFont font_aligned;
+	font_aligned = font;
+	font_aligned.props.posY += font.textHeight() * 2;
+	font_aligned.props.size = 38;
+	font_aligned.props.shadowColor = wiColor::Red;
+	font_aligned.props.h_align = WIFALIGN_CENTER;
+	font_aligned.SetText("Center aligned, red shadow, bigger");
+	addFont(&font_aligned);
+
+	static wiFont font_aligned2;
+	font_aligned2 = font_aligned;
+	font_aligned2.props.posY += font_aligned.textHeight() + 10;
+	font_aligned2.props.shadowColor = wiColor::Purple;
+	font_aligned2.props.h_align = WIFALIGN_RIGHT;
+	font_aligned2.SetText("Right aligned, purple shadow");
+	addFont(&font_aligned2);
+
+	std::stringstream ss("");
+	std::ifstream file("font_test.txt");
+	if (file.is_open())
+	{
+		while (!file.eof())
+		{
+			std::string s;
+			file >> s;
+			ss << s;
+		}
+	}
+	static wiFont font_japanese;
+	font_japanese = font_aligned2;
+	font_japanese.props.posY += font_aligned2.textHeight();
+	font_japanese.style = wiFont::AddFontStyle("yumin.ttf", 34);
+	font_japanese.props.shadowColor = wiColor::Transparent;
+	font_japanese.props.h_align = WIFALIGN_CENTER;
+	font_japanese.props.size = -1; // no scaling, it will use 34 (that was specified with AddFontStyle second argument)
+	font_japanese.SetText(ss.str());
+	addFont(&font_japanese);
 }
