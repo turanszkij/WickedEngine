@@ -45,7 +45,7 @@ namespace wiFont_Internal
 
 	Texture2D* texture = nullptr;
 
-	// These won't be thread safe by the way!
+	// These won't be thread safe by the way! (todo)
 	unordered_map<int64_t, rect_xywhf> rects;
 	constexpr int64_t glyphhash(int code, int style) { return (int64_t(code) << 32) | int64_t(style); }
 	constexpr int codefromhash(int64_t hash) { return int((hash >> 32) & 0xFFFFFFFF); }
@@ -206,11 +206,11 @@ using namespace wiFont_Internal;
 
 wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
 {
-	this->text = wstring(text.begin(), text.end());
+	SetText(text);
 }
-wiFont::wiFont(const std::wstring& text, wiFontProps props, int style) : text(text), props(props), style(style)
+wiFont::wiFont(const std::wstring& text, wiFontProps props, int style) : props(props), style(style)
 {
-
+	SetText(text);
 }
 wiFont::~wiFont()
 {
@@ -419,7 +419,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 		}
 
 		std::vector<bin> bins;
-		if (pack(out_rects.data(), (int)rects.size(), 512, bins))
+		if (pack(out_rects.data(), (int)rects.size(), 1024, bins))
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
@@ -625,7 +625,15 @@ int wiFont::textHeight()
 
 void wiFont::SetText(const string& text)
 {
+#ifdef WIN32
+	int wchars_num = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
+	wchar_t* wstr = new wchar_t[wchars_num];
+	MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, wstr, wchars_num);
+	this->text = wstr;
+	delete[] wstr;
+#else
 	this->text = wstring(text.begin(), text.end());
+#endif
 }
 void wiFont::SetText(const wstring& text)
 {
