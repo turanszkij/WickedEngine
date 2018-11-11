@@ -35,7 +35,7 @@ You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba],
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-![Sponza](https://turanszkij.files.wordpress.com/2018/11/sponza.png)
+![GLTF](https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
@@ -123,7 +123,7 @@ If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor 
 
 When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
 
-![BulletPhysics](https://turanszkij.files.wordpress.com/2018/11/physics.gif)
+![BulletPhysics](https://turanszkij.files.wordpress.com/2018/11/physics.gif) ![HairParticle](https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif)
 
 ### Contents:
 
@@ -149,5 +149,7 @@ For further details, please check the scripting API documentation: [Wicked Engin
 The Editor supports the importing of some common model formats (the list will potentially grow): <b>OBJ</b>, <b>GLTF 2.0</b> <br/>
 The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
 The old Blender exporter script is now not supported! (from version 0.21.0)
+
+![Sponza](https://turanszkij.files.wordpress.com/2018/11/sponza.png)
 	
 
