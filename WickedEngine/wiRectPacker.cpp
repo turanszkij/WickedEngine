@@ -101,6 +101,15 @@ namespace wiRectPacker
 			if (id) return 0;
 			int f = img.fits(rect_xywh(rc));
 
+#ifdef RECTPACK_DISABLE_FLIP
+			switch (f) {
+			case 0: return 0;
+			case 1: img.flipped = false; break;
+			case 2: img.flipped = false; break;
+			case 3: id = true; img.flipped = false; return this;
+			case 4: id = true; img.flipped = false;  return this;
+			}
+#else
 			switch (f) {
 			case 0: return 0;
 			case 1: img.flipped = false; break;
@@ -108,6 +117,7 @@ namespace wiRectPacker
 			case 3: id = true; img.flipped = false; return this;
 			case 4: id = true; img.flipped = true;  return this;
 			}
+#endif
 
 			int iw = (img.flipped ? img.h : img.w), ih = (img.flipped ? img.w : img.h);
 

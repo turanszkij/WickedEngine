@@ -555,6 +555,10 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 int wiFont::textWidth()
 {
+	if (style >= fontStyles.size())
+	{
+		return 0;
+	}
 	const wiFontStyle& fontStyle = *fontStyles[style];
 	const float relativeSize = (props.size < 0 ? 1.0f : (float)props.size / (float)fontStyle.lineHeight);
 	int maxWidth = 0;
@@ -594,6 +598,10 @@ int wiFont::textWidth()
 }
 int wiFont::textHeight()
 {
+	if (style >= fontStyles.size())
+	{
+		return 0;
+	}
 	const wiFontStyle& fontStyle = *fontStyles[style];
 	const float relativeSize = (props.size < 0 ? 1.0f : (float)props.size / (float)fontStyle.lineHeight);
 	int i = 0;
