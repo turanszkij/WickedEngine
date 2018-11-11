@@ -2,10 +2,11 @@
 
 # Wicked Engine
 
-[![Build status][s1]][av] [![DownloadEditor][s4]][do] [![DownloadTests][s5]][dt] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
+[![Build status][s1]][av] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
-            alt="follow on Twitter"></a>
+            alt="follow on Twitter"></a><br/>
+[![DownloadEditor][s4]][do] [![DownloadTests][s5]][dt] 
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
@@ -121,6 +122,8 @@ You should also ActivatePath() for the rendering to begin. You can see an exampl
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 
 When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
+
+![BulletPhysics](https://turanszkij.files.wordpress.com/2018/11/physics.gif)
 
 ### Contents:
 
