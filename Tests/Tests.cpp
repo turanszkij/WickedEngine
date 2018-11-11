@@ -281,7 +281,7 @@ void TestsRenderer::RunFontTest()
 		{
 			std::string s;
 			file >> s;
-			ss << s;
+			ss << s << "\t";
 		}
 	}
 	static wiFont font_japanese;
