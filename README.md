@@ -29,13 +29,13 @@ The full source code is provided with the MIT license, which means, anyone is fr
 From version <b>0.21.0</b> onwards, the engine was changed to use Entity-Component System and the old Object-Oriented system was dropped. <b>It is not backwards-compatible</b>, so assets/scripts made with the old system are unfortunately not usable.
 You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba], but it will not be updated anymore.
 
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"></img>
+
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
 [Features](features.txt)<br/>
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
-
-![GLTF](https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif)
 
 To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
 - You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
