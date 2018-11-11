@@ -73,6 +73,8 @@ You can specify command line arguments for each application to switch between re
   </tr>
 </table>
 
+<img align="left" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
+
 * *Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
 Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
 is automatic if you start the application with Vulkan support.
@@ -81,7 +83,7 @@ This feature is experimental, not tested thoroughly yet.
 * **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the python script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
 This feature is experimental, not tested thoroughly yet.
 
-![Softbody](https://turanszkij.files.wordpress.com/2018/11/soft.gif) ![FluidSimulation](https://turanszkij.files.wordpress.com/2018/05/sphinit.gif) ![PathTracing](https://turanszkij.files.wordpress.com/2018/11/trace.gif)
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
 - Windows PC Desktop (x86, x64)
@@ -94,6 +96,7 @@ This feature is experimental, not tested thoroughly yet.
 - Visual Studio 2017
 - Windows 10 SDK
 
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/trace.gif"/>
 
 ### Getting started: 
 
@@ -112,6 +115,8 @@ Then set the following dependencies to this library in Visual Studio this way in
 	- Directory of your built .lib file (For example ./x64/Release)
 4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
+	
+<img align="left" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. 
@@ -124,8 +129,6 @@ If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor 
 When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
-
-![BulletPhysics](https://turanszkij.files.wordpress.com/2018/11/physics.gif) 
 
 ### Contents:
 
