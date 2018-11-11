@@ -29,7 +29,7 @@ The full source code is provided with the MIT license, which means, anyone is fr
 From version <b>0.21.0</b> onwards, the engine was changed to use Entity-Component System and the old Object-Oriented system was dropped. <b>It is not backwards-compatible</b>, so assets/scripts made with the old system are unfortunately not usable.
 You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba], but it will not be updated anymore.
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"></img>
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -123,7 +123,9 @@ If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor 
 
 When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
 
-![BulletPhysics](https://turanszkij.files.wordpress.com/2018/11/physics.gif) ![HairParticle](https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif)
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
+
+![BulletPhysics](https://turanszkij.files.wordpress.com/2018/11/physics.gif) 
 
 ### Contents:
 
