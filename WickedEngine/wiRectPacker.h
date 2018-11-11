@@ -9,7 +9,6 @@
 1. rect_xywhf - structure representing your rectangle object
 members:
 int x, y, w, h;
-bool flipped;
 
 2. bin - structure representing resultant bin object
 3. bool pack(rect_xywhf* const * v, int n, int max_side, std::std::vector<bin>& bins) - actual packing function
@@ -29,9 +28,8 @@ then for each bin iterate through its rectangles, typecast each one to your own 
 to the array representing your texture atlas to the place specified by the rectangle, then finally upload it with glTexImage2D.
 
 Algorithm doesn't create any new rectangles.
-You just pass an array of pointers - rectangles' x/y/w/h/flipped are modified in place.
+You just pass an array of pointers - rectangles' x/y/w/h are modified in place.
 There is a vector of pointers for every resultant bin to let you know which ones belong to the particular bin.
-The algorithm may swap the w and h fields for the sake of better fitting, the flag "flipped" will be set to true whenever this occurs.
 
 For description how to tune the algorithm and how it actually works see the .cpp file.
 
@@ -49,7 +47,7 @@ namespace wiRectPacker
 		rect_wh(const rect_xywh&);
 		rect_wh(int w = 0, int h = 0);
 		int w, h, area(), perimeter(),
-			fits(const rect_wh& bigger) const; // 0 - no, 1 - yes, 2 - flipped, 3 - perfectly, 4 perfectly flipped
+			fits(const rect_wh& bigger) const; // 0 - no, 1 - yes, 2 - perfectly
 	};
 
 	// rectangle implementing left/top/right/bottom behaviour
@@ -75,8 +73,6 @@ namespace wiRectPacker
 		rect_xywhf(const rect_ltrb&);
 		rect_xywhf(int x, int y, int width, int height);
 		rect_xywhf();
-		void flip();
-		bool flipped;
 	};
 
 

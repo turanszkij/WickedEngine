@@ -3,8 +3,6 @@
 #include <vector>
 #include <algorithm>
 
-#define RECTPACK_DISABLE_FLIP // I don't care for now and it complicate things
-
 using namespace std;
 
 namespace wiRectPacker
@@ -101,25 +99,13 @@ namespace wiRectPacker
 			if (id) return 0;
 			int f = img.fits(rect_xywh(rc));
 
-#ifdef RECTPACK_DISABLE_FLIP
 			switch (f) {
 			case 0: return 0;
-			case 1: img.flipped = false; break;
-			case 2: img.flipped = false; break;
-			case 3: id = true; img.flipped = false; return this;
-			case 4: id = true; img.flipped = false;  return this;
+			case 1: break;
+			case 2: id = true; return this;
 			}
-#else
-			switch (f) {
-			case 0: return 0;
-			case 1: img.flipped = false; break;
-			case 2: img.flipped = true; break;
-			case 3: id = true; img.flipped = false; return this;
-			case 4: id = true; img.flipped = true;  return this;
-			}
-#endif
 
-			int iw = (img.flipped ? img.h : img.w), ih = (img.flipped ? img.w : img.h);
+			int iw = img.w, ih = img.h;
 
 			if (rc.w() - iw > rc.h() - ih) {
 				c[0].set(rc.l, rc.t, rc.l + iw, rc.b);
@@ -223,11 +209,6 @@ namespace wiRectPacker
 				v[i]->x = ret->rc.l;
 				v[i]->y = ret->rc.t;
 
-				if (v[i]->flipped) {
-					v[i]->flipped = false;
-					v[i]->flip();
-				}
-
 				clip_x = std::max(clip_x, ret->rc.r);
 				clip_y = std::max(clip_y, ret->rc.b);
 
@@ -235,8 +216,6 @@ namespace wiRectPacker
 			}
 			else {
 				unsucc.push_back(v[i]);
-
-				v[i]->flipped = false;
 			}
 		}
 
@@ -282,10 +261,8 @@ namespace wiRectPacker
 	rect_wh::rect_wh(int w, int h) : w(w), h(h) {}
 
 	int rect_wh::fits(const rect_wh& r) const {
-		if (w == r.w && h == r.h) return 3;
-		if (h == r.w && w == r.h) return 4;
+		if (w == r.w && h == r.h) return 2;
 		if (w <= r.w && h <= r.h) return 1;
-		if (h <= r.w && w <= r.h) return 2;
 		return 0;
 	}
 
@@ -351,15 +328,8 @@ namespace wiRectPacker
 	}
 
 
-	rect_xywhf::rect_xywhf(const rect_ltrb& rr) : rect_xywh(rr), flipped(false) {}
-	rect_xywhf::rect_xywhf(int x, int y, int width, int height) : rect_xywh(x, y, width, height), flipped(false) {}
-	rect_xywhf::rect_xywhf() : flipped(false) {}
-
-	void rect_xywhf::flip() {
-#ifndef RECTPACK_DISABLE_FLIP
-		flipped = !flipped;
-		std::swap(w, h);
-#endif
-	}
+	rect_xywhf::rect_xywhf(const rect_ltrb& rr) : rect_xywh(rr) {}
+	rect_xywhf::rect_xywhf(int x, int y, int width, int height) : rect_xywh(x, y, width, height) {}
+	rect_xywhf::rect_xywhf() {}
 
 }
