@@ -8,26 +8,25 @@
 enum wiFontAlign
 {
 	WIFALIGN_LEFT,
-	// same as mid
 	WIFALIGN_CENTER,
-	// same as center
-	WIFALIGN_MID,
 	WIFALIGN_RIGHT,
 	WIFALIGN_TOP,
-	WIFALIGN_BOTTOM,
-	WIFALIGN_COUNT,
+	WIFALIGN_BOTTOM
 };
+
+static const int WIFONTSIZE_DEFAULT = 16;
 
 struct wiFontProps
 {
-	int size;
-	int spacingX, spacingY;
 	int posX, posY;
+	int size = WIFONTSIZE_DEFAULT; // line height in pixels
+	float scaling = 1;
+	int spacingX, spacingY;
 	wiFontAlign h_align, v_align;
 	wiColor color;
 	wiColor shadowColor;
 
-	wiFontProps(int posX = 0, int posY = 0, int size = -1, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
+	wiFontProps(int posX = 0, int posY = 0, int size = 16, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, int spacingX = 0, int spacingY = 0, const wiColor& color = wiColor(255, 255, 255, 255), const wiColor& shadowColor = wiColor(0,0,0,0))
 		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(color), shadowColor(shadowColor)
 	{}
@@ -43,6 +42,12 @@ public:
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
 	static wiGraphicsTypes::Texture2D* GetAtlas();
 
+	// Returns the font path that can be modified
+	static std::string& GetFontPath();
+
+	// Create a font. Returns fontStyleID that is reusable. If font already exists, just return its ID
+	static int AddFontStyle(const std::string& fontName);
+
 	std::wstring text;
 	wiFontProps props;
 	int style;
@@ -50,23 +55,15 @@ public:
 	wiFont(const std::string& text = "", wiFontProps props = wiFontProps(), int style = 0);
 	wiFont(const std::wstring& text, wiFontProps props = wiFontProps(), int style = 0);
 	~wiFont();
-
 	
 	void Draw(GRAPHICSTHREAD threadID);
 
-
 	int textWidth();
 	int textHeight();
-
-	// Create a font. Returns fontStyleID that is reusable. If font already exists, just return its ID
-	static int AddFontStyle(const std::string& fontName, int height = 16);
-	// Returns the style ID that is reusable. If font not found, returns -1
-	static int GetFontStyle(const std::string& fontName, int height = 16);
 
 	void SetText(const std::string& text);
 	void SetText(const std::wstring& text);
 	std::wstring GetText();
 	std::string GetTextA();
 
-	static std::string& GetFontPath();
 };

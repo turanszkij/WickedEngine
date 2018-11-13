@@ -241,10 +241,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::VERTEXSHADER:
 		{
 			vector<uint8_t> buffer;
-			size_t bufferSize;
-			if (wiHelper::readByteData(nameStr, buffer, bufferSize)) {
+			if (wiHelper::readByteData(nameStr, buffer)) {
 				VertexShader* shader = new VertexShader;
-				wiRenderer::GetDevice()->CreateVertexShader(buffer.data(), bufferSize, shader);
+				wiRenderer::GetDevice()->CreateVertexShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
 			else{
@@ -255,10 +254,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::PIXELSHADER:
 		{
 			vector<uint8_t> buffer;
-			size_t bufferSize;
-			if (wiHelper::readByteData(nameStr, buffer, bufferSize)){
+			if (wiHelper::readByteData(nameStr, buffer)){
 				PixelShader* shader = new PixelShader;
-				wiRenderer::GetDevice()->CreatePixelShader(buffer.data(), bufferSize, shader);
+				wiRenderer::GetDevice()->CreatePixelShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
 			else{
@@ -269,10 +267,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::GEOMETRYSHADER:
 		{
 			vector<uint8_t> buffer;
-			size_t bufferSize;
-			if (wiHelper::readByteData(nameStr, buffer, bufferSize)){
+			if (wiHelper::readByteData(nameStr, buffer)){
 				GeometryShader* shader = new GeometryShader;
-				wiRenderer::GetDevice()->CreateGeometryShader(buffer.data(), bufferSize, shader);
+				wiRenderer::GetDevice()->CreateGeometryShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
 			else{
@@ -283,10 +280,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::HULLSHADER:
 		{
 			vector<uint8_t> buffer;
-			size_t bufferSize;
-			if (wiHelper::readByteData(nameStr, buffer, bufferSize)){
+			if (wiHelper::readByteData(nameStr, buffer)){
 				HullShader* shader = new HullShader;
-				wiRenderer::GetDevice()->CreateHullShader(buffer.data(), bufferSize, shader);
+				wiRenderer::GetDevice()->CreateHullShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
 			else{
@@ -297,10 +293,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::DOMAINSHADER:
 		{
 			vector<uint8_t> buffer;
-			size_t bufferSize;
-			if (wiHelper::readByteData(nameStr, buffer, bufferSize)){
+			if (wiHelper::readByteData(nameStr, buffer)){
 				DomainShader* shader = new DomainShader;
-				wiRenderer::GetDevice()->CreateDomainShader(buffer.data(), bufferSize, shader);
+				wiRenderer::GetDevice()->CreateDomainShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
 			else{
@@ -311,10 +306,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		case Data_Type::COMPUTESHADER:
 		{
 			vector<uint8_t> buffer;
-			size_t bufferSize;
-			if (wiHelper::readByteData(nameStr, buffer, bufferSize)) {
+			if (wiHelper::readByteData(nameStr, buffer)) {
 				ComputeShader* shader = new ComputeShader;
-				wiRenderer::GetDevice()->CreateComputeShader(buffer.data(), bufferSize, shader);
+				wiRenderer::GetDevice()->CreateComputeShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
 			else {

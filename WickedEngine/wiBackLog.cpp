@@ -99,7 +99,7 @@ namespace wiBackLog
 			font.props.posX = 50;
 			font.props.posY = (int)pos + (int)scroll;
 			font.Draw(GRAPHICSTHREAD_IMMEDIATE);
-			wiFont(inputArea.str().c_str(), wiFontProps(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, -1, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+			wiFont(inputArea.str().c_str(), wiFontProps(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		}
 	}
 

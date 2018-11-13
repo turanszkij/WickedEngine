@@ -6,12 +6,12 @@
 
 /* of your interest:
 
-1. rect_xywhf - structure representing your rectangle object
+1. rect_xywh - structure representing your rectangle object
 members:
 int x, y, w, h;
 
 2. bin - structure representing resultant bin object
-3. bool pack(rect_xywhf* const * v, int n, int max_side, std::std::vector<bin>& bins) - actual packing function
+3. bool pack(rect_xywh* const * v, int n, int max_side, std::std::vector<bin>& bins) - actual packing function
 Arguments:
 input/output: v - pointer to array of pointers to your rectangles (const here means that the pointers will point to the same rectangles after the call)
 input: n - rectangles count
@@ -24,7 +24,7 @@ Every bin also keeps information about its width and height of course, none of t
 returns true on success, false if one of the rectangles' dimension was bigger than max_side
 
 You want to your rectangles representing your textures/glyph objects with GL_MAX_TEXTURE_SIZE as max_side,
-then for each bin iterate through its rectangles, typecast each one to your own structure (or manually add userdata) and then memcpy its pixel contents (rotated by 90 degrees if "flipped" rect_xywhf's member is true)
+then for each bin iterate through its rectangles, typecast each one to your own structure (or manually add userdata) and then memcpy its pixel contents (rotated by 90 degrees if "flipped" rect_xywh's member is true)
 to the array representing your texture atlas to the place specified by the rectangle, then finally upload it with glTexImage2D.
 
 Algorithm doesn't create any new rectangles.
@@ -69,18 +69,12 @@ namespace wiRectPacker
 		void r(int), b(int);
 	};
 
-	struct rect_xywhf : public rect_xywh {
-		rect_xywhf(const rect_ltrb&);
-		rect_xywhf(int x, int y, int width, int height);
-		rect_xywhf();
-	};
-
 
 	struct bin {
 		rect_wh size;
-		std::vector<rect_xywhf*> rects;
+		std::vector<rect_xywh*> rects;
 	};
 
-	bool pack(rect_xywhf* const * v, int n, int max_side, std::vector<bin>& bins);
+	bool pack(rect_xywh* const * v, int n, int max_side, std::vector<bin>& bins);
 
 }

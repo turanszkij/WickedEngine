@@ -8,23 +8,23 @@ using namespace std;
 namespace wiRectPacker
 {
 
-	bool area(rect_xywhf* a, rect_xywhf* b) {
+	bool area(rect_xywh* a, rect_xywh* b) {
 		return a->area() > b->area();
 	}
 
-	bool perimeter(rect_xywhf* a, rect_xywhf* b) {
+	bool perimeter(rect_xywh* a, rect_xywh* b) {
 		return a->perimeter() > b->perimeter();
 	}
 
-	bool max_side(rect_xywhf* a, rect_xywhf* b) {
+	bool max_side(rect_xywh* a, rect_xywh* b) {
 		return std::max(a->w, a->h) > std::max(b->w, b->h);
 	}
 
-	bool max_width(rect_xywhf* a, rect_xywhf* b) {
+	bool max_width(rect_xywh* a, rect_xywh* b) {
 		return a->w > b->w;
 	}
 
-	bool max_height(rect_xywhf* a, rect_xywhf* b) {
+	bool max_height(rect_xywh* a, rect_xywh* b) {
 		return a->h > b->h;
 	}
 
@@ -32,7 +32,7 @@ namespace wiRectPacker
 	// just add another comparing function name to cmpf to perform another packing attempt
 	// more functions == slower but probably more efficient cases covered and hence less area wasted
 
-	bool(*cmpf[])(rect_xywhf*, rect_xywhf*) = {
+	bool(*cmpf[])(rect_xywh*, rect_xywh*) = {
 		area,
 		perimeter,
 		max_side,
@@ -89,7 +89,7 @@ namespace wiRectPacker
 			delcheck();
 		}
 
-		node* insert(rect_xywhf& img) {
+		node* insert(rect_xywh& img) {
 			if (c[0].pn && c[0].fill) {
 				node* newn;
 				if (newn = c[0].pn->insert(img)) return newn;
@@ -130,16 +130,16 @@ namespace wiRectPacker
 		}
 	};
 
-	rect_wh _rect2D(rect_xywhf* const * v, int n, int max_s, std::vector<rect_xywhf*>& succ, std::vector<rect_xywhf*>& unsucc) {
+	rect_wh _rect2D(rect_xywh* const * v, int n, int max_s, std::vector<rect_xywh*>& succ, std::vector<rect_xywh*>& unsucc) {
 		node root;
 
-		const int funcs = (sizeof(cmpf) / sizeof(bool(*)(rect_xywhf*, rect_xywhf*)));
+		const int funcs = (sizeof(cmpf) / sizeof(bool(*)(rect_xywh*, rect_xywh*)));
 
-		rect_xywhf** order[funcs];
+		rect_xywh** order[funcs];
 
 		for (int f = 0; f < funcs; ++f) {
-			order[f] = new rect_xywhf*[n];
-			memcpy(order[f], v, sizeof(rect_xywhf*) * n);
+			order[f] = new rect_xywh*[n];
+			memcpy(order[f], v, sizeof(rect_xywh*) * n);
 			sort(order[f], order[f] + n, cmpf[f]);
 		}
 
@@ -226,16 +226,16 @@ namespace wiRectPacker
 	}
 
 
-	bool pack(rect_xywhf* const * v, int n, int max_s, std::vector<bin>& bins) {
+	bool pack(rect_xywh* const * v, int n, int max_s, std::vector<bin>& bins) {
 		rect_wh _rect(max_s, max_s);
 
 		for (int i = 0; i < n; ++i)
 			if (!v[i]->fits(_rect)) return false;
 
-		std::vector<rect_xywhf*> vec[2], *p[2] = { vec, vec + 1 };
+		std::vector<rect_xywh*> vec[2], *p[2] = { vec, vec + 1 };
 		vec[0].resize(n);
 		vec[1].clear();
-		memcpy(&vec[0][0], v, sizeof(rect_xywhf*)*n);
+		memcpy(&vec[0][0], v, sizeof(rect_xywh*)*n);
 
 		bin* b = 0;
 
@@ -326,10 +326,5 @@ namespace wiRectPacker
 	int rect_wh::perimeter() {
 		return 2 * w + 2 * h;
 	}
-
-
-	rect_xywhf::rect_xywhf(const rect_ltrb& rr) : rect_xywh(rr) {}
-	rect_xywhf::rect_xywhf(int x, int y, int width, int height) : rect_xywh(x, y, width, height) {}
-	rect_xywhf::rect_xywhf() {}
 
 }

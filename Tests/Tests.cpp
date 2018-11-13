@@ -245,13 +245,15 @@ void TestsRenderer::RunFontTest()
 
 	font.props.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
 	font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6;
+	font.props.size = 32;
 
 	font_upscaled.props = font.props;
 	font_upscaled.props.posY += font.textHeight() + 10;
 
-	font.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf", 32);
-	font_upscaled.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf", 14);
-	font_upscaled.props.size = 32; // upscale
+	font.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
+	font_upscaled.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
+	font_upscaled.props.size = 14;
+	font_upscaled.props.scaling = 32.0f / 14.0f;
 
 	addFont(&font);
 	addFont(&font_upscaled);
@@ -287,10 +289,10 @@ void TestsRenderer::RunFontTest()
 	static wiFont font_japanese;
 	font_japanese = font_aligned2;
 	font_japanese.props.posY += font_aligned2.textHeight();
-	font_japanese.style = wiFont::AddFontStyle("yumin.ttf", 34);
+	font_japanese.style = wiFont::AddFontStyle("yumin.ttf");
 	font_japanese.props.shadowColor = wiColor::Transparent;
 	font_japanese.props.h_align = WIFALIGN_CENTER;
-	font_japanese.props.size = -1; // no scaling, it will use 34 (that was specified with AddFontStyle second argument)
+	font_japanese.props.size = 34;
 	font_japanese.SetText(ss.str());
 	addFont(&font_japanese);
 }

@@ -30,7 +30,7 @@ namespace wiHelper
 
 	std::string toUpper(const std::string& s);
 
-	bool readByteData(const std::string& fileName, std::vector<uint8_t>& data, size_t& dataSize);
+	bool readByteData(const std::string& fileName, std::vector<uint8_t>& data);
 
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 

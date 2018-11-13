@@ -46,40 +46,33 @@ namespace wiFont_Internal
 	Texture2D* texture = nullptr;
 
 	// These won't be thread safe by the way! (todo)
-	unordered_map<int64_t, rect_xywhf> rects;
-	constexpr int64_t glyphhash(int code, int style) { return (int64_t(code) << 32) | int64_t(style); }
+	struct Glyph
+	{
+		int16_t x;
+		int16_t y;
+		int16_t width;
+		int16_t height;
+		uint16_t tc_left;
+		uint16_t tc_right;
+		uint16_t tc_top;
+		uint16_t tc_bottom;
+	};
+	unordered_map<int64_t, Glyph> glyph_lookup;
+	unordered_map<int64_t, rect_xywh> rect_lookup;
+	constexpr int64_t glyphhash(int code, int style, int height) { return (int64_t(code) << 32) | (int64_t(style) << 16) | int64_t(height); }
 	constexpr int codefromhash(int64_t hash) { return int((hash >> 32) & 0xFFFFFFFF); }
-	constexpr int stylefromhash(int64_t hash) { return int(hash & 0xFFFFFFFF); }
+	constexpr int stylefromhash(int64_t hash) { return int((hash >> 16) & 0x0000FFFF); }
+	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x0000FFFF); }
 	unordered_set<int64_t> pendingGlyphs;
 
 	struct wiFontStyle
 	{
 		string name;
-		size_t fontBufferSize = 0;
 		vector<uint8_t> fontBuffer;
 		stbtt_fontinfo fontInfo;
-		float fontScaling = 1;
-		int lineHeight = 16;
-		float ascent = 0;
-		float descent = 0;
-		float lineGap = 0;
-
-		struct Glyph
+		wiFontStyle(const string& newName) : name(newName)
 		{
-			int16_t x;
-			int16_t y;
-			int16_t width;
-			int16_t height;
-			uint16_t tc_left;
-			uint16_t tc_right;
-			uint16_t tc_top;
-			uint16_t tc_bottom;
-		};
-		unordered_map<int, Glyph> lookup;
-
-		wiFontStyle(const string& newName, int height = 16) : name(newName), lineHeight(height)
-		{
-			wiHelper::readByteData(newName, fontBuffer, fontBufferSize);
+			wiHelper::readByteData(newName, fontBuffer);
 
 			int offset = stbtt_GetFontOffsetForIndex(fontBuffer.data(), 0);
 
@@ -88,18 +81,7 @@ namespace wiFont_Internal
 				stringstream ss("");
 				ss << "Failed to load font: " << name;
 				wiHelper::messageBox(ss.str());
-				return;
 			}
-
-			fontScaling = stbtt_ScaleForPixelHeight(&fontInfo, (float)lineHeight);
-
-			int _a, _d, _l;
-			stbtt_GetFontVMetrics(&fontInfo, &_a, &_d, &_l);
-
-			ascent = float(_a) * fontScaling;
-			descent = float(_d) * fontScaling;
-			lineGap = float(_l) * fontScaling;
-
 		}
 	};
 	std::vector<wiFontStyle*> fontStyles;
@@ -114,44 +96,43 @@ namespace wiFont_Internal
 	{
 		int quadCount = 0;
 
-		const wiFontStyle& fontStyle = *fontStyles[style];
-
-		const int16_t lineHeight = (props.size < 0 ? uint16_t(fontStyle.lineHeight) : uint16_t(props.size));
-		const float relativeSize = (props.size < 0 ? 1 : (float)props.size / (float)fontStyle.lineHeight);
+		const int16_t lineHeight = props.size;
+		const float scaling = props.scaling;
 
 		int16_t line = 0;
 		int16_t pos = 0;
 		for (size_t i = 0; i < text.length(); ++i)
 		{
 			const int code = text[i];
+			const int64_t hash = glyphhash(code, style, props.size);
 
-			if (fontStyle.lookup.count(code) == 0)
+			if (glyph_lookup.count(hash) == 0)
 			{
 				// glyph not packed yet, so add to pending list:
-				pendingGlyphs.insert(glyphhash(code, style));
+				pendingGlyphs.insert(hash);
 				continue;
 			}
 
 			if (code == '\n')
 			{
-				line += lineHeight + int(props.spacingY * relativeSize);
+				line += lineHeight + int(props.spacingY * scaling);
 				pos = 0;
 			}
 			else if (code == ' ')
 			{
-				pos += int((WHITESPACE_SIZE + props.spacingX) * relativeSize);
+				pos += int((WHITESPACE_SIZE + props.spacingX) * scaling);
 			}
 			else if (code == '\t')
 			{
-				pos += int(((WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT) * relativeSize);
+				pos += int(((WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT) * scaling);
 			}
 			else
 			{
-				const wiFontStyle::Glyph& glyph = fontStyle.lookup.at(code);
-				const int16_t glyphWidth = int16_t(glyph.width * relativeSize);
-				const int16_t glyphHeight = int16_t(glyph.height * relativeSize);
-				const int16_t glyphOffsetX = int16_t(glyph.x * relativeSize);
-				const int16_t glyphOffsetY = int16_t(glyph.y * relativeSize);
+				const Glyph& glyph = glyph_lookup.at(hash);
+				const int16_t glyphWidth = int16_t(glyph.width * scaling);
+				const int16_t glyphHeight = int16_t(glyph.height * scaling);
+				const int16_t glyphOffsetX = int16_t(glyph.x * scaling);
+				const int16_t glyphOffsetY = int16_t(glyph.y * scaling);
 
 				const size_t vertexID = quadCount * 4;
 
@@ -178,7 +159,7 @@ namespace wiFont_Internal
 				vertexList[vertexID + 3].Tex.x = glyph.tc_right;
 				vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
 
-				pos += glyphWidth + props.spacingX;
+				pos += glyphWidth + int16_t(props.spacingX * scaling);
 
 				//// add kerning
 				//if (i > 0 && i < text.length() - 1)
@@ -226,7 +207,7 @@ void wiFont::Initialize()
 	// add default font if there is none yet:
 	if (fontStyles.empty())
 	{
-		AddFontStyle(FONTPATH + "arial.ttf", 16);
+		AddFontStyle(FONTPATH + "arial.ttf");
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -391,27 +372,37 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 		{
 			const int code = codefromhash(hash);
 			const int style = stylefromhash(hash);
+			const int height = heightfromhash(hash);
 			wiFontStyle& fontStyle = *fontStyles[style];
+
+			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
+
+			int ascent, descent, lineGap;
+			stbtt_GetFontVMetrics(&fontStyle.fontInfo, &ascent, &descent, &lineGap);
+
+			ascent = int(float(ascent) * fontScaling);
+			descent = int(float(descent) * fontScaling);
+			lineGap = int(float(lineGap) * fontScaling);
 
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
 			int left, top, right, bottom;
-			stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontStyle.fontScaling, fontStyle.fontScaling, &left, &top, &right, &bottom);
+			stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontScaling, fontScaling, &left, &top, &right, &bottom);
 
-			wiFontStyle::Glyph& glyph = fontStyle.lookup[code];
+			Glyph& glyph = glyph_lookup[hash];
 			glyph.x = left;
-			glyph.y = top + int(fontStyle.ascent);
+			glyph.y = top + ascent;
 			glyph.width = right - left;
 			glyph.height = bottom - top;
 
-			rects[hash] = rect_ltrb(left, top, right, bottom);
+			rect_lookup[hash] = rect_ltrb(left, top, right, bottom);
 		}
 		pendingGlyphs.clear();
 
 
-		vector<rect_xywhf*> out_rects(rects.size());
+		vector<rect_xywh*> out_rects(rect_lookup.size());
 		{
 			int i = 0;
-			for (auto& it : rects)
+			for (auto& it : rect_lookup)
 			{
 				out_rects[i] = &it.second;
 				i++;
@@ -419,7 +410,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 		}
 
 		std::vector<bin> bins;
-		if (pack(out_rects.data(), (int)rects.size(), 1024, bins))
+		if (pack(out_rects.data(), (int)out_rects.size(), 1024, bins))
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
@@ -431,17 +422,20 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			vector<uint8_t> bitmap(bitmapWidth * bitmapHeight);
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
-			for (auto it : rects)
+			for (auto it : rect_lookup)
 			{
 				const int64_t hash = it.first;
 				const wchar_t code = codefromhash(hash);
 				const int style = stylefromhash(hash);
+				const int height = heightfromhash(hash);
 				wiFontStyle& fontStyle = *fontStyles[style];
-				rect_xywhf& rect = it.second;
+				const rect_xywh& rect = it.second;
+
+				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
 
 				// render character (stride and offset is important here)
 				int byteOffset = rect.x + (rect.y * bitmapWidth);
-				stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontStyle.fontScaling, fontStyle.fontScaling, code);
+				stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontScaling, fontScaling, code);
 
 				float tc_left = float(rect.x);
 				float tc_right = tc_left + float(rect.w);
@@ -453,7 +447,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 				tc_top *= inv_height;
 				tc_bottom *= inv_height;
 
-				wiFontStyle::Glyph& glyph = fontStyle.lookup[code];
+				Glyph& glyph = glyph_lookup[hash];
 				glyph.tc_left = XMConvertFloatToHalf(tc_left);
 				glyph.tc_right = XMConvertFloatToHalf(tc_right);
 				glyph.tc_top = XMConvertFloatToHalf(tc_top);
@@ -473,6 +467,23 @@ Texture2D* wiFont::GetAtlas()
 {
 	return texture;
 }
+std::string& wiFont::GetFontPath()
+{
+	return FONTPATH;
+}
+int wiFont::AddFontStyle(const string& fontName)
+{
+	for (size_t i = 0; i < fontStyles.size(); i++)
+	{
+		const wiFontStyle& fontStyle = *fontStyles[i];
+		if (!fontStyle.name.compare(fontName))
+		{
+			return int(i);
+		}
+	}
+	fontStyles.push_back(new wiFontStyle(fontName));
+	return int(fontStyles.size() - 1);
+}
 
 
 void wiFont::Draw(GRAPHICSTHREAD threadID)
@@ -484,11 +495,11 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 	wiFontProps newProps = props;
 
-	if (props.h_align == WIFALIGN_CENTER || props.h_align == WIFALIGN_MID)
+	if (props.h_align == WIFALIGN_CENTER)
 		newProps.posX -= textWidth() / 2;
 	else if (props.h_align == WIFALIGN_RIGHT)
 		newProps.posX -= textWidth();
-	if (props.v_align == WIFALIGN_CENTER || props.h_align == WIFALIGN_MID)
+	if (props.v_align == WIFALIGN_CENTER)
 		newProps.posY -= textHeight() / 2;
 	else if (props.v_align == WIFALIGN_BOTTOM)
 		newProps.posY -= textHeight();
@@ -554,25 +565,26 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 }
 
 
-
 int wiFont::textWidth()
 {
 	if (style >= fontStyles.size())
 	{
 		return 0;
 	}
-	const wiFontStyle& fontStyle = *fontStyles[style];
-	const float relativeSize = (props.size < 0 ? 1.0f : (float)props.size / (float)fontStyle.lineHeight);
+	const int16_t lineHeight = props.size;
+	const float scaling = props.scaling;
+
 	int maxWidth = 0;
 	int currentLineWidth = 0;
 	for (size_t i = 0; i < text.length(); ++i)
 	{
 		const int code = text[i];
+		const int64_t hash = glyphhash(code, style, lineHeight);
 
-		if (fontStyle.lookup.count(code) == 0)
+		if (glyph_lookup.count(hash) == 0)
 		{
 			// glyph not packed yet, so add to pending list:
-			pendingGlyphs.insert(glyphhash(code, style));
+			pendingGlyphs.insert(hash);
 			continue;
 		}
 
@@ -582,16 +594,16 @@ int wiFont::textWidth()
 		}
 		else if (code == ' ')
 		{
-			currentLineWidth += int((WHITESPACE_SIZE + props.spacingX) * relativeSize);
+			currentLineWidth += int((WHITESPACE_SIZE + props.spacingX) * scaling);
 		}
 		else if (code == '\t')
 		{
-			currentLineWidth += int(((WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT) * relativeSize);
+			currentLineWidth += int(((WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT) * scaling);
 		}
 		else
 		{
-			int characterWidth = (int)(fontStyle.lookup.at(code).width * relativeSize);
-			currentLineWidth += characterWidth + int(props.spacingX * relativeSize);
+			int characterWidth = (int)(glyph_lookup.at(hash).width * scaling);
+			currentLineWidth += characterWidth + int(props.spacingX * scaling);
 		}
 		maxWidth = max(maxWidth, currentLineWidth);
 	}
@@ -604,8 +616,9 @@ int wiFont::textHeight()
 	{
 		return 0;
 	}
-	const wiFontStyle& fontStyle = *fontStyles[style];
-	const float relativeSize = (props.size < 0 ? 1.0f : (float)props.size / (float)fontStyle.lineHeight);
+	const int16_t lineHeight = props.size;
+	const float scaling = props.scaling;
+
 	int i = 0;
 	int lines = 1;
 	int len = (int)text.length();
@@ -618,8 +631,7 @@ int wiFont::textHeight()
 		i++;
 	}
 
-	const int lineHeight = (props.size < 0 ? fontStyle.lineHeight : props.size);
-	return lines * (lineHeight + int(props.spacingY * relativeSize));
+	return lines * (lineHeight + int(props.spacingY * scaling));
 }
 
 
@@ -646,35 +658,4 @@ wstring wiFont::GetText()
 string wiFont::GetTextA()
 {
 	return string(text.begin(),text.end());
-}
-
-int wiFont::AddFontStyle(const string& fontName, int height)
-{
-	for (size_t i = 0; i < fontStyles.size(); i++)
-	{
-		const wiFontStyle& fontStyle = *fontStyles[i];
-		if (!fontStyle.name.compare(fontName) && fontStyle.lineHeight == height)
-		{
-			return int(i);
-		}
-	}
-	fontStyles.push_back(new wiFontStyle(fontName, height));
-	return int(fontStyles.size() - 1);
-}
-int wiFont::GetFontStyle(const string& fontName, int height)
-{
-	for (size_t i = 0; i < fontStyles.size(); i++)
-	{
-		const wiFontStyle& fontStyle = *fontStyles[i];
-		if (!fontStyle.name.compare(fontName) && fontStyle.lineHeight == height)
-		{
-			return int(i);
-		}
-	}
-	return -1; // fontstyle not found
-}
-
-std::string& wiFont::GetFontPath()
-{
-	return FONTPATH;
 }

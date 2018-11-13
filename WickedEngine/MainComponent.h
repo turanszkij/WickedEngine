@@ -80,7 +80,7 @@ public:
 		// display resolution info
 		bool resolution = false;
 		// text size
-		int size = -1;
+		int size = 16;
 	};
 	// display all-time engine information text
 	InfoDisplayer infoDisplay;

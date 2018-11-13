@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Editor.h"
 #include "wiRenderer.h"
 #include "MaterialWindow.h"
@@ -70,7 +70,7 @@ void Editor::Initialize()
 void EditorLoadingScreen::Load()
 {
 	font = wiFont("Loading...", wiFontProps((int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f), 36,
-		WIFALIGN_MID, WIFALIGN_MID));
+		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	addFont(&font);
 
 	sprite = wiSprite("../logo/logo_small.png");

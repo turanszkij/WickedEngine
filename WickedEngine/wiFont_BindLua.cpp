@@ -186,9 +186,8 @@ void wiFont_BindLua::Bind()
 
 		wiLua::GetGlobal()->RunText("WIFALIGN_LEFT = 0");
 		wiLua::GetGlobal()->RunText("WIFALIGN_CENTER = 1");
-		wiLua::GetGlobal()->RunText("WIFALIGN_MID = 2");
-		wiLua::GetGlobal()->RunText("WIFALIGN_RIGHT = 3");
-		wiLua::GetGlobal()->RunText("WIFALIGN_TOP = 4");
-		wiLua::GetGlobal()->RunText("WIFALIGN_BOTTOM = 5");
+		wiLua::GetGlobal()->RunText("WIFALIGN_RIGHT = 2");
+		wiLua::GetGlobal()->RunText("WIFALIGN_TOP = 3");
+		wiLua::GetGlobal()->RunText("WIFALIGN_BOTTOM = 4");
 	}
 }

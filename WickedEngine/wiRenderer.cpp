@@ -6892,7 +6892,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	}
 
 	bool repackAtlas = false;
-	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
+	static unordered_map<Texture2D*, rect_xywh> storedTextures;
 	const int atlasWrapBorder = 1;
 	for (Texture2D* tex : sceneTextures)
 	{
@@ -6904,7 +6904,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 		if (storedTextures.find(tex) == storedTextures.end())
 		{
 			// we need to pack this texture into the atlas
-			rect_xywhf newRect = rect_xywhf(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
+			rect_xywh newRect = rect_xywh(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
 			storedTextures[tex] = newRect;
 
 			repackAtlas = true;
@@ -6914,7 +6914,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 	if (repackAtlas)
 	{
-		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		rect_xywh** out_rects = new rect_xywh*[storedTextures.size()];
 		int i = 0;
 		for (auto& it : storedTextures)
 		{
@@ -7011,7 +7011,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 				// Add extended properties:
 				const TextureDesc& desc = atlasTexture->GetDesc();
-				rect_xywhf rect;
+				rect_xywh rect;
 
 
 				if (material.GetBaseColorMap() != nullptr)
@@ -7305,7 +7305,7 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	const int atlasClampBorder = 1;
 
 	using namespace wiRectPacker;
-	static unordered_map<Texture2D*, rect_xywhf> storedTextures;
+	static unordered_map<Texture2D*, rect_xywh> storedTextures;
 
 	Scene& scene = GetScene();
 
@@ -7319,7 +7319,7 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 			if (storedTextures.find(decal.texture) == storedTextures.end())
 			{
 				// we need to pack this decal texture into the atlas
-				rect_xywhf newRect = rect_xywhf(0, 0, decal.texture->GetDesc().Width + atlasClampBorder * 2, decal.texture->GetDesc().Height + atlasClampBorder * 2);
+				rect_xywh newRect = rect_xywh(0, 0, decal.texture->GetDesc().Width + atlasClampBorder * 2, decal.texture->GetDesc().Height + atlasClampBorder * 2);
 				storedTextures[decal.texture] = newRect;
 
 				repackAtlas = true;
@@ -7331,7 +7331,7 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	// Update atlas texture if it is invalidated:
 	if (repackAtlas)
 	{
-		rect_xywhf** out_rects = new rect_xywhf*[storedTextures.size()];
+		rect_xywh** out_rects = new rect_xywh*[storedTextures.size()];
 		int i = 0;
 		for (auto& it : storedTextures)
 		{
@@ -7396,7 +7396,7 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 		{
 			const TextureDesc& desc = atlasTexture->GetDesc();
 
-			rect_xywhf rect = storedTextures[decal.texture];
+			rect_xywh rect = storedTextures[decal.texture];
 
 			// eliminate border expansion:
 			rect.x += atlasClampBorder;
