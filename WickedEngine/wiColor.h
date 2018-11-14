@@ -14,10 +14,10 @@ struct wiColor
 	constexpr uint8_t getB() const { return (rgba >> 16) & 0xFF; }
 	constexpr uint8_t getA() const { return (rgba >> 24) & 0xFF; }
 
-	constexpr void setR(uint8_t value) { wiColor(value, getG(), getB(), getA()); }
-	constexpr void setG(uint8_t value) { wiColor(getR(), value, getB(), getA()); }
-	constexpr void setB(uint8_t value) { wiColor(getR(), getG(), value, getA()); }
-	constexpr void setA(uint8_t value) { wiColor(getR(), getG(), getB(), value); }
+	constexpr void setR(uint8_t value) { *this = wiColor(value, getG(), getB(), getA()); }
+	constexpr void setG(uint8_t value) { *this = wiColor(getR(), value, getB(), getA()); }
+	constexpr void setB(uint8_t value) { *this = wiColor(getR(), getG(), value, getA()); }
+	constexpr void setA(uint8_t value) { *this = wiColor(getR(), getG(), getB(), value); }
 
 	constexpr XMFLOAT3 toFloat3() const
 	{
