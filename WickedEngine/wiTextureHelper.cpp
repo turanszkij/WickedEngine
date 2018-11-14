@@ -43,22 +43,21 @@ namespace wiTextureHelper
 		// ColorGradeDefault
 		{
 			uint8_t data[256 * 16 * 4];
-			for (int slice = 0; slice < 16; ++slice)
+			for (uint8_t slice = 0; slice < 16; ++slice)
 			{
 				for (int x = 0; x < 16; ++x)
 				{
 					for (int y = 0; y < 16; ++y)
 					{
-						wiColor color;
-						color.r = x * 16 + x;
-						color.g = y * 16 + y;
-						color.b = slice * 16 + slice;
+						uint8_t r = x * 16 + x;
+						uint8_t g = y * 16 + y;
+						uint8_t b = slice * 16 + slice;
 
 						int gridPos = (slice * 16 + y * 256 + x) * 4;
-						data[gridPos] = color.r;
-						data[gridPos + 1] = color.g;
-						data[gridPos + 2] = color.b;
-						data[gridPos + 3] = color.a;
+						data[gridPos] = r;
+						data[gridPos + 1] = g;
+						data[gridPos + 2] = b;
+						data[gridPos + 3] = 255;
 					}
 				}
 			}
@@ -171,10 +170,10 @@ namespace wiTextureHelper
 		uint8_t data[dataLength];
 		for (int i = 0; i < dataLength; i += 4)
 		{
-			data[i] = color.r;
-			data[i + 1] = color.g;
-			data[i + 2] = color.b;
-			data[i + 3] = color.a;
+			data[i] = color.getR();
+			data[i + 1] = color.getG();
+			data[i + 2] = color.getB();
+			data[i + 3] = color.getA();
 		}
 
 		Texture2D* texture = nullptr;

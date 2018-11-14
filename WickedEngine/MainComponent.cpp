@@ -93,13 +93,13 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, const
 			return;
 		}
 
-		if (activeComponent != nullptr)
+		if (activePath != nullptr)
 		{
-			activeComponent->Stop();
+			activePath->Stop();
 		}
 
 		component->Start();
-		activeComponent = component;
+		activePath = component;
 	});
 }
 

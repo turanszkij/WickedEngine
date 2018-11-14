@@ -26,10 +26,10 @@ wiWidget::wiWidget() : TransformComponent()
 	state = IDLE;
 	enabled = true;
 	visible = true;
-	colors[IDLE] = wiColor::Booger;
-	colors[FOCUS] = wiColor::Gray;
-	colors[ACTIVE] = wiColor::White;
-	colors[DEACTIVATING] = wiColor::Gray;
+	colors[IDLE] = wiColor::Booger();
+	colors[FOCUS] = wiColor::Gray();
+	colors[ACTIVE] = wiColor::White();
+	colors[DEACTIVATING] = wiColor::Gray();
 	scissorRect.bottom = 0;
 	scissorRect.left = 0;
 	scissorRect.right = 0;
@@ -232,7 +232,7 @@ wiColor wiWidget::GetColor()
 {
 	wiColor retVal = colors[GetState()];
 	if (!IsEnabled()) {
-		retVal = wiColor::lerp(wiColor::Transparent, retVal, 0.5f);
+		retVal = wiColor::lerp(wiColor::Transparent(), retVal, 0.5f);
 	}
 	return retVal;
 }
@@ -949,7 +949,7 @@ void wiCheckBox::Render(wiGUI* gui)
 	// check
 	if (GetCheck())
 	{
-		wiImage::Draw(wiTextureHelper::getColor(wiColor::lerp(color, wiColor::White, 0.8f))
+		wiImage::Draw(wiTextureHelper::getColor(wiColor::lerp(color, wiColor::White(), 0.8f))
 			, wiImageEffects(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
 			, gui->GetGraphicsThread());
 	}
@@ -1534,7 +1534,7 @@ bool wiWindow::IsMinimized()
 wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name) :wiWindow(gui, name)
 {
 	SetSize(XMFLOAT2(300, 260));
-	SetColor(wiColor::Ghost);
+	SetColor(wiColor::Ghost());
 	RemoveWidget(resizeDragger_BottomRight);
 	RemoveWidget(resizeDragger_UpperLeft);
 
@@ -1655,7 +1655,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		wiEventArgs args;
 		args.clickPos = pointer;
 		args.fValue = angle;
-		args.color = final_color;
+		args.color = wiColor::fromFloat4(final_color);
 		onColorChanged(args);
 	}
 }

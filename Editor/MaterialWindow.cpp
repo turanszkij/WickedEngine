@@ -254,7 +254,10 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->SetBaseColor(XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), material->GetOpacity()));
+		{
+			XMFLOAT3 col = args.color.toFloat3();
+			material->SetBaseColor(XMFLOAT4(powf(col.x, 1.f / 2.2f), powf(col.y, 1.f / 2.2f), powf(col.z, 1.f / 2.2f), material->GetOpacity()));
+		}
 	});
 	materialWindow->AddWidget(colorPicker);
 

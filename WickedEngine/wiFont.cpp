@@ -538,14 +538,14 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 	FontCB cb;
 
-	if (newProps.shadowColor.a > 0)
+	if (newProps.shadowColor.getA() > 0)
 	{
 		// font shadow render:
 		XMStoreFloat4x4(&cb.g_xFont_Transform, XMMatrixTranspose(
 			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 			* device->GetScreenProjection()
 		));
-		cb.g_xFont_Color = float4(newProps.shadowColor.R, newProps.shadowColor.G, newProps.shadowColor.B, newProps.shadowColor.A);
+		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 		device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
 		device->DrawIndexed(quadCount * 6, 0, 0, threadID);
@@ -556,7 +556,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 		* device->GetScreenProjection()
 	));
-	cb.g_xFont_Color = float4(newProps.color.R, newProps.color.G, newProps.color.B, newProps.color.A);
+	cb.g_xFont_Color = newProps.color.toFloat4();
 	device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
 	device->DrawIndexed(quadCount * 6, 0, 0, threadID);

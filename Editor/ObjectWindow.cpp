@@ -79,7 +79,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
-			object->color = XMFLOAT4(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f), object->color.w);
+			XMFLOAT3 col = args.color.toFloat3();
+			object->color = XMFLOAT4(powf(col.x, 1.f / 2.2f), powf(col.y, 1.f / 2.2f), powf(col.z, 1.f / 2.2f), object->color.w);
 		}
 	});
 	objectWindow->AddWidget(colorPicker);

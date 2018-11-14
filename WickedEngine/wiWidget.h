@@ -21,7 +21,7 @@ struct wiEventArgs
 	float fValue;
 	bool bValue;
 	int iValue;
-	XMFLOAT4 color;
+	wiColor color;
 	std::string sValue;
 };
 

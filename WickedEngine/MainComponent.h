@@ -10,7 +10,7 @@ class RenderPath;
 class MainComponent
 {
 protected:
-	RenderPath* activeComponent = nullptr;
+	RenderPath* activePath = nullptr;
 	float targetFrameRate = 60;
 	bool frameskip = true;
 	bool initialized = false;
@@ -31,7 +31,7 @@ public:
 	// This will activate a RenderPath as the active one, so it will run its Update, FixedUpdate, Render and Compose functions
 	//	You can set a fade time and fade screen color so that switching components will happen when the screen is faded out. Then it will fade back to the new component
 	void ActivatePath(RenderPath* component, float fadeSeconds = 0, const wiColor& fadeColor = wiColor(0,0,0,255));
-	inline RenderPath* GetActivePath(){ return activeComponent; }
+	inline RenderPath* GetActivePath(){ return activePath; }
 
 	// You can use this as a self-contained resource manager if you want to avoid using the wiResourceManager::GetGlobal()
 	wiResourceManager Content;

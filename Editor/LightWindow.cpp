@@ -177,7 +177,8 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->color = XMFLOAT3(powf(args.color.x, 1.f / 2.2f), powf(args.color.y, 1.f / 2.2f), powf(args.color.z, 1.f / 2.2f));
+			XMFLOAT3 col = args.color.toFloat3();
+			light->color = XMFLOAT3(powf(col.x, 1.f / 2.2f), powf(col.y, 1.f / 2.2f), powf(col.z, 1.f / 2.2f));
 		}
 	});
 	lightWindow->AddWidget(colorPicker);

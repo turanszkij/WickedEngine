@@ -1760,9 +1760,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiColor.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>

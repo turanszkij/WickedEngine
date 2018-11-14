@@ -467,10 +467,10 @@ void EditorComponent::Load()
 					}
 				});
 				loader->onFinished([=] {
-					main->ActivatePath(this, 0.2f, wiColor::Black);
+					main->ActivatePath(this, 0.2f, wiColor::Black());
 					weatherWnd->UpdateFromRenderer();
 				});
-				main->ActivatePath(loader, 0.2f, wiColor::Black);
+				main->ActivatePath(loader, 0.2f, wiColor::Black());
 				ResetHistory();
 			}
 		}).detach();

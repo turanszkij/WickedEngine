@@ -1,33 +1,68 @@
 #pragma once
+#include "CommonInclude.h"
+#include "wiMath.h"
 
-class wiColor
+struct wiColor
 {
-public:
-	wiColor(unsigned char r = 0, unsigned char g = 0, unsigned char b = 0, unsigned char a = 255);
-	~wiColor(){}
+	uint32_t rgba = 0;
 
-	float R, G, B, A;
-	unsigned char r, g, b, a;
-	unsigned long rgb, rgba;
+	constexpr wiColor(uint32_t rgba) :rgba(rgba) {}
+	constexpr wiColor(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : rgba((r << 0) | (g << 8) | (b << 16) | (a << 24)) {}
 
-	unsigned long createRGB(int r, int g, int b);
-	unsigned long createRGBA(int r, int g, int b, int a);
+	constexpr uint8_t getR() const { return (rgba >> 0) & 0xFF; }
+	constexpr uint8_t getG() const { return (rgba >> 8) & 0xFF; }
+	constexpr uint8_t getB() const { return (rgba >> 16) & 0xFF; }
+	constexpr uint8_t getA() const { return (rgba >> 24) & 0xFF; }
 
-	static wiColor fromFloat(float r = 0, float g = 0, float b = 0, float a = 1);
-	static wiColor lerp(const wiColor& a, const wiColor& b, float i);
+	constexpr void setR(uint8_t value) { wiColor(value, getG(), getB(), getA()); }
+	constexpr void setG(uint8_t value) { wiColor(getR(), value, getB(), getA()); }
+	constexpr void setB(uint8_t value) { wiColor(getR(), getG(), value, getA()); }
+	constexpr void setA(uint8_t value) { wiColor(getR(), getG(), getB(), value); }
 
-	static wiColor Red;
-	static wiColor Green;
-	static wiColor Blue;
-	static wiColor Black;
-	static wiColor White;
-	static wiColor Yellow;
-	static wiColor Purple;
-	static wiColor Cyan;
-	static wiColor Transparent;
-	static wiColor Gray;
-	static wiColor Ghost;
-	static wiColor Booger;
+	constexpr XMFLOAT3 toFloat3() const
+	{
+		return XMFLOAT3(
+			((rgba >> 0) & 0xFF) / 255.0f,
+			((rgba >> 8) & 0xFF) / 255.0f,
+			((rgba >> 16) & 0xFF) / 255.0f
+		);
+	}
+	constexpr XMFLOAT4 toFloat4() const
+	{
+		return XMFLOAT4(
+			((rgba >> 0) & 0xFF) / 255.0f,
+			((rgba >> 8) & 0xFF) / 255.0f,
+			((rgba >> 16) & 0xFF) / 255.0f,
+			((rgba >> 24) & 0xFF) / 255.0f
+		);
+	}
+
+	static constexpr wiColor fromFloat4(const XMFLOAT4& value)
+	{
+		return wiColor((uint8_t)(value.x * 255), (uint8_t)(value.y * 255), (uint8_t)(value.z * 255), (uint8_t)(value.w * 255));
+	}
+	static constexpr wiColor fromFloat3(const XMFLOAT3& value)
+	{
+		return wiColor((uint8_t)(value.x * 255), (uint8_t)(value.y * 255), (uint8_t)(value.z * 255));
+	}
+
+	static constexpr wiColor lerp(const wiColor& a, const wiColor& b, float i)
+	{
+		return fromFloat4(wiMath::Lerp(a.toFloat4(), b.toFloat4(), i));
+	}
+
+	static constexpr wiColor Red() { return wiColor(255, 0, 0, 255); }
+	static constexpr wiColor Green() { return wiColor(0, 255, 0, 255); }
+	static constexpr wiColor Blue() { return wiColor(0, 0, 255, 255); }
+	static constexpr wiColor Black() { return wiColor(0, 0, 0, 255); }
+	static constexpr wiColor White() { return wiColor(255, 255, 255, 255); }
+	static constexpr wiColor Yellow() { return wiColor(255, 255, 0, 255); }
+	static constexpr wiColor Purple() { return wiColor(255, 0, 255, 255); }
+	static constexpr wiColor Cyan() { return wiColor(0, 255, 255, 255); }
+	static constexpr wiColor Transparent() { return wiColor(0, 0, 0, 0); }
+	static constexpr wiColor Gray() { return wiColor(127, 127, 127, 255); }
+	static constexpr wiColor Ghost() { return wiColor(127, 127, 127, 127); }
+	static constexpr wiColor Booger() { return wiColor(127, 127, 127, 200); }
 };
 
 

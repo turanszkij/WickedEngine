@@ -567,7 +567,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	}
 	else
 	{
-		fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray));
+		fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	}
 	if (getMotionBlurEnabled())
 	{

@@ -262,7 +262,7 @@ void TestsRenderer::RunFontTest()
 	font_aligned = font;
 	font_aligned.props.posY += font.textHeight() * 2;
 	font_aligned.props.size = 38;
-	font_aligned.props.shadowColor = wiColor::Red;
+	font_aligned.props.shadowColor = wiColor::Red();
 	font_aligned.props.h_align = WIFALIGN_CENTER;
 	font_aligned.SetText("Center aligned, red shadow, bigger");
 	addFont(&font_aligned);
@@ -270,7 +270,7 @@ void TestsRenderer::RunFontTest()
 	static wiFont font_aligned2;
 	font_aligned2 = font_aligned;
 	font_aligned2.props.posY += font_aligned.textHeight() + 10;
-	font_aligned2.props.shadowColor = wiColor::Purple;
+	font_aligned2.props.shadowColor = wiColor::Purple();
 	font_aligned2.props.h_align = WIFALIGN_RIGHT;
 	font_aligned2.SetText("Right aligned, purple shadow");
 	addFont(&font_aligned2);
@@ -290,7 +290,7 @@ void TestsRenderer::RunFontTest()
 	font_japanese = font_aligned2;
 	font_japanese.props.posY += font_aligned2.textHeight();
 	font_japanese.style = wiFont::AddFontStyle("yumin.ttf");
-	font_japanese.props.shadowColor = wiColor::Transparent;
+	font_japanese.props.shadowColor = wiColor::Transparent();
 	font_japanese.props.h_align = WIFALIGN_CENTER;
 	font_japanese.props.size = 34;
 	font_japanese.SetText(ss.str());

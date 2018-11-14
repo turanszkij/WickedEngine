@@ -143,13 +143,13 @@ int MainComponent_BindLua::SetActivePath(lua_State *L)
 			fadeSeconds = wiLua::SGetFloat(L, 2);
 			if (argc > 2)
 			{
-				fadeColor.r = wiLua::SGetInt(L, 3);
+				fadeColor.setR((uint8_t)wiLua::SGetInt(L, 3));
 				if (argc > 3)
 				{
-					fadeColor.g = wiLua::SGetInt(L, 4);
+					fadeColor.setG((uint8_t)wiLua::SGetInt(L, 4));
 					if (argc > 4)
 					{
-						fadeColor.b = wiLua::SGetInt(L, 5);
+						fadeColor.setB((uint8_t)wiLua::SGetInt(L, 5));
 					}
 				}
 			}
