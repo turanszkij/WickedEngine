@@ -22,8 +22,9 @@ using namespace wiGraphicsTypes;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000
-#define WHITESPACE_SIZE 3
-#define TAB_WHITESPACECOUNT 4
+#define WHITESPACE_SIZE (int((props.size + props.spacingX) * props.scaling * 0.3f))
+#define TAB_SIZE (WHITESPACE_SIZE * 4)
+#define LINEBREAK_SIZE (int((props.size + props.spacingY) * props.scaling))
 
 namespace wiFont_Internal
 {
@@ -45,7 +46,6 @@ namespace wiFont_Internal
 
 	Texture2D* texture = nullptr;
 
-	// These won't be thread safe by the way! (todo)
 	struct Glyph
 	{
 		int16_t x;
@@ -64,12 +64,14 @@ namespace wiFont_Internal
 	constexpr int stylefromhash(int64_t hash) { return int((hash >> 16) & 0x0000FFFF); }
 	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x0000FFFF); }
 	unordered_set<int64_t> pendingGlyphs;
+	wiSpinLock glyphLock;
 
 	struct wiFontStyle
 	{
 		string name;
 		vector<uint8_t> fontBuffer;
 		stbtt_fontinfo fontInfo;
+		int ascent, descent, lineGap;
 		wiFontStyle(const string& newName) : name(newName)
 		{
 			wiHelper::readByteData(newName, fontBuffer);
@@ -82,6 +84,8 @@ namespace wiFont_Internal
 				ss << "Failed to load font: " << name;
 				wiHelper::messageBox(ss.str());
 			}
+
+			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
 		}
 	};
 	std::vector<wiFontStyle*> fontStyles;
@@ -92,47 +96,45 @@ namespace wiFont_Internal
 		XMHALF2 Tex;
 	};
 
-	int ModifyGeo(volatile FontVertex* vertexList, const std::wstring& text, wiFontProps props, int style)
+	int WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontProps props, int style)
 	{
 		int quadCount = 0;
 
-		const int16_t lineHeight = props.size;
-		const float scaling = props.scaling;
-
 		int16_t line = 0;
 		int16_t pos = 0;
-		for (size_t i = 0; i < text.length(); ++i)
+		for (auto& code : text)
 		{
-			const int code = text[i];
 			const int64_t hash = glyphhash(code, style, props.size);
 
 			if (glyph_lookup.count(hash) == 0)
 			{
 				// glyph not packed yet, so add to pending list:
+				glyphLock.lock();
 				pendingGlyphs.insert(hash);
+				glyphLock.unlock();
 				continue;
 			}
 
 			if (code == '\n')
 			{
-				line += lineHeight + int(props.spacingY * scaling);
+				line += LINEBREAK_SIZE;
 				pos = 0;
 			}
 			else if (code == ' ')
 			{
-				pos += int((WHITESPACE_SIZE + props.spacingX) * scaling);
+				pos += WHITESPACE_SIZE;
 			}
 			else if (code == '\t')
 			{
-				pos += int(((WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT) * scaling);
+				pos += TAB_SIZE;
 			}
 			else
 			{
 				const Glyph& glyph = glyph_lookup.at(hash);
-				const int16_t glyphWidth = int16_t(glyph.width * scaling);
-				const int16_t glyphHeight = int16_t(glyph.height * scaling);
-				const int16_t glyphOffsetX = int16_t(glyph.x * scaling);
-				const int16_t glyphOffsetY = int16_t(glyph.y * scaling);
+				const int16_t glyphWidth = int16_t(glyph.width * props.scaling);
+				const int16_t glyphHeight = int16_t(glyph.height * props.scaling);
+				const int16_t glyphOffsetX = int16_t(glyph.x * props.scaling);
+				const int16_t glyphOffsetY = int16_t(glyph.y * props.scaling);
 
 				const size_t vertexID = quadCount * 4;
 
@@ -159,19 +161,7 @@ namespace wiFont_Internal
 				vertexList[vertexID + 3].Tex.x = glyph.tc_right;
 				vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
 
-				pos += glyphWidth + int16_t(props.spacingX * scaling);
-
-				//// add kerning
-				//if (i > 0 && i < text.length() - 1)
-				//{
-				//	const wchar_t next_character = text[i + 1];
-				//	if (next_character != ' ' && next_character != '\t')
-				//	{
-				//		int kern;
-				//		kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code, next_character);
-				//		pos += int(float(kern) * fontStyle.fontScaling);
-				//	}
-				//}
+				pos += int16_t((glyph.width + props.spacingX) * props.scaling);
 
 				quadCount++;
 			}
@@ -368,6 +358,9 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 	// If there are pending glyphs, render them and repack the atlas:
 	if (!pendingGlyphs.empty())
 	{
+		// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
+		const int borderPadding = 1;
+
 		for (int64_t hash : pendingGlyphs)
 		{
 			const int code = codefromhash(hash);
@@ -377,51 +370,49 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 
 			float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
 
-			int ascent, descent, lineGap;
-			stbtt_GetFontVMetrics(&fontStyle.fontInfo, &ascent, &descent, &lineGap);
-
-			ascent = int(float(ascent) * fontScaling);
-			descent = int(float(descent) * fontScaling);
-			lineGap = int(float(lineGap) * fontScaling);
-
 			// get bounding box for character (may be offset to account for chars that dip above or below the line
 			int left, top, right, bottom;
 			stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontScaling, fontScaling, &left, &top, &right, &bottom);
 
+			// Glyph dimensions are calculated without padding:
 			Glyph& glyph = glyph_lookup[hash];
 			glyph.x = left;
-			glyph.y = top + ascent;
+			glyph.y = top + int(fontStyle.ascent * fontScaling);
 			glyph.width = right - left;
 			glyph.height = bottom - top;
 
+			// Add padding to the rectangle that will be packed in the atlas:
+			right += borderPadding * 2;
+			bottom += borderPadding * 2;
 			rect_lookup[hash] = rect_ltrb(left, top, right, bottom);
 		}
 		pendingGlyphs.clear();
 
-
-		vector<rect_xywh*> out_rects(rect_lookup.size());
+		// This reference array will be used for packing:
+		vector<rect_xywh*> out_rects;
+		out_rects.reserve(rect_lookup.size());
+		for (auto& it : rect_lookup)
 		{
-			int i = 0;
-			for (auto& it : rect_lookup)
-			{
-				out_rects[i] = &it.second;
-				i++;
-			}
+			out_rects.push_back(&it.second);
 		}
 
+		// Perform packing and process the result if successful:
 		std::vector<bin> bins;
-		if (pack(out_rects.data(), (int)out_rects.size(), 1024, bins))
+		if (pack(out_rects.data(), (int)out_rects.size(), 4096, bins))
 		{
-			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+			assert(bins.size() == 1 && "The regions won't fit into one texture!");
 
+			// Retrieve texture atlas dimensions:
 			const int bitmapWidth = bins[0].size.w;
 			const int bitmapHeight = bins[0].size.h;
 			const float inv_width = 1.0f / bitmapWidth;
 			const float inv_height = 1.0f / bitmapHeight;
 
+			// Create the CPU-side texture atlas and fill with transparency (0):
 			vector<uint8_t> bitmap(bitmapWidth * bitmapHeight);
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
+			// Iterate all packed glyph rectangles:
 			for (auto it : rect_lookup)
 			{
 				const int64_t hash = it.first;
@@ -429,14 +420,22 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 				const int style = stylefromhash(hash);
 				const int height = heightfromhash(hash);
 				wiFontStyle& fontStyle = *fontStyles[style];
-				const rect_xywh& rect = it.second;
+				rect_xywh& rect = it.second;
+				Glyph& glyph = glyph_lookup[hash];
+
+				// Remove border padding from the packed rectangle (we don't want to touch the border, it should stay transparent):
+				rect.x += borderPadding;
+				rect.y += borderPadding;
+				rect.w -= borderPadding * 2;
+				rect.h -= borderPadding * 2;
 
 				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, float(height));
 
-				// render character (stride and offset is important here)
+				// Render the glyph inside the CPU-side atlas:
 				int byteOffset = rect.x + (rect.y * bitmapWidth);
 				stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontScaling, fontScaling, code);
 
+				// Compute texture coordinates for the glyph:
 				float tc_left = float(rect.x);
 				float tc_right = tc_left + float(rect.w);
 				float tc_top = float(rect.y);
@@ -447,7 +446,6 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 				tc_top *= inv_height;
 				tc_bottom *= inv_height;
 
-				Glyph& glyph = glyph_lookup[hash];
 				glyph.tc_left = XMConvertFloatToHalf(tc_left);
 				glyph.tc_right = XMConvertFloatToHalf(tc_right);
 				glyph.tc_top = XMConvertFloatToHalf(tc_top);
@@ -455,12 +453,13 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 
 			}
 
+			// Upload the CPU-side texture atlas bitmap to the GPU:
 			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, 1, FORMAT_R8_UNORM);
 			assert(SUCCEEDED(hr));
 		}
 	}
 
-
+	// Bind the whole font atlas once for the whole frame:
 	device->BindResource(PS, texture, TEXSLOT_FONTATLAS, threadID);
 }
 Texture2D* wiFont::GetAtlas()
@@ -514,7 +513,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	{
 		return;
 	}
-	const int quadCount = ModifyGeo(textBuffer, text, newProps, style);
+	const int quadCount = WriteVertices(textBuffer, text, newProps, style);
 	device->InvalidateBufferAccess(&vertexBuffers[threadID], threadID);
 
 	device->EventBegin("Font", threadID);
@@ -571,20 +570,16 @@ int wiFont::textWidth()
 	{
 		return 0;
 	}
-	const int16_t lineHeight = props.size;
-	const float scaling = props.scaling;
 
 	int maxWidth = 0;
 	int currentLineWidth = 0;
-	for (size_t i = 0; i < text.length(); ++i)
+	for (auto& code : text)
 	{
-		const int code = text[i];
-		const int64_t hash = glyphhash(code, style, lineHeight);
+		const int64_t hash = glyphhash(code, style, props.size);
 
 		if (glyph_lookup.count(hash) == 0)
 		{
-			// glyph not packed yet, so add to pending list:
-			pendingGlyphs.insert(hash);
+			// glyph not packed yet, we just continue (it will be added if it is actually rendered)
 			continue;
 		}
 
@@ -594,16 +589,16 @@ int wiFont::textWidth()
 		}
 		else if (code == ' ')
 		{
-			currentLineWidth += int((WHITESPACE_SIZE + props.spacingX) * scaling);
+			currentLineWidth += WHITESPACE_SIZE;
 		}
 		else if (code == '\t')
 		{
-			currentLineWidth += int(((WHITESPACE_SIZE + props.spacingX) * TAB_WHITESPACECOUNT) * scaling);
+			currentLineWidth += TAB_SIZE;
 		}
 		else
 		{
-			int characterWidth = (int)(glyph_lookup.at(hash).width * scaling);
-			currentLineWidth += characterWidth + int(props.spacingX * scaling);
+			const Glyph& glyph = glyph_lookup.at(hash);
+			currentLineWidth += int((glyph.width + props.spacingX) * props.scaling);
 		}
 		maxWidth = max(maxWidth, currentLineWidth);
 	}
@@ -616,22 +611,17 @@ int wiFont::textHeight()
 	{
 		return 0;
 	}
-	const int16_t lineHeight = props.size;
-	const float scaling = props.scaling;
 
-	int i = 0;
-	int lines = 1;
-	int len = (int)text.length();
-	while (i < len)
+	int height = LINEBREAK_SIZE;
+	for(auto& code : text)
 	{
-		if (text[i] == '\n')
+		if (code == '\n')
 		{
-			lines++;
+			height += LINEBREAK_SIZE;
 		}
-		i++;
 	}
 
-	return lines * (lineHeight + int(props.spacingY * scaling));
+	return height;
 }
 
 
