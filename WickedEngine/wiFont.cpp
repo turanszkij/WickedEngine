@@ -57,13 +57,17 @@ namespace wiFont_Internal
 		uint16_t tc_top;
 		uint16_t tc_bottom;
 	};
-	unordered_map<int64_t, Glyph> glyph_lookup;
-	unordered_map<int64_t, rect_xywh> rect_lookup;
-	constexpr int64_t glyphhash(int code, int style, int height) { return (int64_t(code) << 32) | (int64_t(style) << 16) | int64_t(height); }
-	constexpr int codefromhash(int64_t hash) { return int((hash >> 32) & 0xFFFFFFFF); }
-	constexpr int stylefromhash(int64_t hash) { return int((hash >> 16) & 0x0000FFFF); }
-	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x0000FFFF); }
-	unordered_set<int64_t> pendingGlyphs;
+	unordered_map<int32_t, Glyph> glyph_lookup;
+	unordered_map<int32_t, rect_xywh> rect_lookup;
+	// pack glyph identifiers to a 32-bit hash:
+	//	height:	10 bits	(height supported: 0 - 1023)
+	//	style:	6 bits	(number of font styles supported: 0 - 63)
+	//	code:	16 bits (character code range supported: 0 - 65535)
+	constexpr int32_t glyphhash(int code, int style, int height) { return ((code & 0xFFFF) << 16) | ((style & 0x3F) << 10) | (height & 0x3FF); }
+	constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
+	constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
+	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
+	unordered_set<int32_t> pendingGlyphs;
 	wiSpinLock glyphLock;
 
 	struct wiFontStyle
@@ -104,7 +108,7 @@ namespace wiFont_Internal
 		int16_t pos = 0;
 		for (auto& code : text)
 		{
-			const int64_t hash = glyphhash(code, style, props.size);
+			const int32_t hash = glyphhash(code, style, props.size);
 
 			if (glyph_lookup.count(hash) == 0)
 			{
@@ -361,7 +365,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 		// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
 		const int borderPadding = 1;
 
-		for (int64_t hash : pendingGlyphs)
+		for (int32_t hash : pendingGlyphs)
 		{
 			const int code = codefromhash(hash);
 			const int style = stylefromhash(hash);
@@ -415,7 +419,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			// Iterate all packed glyph rectangles:
 			for (auto it : rect_lookup)
 			{
-				const int64_t hash = it.first;
+				const int32_t hash = it.first;
 				const wchar_t code = codefromhash(hash);
 				const int style = stylefromhash(hash);
 				const int height = heightfromhash(hash);
@@ -575,7 +579,7 @@ int wiFont::textWidth()
 	int currentLineWidth = 0;
 	for (auto& code : text)
 	{
-		const int64_t hash = glyphhash(code, style, props.size);
+		const int32_t hash = glyphhash(code, style, props.size);
 
 		if (glyph_lookup.count(hash) == 0)
 		{
