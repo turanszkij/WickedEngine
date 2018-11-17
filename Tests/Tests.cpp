@@ -104,6 +104,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Cloth Physics Test");
 	testSelector->AddItem("Job System Test");
 	testSelector->AddItem("Font Test");
+	testSelector->AddItem("Volumetric Test");
 	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -173,6 +174,10 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 11:
 			RunFontTest();
+			break;
+		case 12:
+			wiRenderer::SetTemporalAAEnabled(true);
+			wiRenderer::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		default:
 			assert(0);
