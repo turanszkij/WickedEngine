@@ -13,7 +13,7 @@ ToggleCameraAnimation();
 
 -- Load an image:
 local sprite = Sprite("images/HelloWorld.png");
-sprite.SetEffects(ImageEffects(100,100,100,50));
+sprite.SetParams(ImageParams(100,100,100,50));
 -- Set this image as renderable to the active component:
 local component = main.GetActivePath();
 component.AddSprite(sprite);
@@ -44,7 +44,7 @@ runProcess(function()
 	while(true) do
 	
 		-- Bounce our sprite across the screen:
-		local fx = sprite.GetEffects();
+		local fx = sprite.GetParams();
 		local pos = fx.GetPos();
 		local size = fx.GetSize();
 		
@@ -65,7 +65,7 @@ runProcess(function()
 		pos = vector.Add(pos, velocity);
 		
 		fx.SetPos(pos);
-		sprite.SetEffects(fx);
+		sprite.SetParams(fx);
 
 		-- Rotate teapot by parent transform:
 		local transform = scene.Component_GetTransform(parent);

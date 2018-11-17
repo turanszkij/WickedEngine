@@ -1,6 +1,5 @@
 #pragma once
 #include "wiImage.h"
-#include "wiImageEffects.h"
 #include "wiGraphicsDevice.h"
 
 class wiResourceManager;
@@ -28,7 +27,7 @@ public:
 
 	std::string name;
 
-	wiImageEffects effects;
+	wiImageParams effects;
 
 	struct Anim{
 		struct MovingTexData{

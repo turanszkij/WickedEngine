@@ -1,7 +1,6 @@
 #include "RenderPath3D.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
-#include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSceneSystem.h"
@@ -229,7 +228,7 @@ void RenderPath3D::Compose()
 
 	if (wiRenderer::GetDebugLightCulling())
 	{
-		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	RenderPath2D::Compose();
@@ -312,7 +311,7 @@ void RenderPath3D::RenderShadows(GRAPHICSTHREAD threadID)
 }
 void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
-	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.hdr = true;
 
 	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer", threadID);
@@ -357,7 +356,7 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 		}
 
 		rtSun[1].Activate(threadID); {
-			wiImageEffects fxs = fx;
+			wiImageParams fxs = fx;
 			fxs.blendFlag = BLENDMODE_OPAQUE;
 			XMVECTOR sunPos = XMVector3Project(sunDirection * 100000, 0, 0, 
 				(float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 1.0f, 
@@ -467,7 +466,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	}
 	wiProfiler::BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.hdr = true;
 
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
@@ -647,7 +646,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 }
 void RenderPath3D::RenderColorGradedComposition()
 {
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 	fx.quality = QUALITY_BILINEAR;
 

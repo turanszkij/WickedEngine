@@ -102,7 +102,7 @@ namespace wiJobSystem
 		wakeCondition.notify_one(); // wake one thread
 	}
 
-	void Dispatch(uint32_t jobCount, uint32_t groupSize, const std::function<void(JobDispatchArgs)>& job)
+	void Dispatch(uint32_t jobCount, uint32_t groupSize, const std::function<void(wiJobDispatchArgs)>& job)
 	{
 		if (jobCount == 0 || groupSize == 0)
 		{
@@ -124,7 +124,7 @@ namespace wiJobSystem
 				const uint32_t groupJobOffset = groupIndex * groupSize;
 				const uint32_t groupJobEnd = min(groupJobOffset + groupSize, jobCount);
 
-				JobDispatchArgs args;
+				wiJobDispatchArgs args;
 				args.groupIndex = groupIndex;
 
 				// Inside the group, loop through all job indices and execute job for each index:

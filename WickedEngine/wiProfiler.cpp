@@ -191,7 +191,7 @@ namespace wiProfiler
 			ss << endl;
 		}
 
-		wiFont(ss.str(), wiFontProps(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255))).Draw(threadID);
+		wiFont(ss.str(), wiFontParams(x, y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255))).Draw(threadID);
 	}
 
 	void SetEnabled(bool value)

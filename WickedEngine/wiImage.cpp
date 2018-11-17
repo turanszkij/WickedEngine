@@ -1,7 +1,6 @@
 #include "wiImage.h"
 #include "wiResourceManager.h"
 #include "wiRenderer.h"
-#include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
@@ -76,7 +75,7 @@ namespace wiImage
 	std::atomic_bool initialized = false;
 
 
-	void Draw(Texture2D* texture, const wiImageEffects& effects, GRAPHICSTHREAD threadID)
+	void Draw(Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID)
 	{
 		if (!initialized.load())
 		{
@@ -90,69 +89,69 @@ namespace wiImage
 
 		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
 
-		device->BindStencilRef(effects.stencilRef, threadID);
+		device->BindStencilRef(params.stencilRef, threadID);
 
-		if (effects.quality == QUALITY_NEAREST)
+		if (params.quality == QUALITY_NEAREST)
 		{
-			if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			if (params.sampleFlag == SAMPLEMODE_MIRROR)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_MIRROR), SSLOT_ONDEMAND0, threadID);
-			else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			else if (params.sampleFlag == SAMPLEMODE_WRAP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_WRAP), SSLOT_ONDEMAND0, threadID);
-			else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_CLAMP), SSLOT_ONDEMAND0, threadID);
 		}
-		else if (effects.quality == QUALITY_BILINEAR)
+		else if (params.quality == QUALITY_BILINEAR)
 		{
-			if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			if (params.sampleFlag == SAMPLEMODE_MIRROR)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR), SSLOT_ONDEMAND0, threadID);
-			else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			else if (params.sampleFlag == SAMPLEMODE_WRAP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP), SSLOT_ONDEMAND0, threadID);
-			else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP), SSLOT_ONDEMAND0, threadID);
 		}
-		else if (effects.quality == QUALITY_ANISOTROPIC)
+		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
-			if (effects.sampleFlag == SAMPLEMODE_MIRROR)
+			if (params.sampleFlag == SAMPLEMODE_MIRROR)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR), SSLOT_ONDEMAND0, threadID);
-			else if (effects.sampleFlag == SAMPLEMODE_WRAP)
+			else if (params.sampleFlag == SAMPLEMODE_WRAP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_WRAP), SSLOT_ONDEMAND0, threadID);
-			else if (effects.sampleFlag == SAMPLEMODE_CLAMP)
+			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP), SSLOT_ONDEMAND0, threadID);
 		}
 
-		if (effects.presentFullScreen)
+		if (params.presentFullScreen)
 		{
-			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][effects.blendFlag][effects.stencilComp][effects.hdr], threadID);
+			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.hdr], threadID);
 			device->Draw(3, 0, threadID);
 			device->EventEnd(threadID);
 			return;
 		}
 
-		if (!effects.blur) // NORMAL IMAGE
+		if (!params.blur) // NORMAL IMAGE
 		{
 			ImageCB cb;
 
-			if (!effects.process.active && !effects.bloom.separate && !effects.sunPos.x && !effects.sunPos.y) {
-				if (effects.typeFlag == SCREEN)
+			if (!params.process.active && !params.bloom.separate && !params.sunPos.x && !params.sunPos.y) {
+				if (params.typeFlag == SCREEN)
 				{
 					XMStoreFloat4x4(&cb.xTransform, XMMatrixTranspose(
-						XMMatrixScaling(effects.scale.x*effects.siz.x, effects.scale.y*effects.siz.y, 1)
-						* XMMatrixRotationZ(effects.rotation)
-						* XMMatrixTranslation(effects.pos.x, effects.pos.y, 0)
+						XMMatrixScaling(params.scale.x*params.siz.x, params.scale.y*params.siz.y, 1)
+						* XMMatrixRotationZ(params.rotation)
+						* XMMatrixTranslation(params.pos.x, params.pos.y, 0)
 						* device->GetScreenProjection()
 					));
 				}
-				else if (effects.typeFlag == WORLD)
+				else if (params.typeFlag == WORLD)
 				{
 					XMMATRIX faceRot = XMMatrixIdentity();
-					if (effects.lookAt.w)
+					if (params.lookAt.w)
 					{
-						XMVECTOR vvv = (effects.lookAt.x == 1 && !effects.lookAt.y && !effects.lookAt.z) ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
+						XMVECTOR vvv = (params.lookAt.x == 1 && !params.lookAt.y && !params.lookAt.z) ? XMVectorSet(0, 1, 0, 0) : XMVectorSet(1, 0, 0, 0);
 						faceRot =
 							XMMatrixLookAtLH(XMVectorSet(0, 0, 0, 0)
-								, XMLoadFloat4(&effects.lookAt)
+								, XMLoadFloat4(&params.lookAt)
 								, XMVector3Cross(
-									vvv, XMLoadFloat4(&effects.lookAt)
+									vvv, XMLoadFloat4(&params.lookAt)
 								)
 							);
 					}
@@ -168,34 +167,34 @@ namespace wiImage
 					projection.r[2] = XMVectorSetY(projection.r[2], 0);
 
 					XMStoreFloat4x4(&cb.xTransform, XMMatrixTranspose(
-						XMMatrixScaling(effects.scale.x*effects.siz.x, -1 * effects.scale.y*effects.siz.y, 1)
-						*XMMatrixRotationZ(effects.rotation)
+						XMMatrixScaling(params.scale.x*params.siz.x, -1 * params.scale.y*params.siz.y, 1)
+						*XMMatrixRotationZ(params.rotation)
 						*faceRot
-						*XMMatrixTranslation(effects.pos.x, effects.pos.y, effects.pos.z)
+						*XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z)
 						*view * projection
 					));
 				}
 
-				// todo: effects.drawRec -> texmuladd!
+				// todo: params.drawRec -> texmuladd!
 
-				cb.xTexMulAdd = XMFLOAT4(1, 1, effects.texOffset.x, effects.texOffset.y);
-				cb.xColor = effects.col;
-				cb.xColor.x *= 1 - effects.fade;
-				cb.xColor.y *= 1 - effects.fade;
-				cb.xColor.z *= 1 - effects.fade;
-				cb.xColor.w *= effects.opacity;
-				cb.xPivot = effects.pivot;
-				cb.xMirror = effects.mirror;
-				cb.xPivot = effects.pivot;
-				cb.xMipLevel = effects.mipLevel;
+				cb.xTexMulAdd = XMFLOAT4(1, 1, params.texOffset.x, params.texOffset.y);
+				cb.xColor = params.col;
+				cb.xColor.x *= 1 - params.fade;
+				cb.xColor.y *= 1 - params.fade;
+				cb.xColor.z *= 1 - params.fade;
+				cb.xColor.w *= params.opacity;
+				cb.xPivot = params.pivot;
+				cb.xMirror = params.mirror;
+				cb.xPivot = params.pivot;
+				cb.xMipLevel = params.mipLevel;
 
 				device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
 				// Determine relevant image rendering pixel shader:
 				IMAGE_SHADER targetShader;
-				bool NormalmapSeparate = effects.extractNormalMap;
-				bool Mask = effects.maskMap != nullptr;
-				bool Distort = effects.distortionMap != nullptr;
+				bool NormalmapSeparate = params.extractNormalMap;
+				bool Mask = params.maskMap != nullptr;
+				bool Distort = params.distortionMap != nullptr;
 				if (NormalmapSeparate)
 				{
 					targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
@@ -223,11 +222,11 @@ namespace wiImage
 					}
 				}
 
-				device->BindGraphicsPSO(&imagePSO[targetShader][effects.blendFlag][effects.stencilComp][effects.hdr], threadID);
+				device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.hdr], threadID);
 
 				fullScreenEffect = false;
 			}
-			else if (abs(effects.sunPos.x + effects.sunPos.y) < FLT_EPSILON) // POSTPROCESS
+			else if (abs(params.sunPos.x + params.sunPos.y) < FLT_EPSILON) // POSTPROCESS
 			{
 				PostProcessCB prcb;
 
@@ -235,91 +234,91 @@ namespace wiImage
 
 				POSTPROCESS targetShader;
 
-				if (effects.process.outline)
+				if (params.process.outline)
 				{
 					targetShader = POSTPROCESS_OUTLINE;
 
-					prcb.xPPParams0.y = effects.process.outline ? 1.0f : 0.0f;
+					prcb.xPPParams0.y = params.process.outline ? 1.0f : 0.0f;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
-				else if (effects.process.motionBlur)
+				else if (params.process.motionBlur)
 				{
 					targetShader = POSTPROCESS_MOTIONBLUR;
 
-					prcb.xPPParams0.x = effects.process.motionBlur ? 1.0f : 0.0f;
+					prcb.xPPParams0.x = params.process.motionBlur ? 1.0f : 0.0f;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
-				else if (effects.process.dofStrength)
+				else if (params.process.dofStrength)
 				{
 					targetShader = POSTPROCESS_DEPTHOFFIELD;
 
-					prcb.xPPParams0.z = effects.process.dofStrength;
+					prcb.xPPParams0.z = params.process.dofStrength;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
-				else if (effects.process.fxaa)
+				else if (params.process.fxaa)
 				{
 					targetShader = POSTPROCESS_FXAA;
 				}
-				else if (effects.process.ssao)
+				else if (params.process.ssao)
 				{
 					targetShader = POSTPROCESS_SSAO;
 				}
-				else if (effects.process.linDepth)
+				else if (params.process.linDepth)
 				{
 					targetShader = POSTPROCESS_LINEARDEPTH;
 				}
-				else if (effects.process.colorGrade)
+				else if (params.process.colorGrade)
 				{
 					targetShader = POSTPROCESS_COLORGRADE;
 				}
-				else if (effects.process.ssr)
+				else if (params.process.ssr)
 				{
 					targetShader = POSTPROCESS_SSR;
 				}
-				else if (effects.process.stereogram)
+				else if (params.process.stereogram)
 				{
 					targetShader = POSTPROCESS_STEREOGRAM;
 				}
-				else if (effects.process.tonemap)
+				else if (params.process.tonemap)
 				{
 					targetShader = POSTPROCESS_TONEMAP;
-					prcb.xPPParams0.x = effects.process.exposure;
+					prcb.xPPParams0.x = params.process.exposure;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
-				else if (effects.process.ssss.x + effects.process.ssss.y > 0)
+				else if (params.process.ssss.x + params.process.ssss.y > 0)
 				{
 					targetShader = POSTPROCESS_SSSS;
 
-					prcb.xPPParams0.x = effects.process.ssss.x;
-					prcb.xPPParams0.y = effects.process.ssss.y;
+					prcb.xPPParams0.x = params.process.ssss.x;
+					prcb.xPPParams0.y = params.process.ssss.y;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
-				else if (effects.bloom.separate)
+				else if (params.bloom.separate)
 				{
 					targetShader = POSTPROCESS_BLOOMSEPARATE;
 
-					prcb.xPPParams1.x = effects.bloom.separate ? 1.0f : 0.0f;
-					prcb.xPPParams1.y = effects.bloom.threshold;
-					prcb.xPPParams1.z = effects.bloom.saturation;
+					prcb.xPPParams1.x = params.bloom.separate ? 1.0f : 0.0f;
+					prcb.xPPParams1.y = params.bloom.threshold;
+					prcb.xPPParams1.z = params.bloom.saturation;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
-				else if (effects.process.reprojectDepthBuffer)
+				else if (params.process.reprojectDepthBuffer)
 				{
 					targetShader = POSTPROCESS_REPROJECTDEPTHBUFFER;
 				}
-				else if (effects.process.downsampleDepthBuffer4x)
+				else if (params.process.downsampleDepthBuffer4x)
 				{
 					targetShader = POSTPROCESS_DOWNSAMPLEDEPTHBUFFER;
 				}
-				else if (effects.process.temporalAAResolve)
+				else if (params.process.temporalAAResolve)
 				{
 					targetShader = POSTPROCESS_TEMPORALAA;
 				}
-				else if (effects.process.sharpen > 0)
+				else if (params.process.sharpen > 0)
 				{
 					targetShader = POSTPROCESS_SHARPEN;
 
-					prcb.xPPParams0.x = effects.process.sharpen;
+					prcb.xPPParams0.x = params.process.sharpen;
 					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
 				else
@@ -340,16 +339,16 @@ namespace wiImage
 				prcb.xPPParams0.y = 0.25f;
 				prcb.xPPParams0.z = 0.945f;
 				prcb.xPPParams0.w = 0.2f;
-				prcb.xPPParams1.x = effects.sunPos.x;
-				prcb.xPPParams1.y = effects.sunPos.y;
+				prcb.xPPParams1.x = params.sunPos.x;
+				prcb.xPPParams1.y = params.sunPos.y;
 
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 
 				device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_LIGHTSHAFT], threadID);
 			}
-			device->BindResource(PS, effects.maskMap, TEXSLOT_ONDEMAND1, threadID);
-			device->BindResource(PS, effects.distortionMap, TEXSLOT_ONDEMAND2, threadID);
-			device->BindResource(PS, effects.refractionSource, TEXSLOT_ONDEMAND3, threadID);
+			device->BindResource(PS, params.maskMap, TEXSLOT_ONDEMAND1, threadID);
+			device->BindResource(PS, params.distortionMap, TEXSLOT_ONDEMAND2, threadID);
+			device->BindResource(PS, params.refractionSource, TEXSLOT_ONDEMAND3, threadID);
 		}
 		else // BLUR
 		{
@@ -357,7 +356,7 @@ namespace wiImage
 
 			fullScreenEffect = true;
 
-			if (effects.blurDir == 0)
+			if (params.blurDir == 0)
 			{
 				device->BindGraphicsPSO(&postprocessPSO[POSTPROCESS_BLUR_H], threadID);
 				prcb.xPPParams1.w = 1.0f / wiRenderer::GetInternalResolution().x;
@@ -379,8 +378,8 @@ namespace wiImage
 			prcb.xPPParams0.z = weight2 * normalization;
 			prcb.xPPParams0.w = weight3 * normalization;
 			prcb.xPPParams1.x = weight4 * normalization;
-			prcb.xPPParams1.y = effects.blur;
-			prcb.xPPParams1.z = effects.mipLevel;
+			prcb.xPPParams1.y = params.blur;
+			prcb.xPPParams1.z = params.mipLevel;
 
 			device->UpdateBuffer(&processCb, &prcb, threadID);
 

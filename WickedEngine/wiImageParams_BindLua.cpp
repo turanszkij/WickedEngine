@@ -1,65 +1,65 @@
-#include "wiImageEffects_BindLua.h"
+#include "wiImageParams_BindLua.h"
 #include "Vector_BindLua.h"
 
-const char wiImageEffects_BindLua::className[] = "ImageEffects";
+const char wiImageParams_BindLua::className[] = "ImageParams";
 
-Luna<wiImageEffects_BindLua>::FunctionType wiImageEffects_BindLua::methods[] = {
-	lunamethod(wiImageEffects_BindLua, GetPos),
-	lunamethod(wiImageEffects_BindLua, GetSize),
-	lunamethod(wiImageEffects_BindLua, GetOpacity),
-	lunamethod(wiImageEffects_BindLua, GetFade),
-	lunamethod(wiImageEffects_BindLua, GetRotation),
-	lunamethod(wiImageEffects_BindLua, GetMipLevel),
+Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
+	lunamethod(wiImageParams_BindLua, GetPos),
+	lunamethod(wiImageParams_BindLua, GetSize),
+	lunamethod(wiImageParams_BindLua, GetOpacity),
+	lunamethod(wiImageParams_BindLua, GetFade),
+	lunamethod(wiImageParams_BindLua, GetRotation),
+	lunamethod(wiImageParams_BindLua, GetMipLevel),
 
-	lunamethod(wiImageEffects_BindLua, SetPos),
-	lunamethod(wiImageEffects_BindLua, SetSize),
-	lunamethod(wiImageEffects_BindLua, SetOpacity),
-	lunamethod(wiImageEffects_BindLua, SetFade),
-	lunamethod(wiImageEffects_BindLua, SetRotation),
-	lunamethod(wiImageEffects_BindLua, SetMipLevel),
+	lunamethod(wiImageParams_BindLua, SetPos),
+	lunamethod(wiImageParams_BindLua, SetSize),
+	lunamethod(wiImageParams_BindLua, SetOpacity),
+	lunamethod(wiImageParams_BindLua, SetFade),
+	lunamethod(wiImageParams_BindLua, SetRotation),
+	lunamethod(wiImageParams_BindLua, SetMipLevel),
 	{ NULL, NULL }
 };
-Luna<wiImageEffects_BindLua>::PropertyType wiImageEffects_BindLua::properties[] = {
+Luna<wiImageParams_BindLua>::PropertyType wiImageParams_BindLua::properties[] = {
 	{ NULL, NULL }
 };
 
 
-wiImageEffects_BindLua::wiImageEffects_BindLua(const wiImageEffects& effects) :effects(effects)
+wiImageParams_BindLua::wiImageParams_BindLua(const wiImageParams& effects) :effects(effects)
 {
 }
 
-int wiImageEffects_BindLua::GetPos(lua_State* L)
+int wiImageParams_BindLua::GetPos(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&effects.pos)));
 	return 1;
 }
-int wiImageEffects_BindLua::GetSize(lua_State* L)
+int wiImageParams_BindLua::GetSize(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&effects.siz)));
 	return 1;
 }
-int wiImageEffects_BindLua::GetOpacity(lua_State* L)
+int wiImageParams_BindLua::GetOpacity(lua_State* L)
 {
 	wiLua::SSetFloat(L, effects.opacity);
 	return 1;
 }
-int wiImageEffects_BindLua::GetFade(lua_State* L)
+int wiImageParams_BindLua::GetFade(lua_State* L)
 {
 	wiLua::SSetFloat(L, effects.fade);
 	return 1;
 }
-int wiImageEffects_BindLua::GetRotation(lua_State* L)
+int wiImageParams_BindLua::GetRotation(lua_State* L)
 {
 	wiLua::SSetFloat(L, effects.rotation);
 	return 1;
 }
-int wiImageEffects_BindLua::GetMipLevel(lua_State* L)
+int wiImageParams_BindLua::GetMipLevel(lua_State* L)
 {
 	wiLua::SSetFloat(L, effects.mipLevel);
 	return 1;
 }
 
-int wiImageEffects_BindLua::SetPos(lua_State* L)
+int wiImageParams_BindLua::SetPos(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -76,7 +76,7 @@ int wiImageEffects_BindLua::SetPos(lua_State* L)
 	}
 	return 0;
 }
-int wiImageEffects_BindLua::SetSize(lua_State* L)
+int wiImageParams_BindLua::SetSize(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -93,7 +93,7 @@ int wiImageEffects_BindLua::SetSize(lua_State* L)
 	}
 	return 0;
 }
-int wiImageEffects_BindLua::SetOpacity(lua_State* L)
+int wiImageParams_BindLua::SetOpacity(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -106,7 +106,7 @@ int wiImageEffects_BindLua::SetOpacity(lua_State* L)
 	}
 	return 0;
 }
-int wiImageEffects_BindLua::SetFade(lua_State* L)
+int wiImageParams_BindLua::SetFade(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -119,7 +119,7 @@ int wiImageEffects_BindLua::SetFade(lua_State* L)
 	}
 	return 0;
 }
-int wiImageEffects_BindLua::SetRotation(lua_State* L)
+int wiImageParams_BindLua::SetRotation(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -132,7 +132,7 @@ int wiImageEffects_BindLua::SetRotation(lua_State* L)
 	}
 	return 0;
 }
-int wiImageEffects_BindLua::SetMipLevel(lua_State* L)
+int wiImageParams_BindLua::SetMipLevel(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -146,7 +146,7 @@ int wiImageEffects_BindLua::SetMipLevel(lua_State* L)
 	return 0;
 }
 
-wiImageEffects_BindLua::wiImageEffects_BindLua(lua_State *L)
+wiImageParams_BindLua::wiImageParams_BindLua(lua_State *L)
 {
 	float x = 0, y = 0, w = 100, h = 100;
 	int argc = wiLua::SGetArgCount(L);
@@ -170,20 +170,20 @@ wiImageEffects_BindLua::wiImageEffects_BindLua(lua_State *L)
 			}
 		}
 	}
-	effects = wiImageEffects(x, y, w, h);
+	effects = wiImageParams(x, y, w, h);
 }
 
-wiImageEffects_BindLua::~wiImageEffects_BindLua()
+wiImageParams_BindLua::~wiImageParams_BindLua()
 {
 }
 
-void wiImageEffects_BindLua::Bind()
+void wiImageParams_BindLua::Bind()
 {
 	static bool initialized = false;
 	if (!initialized)
 	{
 		initialized = true;
-		Luna<wiImageEffects_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+		Luna<wiImageParams_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
 	}
 }
 

@@ -16,7 +16,7 @@ enum wiFontAlign
 
 static const int WIFONTSIZE_DEFAULT = 16;
 
-struct wiFontProps
+struct wiFontParams
 {
 	int posX, posY;
 	int size = WIFONTSIZE_DEFAULT; // line height in pixels
@@ -26,7 +26,7 @@ struct wiFontProps
 	wiColor color;
 	wiColor shadowColor;
 
-	wiFontProps(int posX = 0, int posY = 0, int size = 16, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
+	wiFontParams(int posX = 0, int posY = 0, int size = 16, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
 		, int spacingX = 0, int spacingY = 0, const wiColor& color = wiColor(255, 255, 255, 255), const wiColor& shadowColor = wiColor(0,0,0,0))
 		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), spacingX(spacingX), spacingY(spacingY), color(color), shadowColor(shadowColor)
 	{}
@@ -49,11 +49,11 @@ public:
 	static int AddFontStyle(const std::string& fontName);
 
 	std::wstring text;
-	wiFontProps props;
+	wiFontParams props;
 	int style;
 
-	wiFont(const std::string& text = "", wiFontProps props = wiFontProps(), int style = 0);
-	wiFont(const std::wstring& text, wiFontProps props = wiFontProps(), int style = 0);
+	wiFont(const std::string& text = "", wiFontParams props = wiFontParams(), int style = 0);
+	wiFont(const std::wstring& text, wiFontParams props = wiFontParams(), int style = 0);
 	~wiFont();
 	
 	void Draw(GRAPHICSTHREAD threadID);

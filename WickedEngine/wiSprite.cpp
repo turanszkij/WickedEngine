@@ -1,6 +1,5 @@
 #include "wiSprite.h"
 #include "wiResourceManager.h"
-#include "wiImageEffects.h"
 #include "wiImage.h"
 #include "wiRenderer.h"
 
@@ -36,7 +35,7 @@ void wiSprite::Init(){
 	normal="";
 	name="";
 	texturePointer=maskPointer=normalPointer=nullptr;
-	effects=wiImageEffects();
+	effects=wiImageParams();
 	anim=Anim();
 }
 void wiSprite::CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal){
@@ -74,7 +73,7 @@ void wiSprite::DrawNormal(GRAPHICSTHREAD threadID){
 	if(normalPointer && effects.opacity>0 && ((effects.blendFlag==BLENDMODE_ADDITIVE && effects.fade<1) || effects.blendFlag!=BLENDMODE_ADDITIVE)){
 		//effects.setRefractionMap(refracRes);
 
-		wiImageEffects effectsMod(effects);
+		wiImageParams effectsMod(effects);
 		effectsMod.blendFlag=BLENDMODE_ADDITIVE;
 		effectsMod.extractNormalMap=true;
 		wiImage::Draw(normalPointer,effectsMod,threadID);

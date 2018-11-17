@@ -1,7 +1,6 @@
 #include "RenderPath3D_PathTracing.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
-#include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
@@ -146,7 +145,7 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 
 
 
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.hdr = true;
 
 
@@ -166,7 +165,7 @@ void RenderPath3D_PathTracing::Compose()
 	wiRenderer::GetDevice()->EventBegin("RenderPath3D_PathTracing::Compose", GRAPHICSTHREAD_IMMEDIATE);
 
 
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_BILINEAR;
 	fx.process.setToneMap(true);

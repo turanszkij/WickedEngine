@@ -192,7 +192,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				L = light.positionWS - P;
 				const float dist2 = dot(L, L);
-				const float dist = sqrt(dist2);
+				dist = sqrt(dist2);
 
 				[branch]
 				if (dist < light.range)
@@ -219,7 +219,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				L = light.positionWS - surface.P;
 				const float dist2 = dot(L, L);
-				const float dist = sqrt(dist2);
+				dist = sqrt(dist2);
 
 				[branch]
 				if (dist < light.range)

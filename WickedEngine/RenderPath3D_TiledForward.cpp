@@ -1,7 +1,6 @@
 #include "RenderPath3D_TiledForward.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
-#include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiProfiler.h"
 #include "wiTextureHelper.h"
@@ -23,7 +22,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass

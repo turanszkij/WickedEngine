@@ -1,7 +1,6 @@
 #include "wiBackLog.h"
 #include "wiMath.h"
 #include "wiResourceManager.h"
-#include "wiImageEffects.h"
 #include "wiRenderer.h"
 #include "wiTextureHelper.h"
 #include "wiSpinLock.h"
@@ -91,7 +90,7 @@ namespace wiBackLog
 				assert(SUCCEEDED(hr));
 			}
 
-			wiImageEffects fx = wiImageEffects((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+			wiImageParams fx = wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
 			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
 			wiImage::Draw(backgroundTex, fx, GRAPHICSTHREAD_IMMEDIATE);
@@ -99,7 +98,7 @@ namespace wiBackLog
 			font.props.posX = 50;
 			font.props.posY = (int)pos + (int)scroll;
 			font.Draw(GRAPHICSTHREAD_IMMEDIATE);
-			wiFont(inputArea.str().c_str(), wiFontProps(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+			wiFont(inputArea.str().c_str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		}
 	}
 

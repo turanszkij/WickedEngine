@@ -11,7 +11,7 @@ The documentation completion is still pending....
 4. Utility Tools
 	1. Font
 	2. Sprite
-		1. ImageEffects
+		1. ImageParams
 		2. SpriteAnim
 		3. MovingTexAnim
 		4. DrawRecAnim
@@ -164,16 +164,16 @@ Gives you the ability to render text with a custom font.
 ### Sprite
 Render images on the screen.
 - [constructor]Sprite(opt string texture, opt string maskTexture, opt string normalMapTexture)
-- SetEffects(ImageEffects effects)
-- GetEffects() : ImageEffects result
+- SetParams(ImageParams effects)
+- GetParams() : ImageParams result
 - SetAnim(SpriteAnim anim)
 - GetAnim() : SpriteAnim result
 - Destroy()
 
-#### ImageEffects
+#### ImageParams
 Specify Sprite properties, like position, size, etc.
-- [constructor]ImageEffects(opt float width, opt float height)
-- [constructor]ImageEffects(float posX, float posY, float width, opt float height)
+- [constructor]ImageParams(opt float width, opt float height)
+- [constructor]ImageParams(float posX, float posY, float width, opt float height)
 - GetPos() : Vector result
 - GetSize() : Vector result
 - GetOpacity() : float result

@@ -7,7 +7,7 @@
 #include "wiBackLog.h"
 #include "MainComponent_BindLua.h"
 #include "wiVersion.h"
-#include "wiImageEffects.h"
+#include "wiEnums.h"
 #include "wiTextureHelper.h"
 #include "wiProfiler.h"
 #include "wiInitializer.h"
@@ -116,7 +116,7 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		wiRenderer::GetDevice()->PresentBegin();
 		wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-		wiFont(wiBackLog::getText(), wiFontProps(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		wiRenderer::GetDevice()->PresentEnd();
 		return;
 	}
@@ -245,7 +245,7 @@ void MainComponent::Compose()
 	if (fadeManager.IsActive())
 	{
 		// display fade rect
-		static wiImageEffects fx;
+		static wiImageParams fx;
 		fx.siz.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
 		fx.siz.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 		fx.opacity = fadeManager.opacity;
@@ -290,7 +290,7 @@ void MainComponent::Compose()
 			ss << fixed << 1.0f / deltaTime << " FPS" << endl;
 		}
 		ss.precision(2);
-		wiFont(ss.str(), wiFontProps(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(GRAPHICSTHREAD_IMMEDIATE);
+		wiFont(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	wiProfiler::DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);

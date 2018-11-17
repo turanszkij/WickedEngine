@@ -1,7 +1,6 @@
 #include "RenderPath3D_Forward.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
-#include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiProfiler.h"
 #include "wiTextureHelper.h"
@@ -86,7 +85,7 @@ void RenderPath3D_Forward::RenderScene(GRAPHICSTHREAD threadID)
 	GPUResource* dsv[] = { rtMain.depth->GetTexture() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	rtMain.Activate(threadID, 0, 0, 0, 0);
 	{

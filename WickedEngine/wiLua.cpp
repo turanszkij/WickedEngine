@@ -14,7 +14,7 @@
 #include "wiRenderer_BindLua.h"
 #include "wiSound_BindLua.h"
 #include "wiSprite_BindLua.h"
-#include "wiImageEffects_BindLua.h"
+#include "wiImageParams_BindLua.h"
 #include "SpriteAnim_BindLua.h"
 #include "wiResourceManager_BindLua.h"
 #include "wiSceneSystem_BindLua.h"
@@ -70,7 +70,7 @@ wiLua* wiLua::GetGlobal()
 		wiSoundEffect_BindLua::Bind();
 		wiMusic_BindLua::Bind();
 		wiSprite_BindLua::Bind();
-		wiImageEffects_BindLua::Bind();
+		wiImageParams_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
 		wiResourceManager_BindLua::Bind();
 		wiSceneSystem_BindLua::Bind();

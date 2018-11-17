@@ -12,6 +12,16 @@ enum GRAPHICSTHREAD
 	GRAPHICSTHREAD_COUNT
 };
 
+// Common blendmodes used across multiple systems
+enum BLENDMODE
+{
+	BLENDMODE_OPAQUE,
+	BLENDMODE_ALPHA,
+	BLENDMODE_PREMULTIPLIED,
+	BLENDMODE_ADDITIVE,
+	BLENDMODE_COUNT
+};
+
 // Do not alter order or value because it is bound to lua manually!
 enum RENDERTYPE
 {

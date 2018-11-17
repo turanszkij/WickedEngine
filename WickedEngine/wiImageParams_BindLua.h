@@ -1,20 +1,20 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "wiImageEffects.h"
+#include "wiImage.h"
 
-class wiImageEffects_BindLua
+class wiImageParams_BindLua
 {
 public:
-	wiImageEffects effects;
+	wiImageParams effects;
 
 	static const char className[];
-	static Luna<wiImageEffects_BindLua>::FunctionType methods[];
-	static Luna<wiImageEffects_BindLua>::PropertyType properties[];
+	static Luna<wiImageParams_BindLua>::FunctionType methods[];
+	static Luna<wiImageParams_BindLua>::PropertyType properties[];
 
-	wiImageEffects_BindLua(const wiImageEffects& effects);
-	wiImageEffects_BindLua(lua_State *L);
-	~wiImageEffects_BindLua();
+	wiImageParams_BindLua(const wiImageParams& effects);
+	wiImageParams_BindLua(lua_State *L);
+	~wiImageParams_BindLua();
 
 	int GetPos(lua_State* L);
 	int GetSize(lua_State* L);

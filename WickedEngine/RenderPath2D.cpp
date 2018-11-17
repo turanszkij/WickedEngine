@@ -129,7 +129,7 @@ void RenderPath2D::Render()
 }
 void RenderPath2D::Compose()
 {
-	wiImageEffects fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.presentFullScreen = true;
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 

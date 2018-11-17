@@ -7,7 +7,7 @@ class RenderPath3D :
 	public RenderPath2D
 {
 private:
-	float exposure;
+	float exposure = 1.0f;
 	float lightShaftQuality;
 	float bloomDownSample;
 	float bloomStren;

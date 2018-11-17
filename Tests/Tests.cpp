@@ -223,7 +223,7 @@ void TestsRenderer::RunJobSystemTest()
 	{
 		std::vector<wiSceneSystem::CameraComponent> dataSet(itemCount);
 		timer.record();
-		wiJobSystem::Dispatch(itemCount, 1000, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch(itemCount, 1000, [&](wiJobDispatchArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();
 		});
 		wiJobSystem::Wait();

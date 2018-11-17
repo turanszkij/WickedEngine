@@ -23,10 +23,11 @@ namespace wiInitializer
 
 		wiJobSystem::Initialize();
 
-		wiJobSystem::Execute([] { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
 		wiJobSystem::Execute([] { wiFont::Initialize(); });
 		wiJobSystem::Execute([] { wiImage::Initialize(); });
+		wiJobSystem::Execute([] { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
 		wiJobSystem::Execute([] { wiSoundEffect::Initialize(); wiMusic::Initialize(); });
+		wiJobSystem::Execute([] { wiPostProcess::Initialize(); });
 		wiJobSystem::Execute([] { wiTextureHelper::Initialize(); });
 		wiJobSystem::Execute([] { wiSceneSystem::wiHairParticle::Initialize(); });
 		wiJobSystem::Execute([] { wiSceneSystem::wiEmittedParticle::Initialize(); });

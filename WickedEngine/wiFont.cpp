@@ -100,7 +100,7 @@ namespace wiFont_Internal
 		XMHALF2 Tex;
 	};
 
-	int WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontProps props, int style)
+	int WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams props, int style)
 	{
 		int quadCount = 0;
 
@@ -179,11 +179,11 @@ namespace wiFont_Internal
 using namespace wiFont_Internal;
 
 
-wiFont::wiFont(const std::string& text, wiFontProps props, int style) : props(props), style(style)
+wiFont::wiFont(const std::string& text, wiFontParams props, int style) : props(props), style(style)
 {
 	SetText(text);
 }
-wiFont::wiFont(const std::wstring& text, wiFontProps props, int style) : props(props), style(style)
+wiFont::wiFont(const std::wstring& text, wiFontParams props, int style) : props(props), style(style)
 {
 	SetText(text);
 }
@@ -496,7 +496,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	wiFontProps newProps = props;
+	wiFontParams newProps = props;
 
 	if (props.h_align == WIFALIGN_CENTER)
 		newProps.posX -= textWidth() / 2;

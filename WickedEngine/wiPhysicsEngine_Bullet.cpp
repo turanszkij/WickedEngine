@@ -318,7 +318,7 @@ namespace wiPhysicsEngine
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
-		wiJobSystem::Dispatch((uint32_t)rigidbodies.GetCount(), 256, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)rigidbodies.GetCount(), 256, [&](wiJobDispatchArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[args.jobIndex];
 			Entity entity = rigidbodies.GetEntity(args.jobIndex);
@@ -368,7 +368,7 @@ namespace wiPhysicsEngine
 		});
 
 		// System will register softbodies to meshes and update physics engine state:
-		wiJobSystem::Dispatch((uint32_t)softbodies.GetCount(), 1, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)softbodies.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			SoftBodyPhysicsComponent& physicscomponent = softbodies[args.jobIndex];
 			Entity entity = softbodies.GetEntity(args.jobIndex);

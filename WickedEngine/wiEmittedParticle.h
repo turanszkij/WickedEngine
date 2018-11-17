@@ -3,7 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiIntersectables.h"
 #include "ShaderInterop_EmittedParticle.h"
-#include "wiImageEffects.h"
+#include "wiEnums.h"
 #include "wiSceneSystem_Decl.h"
 #include "wiECS.h"
 

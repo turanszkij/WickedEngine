@@ -1,7 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiEnums.h"
-#include "wiImageEffects.h"
 #include "wiIntersectables.h"
 #include "wiFrustum.h"
 #include "wiRenderTarget.h"

@@ -103,7 +103,7 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		{
 			tooltipPos.y += 40;
 		}
-		wiFontProps fontProps = wiFontProps((int)tooltipPos.x, (int)tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
+		wiFontParams fontProps = wiFontParams((int)tooltipPos.x, (int)tooltipPos.y, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
 		wiFont tooltipFont = wiFont(tooltip, fontProps);
 		if (!scriptTip.empty())
@@ -121,7 +121,7 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		static const float _border = 2;
 		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
 		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
-		wiImage::Draw(wiTextureHelper::getColor(wiColor(255, 234, 165)), wiImageEffects(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), gui->GetGraphicsThread());
+		wiImage::Draw(wiTextureHelper::getColor(wiColor(255, 234, 165)), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), gui->GetGraphicsThread());
 		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(gui->GetGraphicsThread());
 		if (!scriptTip.empty())
@@ -389,7 +389,7 @@ void wiButton::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
 
@@ -398,7 +398,7 @@ void wiButton::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -460,7 +460,7 @@ void wiLabel::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
 	scissorRect.bottom = (LONG)(translation.y + scale.y);
@@ -468,7 +468,7 @@ void wiLabel::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)translation.x + 2, (int)translation.y + 2, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
+	wiFont(text, wiFontParams((int)translation.x + 2, (int)translation.y + 2, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -616,7 +616,7 @@ void wiTextInputField::Render(wiGUI* gui)
 	gui->ResetScissor();
 
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 
 
@@ -635,7 +635,7 @@ void wiTextInputField::Render(wiGUI* gui)
 	{
 		activeText = value;
 	}
-	wiFont(activeText, wiFontProps((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
+	wiFont(activeText, wiFontParams((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -811,24 +811,24 @@ void wiSlider::Render(wiGUI* gui)
 
 	// trail
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), gui->GetGraphicsThread());
+		, wiImageParams(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), gui->GetGraphicsThread());
 	// head
 	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
+		, wiImageParams(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), gui->GetGraphicsThread());
 
 	if (parent != gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
 	// text
-	wiFont(text, wiFontProps((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 	//// value
 	//stringstream ss("");
 	//ss << value;
-	//wiFont(ss.str(), wiFontProps((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
+	//wiFont(ss.str(), wiFontParams((int)(translation.x + scale.x + headWidth), (int)(translation.y + scale.y*0.5f), -1, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
 	//	textColor, textShadowColor )).Draw(gui->GetGraphicsThread(), parent != nullptr);
 
 
@@ -944,13 +944,13 @@ void wiCheckBox::Render(wiGUI* gui)
 
 	// control
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 
 	// check
 	if (GetCheck())
 	{
 		wiImage::Draw(wiTextureHelper::getColor(wiColor::lerp(color, wiColor::White(), 0.8f))
-			, wiImageEffects(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
+			, wiImageParams(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
 			, gui->GetGraphicsThread());
 	}
 
@@ -958,7 +958,7 @@ void wiCheckBox::Render(wiGUI* gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
-	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -1134,11 +1134,11 @@ void wiComboBox::Render(wiGUI* gui)
 
 	// control-base
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	// control-arrow
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageEffects(translation.x + scale.x + 1, translation.y, scale.y, scale.y), gui->GetGraphicsThread());
-	wiFont("V", wiFontProps((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y), gui->GetGraphicsThread());
+	wiFont("V", wiFontParams((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 
@@ -1146,12 +1146,12 @@ void wiComboBox::Render(wiGUI* gui)
 	{
 		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
 	}
-	wiFont(text, wiFontProps((int)(translation.x), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 	if (selected >= 0)
 	{
-		wiFont(items[selected], wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+		wiFont(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 			textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 	}
 
@@ -1183,8 +1183,8 @@ void wiComboBox::Render(wiGUI* gui)
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getColor(col)
-				, wiImageEffects(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), gui->GetGraphicsThread());
-			wiFont(x, wiFontProps((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
+				, wiImageParams(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), gui->GetGraphicsThread());
+			wiFont(x, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 				textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 			i++;
 		}
@@ -1456,7 +1456,7 @@ void wiWindow::Render(wiGUI* gui)
 	if (!IsMinimized())
 	{
 		wiImage::Draw(wiTextureHelper::getColor(color)
-			, wiImageEffects(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
+			, wiImageParams(translation.x, translation.y, scale.x, scale.y), gui->GetGraphicsThread());
 	}
 
 	for (auto& x : childrenWidgets)
@@ -1473,7 +1473,7 @@ void wiWindow::Render(wiGUI* gui)
 	scissorRect.right = (LONG)(translation.x + scale.x);
 	scissorRect.top = (LONG)(translation.y);
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontProps((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }
@@ -1893,7 +1893,7 @@ void wiColorPicker::Render(wiGUI* gui)
 	_rgb << "R: " << (int)(final_color.x * 255) << endl;
 	_rgb << "G: " << (int)(final_color.y * 255) << endl;
 	_rgb << "B: " << (int)(final_color.z * 255) << endl;
-	wiFont(_rgb.str(), wiFontProps((int)(translation.x + 200), (int)(translation.y + 200), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
+	wiFont(_rgb.str(), wiFontParams((int)(translation.x + 200), (int)(translation.y + 200), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
 		textColor, textShadowColor)).Draw(threadID);
 
 }

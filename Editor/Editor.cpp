@@ -69,7 +69,7 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiFont("Loading...", wiFontProps((int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f), 36,
+	font = wiFont("Loading...", wiFontParams((int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f), (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f), 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	addFont(&font);
 
@@ -1486,7 +1486,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
@@ -1534,7 +1534,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
@@ -1569,7 +1569,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
@@ -1604,7 +1604,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
@@ -1638,7 +1638,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
@@ -1672,7 +1672,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;
@@ -1706,7 +1706,7 @@ void EditorComponent::Compose()
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
-			wiImageEffects fx;
+			wiImageParams fx;
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
 			fx.typeFlag = ImageType::WORLD;

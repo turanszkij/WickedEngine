@@ -26,7 +26,7 @@
 #include "wiDepthTarget.h"
 #include "wiBackLog.h"
 #include "wiFrustum.h"
-#include "wiImageEffects.h"
+#include "wiPostProcess.h"
 #include "wiImage.h"
 #include "wiSprite.h"
 #include "wiFont.h"

@@ -16,8 +16,8 @@ public:
 	wiSprite_BindLua(lua_State *L);
 	~wiSprite_BindLua();
 
-	int SetEffects(lua_State *L);
-	int GetEffects(lua_State *L);
+	int SetParams(lua_State *L);
+	int GetParams(lua_State *L);
 	int SetAnim(lua_State *L);
 	int GetAnim(lua_State *L);
 

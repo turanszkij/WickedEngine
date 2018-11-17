@@ -1341,7 +1341,7 @@ namespace wiSceneSystem
 		ComponentManager<PreviousFrameTransformComponent>& prev_transforms
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			PreviousFrameTransformComponent& prev_transform = prev_transforms[args.jobIndex];
 			Entity entity = prev_transforms.GetEntity(args.jobIndex);
@@ -1475,7 +1475,7 @@ namespace wiSceneSystem
 	}
 	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
 	{
-		wiJobSystem::Dispatch((uint32_t)transforms.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			TransformComponent& transform = transforms[args.jobIndex];
 			transform.UpdateTransform();
@@ -1516,7 +1516,7 @@ namespace wiSceneSystem
 		ComponentManager<ArmatureComponent>& armatures
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)armatures.GetCount(), 1, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)armatures.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
 
@@ -1543,7 +1543,7 @@ namespace wiSceneSystem
 	}
 	void RunMaterialUpdateSystem(ComponentManager<MaterialComponent>& materials, float dt)
 	{
-		wiJobSystem::Dispatch((uint32_t)materials.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
 
@@ -1566,7 +1566,7 @@ namespace wiSceneSystem
 	}
 	void RunImpostorUpdateSystem(ComponentManager<ImpostorComponent>& impostors)
 	{
-		wiJobSystem::Dispatch((uint32_t)impostors.GetCount(), 1, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)impostors.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
 			impostor.aabb = AABB();
@@ -1708,7 +1708,7 @@ namespace wiSceneSystem
 		ComponentManager<CameraComponent>& cameras
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)cameras.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)cameras.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			CameraComponent& camera = cameras[args.jobIndex];
 			Entity entity = cameras.GetEntity(args.jobIndex);
@@ -1729,7 +1729,7 @@ namespace wiSceneSystem
 	{
 		assert(decals.GetCount() == aabb_decals.GetCount());
 
-		wiJobSystem::Dispatch((uint32_t)decals.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)decals.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			DecalComponent& decal = decals[args.jobIndex];
 			Entity entity = decals.GetEntity(args.jobIndex);
@@ -1767,7 +1767,7 @@ namespace wiSceneSystem
 	{
 		assert(probes.GetCount() == aabb_probes.GetCount());
 
-		wiJobSystem::Dispatch((uint32_t)probes.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			EnvironmentProbeComponent& probe = probes[args.jobIndex];
 			Entity entity = probes.GetEntity(args.jobIndex);
@@ -1794,7 +1794,7 @@ namespace wiSceneSystem
 		ComponentManager<ForceFieldComponent>& forces
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)forces.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)forces.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			ForceFieldComponent& force = forces[args.jobIndex];
 			Entity entity = forces.GetEntity(args.jobIndex);
@@ -1811,7 +1811,7 @@ namespace wiSceneSystem
 	{
 		assert(lights.GetCount() == aabb_lights.GetCount());
 
-		wiJobSystem::Dispatch((uint32_t)lights.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			LightComponent& light = lights[args.jobIndex];
 			Entity entity = lights.GetEntity(args.jobIndex);
@@ -1858,13 +1858,13 @@ namespace wiSceneSystem
 		float dt
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
 			emitter.Update(dt);
 		});
 
-		wiJobSystem::Dispatch((uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](JobDispatchArgs args) {
+		wiJobSystem::Dispatch((uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
 			Entity entity = hairs.GetEntity(args.jobIndex);

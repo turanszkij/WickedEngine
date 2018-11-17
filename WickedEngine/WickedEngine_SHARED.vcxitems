@@ -334,14 +334,14 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPostProcess.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h" />
@@ -672,7 +672,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiImageEffects_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp" />
@@ -680,6 +680,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPostProcess.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />

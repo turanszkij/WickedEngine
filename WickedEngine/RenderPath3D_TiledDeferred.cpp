@@ -1,7 +1,6 @@
 #include "RenderPath3D_TiledDeferred.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
-#include "wiImageEffects.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
@@ -29,7 +28,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	wiImageEffects fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	GPUResource* dsv[] = { rtGBuffer.depth->GetTexture() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
