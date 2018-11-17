@@ -18,11 +18,22 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(360, 520));
+	ppWindow->SetSize(XMFLOAT2(360, 550));
 	GUI->AddWidget(ppWindow);
 
 	float x = 110;
 	float y = 0;
+
+	exposureSlider = new wiSlider(0.0f, 3.0f, 1, 10000, "Exposure: ");
+	exposureSlider->SetTooltip("Set the tonemap exposure value");
+	exposureSlider->SetScriptTip("RenderPath3D::SetExposure(float value)");
+	exposureSlider->SetSize(XMFLOAT2(100, 20));
+	exposureSlider->SetPos(XMFLOAT2(x, y += 35));
+	exposureSlider->SetValue(component->getExposure());
+	exposureSlider->OnSlide([&](wiEventArgs args) {
+		component->setExposure(args.fValue);
+	});
+	ppWindow->AddWidget(exposureSlider);
 
 	lensFlareCheckBox = new wiCheckBox("LensFlare: ");
 	lensFlareCheckBox->SetTooltip("Toggle visibility of light source flares. Additional setup needed per light for a lensflare to be visible.");
@@ -134,6 +145,16 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		component->setBloomEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(bloomCheckBox);
+
+	bloomStrengthSlider = new wiSlider(0.0f, 40, 10, 1000, "Radius: ");
+	bloomStrengthSlider->SetTooltip("Set bloom strength.");
+	bloomStrengthSlider->SetSize(XMFLOAT2(100, 20));
+	bloomStrengthSlider->SetPos(XMFLOAT2(x + 100, y));
+	bloomStrengthSlider->SetValue(component->getBloomStrength());
+	bloomStrengthSlider->OnSlide([&](wiEventArgs args) {
+		component->setBloomStrength(args.fValue);
+	});
+	ppWindow->AddWidget(bloomStrengthSlider);
 
 	fxaaCheckBox = new wiCheckBox("FXAA: ");
 	fxaaCheckBox->SetTooltip("Fast Approximate Anti Aliasing. A fast antialiasing method, but can be a bit too blurry.");

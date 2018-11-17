@@ -283,6 +283,8 @@ namespace wiImage
 				else if (effects.process.tonemap)
 				{
 					targetShader = POSTPROCESS_TONEMAP;
+					prcb.xPPParams0.x = effects.process.exposure;
+					device->UpdateBuffer(&processCb, &prcb, threadID);
 				}
 				else if (effects.process.ssss.x + effects.process.ssss.y > 0)
 				{

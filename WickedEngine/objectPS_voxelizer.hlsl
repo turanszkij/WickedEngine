@@ -54,15 +54,17 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 			case ENTITY_TYPE_POINTLIGHT:
 			{
 				float3 L = light.positionWS - P;
-				float dist = length(L);
+				const float dist2 = dot(L, L);
+				const float dist = sqrt(dist2);
 
 				[branch]
 				if (dist < light.range)
 				{
 					L /= dist;
 
-					float att = (light.energy * (light.range / (light.range + 1 + dist)));
-					float attenuation = (att * (light.range - dist) / light.range);
+					const float range2 = light.range * light.range;
+					const float att = saturate(1.0 - (dist2 / range2));
+					const float attenuation = att * att;
 
 					float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0) * attenuation;
 
@@ -78,21 +80,23 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
 				float3 L = light.positionWS - P;
-				float dist = length(L);
+				const float dist2 = dot(L, L);
+				const float dist = sqrt(dist2);
 
 				[branch]
 				if (dist < light.range)
 				{
 					L /= dist;
 
-					float SpotFactor = dot(L, light.directionWS);
-					float spotCutOff = light.coneAngleCos;
+					const float SpotFactor = dot(L, light.directionWS);
+					const float spotCutOff = light.coneAngleCos;
 
 					[branch]
 					if (SpotFactor > spotCutOff)
 					{
-						float att = (light.energy * (light.range / (light.range + 1 + dist)));
-						float attenuation = (att * (light.range - dist) / light.range);
+						const float range2 = light.range * light.range;
+						const float att = saturate(1.0 - (dist2 / range2));
+						float attenuation = att * att;
 						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 
 						float3 lightColor = light.GetColor().rgb * light.energy * max(dot(N, L), 0) * attenuation;

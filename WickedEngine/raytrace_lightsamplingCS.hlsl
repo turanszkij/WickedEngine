@@ -191,22 +191,25 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			case ENTITY_TYPE_POINTLIGHT:
 			{
 				L = light.positionWS - P;
-				dist = length(L);
+				const float dist2 = dot(L, L);
+				const float dist = sqrt(dist2);
 
 				[branch]
 				if (dist < light.range)
 				{
 					L /= dist;
 
-					float3 lightColor = light.GetColor().rgb*light.energy;
+					const float3 lightColor = light.GetColor().rgb*light.energy;
 
 					SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 					result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-					float att = (light.energy * (light.range / (light.range + 1 + dist)));
-					float attenuation = (att * (light.range - dist) / light.range);
+					const float range2 = light.range * light.range;
+					const float att = saturate(1.0 - (dist2 / range2));
+					const float attenuation = att * att;
+
 					result.diffuse *= attenuation;
 					result.specular *= attenuation;
 				}
@@ -215,17 +218,18 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
 				L = light.positionWS - surface.P;
-				dist = length(L);
+				const float dist2 = dot(L, L);
+				const float dist = sqrt(dist2);
 
 				[branch]
 				if (dist < light.range)
 				{
 					L /= dist;
 
-					float3 lightColor = light.GetColor().rgb*light.energy;
+					const float3 lightColor = light.GetColor().rgb*light.energy;
 
-					float SpotFactor = dot(L, light.directionWS);
-					float spotCutOff = light.coneAngleCos;
+					const float SpotFactor = dot(L, light.directionWS);
+					const float spotCutOff = light.coneAngleCos;
 
 					[branch]
 					if (SpotFactor > spotCutOff)
@@ -235,9 +239,11 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 						result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-						float att = (light.energy * (light.range / (light.range + 1 + dist)));
-						float attenuation = (att * (light.range - dist) / light.range);
+						const float range2 = light.range * light.range;
+						const float att = saturate(1.0 - (dist2 / range2));
+						float attenuation = att * att;
 						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+
 						result.diffuse *= attenuation;
 						result.specular *= attenuation;
 					}

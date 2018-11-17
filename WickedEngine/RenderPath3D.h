@@ -7,6 +7,7 @@ class RenderPath3D :
 	public RenderPath2D
 {
 private:
+	float exposure;
 	float lightShaftQuality;
 	float bloomDownSample;
 	float bloomStren;
@@ -76,6 +77,7 @@ protected:
 public:
 	virtual wiDepthTarget* GetDepthBuffer() = 0;
 
+	inline float getExposure() { return exposure; }
 	inline float getLightShaftQuality(){ return lightShaftQuality; }
 	inline float getBloomDownSample(){ return bloomDownSample; }
 	inline float getBloomStrength(){ return bloomStren; }
@@ -114,6 +116,7 @@ public:
 
 	inline UINT getMSAASampleCount() { return msaaSampleCount; }
 
+	inline void setExposure(float value) { exposure = value; }
 	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
 	inline void setBloomDownSample(float value){ bloomDownSample = value; }
 	inline void setBloomStrength(float value){ bloomStren = value; }

@@ -56,7 +56,7 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface surface)
 {
 	LightingResult result;
-	float3 lightColor = light.GetColor().rgb*light.energy;
+	const float3 lightColor = light.GetColor().rgb*light.energy;
 
 	float3 L = light.directionWS.xyz;
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
@@ -123,22 +123,25 @@ inline LightingResult PointLight(in ShaderEntityType light, in Surface surface)
 	LightingResult result = (LightingResult)0;
 
 	float3 L = light.positionWS - surface.P;
-	float dist = length(L);
+	const float dist2 = dot(L, L);
+	const float dist = sqrt(dist2);
 
 	[branch]
 	if (dist < light.range)
 	{
 		L /= dist;
 
-		float3 lightColor = light.GetColor().rgb*light.energy;
+		const float3 lightColor = light.GetColor().rgb*light.energy;
 
 		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
 		result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 		result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-		float att = (light.energy * (light.range / (light.range + 1 + dist)));
-		float attenuation = (att * (light.range - dist) / light.range);
+		const float range2 = light.range * light.range;
+		const float att = saturate(1.0 - (dist2 / range2));
+		const float attenuation = att * att;
+
 		result.diffuse *= attenuation;
 		result.specular *= attenuation;
 
@@ -163,17 +166,18 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 	LightingResult result = (LightingResult)0;
 
 	float3 L = light.positionWS - surface.P;
-	float dist = length(L);
+	const float dist2 = dot(L, L);
+	const float dist = sqrt(dist2);
 
 	[branch]
 	if (dist < light.range)
 	{
 		L /= dist;
 
-		float3 lightColor = light.GetColor().rgb*light.energy;
+		const float3 lightColor = light.GetColor().rgb*light.energy;
 
-		float SpotFactor = dot(L, light.directionWS);
-		float spotCutOff = light.coneAngleCos;
+		const float SpotFactor = dot(L, light.directionWS);
+		const float spotCutOff = light.coneAngleCos;
 
 		[branch]
 		if (SpotFactor > spotCutOff)
@@ -183,9 +187,11 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 			result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 			result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
-			float att = (light.energy * (light.range / (light.range + 1 + dist)));
-			float attenuation = (att * (light.range - dist) / light.range);
+			const float range2 = light.range * light.range;
+			const float att = saturate(1.0 - (dist2 / range2));
+			float attenuation = att * att;
 			attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+
 			result.diffuse *= attenuation;
 			result.specular *= attenuation;
 

@@ -38,6 +38,7 @@ public:
 	int SetMSAASampleCount(lua_State* L);
 	int SetSharpenFilterEnabled(lua_State* L);
 	int SetSharpenFilterAmount(lua_State* L);
+	int SetExposure(lua_State* L);
 
 	int SetDepthOfFieldFocus(lua_State* L);
 	int SetDepthOfFieldStrength(lua_State* L);

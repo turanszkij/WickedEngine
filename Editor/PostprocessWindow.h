@@ -19,6 +19,7 @@ public:
 	RenderPath3D* component;
 
 	wiWindow*	ppWindow;
+	wiSlider*	exposureSlider;
 	wiCheckBox* lensFlareCheckBox;
 	wiCheckBox* lightShaftsCheckBox;
 	wiCheckBox* ssaoCheckBox;
@@ -30,6 +31,7 @@ public:
 	wiSlider*	depthOfFieldFocusSlider;
 	wiSlider*	depthOfFieldStrengthSlider;
 	wiCheckBox* bloomCheckBox;
+	wiSlider*	bloomStrengthSlider;
 	wiCheckBox* fxaaCheckBox;
 	wiCheckBox* stereogramCheckBox;
 	wiCheckBox* colorGradingCheckBox;

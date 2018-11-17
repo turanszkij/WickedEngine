@@ -158,6 +158,7 @@ void RenderPath3D::ResizeBuffers()
 
 void RenderPath3D::setProperties()
 {
+	setExposure(1.0f);
 	setLightShaftQuality(0.4f);
 	setBloomDownSample(4.0f);
 	setParticleDownSample(1.0f);
@@ -560,6 +561,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	rtFinal[0].Set(threadID);
 	fx.process.setToneMap(true);
+	fx.process.setExposure(getExposure());
 	fx.setDistortionMap(rtParticle.GetTexture());
 	if (getEyeAdaptionEnabled())
 	{

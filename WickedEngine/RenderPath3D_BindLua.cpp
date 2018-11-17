@@ -58,6 +58,7 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
+	lunamethod(RenderPath3D_BindLua, SetExposure),
 
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldFocus),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldStrength),
@@ -389,7 +390,7 @@ int RenderPath3D_BindLua::SetSharpenFilterAmount(lua_State* L)
 {
 	if (component == nullptr)
 	{
-		wiLua::SError(L, "SetSharpenFilterAmount(bool value) component is null!");
+		wiLua::SError(L, "SetSharpenFilterAmount(float value) component is null!");
 		return 0;
 	}
 	if (wiLua::SGetArgCount(L) > 0)
@@ -397,7 +398,22 @@ int RenderPath3D_BindLua::SetSharpenFilterAmount(lua_State* L)
 		((RenderPath3D*)component)->setSharpenFilterAmount(wiLua::SGetFloat(L, 1));
 	}
 	else
-		wiLua::SError(L, "SetSharpenFilterAmount(bool value) not enough arguments!");
+		wiLua::SError(L, "SetSharpenFilterAmount(float value) not enough arguments!");
+	return 0;
+}
+int RenderPath3D_BindLua::SetExposure(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetExposure(float value) component is null!");
+		return 0;
+	}
+	if (wiLua::SGetArgCount(L) > 0)
+	{
+		((RenderPath3D*)component)->setExposure(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetExposure(float value) not enough arguments!");
 	return 0;
 }
 

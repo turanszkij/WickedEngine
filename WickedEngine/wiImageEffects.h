@@ -97,6 +97,7 @@ public:
 		bool downsampleDepthBuffer4x;
 		bool temporalAAResolve;
 		float sharpen;
+		float exposure;
 
 		void clear() { 
 			active = motionBlur = outline = fxaa = ssao = linDepth = colorGrade = ssr = stereogram = tonemap = reprojectDepthBuffer = downsampleDepthBuffer4x = temporalAAResolve = false; 
@@ -114,6 +115,7 @@ public:
 		void setSSR(bool value) { ssr = value; active = value; }
 		void setStereogram(bool value) { stereogram = value; active = value; }
 		void setToneMap(bool value) { tonemap = value; active = value; }
+		void setExposure(float value) { exposure = value; }
 		void setDepthBufferReprojection(bool value) { reprojectDepthBuffer = value; active = value; }
 		void setDepthBufferDownsampling(bool value) { downsampleDepthBuffer4x = value; active = value; }
 		void setTemporalAAResolve(bool value) { temporalAAResolve = value; active = value; }

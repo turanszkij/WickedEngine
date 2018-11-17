@@ -379,7 +379,8 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetMSAASampleCount(int count)
 - SetStereogramEnabled(bool value)
 - SetSharpenFilterEnabled(bool value)
-- SetSharpenFilterAmount(bool value)
+- SetSharpenFilterAmount(float value)
+- SetExposure(float value)
 
 ##### RenderPath3D_Forward
 It renders the scene contained by the Renderer in a forward render path. The component does not hold the scene information, 

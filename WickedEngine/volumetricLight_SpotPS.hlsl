@@ -27,7 +27,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 	for (uint i = 0; i < sampleCount; ++i)
 	{
 		float3 L = light.positionWS - P;
-		float dist = length(L);
+		const float dist2 = dot(L, L);
+		const float dist = sqrt(dist2);
 		L /= dist;
 
 		float SpotFactor = dot(L, light.directionWS);
@@ -36,8 +37,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 		[branch]
 		if (SpotFactor > spotCutOff)
 		{
-			float att = (light.energy * (light.range / (light.range + 1 + dist)));
-			float3 attenuation = (att * (light.range - dist) / light.range);
+			const float range2 = light.range * light.range;
+			const float att = saturate(1.0 - (dist2 / range2));
+			float3 attenuation = att * att;
 			attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 
 			[branch]
