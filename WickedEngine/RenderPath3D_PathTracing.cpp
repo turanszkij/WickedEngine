@@ -168,8 +168,7 @@ void RenderPath3D_PathTracing::Compose()
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_BILINEAR;
-	fx.process.setToneMap(true);
-	fx.process.setExposure(getExposure());
+	fx.process.setToneMap(getExposure());
 	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
 	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	

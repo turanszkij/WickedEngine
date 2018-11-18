@@ -16,7 +16,6 @@ namespace wiImage
 
 	void LoadShaders();
 	void Initialize();
-	void CleanUp();
 };
 
 enum STENCILMODE
@@ -50,90 +49,32 @@ enum ImageType
 struct wiImageParams
 {
 	XMFLOAT3 pos;
+	float rotation;
 	XMFLOAT2 siz;
-	XMFLOAT4 col;
 	XMFLOAT2 scale;
+	XMFLOAT4 col;
 	XMFLOAT4 drawRec;
+	XMFLOAT4 lookAt;			//(x,y,z) : direction, (w) :isenabled?
 	XMFLOAT2 texOffset;
-	XMFLOAT2 sunPos;
-	//(x,y,z) : direction, (w) :isenabled?
-	XMFLOAT4 lookAt;
-	// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
-	XMFLOAT2 pivot;
-	// mirror horizontally
-	bool mirror;
-	float blur, blurDir;
+	XMFLOAT2 pivot;				// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
+	float mipLevel;
 	float fade;
 	float opacity;
-	float rotation;
-	bool extractNormalMap;
-	float mipLevel;
-	bool hdr;
 	UINT stencilRef;
 	STENCILMODE stencilComp;
-
-	// don't set anything, just fill the whole screen
-	bool presentFullScreen;
+	bool mirror;				// horizontal mirroring
+	bool extractNormalMap;
+	bool hdr;					// is it rendered to HDR render target?
+	bool presentFullScreen;		// don't set anything, just fill the whole screen
 
 	BLENDMODE blendFlag;
 	ImageType typeFlag;
 	SAMPLEMODE sampleFlag;
 	QUALITY quality;
 
-	struct Bloom {
-		bool  separate;
-		float threshold;
-		float saturation;
-
-		void clear() { separate = false; threshold = saturation = 0; }
-		Bloom() { clear(); }
-	};
-	Bloom bloom;
-	struct Processing {
-		bool active;
-		bool motionBlur;
-		bool outline;
-		float dofStrength;
-		bool fxaa;
-		bool ssao;
-		XMFLOAT2 ssss;
-		bool ssr;
-		bool linDepth;
-		bool colorGrade;
-		bool stereogram;
-		bool tonemap;
-		bool reprojectDepthBuffer;
-		bool downsampleDepthBuffer4x;
-		bool temporalAAResolve;
-		float sharpen;
-		float exposure;
-
-		void clear() {
-			active = motionBlur = outline = fxaa = ssao = linDepth = colorGrade = ssr = stereogram = tonemap = reprojectDepthBuffer = downsampleDepthBuffer4x = temporalAAResolve = false;
-			dofStrength = sharpen = 0; ssss = XMFLOAT2(0, 0);
-		}
-		void setDOF(float value) { dofStrength = value; active = value > FLT_EPSILON; }
-		void setMotionBlur(bool value) { motionBlur = value; active = value; }
-		void setOutline(bool value) { outline = value; active = value; }
-		void setFXAA(bool value) { fxaa = value; active = value; }
-		void setSSAO(bool value) { ssao = value; active = value; }
-		void setLinDepth(bool value) { linDepth = value; active = value; }
-		void setColorGrade(bool value) { colorGrade = value; active = value; }
-		//direction*Properties
-		void setSSSS(const XMFLOAT2& value) { ssss = value; active = value.x || value.y; }
-		void setSSR(bool value) { ssr = value; active = value; }
-		void setStereogram(bool value) { stereogram = value; active = value; }
-		void setToneMap(bool value) { tonemap = value; active = value; }
-		void setExposure(float value) { exposure = value; }
-		void setDepthBufferReprojection(bool value) { reprojectDepthBuffer = value; active = value; }
-		void setDepthBufferDownsampling(bool value) { downsampleDepthBuffer4x = value; active = value; }
-		void setTemporalAAResolve(bool value) { temporalAAResolve = value; active = value; }
-		void setSharpen(float value) { sharpen = value; active = value > FLT_EPSILON; }
-		Processing() { clear(); }
-	};
-	Processing process;
-	bool deferred;
-	wiGraphicsTypes::Texture2D* maskMap, *distortionMap, *refractionSource;
+	wiGraphicsTypes::Texture2D* maskMap;
+	wiGraphicsTypes::Texture2D* distortionMap;
+	wiGraphicsTypes::Texture2D* refractionSource;
 	// Generic texture
 	void setMaskMap(wiGraphicsTypes::Texture2D* view) { maskMap = view; }
 	// The normalmap texture which should distort the refraction source
@@ -141,18 +82,86 @@ struct wiImageParams
 	// The texture which should be distorted
 	void setRefractionSource(wiGraphicsTypes::Texture2D* view) { refractionSource = view; }
 
-	void init() {
+	struct PostProcess 
+	{
+		enum POSTPROCESS
+		{
+			DISABLED,
+			BLUR,
+			LIGHTSHAFT,
+			OUTLINE,
+			DEPTHOFFIELD,
+			MOTIONBLUR,
+			BLOOMSEPARATE,
+			FXAA,
+			SSAO,
+			SSSS,
+			SSR,
+			COLORGRADE,
+			STEREOGRAM,
+			TONEMAP,
+			REPROJECTDEPTHBUFFER,
+			DOWNSAMPLEDEPTHBUFFER,
+			TEMPORALAA,
+			SHARPEN,
+			LINEARDEPTH,
+			POSTPROCESS_COUNT
+		} type = DISABLED;
+
+		union PostProcessParams
+		{
+			struct Bloom
+			{
+				float threshold;
+				float saturation;
+			} bloom;
+			struct Blur
+			{
+				float x;
+				float y;
+			} blur;
+			Blur ssss;
+			Blur sun;
+			float dofStrength;
+			float sharpen;
+			float exposure;
+		} params;
+
+		bool isActive() const { return type != DISABLED; }
+		void clear() { type = DISABLED; }
+		void setBlur(const XMFLOAT2& direction) { type = BLUR; params.blur.x = direction.x; params.blur.y = direction.y; }
+		void setBloom(float threshold, float saturation) { type = BLOOMSEPARATE; params.bloom.saturation = saturation; params.bloom.threshold = threshold; }
+		void setDOF(float value) { if (value > 0) { type = DEPTHOFFIELD; params.dofStrength = value; } }
+		void setMotionBlur() { type = MOTIONBLUR; }
+		void setOutline() { type = OUTLINE; }
+		void setFXAA() { type = FXAA; }
+		void setSSAO() { type = SSAO; }
+		void setLinDepth() { type = LINEARDEPTH; }
+		void setColorGrade() { type = COLORGRADE; }
+		void setSSSS(const XMFLOAT2& value) { type = SSSS; params.ssss.x = value.x; params.ssss.y = value.y; }
+		void setSSR() { type = SSR; }
+		void setStereogram() { type = STEREOGRAM; }
+		void setToneMap(float exposure) { type = TONEMAP; params.exposure = exposure; }
+		void setDepthBufferReprojection() { type = REPROJECTDEPTHBUFFER; }
+		void setDepthBufferDownsampling() { type = DOWNSAMPLEDEPTHBUFFER; }
+		void setTemporalAAResolve() { type = TEMPORALAA; }
+		void setSharpen(float value) { if (value > 0) { type = SHARPEN; params.sharpen = value; } }
+		void setLightShaftCenter(const XMFLOAT2& pos) { type = LIGHTSHAFT; params.sun.x = pos.x; params.sun.y = pos.y; }
+	};
+	PostProcess process;
+
+	void init() 
+	{
 		pos = XMFLOAT3(0, 0, 0);
 		siz = XMFLOAT2(1, 1);
 		col = XMFLOAT4(1, 1, 1, 1);
 		scale = XMFLOAT2(1, 1);
 		drawRec = XMFLOAT4(0, 0, 0, 0);
 		texOffset = XMFLOAT2(0, 0);
-		sunPos = XMFLOAT2(0, 0);
 		lookAt = XMFLOAT4(0, 0, 0, 0);
 		pivot = XMFLOAT2(0, 0);
 		mirror = false;
-		blur = blurDir = fade = rotation = 0.0f;
+		fade = rotation = 0.0f;
 		opacity = 1.0f;
 		extractNormalMap = false;
 		hdr = false;
@@ -164,9 +173,6 @@ struct wiImageParams
 		typeFlag = SCREEN;
 		sampleFlag = SAMPLEMODE_MIRROR;
 		quality = QUALITY_BILINEAR;
-		bloom = Bloom();
-		process = Processing();
-		deferred = false;
 		maskMap = nullptr;
 		distortionMap = nullptr;
 		refractionSource = nullptr;

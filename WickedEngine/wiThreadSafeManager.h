@@ -7,13 +7,10 @@
 class wiThreadSafeManager
 {
 protected:
-	//mutex MUTEX;
 	static std::mutex STATICMUTEX;
-	wiSpinLock spinlock;
+	//wiSpinLock lock;
+	std::mutex lock;
 public:
-	wiThreadSafeManager();
-	~wiThreadSafeManager();
-
 	void LOCK();
 	bool TRY_LOCK();
 	void UNLOCK();

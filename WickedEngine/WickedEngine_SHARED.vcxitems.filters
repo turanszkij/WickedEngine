@@ -1143,9 +1143,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocators.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPostProcess.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
@@ -1754,9 +1751,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
@@ -1936,9 +1930,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWindowRegistration.cpp">
       <Filter>ENGINE\System</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiPostProcess.cpp">
-      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>

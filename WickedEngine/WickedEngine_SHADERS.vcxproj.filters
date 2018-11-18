@@ -94,9 +94,6 @@
     <None Include="voxelConeTracingHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="generateMIPChainHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="tonemapHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -177,9 +174,6 @@
     <FxCompile Include="fontPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="horizontalBlurPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="imagePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -238,9 +232,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="trailPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="verticalBlurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="fxaa.hlsl">
@@ -817,6 +808,9 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="captureImpostorPS_albedo.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="blurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>

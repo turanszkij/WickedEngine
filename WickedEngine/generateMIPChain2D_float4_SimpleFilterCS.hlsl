@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "generateMIPChainHF.hlsli"
+#include "ShaderInterop_Utility.h"
 
 #ifndef MIP_OUTPUT_FORMAT
 #define MIP_OUTPUT_FORMAT float4

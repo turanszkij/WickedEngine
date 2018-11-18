@@ -46,7 +46,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
-		fx.process.setLinDepth(true);
+		fx.process.setLinDepth();
 		wiImage::Draw(rtGBuffer.depth->GetTexture(), fx, threadID);
 		fx.process.clear();
 	}
@@ -86,7 +86,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
-			fx.process.setSSAO(true);
+			fx.process.setSSAO();
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_BILINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
@@ -94,17 +94,15 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.clear();
 		}
 		rtSSAO[1].Activate(threadID); {
-			fx.blur = getSSAOBlur();
-			fx.blurDir = 0;
+			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtSSAO[0].GetTexture(), fx, threadID);
 		}
 		rtSSAO[2].Activate(threadID); {
-			fx.blur = getSSAOBlur();
-			fx.blurDir = 1;
+			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtSSAO[1].GetTexture(), fx, threadID);
-			fx.blur = 0;
+			fx.process.clear();
 		}
 		fx.stencilRef = 0;
 		fx.stencilComp = STENCILMODE_DISABLED;
@@ -181,7 +179,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
 			fx.presentFullScreen = false;
-			fx.process.setSSR(true);
+			fx.process.setSSR();
 			fx.setMaskMap(nullptr);
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			fx.process.clear();

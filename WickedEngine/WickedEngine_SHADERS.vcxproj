@@ -21,7 +21,6 @@
     <None Include="fogHF.hlsli" />
     <None Include="fullScreenTriangleHF.hlsli" />
     <None Include="fxaa.hlsli" />
-    <None Include="generateMIPChainHF.hlsli" />
     <None Include="globals.hlsli" />
     <None Include="hairparticleHF.hlsli" />
     <None Include="icosphere.hlsli" />
@@ -343,7 +342,7 @@
     <FxCompile Include="hairparticleVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="horizontalBlurPS.hlsl">
+    <FxCompile Include="blurPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="imagePS.hlsl">
@@ -753,9 +752,6 @@
     </FxCompile>
     <FxCompile Include="vDiscLightVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-    </FxCompile>
-    <FxCompile Include="verticalBlurPS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="lightVisualizerPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>

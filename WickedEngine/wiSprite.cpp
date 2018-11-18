@@ -35,8 +35,6 @@ void wiSprite::Init(){
 	normal="";
 	name="";
 	texturePointer=maskPointer=normalPointer=nullptr;
-	effects=wiImageParams();
-	anim=Anim();
 }
 void wiSprite::CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal){
 	if(newTexture.length()) {

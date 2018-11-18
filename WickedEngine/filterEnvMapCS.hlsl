@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "generateMIPChainHF.hlsli"
+#include "ShaderInterop_Utility.h"
 
 // Hemisphere point generation from:
 //	http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html

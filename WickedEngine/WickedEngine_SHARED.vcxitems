@@ -341,7 +341,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPostProcess.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua_Globals.h" />
@@ -535,7 +534,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiHashString.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -680,7 +678,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiPostProcess.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp" />

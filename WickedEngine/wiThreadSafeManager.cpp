@@ -4,30 +4,18 @@ using namespace std;
 
 mutex wiThreadSafeManager::STATICMUTEX;
 
-wiThreadSafeManager::wiThreadSafeManager()
-{
-}
-
-
-wiThreadSafeManager::~wiThreadSafeManager()
-{
-}
-
 
 void wiThreadSafeManager::LOCK()
 {
-	//MUTEX.lock();
-	spinlock.lock();
+	lock.lock();
 }
 bool wiThreadSafeManager::TRY_LOCK()
 {
-	//return MUTEX.try_lock();
-	return spinlock.try_lock();
+	return lock.try_lock();
 }
 void wiThreadSafeManager::UNLOCK()
 {
-	//MUTEX.unlock();
-	spinlock.unlock();
+	lock.unlock();
 }
 
 void wiThreadSafeManager::LOCK_STATIC()

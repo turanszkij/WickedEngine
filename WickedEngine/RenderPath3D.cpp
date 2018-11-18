@@ -331,7 +331,7 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 		GPUResource* dsv[] = { smallDepth };
 		wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
-		fx.process.setDepthBufferDownsampling(true);
+		fx.process.setDepthBufferDownsampling();
 		wiImage::Draw(dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
 		fx.process.clear();
 	}
@@ -362,7 +362,9 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 				(float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 1.0f, 
 				wiRenderer::GetCamera().GetProjection(), wiRenderer::GetCamera().GetView(), XMMatrixIdentity());
 			{
-				XMStoreFloat2(&fxs.sunPos, sunPos);
+				XMFLOAT2 sun;
+				XMStoreFloat2(&sun, sunPos);
+				fxs.process.setLightShaftCenter(sun);
 				wiImage::Draw(rtSun[0].GetTextureResolvedMSAA(threadID), fxs, threadID);
 			}
 		}
@@ -479,7 +481,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		rtTemporalAA[current].Set(threadID); {
 			wiRenderer::BindGBufferTextures(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
 			fx.presentFullScreen = false;
-			fx.process.setTemporalAAResolve(true);
+			fx.process.setTemporalAAResolve();
 			fx.setMaskMap(rtTemporalAA[history].GetTexture());
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 			fx.process.clear();
@@ -504,34 +506,29 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		fx.quality = QUALITY_BILINEAR;
 		rtBloom[0].Set(threadID); // separate bright parts
 		{
-			fx.bloom.separate = true;
-			fx.bloom.saturation = getBloomSaturation();
-			fx.bloom.threshold = getBloomThreshold();
+			fx.process.setBloom(getBloomThreshold(), getBloomSaturation());
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		}
+		fx.process.clear();
 
 		wiRenderer::GenerateMipChain(rtBloom[0].GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
 
 		rtBloom[1].Set(threadID); //horizontal
 		{
 			fx.mipLevel = 5.32f;
-			fx.blur = getBloomStrength();
-			fx.blurDir = 0;
+			fx.process.setBlur(XMFLOAT2(getBloomStrength(), 0));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtBloom[0].GetTexture(), fx, threadID);
 		}
 		rtBloom[2].Set(threadID); //vertical
 		{
-			fx.blur = getBloomStrength();
-			fx.blurDir = 1;
+			fx.process.setBlur(XMFLOAT2(0, getBloomStrength()));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtBloom[1].GetTexture(), fx, threadID);
 		}
-		fx.bloom.clear();
-		fx.blur = 0;
-		fx.blurDir = 0;
+		fx.process.clear();
 
 		shadedSceneRT.Set(threadID, false, 0); { // add to the scene
 			fx.blendFlag = BLENDMODE_ADDITIVE;
@@ -546,7 +543,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	if (getMotionBlurEnabled()) {
 		wiRenderer::GetDevice()->EventBegin("Motion Blur", threadID);
 		rtMotionBlur.Set(threadID);
-		fx.process.setMotionBlur(true);
+		fx.process.setMotionBlur();
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.presentFullScreen = false;
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
@@ -559,8 +556,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	wiRenderer::GetDevice()->EventBegin("Tone Mapping", threadID);
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	rtFinal[0].Set(threadID);
-	fx.process.setToneMap(true);
-	fx.process.setExposure(getExposure());
+	fx.process.setToneMap(getExposure());
 	fx.setDistortionMap(rtParticle.GetTexture());
 	if (getEyeAdaptionEnabled())
 	{
@@ -601,14 +597,12 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		// downsample + blur
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		rtDof[0].Set(threadID);
-		fx.blur = getDepthOfFieldStrength();
-		fx.blurDir = 0;
+		fx.process.setBlur(XMFLOAT2(getDepthOfFieldStrength(), 0));
 		wiImage::Draw(rt0->GetTexture(), fx, threadID);
 
 		rtDof[1].Set(threadID);
-		fx.blurDir = 1;
+		fx.process.setBlur(XMFLOAT2(0, getDepthOfFieldStrength()));
 		wiImage::Draw(rtDof[0].GetTexture(), fx, threadID);
-		fx.blur = 0;
 		fx.process.clear();
 
 		// depth of field compose pass
@@ -628,7 +622,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	wiRenderer::GetDevice()->EventBegin("FXAA", threadID);
 	if (getFXAAEnabled())
 	{
-		fx.process.setFXAA(true);
+		fx.process.setFXAA();
 	}
 	else
 	{
@@ -655,7 +649,7 @@ void RenderPath3D::RenderColorGradedComposition()
 		wiRenderer::GetDevice()->EventBegin("Stereogram", GRAPHICSTHREAD_IMMEDIATE);
 		fx.presentFullScreen = false;
 		fx.process.clear();
-		fx.process.setStereogram(true);
+		fx.process.setStereogram();
 		wiImage::Draw(wiTextureHelper::getRandom64x64(), fx, GRAPHICSTHREAD_IMMEDIATE);
 		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 		return;
@@ -665,12 +659,12 @@ void RenderPath3D::RenderColorGradedComposition()
 	{
 		wiRenderer::GetDevice()->EventBegin("Color Graded Composition", GRAPHICSTHREAD_IMMEDIATE);
 		if (colorGradingTex != nullptr){
-			fx.process.setColorGrade(true);
+			fx.process.setColorGrade();
 			fx.setMaskMap(colorGradingTex);
 		}
 		else
 		{
-			fx.process.setColorGrade(true);
+			fx.process.setColorGrade();
 			fx.setMaskMap(wiTextureHelper::getColorGradeDefault());
 		}
 	}
