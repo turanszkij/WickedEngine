@@ -152,8 +152,8 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.stencilRef = 0;
 			fx.stencilComp = STENCILMODE_DISABLED;
-			fx.presentFullScreen = true;
-			fx.hdr = true;
+			fx.enableFullScreen();
+			fx.enableHDR();
 			wiImage::Draw(static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV)), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;
@@ -178,7 +178,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
-			fx.presentFullScreen = false;
+			fx.disableFullScreen();
 			fx.process.setSSR();
 			fx.setMaskMap(nullptr);
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);

@@ -312,7 +312,7 @@ void RenderPath3D::RenderShadows(GRAPHICSTHREAD threadID)
 void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID)
 {
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-	fx.hdr = true;
+	fx.enableHDR();
 
 	wiRenderer::GetDevice()->EventBegin("Downsample Depth Buffer", threadID);
 	{
@@ -391,7 +391,7 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 		wiRenderer::GetDevice()->EventBegin("Refraction Target", threadID);
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.quality = QUALITY_NEAREST;
-		fx.presentFullScreen = true;
+		fx.enableFullScreen();
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
@@ -407,7 +407,7 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 
 		wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), threadID);
 
-		fx.presentFullScreen = true;
+		fx.enableFullScreen();
 
 		if (getEmittedParticlesEnabled()) {
 			wiRenderer::GetDevice()->EventBegin("Contribute Emitters", threadID);
@@ -469,7 +469,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	wiProfiler::BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-	fx.hdr = true;
+	fx.enableHDR();
 
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	{
@@ -480,7 +480,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		int history = 1 - current;
 		rtTemporalAA[current].Set(threadID); {
 			wiRenderer::BindGBufferTextures(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
-			fx.presentFullScreen = false;
+			fx.disableFullScreen();
 			fx.process.setTemporalAAResolve();
 			fx.setMaskMap(rtTemporalAA[history].GetTexture());
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
@@ -489,10 +489,10 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_GBUFFER0, 1, threadID);
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		shadedSceneRT.Set(threadID, nullptr, false, 0); {
-			fx.presentFullScreen = true;
+			fx.enableFullScreen();
 			fx.quality = QUALITY_NEAREST;
 			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
-			fx.presentFullScreen = false;
+			fx.disableFullScreen();
 		}
 		wiProfiler::EndRange(threadID);
 		wiRenderer::GetDevice()->EventEnd(threadID);
@@ -502,7 +502,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	{
 		wiRenderer::GetDevice()->EventBegin("Bloom", threadID);
 		fx.process.clear();
-		fx.presentFullScreen = false;
+		fx.disableFullScreen();
 		fx.quality = QUALITY_BILINEAR;
 		rtBloom[0].Set(threadID); // separate bright parts
 		{
@@ -532,10 +532,10 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 
 		shadedSceneRT.Set(threadID, false, 0); { // add to the scene
 			fx.blendFlag = BLENDMODE_ADDITIVE;
-			fx.presentFullScreen = true;
+			fx.enableFullScreen();
 			fx.process.clear();
 			wiImage::Draw(rtBloom.back().GetTexture(), fx, threadID);
-			fx.presentFullScreen = false;
+			fx.disableFullScreen();
 		}
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
@@ -545,13 +545,13 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		rtMotionBlur.Set(threadID);
 		fx.process.setMotionBlur();
 		fx.blendFlag = BLENDMODE_OPAQUE;
-		fx.presentFullScreen = false;
+		fx.disableFullScreen();
 		wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
 		fx.process.clear();
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 
-	fx.hdr = false;
+	fx.disableHDR();
 
 	wiRenderer::GetDevice()->EventBegin("Tone Mapping", threadID);
 	fx.blendFlag = BLENDMODE_OPAQUE;
@@ -626,7 +626,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	}
 	else
 	{
-		fx.presentFullScreen = true;
+		fx.enableFullScreen();
 	}
 	if (getDepthOfFieldEnabled())
 		wiImage::Draw(rtDof[2].GetTexture(), fx, threadID);
@@ -647,7 +647,7 @@ void RenderPath3D::RenderColorGradedComposition()
 	if (getStereogramEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Stereogram", GRAPHICSTHREAD_IMMEDIATE);
-		fx.presentFullScreen = false;
+		fx.disableFullScreen();
 		fx.process.clear();
 		fx.process.setStereogram();
 		wiImage::Draw(wiTextureHelper::getRandom64x64(), fx, GRAPHICSTHREAD_IMMEDIATE);
@@ -671,7 +671,7 @@ void RenderPath3D::RenderColorGradedComposition()
 	else
 	{
 		wiRenderer::GetDevice()->EventBegin("Composition", GRAPHICSTHREAD_IMMEDIATE);
-		fx.presentFullScreen = true;
+		fx.enableFullScreen();
 	}
 
 	if (getSharpenFilterEnabled())

@@ -49,11 +49,11 @@ public:
 	static int AddFontStyle(const std::string& fontName);
 
 	std::wstring text;
-	wiFontParams props;
+	wiFontParams params;
 	int style;
 
-	wiFont(const std::string& text = "", wiFontParams props = wiFontParams(), int style = 0);
-	wiFont(const std::wstring& text, wiFontParams props = wiFontParams(), int style = 0);
+	wiFont(const std::string& text = "", wiFontParams params = wiFontParams(), int style = 0);
+	wiFont(const std::wstring& text, wiFontParams params = wiFontParams(), int style = 0);
 	~wiFont();
 	
 	void Draw(GRAPHICSTHREAD threadID);

@@ -105,6 +105,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Job System Test");
 	testSelector->AddItem("Font Test");
 	testSelector->AddItem("Volumetric Test");
+	testSelector->AddItem("Sprite Test");
 	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -130,9 +131,9 @@ TestsRenderer::TestsRenderer()
 		{
 			static wiSprite sprite;
 			sprite = wiSprite("images/HelloWorld.png");
-			sprite.effects.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
-			sprite.effects.siz = XMFLOAT2(200, 100);
-			sprite.effects.pivot = XMFLOAT2(0.5f, 0.5f);
+			sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
+			sprite.params.siz = XMFLOAT2(200, 100);
+			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
 			sprite.anim.rot = XM_PI / 400.0f;
 			this->addSprite(&sprite);
 			break;
@@ -178,6 +179,9 @@ TestsRenderer::TestsRenderer()
 		case 12:
 			wiRenderer::SetTemporalAAEnabled(true);
 			wiRenderer::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			break;
+		case 13:
+			RunSpriteTest();
 			break;
 		default:
 			assert(0);
@@ -233,11 +237,11 @@ void TestsRenderer::RunJobSystemTest()
 
 	static wiFont font;
 	font = wiFont(ss.str());
-	font.props.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
-	font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
-	font.props.h_align = WIFALIGN_CENTER;
-	font.props.v_align = WIFALIGN_CENTER;
-	font.props.size = 24;
+	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
+	font.params.h_align = WIFALIGN_CENTER;
+	font.params.v_align = WIFALIGN_CENTER;
+	font.params.size = 24;
 	this->addFont(&font);
 }
 void TestsRenderer::RunFontTest()
@@ -248,35 +252,35 @@ void TestsRenderer::RunFontTest()
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
 
-	font.props.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
-	font.props.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6;
-	font.props.size = 32;
+	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6;
+	font.params.size = 32;
 
-	font_upscaled.props = font.props;
-	font_upscaled.props.posY += font.textHeight() + 10;
+	font_upscaled.params = font.params;
+	font_upscaled.params.posY += font.textHeight() + 10;
 
 	font.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
 	font_upscaled.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
-	font_upscaled.props.size = 14;
-	font_upscaled.props.scaling = 32.0f / 14.0f;
+	font_upscaled.params.size = 14;
+	font_upscaled.params.scaling = 32.0f / 14.0f;
 
 	addFont(&font);
 	addFont(&font_upscaled);
 
 	static wiFont font_aligned;
 	font_aligned = font;
-	font_aligned.props.posY += font.textHeight() * 2;
-	font_aligned.props.size = 38;
-	font_aligned.props.shadowColor = wiColor::Red();
-	font_aligned.props.h_align = WIFALIGN_CENTER;
+	font_aligned.params.posY += font.textHeight() * 2;
+	font_aligned.params.size = 38;
+	font_aligned.params.shadowColor = wiColor::Red();
+	font_aligned.params.h_align = WIFALIGN_CENTER;
 	font_aligned.SetText("Center aligned, red shadow, bigger");
 	addFont(&font_aligned);
 
 	static wiFont font_aligned2;
 	font_aligned2 = font_aligned;
-	font_aligned2.props.posY += font_aligned.textHeight() + 10;
-	font_aligned2.props.shadowColor = wiColor::Purple();
-	font_aligned2.props.h_align = WIFALIGN_RIGHT;
+	font_aligned2.params.posY += font_aligned.textHeight() + 10;
+	font_aligned2.params.shadowColor = wiColor::Purple();
+	font_aligned2.params.h_align = WIFALIGN_RIGHT;
 	font_aligned2.SetText("Right aligned, purple shadow");
 	addFont(&font_aligned2);
 
@@ -293,11 +297,34 @@ void TestsRenderer::RunFontTest()
 	}
 	static wiFont font_japanese;
 	font_japanese = font_aligned2;
-	font_japanese.props.posY += font_aligned2.textHeight();
+	font_japanese.params.posY += font_aligned2.textHeight();
 	font_japanese.style = wiFont::AddFontStyle("yumin.ttf");
-	font_japanese.props.shadowColor = wiColor::Transparent();
-	font_japanese.props.h_align = WIFALIGN_CENTER;
-	font_japanese.props.size = 34;
+	font_japanese.params.shadowColor = wiColor::Transparent();
+	font_japanese.params.h_align = WIFALIGN_CENTER;
+	font_japanese.params.size = 34;
 	font_japanese.SetText(ss.str());
 	addFont(&font_japanese);
+
+	static wiFont font_colored;
+	font_colored.params.color = wiColor::Cyan();
+	font_colored.params.h_align = WIFALIGN_CENTER;
+	font_colored.params.v_align = WIFALIGN_TOP;
+	font_colored.params.size = 26;
+	font_colored.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
+	font_colored.SetText("Colored font");
+	addFont(&font_colored);
+}
+void TestsRenderer::RunSpriteTest()
+{
+	static wiSprite sprite("images/effect.png");
+	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0);
+	sprite.params.siz = XMFLOAT2(200, 200);
+	sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
+	sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128));
+	sprite.params.sampleFlag = SAMPLEMODE_WRAP;
+	sprite.anim.drawRecAnim.frameCount = 8;
+	sprite.anim.drawRecAnim.jumpX = 1;
+	sprite.anim.drawRecAnim.onFrameChangeWait = 4;
+	addSprite(&sprite);
 }

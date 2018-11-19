@@ -22,9 +22,9 @@ using namespace wiGraphicsTypes;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000
-#define WHITESPACE_SIZE (int((props.size + props.spacingX) * props.scaling * 0.3f))
+#define WHITESPACE_SIZE (int((params.size + params.spacingX) * params.scaling * 0.3f))
 #define TAB_SIZE (WHITESPACE_SIZE * 4)
-#define LINEBREAK_SIZE (int((props.size + props.spacingY) * props.scaling))
+#define LINEBREAK_SIZE (int((params.size + params.spacingY) * params.scaling))
 
 namespace wiFont_Internal
 {
@@ -100,7 +100,7 @@ namespace wiFont_Internal
 		XMHALF2 Tex;
 	};
 
-	int WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams props, int style)
+	int WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams params, int style)
 	{
 		int quadCount = 0;
 
@@ -108,7 +108,7 @@ namespace wiFont_Internal
 		int16_t pos = 0;
 		for (auto& code : text)
 		{
-			const int32_t hash = glyphhash(code, style, props.size);
+			const int32_t hash = glyphhash(code, style, params.size);
 
 			if (glyph_lookup.count(hash) == 0)
 			{
@@ -135,10 +135,10 @@ namespace wiFont_Internal
 			else
 			{
 				const Glyph& glyph = glyph_lookup.at(hash);
-				const int16_t glyphWidth = int16_t(glyph.width * props.scaling);
-				const int16_t glyphHeight = int16_t(glyph.height * props.scaling);
-				const int16_t glyphOffsetX = int16_t(glyph.x * props.scaling);
-				const int16_t glyphOffsetY = int16_t(glyph.y * props.scaling);
+				const int16_t glyphWidth = int16_t(glyph.width * params.scaling);
+				const int16_t glyphHeight = int16_t(glyph.height * params.scaling);
+				const int16_t glyphOffsetX = int16_t(glyph.x * params.scaling);
+				const int16_t glyphOffsetY = int16_t(glyph.y * params.scaling);
 
 				const size_t vertexID = quadCount * 4;
 
@@ -165,7 +165,7 @@ namespace wiFont_Internal
 				vertexList[vertexID + 3].Tex.x = glyph.tc_right;
 				vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
 
-				pos += int16_t((glyph.width + props.spacingX) * props.scaling);
+				pos += int16_t((glyph.width + params.spacingX) * params.scaling);
 
 				quadCount++;
 			}
@@ -179,11 +179,11 @@ namespace wiFont_Internal
 using namespace wiFont_Internal;
 
 
-wiFont::wiFont(const std::string& text, wiFontParams props, int style) : props(props), style(style)
+wiFont::wiFont(const std::string& text, wiFontParams params, int style) : params(params), style(style)
 {
 	SetText(text);
 }
-wiFont::wiFont(const std::wstring& text, wiFontParams props, int style) : props(props), style(style)
+wiFont::wiFont(const std::wstring& text, wiFontParams params, int style) : params(params), style(style)
 {
 	SetText(text);
 }
@@ -496,15 +496,15 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 		return;
 	}
 
-	wiFontParams newProps = props;
+	wiFontParams newProps = params;
 
-	if (props.h_align == WIFALIGN_CENTER)
+	if (params.h_align == WIFALIGN_CENTER)
 		newProps.posX -= textWidth() / 2;
-	else if (props.h_align == WIFALIGN_RIGHT)
+	else if (params.h_align == WIFALIGN_RIGHT)
 		newProps.posX -= textWidth();
-	if (props.v_align == WIFALIGN_CENTER)
+	if (params.v_align == WIFALIGN_CENTER)
 		newProps.posY -= textHeight() / 2;
-	else if (props.v_align == WIFALIGN_BOTTOM)
+	else if (params.v_align == WIFALIGN_BOTTOM)
 		newProps.posY -= textHeight();
 
 
@@ -579,7 +579,7 @@ int wiFont::textWidth()
 	int currentLineWidth = 0;
 	for (auto& code : text)
 	{
-		const int32_t hash = glyphhash(code, style, props.size);
+		const int32_t hash = glyphhash(code, style, params.size);
 
 		if (glyph_lookup.count(hash) == 0)
 		{
@@ -602,7 +602,7 @@ int wiFont::textWidth()
 		else
 		{
 			const Glyph& glyph = glyph_lookup.at(hash);
-			currentLineWidth += int((glyph.width + props.spacingX) * props.scaling);
+			currentLineWidth += int((glyph.width + params.spacingX) * params.scaling);
 		}
 		maxWidth = max(maxWidth, currentLineWidth);
 	}

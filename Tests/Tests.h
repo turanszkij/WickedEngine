@@ -20,5 +20,6 @@ public:
 
 	void RunJobSystemTest();
 	void RunFontTest();
+	void RunSpriteTest();
 };
 

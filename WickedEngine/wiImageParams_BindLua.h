@@ -6,13 +6,13 @@
 class wiImageParams_BindLua
 {
 public:
-	wiImageParams effects;
+	wiImageParams params;
 
 	static const char className[];
 	static Luna<wiImageParams_BindLua>::FunctionType methods[];
 	static Luna<wiImageParams_BindLua>::PropertyType properties[];
 
-	wiImageParams_BindLua(const wiImageParams& effects);
+	wiImageParams_BindLua(const wiImageParams& params);
 	wiImageParams_BindLua(lua_State *L);
 	~wiImageParams_BindLua();
 

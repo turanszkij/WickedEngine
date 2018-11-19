@@ -24,38 +24,38 @@ Luna<wiImageParams_BindLua>::PropertyType wiImageParams_BindLua::properties[] = 
 };
 
 
-wiImageParams_BindLua::wiImageParams_BindLua(const wiImageParams& effects) :effects(effects)
+wiImageParams_BindLua::wiImageParams_BindLua(const wiImageParams& params) :params(params)
 {
 }
 
 int wiImageParams_BindLua::GetPos(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&effects.pos)));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&params.pos)));
 	return 1;
 }
 int wiImageParams_BindLua::GetSize(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&effects.siz)));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&params.siz)));
 	return 1;
 }
 int wiImageParams_BindLua::GetOpacity(lua_State* L)
 {
-	wiLua::SSetFloat(L, effects.opacity);
+	wiLua::SSetFloat(L, params.opacity);
 	return 1;
 }
 int wiImageParams_BindLua::GetFade(lua_State* L)
 {
-	wiLua::SSetFloat(L, effects.fade);
+	wiLua::SSetFloat(L, params.fade);
 	return 1;
 }
 int wiImageParams_BindLua::GetRotation(lua_State* L)
 {
-	wiLua::SSetFloat(L, effects.rotation);
+	wiLua::SSetFloat(L, params.rotation);
 	return 1;
 }
 int wiImageParams_BindLua::GetMipLevel(lua_State* L)
 {
-	wiLua::SSetFloat(L, effects.mipLevel);
+	wiLua::SSetFloat(L, params.mipLevel);
 	return 1;
 }
 
@@ -67,7 +67,7 @@ int wiImageParams_BindLua::SetPos(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat3(&effects.pos, vector->vector);
+			XMStoreFloat3(&params.pos, vector->vector);
 		}
 	}
 	else
@@ -84,7 +84,7 @@ int wiImageParams_BindLua::SetSize(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat2(&effects.siz, vector->vector);
+			XMStoreFloat2(&params.siz, vector->vector);
 		}
 	}
 	else
@@ -98,7 +98,7 @@ int wiImageParams_BindLua::SetOpacity(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		effects.opacity = wiLua::SGetFloat(L, 1);
+		params.opacity = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -111,7 +111,7 @@ int wiImageParams_BindLua::SetFade(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		effects.fade = wiLua::SGetFloat(L, 1);
+		params.fade = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -124,7 +124,7 @@ int wiImageParams_BindLua::SetRotation(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		effects.rotation = wiLua::SGetFloat(L, 1);
+		params.rotation = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -137,7 +137,7 @@ int wiImageParams_BindLua::SetMipLevel(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		effects.mipLevel = wiLua::SGetFloat(L, 1);
+		params.mipLevel = wiLua::SGetFloat(L, 1);
 	}
 	else
 	{
@@ -170,7 +170,7 @@ wiImageParams_BindLua::wiImageParams_BindLua(lua_State *L)
 			}
 		}
 	}
-	effects = wiImageParams(x, y, w, h);
+	params = wiImageParams(x, y, w, h);
 }
 
 wiImageParams_BindLua::~wiImageParams_BindLua()

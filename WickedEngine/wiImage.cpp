@@ -96,16 +96,16 @@ namespace wiImage
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP), SSLOT_ONDEMAND0, threadID);
 		}
 
-		if (params.presentFullScreen)
+		if (params.isFullScreenEnabled())
 		{
-			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.hdr], threadID);
+			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.isHDREnabled()], threadID);
 			device->Draw(3, 0, threadID);
 			device->EventEnd(threadID);
 			return;
 		}
 
 
-		if (!params.process.isActive()) // not post process, ust regular image
+		if (!params.process.isActive()) // not post process, just regular image
 		{
 			ImageCB cb;
 			if (params.typeFlag == SCREEN)
@@ -151,24 +151,39 @@ namespace wiImage
 				));
 			}
 
-			// todo: params.drawRec -> texmuladd!
 
-			cb.xTexMulAdd = XMFLOAT4(1, 1, params.texOffset.x, params.texOffset.y);
+			const TextureDesc& desc = texture->GetDesc();
+			const float inv_width = 1.0f / float(desc.Width);
+			const float inv_height = 1.0f / float(desc.Height);
+
+			if (params.isDrawRectEnabled())
+			{
+				cb.xTexMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
+				cb.xTexMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+				cb.xTexMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
+				cb.xTexMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			}
+			else
+			{
+				cb.xTexMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			}
+			cb.xTexMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
+			cb.xTexMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
 			cb.xColor = params.col;
-			cb.xColor.x *= 1 - params.fade;
-			cb.xColor.y *= 1 - params.fade;
-			cb.xColor.z *= 1 - params.fade;
+			const float darken = 1 - params.fade;
+			cb.xColor.x *= darken;
+			cb.xColor.y *= darken;
+			cb.xColor.z *= darken;
 			cb.xColor.w *= params.opacity;
 			cb.xPivot = params.pivot;
-			cb.xMirror = params.mirror;
-			cb.xPivot = params.pivot;
+			cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
 			cb.xMipLevel = params.mipLevel;
 
 			device->UpdateBuffer(&constantBuffer, &cb, threadID);
 
 			// Determine relevant image rendering pixel shader:
 			IMAGE_SHADER targetShader;
-			bool NormalmapSeparate = params.extractNormalMap;
+			bool NormalmapSeparate = params.isExtractNormalMapEnabled();
 			bool Mask = params.maskMap != nullptr;
 			bool Distort = params.distortionMap != nullptr;
 			if (NormalmapSeparate)
@@ -198,7 +213,7 @@ namespace wiImage
 				}
 			}
 
-			device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.hdr], threadID);
+			device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()], threadID);
 
 			fullScreenEffect = false;
 		}

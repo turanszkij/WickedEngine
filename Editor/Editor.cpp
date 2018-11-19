@@ -76,20 +76,20 @@ void EditorLoadingScreen::Load()
 	sprite = wiSprite("../logo/logo_small.png");
 	sprite.anim.opa = 0.02f;
 	sprite.anim.repeatable = true;
-	sprite.effects.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
-	sprite.effects.siz = XMFLOAT2(128, 128);
-	sprite.effects.pivot = XMFLOAT2(0.5f, 1.0f);
-	sprite.effects.quality = QUALITY_BILINEAR;
-	sprite.effects.blendFlag = BLENDMODE_ALPHA;
+	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
+	sprite.params.siz = XMFLOAT2(128, 128);
+	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
+	sprite.params.quality = QUALITY_BILINEAR;
+	sprite.params.blendFlag = BLENDMODE_ALPHA;
 	addSprite(&sprite);
 
 	__super::Load();
 }
 void EditorLoadingScreen::Compose()
 {
-	font.props.posX = (int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f);
-	font.props.posY = (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f);
-	sprite.effects.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
+	font.params.posX = (int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f);
+	font.params.posY = (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f);
+	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 
 	__super::Compose();
 }

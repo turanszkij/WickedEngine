@@ -101,7 +101,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
-			fx.presentFullScreen = false;
+			fx.disableFullScreen();
 			fx.process.setSSR();
 			fx.setMaskMap(nullptr);
 			wiImage::Draw(rtMain.GetTexture(), fx, threadID);

@@ -115,7 +115,7 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		if (tooltipPos.x > wiRenderer::GetDevice()->GetScreenWidth() - textWidth)
 		{
 			tooltipPos.x -= textWidth + 10;
-			tooltipFont.props.posX = (int)tooltipPos.x;
+			tooltipFont.params.posX = (int)tooltipPos.x;
 		}
 
 		static const float _border = 2;
@@ -127,8 +127,8 @@ void wiWidget::RenderTooltip(wiGUI* gui)
 		if (!scriptTip.empty())
 		{
 			tooltipFont.SetText(scriptTip);
-			tooltipFont.props.posY += (int)(fontHeight / 2);
-			tooltipFont.props.color = wiColor(25, 25, 25, 110);
+			tooltipFont.params.posY += (int)(fontHeight / 2);
+			tooltipFont.params.color = wiColor(25, 25, 25, 110);
 			tooltipFont.Draw(gui->GetGraphicsThread());
 		}
 	}

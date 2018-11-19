@@ -79,7 +79,7 @@ int wiFont_BindLua::SetSize(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		font->props.size = wiLua::SGetInt(L, 1);
+		font->params.size = wiLua::SGetInt(L, 1);
 	}
 	else
 		wiLua::SError(L, "SetSize(int size) not enough arguments!");
@@ -93,8 +93,8 @@ int wiFont_BindLua::SetPos(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			font->props.posX = (int)XMVectorGetX(param->vector);
-			font->props.posY = (int)XMVectorGetY(param->vector);
+			font->params.posX = (int)XMVectorGetX(param->vector);
+			font->params.posY = (int)XMVectorGetY(param->vector);
 		}
 		else
 			wiLua::SError(L, "SetPos(Vector pos) argument is not a vector!");
@@ -111,8 +111,8 @@ int wiFont_BindLua::SetSpacing(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			font->props.spacingX = (int)XMVectorGetX(param->vector);
-			font->props.spacingY = (int)XMVectorGetY(param->vector);
+			font->params.spacingX = (int)XMVectorGetX(param->vector);
+			font->params.spacingY = (int)XMVectorGetY(param->vector);
 		}
 		else
 			wiLua::SError(L, "SetSpacing(Vector spacing) argument is not a vector!");
@@ -126,10 +126,10 @@ int wiFont_BindLua::SetAlign(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		font->props.h_align = (wiFontAlign)wiLua::SGetInt(L, 1);
+		font->params.h_align = (wiFontAlign)wiLua::SGetInt(L, 1);
 		if (argc > 1)
 		{
-			font->props.v_align = (wiFontAlign)wiLua::SGetInt(L, 2);
+			font->params.v_align = (wiFontAlign)wiLua::SGetInt(L, 2);
 		}
 	}
 	else
@@ -144,23 +144,23 @@ int wiFont_BindLua::GetText(lua_State* L)
 }
 int wiFont_BindLua::GetSize(lua_State* L)
 {
-	wiLua::SSetInt(L, font->props.size);
+	wiLua::SSetInt(L, font->params.size);
 	return 1;
 }
 int wiFont_BindLua::GetPos(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font->props.posX, (float)font->props.posY, 0, 0)));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font->params.posX, (float)font->params.posY, 0, 0)));
 	return 1;
 }
 int wiFont_BindLua::GetSpacing(lua_State* L)
 {
-	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font->props.spacingX, (float)font->props.spacingY, 0, 0)));
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVectorSet((float)font->params.spacingX, (float)font->params.spacingY, 0, 0)));
 	return 1;
 }
 int wiFont_BindLua::GetAlign(lua_State* L)
 {
-	wiLua::SSetInt(L, font->props.h_align);
-	wiLua::SSetInt(L, font->props.v_align);
+	wiLua::SSetInt(L, font->params.h_align);
+	wiLua::SSetInt(L, font->params.v_align);
 	return 2;
 }
 

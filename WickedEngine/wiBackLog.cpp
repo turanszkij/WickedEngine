@@ -95,8 +95,8 @@ namespace wiBackLog
 			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
 			wiImage::Draw(backgroundTex, fx, GRAPHICSTHREAD_IMMEDIATE);
 			font.SetText(getText());
-			font.props.posX = 50;
-			font.props.posY = (int)pos + (int)scroll;
+			font.params.posX = 50;
+			font.params.posY = (int)pos + (int)scroll;
 			font.Draw(GRAPHICSTHREAD_IMMEDIATE);
 			wiFont(inputArea.str().c_str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		}
@@ -186,11 +186,11 @@ namespace wiBackLog
 	}
 	void setFontSize(int value)
 	{
-		font.props.size = value;
+		font.params.size = value;
 	}
 	void setFontRowspacing(int value)
 	{
-		font.props.spacingY = value;
+		font.params.spacingY = value;
 	}
 
 	bool isActive() { return state == IDLE; }

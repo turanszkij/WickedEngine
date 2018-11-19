@@ -27,7 +27,7 @@ public:
 
 	std::string name;
 
-	wiImageParams effects;
+	wiImageParams params;
 
 	struct Anim{
 		struct MovingTexData{

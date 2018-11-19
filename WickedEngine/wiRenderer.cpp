@@ -4131,20 +4131,20 @@ void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	img->anim.fad=0.01f;
 	img->anim.scaleX=0.2f;
 	img->anim.scaleY=0.2f;
-	img->effects.pos=pos;
-	img->effects.rotation=(wiRandom::getRandom(0,1000)*0.001f)*2*3.1415f;
-	img->effects.siz=XMFLOAT2(1,1);
-	img->effects.typeFlag=WORLD;
-	img->effects.quality=QUALITY_ANISOTROPIC;
-	img->effects.pivot = XMFLOAT2(0.5f, 0.5f);
-	img->effects.lookAt=waterPlane;
-	img->effects.lookAt.w=1;
+	img->params.pos=pos;
+	img->params.rotation=(wiRandom::getRandom(0,1000)*0.001f)*2*3.1415f;
+	img->params.siz=XMFLOAT2(1,1);
+	img->params.typeFlag=WORLD;
+	img->params.quality=QUALITY_ANISOTROPIC;
+	img->params.pivot = XMFLOAT2(0.5f, 0.5f);
+	img->params.lookAt=waterPlane;
+	img->params.lookAt.w=1;
 	waterRipples.push_back(img);
 }
 void ManageWaterRipples(){
 	while(	
 		!waterRipples.empty() && 
-			(waterRipples.front()->effects.opacity <= 0 + FLT_EPSILON || waterRipples.front()->effects.fade==1)
+			(waterRipples.front()->params.opacity <= 0 + FLT_EPSILON || waterRipples.front()->params.fade==1)
 		)
 		waterRipples.pop_front();
 }

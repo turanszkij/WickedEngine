@@ -57,10 +57,10 @@ int wiSprite_BindLua::SetParams(lua_State *L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		wiImageParams_BindLua* effects = Luna<wiImageParams_BindLua>::check(L, 1);
-		if (effects != nullptr)
+		wiImageParams_BindLua* params = Luna<wiImageParams_BindLua>::check(L, 1);
+		if (params != nullptr)
 		{
-			sprite->effects = effects->effects;
+			sprite->params = params->params;
 		}
 	}
 	else
@@ -76,7 +76,7 @@ int wiSprite_BindLua::GetParams(lua_State *L)
 		wiLua::SError(L, "GetParams() sprite is null!");
 		return 0;
 	}
-	Luna<wiImageParams_BindLua>::push(L, new wiImageParams_BindLua(sprite->effects));
+	Luna<wiImageParams_BindLua>::push(L, new wiImageParams_BindLua(sprite->params));
 	return 1;
 }
 int wiSprite_BindLua::SetAnim(lua_State *L)

@@ -146,7 +146,7 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 
 
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	fx.hdr = true;
+	fx.enableHDR();
 
 
 	// Accumulate with moving averaged blending:
