@@ -1547,12 +1547,12 @@ namespace wiSceneSystem
 
 			MaterialComponent& material = materials[args.jobIndex];
 
-			material.texAnimSleep -= dt * material.texAnimFrameRate;
-			if (material.texAnimSleep <= 0)
+			material.texAnimElapsedTime += dt * material.texAnimFrameRate;
+			if (material.texAnimElapsedTime >= 1.0f)
 			{
 				material.texMulAdd.z = fmodf(material.texMulAdd.z + material.texAnimDirection.x, 1);
 				material.texMulAdd.w = fmodf(material.texMulAdd.w + material.texAnimDirection.y, 1);
-				material.texAnimSleep = 1.0f;
+				material.texAnimElapsedTime = 0.0f;
 
 				material.SetDirty(); // will trigger constant buffer update later on
 			}

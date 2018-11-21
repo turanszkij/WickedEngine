@@ -86,15 +86,20 @@ void wiSprite::DrawNormal(GRAPHICSTHREAD threadID)
 	}
 }
 
-void wiSprite::Update(float gameSpeed)
+void wiSprite::FixedUpdate(float speed)
 {
-	params.pos.x += anim.vel.x*gameSpeed;
-	params.pos.y += anim.vel.y*gameSpeed;
-	params.pos.z += anim.vel.z*gameSpeed;
-	params.rotation += anim.rot*gameSpeed;
-	params.scale.x += anim.scaleX*gameSpeed;
-	params.scale.y += anim.scaleY*gameSpeed;
-	params.opacity += anim.opa*gameSpeed;
+
+}
+
+void wiSprite::Update(float dt)
+{
+	params.pos.x += anim.vel.x*dt;
+	params.pos.y += anim.vel.y*dt;
+	params.pos.z += anim.vel.z*dt;
+	params.rotation += anim.rot*dt;
+	params.scale.x += anim.scaleX*dt;
+	params.scale.y += anim.scaleY*dt;
+	params.opacity += anim.opa*dt;
 	if (params.opacity >= 1) {
 		if (anim.repeatable) { params.opacity = 0.99f; anim.opa *= -1; }
 		else				params.opacity = 1;
@@ -103,7 +108,7 @@ void wiSprite::Update(float gameSpeed)
 		if (anim.repeatable) { params.opacity = 0.01f; anim.opa *= -1; }
 		else				params.opacity = 0;
 	}
-	params.fade += anim.fad*gameSpeed;
+	params.fade += anim.fad*dt;
 	if (params.fade >= 1) {
 		if (anim.repeatable) { params.fade = 0.99f; anim.fad *= -1; }
 		else				params.fade = 1;
@@ -113,28 +118,39 @@ void wiSprite::Update(float gameSpeed)
 		else				params.fade = 0;
 	}
 
-	params.texOffset.x += anim.movingTexAnim.speedX*gameSpeed;
-	params.texOffset.y += anim.movingTexAnim.speedY*gameSpeed;
+	params.texOffset.x += anim.movingTexAnim.speedX*dt;
+	params.texOffset.y += anim.movingTexAnim.speedY*dt;
 
-	if (anim.drawRecAnim.elapsedFrames >= anim.drawRecAnim.onFrameChangeWait) {
-		params.drawRect.x += params.drawRect.z*anim.drawRecAnim.jumpX;
-		params.drawRect.y += params.drawRect.w*anim.drawRecAnim.jumpY;
+	// Draw rect anim:
+	anim.drawRectAnim._elapsedTime += dt * anim.drawRectAnim.frameRate;
+	if (anim.drawRectAnim._elapsedTime >= 1.0f)
+	{
+		// Reset timer:
+		anim.drawRectAnim._elapsedTime = 0;
 
-		if (anim.drawRecAnim.currentFrame >= anim.drawRecAnim.frameCount) {
-			params.drawRect.z -= anim.drawRecAnim.sizX*anim.drawRecAnim.frameCount;
-			params.drawRect.w -= anim.drawRecAnim.sizY*anim.drawRecAnim.frameCount;
-			anim.drawRecAnim.currentFrame = 0;
+		// Advance total frame counter:
+		anim.drawRectAnim._finishedFrame++;
+
+		// Step one frame horizontally:
+		params.drawRect.x += params.drawRect.z;
+
+		if(anim.drawRectAnim._finishedFrame >= anim.drawRectAnim.frameCount)
+		{
+			// If the animation ended (we are on the last frame)...
+			if (anim.repeatable)
+			{
+				// restart if repeatable:
+				params.drawRect.x -= params.drawRect.z * anim.drawRectAnim.frameCount;
+				anim.drawRectAnim._finishedFrame = 0;
+			}
+			else
+			{
+				// just stay on the last frame if not repeatable:
+				params.drawRect.x -= params.drawRect.z;
+				anim.drawRectAnim._finishedFrame--;
+			}
 		}
-		else {
-			params.drawRect.z += anim.drawRecAnim.sizX;
-			params.drawRect.w += anim.drawRecAnim.sizY;
-			anim.drawRecAnim.currentFrame++;
-		}
-		anim.drawRecAnim.elapsedFrames = 0;
+
 	}
-	else anim.drawRecAnim.elapsedFrames += gameSpeed;
-}
-void wiSprite::Update()
-{
-	Update(1);
+
 }

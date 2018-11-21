@@ -95,7 +95,7 @@ namespace wiSceneSystem
 			archive >> alphaRef;
 			archive >> texAnimDirection;
 			archive >> texAnimFrameRate;
-			archive >> texAnimSleep;
+			archive >> texAnimElapsedTime;
 
 			archive >> baseColorMapName;
 			archive >> surfaceMapName;
@@ -142,7 +142,7 @@ namespace wiSceneSystem
 			archive << alphaRef;
 			archive << texAnimDirection;
 			archive << texAnimFrameRate;
-			archive << texAnimSleep;
+			archive << texAnimElapsedTime;
 
 			archive << baseColorMapName;
 			archive << surfaceMapName;

@@ -125,7 +125,7 @@ namespace wiSceneSystem
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;
-		float texAnimSleep = 0.0f;
+		float texAnimElapsedTime = 0.0f;
 
 		std::string baseColorMapName;
 		std::string surfaceMapName;

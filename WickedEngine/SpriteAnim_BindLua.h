@@ -42,18 +42,18 @@ public:
 	static void Bind();
 };
 
-class MovingTexData_BindLua
+class MovingTexAnim_BindLua
 {
 public:
-	wiSprite::Anim::MovingTexData data;
+	wiSprite::Anim::MovingTexAnim anim;
 
 	static const char className[];
-	static Luna<MovingTexData_BindLua>::FunctionType methods[];
-	static Luna<MovingTexData_BindLua>::PropertyType properties[];
+	static Luna<MovingTexAnim_BindLua>::FunctionType methods[];
+	static Luna<MovingTexAnim_BindLua>::PropertyType properties[];
 
-	MovingTexData_BindLua(const wiSprite::Anim::MovingTexData& data);
-	MovingTexData_BindLua(lua_State *L);
-	~MovingTexData_BindLua();
+	MovingTexAnim_BindLua(const wiSprite::Anim::MovingTexAnim& anim);
+	MovingTexAnim_BindLua(lua_State *L);
+	~MovingTexAnim_BindLua();
 
 	int SetSpeedX(lua_State* L);
 	int SetSpeedY(lua_State* L);
@@ -62,31 +62,23 @@ public:
 	int GetSpeedY(lua_State* L);
 };
 
-class DrawRecData_BindLua
+class DrawRectAnim_BindLua
 {
 public:
-	wiSprite::Anim::DrawRecData data;
+	wiSprite::Anim::DrawRectAnim anim;
 
 	static const char className[];
-	static Luna<DrawRecData_BindLua>::FunctionType methods[];
-	static Luna<DrawRecData_BindLua>::PropertyType properties[];
+	static Luna<DrawRectAnim_BindLua>::FunctionType methods[];
+	static Luna<DrawRectAnim_BindLua>::PropertyType properties[];
 
-	DrawRecData_BindLua(const wiSprite::Anim::DrawRecData& data);
-	DrawRecData_BindLua(lua_State *L);
-	~DrawRecData_BindLua();
+	DrawRectAnim_BindLua(const wiSprite::Anim::DrawRectAnim& anim);
+	DrawRectAnim_BindLua(lua_State *L);
+	~DrawRectAnim_BindLua();
 
-	int SetOnFrameChangeWait(lua_State* L);
 	int SetFrameCount(lua_State* L);
-	int SetJumpX(lua_State* L);
-	int SetJumpY(lua_State* L);
-	int SetSizX(lua_State* L);
-	int SetSizY(lua_State* L);
+	int SetFrameRate(lua_State* L);
 
-	int GetOnFrameChangeWait(lua_State* L);
 	int GetFrameCount(lua_State* L);
-	int GetJumpX(lua_State* L);
-	int GetJumpY(lua_State* L);
-	int GetSizX(lua_State* L);
-	int GetSizY(lua_State* L);
+	int GetFrameRate(lua_State* L);
 };
 

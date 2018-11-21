@@ -134,7 +134,7 @@ TestsRenderer::TestsRenderer()
 			sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
 			sprite.params.siz = XMFLOAT2(200, 100);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
-			sprite.anim.rot = XM_PI / 400.0f;
+			sprite.anim.rot = XM_PI / 4.0f;
 			this->addSprite(&sprite);
 			break;
 		}
@@ -323,8 +323,9 @@ void TestsRenderer::RunSpriteTest()
 	sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
 	sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128));
 	sprite.params.sampleFlag = SAMPLEMODE_WRAP;
-	sprite.anim.drawRecAnim.frameCount = 8;
-	sprite.anim.drawRecAnim.jumpX = 1;
-	sprite.anim.drawRecAnim.onFrameChangeWait = 4;
+	sprite.anim = wiSprite::Anim();
+	sprite.anim.drawRectAnim.frameCount = 8;
+	sprite.anim.drawRectAnim.frameRate = 10;
+	sprite.anim.repeatable = true;
 	addSprite(&sprite);
 }

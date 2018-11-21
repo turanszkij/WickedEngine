@@ -199,7 +199,7 @@ Animate Sprites easily with this helper.
 - SetScaleX(float val)
 - SetScaleY(float val)
 - SetMovingTexAnim(MovingTexAnim val)
-- SetDrawRecAnim(DrawRecAnim val)
+- SetDrawRectAnim(DrawRectAnim val)
 - GetRot() : float result
 - GetRotation() : float result
 - GetOpacity() : float result
@@ -209,7 +209,7 @@ Animate Sprites easily with this helper.
 - GetScaleX() : float result
 - GetScaleY() : float result
 - GetMovingTexAnim() : GetMovingTexAnim result
-- GetDrawRecAnim() : GetDrawRecAnim result
+- GetDrawRectAnim() : GetDrawRectAnim result
 
 #### MovingTexAnim
 Move texture continuously along the sprite.
@@ -223,17 +223,10 @@ Move texture continuously along the sprite.
 Animate sprite frame by frame.
 - [constructor]DrawRecAnim()
 - SetOnFrameChangeWait(float val)
-- SetFrameCount(float val)
-- SetJumpX(float val)
-- SetJumpY(float val)
-- SetSizX(float val)
-- SetSizY(float val)
-- GetOnFrameChangeWait() : float result
-- GetFrameCount() : float result
-- GetJumpX() : float result
-- GetJumpY() : float result
-- GetSizX() : float result
-- GetSizY() : float result
+- SetFrameCount(int val)
+- SetFrameRate(float val)
+- GetFrameCount() : int result
+- GetFrameRate() : float result
 
 ### Texture
 Just holds texture information in VRAM.

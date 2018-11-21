@@ -84,18 +84,28 @@ void RenderPath2D::Update(float dt)
 {
 	GetGUI().Update(dt);
 
-	RenderPath::Update(dt);
-}
-void RenderPath2D::FixedUpdate()
-{
-	
 	for (auto& x : layers)
 	{
 		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr)
 			{
-				y.sprite->Update(getSpriteSpeed());
+				y.sprite->Update(dt * getSpriteSpeed());
+			}
+		}
+	}
+
+	RenderPath::Update(dt);
+}
+void RenderPath2D::FixedUpdate()
+{
+	for (auto& x : layers)
+	{
+		for (auto& y : x.items)
+		{
+			if (y.sprite != nullptr)
+			{
+				y.sprite->FixedUpdate(getSpriteSpeed());
 			}
 		}
 	}

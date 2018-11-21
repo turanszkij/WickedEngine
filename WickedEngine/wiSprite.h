@@ -19,8 +19,8 @@ public:
 	void CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal);
 	void CleanUp();
 
-	void Update(float);
-	void Update();
+	virtual void FixedUpdate(float speed);
+	virtual void Update(float dt);
 	void Draw(wiGraphicsTypes::Texture2D* refracRes, GRAPHICSTHREAD threadID);
 	void Draw(GRAPHICSTHREAD threadID);
 	void DrawNormal(GRAPHICSTHREAD threadID);
@@ -29,39 +29,31 @@ public:
 
 	wiImageParams params;
 
-	struct Anim{
-		struct MovingTexData{
-			float speedX,speedY;
-			MovingTexData(){
-				speedX=speedY=0;
-			}
+	struct Anim
+	{
+		struct MovingTexAnim
+		{
+			float speedX = 0; // the speed of texture scrolling animation in horizontal direction
+			float speedY = 0; // the speed of texture scrolling animation in vertical direction
 		};
-		struct DrawRecData{
-			float onFrameChangeWait,elapsedFrames,currentFrame,frameCount;
-			float jumpX,jumpY;
-			float sizX,sizY;
+		struct DrawRectAnim
+		{
+			float frameRate = 30; // target frame rate of the spritesheet animation (eg. 30, 60, etc.)
+			int frameCount = 1; // how many frames are in the animation in total
 
-			DrawRecData(){
-				onFrameChangeWait=elapsedFrames=currentFrame=frameCount=0;
-				jumpX=jumpY=0;
-				sizX=sizY=0;
-			}
+			float _elapsedTime = 0; // internal use; you don't need to initialize
+			int _finishedFrame = 0; // internal use; you don't need to initialize
 		};
 
-		bool repeatable;
-		XMFLOAT3 vel;
-		float rot,scaleX,scaleY,opa,fad;
-		MovingTexData movingTexAnim;
-		DrawRecData drawRecAnim;
-
-		Anim(){
-			repeatable=false;
-			vel=XMFLOAT3(0,0,0);
-			rot=scaleX=scaleY=fad=0;
-			opa = 1;
-			movingTexAnim=MovingTexData();
-			drawRecAnim=DrawRecData();
-		}
+		bool repeatable = false;
+		XMFLOAT3 vel = XMFLOAT3(0, 0, 0);
+		float rot = 0;
+		float scaleX = 0;
+		float scaleY = 0;
+		float opa = 0;
+		float fad = 0;
+		MovingTexAnim movingTexAnim;
+		DrawRectAnim drawRectAnim;
 	};
 	Anim anim;
 	
