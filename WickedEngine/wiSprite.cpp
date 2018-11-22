@@ -128,27 +128,34 @@ void wiSprite::Update(float dt)
 		// Reset timer:
 		anim.drawRectAnim._elapsedTime = 0;
 
-		// Advance total frame counter:
-		anim.drawRectAnim._finishedFrame++;
-
-		// Step one frame horizontally:
-		params.drawRect.x += params.drawRect.z;
-
-		if(anim.drawRectAnim._finishedFrame >= anim.drawRectAnim.frameCount)
+		if (anim.drawRectAnim.horizontalFrameCount == 0)
 		{
-			// If the animation ended (we are on the last frame)...
-			if (anim.repeatable)
+			// If no horizontal frame count was specified, it means that all the frames are horizontal:
+			anim.drawRectAnim.horizontalFrameCount = anim.drawRectAnim.frameCount;
+		}
+
+		if (anim.drawRectAnim._currentFrame < anim.drawRectAnim.frameCount - 1)
+		{
+			// Advance frame counter if the animation is not finished:
+			anim.drawRectAnim._currentFrame++;
+
+			// Step one frame horizontally:
+			params.drawRect.x += params.drawRect.z;
+
+			if (anim.drawRectAnim._currentFrame > 0 &&
+				anim.drawRectAnim._currentFrame % anim.drawRectAnim.horizontalFrameCount == 0)
 			{
-				// restart if repeatable:
-				params.drawRect.x -= params.drawRect.z * anim.drawRectAnim.frameCount;
-				anim.drawRectAnim._finishedFrame = 0;
+				// if the animation is multiline, we reset horizontally and step downwards:
+				params.drawRect.x -= params.drawRect.z * anim.drawRectAnim.horizontalFrameCount;
+				params.drawRect.y += params.drawRect.w;
 			}
-			else
-			{
-				// just stay on the last frame if not repeatable:
-				params.drawRect.x -= params.drawRect.z;
-				anim.drawRectAnim._finishedFrame--;
-			}
+		}
+		else if (anim.repeatable)
+		{
+			// restart if repeatable:
+			params.drawRect.x -= params.drawRect.z * (anim.drawRectAnim.horizontalFrameCount - 1);
+			params.drawRect.y -= params.drawRect.w * (anim.drawRectAnim.frameCount / anim.drawRectAnim.horizontalFrameCount - 1);
+			anim.drawRectAnim._currentFrame = 0;
 		}
 
 	}

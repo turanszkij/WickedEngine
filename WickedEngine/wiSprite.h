@@ -40,9 +40,10 @@ public:
 		{
 			float frameRate = 30; // target frame rate of the spritesheet animation (eg. 30, 60, etc.)
 			int frameCount = 1; // how many frames are in the animation in total
+			int horizontalFrameCount = 0; // how many horizontal frames there are (optional, use if the spritesheet contains multiple rows)
 
 			float _elapsedTime = 0; // internal use; you don't need to initialize
-			int _finishedFrame = 0; // internal use; you don't need to initialize
+			int _currentFrame = 0; // internal use; you don't need to initialize
 		};
 
 		bool repeatable = false;
