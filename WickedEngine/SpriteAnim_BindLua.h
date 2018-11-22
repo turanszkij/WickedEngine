@@ -75,10 +75,12 @@ public:
 	DrawRectAnim_BindLua(lua_State *L);
 	~DrawRectAnim_BindLua();
 
-	int SetFrameCount(lua_State* L);
 	int SetFrameRate(lua_State* L);
+	int SetFrameCount(lua_State* L);
+	int SetHorizontalFrameCount(lua_State* L);
 
-	int GetFrameCount(lua_State* L);
 	int GetFrameRate(lua_State* L);
+	int GetFrameCount(lua_State* L);
+	int GetHorizontalFrameCount(lua_State* L);
 };
 

@@ -223,10 +223,12 @@ Move texture continuously along the sprite.
 Animate sprite frame by frame.
 - [constructor]DrawRecAnim()
 - SetOnFrameChangeWait(float val)
-- SetFrameCount(int val)
 - SetFrameRate(float val)
-- GetFrameCount() : int result
+- SetFrameCount(int val)
+- SetHorizontalFrameCount(int val)
 - GetFrameRate() : float result
+- GetFrameCount() : int result
+- GetHorizontalFrameCount() : int result
 
 ### Texture
 Just holds texture information in VRAM.

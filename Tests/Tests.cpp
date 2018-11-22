@@ -248,6 +248,7 @@ void TestsRenderer::RunFontTest()
 {
 	static wiFont font;
 	static wiFont font_upscaled;
+	int arial = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
 
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
@@ -259,8 +260,8 @@ void TestsRenderer::RunFontTest()
 	font_upscaled.params = font.params;
 	font_upscaled.params.posY += font.textHeight() + 10;
 
-	font.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
-	font_upscaled.style = wiFont::AddFontStyle(wiFont::GetFontPath() + "arial.ttf");
+	font.style = arial;
+	font_upscaled.style = arial;
 	font_upscaled.params.size = 14;
 	font_upscaled.params.scaling = 32.0f / 14.0f;
 
@@ -319,14 +320,13 @@ void TestsRenderer::RunSpriteTest()
 {
 	static wiSprite sprite("images/fire_001.png");
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0);
-	sprite.params.siz = XMFLOAT2(200, 200);
-	sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
-	sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
-	sprite.params.sampleFlag = SAMPLEMODE_WRAP;
-	sprite.anim = wiSprite::Anim();
-	sprite.anim.drawRectAnim.frameCount = 20;
-	sprite.anim.drawRectAnim.horizontalFrameCount = 5;
-	sprite.anim.drawRectAnim.frameRate = 40;
-	sprite.anim.repeatable = true;
+	sprite.params.siz = XMFLOAT2(200, 200); // size on screen
+	sprite.params.pivot = XMFLOAT2(0.5f, 0.5f); // center pivot
+	sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192)); // set the draw rect (texture cutout). This will also be the first frame of the animation
+	sprite.anim = wiSprite::Anim(); // reset animation state
+	sprite.anim.drawRectAnim.frameCount = 20; // set the total frame count of the animation
+	sprite.anim.drawRectAnim.horizontalFrameCount = 5; // this is a multiline spritesheet, so also set how many maximum frames there are in a line
+	sprite.anim.drawRectAnim.frameRate = 40; // animation frames per second
+	sprite.anim.repeatable = true; // looping
 	addSprite(&sprite);
 }

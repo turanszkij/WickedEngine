@@ -122,42 +122,47 @@ void wiSprite::Update(float dt)
 	params.texOffset.y += anim.movingTexAnim.speedY*dt;
 
 	// Draw rect anim:
-	anim.drawRectAnim._elapsedTime += dt * anim.drawRectAnim.frameRate;
-	if (anim.drawRectAnim._elapsedTime >= 1.0f)
+	if (anim.drawRectAnim.frameCount > 0)
 	{
-		// Reset timer:
-		anim.drawRectAnim._elapsedTime = 0;
-
-		if (anim.drawRectAnim.horizontalFrameCount == 0)
+		anim.drawRectAnim._elapsedTime += dt * anim.drawRectAnim.frameRate;
+		if (anim.drawRectAnim._elapsedTime >= 1.0f)
 		{
-			// If no horizontal frame count was specified, it means that all the frames are horizontal:
-			anim.drawRectAnim.horizontalFrameCount = anim.drawRectAnim.frameCount;
-		}
+			// Reset timer:
+			anim.drawRectAnim._elapsedTime = 0;
 
-		if (anim.drawRectAnim._currentFrame < anim.drawRectAnim.frameCount - 1)
-		{
-			// Advance frame counter if the animation is not finished:
+			if (anim.drawRectAnim.horizontalFrameCount == 0)
+			{
+				// If no horizontal frame count was specified, it means that all the frames are horizontal:
+				anim.drawRectAnim.horizontalFrameCount = anim.drawRectAnim.frameCount;
+			}
+
+			// Advance frame counter:
 			anim.drawRectAnim._currentFrame++;
 
-			// Step one frame horizontally:
-			params.drawRect.x += params.drawRect.z;
-
-			if (anim.drawRectAnim._currentFrame > 0 &&
-				anim.drawRectAnim._currentFrame % anim.drawRectAnim.horizontalFrameCount == 0)
+			if (anim.drawRectAnim._currentFrame < anim.drawRectAnim.frameCount)
 			{
-				// if the animation is multiline, we reset horizontally and step downwards:
-				params.drawRect.x -= params.drawRect.z * anim.drawRectAnim.horizontalFrameCount;
-				params.drawRect.y += params.drawRect.w;
-			}
-		}
-		else if (anim.repeatable)
-		{
-			// restart if repeatable:
-			params.drawRect.x -= params.drawRect.z * (anim.drawRectAnim.horizontalFrameCount - 1);
-			params.drawRect.y -= params.drawRect.w * (anim.drawRectAnim.frameCount / anim.drawRectAnim.horizontalFrameCount - 1);
-			anim.drawRectAnim._currentFrame = 0;
-		}
+				// Step one frame horizontally if animation is still playing:
+				params.drawRect.x += params.drawRect.z;
 
+				if (anim.drawRectAnim._currentFrame > 0 &&
+					anim.drawRectAnim._currentFrame % anim.drawRectAnim.horizontalFrameCount == 0)
+				{
+					// if the animation is multiline, we reset horizontally and step downwards:
+					params.drawRect.x -= params.drawRect.z * anim.drawRectAnim.horizontalFrameCount;
+					params.drawRect.y += params.drawRect.w;
+				}
+			}
+			else if (anim.repeatable)
+			{
+				// restart if repeatable:
+				const int rewind_X = (anim.drawRectAnim.frameCount - 1) % anim.drawRectAnim.horizontalFrameCount;
+				const int rewind_Y = (anim.drawRectAnim.frameCount - 1) / anim.drawRectAnim.horizontalFrameCount;
+				params.drawRect.x -= params.drawRect.z * rewind_X;
+				params.drawRect.y -= params.drawRect.w * rewind_Y;
+				anim.drawRectAnim._currentFrame = 0;
+			}
+
+		}
 	}
 
 }

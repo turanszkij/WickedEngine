@@ -335,11 +335,13 @@ int MovingTexAnim_BindLua::GetSpeedY(lua_State *L)
 const char DrawRectAnim_BindLua::className[] = "DrawRecAnim";
 
 Luna<DrawRectAnim_BindLua>::FunctionType DrawRectAnim_BindLua::methods[] = {
-	lunamethod(DrawRectAnim_BindLua, SetFrameCount),
 	lunamethod(DrawRectAnim_BindLua, SetFrameRate),
+	lunamethod(DrawRectAnim_BindLua, SetFrameCount),
+	lunamethod(DrawRectAnim_BindLua, SetHorizontalFrameCount),
 
-	lunamethod(DrawRectAnim_BindLua, GetFrameCount),
 	lunamethod(DrawRectAnim_BindLua, GetFrameRate),
+	lunamethod(DrawRectAnim_BindLua, GetFrameCount),
+	lunamethod(DrawRectAnim_BindLua, GetHorizontalFrameCount),
 	{ NULL, NULL }
 };
 Luna<DrawRectAnim_BindLua>::PropertyType DrawRectAnim_BindLua::properties[] = {
@@ -359,19 +361,6 @@ DrawRectAnim_BindLua::~DrawRectAnim_BindLua()
 {
 }
 
-int DrawRectAnim_BindLua::SetFrameCount(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		anim.frameCount = wiLua::SGetInt(L, 1);
-	}
-	else
-	{
-		wiLua::SError(L, "SetFrameCount(int val) not enough arguments!");
-	}
-	return 0;
-}
 int DrawRectAnim_BindLua::SetFrameRate(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -385,14 +374,45 @@ int DrawRectAnim_BindLua::SetFrameRate(lua_State* L)
 	}
 	return 0;
 }
+int DrawRectAnim_BindLua::SetFrameCount(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		anim.frameCount = wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetFrameCount(int val) not enough arguments!");
+	}
+	return 0;
+}
+int DrawRectAnim_BindLua::SetHorizontalFrameCount(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		anim.horizontalFrameCount = wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetHorizontalFrameCount(int val) not enough arguments!");
+	}
+	return 0;
+}
 
+int DrawRectAnim_BindLua::GetFrameRate(lua_State* L)
+{
+	wiLua::SSetFloat(L, anim.frameRate);
+	return 1;
+}
 int DrawRectAnim_BindLua::GetFrameCount(lua_State* L)
 {
 	wiLua::SSetInt(L, anim.frameCount);
 	return 1;
 }
-int DrawRectAnim_BindLua::GetFrameRate(lua_State* L)
+int DrawRectAnim_BindLua::GetHorizontalFrameCount(lua_State* L)
 {
-	wiLua::SSetFloat(L, anim.frameRate);
+	wiLua::SSetInt(L, anim.horizontalFrameCount);
 	return 1;
 }
