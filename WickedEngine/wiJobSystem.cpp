@@ -118,7 +118,7 @@ namespace wiJobSystem
 		for (uint32_t groupIndex = 0; groupIndex < groupCount; ++groupIndex)
 		{
 			// For each group, generate one real job:
-			auto& jobGroup = [jobCount, groupSize, job, groupIndex]() {
+			const auto& jobGroup = [jobCount, groupSize, job, groupIndex]() {
 
 				// Calculate the current group's offset into the jobs:
 				const uint32_t groupJobOffset = groupIndex * groupSize;
