@@ -197,19 +197,43 @@ TestsRenderer::~TestsRenderer()
 {
 }
 
-
 void TestsRenderer::RunJobSystemTest()
 {
+	wiTimer timer;
+
 	// This will simulate going over a big dataset first in a simple loop, then with the Job System and compare timings
 	uint32_t itemCount = 1000000;
 	std::stringstream ss("");
 	ss << "Job System performance test:" << std::endl;
-	ss << "You can find out more in Tests.cpp, RunJobSystemTest() function." << std::endl;
-	ss << "The simple loop should take longer to execute if the job system is implemented correctly." << std::endl;
-	ss << "Result:" << std::endl;
-	ss << std::endl;
+	ss << "You can find out more in Tests.cpp, RunJobSystemTest() function." << std::endl << std::endl;
 
-	wiTimer timer;
+
+	ss << "1) Execute() test:" << std::endl;
+
+	// Serial test
+	{
+		timer.record();
+		wiHelper::Spin(100);
+		wiHelper::Spin(100);
+		wiHelper::Spin(100);
+		wiHelper::Spin(100);
+		double time = timer.elapsed();
+		ss << "Serial took " << time << " milliseconds" << std::endl;
+	}
+	// Execute test
+	{
+		timer.record();
+		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
+		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
+		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
+		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
+		wiJobSystem::Wait();
+		double time = timer.elapsed();
+		ss << "wiJobSystem::Execute() took " << time << " milliseconds" << std::endl;
+	}
+
+	ss << std::endl;
+	ss << "2) Dispatch() test:" << std::endl;
 
 	// Simple loop test:
 	{
@@ -223,7 +247,7 @@ void TestsRenderer::RunJobSystemTest()
 		ss << "Simple loop took " << time << " milliseconds" << std::endl;
 	}
 
-	// Job system test:
+	// Dispatch test:
 	{
 		std::vector<wiSceneSystem::CameraComponent> dataSet(itemCount);
 		timer.record();
