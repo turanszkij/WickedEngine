@@ -207,6 +207,7 @@ void TestsRenderer::RunJobSystemTest()
 	ss << "Job System performance test:" << std::endl;
 	ss << "You can find out more in Tests.cpp, RunJobSystemTest() function." << std::endl << std::endl;
 
+	ss << "wiJobSystem was created with " << wiJobSystem::GetThreadCount() << " worker threads." << std::endl << std::endl;
 
 	ss << "1) Execute() test:" << std::endl;
 
@@ -282,7 +283,7 @@ void TestsRenderer::RunFontTest()
 	font.params.size = 32;
 
 	font_upscaled.params = font.params;
-	font_upscaled.params.posY += font.textHeight() + 10;
+	font_upscaled.params.posY += font.textHeight();
 
 	font.style = arial;
 	font_upscaled.style = arial;
@@ -303,7 +304,7 @@ void TestsRenderer::RunFontTest()
 
 	static wiFont font_aligned2;
 	font_aligned2 = font_aligned;
-	font_aligned2.params.posY += font_aligned.textHeight() + 10;
+	font_aligned2.params.posY += font_aligned.textHeight();
 	font_aligned2.params.shadowColor = wiColor::Purple();
 	font_aligned2.params.h_align = WIFALIGN_RIGHT;
 	font_aligned2.SetText("Right aligned, purple shadow");
@@ -342,15 +343,308 @@ void TestsRenderer::RunFontTest()
 }
 void TestsRenderer::RunSpriteTest()
 {
-	static wiSprite sprite("images/fire_001.png");
-	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth() * 0.5f, wiRenderer::GetDevice()->GetScreenHeight() * 0.5f, 0);
-	sprite.params.siz = XMFLOAT2(200, 200); // size on screen
-	sprite.params.pivot = XMFLOAT2(0.5f, 0.5f); // center pivot
-	sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192)); // set the draw rect (texture cutout). This will also be the first frame of the animation
-	sprite.anim = wiSprite::Anim(); // reset animation state
-	sprite.anim.drawRectAnim.frameCount = 20; // set the total frame count of the animation
-	sprite.anim.drawRectAnim.horizontalFrameCount = 5; // this is a multiline spritesheet, so also set how many maximum frames there are in a line
-	sprite.anim.drawRectAnim.frameRate = 40; // animation frames per second
-	sprite.anim.repeatable = true; // looping
-	addSprite(&sprite);
+	const float step = 30;
+	const XMFLOAT3 startPos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth() * 0.3f, wiRenderer::GetDevice()->GetScreenHeight() * 0.2f, 0);
+	wiImageParams params;
+	params.pos = startPos;
+	params.siz = XMFLOAT2(128, 128);
+	params.pivot = XMFLOAT2(0.5f, 0.5f);
+	params.quality = QUALITY_BILINEAR;
+	params.sampleFlag = SAMPLEMODE_CLAMP;
+	params.blendFlag = BLENDMODE_ALPHA;
+
+	// Info:
+	{
+		static wiFont font("For more information, please see \nTests.cpp, RunSpriteTest() function.");
+		font.params.posX = 10;
+		font.params.posY = 200;
+		addFont(&font);
+	}
+
+	// Simple sprite, no animation:
+	{
+		static wiSprite sprite("../logo/logo_small.png");
+		sprite.params = params;
+		addSprite(&sprite);
+
+		static wiFont font("No animation: ");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Simple sprite, fade animation:
+	{
+		static wiSprite sprite("../logo/logo_small.png");
+		sprite.params = params;
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.fad = 1.2f;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		static wiFont font("Fade animation: ");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Simple sprite, opacity animation:
+	{
+		static wiSprite sprite("../logo/logo_small.png");
+		sprite.params = params;
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.opa = 2.2f;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		static wiFont font("Opacity animation: ");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Simple sprite, rotate animation:
+	{
+		static wiSprite sprite("../logo/logo_small.png");
+		sprite.params = params;
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.rot = 2.8f;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		static wiFont font("Rotate animation: ");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Simple sprite, movingtex:
+	{
+		static wiSprite sprite("images/movingtex.png", "../logo/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
+		// Don't overwrite all params for this, because we want to keep the mask...
+		sprite.params.pos = params.pos;
+		sprite.params.siz = params.siz;
+		sprite.params.pivot = params.pivot;
+		sprite.params.col = XMFLOAT4(2, 2, 2, 1); // increase brightness a bit
+		sprite.params.sampleFlag = SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.movingTexAnim.speedX = 0;
+		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2
+		addSprite(&sprite);
+
+		static wiFont font("MovingTex + mask: ");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x = startPos.x;
+		params.pos.y += sprite.params.siz.y + step * 1.5f;
+	}
+
+
+	// Now the spritesheets:
+
+	// Spritesheet, no anim:
+	{
+		static wiSprite sprite("images/spritesheet_grid.png");
+		sprite.params = params; // nothing extra, just display the full spritesheet
+		addSprite(&sprite);
+
+		static wiFont font("Spritesheet: \n(without animation)");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Spritesheet, single line:
+	{
+		static wiSprite sprite("images/spritesheet_grid.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.repeatable = true; // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 4; // animate only a single line horizontally
+		addSprite(&sprite);
+
+		static wiFont font("single line anim: \n(4 frames)");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Spritesheet, single vertical line:
+	{
+		static wiSprite sprite("images/spritesheet_grid.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.repeatable = true; // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 4; // again, specify 4 total frames to loop...
+		sprite.anim.drawRectAnim.horizontalFrameCount = 1; // ...but this time, limit the horizontal frame count. This way, we can get it to only animate vertically
+		addSprite(&sprite);
+
+		static wiFont font("single line: \n(4 vertical frames)");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Spritesheet, multiline:
+	{
+		static wiSprite sprite("images/spritesheet_grid.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.repeatable = true; // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 16; // all frames
+		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
+		addSprite(&sprite);
+
+		static wiFont font("multiline: \n(all 16 frames)");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	// Spritesheet, multiline, irregular:
+	{
+		static wiSprite sprite("images/spritesheet_grid.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.repeatable = true; // enable looping
+		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
+		sprite.anim.drawRectAnim.frameCount = 14; // NOT all frames, which makes it irregular, so the last line will not contain all horizontal frames
+		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
+		addSprite(&sprite);
+
+		static wiFont font("irregular multiline: \n(14 frames)");
+		font.params.h_align = WIFALIGN_CENTER;
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x = startPos.x;
+		params.pos.y += sprite.params.siz.y + step * 1.5f;
+	}
+
+
+
+
+	// And the nice ones:
+
+	{
+		static wiSprite sprite("images/fire_001.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192)); // set the draw rect (texture cutout). This will also be the first frame of the animation
+		sprite.anim = wiSprite::Anim(); // reset animation state
+		sprite.anim.drawRectAnim.frameCount = 20; // set the total frame count of the animation
+		sprite.anim.drawRectAnim.horizontalFrameCount = 5; // this is a multiline spritesheet, so also set how many maximum frames there are in a line
+		sprite.anim.drawRectAnim.frameRate = 40; // animation frames per second
+		sprite.anim.repeatable = true; // looping
+		addSprite(&sprite);
+
+		static wiFont font("For the following spritesheets, credits belongs to: https://mrbubblewand.wordpress.com/download/");
+		font.params.v_align = WIFALIGN_BOTTOM;
+		font.params.posX = int(sprite.params.pos.x - sprite.params.siz.x * 0.5f);
+		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
+		addFont(&font);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	{
+		static wiSprite sprite("images/wind_002.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.drawRectAnim.frameCount = 30;
+		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
+		sprite.anim.drawRectAnim.frameRate = 30;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	{
+		static wiSprite sprite("images/water_003.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.drawRectAnim.frameCount = 50;
+		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
+		sprite.anim.drawRectAnim.frameRate = 27;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	{
+		static wiSprite sprite("images/earth_001.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.drawRectAnim.frameCount = 20;
+		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
+		sprite.anim.drawRectAnim.frameRate = 27;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
+	{
+		static wiSprite sprite("images/special_001.png");
+		sprite.params = params;
+		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
+		sprite.anim = wiSprite::Anim();
+		sprite.anim.drawRectAnim.frameCount = 40;
+		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
+		sprite.anim.drawRectAnim.frameRate = 27;
+		sprite.anim.repeatable = true;
+		addSprite(&sprite);
+
+		params.pos.x += sprite.params.siz.x + step;
+	}
+
 }
