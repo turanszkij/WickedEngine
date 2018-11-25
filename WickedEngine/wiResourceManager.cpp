@@ -216,7 +216,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					assert(SUCCEEDED(hr));
 					wiRenderer::GetDevice()->SetName(image, nameStr);
 
-					if (image != nullptr)
+					if (image != nullptr && image->GetDesc().MipLevels > 1)
 					{
 						wiRenderer::AddDeferredMIPGen(image);
 					}

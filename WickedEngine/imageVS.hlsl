@@ -3,7 +3,7 @@
 
 VertextoPixel main(uint vI : SV_VERTEXID)
 {
-	VertextoPixel Out = (VertextoPixel)0;
+	VertextoPixel Out;
 
 	// This vertex shader generates a trianglestrip like this:
 	//	1--2
@@ -16,7 +16,9 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 	
 	Out.pos = mul(inPos, xTransform);
 
-	Out.tex.xy = inTex * xTexMulAdd.xy + xTexMulAdd.zw;
+	Out.tex_original = inTex;
+
+	Out.tex = inTex * xTexMulAdd.xy + xTexMulAdd.zw;
 
 	Out.pos2D = Out.pos;
 
