@@ -582,7 +582,7 @@ void TestsRenderer::RunSpriteTest()
 		sprite.anim.repeatable = true; // looping
 		addSprite(&sprite);
 
-		static wiFont font("For the following spritesheets, credits belongs to: https://mrbubblewand.wordpress.com/download/");
+		static wiFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x - sprite.params.siz.x * 0.5f);
 		font.params.posY = int(sprite.params.pos.y - sprite.params.siz.y * 0.5f);
