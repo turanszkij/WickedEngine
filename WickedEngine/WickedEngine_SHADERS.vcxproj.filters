@@ -813,6 +813,12 @@
     <FxCompile Include="blurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="renderlightmapVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="renderlightmapPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

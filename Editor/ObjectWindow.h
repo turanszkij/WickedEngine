@@ -32,5 +32,7 @@ public:
 	wiCheckBox* disabledeactivationCheckBox;
 	wiCheckBox* kinematicCheckBox;
 	wiComboBox*	collisionShapeComboBox;
+
+	wiButton*	generateAtlasButton;
 };
 

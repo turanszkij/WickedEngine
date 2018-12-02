@@ -26,7 +26,7 @@ PixelInputType main(Input_Object_ALL input)
 	Out.tex = surface.uv;
 	Out.nor = surface.normal;
 	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_View).xy;
-
+	Out.atl = surface.atlas;
 
 	Out.ReflectionMapSamplingPos = mul(surface.position, g_xFrame_MainCamera_ReflVP);
 

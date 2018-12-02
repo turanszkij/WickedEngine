@@ -1082,6 +1082,8 @@ GraphicsPSO* PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT] = {};
 GraphicsPSO* PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT] = {};
 GraphicsPSO* PSO_enviromentallight = nullptr;
 
+GraphicsPSO* PSO_renderlightmap = nullptr;
+
 enum SKYRENDERING
 {
 	SKYRENDERING_STATIC,
@@ -1549,16 +1551,19 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 						GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
+							mesh.vertexBuffer_ATL.get(),
 							mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
 							&dynamicVertexBufferPools[threadID]
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
 							sizeof(MeshComponent::Vertex_TEX),
+							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_POS),
 							instanceDataSize
 						};
 						UINT offsets[] = {
+							0,
 							0,
 							0,
 							0,
@@ -1706,15 +1711,16 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, vertexLayouts[VLTYPE_OBJECT_ALL]);
@@ -1802,6 +1808,21 @@ void LoadShaders()
 		};
 		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_TRAIL]->code, vertexLayouts[VLTYPE_TRAIL]);
+
+	}
+
+	{
+		VertexLayoutDesc layout[] =
+		{
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+
+			{ "MATIPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+		};
+		vertexShaders[VSTYPE_RENDERLIGHTMAP] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapVS.cso", wiResourceManager::VERTEXSHADER));
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP]->code, vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
 
 	}
 
@@ -1911,6 +1932,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RENDERLIGHTMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS.cso", wiResourceManager::PIXELSHADER));
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -2483,6 +2505,22 @@ void LoadShaders()
 
 		RECREATE(PSO_enviromentallight);
 		device->CreateGraphicsPSO(&desc, PSO_enviromentallight);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.il = vertexLayouts[VLTYPE_RENDERLIGHTMAP];
+		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
+		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP];
+		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[DSSTYPE_XRAY];
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = FORMAT_R8G8B8A8_UNORM;
+		desc.DSFormat = FORMAT_UNKNOWN;
+
+		RECREATE(PSO_renderlightmap);
+		device->CreateGraphicsPSO(&desc, PSO_renderlightmap);
 	}
 	for (int type = 0; type < SKYRENDERING_COUNT; ++type)
 	{
@@ -3801,6 +3839,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	GetPrevCamera() = GetCamera();
 
 	ManageDecalAtlas(threadID);
+	ManageGlobalLightmapAtlas(threadID);
 
 	wiProfiler::BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	device->EventBegin("Skinning", threadID);
@@ -6775,91 +6814,17 @@ void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D*
 	device->EventEnd(threadID);
 }
 
-
-void BuildSceneBVH(GRAPHICSTHREAD threadID)
+struct TracedSceneParams
 {
-	Scene& scene = GetScene();
-
-	sceneBVH.Build(scene, threadID);
-}
-void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICSTHREAD threadID)
+	uint32_t triangleCount = 0;
+	uint32_t materialCount = 0;
+	GPUBuffer* materialBuffer = nullptr;
+	Texture2D* materialAtlas = nullptr;
+};
+TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
-
-	device->EventBegin("DrawTracedScene", threadID);
-
-	uint _width = GetInternalResolution().x;
-	uint _height = GetInternalResolution().y;
-
-	// Ray storage buffer:
-	static GPUBuffer* rayBuffer[2] = {};
-	static uint RayCountPrev = 0;
-	const uint _raycount = _width * _height;
-
-	if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
-	{
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		SAFE_DELETE(rayBuffer[0]);
-		SAFE_DELETE(rayBuffer[1]);
-		rayBuffer[0] = new GPUBuffer;
-		rayBuffer[1] = new GPUBuffer;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
-		desc.ByteWidth = desc.StructureByteStride * _raycount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
-		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
-		assert(SUCCEEDED(hr));
-
-		RayCountPrev = _raycount;
-	}
-
-	// Misc buffers:
-	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
-	static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
-
-	if (indirectBuffer == nullptr || counterBuffer == nullptr)
-	{
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		SAFE_DELETE(indirectBuffer);
-		indirectBuffer = new GPUBuffer;
-
-		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
-		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
-		assert(SUCCEEDED(hr));
-
-
-		SAFE_DELETE(counterBuffer[0]);
-		SAFE_DELETE(counterBuffer[1]);
-		counterBuffer[0] = new GPUBuffer;
-		counterBuffer[1] = new GPUBuffer;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
-		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
-		assert(SUCCEEDED(hr));
-	}
 
 	// Traced Scene Texture Atlas:
 	static Texture2D* atlasTexture = nullptr;
@@ -7074,6 +7039,100 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	}
 	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(TracedRenderingMaterial) * totalMaterials);
 
+	TracedSceneParams result;
+	result.triangleCount = totalTriangles;
+	result.materialCount = totalMaterials;
+	result.materialBuffer = materialBuffer;
+	result.materialAtlas = atlasTexture;
+
+	return result;
+}
+void BuildSceneBVH(GRAPHICSTHREAD threadID)
+{
+	Scene& scene = GetScene();
+
+	sceneBVH.Build(scene, threadID);
+}
+void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+	Scene& scene = GetScene();
+
+	device->EventBegin("DrawTracedScene", threadID);
+
+	uint _width = GetInternalResolution().x;
+	uint _height = GetInternalResolution().y;
+
+	// Ray storage buffer:
+	static GPUBuffer* rayBuffer[2] = {};
+	static uint RayCountPrev = 0;
+	const uint _raycount = _width * _height;
+
+	if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(rayBuffer[0]);
+		SAFE_DELETE(rayBuffer[1]);
+		rayBuffer[0] = new GPUBuffer;
+		rayBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
+		desc.ByteWidth = desc.StructureByteStride * _raycount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
+		assert(SUCCEEDED(hr));
+
+		RayCountPrev = _raycount;
+	}
+
+	// Misc buffers:
+	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
+	static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
+
+	if (indirectBuffer == nullptr || counterBuffer == nullptr)
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(indirectBuffer);
+		indirectBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		assert(SUCCEEDED(hr));
+
+
+		SAFE_DELETE(counterBuffer[0]);
+		SAFE_DELETE(counterBuffer[1]);
+		counterBuffer[0] = new GPUBuffer;
+		counterBuffer[1] = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
+		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
+		assert(SUCCEEDED(hr));
+	}
+
+	TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
 
 	// Begin raytrace
 
@@ -7083,7 +7142,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	TracedRenderingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceRandomSeed = renderTime;
-	cb.xTraceMeshTriangleCount = totalTriangles;
+	cb.xTraceMeshTriangleCount = tracedSceneParams.triangleCount;
 
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 
@@ -7129,16 +7188,16 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 
 	// Set up tracing resources:
+	sceneBVH.Bind(threadID);
+
 	GPUResource* res[] = {
-		materialBuffer,
+		tracedSceneParams.materialBuffer,
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-	sceneBVH.Bind(threadID);
-
-	if (atlasTexture != nullptr)
+	if (tracedSceneParams.materialAtlas != nullptr)
 	{
-		device->BindResource(CS, atlasTexture, TEXSLOT_ONDEMAND8, threadID);
+		device->BindResource(CS, tracedSceneParams.materialAtlas, TEXSLOT_ONDEMAND8, threadID);
 	}
 	else
 	{
@@ -7417,6 +7476,145 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	{
 		device->BindResource(PS, atlasTexture, TEXSLOT_DECALATLAS, threadID);
 	}
+}
+
+void ManageGlobalLightmapAtlas(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	static Texture2D* atlasTexture = nullptr;
+
+	Scene& scene = GetScene();
+
+	if(!atlasTexture)
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (!object.lightmapTextureData.empty())
+		{
+			// TODO: proper packing, etc.
+			HRESULT hr = wiTextureHelper::CreateTexture(atlasTexture, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, 4, FORMAT_R8G8B8A8_UNORM);
+			assert(SUCCEEDED(hr));
+			return;
+		}
+
+	}
+
+	if (atlasTexture != nullptr)
+	{
+		device->BindResource(PS, atlasTexture, TEXSLOT_GLOBALLIGHTMAP, threadID);
+	}
+	else
+	{
+		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_GLOBALLIGHTMAP, threadID);
+	}
+}
+
+void RenderObjectLightMap(ObjectComponent& object, GRAPHICSTHREAD threadID)
+{
+	// because we will wait for GPU to finish at the end (to be able to download the baking results), it must be done on the main thread.
+	assert(threadID == GRAPHICSTHREAD_IMMEDIATE);
+
+	GraphicsDevice* device = GetDevice();
+	Scene& scene = GetScene();
+
+	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+	assert(!mesh.vertex_atlas.empty());
+	assert(mesh.vertexBuffer_ATL != nullptr);
+
+	BuildSceneBVH(threadID);
+	sceneBVH.Bind(threadID);
+	TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
+
+	GPUResource* res[] = {
+		tracedSceneParams.materialBuffer,
+	};
+	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+	if (tracedSceneParams.materialAtlas != nullptr)
+	{
+		device->BindResource(CS, tracedSceneParams.materialAtlas, TEXSLOT_ONDEMAND8, threadID);
+	}
+	else
+	{
+		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND8, threadID);
+	}
+
+	// Create a temporary render target:
+	Texture2D* rt = nullptr;
+	TextureDesc desc;
+	desc.Width = object.lightmapWidth;
+	desc.Height = object.lightmapHeight;
+	desc.BindFlags = BIND_RENDER_TARGET;
+	desc.Format = FORMAT_R8G8B8A8_UNORM;
+	device->CreateTexture2D(&desc, nullptr, &rt);
+	device->BindRenderTargets(1, &rt, nullptr, threadID);
+
+	float clearColor[4] = { 0,0,0,1 };
+	device->ClearRenderTarget(rt, clearColor, threadID);
+
+	ViewPort vp;
+	vp.Width = (float)desc.Width;
+	vp.Height = (float)desc.Height;
+	device->BindViewports(1, &vp, threadID);
+
+	const TransformComponent& transform = scene.transforms[object.transform_index];
+
+	// Note: using InstancePrev, because we just need the matrix, nothing else here...
+	UINT instanceOffset;
+	volatile InstancePrev* instance = (volatile InstancePrev*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstancePrev), instanceOffset, threadID);
+	instance->Create(transform.world);
+	device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
+
+	device->BindGraphicsPSO(PSO_renderlightmap, threadID);
+
+	GPUBuffer* vbs[] = {
+		mesh.vertexBuffer_POS.get(),
+		mesh.vertexBuffer_ATL.get(),
+		&dynamicVertexBufferPools[threadID],
+	};
+	UINT strides[] = {
+		sizeof(MeshComponent::Vertex_POS),
+		sizeof(MeshComponent::Vertex_TEX),
+		sizeof(InstancePrev),
+	};
+	UINT offsets[] = {
+		0,
+		0,
+		instanceOffset,
+	};
+	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+
+	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+
+
+	// Now download the rendered lightmap from GPU and store it inside the object:
+
+	device->WaitForGPU();
+
+	UINT data_count = desc.Width * desc.Height;
+	UINT data_stride = device->GetFormatStride(desc.Format);
+	UINT data_size = data_count * data_stride;
+
+	object.lightmapTextureData.clear();
+	object.lightmapTextureData.resize(data_size);
+
+	Texture2D* stagingTex = nullptr;
+	TextureDesc staging_desc = desc;
+	staging_desc.Usage = USAGE_STAGING;
+	staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
+	staging_desc.BindFlags = 0;
+	staging_desc.MiscFlags = 0;
+	HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
+	assert(SUCCEEDED(hr));
+
+	bool download_success = device->DownloadResource(rt, stagingTex, object.lightmapTextureData.data(), GRAPHICSTHREAD_IMMEDIATE);
+	assert(download_success);
+
+	delete rt;
+	delete stagingTex;
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)

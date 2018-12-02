@@ -402,7 +402,13 @@ namespace wiSceneSystem
 		uint32_t rendertypeMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 
+		uint32_t lightmapWidth = 0;
+		uint32_t lightmapHeight = 0;
+		std::vector<uint8_t> lightmapTextureData;
+
 		// Non-serialized attributes:
+
+		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;

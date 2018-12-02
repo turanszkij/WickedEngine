@@ -64,6 +64,7 @@ struct PixelInputType
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
 	float4 ReflectionMapSamplingPos			: TEXCOORD1;
 	float2 nor2D							: NORMAL2D;
+	float2 atl								: ATLAS;
 };
 
 struct GBUFFEROutputType
@@ -595,6 +596,16 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // WATER
 
 	specular += reflection * surface.F;
+
+
+#ifndef SIMPLE_INPUT
+#ifndef ENVMAPRENDERING
+	float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, input.atl, 0);
+	diffuse += lightmap.rgb;
+	ao *= lightmap.a;
+#endif // ENVMAPRENDERING
+#endif // SIMPLE_INPUT
+
 
 	ApplyLighting(surface, diffuse, specular, ao, color);
 

@@ -30,6 +30,7 @@ struct Input_Object_ALL
 {
 	float4 pos : POSITION_NORMAL_SUBSETINDEX;
 	float2 tex : TEXCOORD;
+	float2 atl : ATLAS;
 	float4 pre : PREVPOS;
 	Input_Instance instance;
 	Input_InstancePrev instancePrev;
@@ -60,6 +61,7 @@ struct VertexSurface
 	float3 normal;
 	uint materialIndex;
 	float2 uv;
+	float2 atlas;
 	float4 prevPos;
 };
 inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
@@ -88,7 +90,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
-	surface.uv = input.tex.xy;
+	surface.uv = input.tex;
 
 	return surface;
 }
@@ -104,7 +106,9 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
-	surface.uv = input.tex.xy;
+	surface.uv = input.tex;
+
+	surface.atlas = input.atl;
 
 	surface.prevPos = float4(input.pre.xyz, 1);
 

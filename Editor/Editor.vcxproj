@@ -190,6 +190,7 @@
     <ClInclude Include="tiny_obj_loader.h" />
     <ClInclude Include="Translator.h" />
     <ClInclude Include="WeatherWindow.h" />
+    <ClInclude Include="xatlas.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AnimationWindow.cpp" />
@@ -218,6 +219,7 @@
     </ClCompile>
     <ClCompile Include="Translator.cpp" />
     <ClCompile Include="WeatherWindow.cpp" />
+    <ClCompile Include="xatlas.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="images\arealight.dds">

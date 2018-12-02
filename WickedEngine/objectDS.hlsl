@@ -89,10 +89,10 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	float4 vertexPosition;
 	float4 vertexPositionPrev;
 	float4 vertexNormal;
-	float2 vertexTex;
+	float4 vertexTex;
 
     //New vertex returned from tessallator, average it
-	vertexTex      = uvwCoord.z * patch[0].tex.xy + uvwCoord.x * patch[1].tex.xy + uvwCoord.y * patch[2].tex.xy;
+	vertexTex = uvwCoord.z * patch[0].tex + uvwCoord.x * patch[1].tex + uvwCoord.y * patch[2].tex;
 
 	
 	// The barycentric coordinates
@@ -122,6 +122,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	Out.tex = vertexTex.xy;
 	Out.nor = normalize(vertexNormal.xyz);
 	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_View).xy;
+	Out.atl = vertexTex.zw;
 
 	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xFrame_MainCamera_ReflVP);
 

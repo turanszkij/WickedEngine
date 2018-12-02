@@ -88,6 +88,9 @@
     <ClInclude Include="WeatherWindow.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="xatlas.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -151,6 +154,9 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="WeatherWindow.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="xatlas.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

@@ -229,6 +229,13 @@ namespace wiSceneSystem
 			archive >> cascadeMask;
 			archive >> rendertypeMask;
 			archive >> color;
+
+			if (archive.GetVersion() >= 23)
+			{
+				archive >> lightmapWidth;
+				archive >> lightmapHeight;
+				archive >> lightmapTextureData;
+			}
 		}
 		else
 		{
@@ -237,6 +244,13 @@ namespace wiSceneSystem
 			archive << cascadeMask;
 			archive << rendertypeMask;
 			archive << color;
+
+			if (archive.GetVersion() >= 23)
+			{
+				archive << lightmapWidth;
+				archive << lightmapHeight;
+				archive << lightmapTextureData;
+			}
 		}
 	}
 	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, uint32_t seed)
