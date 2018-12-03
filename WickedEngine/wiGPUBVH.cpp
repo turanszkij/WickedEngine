@@ -398,7 +398,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 	wiProfiler::EndRange(threadID); // BVH rebuild
 }
-void wiGPUBVH::Bind(GRAPHICSTHREAD threadID)
+void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -411,7 +411,7 @@ void wiGPUBVH::Bind(GRAPHICSTHREAD threadID)
 		bvhNodeBuffer.get(),
 		bvhAABBBuffer.get(),
 	};
-	device->BindResources(CS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+	device->BindResources(stage, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
 }
 
 

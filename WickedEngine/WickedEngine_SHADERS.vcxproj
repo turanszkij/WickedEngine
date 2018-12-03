@@ -35,6 +35,7 @@
     <None Include="packHF.hlsli" />
     <None Include="postProcessHF.hlsli" />
     <None Include="quad.hlsli" />
+    <None Include="raySceneIntersectHF.hlsli" />
     <None Include="reconstructPositionHF.hlsli" />
     <None Include="skyHF.hlsli" />
     <None Include="sOHF.hlsli" />

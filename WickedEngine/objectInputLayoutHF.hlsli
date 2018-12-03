@@ -14,6 +14,10 @@ struct Input_InstancePrev
 	float4 wiPrev1 : MATIPREV1;
 	float4 wiPrev2 : MATIPREV2;
 };
+struct Input_InstanceAtlas
+{
+	float4 atlasMulAdd : INSTANCEATLAS;
+};
 
 struct Input_Object_POS
 {
@@ -34,6 +38,7 @@ struct Input_Object_ALL
 	float4 pre : PREVPOS;
 	Input_Instance instance;
 	Input_InstancePrev instancePrev;
+	Input_InstanceAtlas instanceAtlas;
 };
 
 inline float4x4 MakeWorldMatrixFromInstance(in Input_Instance input)
@@ -108,7 +113,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 
 	surface.uv = input.tex;
 
-	surface.atlas = input.atl;
+	surface.atlas = input.atl * input.instanceAtlas.atlasMulAdd.xy + input.instanceAtlas.atlasMulAdd.zw;
 
 	surface.prevPos = float4(input.pre.xyz, 1);
 

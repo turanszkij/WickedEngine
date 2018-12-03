@@ -11,6 +11,7 @@ struct Input
 struct Output
 {
 	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD;
 	float3 pos3D : WORLDPOSITION;
 	float3 normal : NORMAL;
 };
@@ -21,9 +22,11 @@ Output main(Input input)
 
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
 
-	output.pos = float4(input.atl.xy, 0, 1);
+	output.pos = float4(input.atl, 0, 1);
 	output.pos.xy = output.pos.xy * 2 - 1;
 	output.pos.y *= -1;
+
+	output.uv = input.atl;
 
 	output.pos3D = mul(float4(input.pos.xyz, 1), WORLD).xyz;
 

@@ -246,10 +246,19 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 	y += 30;
 
-	generateAtlasButton = new wiButton("Generate Atlas");
-	generateAtlasButton->SetTooltip("Toggle kinematic behaviour.");
-	generateAtlasButton->SetPos(XMFLOAT2(x, y += 30));
-	generateAtlasButton->OnClick([&](wiEventArgs args) {
+
+	lightmapResolutionSlider = new wiSlider(32, 1024, 128, 1024 - 32, "Lightmap resolution: ");
+	lightmapResolutionSlider->SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
+	lightmapResolutionSlider->SetSize(XMFLOAT2(100, 30));
+	lightmapResolutionSlider->SetPos(XMFLOAT2(x, y += 30));
+	objectWindow->AddWidget(lightmapResolutionSlider);
+
+
+	generateLightmapButton = new wiButton("Generate Lightmap");
+	generateLightmapButton->SetTooltip("Toggle kinematic behaviour.");
+	generateLightmapButton->SetPos(XMFLOAT2(x, y += 30));
+	generateLightmapButton->SetSize(XMFLOAT2(140,30));
+	generateLightmapButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiRenderer::GetScene();
 		ObjectComponent* objectcomponent = scene.objects.GetComponent(entity);
@@ -288,7 +297,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 				// Generate atlas:
 				{
 					xatlas::PackerOptions packerOptions;
-					packerOptions.resolution = 1024;
+					packerOptions.resolution = (uint32_t)lightmapResolutionSlider->GetValue();
 					packerOptions.conservative = true;
 					packerOptions.padding = 1;
 					xatlas::GenerateCharts(atlas, xatlas::CharterOptions(), nullptr, nullptr);
@@ -418,7 +427,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 
 	});
-	objectWindow->AddWidget(generateAtlasButton);
+	objectWindow->AddWidget(generateLightmapButton);
 
 
 

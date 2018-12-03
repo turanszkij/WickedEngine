@@ -25,7 +25,7 @@ public:
 	~wiGPUBVH();
 
 	void Build(const wiSceneSystem::Scene& scene, GRAPHICSTHREAD threadID);
-	void Bind(GRAPHICSTHREAD threadID);
+	void Bind(wiGraphicsTypes::SHADERSTAGE stage, GRAPHICSTHREAD threadID);
 
 	static void LoadShaders();
 

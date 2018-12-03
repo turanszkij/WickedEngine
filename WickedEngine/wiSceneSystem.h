@@ -409,6 +409,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+		wiGraphicsTypes::Texture2D* lightmap = nullptr;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;

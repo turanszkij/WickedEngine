@@ -115,6 +115,9 @@
     <None Include="impostorHF.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="raySceneIntersectHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="objectHS.hlsl">
