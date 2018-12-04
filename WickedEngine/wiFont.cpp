@@ -458,7 +458,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
-			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, 1, FORMAT_R8_UNORM);
+			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 			assert(SUCCEEDED(hr));
 		}
 	}

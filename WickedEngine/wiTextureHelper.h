@@ -17,6 +17,6 @@ namespace wiTextureHelper
 	wiGraphicsTypes::Texture2D* getTransparent();
 	wiGraphicsTypes::Texture2D* getColor(const wiColor& color);
 
-	HRESULT CreateTexture(wiGraphicsTypes::Texture2D*& texture, const uint8_t* data, UINT width, UINT height, UINT channelCount, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM);
+	HRESULT CreateTexture(wiGraphicsTypes::Texture2D*& texture, const uint8_t* data, UINT width, UINT height, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM);
 };
 

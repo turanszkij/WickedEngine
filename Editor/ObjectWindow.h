@@ -35,5 +35,6 @@ public:
 
 	wiSlider*	lightmapResolutionSlider;
 	wiButton*	generateLightmapButton;
+	wiButton*	stopLightmapGenButton;
 };
 

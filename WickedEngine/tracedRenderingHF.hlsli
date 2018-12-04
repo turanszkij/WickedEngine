@@ -131,14 +131,13 @@ inline RayHit CreateRayHit()
 
 
 
-#define BACKFACE_CULLING
 inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHMeshTriangle tri, uint primitiveID)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
 	float3 pvec = cross(ray.direction, v0v2);
 	float det = dot(v0v1, pvec);
-#ifdef BACKFACE_CULLING 
+#ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
 	if (det < EPSILON)
@@ -183,7 +182,7 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHMeshTri
 	float3 v0v2 = tri.v2 - tri.v0;
 	float3 pvec = cross(ray.direction, v0v2);
 	float det = dot(v0v1, pvec);
-#ifdef BACKFACE_CULLING 
+#ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
 	if (det < EPSILON)

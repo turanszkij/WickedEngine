@@ -159,7 +159,7 @@ namespace wiMath
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
 
-	// 64-iteration 4-dimensional Halton sequence (0 <= idx < 64)
+	// Returns an element of a precomputed halton sequence. Specify which iteration to get with idx >= 0
 	const XMFLOAT4& GetHaltonSequence(int idx);
 
 	uint32_t CompressNormal(const XMFLOAT3& normal);

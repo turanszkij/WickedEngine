@@ -260,6 +260,7 @@ namespace wiSceneSystem
 
 	void MeshComponent::CreateRenderData()
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		HRESULT hr;
 
 		// Create index buffer GPU data:
@@ -303,7 +304,7 @@ namespace wiSceneSystem
 			InitData.pSysMem = gpuIndexData;
 			bd.ByteWidth = (UINT)(stride * indices.size());
 			indexBuffer.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, indexBuffer.get());
+			hr = device->CreateBuffer(&bd, &InitData, indexBuffer.get());
 			assert(SUCCEEDED(hr));
 
 			SAFE_DELETE_ARRAY(gpuIndexData);
@@ -351,7 +352,7 @@ namespace wiSceneSystem
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			vertexBuffer_POS.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_POS.get());
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_POS.get());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -386,7 +387,7 @@ namespace wiSceneSystem
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			vertexBuffer_BON.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_BON.get());
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_BON.get());
 			assert(SUCCEEDED(hr));
 
 			bd.Usage = USAGE_DEFAULT;
@@ -396,7 +397,7 @@ namespace wiSceneSystem
 
 			bd.ByteWidth = (UINT)(sizeof(Vertex_POS) * vertex_positions.size());
 			streamoutBuffer_POS.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, streamoutBuffer_POS.get());
+			hr = device->CreateBuffer(&bd, nullptr, streamoutBuffer_POS.get());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -421,7 +422,7 @@ namespace wiSceneSystem
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			vertexBuffer_TEX.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_TEX.get());
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_TEX.get());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -440,7 +441,7 @@ namespace wiSceneSystem
 			SubresourceData InitData;
 			InitData.pSysMem = vertex_colors.data();
 			vertexBuffer_COL.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_COL.get());
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_COL.get());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -465,7 +466,7 @@ namespace wiSceneSystem
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			vertexBuffer_ATL.reset(new GPUBuffer);
-			hr = wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, vertexBuffer_ATL.get());
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_ATL.get());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -745,6 +746,44 @@ namespace wiSceneSystem
 		}
 
 		CreateRenderData();
+	}
+
+	void ObjectComponent::ClearLightmap()
+	{
+		lightmapIterationCount = 0; 
+		lightmapTextureData.clear();
+	}
+	void ObjectComponent::SaveLightmap()
+	{
+		if (lightmap == nullptr)
+		{
+			return;
+		}
+
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		HRESULT hr;
+
+		TextureDesc desc = lightmap->GetDesc();
+		UINT data_count = desc.Width * desc.Height;
+		UINT data_stride = device->GetFormatStride(desc.Format);
+		UINT data_size = data_count * data_stride;
+
+		lightmapTextureData.clear();
+		lightmapTextureData.resize(data_size);
+
+		Texture2D* stagingTex = nullptr;
+		TextureDesc staging_desc = desc;
+		staging_desc.Usage = USAGE_STAGING;
+		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
+		staging_desc.BindFlags = 0;
+		staging_desc.MiscFlags = 0;
+		hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
+		assert(SUCCEEDED(hr));
+
+		bool download_success = device->DownloadResource(lightmap, stagingTex, lightmapTextureData.data(), GRAPHICSTHREAD_IMMEDIATE);
+		assert(download_success);
+
+		delete stagingTex;
 	}
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)

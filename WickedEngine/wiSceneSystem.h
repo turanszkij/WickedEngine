@@ -394,6 +394,7 @@ namespace wiSceneSystem
 			DYNAMIC = 1 << 2,
 			IMPOSTOR_PLACEMENT = 1 << 3,
 			REQUEST_PLANAR_REFLECTION = 1 << 4,
+			LIGHTMAP_RENDER_REQUEST = 1 << 5,
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
@@ -410,6 +411,7 @@ namespace wiSceneSystem
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 		wiGraphicsTypes::Texture2D* lightmap = nullptr;
+		uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;
@@ -438,15 +440,20 @@ namespace wiSceneSystem
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 		inline void SetImpostorPlacement(bool value) { if (value) { _flags |= IMPOSTOR_PLACEMENT; } else { _flags &= ~IMPOSTOR_PLACEMENT; } }
 		inline void SetRequestPlanarReflection(bool value) { if (value) { _flags |= REQUEST_PLANAR_REFLECTION; } else { _flags &= ~REQUEST_PLANAR_REFLECTION; } }
+		inline void SetLightmapRenderRequest(bool value) { if (value) { _flags |= LIGHTMAP_RENDER_REQUEST; } else { _flags &= ~LIGHTMAP_RENDER_REQUEST; } }
 
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsImpostorPlacement() const { return _flags & IMPOSTOR_PLACEMENT; }
 		inline bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
+		inline bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
+
+		void ClearLightmap();
+		void SaveLightmap();
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};

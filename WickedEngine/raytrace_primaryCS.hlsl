@@ -1,3 +1,4 @@
+#define RAY_BACKFACE_CULLING
 #include "globals.hlsli"
 #include "ShaderInterop_TracedRendering.h"
 #include "ShaderInterop_BVH.h"

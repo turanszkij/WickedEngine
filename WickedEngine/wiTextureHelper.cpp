@@ -36,7 +36,7 @@ namespace wiTextureHelper
 				data[i + 3] = 255;
 			}
 
-			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64, 4);
+			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
 			assert(SUCCEEDED(hr));
 		}
 
@@ -62,7 +62,7 @@ namespace wiTextureHelper
 				}
 			}
 
-			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16, 4);
+			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16);
 			assert(SUCCEEDED(hr));
 		}
 
@@ -177,7 +177,7 @@ namespace wiTextureHelper
 		}
 
 		Texture2D* texture = nullptr;
-		if (FAILED(CreateTexture(texture, data, dim, dim, 4)))
+		if (FAILED(CreateTexture(texture, data, dim, dim)))
 		{
 			return nullptr;
 		}
@@ -190,12 +190,13 @@ namespace wiTextureHelper
 	}
 
 
-	HRESULT CreateTexture(wiGraphicsTypes::Texture2D*& texture, const uint8_t* data, UINT width, UINT height, UINT channelCount, FORMAT format)
+	HRESULT CreateTexture(wiGraphicsTypes::Texture2D*& texture, const uint8_t* data, UINT width, UINT height, FORMAT format)
 	{
 		if (data == nullptr)
 		{
 			return E_FAIL;
 		}
+		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		SAFE_DELETE(texture);
 
@@ -216,10 +217,10 @@ namespace wiTextureHelper
 		SubresourceData InitData;
 		ZeroMemory(&InitData, sizeof(InitData));
 		InitData.pSysMem = data;
-		InitData.SysMemPitch = static_cast<UINT>(width * channelCount);
+		InitData.SysMemPitch = static_cast<UINT>(width * device->GetFormatStride(format));
 
 		HRESULT hr;
-		hr = wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, &InitData, &texture);
+		hr = device->CreateTexture2D(&textureDesc, &InitData, &texture);
 
 		return hr;
 	}

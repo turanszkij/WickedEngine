@@ -175,11 +175,7 @@ namespace wiRenderer
 	// New decals will be packed into a texture atlas
 	void ManageDecalAtlas(GRAPHICSTHREAD threadID);
 	// New lightmapped objects will be packed into global lightmap atlas
-	void ManageGlobalLightmapAtlas(GRAPHICSTHREAD threadID);
-
-	// Renders the lightmap for an object on the GPU
-	//	object must already have atlas texture coordinates in its mesh
-	void RenderObjectLightMap(wiSceneSystem::ObjectComponent& object, GRAPHICSTHREAD threadID);
+	void ManageLightmapAtlas(GRAPHICSTHREAD threadID);
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	void ManageWaterRipples();

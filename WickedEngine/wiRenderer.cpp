@@ -1986,7 +1986,9 @@ void LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChainCubeArray_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_FILTERENVMAP] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "filterEnvMapCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_float4CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_unorm4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_float4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
@@ -2534,11 +2536,11 @@ void LoadShaders()
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP];
 		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.bs = blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = depthStencils[DSSTYPE_XRAY];
 
 		desc.numRTs = 1;
-		desc.RTFormats[0] = FORMAT_R8G8B8A8_UNORM;
+		desc.RTFormats[0] = FORMAT_R32G32B32A32_FLOAT;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
 		RECREATE(PSO_renderlightmap);
@@ -3861,7 +3863,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	GetPrevCamera() = GetCamera();
 
 	ManageDecalAtlas(threadID);
-	ManageGlobalLightmapAtlas(threadID);
 
 	wiProfiler::BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	device->EventBegin("Skinning", threadID);
@@ -4043,6 +4044,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
+	ManageLightmapAtlas(threadID);
 	RefreshEnvProbes(threadID);
 	RefreshImpostors(threadID);
 }
@@ -6801,11 +6803,25 @@ void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D*
 
 	if (borderExpand == BORDEREXPAND_DISABLE)
 	{
-		device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
+		if (desc_dst.Format == RTFormat_hdr)
+		{
+			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4], threadID);
+		}
+		else
+		{
+			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
+		}
 	}
 	else
 	{
-		device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
+		if (desc_dst.Format == RTFormat_hdr)
+		{
+			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], threadID);
+		}
+		else
+		{
+			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
+		}
 	}
 
 	CopyTextureCB cb;
@@ -7502,180 +7518,67 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	}
 }
 
-void ManageGlobalLightmapAtlas(GRAPHICSTHREAD threadID)
+unordered_map<Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
+void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-
-	static Texture2D* atlasTexture = nullptr;
-	bool repackAtlas = false;
-	const int atlasClampBorder = 1;
-
-	using namespace wiRectPacker;
-	static unordered_map<Texture2D*, rect_xywh> storedTextures;
-
 	Scene& scene = GetScene();
-
-	// Gather all object lightmap textures:
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		ObjectComponent& object = scene.objects[i];
-
-		if (!object.lightmapTextureData.empty())
-		{
-			if (object.lightmap == nullptr)
-			{
-				// Also create a GPU-side per object lighmap, so that copying into atlas can be done efficiently:
-				wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, 4, FORMAT_R8G8B8A8_UNORM);
-			}
-
-			if (storedTextures.find(object.lightmap) == storedTextures.end())
-			{
-				// we need to pack this lightmap texture into the atlas
-				rect_xywh newRect = rect_xywh(0, 0, object.lightmap->GetDesc().Width + atlasClampBorder * 2, object.lightmap->GetDesc().Height + atlasClampBorder * 2);
-				storedTextures[object.lightmap] = newRect;
-
-				repackAtlas = true;
-			}
-		}
-
-	}
-
-	// Update atlas texture if it is invalidated:
-	if (repackAtlas)
-	{
-		rect_xywh** out_rects = new rect_xywh*[storedTextures.size()];
-		int i = 0;
-		for (auto& it : storedTextures)
-		{
-			out_rects[i] = &it.second;
-			i++;
-		}
-
-		std::vector<bin> bins;
-		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
-		{
-			assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-			SAFE_DELETE(atlasTexture);
-
-			TextureDesc desc;
-			ZeroMemory(&desc, sizeof(desc));
-			desc.Width = (UINT)bins[0].size.w;
-			desc.Height = (UINT)bins[0].size.h;
-			desc.MipLevels = 0;
-			desc.ArraySize = 1;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
-			desc.Usage = USAGE_DEFAULT;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-
-			atlasTexture = new Texture2D;
-			atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-
-			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
-
-			for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
-			{
-				for (auto& it : storedTextures)
-				{
-					if (mip < it.first->GetDesc().MipLevels)
-					{
-						CopyTexture2D(atlasTexture, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
-					}
-				}
-			}
-		}
-		else
-		{
-			wiBackLog::post("Global Lightmap atlas packing failed!");
-		}
-
-		SAFE_DELETE_ARRAY(out_rects);
-	}
-
-	// Assign atlas buckets to objects:
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		ObjectComponent& object = scene.objects[i];
-
-		if (object.lightmap != nullptr)
-		{
-			const TextureDesc& desc = atlasTexture->GetDesc();
-
-			rect_xywh rect = storedTextures[object.lightmap];
-
-			// eliminate border expansion:
-			rect.x += atlasClampBorder;
-			rect.y += atlasClampBorder;
-			rect.w -= atlasClampBorder * 2;
-			rect.h -= atlasClampBorder * 2;
-
-			object.globalLightMapMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-		}
-		else
-		{
-			object.globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-		}
-
-	}
-
-	if (atlasTexture != nullptr)
-	{
-		device->BindResource(PS, atlasTexture, TEXSLOT_GLOBALLIGHTMAP, threadID);
-	}
-	else
-	{
-		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_GLOBALLIGHTMAP, threadID);
-	}
-}
-
-void RenderObjectLightMap(ObjectComponent& object, GRAPHICSTHREAD threadID)
-{
-	// because we will wait for GPU to finish at the end (to be able to download the baking results), it must be done on the main thread.
-	assert(threadID == GRAPHICSTHREAD_IMMEDIATE);
-
-	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene();
+	HRESULT hr;
 
 	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 	assert(!mesh.vertex_atlas.empty());
 	assert(mesh.vertexBuffer_ATL != nullptr);
 
-	UpdatePerFrameData(0);
-	BindPersistentState(threadID);
-
-	BuildSceneBVH(threadID);
-	TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
-
-	GPUResource* res[] = {
-		tracedSceneParams.materialBuffer,
-	};
-	device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-	if (tracedSceneParams.materialAtlas != nullptr)
+	if (updateBVHAndScene)
 	{
-		device->BindResource(PS, tracedSceneParams.materialAtlas, TEXSLOT_ONDEMAND8, threadID);
+		BuildSceneBVH(threadID);
+		TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
+
+		GPUResource* res[] = {
+			tracedSceneParams.materialBuffer,
+		};
+		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+
+		if (tracedSceneParams.materialAtlas != nullptr)
+		{
+			device->BindResource(PS, tracedSceneParams.materialAtlas, TEXSLOT_ONDEMAND8, threadID);
+		}
+		else
+		{
+			device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND8, threadID);
+		}
+		sceneBVH.Bind(PS, threadID);
+	}
+
+	if (object.lightmap != nullptr)
+	{
+		packedLightmaps.erase(object.lightmap);
+	}
+
+	TextureDesc desc;
+	if (object.lightmapIterationCount == 0)
+	{
+		SAFE_DELETE(object.lightmap);
+		desc.Width = object.lightmapWidth;
+		desc.Height = object.lightmapHeight;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		// Note: we need the full precision format to achieve correct accumulative blending! But the atlas will be half, so not a huge deal
+		desc.Format = FORMAT_R32G32B32A32_FLOAT;
+		hr = device->CreateTexture2D(&desc, nullptr, &object.lightmap);
+		assert(SUCCEEDED(hr));
 	}
 	else
 	{
-		device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND8, threadID);
+		desc = object.lightmap->GetDesc();
 	}
-	sceneBVH.Bind(PS, threadID);
 
-	TextureDesc desc;
-	desc.Width = object.lightmapWidth;
-	desc.Height = object.lightmapHeight;
-	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-	desc.Format = FORMAT_R8G8B8A8_UNORM;
-	SAFE_DELETE(object.lightmap);
-	device->CreateTexture2D(&desc, nullptr, &object.lightmap);
 	device->BindRenderTargets(1, &object.lightmap, nullptr, threadID);
 
-	float clearColor[4] = { 0,0,0,1 };
-	device->ClearRenderTarget(object.lightmap, clearColor, threadID);
+	if (object.lightmapIterationCount == 0)
+	{
+		float clearColor[4] = { 0,0,0,1 };
+		device->ClearRenderTarget(object.lightmap, clearColor, threadID);
+	}
 
 	ViewPort vp;
 	vp.Width = (float)desc.Width;
@@ -7710,35 +7613,171 @@ void RenderObjectLightMap(ObjectComponent& object, GRAPHICSTHREAD threadID)
 	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
 
+	MiscCB cb;
+	cb.g_xColor = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
+	cb.g_xColor.x = (cb.g_xColor.x * 2 - 1) / vp.Width;
+	cb.g_xColor.y = (cb.g_xColor.y * 2 - 1) / vp.Height;
+	cb.g_xColor.z = (float)wiRandom::getRandom(1, 1000000); // random seed
+	cb.g_xColor.w = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+	device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+
+	object.lightmapIterationCount++;
 
 	device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
+}
+void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
 
-	// Now download the rendered lightmap from GPU and store it inside the object:
+	static Texture2D* atlasTexture = nullptr;
+	bool repackAtlas = false;
+	const int atlasClampBorder = 1;
 
-	device->WaitForGPU();
+	using namespace wiRectPacker;
 
-	UINT data_count = desc.Width * desc.Height;
-	UINT data_stride = device->GetFormatStride(desc.Format);
-	UINT data_size = data_count * data_stride;
+	Scene& scene = GetScene();
 
-	object.lightmapTextureData.clear();
-	object.lightmapTextureData.resize(data_size);
+	uint32_t* refreshArray = nullptr;
+	uint32_t objects_to_refresh = 0;
 
-	Texture2D* stagingTex = nullptr;
-	TextureDesc staging_desc = desc;
-	staging_desc.Usage = USAGE_STAGING;
-	staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
-	staging_desc.BindFlags = 0;
-	staging_desc.MiscFlags = 0;
-	HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
-	assert(SUCCEEDED(hr));
+	// Gather all object lightmap textures:
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		ObjectComponent& object = scene.objects[i];
+		bool refresh = false;
 
-	bool download_success = device->DownloadResource(object.lightmap, stagingTex, object.lightmapTextureData.data(), GRAPHICSTHREAD_IMMEDIATE);
-	assert(download_success);
+		if (object.IsLightmapRenderRequested())
+		{
+			refresh = true;
+			bool updateBVHAndScene = objects_to_refresh > 0 ? false : true;
+			RenderObjectLightMap(object, updateBVHAndScene, threadID);
+		}
 
-	delete stagingTex;
+		if (!object.lightmapTextureData.empty() && object.lightmap == nullptr)
+		{
+			refresh = true;
+			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
+			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, RTFormat_hdr);
+		}
+
+		if (object.lightmap != nullptr)
+		{
+			if (packedLightmaps.find(object.lightmap) == packedLightmaps.end())
+			{
+				// we need to pack this lightmap texture into the atlas
+				rect_xywh newRect = rect_xywh(0, 0, object.lightmap->GetDesc().Width + atlasClampBorder * 2, object.lightmap->GetDesc().Height + atlasClampBorder * 2);
+				packedLightmaps[object.lightmap] = newRect;
+
+				repackAtlas = true;
+				refresh = true;
+			}
+		}
+
+		if (refresh)
+		{
+			// Push a new object whose lightmap should be copied over to the atlas:
+			uint32_t* object_index = (uint32_t*)frameAllocators[threadID].allocate(sizeof(uint32_t));
+			*object_index = (uint32_t)i;
+			objects_to_refresh++;
+			if (refreshArray == nullptr)
+			{
+				refreshArray = object_index;
+			}
+		}
+
+	}
+
+	// Update atlas texture if it is invalidated:
+	if (repackAtlas)
+	{
+		rect_xywh** out_rects = new rect_xywh*[packedLightmaps.size()];
+		int i = 0;
+		for (auto& it : packedLightmaps)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects, (int)packedLightmaps.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+			SAFE_DELETE(atlasTexture);
+
+			TextureDesc desc;
+			ZeroMemory(&desc, sizeof(desc));
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = RTFormat_hdr;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+		}
+		else
+		{
+			wiBackLog::post("Global Lightmap atlas packing failed!");
+		}
+
+		SAFE_DELETE_ARRAY(out_rects);
+	}
+
+	for (uint32_t i = 0; i < objects_to_refresh; ++i)
+	{
+		uint32_t ind = refreshArray[i];
+		const ObjectComponent& object = scene.objects[ind];
+		auto& rec = packedLightmaps.at(object.lightmap);
+		CopyTexture2D(atlasTexture, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID, BORDEREXPAND_CLAMP);
+	}
+
+	// Assign atlas buckets to objects:
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		ObjectComponent& object = scene.objects[i];
+
+		if (object.lightmap != nullptr)
+		{
+			const TextureDesc& desc = atlasTexture->GetDesc();
+
+			rect_xywh rect = packedLightmaps[object.lightmap];
+
+			// eliminate border expansion:
+			rect.x += atlasClampBorder;
+			rect.y += atlasClampBorder;
+			rect.w -= atlasClampBorder * 2;
+			rect.h -= atlasClampBorder * 2;
+
+			object.globalLightMapMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+		}
+		else
+		{
+			object.globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+		}
+
+	}
+
+	if (atlasTexture != nullptr)
+	{
+		device->BindResource(PS, atlasTexture, TEXSLOT_GLOBALLIGHTMAP, threadID);
+	}
+	else
+	{
+		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_GLOBALLIGHTMAP, threadID);
+	}
+
+	if (objects_to_refresh > 0)
+	{
+		frameAllocators[threadID].free(sizeof(uint32_t) * objects_to_refresh);
+	}
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)

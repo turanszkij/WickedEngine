@@ -602,7 +602,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #ifndef ENVMAPRENDERING
 	float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, input.atl, 0);
 	diffuse += lightmap.rgb;
-	ao *= lightmap.a;
+	//ao *= lightmap.a;
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 

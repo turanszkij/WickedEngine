@@ -822,6 +822,12 @@
     <FxCompile Include="renderlightmapPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="copytexture2D_float4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="copytexture2D_float4_borderexpandCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

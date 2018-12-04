@@ -69,7 +69,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	objectWindow = new wiWindow(GUI, "Object Window");
-	objectWindow->SetSize(XMFLOAT2(600, 480));
+	objectWindow->SetSize(XMFLOAT2(600, 500));
 	objectWindow->SetEnabled(false);
 	GUI->AddWidget(objectWindow);
 
@@ -255,7 +255,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 
 	generateLightmapButton = new wiButton("Generate Lightmap");
-	generateLightmapButton->SetTooltip("Toggle kinematic behaviour.");
+	generateLightmapButton->SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
 	generateLightmapButton->SetPos(XMFLOAT2(x, y += 30));
 	generateLightmapButton->SetSize(XMFLOAT2(140,30));
 	generateLightmapButton->OnClick([&](wiEventArgs args) {
@@ -420,7 +420,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 				//	}
 				//}
 
-				wiRenderer::RenderObjectLightMap(*objectcomponent, GRAPHICSTHREAD_IMMEDIATE);
+				objectcomponent->ClearLightmap();
+				objectcomponent->SetLightmapRenderRequest(true);
 
 			}
 		}
@@ -428,6 +429,23 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 	});
 	objectWindow->AddWidget(generateLightmapButton);
+
+	stopLightmapGenButton = new wiButton("Stop Lightmap Gen");
+	stopLightmapGenButton->SetTooltip("Stop the lightmap rendering and save the lightmap.");
+	stopLightmapGenButton->SetPos(XMFLOAT2(x, y += 30));
+	stopLightmapGenButton->SetSize(XMFLOAT2(140, 30));
+	stopLightmapGenButton->OnClick([&](wiEventArgs args) {
+
+		Scene& scene = wiRenderer::GetScene();
+		ObjectComponent* objectcomponent = scene.objects.GetComponent(entity);
+		if (objectcomponent != nullptr)
+		{
+			objectcomponent->SetLightmapRenderRequest(false);
+			objectcomponent->SaveLightmap();
+		}
+
+	});
+	objectWindow->AddWidget(stopLightmapGenButton);
 
 
 
