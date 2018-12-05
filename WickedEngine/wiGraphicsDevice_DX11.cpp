@@ -3058,6 +3058,7 @@ void GraphicsDevice_DX11::PresentEnd()
 	memset(prev_hs, 0, sizeof(prev_hs));
 	memset(prev_ds, 0, sizeof(prev_ds));
 	memset(prev_gs, 0, sizeof(prev_gs));
+	memset(prev_cs, 0, sizeof(prev_cs));
 	memset(prev_blendfactor, 0, sizeof(prev_blendfactor));
 	memset(prev_samplemask, 0, sizeof(prev_samplemask));
 	memset(prev_bs, 0, sizeof(prev_bs));
@@ -3581,7 +3582,6 @@ void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadI
 {
 	const ComputePSODesc& desc = pso != nullptr ? pso->GetDesc() : ComputePSODesc();
 
-	static ID3D11ComputeShader* prev_cs[GRAPHICSTHREAD_COUNT] = {};
 	ID3D11ComputeShader* cs = desc.cs == nullptr ? nullptr : (ID3D11ComputeShader*)desc.cs->resource;
 	if (cs != prev_cs[threadID])
 	{

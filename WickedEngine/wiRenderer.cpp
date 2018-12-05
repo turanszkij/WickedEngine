@@ -432,6 +432,7 @@ void ReloadShaders(const std::string& path)
 	CSFFT_512x512_Data_t::LoadShaders();
 	wiWidget::LoadShaders();
 	wiGPUSortLib::LoadShaders();
+	wiGPUBVH::LoadShaders();
 }
 
 Scene& GetScene()
@@ -7617,7 +7618,7 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	cb.g_xColor = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
 	cb.g_xColor.x = (cb.g_xColor.x * 2 - 1) / vp.Width;
 	cb.g_xColor.y = (cb.g_xColor.y * 2 - 1) / vp.Height;
-	cb.g_xColor.z = (float)wiRandom::getRandom(1, 1000000); // random seed
+	cb.g_xColor.z = renderTime; // random seed
 	cb.g_xColor.w = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
@@ -7659,7 +7660,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		{
 			refresh = true;
 			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, RTFormat_hdr);
+			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, FORMAT_R32G32B32A32_FLOAT);
 		}
 
 		if (object.lightmap != nullptr)

@@ -768,6 +768,8 @@ namespace wiSceneSystem
 		UINT data_stride = device->GetFormatStride(desc.Format);
 		UINT data_size = data_count * data_stride;
 
+		lightmapWidth = desc.Width;
+		lightmapHeight = desc.Height;
 		lightmapTextureData.clear();
 		lightmapTextureData.resize(data_size);
 

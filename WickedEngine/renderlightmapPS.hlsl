@@ -20,7 +20,7 @@ float4 main(Input input) : SV_TARGET
 	Ray ray = CreateRay(input.pos3D + N * EPSILON, direction);
 
 	const uint bounces = 4;
-	for (uint i = 0; i < bounces; ++i)
+	for (uint i = 0; i < bounces && any(ray.energy); ++i)
 	{
 		RayHit hit = TraceScene(ray);
 		result += ray.energy * Shade(ray, hit, seed, uv);

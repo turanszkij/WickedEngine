@@ -32,6 +32,7 @@ namespace wiGraphicsTypes
 		ID3D11HullShader* prev_hs[GRAPHICSTHREAD_COUNT] = {};
 		ID3D11DomainShader* prev_ds[GRAPHICSTHREAD_COUNT] = {};
 		ID3D11GeometryShader* prev_gs[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11ComputeShader* prev_cs[GRAPHICSTHREAD_COUNT] = {};
 		XMFLOAT4 prev_blendfactor[GRAPHICSTHREAD_COUNT] = {};
 		UINT prev_samplemask[GRAPHICSTHREAD_COUNT] = {};
 		ID3D11BlendState* prev_bs[GRAPHICSTHREAD_COUNT] = {};
