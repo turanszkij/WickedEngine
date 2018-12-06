@@ -201,7 +201,6 @@ namespace wiTextureHelper
 		SAFE_DELETE(texture);
 
 		TextureDesc textureDesc;
-		ZeroMemory(&textureDesc, sizeof(textureDesc));
 		textureDesc.Width = width;
 		textureDesc.Height = height;
 		textureDesc.MipLevels = 1;
@@ -215,9 +214,8 @@ namespace wiTextureHelper
 		textureDesc.MiscFlags = 0;
 
 		SubresourceData InitData;
-		ZeroMemory(&InitData, sizeof(InitData));
 		InitData.pSysMem = data;
-		InitData.SysMemPitch = static_cast<UINT>(width * device->GetFormatStride(format));
+		InitData.SysMemPitch = width * device->GetFormatStride(format);
 
 		HRESULT hr;
 		hr = device->CreateTexture2D(&textureDesc, &InitData, &texture);

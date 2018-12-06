@@ -7660,7 +7660,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		{
 			refresh = true;
 			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, FORMAT_R32G32B32A32_FLOAT);
+			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
 		}
 
 		if (object.lightmap != nullptr)

@@ -454,6 +454,7 @@ namespace wiSceneSystem
 
 		void ClearLightmap();
 		void SaveLightmap();
+		wiGraphicsTypes::FORMAT GetLightmapFormat();
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};

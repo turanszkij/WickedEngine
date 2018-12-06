@@ -787,6 +787,19 @@ namespace wiSceneSystem
 
 		delete stagingTex;
 	}
+	FORMAT ObjectComponent::GetLightmapFormat()
+	{
+		uint32_t stride = lightmapTextureData.size() / lightmapWidth / lightmapHeight;
+
+		switch (stride)
+		{
+		case 4: return FORMAT_R8G8B8A8_UNORM;
+		case 8: return FORMAT_R16G16B16A16_FLOAT;
+		case 16: return FORMAT_R32G32B32A32_FLOAT;
+		}
+
+		return FORMAT_UNKNOWN;
+	}
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{

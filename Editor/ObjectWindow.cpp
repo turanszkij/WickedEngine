@@ -251,6 +251,10 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	lightmapResolutionSlider->SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
 	lightmapResolutionSlider->SetSize(XMFLOAT2(100, 30));
 	lightmapResolutionSlider->SetPos(XMFLOAT2(x, y += 30));
+	lightmapResolutionSlider->OnSlide([&](wiEventArgs args) {
+		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
+		lightmapResolutionSlider->SetValue(float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
+	});
 	objectWindow->AddWidget(lightmapResolutionSlider);
 
 
