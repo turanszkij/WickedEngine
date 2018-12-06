@@ -83,6 +83,11 @@ struct RayHit
 	float3 position;
 	uint primitiveID;
 	float2 bary;
+
+	// these will only be filled when bestHit is determined to avoid recomputing them for every intersection:
+	float3 N;
+	float2 UV;
+	uint materialIndex;
 };
 
 inline RayHit CreateRayHit()
@@ -92,9 +97,10 @@ inline RayHit CreateRayHit()
 	hit.position = float3(0.0f, 0.0f, 0.0f);
 	hit.primitiveID = 0xFFFFFFFF;
 	hit.bary = 0;
-	//hit.normal = float3(0.0f, 0.0f, 0.0f);
-	//hit.materialIndex = 0;
-	//hit.texCoords = 0;
+
+	hit.N = 0;
+	hit.UV = 0;
+	hit.materialIndex = 0;
 
 	return hit;
 }

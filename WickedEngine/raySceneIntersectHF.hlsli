@@ -201,7 +201,11 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	return shadow;
 }
 
-inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel)
+// This will modify ray to continue the trace
+//	Also fill the final params of rayHit, such as normal, uv, materialIndex
+//	seed should be > 0
+//	pixel should be normalized uv coordinates of the ray start position (used to randomize)
+inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2 pixel)
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
@@ -211,17 +215,16 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 		float v = hit.bary.y;
 		float w = 1 - u - v;
 
-		float3 N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
-		float2 UV = tri.t0 * w + tri.t1 * u + tri.t2 * v;
+		hit.N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
+		hit.UV = tri.t0 * w + tri.t1 * u + tri.t2 * v;
+		hit.materialIndex = tri.materialIndex;
 
-		uint materialIndex = tri.materialIndex;
+		TracedRenderingMaterial mat = materialBuffer[hit.materialIndex];
 
-		TracedRenderingMaterial mat = materialBuffer[materialIndex];
-
-		UV = frac(UV); // emulate wrap
-		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
-		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
-		float4 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.normalMapAtlasMulAdd.xy + mat.normalMapAtlasMulAdd.zw, 0);
+		hit.UV = frac(hit.UV); // emulate wrap
+		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, hit.UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
+		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, hit.UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
+		float4 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, hit.UV * mat.normalMapAtlasMulAdd.xy + mat.normalMapAtlasMulAdd.zw, 0);
 
 		float4 baseColor = DEGAMMA(mat.baseColor * baseColorMap);
 		float reflectance = mat.reflectance * surfaceMap.r;
@@ -249,18 +252,18 @@ inline float3 Shade(inout Ray ray, RayHit hit, inout float seed, in float2 pixel
 			// Specular reflection
 			//float alpha = 150.0f;
 			float alpha = sqr(1 - roughness) * 1000;
-			ray.direction = SampleHemisphere(reflect(ray.direction, N), alpha, seed, pixel);
+			ray.direction = SampleHemisphere(reflect(ray.direction, hit.N), alpha, seed, pixel);
 			float f = (alpha + 2) / (alpha + 1);
-			ray.energy *= (1.0f / specChance) * specular * saturate(dot(N, ray.direction) * f);
+			ray.energy *= (1.0f / specChance) * specular * saturate(dot(hit.N, ray.direction) * f);
 		}
 		else
 		{
 			// Diffuse reflection
-			ray.direction = SampleHemisphere(N, 1.0f, seed, pixel);
+			ray.direction = SampleHemisphere(hit.N, 1.0f, seed, pixel);
 			ray.energy *= (1.0f / diffChance) * albedo;
 		}
 
-		ray.origin = hit.position + N * EPSILON;
+		ray.origin = hit.position + ray.direction * EPSILON;
 		ray.primitiveID = hit.primitiveID;
 		ray.bary = hit.bary;
 
