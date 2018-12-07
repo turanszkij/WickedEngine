@@ -91,6 +91,7 @@ bool requestReflectionRendering = false;
 bool advancedLightCulling = true;
 bool advancedRefractions = false;
 bool ldsSkinningEnabled = true;
+bool scene_bvh_invalid = true;
 float SPECULARAA = 0.0f;
 float renderTime = 0;
 float renderTime_Prev = 0;
@@ -6964,31 +6965,11 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 		SAFE_DELETE_ARRAY(out_rects);
 	}
 
-	static TracedRenderingMaterial materialArray[1000] = {}; // todo realloc!
-	static GPUBuffer* materialBuffer = nullptr;
-
-	if (materialBuffer == nullptr)
-	{
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		SAFE_DELETE(materialBuffer);
-		materialBuffer = new GPUBuffer;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
-		desc.ByteWidth = desc.StructureByteStride * ARRAYSIZE(materialArray);
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
-		assert(SUCCEEDED(hr));
-	}
+	static std::vector<TracedRenderingMaterial> materialArray;
+	materialArray.clear();
 
 	// Pre-gather scene properties:
 	uint32_t totalTriangles = 0;
-	uint32_t totalMaterials = 0;
 	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 	{
 		const ObjectComponent& object = scene.objects[i];
@@ -7003,17 +6984,19 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 			{
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
+				TracedRenderingMaterial global_material;
+
 				// Copy base params:
-				materialArray[totalMaterials].baseColor = material.baseColor;
-				materialArray[totalMaterials].texMulAdd = material.texMulAdd;
-				materialArray[totalMaterials].roughness = material.roughness;
-				materialArray[totalMaterials].reflectance = material.reflectance;
-				materialArray[totalMaterials].metalness = material.metalness;
-				materialArray[totalMaterials].emissive = material.emissive;
-				materialArray[totalMaterials].refractionIndex = material.refractionIndex;
-				materialArray[totalMaterials].subsurfaceScattering = material.subsurfaceScattering;
-				materialArray[totalMaterials].normalMapStrength = material.normalMapStrength;
-				materialArray[totalMaterials].parallaxOcclusionMapping = material.parallaxOcclusionMapping;
+				global_material.baseColor = material.baseColor;
+				global_material.texMulAdd = material.texMulAdd;
+				global_material.roughness = material.roughness;
+				global_material.reflectance = material.reflectance;
+				global_material.metalness = material.metalness;
+				global_material.emissive = material.emissive;
+				global_material.refractionIndex = material.refractionIndex;
+				global_material.subsurfaceScattering = material.subsurfaceScattering;
+				global_material.normalMapStrength = material.normalMapStrength;
+				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
 				// Add extended properties:
 				const TextureDesc& desc = atlasTexture->GetDesc();
@@ -7033,7 +7016,7 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 				rect.y += atlasWrapBorder;
 				rect.w -= atlasWrapBorder * 2;
 				rect.h -= atlasWrapBorder * 2;
-				materialArray[totalMaterials].baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+				global_material.baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
 					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 
@@ -7051,7 +7034,7 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 				rect.y += atlasWrapBorder;
 				rect.w -= atlasWrapBorder * 2;
 				rect.h -= atlasWrapBorder * 2;
-				materialArray[totalMaterials].surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+				global_material.surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
 					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 
@@ -7070,19 +7053,38 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 				rect.y += atlasWrapBorder;
 				rect.w -= atlasWrapBorder * 2;
 				rect.h -= atlasWrapBorder * 2;
-				materialArray[totalMaterials].normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+				global_material.normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
 					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
-
-				totalMaterials++;
+				materialArray.push_back(global_material);
 			}
 		}
 	}
-	device->UpdateBuffer(materialBuffer, materialArray, threadID, sizeof(TracedRenderingMaterial) * totalMaterials);
+
+	static GPUBuffer* materialBuffer = nullptr;
+	if (materialBuffer == nullptr || materialBuffer->GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		SAFE_DELETE(materialBuffer);
+		materialBuffer = new GPUBuffer;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
+		desc.ByteWidth = desc.StructureByteStride * (UINT)materialArray.size();
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+		assert(SUCCEEDED(hr));
+	}
+	device->UpdateBuffer(materialBuffer, materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
 
 	TracedSceneParams result;
 	result.triangleCount = totalTriangles;
-	result.materialCount = totalMaterials;
+	result.materialCount = (uint)materialArray.size();
 	result.materialBuffer = materialBuffer;
 	result.materialAtlas = atlasTexture;
 
@@ -7532,7 +7534,11 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 
 	if (updateBVHAndScene)
 	{
-		BuildSceneBVH(threadID);
+		if (scene_bvh_invalid)
+		{
+			scene_bvh_invalid = false;
+			BuildSceneBVH(threadID);
+		}
 		TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
 
 		GPUResource* res[] = {
@@ -8404,5 +8410,6 @@ void SetOceanEnabled(bool enabled)
 	}
 }
 bool GetOceanEnabled() { return ocean != nullptr; }
+void InvalidateBVH() { scene_bvh_invalid = true; }
 
 }

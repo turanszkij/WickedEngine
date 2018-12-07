@@ -789,7 +789,7 @@ namespace wiSceneSystem
 	}
 	FORMAT ObjectComponent::GetLightmapFormat()
 	{
-		uint32_t stride = lightmapTextureData.size() / lightmapWidth / lightmapHeight;
+		uint32_t stride = (uint32_t)lightmapTextureData.size() / lightmapWidth / lightmapHeight;
 
 		switch (stride)
 		{

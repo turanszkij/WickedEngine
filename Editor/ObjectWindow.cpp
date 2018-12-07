@@ -426,6 +426,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 				objectcomponent->ClearLightmap();
 				objectcomponent->SetLightmapRenderRequest(true);
+				wiRenderer::InvalidateBVH();
 
 			}
 		}
