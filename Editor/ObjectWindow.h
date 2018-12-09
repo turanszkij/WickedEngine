@@ -33,6 +33,8 @@ public:
 	wiCheckBox* kinematicCheckBox;
 	wiComboBox*	collisionShapeComboBox;
 
+	wiButton*	generateAtlasButton;
+	wiButton*	clearLightmapButton;
 	wiSlider*	lightmapResolutionSlider;
 	wiButton*	generateLightmapButton;
 	wiButton*	stopLightmapGenButton;

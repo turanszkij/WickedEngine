@@ -750,8 +750,12 @@ namespace wiSceneSystem
 
 	void ObjectComponent::ClearLightmap()
 	{
+		lightmapWidth = 0;
+		lightmapHeight = 0;
+		globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 		lightmapIterationCount = 0; 
 		lightmapTextureData.clear();
+		SetLightmapRenderRequest(false);
 	}
 	void ObjectComponent::SaveLightmap()
 	{

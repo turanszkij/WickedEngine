@@ -69,7 +69,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	objectWindow = new wiWindow(GUI, "Object Window");
-	objectWindow->SetSize(XMFLOAT2(600, 500));
+	objectWindow->SetSize(XMFLOAT2(600, 520));
 	objectWindow->SetEnabled(false);
 	GUI->AddWidget(objectWindow);
 
@@ -253,10 +253,10 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	lightmapResolutionSlider->SetPos(XMFLOAT2(x, y += 30));
 	lightmapResolutionSlider->OnSlide([&](wiEventArgs args) {
 		// unfortunately, we must be pow2 with full float lightmap format, otherwise it could be unlimited (but accumulation blending would suffer then)
+		//	or at least for me, downloading the lightmap was glitching out when non-pow 2 and RGBA32_FLOAT format
 		lightmapResolutionSlider->SetValue(float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue)))); 
 	});
 	objectWindow->AddWidget(lightmapResolutionSlider);
-
 
 	generateLightmapButton = new wiButton("Generate Lightmap");
 	generateLightmapButton->SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
@@ -272,6 +272,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 			if (meshcomponent != nullptr)
 			{
+				objectcomponent->ClearLightmap();
+
 				xatlas::Atlas* atlas = xatlas::Create();
 
 				// Prepare mesh to be processed by xatlas:
@@ -311,6 +313,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 					objectcomponent->lightmapHeight = xatlas::GetHeight(atlas);
 					const xatlas::OutputMesh* mesh = xatlas::GetOutputMeshes(atlas)[0];
 
+					// Note: we must recreate all vertex buffers, because the index buffer will be different (the atlas could have removed shared vertices)
 					meshcomponent->indices.clear();
 					meshcomponent->indices.resize(mesh->indexCount);
 					std::vector<XMFLOAT3> positions(mesh->vertexCount);
@@ -341,7 +344,7 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 						boneweights.resize(mesh->vertexCount);
 					}
 
-					for (uint32_t j = 0; j < mesh->indexCount; ++j) 
+					for (uint32_t j = 0; j < mesh->indexCount; ++j)
 					{
 						const uint32_t ind = mesh->indexArray[j];
 						const xatlas::OutputVertex &v = mesh->vertexArray[ind];
@@ -424,7 +427,8 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 				//	}
 				//}
 
-				objectcomponent->ClearLightmap();
+				xatlas::Destroy(atlas);
+
 				objectcomponent->SetLightmapRenderRequest(true);
 				wiRenderer::InvalidateBVH();
 
@@ -451,6 +455,22 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 
 	});
 	objectWindow->AddWidget(stopLightmapGenButton);
+
+	clearLightmapButton = new wiButton("Clear Lightmap");
+	clearLightmapButton->SetTooltip("Clear the lightmap from this object.");
+	clearLightmapButton->SetPos(XMFLOAT2(x, y += 30));
+	clearLightmapButton->SetSize(XMFLOAT2(140, 30));
+	clearLightmapButton->OnClick([&](wiEventArgs args) {
+
+		Scene& scene = wiRenderer::GetScene();
+		ObjectComponent* objectcomponent = scene.objects.GetComponent(entity);
+		if (objectcomponent != nullptr)
+		{
+			objectcomponent->ClearLightmap();
+		}
+
+	});
+	objectWindow->AddWidget(clearLightmapButton);
 
 
 

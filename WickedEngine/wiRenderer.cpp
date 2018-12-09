@@ -7655,6 +7655,16 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		ObjectComponent& object = scene.objects[i];
 		bool refresh = false;
 
+		if (object.lightmap != nullptr && object.lightmapWidth == 0)
+		{
+			// If we get here, it means that the lightmap GPU texture contains the rendered lightmap, but the CPU-side data was erased.
+			//	In this case, we delete the GPU side lightmap data from the object and the atlas too.
+			packedLightmaps.erase(object.lightmap);
+			SAFE_DELETE(object.lightmap);
+			repackAtlas = true;
+			refresh = false;
+		}
+
 		if (object.IsLightmapRenderRequested())
 		{
 			refresh = true;
@@ -7697,7 +7707,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 	}
 
 	// Update atlas texture if it is invalidated:
-	if (repackAtlas)
+	if (repackAtlas && !packedLightmaps.empty())
 	{
 		rect_xywh** out_rects = new rect_xywh*[packedLightmaps.size()];
 		int i = 0;
@@ -7743,7 +7753,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		uint32_t ind = refreshArray[i];
 		const ObjectComponent& object = scene.objects[ind];
 		auto& rec = packedLightmaps.at(object.lightmap);
-		CopyTexture2D(atlasTexture, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID, BORDEREXPAND_CLAMP);
+		CopyTexture2D(atlasTexture, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID);
 	}
 
 	// Assign atlas buckets to objects:
