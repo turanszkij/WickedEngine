@@ -143,7 +143,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	materialWnd.reset(new MaterialWindow(&GetGUI()));
 	postprocessWnd.reset(new PostprocessWindow(&GetGUI(), renderPath));
 	weatherWnd.reset(new WeatherWindow(&GetGUI()));
-	objectWnd.reset(new ObjectWindow(&GetGUI()));
+	objectWnd.reset(new ObjectWindow(this));
 	meshWnd.reset(new MeshWindow(&GetGUI()));
 	cameraWnd.reset(new CameraWindow(&GetGUI()));
 	rendererWnd.reset(new RendererWindow(&GetGUI(), renderPath));
