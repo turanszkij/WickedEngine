@@ -1,4 +1,5 @@
 #pragma once
+class EditorComponent;
 
 class wiGUI;
 class wiWindow;
@@ -11,9 +12,10 @@ class wiColorPicker;
 class ObjectWindow
 {
 public:
-	ObjectWindow(wiGUI* gui);
+	ObjectWindow(EditorComponent* editor);
 	~ObjectWindow();
 
+	EditorComponent* editor;
 	wiECS::Entity entity;
 	void SetEntity(wiECS::Entity entity);
 
@@ -33,10 +35,9 @@ public:
 	wiCheckBox* kinematicCheckBox;
 	wiComboBox*	collisionShapeComboBox;
 
-	wiButton*	generateAtlasButton;
-	wiButton*	clearLightmapButton;
 	wiSlider*	lightmapResolutionSlider;
 	wiButton*	generateLightmapButton;
 	wiButton*	stopLightmapGenButton;
+	wiButton*	clearLightmapButton;
 };
 

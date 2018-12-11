@@ -6856,20 +6856,15 @@ void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D*
 	device->EventEnd(threadID);
 }
 
-struct TracedSceneParams
-{
-	uint32_t triangleCount = 0;
-	uint32_t materialCount = 0;
-	GPUBuffer* materialBuffer = nullptr;
-	Texture2D* materialAtlas = nullptr;
-};
-TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
+
+// These will hold all materials in the scene, ready to be accessed randomly in shaders:
+GPUBuffer* globalMaterialBuffer = nullptr;
+Texture2D* globalMaterialAtlas = nullptr;
+void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
 
-	// Traced Scene Texture Atlas:
-	static Texture2D* atlasTexture = nullptr;
 	using namespace wiRectPacker;
 	static unordered_set<Texture2D*> sceneTextures;
 	if (sceneTextures.empty())
@@ -6934,7 +6929,7 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
-			SAFE_DELETE(atlasTexture);
+			SAFE_DELETE(globalMaterialAtlas);
 
 			TextureDesc desc;
 			ZeroMemory(&desc, sizeof(desc));
@@ -6950,11 +6945,11 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+			device->CreateTexture2D(&desc, nullptr, &globalMaterialAtlas);
 
 			for (auto& it : storedTextures)
 			{
-				CopyTexture2D(atlasTexture, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
+				CopyTexture2D(globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
 			}
 		}
 		else
@@ -6969,7 +6964,6 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 	materialArray.clear();
 
 	// Pre-gather scene properties:
-	uint32_t totalTriangles = 0;
 	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 	{
 		const ObjectComponent& object = scene.objects[i];
@@ -6977,8 +6971,6 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 		if (object.meshID != INVALID_ENTITY)
 		{
 			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			totalTriangles += (uint)mesh.indices.size() / 3;
 
 			for (auto& subset : mesh.subsets)
 			{
@@ -6999,7 +6991,7 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
 				// Add extended properties:
-				const TextureDesc& desc = atlasTexture->GetDesc();
+				const TextureDesc& desc = globalMaterialAtlas->GetDesc();
 				rect_xywh rect;
 
 
@@ -7061,14 +7053,13 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 		}
 	}
 
-	static GPUBuffer* materialBuffer = nullptr;
-	if (materialBuffer == nullptr || materialBuffer->GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())
+	if (globalMaterialBuffer == nullptr || globalMaterialBuffer->GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
 
-		SAFE_DELETE(materialBuffer);
-		materialBuffer = new GPUBuffer;
+		SAFE_DELETE(globalMaterialBuffer);
+		globalMaterialBuffer = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
@@ -7077,18 +7068,11 @@ TracedSceneParams PrepareTracedSceneResources(GRAPHICSTHREAD threadID)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, materialBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, globalMaterialBuffer);
 		assert(SUCCEEDED(hr));
 	}
-	device->UpdateBuffer(materialBuffer, materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
+	device->UpdateBuffer(globalMaterialBuffer, materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
 
-	TracedSceneParams result;
-	result.triangleCount = totalTriangles;
-	result.materialCount = (uint)materialArray.size();
-	result.materialBuffer = materialBuffer;
-	result.materialAtlas = atlasTexture;
-
-	return result;
 }
 void BuildSceneBVH(GRAPHICSTHREAD threadID)
 {
@@ -7175,7 +7159,7 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 		assert(SUCCEEDED(hr));
 	}
 
-	TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
+	UpdateGlobalMaterialResources(threadID);
 
 	// Begin raytrace
 
@@ -7185,7 +7169,6 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	TracedRenderingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceRandomSeed = renderTime;
-	cb.xTraceMeshTriangleCount = tracedSceneParams.triangleCount;
 
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 
@@ -7234,13 +7217,13 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	sceneBVH.Bind(CS, threadID);
 
 	GPUResource* res[] = {
-		tracedSceneParams.materialBuffer,
+		globalMaterialBuffer,
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-	if (tracedSceneParams.materialAtlas != nullptr)
+	if (globalMaterialAtlas != nullptr)
 	{
-		device->BindResource(CS, tracedSceneParams.materialAtlas, TEXSLOT_ONDEMAND8, threadID);
+		device->BindResource(CS, globalMaterialAtlas, TEXSLOT_ONDEMAND8, threadID);
 	}
 	else
 	{
@@ -7521,12 +7504,15 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	}
 }
 
+Texture2D* globalLightmap = nullptr;
 unordered_map<Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
 void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
 	HRESULT hr;
+
+	device->EventBegin("RenderObjectLightMap", threadID);
 
 	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 	assert(!mesh.vertex_atlas.empty());
@@ -7539,16 +7525,16 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 			scene_bvh_invalid = false;
 			BuildSceneBVH(threadID);
 		}
-		TracedSceneParams tracedSceneParams = PrepareTracedSceneResources(threadID);
+	UpdateGlobalMaterialResources(threadID);
 
 		GPUResource* res[] = {
-			tracedSceneParams.materialBuffer,
+			globalMaterialBuffer,
 		};
 		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		if (tracedSceneParams.materialAtlas != nullptr)
+		if (globalMaterialAtlas != nullptr)
 		{
-			device->BindResource(PS, tracedSceneParams.materialAtlas, TEXSLOT_ONDEMAND8, threadID);
+			device->BindResource(PS, globalMaterialAtlas, TEXSLOT_ONDEMAND8, threadID);
 		}
 		else
 		{
@@ -7557,14 +7543,13 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 		sceneBVH.Bind(PS, threadID);
 	}
 
-	if (object.lightmap != nullptr)
-	{
-		packedLightmaps.erase(object.lightmap);
-	}
-
 	TextureDesc desc;
 	if (object.lightmapIterationCount == 0)
 	{
+		if (object.lightmap != nullptr)
+		{
+			packedLightmaps.erase(object.lightmap);
+		}
 		SAFE_DELETE(object.lightmap);
 		desc.Width = object.lightmapWidth;
 		desc.Height = object.lightmapHeight;
@@ -7583,7 +7568,7 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 
 	if (object.lightmapIterationCount == 0)
 	{
-		float clearColor[4] = { 0,0,0,1 };
+		float clearColor[4] = { 0,0,0,0 };
 		device->ClearRenderTarget(object.lightmap, clearColor, threadID);
 	}
 
@@ -7620,25 +7605,30 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
 
-	MiscCB cb;
-	cb.g_xColor = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
-	cb.g_xColor.x = (cb.g_xColor.x * 2 - 1) / vp.Width;
-	cb.g_xColor.y = (cb.g_xColor.y * 2 - 1) / vp.Height;
-	cb.g_xColor.z = renderTime; // random seed
-	cb.g_xColor.w = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
-	device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+	TracedRenderingCB cb;
+	XMFLOAT4 halton = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
+	cb.xTracePixelOffset.x = (halton.x * 2 - 1) / vp.Width;
+	cb.xTracePixelOffset.y = (halton.y * 2 - 1) / vp.Height;
+	cb.xTraceRandomSeed = renderTime; // random seed
+	cb.xTraceUserData = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+
 	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
 
 	object.lightmapIterationCount++;
 
 	device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
+	device->EventEnd(threadID);
 }
 void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static Texture2D* atlasTexture = nullptr;
+	wiProfiler::BeginRange("Lightmap Processing", wiProfiler::DOMAIN_GPU, threadID);
+
 	bool repackAtlas = false;
 	const int atlasClampBorder = 1;
 
@@ -7722,7 +7712,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
-			SAFE_DELETE(atlasTexture);
+			SAFE_DELETE(globalLightmap);
 
 			TextureDesc desc;
 			ZeroMemory(&desc, sizeof(desc));
@@ -7738,7 +7728,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+			device->CreateTexture2D(&desc, nullptr, &globalLightmap);
 		}
 		else
 		{
@@ -7748,53 +7738,79 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		SAFE_DELETE_ARRAY(out_rects);
 	}
 
-	for (uint32_t i = 0; i < objects_to_refresh; ++i)
+	if (!packedLightmaps.empty())
 	{
-		uint32_t ind = refreshArray[i];
-		const ObjectComponent& object = scene.objects[ind];
-		auto& rec = packedLightmaps.at(object.lightmap);
-		CopyTexture2D(atlasTexture, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID);
-	}
-
-	// Assign atlas buckets to objects:
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		ObjectComponent& object = scene.objects[i];
-
-		if (object.lightmap != nullptr)
+		device->EventBegin("PackGlobalLightmap", threadID);
+		if (repackAtlas)
 		{
-			const TextureDesc& desc = atlasTexture->GetDesc();
-
-			rect_xywh rect = packedLightmaps[object.lightmap];
-
-			// eliminate border expansion:
-			rect.x += atlasClampBorder;
-			rect.y += atlasClampBorder;
-			rect.w -= atlasClampBorder * 2;
-			rect.h -= atlasClampBorder * 2;
-
-			object.globalLightMapMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+			// If atlas was repacked, we copy every object lightmap:
+			for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+			{
+				const ObjectComponent& object = scene.objects[i];
+				if (object.lightmap != nullptr)
+				{
+					auto& rec = packedLightmaps.at(object.lightmap);
+					CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID);
+				}
+			}
 		}
 		else
 		{
-			object.globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+			// If atlas was not repacked, we only copy refreshed object lightmaps:
+			for (uint32_t i = 0; i < objects_to_refresh; ++i)
+			{
+				uint32_t ind = refreshArray[i];
+				const ObjectComponent& object = scene.objects[ind];
+				auto& rec = packedLightmaps.at(object.lightmap);
+				CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID);
+			}
+		}
+		device->EventEnd(threadID);
+
+		// Assign atlas buckets to objects:
+		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		{
+			ObjectComponent& object = scene.objects[i];
+
+			if (object.lightmap != nullptr)
+			{
+				const TextureDesc& desc = globalLightmap->GetDesc();
+
+				rect_xywh rect = packedLightmaps[object.lightmap];
+
+				// eliminate border expansion:
+				rect.x += atlasClampBorder;
+				rect.y += atlasClampBorder;
+				rect.w -= atlasClampBorder * 2;
+				rect.h -= atlasClampBorder * 2;
+
+				object.globalLightMapMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+			}
+			else
+			{
+				object.globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+			}
 		}
 
 	}
 
-	if (atlasTexture != nullptr)
-	{
-		device->BindResource(PS, atlasTexture, TEXSLOT_GLOBALLIGHTMAP, threadID);
-	}
-	else
-	{
-		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_GLOBALLIGHTMAP, threadID);
-	}
+	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
 
 	if (objects_to_refresh > 0)
 	{
 		frameAllocators[threadID].free(sizeof(uint32_t) * objects_to_refresh);
 	}
+
+	wiProfiler::EndRange(threadID);
+}
+
+Texture2D* GetGlobalLightmap()
+{
+	if (globalLightmap == nullptr)
+	{
+		return wiTextureHelper::getTransparent();
+	}
+	return globalLightmap;
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)

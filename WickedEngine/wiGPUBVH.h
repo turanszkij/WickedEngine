@@ -19,6 +19,8 @@ private:
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterOffsetBuffer;
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterAABBBuffer;
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterConeBuffer;
+	uint32_t maxTriangleCount = 0;
+	uint32_t maxClusterCount = 0;
 
 public:
 	wiGPUBVH();

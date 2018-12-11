@@ -56,15 +56,17 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 	// Pre-gather scene properties:
 	uint totalTriangles = 0;
-	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 	{
-		const MeshComponent& mesh = scene.meshes[i];
+		const ObjectComponent& object = scene.objects[i];
 
-		totalTriangles += (uint)mesh.indices.size() / 3;
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			totalTriangles += (uint)mesh.indices.size() / 3;
+		}
 	}
-
-	static uint maxTriangleCount = 0;
-	static uint maxClusterCount = 0;
 
 	if (totalTriangles > maxTriangleCount)
 	{

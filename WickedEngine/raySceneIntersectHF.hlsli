@@ -3,6 +3,10 @@
 #include "globals.hlsli"
 #include "tracedRenderingHF.hlsli"
 
+#ifndef RAYTRACE_STACKSIZE
+#define RAYTRACE_STACKSIZE 32
+#endif // RAYTRACE_STACKSIZE
+
 STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND1);
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND2);
@@ -21,8 +25,7 @@ inline RayHit TraceScene(Ray ray)
 	// Using BVH acceleration structure:
 
 	// Emulated stack for tree traversal:
-	const uint stacksize = 32;
-	uint stack[stacksize];
+	uint stack[RAYTRACE_STACKSIZE];
 	uint stackpos = 0;
 
 	const uint clusterCount = clusterCounterBuffer.Load(0);
@@ -32,11 +35,13 @@ inline RayHit TraceScene(Ray ray)
 	stack[stackpos] = 0;
 	stackpos++;
 
-	uint k = 0;
+	uint exit_condition = 0;
 	do {
-		k++;
-		if (k > 256)
-			return bestHit;
+#ifdef RAYTRACE_EXIT
+		if (exit_condition > RAYTRACE_EXIT)
+			break;
+		exit_condition++;
+#endif // RAYTRACE_EXIT
 
 		// pop untraversed node
 		stackpos--;
@@ -82,7 +87,7 @@ inline RayHit TraceScene(Ray ray)
 			else
 			{
 				// Internal node
-				if (stackpos < stacksize - 1)
+				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
 					stack[stackpos] = node.LeftChildIndex;
@@ -113,8 +118,7 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	// Using BVH acceleration structure:
 
 	// Emulated stack for tree traversal:
-	const uint stacksize = 32;
-	uint stack[stacksize];
+	uint stack[RAYTRACE_STACKSIZE];
 	uint stackpos = 0;
 
 	const uint clusterCount = clusterCounterBuffer.Load(0);
@@ -124,11 +128,13 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	stack[stackpos] = 0;
 	stackpos++;
 
-	uint k = 0;
+	uint exit_condition = 0;
 	do {
-		k++;
-		if (k > 256)
-			return false;
+#ifdef RAYTRACE_EXIT
+		if (exit_condition > RAYTRACE_EXIT)
+			break;
+		exit_condition++;
+#endif // RAYTRACE_EXIT
 
 		// pop untraversed node
 		stackpos--;
@@ -178,7 +184,7 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 			else
 			{
 				// Internal node
-				if (stackpos < stacksize - 1)
+				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
 					stack[stackpos] = node.LeftChildIndex;

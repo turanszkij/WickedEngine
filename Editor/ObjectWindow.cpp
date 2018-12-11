@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Editor.h"
 #include "ObjectWindow.h"
 #include "wiSceneSystem.h"
 
@@ -59,9 +60,174 @@ static void RasterizeTriangle(uint8_t *dest, int destWidth, const int *t0, const
 	}
 }
 
-
-ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
+static void GenerateObjectLightmap(ObjectComponent& objectcomponent, MeshComponent& meshcomponent, uint32_t resolution)
 {
+	objectcomponent.ClearLightmap();
+
+	xatlas::Atlas* atlas = xatlas::Create();
+
+	// Prepare mesh to be processed by xatlas:
+	{
+		xatlas::InputMesh mesh;
+		mesh.vertexCount = (int)meshcomponent.vertex_positions.size();
+		mesh.vertexPositionData = meshcomponent.vertex_positions.data();
+		mesh.vertexPositionStride = sizeof(float) * 3;
+		if (!meshcomponent.vertex_normals.empty()) {
+			mesh.vertexNormalData = meshcomponent.vertex_normals.data();
+			mesh.vertexNormalStride = sizeof(float) * 3;
+		}
+		if (!meshcomponent.vertex_texcoords.empty()) {
+			mesh.vertexUvData = meshcomponent.vertex_texcoords.data();
+			mesh.vertexUvStride = sizeof(float) * 2;
+		}
+		mesh.indexCount = (int)meshcomponent.indices.size();
+		mesh.indexData = meshcomponent.indices.data();
+		mesh.indexFormat = xatlas::IndexFormat::UInt32;
+		xatlas::AddMeshError::Enum error = xatlas::AddMesh(atlas, mesh);
+		if (error != xatlas::AddMeshError::Success) {
+			wiHelper::messageBox(xatlas::StringForEnum(error), "Adding mesh to xatlas failed!");
+			return;
+		}
+	}
+
+	// Generate atlas:
+	{
+		xatlas::PackerOptions packerOptions;
+		packerOptions.resolution = resolution;
+		packerOptions.conservative = true;
+		packerOptions.padding = 1;
+		xatlas::GenerateCharts(atlas, xatlas::CharterOptions(), nullptr, nullptr);
+		xatlas::PackCharts(atlas, packerOptions, nullptr, nullptr);
+		const uint32_t charts = xatlas::GetNumCharts(atlas);
+		objectcomponent.lightmapWidth = xatlas::GetWidth(atlas);
+		objectcomponent.lightmapHeight = xatlas::GetHeight(atlas);
+		const xatlas::OutputMesh* mesh = xatlas::GetOutputMeshes(atlas)[0];
+
+		// Note: we must recreate all vertex buffers, because the index buffer will be different (the atlas could have removed shared vertices)
+		meshcomponent.indices.clear();
+		meshcomponent.indices.resize(mesh->indexCount);
+		std::vector<XMFLOAT3> positions(mesh->vertexCount);
+		std::vector<XMFLOAT2> atlas(mesh->vertexCount);
+		std::vector<XMFLOAT3> normals;
+		std::vector<XMFLOAT2> texcoords;
+		std::vector<uint32_t> colors;
+		std::vector<XMUINT4> boneindices;
+		std::vector<XMFLOAT4> boneweights;
+		if (!meshcomponent.vertex_normals.empty())
+		{
+			normals.resize(mesh->vertexCount);
+		}
+		if (!meshcomponent.vertex_texcoords.empty())
+		{
+			texcoords.resize(mesh->vertexCount);
+		}
+		if (!meshcomponent.vertex_colors.empty())
+		{
+			colors.resize(mesh->vertexCount);
+		}
+		if (!meshcomponent.vertex_boneindices.empty())
+		{
+			boneindices.resize(mesh->vertexCount);
+		}
+		if (!meshcomponent.vertex_boneweights.empty())
+		{
+			boneweights.resize(mesh->vertexCount);
+		}
+
+		for (uint32_t j = 0; j < mesh->indexCount; ++j)
+		{
+			const uint32_t ind = mesh->indexArray[j];
+			const xatlas::OutputVertex &v = mesh->vertexArray[ind];
+			meshcomponent.indices[j] = ind;
+			atlas[ind].x = v.uv[0] / float(objectcomponent.lightmapWidth);
+			atlas[ind].y = v.uv[1] / float(objectcomponent.lightmapHeight);
+			positions[ind] = meshcomponent.vertex_positions[v.xref];
+			if (!normals.empty())
+			{
+				normals[ind] = meshcomponent.vertex_normals[v.xref];
+			}
+			if (!texcoords.empty())
+			{
+				texcoords[ind] = meshcomponent.vertex_texcoords[v.xref];
+			}
+			if (!colors.empty())
+			{
+				colors[ind] = meshcomponent.vertex_colors[v.xref];
+			}
+			if (!boneindices.empty())
+			{
+				boneindices[ind] = meshcomponent.vertex_boneindices[v.xref];
+			}
+			if (!boneweights.empty())
+			{
+				boneweights[ind] = meshcomponent.vertex_boneweights[v.xref];
+			}
+		}
+
+		meshcomponent.vertex_positions = positions;
+		meshcomponent.vertex_atlas = atlas;
+		if (!normals.empty())
+		{
+			meshcomponent.vertex_normals = normals;
+		}
+		if (!texcoords.empty())
+		{
+			meshcomponent.vertex_texcoords = texcoords;
+		}
+		if (!colors.empty())
+		{
+			meshcomponent.vertex_colors = colors;
+		}
+		if (!boneindices.empty())
+		{
+			meshcomponent.vertex_boneindices = boneindices;
+		}
+		if (!boneweights.empty())
+		{
+			meshcomponent.vertex_boneweights = boneweights;
+		}
+		meshcomponent.CreateRenderData();
+
+	}
+
+	//// DEBUG
+	//{
+	//	const uint32_t width = objectcomponent.lightmapWidth;
+	//	const uint32_t height = objectcomponent.lightmapHeight;
+	//	objectcomponent.lightmapTextureData.resize(width * height * 4);
+	//	const xatlas::OutputMesh *mesh = xatlas::GetOutputMeshes(atlas)[0];
+	//	// Rasterize mesh triangles.
+	//	const uint8_t white[] = { 255, 255, 255 };
+	//	for (uint32_t j = 0; j < mesh->indexCount; j += 3) {
+	//		int verts[3][2];
+	//		uint8_t color[4];
+	//		for (int k = 0; k < 3; k++) {
+	//			const xatlas::OutputVertex &v = mesh->vertexArray[mesh->indexArray[j + k]];
+	//			verts[k][0] = int(v.uv[0]);
+	//			verts[k][1] = int(v.uv[1]);
+	//			color[k] = rand() % 255;
+	//		}
+	//		color[3] = 255;
+	//		if (!verts[0][0] && !verts[0][1] && !verts[1][0] && !verts[1][1] && !verts[2][0] && !verts[2][1])
+	//			continue; // Skip triangles that weren't atlased.
+	//		RasterizeTriangle(objectcomponent.lightmapTextureData.data(), width, verts[0], verts[1], verts[2], color);
+	//		RasterizeLine(objectcomponent.lightmapTextureData.data(), width, verts[0], verts[1], white);
+	//		RasterizeLine(objectcomponent.lightmapTextureData.data(), width, verts[1], verts[2], white);
+	//		RasterizeLine(objectcomponent.lightmapTextureData.data(), width, verts[2], verts[0], white);
+	//	}
+	//}
+
+	xatlas::Destroy(atlas);
+
+	objectcomponent.SetLightmapRenderRequest(true);
+	wiRenderer::InvalidateBVH();
+
+}
+
+
+ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
+{
+	GUI = &editor->GetGUI();
 	assert(GUI && "Invalid GUI!");
 
 
@@ -265,176 +431,20 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	generateLightmapButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiRenderer::GetScene();
-		ObjectComponent* objectcomponent = scene.objects.GetComponent(entity);
-		if (objectcomponent != nullptr)
+
+		for (auto& x : this->editor->selected)
 		{
-			MeshComponent* meshcomponent = scene.meshes.GetComponent(objectcomponent->meshID);
-
-			if (meshcomponent != nullptr)
+			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
+			if (objectcomponent != nullptr)
 			{
-				objectcomponent->ClearLightmap();
+				MeshComponent* meshcomponent = scene.meshes.GetComponent(objectcomponent->meshID);
 
-				xatlas::Atlas* atlas = xatlas::Create();
-
-				// Prepare mesh to be processed by xatlas:
+				if (meshcomponent != nullptr)
 				{
-					xatlas::InputMesh mesh;
-					mesh.vertexCount = (int)meshcomponent->vertex_positions.size();
-					mesh.vertexPositionData = meshcomponent->vertex_positions.data();
-					mesh.vertexPositionStride = sizeof(float) * 3;
-					if (!meshcomponent->vertex_normals.empty()) {
-						mesh.vertexNormalData = meshcomponent->vertex_normals.data();
-						mesh.vertexNormalStride = sizeof(float) * 3;
-					}
-					if (!meshcomponent->vertex_texcoords.empty()) {
-						mesh.vertexUvData = meshcomponent->vertex_texcoords.data();
-						mesh.vertexUvStride = sizeof(float) * 2;
-					}
-					mesh.indexCount = (int)meshcomponent->indices.size();
-					mesh.indexData = meshcomponent->indices.data();
-					mesh.indexFormat = xatlas::IndexFormat::UInt32;
-					xatlas::AddMeshError::Enum error = xatlas::AddMesh(atlas, mesh);
-					if (error != xatlas::AddMeshError::Success) {
-						wiHelper::messageBox(xatlas::StringForEnum(error), "Adding mesh to xatlas failed!");
-						return;
-					}
+					GenerateObjectLightmap(*objectcomponent, *meshcomponent, (uint32_t)lightmapResolutionSlider->GetValue());
 				}
-
-				// Generate atlas:
-				{
-					xatlas::PackerOptions packerOptions;
-					packerOptions.resolution = (uint32_t)lightmapResolutionSlider->GetValue();
-					packerOptions.conservative = true;
-					packerOptions.padding = 1;
-					xatlas::GenerateCharts(atlas, xatlas::CharterOptions(), nullptr, nullptr);
-					xatlas::PackCharts(atlas, packerOptions, nullptr, nullptr);
-					const uint32_t charts = xatlas::GetNumCharts(atlas);
-					objectcomponent->lightmapWidth = xatlas::GetWidth(atlas);
-					objectcomponent->lightmapHeight = xatlas::GetHeight(atlas);
-					const xatlas::OutputMesh* mesh = xatlas::GetOutputMeshes(atlas)[0];
-
-					// Note: we must recreate all vertex buffers, because the index buffer will be different (the atlas could have removed shared vertices)
-					meshcomponent->indices.clear();
-					meshcomponent->indices.resize(mesh->indexCount);
-					std::vector<XMFLOAT3> positions(mesh->vertexCount);
-					std::vector<XMFLOAT2> atlas(mesh->vertexCount);
-					std::vector<XMFLOAT3> normals;
-					std::vector<XMFLOAT2> texcoords;
-					std::vector<uint32_t> colors;
-					std::vector<XMUINT4> boneindices;
-					std::vector<XMFLOAT4> boneweights;
-					if (!meshcomponent->vertex_normals.empty())
-					{
-						normals.resize(mesh->vertexCount);
-					}
-					if (!meshcomponent->vertex_texcoords.empty())
-					{
-						texcoords.resize(mesh->vertexCount);
-					}
-					if (!meshcomponent->vertex_colors.empty())
-					{
-						colors.resize(mesh->vertexCount);
-					}
-					if (!meshcomponent->vertex_boneindices.empty())
-					{
-						boneindices.resize(mesh->vertexCount);
-					}
-					if (!meshcomponent->vertex_boneweights.empty())
-					{
-						boneweights.resize(mesh->vertexCount);
-					}
-
-					for (uint32_t j = 0; j < mesh->indexCount; ++j)
-					{
-						const uint32_t ind = mesh->indexArray[j];
-						const xatlas::OutputVertex &v = mesh->vertexArray[ind];
-						meshcomponent->indices[j] = ind;
-						atlas[ind].x = v.uv[0] / float(objectcomponent->lightmapWidth);
-						atlas[ind].y = v.uv[1] / float(objectcomponent->lightmapHeight);
-						positions[ind] = meshcomponent->vertex_positions[v.xref];
-						if (!normals.empty())
-						{
-							normals[ind] = meshcomponent->vertex_normals[v.xref];
-						}
-						if (!texcoords.empty())
-						{
-							texcoords[ind] = meshcomponent->vertex_texcoords[v.xref];
-						}
-						if (!colors.empty())
-						{
-							colors[ind] = meshcomponent->vertex_colors[v.xref];
-						}
-						if (!boneindices.empty())
-						{
-							boneindices[ind] = meshcomponent->vertex_boneindices[v.xref];
-						}
-						if (!boneweights.empty())
-						{
-							boneweights[ind] = meshcomponent->vertex_boneweights[v.xref];
-						}
-					}
-
-					meshcomponent->vertex_positions = positions;
-					meshcomponent->vertex_atlas = atlas;
-					if (!normals.empty())
-					{
-						meshcomponent->vertex_normals = normals;
-					}
-					if (!texcoords.empty())
-					{
-						meshcomponent->vertex_texcoords = texcoords;
-					}
-					if (!colors.empty())
-					{
-						meshcomponent->vertex_colors = colors;
-					}
-					if (!boneindices.empty())
-					{
-						meshcomponent->vertex_boneindices = boneindices;
-					}
-					if (!boneweights.empty())
-					{
-						meshcomponent->vertex_boneweights = boneweights;
-					}
-					meshcomponent->CreateRenderData();
-
-				}
-
-				//// DEBUG
-				//{
-				//	const uint32_t width = objectcomponent->lightmapWidth;
-				//	const uint32_t height = objectcomponent->lightmapHeight;
-				//	objectcomponent->lightmapTextureData.resize(width * height * 4);
-				//	const xatlas::OutputMesh *mesh = xatlas::GetOutputMeshes(atlas)[0];
-				//	// Rasterize mesh triangles.
-				//	const uint8_t white[] = { 255, 255, 255 };
-				//	for (uint32_t j = 0; j < mesh->indexCount; j += 3) {
-				//		int verts[3][2];
-				//		uint8_t color[4];
-				//		for (int k = 0; k < 3; k++) {
-				//			const xatlas::OutputVertex &v = mesh->vertexArray[mesh->indexArray[j + k]];
-				//			verts[k][0] = int(v.uv[0]);
-				//			verts[k][1] = int(v.uv[1]);
-				//			color[k] = rand() % 255;
-				//		}
-				//		color[3] = 255;
-				//		if (!verts[0][0] && !verts[0][1] && !verts[1][0] && !verts[1][1] && !verts[2][0] && !verts[2][1])
-				//			continue; // Skip triangles that weren't atlased.
-				//		RasterizeTriangle(objectcomponent->lightmapTextureData.data(), width, verts[0], verts[1], verts[2], color);
-				//		RasterizeLine(objectcomponent->lightmapTextureData.data(), width, verts[0], verts[1], white);
-				//		RasterizeLine(objectcomponent->lightmapTextureData.data(), width, verts[1], verts[2], white);
-				//		RasterizeLine(objectcomponent->lightmapTextureData.data(), width, verts[2], verts[0], white);
-				//	}
-				//}
-
-				xatlas::Destroy(atlas);
-
-				objectcomponent->SetLightmapRenderRequest(true);
-				wiRenderer::InvalidateBVH();
-
 			}
 		}
-
 
 	});
 	objectWindow->AddWidget(generateLightmapButton);
@@ -446,11 +456,15 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	stopLightmapGenButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiRenderer::GetScene();
-		ObjectComponent* objectcomponent = scene.objects.GetComponent(entity);
-		if (objectcomponent != nullptr)
+
+		for (auto& x : this->editor->selected)
 		{
-			objectcomponent->SetLightmapRenderRequest(false);
-			objectcomponent->SaveLightmap();
+			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
+			if (objectcomponent != nullptr)
+			{
+				objectcomponent->SetLightmapRenderRequest(false);
+				objectcomponent->SaveLightmap();
+			}
 		}
 
 	});
@@ -463,10 +477,14 @@ ObjectWindow::ObjectWindow(wiGUI* gui) : GUI(gui)
 	clearLightmapButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiRenderer::GetScene();
-		ObjectComponent* objectcomponent = scene.objects.GetComponent(entity);
-		if (objectcomponent != nullptr)
+
+		for (auto& x : this->editor->selected)
 		{
-			objectcomponent->ClearLightmap();
+			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
+			if (objectcomponent != nullptr)
+			{
+				objectcomponent->ClearLightmap();
+			}
 		}
 
 	});
@@ -551,12 +569,8 @@ void ObjectWindow::SetEntity(Entity entity)
 			}
 		}
 
-		objectWindow->SetEnabled(true);
+	}
 
-	}
-	else
-	{
-		objectWindow->SetEnabled(false);
-	}
+	objectWindow->SetEnabled(!editor->selected.empty());
 
 }

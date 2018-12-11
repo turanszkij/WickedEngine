@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
+#include "ShaderInterop_TracedRendering.h"
 
 struct Input
 {
@@ -25,7 +26,7 @@ Output main(Input input)
 	output.pos = float4(input.atl, 0, 1);
 	output.pos.xy = output.pos.xy * 2 - 1;
 	output.pos.y *= -1;
-	output.pos.xy += g_xColor.xy; // jittering the rasterization (g_xColor contains some pixel offset here)
+	output.pos.xy += xTracePixelOffset;
 
 	output.uv = input.atl;
 

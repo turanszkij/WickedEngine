@@ -265,6 +265,8 @@ namespace wiRenderer
 	bool GetOceanEnabled();
 	void InvalidateBVH(); // invalidates scene bvh so if something wants to use it, it will recompute and validate it
 
+	wiGraphicsTypes::Texture2D* GetGlobalLightmap();
+
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY);
 
