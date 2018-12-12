@@ -828,6 +828,12 @@
     <FxCompile Include="copytexture2D_float4_borderexpandCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="generateMIPChain2D_float4_BicubicCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="generateMIPChain2D_unorm4_BicubicCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

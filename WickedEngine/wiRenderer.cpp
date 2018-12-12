@@ -666,10 +666,8 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 	case SHADERTYPE_DEFERRED:
 	case SHADERTYPE_FORWARD:
 	case SHADERTYPE_TILEDFORWARD:
-		realVL = VLTYPE_OBJECT_ALL;
-		break;
 	case SHADERTYPE_ENVMAPCAPTURE:
-		realVL = VLTYPE_OBJECT_POS_TEX;
+		realVL = VLTYPE_OBJECT_ALL;
 		break;
 	case SHADERTYPE_DEPTHONLY:
 		if (tessellation)
@@ -1328,10 +1326,12 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 		};
 
 		const bool advancedVBRequest =
-			!IsWireRender() &&
-			(shaderType == SHADERTYPE_FORWARD ||
+			!IsWireRender() && (
+				shaderType == SHADERTYPE_FORWARD ||
 				shaderType == SHADERTYPE_DEFERRED ||
-				shaderType == SHADERTYPE_TILEDFORWARD);
+				shaderType == SHADERTYPE_TILEDFORWARD ||
+				shaderType == SHADERTYPE_ENVMAPCAPTURE
+				);
 
 		const bool easyTextureBind =
 			shaderType == SHADERTYPE_TEXTURE ||
@@ -1978,6 +1978,8 @@ void LoadShaders()
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_unorm4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_float4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_unorm4_BicubicCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain2D_float4_BicubicCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_unorm4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_float4_SimpleFilterCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN] = static_cast<ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "generateMIPChain3D_unorm4_GaussianCS.cso", wiResourceManager::COMPUTESHADER));
@@ -6629,7 +6631,7 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			default:
-				assert(0);
+				assert(0); // not implemented
 				break;
 			}
 
@@ -6681,6 +6683,10 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 		case MIPGENFILTER_GAUSSIAN:
 			GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
 			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
+			break;
+		case MIPGENFILTER_BICUBIC:
+			GetDevice()->EventBegin("GenerateMipChain 2D - BicubicFilter", threadID);
+			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], threadID);
 			break;
 		default:
 			assert(0);
@@ -6759,6 +6765,9 @@ void GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 	case MIPGENFILTER_GAUSSIAN:
 		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
 		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
+		break;
+	default:
+		assert(0); // not implemented
 		break;
 	}
 

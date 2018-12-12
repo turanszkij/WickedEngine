@@ -2,7 +2,7 @@
 #include "envMapHF.hlsli"
 
 
-VSOut_EnvmapRendering main(Input_Object_POS_TEX input)
+VSOut_EnvmapRendering main(Input_Object_ALL input)
 {
 	VSOut_EnvmapRendering Out;
 
@@ -12,6 +12,7 @@ VSOut_EnvmapRendering main(Input_Object_POS_TEX input)
 	Out.pos = mul(surface.position, WORLD);
 	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
 	Out.tex = surface.uv;
+	Out.atl = surface.atlas;
 	Out.instanceColor = input.instance.color_dither.rgb;
 	Out.ao = 1;
 

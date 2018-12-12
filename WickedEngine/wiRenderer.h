@@ -151,6 +151,7 @@ namespace wiRenderer
 		MIPGENFILTER_LINEAR,
 		MIPGENFILTER_LINEAR_MAXIMUM,
 		MIPGENFILTER_GAUSSIAN,
+		MIPGENFILTER_BICUBIC,
 	};
 	void GenerateMipChain(wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
 	void GenerateMipChain(wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);

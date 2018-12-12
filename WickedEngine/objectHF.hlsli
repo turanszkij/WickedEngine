@@ -15,6 +15,8 @@
 #endif
 
 
+#define LIGHTMAP_QUALITY_BICUBIC
+
 
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
@@ -599,11 +601,13 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 #ifndef SIMPLE_INPUT
-#ifndef ENVMAPRENDERING
+#ifdef LIGHTMAP_QUALITY_BICUBIC
+	float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, input.atl);
+#else
 	float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, input.atl, 0);
+#endif // LIGHTMAP_QUALITY_BICUBIC
 	diffuse += lightmap.rgb;
 	ao *= saturate(1 - lightmap.a);
-#endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
 
