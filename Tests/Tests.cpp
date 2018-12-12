@@ -50,7 +50,7 @@ TestsRenderer::TestsRenderer()
 
 	wiButton* audioTest = new wiButton("AudioTest");
 	audioTest->SetText("Play Test Audio");
-	audioTest->SetSize(XMFLOAT2(180, 20));
+	audioTest->SetSize(XMFLOAT2(200, 20));
 	audioTest->SetPos(XMFLOAT2(10, 80));
 	audioTest->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	audioTest->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -76,7 +76,7 @@ TestsRenderer::TestsRenderer()
 
 	wiSlider* volume = new wiSlider(0, 100, 50, 100, "Volume");
 	volume->SetText("Volume: ");
-	volume->SetSize(XMFLOAT2(85, 20));
+	volume->SetSize(XMFLOAT2(95, 20));
 	volume->SetPos(XMFLOAT2(65, 110));
 	volume->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	volume->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -88,7 +88,7 @@ TestsRenderer::TestsRenderer()
 
 	wiComboBox* testSelector = new wiComboBox("TestSelector");
 	testSelector->SetText("Demo: ");
-	testSelector->SetSize(XMFLOAT2(120, 20));
+	testSelector->SetSize(XMFLOAT2(140, 20));
 	testSelector->SetPos(XMFLOAT2(50, 140));
 	testSelector->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	testSelector->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
@@ -106,6 +106,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Font Test");
 	testSelector->AddItem("Volumetric Test");
 	testSelector->AddItem("Sprite Test");
+	testSelector->AddItem("Lightmap Bake Test");
 	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -182,6 +183,10 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 13:
 			RunSpriteTest();
+			break;
+		case 14:
+			wiRenderer::SetTemporalAAEnabled(true);
+			wiRenderer::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		default:
 			assert(0);
