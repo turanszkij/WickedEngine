@@ -492,7 +492,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 
 
-	objectWindow->Translate(XMFLOAT3(1300, 100, 0));
+	objectWindow->Translate(XMFLOAT3(1300, 120, 0));
 	objectWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
