@@ -8,8 +8,6 @@ TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH)
 TEXTURE2D(texture_gbuffer0, float4, TEXSLOT_GBUFFER0)
 TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1)
 TEXTURE2D(texture_gbuffer2, float4, TEXSLOT_GBUFFER2)
-TEXTURE2D(texture_gbuffer3, float4, TEXSLOT_GBUFFER3)
-TEXTURE2D(texture_gbuffer4, float4, TEXSLOT_GBUFFER4)
 TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP)
 TEXTURECUBEARRAY(texture_envmaparray, float4, TEXSLOT_ENVMAPARRAY)
 TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS)
@@ -92,7 +90,6 @@ inline float GetScreenWidth() { return g_xFrame_ScreenWidthHeight.x; }
 inline float GetScreenHeight() { return g_xFrame_ScreenWidthHeight.y; }
 inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
-inline float GetEmissive(float emissive) { return emissive * 10.0f; }
 inline uint2 GetTemporalAASampleRotation() { return float2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
 
 struct ComputeShaderInput

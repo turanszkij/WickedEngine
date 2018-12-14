@@ -24,6 +24,8 @@ RenderPath3D_TiledDeferred::~RenderPath3D_TiledDeferred()
 
 void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
@@ -31,16 +33,36 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	GPUResource* dsv[] = { rtGBuffer.depth->GetTexture() };
-	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
-	rtGBuffer.Activate(threadID, 0, 0, 0, 0);
 	{
-		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		// We can't just call rtGbuffer.Activate() because we need to inject light buffers here too so gets a bit more complicated:
+		Texture2D* rts[] = {
+			rtGBuffer.GetTexture(0),
+			rtGBuffer.GetTexture(1),
+			rtGBuffer.GetTexture(2),
+			lightbuffer_diffuse,
+			lightbuffer_specular,
+		};
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, rtGBuffer.depth->GetTexture(), threadID);
+		device->ClearDepthStencil(rtGBuffer.depth->GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
+		float clear[4] = { 0,0,0,0 };
+		device->ClearRenderTarget(rts[0], clear, threadID);
+		device->ClearRenderTarget(rts[1], clear, threadID);
+		device->ClearRenderTarget(rts[2], clear, threadID);
+		device->ClearRenderTarget(rts[3], clear, threadID);
+		device->ClearRenderTarget(rts[4], clear, threadID);
+		ViewPort vp;
+		vp.Width = (float)rts[0]->GetDesc().Width;
+		vp.Height = (float)rts[0]->GetDesc().Height;
+		device->BindViewports(1, &vp, threadID);
+
+		device->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
 	}
 
 
-	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
+	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
 
 	rtLinearDepth.Activate(threadID); {
 		fx.blendFlag = BLENDMODE_OPAQUE;
@@ -53,10 +75,10 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 	rtLinearDepth.Deactivate(threadID);
 	dtDepthCopy.CopyFrom(*rtGBuffer.depth, threadID);
 
-	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 
-	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 
 	wiRenderer::BindDepthTextures(dtDepthCopy.GetTexture(), rtLinearDepth.GetTexture(), threadID);
 
@@ -72,17 +94,18 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 	}
 	rtGBuffer.Deactivate(threadID);
 
-	wiRenderer::BindGBufferTextures(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), rtGBuffer.GetTexture(3), nullptr, threadID);
+	wiRenderer::BindGBufferTextures(rtGBuffer.GetTexture(0), rtGBuffer.GetTexture(1), rtGBuffer.GetTexture(2), threadID);
 
 
-	wiRenderer::GetDevice()->BindResource(CS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+	device->BindResource(CS, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+	device->BindResource(CS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 
-	wiRenderer::ComputeTiledLightCulling(true, threadID);
+	wiRenderer::ComputeTiledLightCulling(threadID, lightbuffer_diffuse, lightbuffer_specular);
 
 
 	if (getSSAOEnabled()) {
-		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
-		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
+		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
+		device->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
@@ -106,12 +129,12 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 		}
 		fx.stencilRef = 0;
 		fx.stencilComp = STENCILMODE_DISABLED;
-		wiRenderer::GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
 	if (getSSSEnabled())
 	{
-		wiRenderer::GetDevice()->EventBegin("SSS", threadID);
+		device->EventBegin("SSS", threadID);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = STENCILMODE_LESS;
 		fx.quality = QUALITY_BILINEAR;
@@ -121,7 +144,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 		static int sssPassCount = 6;
 		for (int i = 0; i < sssPassCount; ++i)
 		{
-			wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 			rtSSS[i % 2].Set(threadID, rtGBuffer.depth);
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
 			static float stren = 0.018f;
@@ -136,7 +159,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.setSSSS(dir);
 			if (i == 0)
 			{
-				wiImage::Draw(static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV)), fx, threadID);
+				wiImage::Draw(static_cast<Texture2D*>(lightbuffer_diffuse), fx, threadID);
 			}
 			else
 			{
@@ -144,7 +167,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			}
 		}
 		fx.process.clear();
-		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		rtSSS[0].Activate(threadID, rtGBuffer.depth); {
 			fx.setMaskMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
@@ -154,7 +177,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.enableFullScreen();
 			fx.enableHDR();
-			wiImage::Draw(static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV)), fx, threadID);
+			wiImage::Draw(static_cast<Texture2D*>(lightbuffer_diffuse), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;
 			wiImage::Draw(rtSSS[1].GetTexture(), fx, threadID);
@@ -162,20 +185,20 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 
 		fx.stencilRef = 0;
 		fx.stencilComp = STENCILMODE_DISABLED;
-		wiRenderer::GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
-		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV))), 
-			static_cast<Texture2D*>(wiRenderer::GetTexture(TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV))
+		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : lightbuffer_diffuse), 
+			lightbuffer_specular
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite()
 			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);
 	}
 
 	if (getSSREnabled()) {
-		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
-		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
+		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
+		device->EventBegin("SSR", threadID);
 		rtSSR.Activate(threadID); {
 			fx.process.clear();
 			fx.disableFullScreen();
@@ -184,7 +207,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			wiImage::Draw(rtDeferred.GetTexture(), fx, threadID);
 			fx.process.clear();
 		}
-		wiRenderer::GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
 

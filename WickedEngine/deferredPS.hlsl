@@ -10,23 +10,18 @@
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
 	float4 color = texture_gbuffer0[uint2(PSIn.pos.xy)];
-	float3 N = decode(texture_gbuffer1[uint2(PSIn.pos.xy)].xy);
-	float emissive = texture_gbuffer2[uint2(PSIn.pos.xy)].a;
 
-	float4 g3 = texture_gbuffer3[int2(PSIn.pos.xy)];
-	float roughness = g3.x;
-	float reflectance = g3.y;
-	float metalness = g3.z;
+	float4 g2 = texture_gbuffer2[int2(PSIn.pos.xy)];
+	float roughness = g2.x;
+	float reflectance = g2.y;
+	float metalness = g2.z;
 	float3 albedo = ComputeAlbedo(color, metalness, reflectance);
 
 	float  depth = texture_lineardepth[(uint2)PSIn.pos.xy].r * g_xFrame_MainCamera_ZFarP;
 
 	float4 diffuse = texture_0[uint2(PSIn.pos.xy)]; // light diffuse
 	float4 specular = texture_1[uint2(PSIn.pos.xy)]; // light specular
-	float ssao = texture_2.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).r;
-	float ao = diffuse.a;
-	color.rgb = (GetAmbient(N) * ao * ssao + diffuse.rgb) * albedo + specular.rgb;
-	color.rgb += color.rgb * GetEmissive(emissive);
+	color.rgb = diffuse.rgb * albedo + specular.rgb;
 
 	ApplyFog(depth, color);
 

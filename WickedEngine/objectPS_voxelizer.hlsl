@@ -126,7 +126,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 
 		color.rgb *= diffuse;
 		
-		color.rgb += baseColor.rgb * GetEmissive(emissive);
+		color.rgb += baseColor.rgb * emissive;
 
 		uint color_encoded = EncodeColor(color);
 		uint normal_encoded = EncodeNormal(N);

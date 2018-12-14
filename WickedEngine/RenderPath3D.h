@@ -61,6 +61,7 @@ protected:
 		, rtTemporalAA[2]
 		;
 	static std::vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
+	static wiGraphicsTypes::Texture2D* depthBuffer;
 	static wiDepthTarget dtDepthCopy;
 	static wiGraphicsTypes::Texture2D* smallDepth;
 

@@ -27,6 +27,8 @@ float4 main(VertexToPixelPostProcess input) : SV_TARGET
     // Fetch color and linear depth for current pixel:
     float4 colorM = xTexture.Sample(Sampler, input.tex);
 	float depthM = texture_lineardepth[input.pos.xy];
+	float sss = texture_gbuffer2[input.pos.xy].a;
+	sss *= 0.01f;
 
     // Accumulate center sample, multiplying it with its gaussian weight:
     float4 colorBlurred = colorM;
@@ -37,7 +39,7 @@ float4 main(VertexToPixelPostProcess input) : SV_TARGET
     //     step = sssStrength * gaussianWidth * pixelSize * dir
     // The closer the pixel, the stronger the effect needs to be, hence
     // the factor 1.0 / depthM.
-	float2 step = xPPParams0.xy * texture_gbuffer2.Load(uint3(input.pos.xy,0)).z * 100;
+	float2 step = xPPParams0.xy * sss;
     float2 finalStep = colorM.a * step / depthM;
 
     // Accumulate the other samples:

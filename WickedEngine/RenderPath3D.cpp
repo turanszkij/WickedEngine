@@ -479,7 +479,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
 		int history = 1 - current;
 		rtTemporalAA[current].Set(threadID); {
-			wiRenderer::BindGBufferTextures(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, nullptr, nullptr, threadID);
+			wiRenderer::BindGBufferTextures(mainRT.GetTextureResolvedMSAA(threadID, 0), mainRT.GetTextureResolvedMSAA(threadID, 1), nullptr, threadID);
 			fx.disableFullScreen();
 			fx.process.setTemporalAAResolve();
 			fx.setMaskMap(rtTemporalAA[history].GetTexture());

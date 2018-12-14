@@ -4,6 +4,7 @@
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
+#define	xSSAO texture_8
 #define	xSSR texture_9
 
 #ifdef DEBUG_TILEDLIGHTCULLING
@@ -455,14 +456,15 @@ void main(ComputeShaderInput IN)
 	
 	float3 diffuse = 0, specular = 0;
 	float3 reflection = 0;
-	float4 baseColor = texture_gbuffer0[pixel];
+	float4 g0 = texture_gbuffer0[pixel];
+	float4 baseColor = float4(g0.rgb, 1);
+	float ao = g0.a;
 	float4 g1 = texture_gbuffer1[pixel];
-	float4 g3 = texture_gbuffer3[pixel];
+	float4 g2 = texture_gbuffer2[pixel];
 	float3 N = decode(g1.xy);
-	float roughness = g3.x;
-	float reflectance = g3.y;
-	float metalness = g3.z;
-	float ao = g3.w;
+	float roughness = g2.x;
+	float reflectance = g2.y;
+	float metalness = g2.z;
 	float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth);
 	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 	Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
@@ -575,13 +577,17 @@ void main(ComputeShaderInput IN)
 	float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
 	float2 velocity = g1.zw;
 	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
+	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	reflection = lerp(reflection, ssr.rgb, ssr.a);
 
 	specular += reflection * surface.F;
 
-	deferred_Diffuse[pixel] = float4(diffuse, ao);
-	deferred_Specular[pixel] = float4(specular, 1);
+	float3 ambient = GetAmbient(N) * ao * ssao;
+	diffuse += ambient;
+
+	deferred_Diffuse[pixel] += float4(diffuse, 1);
+	deferred_Specular[pixel] += float4(specular, 1);
 
 #endif // DEFERRED
 

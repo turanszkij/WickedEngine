@@ -74,15 +74,17 @@ struct GBUFFEROutputType
 	float4 g0	: SV_Target0;		// texture_gbuffer0
 	float4 g1	: SV_Target1;		// texture_gbuffer1
 	float4 g2	: SV_Target2;		// texture_gbuffer2
-	float4 g3	: SV_Target3;		// texture_gbuffer3
+	float4 diffuse	: SV_Target3;
+	float4 specular	: SV_Target4;
 };
-inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity)
+inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in float2 velocity, in float3 diffuse, in float3 specular, in float ao)
 {
 	GBUFFEROutputType Out;
-	Out.g0 = float4(color.rgb, 1);														/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g2 = float4(0, 0, surface.sss, surface.emissive);								/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g3 = float4(surface.roughness, surface.reflectance, surface.metalness, 1);		/*FORMAT_R8G8B8A8_UNORM*/
+	Out.g0 = float4(color.rgb, ao);																/*FORMAT_R8G8B8A8_UNORM*/
+	Out.g1 = float4(encode(surface.N), velocity);												/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g2 = float4(surface.roughness, surface.reflectance, surface.metalness, surface.sss);	/*FORMAT_R8G8B8A8_UNORM*/
+	Out.diffuse = float4(diffuse, 1);															/*wiRenderer::RTFormat_deferred_lightbuffer*/
+	Out.specular = float4(specular, 1);															/*wiRenderer::RTFormat_deferred_lightbuffer*/
 	return Out;
 }
 
@@ -102,6 +104,22 @@ inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface sur
 
 // METHODS
 ////////////
+
+inline void ApplyEmissive(in Surface surface, inout float3 specular)
+{
+	specular += surface.baseColor.rgb * surface.emissive;
+}
+
+inline void LightMapping(in float2 ATLAS, inout float3 diffuse, inout float3 specular, inout float ao)
+{
+#ifdef LIGHTMAP_QUALITY_BICUBIC
+	float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, ATLAS);
+#else
+	float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
+#endif // LIGHTMAP_QUALITY_BICUBIC
+	diffuse += lightmap.rgb;
+	ao *= saturate(1 - lightmap.a);
+}
 
 inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor, inout float roughness)
 {
@@ -169,14 +187,8 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 }
 
 
-inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out float3 specular, out float3 reflection)
+inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
-	specular = 0;
-	diffuse = 0;
-	reflection = 0;
-
-	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
-
 #ifndef DISABLE_ENVMAPS
 	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 	reflection = max(0, EnvironmentReflection_Global(surface, envMapMIP));
@@ -234,7 +246,7 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, out flo
 }
 
 
-inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, out float3 specular, out float3 reflection)
+inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
 	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	uint startOffset = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
@@ -244,12 +256,6 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 	uint envmapCount = (arrayProperties & 0x00F00000) >> 20; // count of just the envmaps in the tile
 	startOffset += 1; // first element was the itemcount
 	uint iterator = 0;
-
-	specular = 0;
-	diffuse = 0;
-	reflection = 0;
-
-	specular += surface.baseColor.rgb * GetEmissive(surface.emissive);
 
 #ifdef DISABLE_DECALS
 	// decals are disabled, set the iterator to skip decals:
@@ -559,8 +565,12 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // WATER
 
 
-
 	SpecularAA(surface.N, surface.roughness);
+
+	ApplyEmissive(surface, specular);
+
+	LightMapping(input.atl, diffuse, specular, ao);
+
 
 #ifndef DEFERRED
 
@@ -599,18 +609,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	specular += reflection * surface.F;
 
-
-#ifndef SIMPLE_INPUT
-#ifdef LIGHTMAP_QUALITY_BICUBIC
-	float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, input.atl);
-#else
-	float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, input.atl, 0);
-#endif // LIGHTMAP_QUALITY_BICUBIC
-	diffuse += lightmap.rgb;
-	ao *= saturate(1 - lightmap.a);
-#endif // SIMPLE_INPUT
-
-
 	ApplyLighting(surface, diffuse, specular, ao, color);
 
 #ifdef WATER
@@ -626,7 +624,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 #ifdef TEXTUREONLY
-	color.rgb += color.rgb * GetEmissive(surface.emissive);
+	color.rgb += color.rgb * surface.emissive;
 #endif // TEXTUREONLY
 
 
@@ -644,7 +642,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	return color;
 #else
 #if defined(DEFERRED)	
-	return CreateGbuffer(color, surface, velocity);
+	return CreateGbuffer(color, surface, velocity, diffuse, specular, ao);
 #elif defined(FORWARD) || defined(TILEDFORWARD)
 	return CreateGbuffer_Thin(color, surface, velocity);
 #endif // DEFERRED

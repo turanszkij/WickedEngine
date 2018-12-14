@@ -6,7 +6,9 @@ class RenderPath3D_Deferred :
 	public RenderPath3D
 {
 protected:
-	static wiRenderTarget rtGBuffer, rtDeferred, rtLight, rtSSS[2];
+	static wiRenderTarget rtGBuffer, rtDeferred, rtSSS[2];
+	static wiGraphicsTypes::Texture2D* lightbuffer_diffuse;
+	static wiGraphicsTypes::Texture2D* lightbuffer_specular;
 
 	void ResizeBuffers() override;
 

@@ -11,7 +11,7 @@ public:
 };
 
 
-class TestsRenderer : public RenderPath3D_TiledForward
+class TestsRenderer : public RenderPath3D_Deferred
 {
 public: 
 	TestsRenderer();

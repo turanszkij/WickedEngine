@@ -2100,11 +2100,12 @@ void LoadShaders()
 										desc.DSFormat = DSFormat_full;
 										break;
 									case SHADERTYPE_DEFERRED:
-										desc.numRTs = 4;
+										desc.numRTs = 5;
 										desc.RTFormats[0] = RTFormat_gbuffer_0;
 										desc.RTFormats[1] = RTFormat_gbuffer_1;
 										desc.RTFormats[2] = RTFormat_gbuffer_2;
-										desc.RTFormats[3] = RTFormat_gbuffer_3;
+										desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
+										desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
 										desc.DSFormat = DSFormat_full;
 										break;
 									case SHADERTYPE_FORWARD:
@@ -2315,11 +2316,10 @@ void LoadShaders()
 		case SHADERTYPE_DEFERRED:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
-			desc.numRTs = 4;
+			desc.numRTs = 3;
 			desc.RTFormats[0] = RTFormat_gbuffer_0;
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			desc.RTFormats[2] = RTFormat_gbuffer_2;
-			desc.RTFormats[3] = RTFormat_gbuffer_3;
 			break;
 		case SHADERTYPE_FORWARD:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
@@ -6318,8 +6318,9 @@ inline XMUINT3 GetEntityCullingTileCount()
 		(UINT)ceilf((float)GetInternalResolution().y / (float)TILED_CULLING_BLOCKSIZE),
 		1);
 }
-void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
+void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_diffuse, Texture2D* lightbuffer_specular)
 {
+	const bool deferred = lightbuffer_diffuse != nullptr && lightbuffer_specular != nullptr;
 	wiProfiler::BeginRange("Tiled Entity Processing", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = GetDevice();
 
@@ -6374,24 +6375,6 @@ void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
 		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
-	}
-	if (deferred && (textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV] == nullptr || textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV] == nullptr))
-	{
-		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
-		desc.ArraySize = 1;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = 0;
-		desc.Format = RTFormat_deferred_lightbuffer;
-		desc.Width = (UINT)_width;
-		desc.Height = (UINT)_height;
-		desc.MipLevels = 1;
-		desc.MiscFlags = 0;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
-		desc.Usage = USAGE_DEFAULT;
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV]);
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV]);
 	}
 
 	// calculate the per-tile frustums once:
@@ -6480,9 +6463,9 @@ void ComputeTiledLightCulling(bool deferred, GRAPHICSTHREAD threadID)
 		if (deferred)
 		{
 			GPUResource* uavs[] = {
-				textures[TEXTYPE_2D_TILEDDEFERRED_DIFFUSEUAV],
+				lightbuffer_diffuse,
 				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
-				textures[TEXTYPE_2D_TILEDDEFERRED_SPECULARUAV],
+				lightbuffer_specular,
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
@@ -7999,19 +7982,15 @@ void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 	}
 }
-void BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, Texture2D* slot3, Texture2D* slot4, GRAPHICSTHREAD threadID)
+void BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, GRAPHICSTHREAD threadID)
 {
 	GetDevice()->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
 	GetDevice()->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
 	GetDevice()->BindResource(PS, slot2, TEXSLOT_GBUFFER2, threadID);
-	GetDevice()->BindResource(PS, slot3, TEXSLOT_GBUFFER3, threadID);
-	GetDevice()->BindResource(PS, slot4, TEXSLOT_GBUFFER4, threadID);
 
 	GetDevice()->BindResource(CS, slot0, TEXSLOT_GBUFFER0, threadID);
 	GetDevice()->BindResource(CS, slot1, TEXSLOT_GBUFFER1, threadID);
 	GetDevice()->BindResource(CS, slot2, TEXSLOT_GBUFFER2, threadID);
-	GetDevice()->BindResource(CS, slot3, TEXSLOT_GBUFFER3, threadID);
-	GetDevice()->BindResource(CS, slot4, TEXSLOT_GBUFFER4, threadID);
 }
 void BindDepthTextures(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
