@@ -6,6 +6,8 @@
 #include "xatlas.h"
 
 #include <sstream>
+#include <unordered_set>
+#include <unordered_map>
 
 using namespace wiECS;
 using namespace wiSceneSystem;
@@ -60,9 +62,14 @@ static void RasterizeTriangle(uint8_t *dest, int destWidth, const int *t0, const
 	}
 }
 
-static void GenerateObjectLightmap(ObjectComponent& objectcomponent, MeshComponent& meshcomponent, uint32_t resolution)
+struct Atlas_Dim
 {
-	objectcomponent.ClearLightmap();
+	uint32_t width = 0;
+	uint32_t height = 0;
+};
+static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolution)
+{
+	Atlas_Dim dim;
 
 	xatlas::Atlas* atlas = xatlas::Create();
 
@@ -86,7 +93,7 @@ static void GenerateObjectLightmap(ObjectComponent& objectcomponent, MeshCompone
 		xatlas::AddMeshError::Enum error = xatlas::AddMesh(atlas, mesh);
 		if (error != xatlas::AddMeshError::Success) {
 			wiHelper::messageBox(xatlas::StringForEnum(error), "Adding mesh to xatlas failed!");
-			return;
+			return dim;
 		}
 	}
 
@@ -99,8 +106,8 @@ static void GenerateObjectLightmap(ObjectComponent& objectcomponent, MeshCompone
 		xatlas::GenerateCharts(atlas, xatlas::CharterOptions(), nullptr, nullptr);
 		xatlas::PackCharts(atlas, packerOptions, nullptr, nullptr);
 		const uint32_t charts = xatlas::GetNumCharts(atlas);
-		objectcomponent.lightmapWidth = xatlas::GetWidth(atlas);
-		objectcomponent.lightmapHeight = xatlas::GetHeight(atlas);
+		dim.width = xatlas::GetWidth(atlas);
+		dim.height = xatlas::GetHeight(atlas);
 		const xatlas::OutputMesh* mesh = xatlas::GetOutputMeshes(atlas)[0];
 
 		// Note: we must recreate all vertex buffers, because the index buffer will be different (the atlas could have removed shared vertices)
@@ -139,8 +146,8 @@ static void GenerateObjectLightmap(ObjectComponent& objectcomponent, MeshCompone
 			const uint32_t ind = mesh->indexArray[j];
 			const xatlas::OutputVertex &v = mesh->vertexArray[ind];
 			meshcomponent.indices[j] = ind;
-			atlas[ind].x = v.uv[0] / float(objectcomponent.lightmapWidth);
-			atlas[ind].y = v.uv[1] / float(objectcomponent.lightmapHeight);
+			atlas[ind].x = v.uv[0] / float(dim.width);
+			atlas[ind].y = v.uv[1] / float(dim.height);
 			positions[ind] = meshcomponent.vertex_positions[v.xref];
 			if (!normals.empty())
 			{
@@ -219,9 +226,7 @@ static void GenerateObjectLightmap(ObjectComponent& objectcomponent, MeshCompone
 
 	xatlas::Destroy(atlas);
 
-	objectcomponent.SetLightmapRenderRequest(true);
-	wiRenderer::InvalidateBVH();
-
+	return dim;
 }
 
 
@@ -432,6 +437,9 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 		Scene& scene = wiRenderer::GetScene();
 
+		std::unordered_set<ObjectComponent*> gen_objects;
+		std::unordered_map<MeshComponent*, Atlas_Dim> gen_meshes;
+
 		for (auto& x : this->editor->selected)
 		{
 			ObjectComponent* objectcomponent = scene.objects.GetComponent(x.entity);
@@ -441,10 +449,31 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 				if (meshcomponent != nullptr)
 				{
-					GenerateObjectLightmap(*objectcomponent, *meshcomponent, (uint32_t)lightmapResolutionSlider->GetValue());
+					gen_objects.insert(objectcomponent);
+					gen_meshes[meshcomponent] = Atlas_Dim();
 				}
 			}
+
 		}
+
+		for (auto& it : gen_meshes)
+		{
+			wiJobSystem::Execute([&] {
+				it.second = GenerateMeshAtlas(*it.first, (uint32_t)lightmapResolutionSlider->GetValue());
+			});
+		}
+		wiJobSystem::Wait();
+
+		for (auto& x : gen_objects)
+		{
+			x->ClearLightmap();
+			MeshComponent* meshcomponent = scene.meshes.GetComponent(x->meshID);
+			x->lightmapWidth = gen_meshes.at(meshcomponent).width;
+			x->lightmapHeight = gen_meshes.at(meshcomponent).height;
+			x->SetLightmapRenderRequest(true);
+		}
+
+		wiRenderer::InvalidateBVH();
 
 	});
 	objectWindow->AddWidget(generateLightmapButton);
