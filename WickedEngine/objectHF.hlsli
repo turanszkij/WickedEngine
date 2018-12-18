@@ -112,13 +112,16 @@ inline void ApplyEmissive(in Surface surface, inout float3 specular)
 
 inline void LightMapping(in float2 ATLAS, inout float3 diffuse, inout float3 specular, inout float ao)
 {
+	if (any(ATLAS))
+	{
 #ifdef LIGHTMAP_QUALITY_BICUBIC
-	float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, ATLAS);
+		float4 lightmap = SampleTextureCatmullRom(texture_globallightmap, ATLAS);
 #else
-	float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
+		float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
 #endif // LIGHTMAP_QUALITY_BICUBIC
-	diffuse += lightmap.rgb;
-	ao *= saturate(1 - lightmap.a);
+		diffuse += lightmap.rgb;
+		ao *= saturate(1 - lightmap.a);
+	}
 }
 
 inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3 TBN, inout float3 bumpColor, inout float roughness)

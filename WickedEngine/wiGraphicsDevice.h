@@ -104,6 +104,7 @@ namespace wiGraphicsTypes
 		bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
 		uint32_t GetFormatStride(FORMAT value) const;
+		bool IsFormatUnorm(FORMAT value) const;
 
 		inline XMMATRIX GetScreenProjection() const
 		{

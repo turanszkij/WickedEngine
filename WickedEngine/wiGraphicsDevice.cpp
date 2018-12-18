@@ -68,8 +68,25 @@ uint32_t GraphicsDevice::GetFormatStride(FORMAT value) const
 		break;
 	}
 
-	// TODO more formats
+	// Probably didn't catch all...
 
 	return 16;
+}
+
+bool GraphicsDevice::IsFormatUnorm(FORMAT value) const
+{
+	switch (value)
+	{
+	case FORMAT_R8G8B8A8_UNORM:
+	case FORMAT_R10G10B10A2_UNORM:
+	case FORMAT_R16_UNORM:
+	case FORMAT_R8_UNORM:
+	case FORMAT_A8_UNORM:
+		return true;
+	}
+
+	// Probably didn't catch all...
+
+	return false;
 }
 

@@ -2544,7 +2544,7 @@ void LoadShaders()
 		desc.dss = depthStencils[DSSTYPE_XRAY];
 
 		desc.numRTs = 1;
-		desc.RTFormats[0] = FORMAT_R32G32B32A32_FLOAT;
+		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
 		RECREATE(PSO_renderlightmap);
@@ -6519,6 +6519,7 @@ void GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 }
 void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
 {
+	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
@@ -6527,18 +6528,10 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 		return;
 	}
 
-	bool hdr = false;
-	switch (desc.Format)
-	{
-	case FORMAT_R16G16B16A16_FLOAT:
-	case FORMAT_R32G32B32A32_FLOAT:
-		hdr = true;
-		break;
-	default:
-		break;
-	}
 
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	bool hdr = !device->IsFormatUnorm(desc.Format);
+
+	device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 	if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 	{
@@ -6551,19 +6544,19 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 			switch (filter)
 			{
 			case MIPGENFILTER_POINT:
-				GetDevice()->EventBegin("GenerateMipChain CubeArray - PointFilter", threadID);
-				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain CubeArray - PointFilter", threadID);
+				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR:
-				GetDevice()->EventBegin("GenerateMipChain CubeArray - LinearFilter", threadID);
-				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain CubeArray - LinearFilter", threadID);
+				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR_MAXIMUM:
-				GetDevice()->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", threadID);
-				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", threadID);
+				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			default:
 				assert(0);
@@ -6572,8 +6565,8 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 
 			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 			{
-				GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
-				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+				device->BindUAV(CS, texture, 0, threadID, i + 1);
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 				desc.Width = max(1, desc.Width / 2);
 				desc.Height = max(1, desc.Height / 2);
 
@@ -6581,16 +6574,16 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 				cb.outputResolution.x = desc.Width;
 				cb.outputResolution.y = desc.Height;
 				cb.arrayIndex = arrayIndex;
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
-				GetDevice()->Dispatch(
+				device->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					threadID);
 
-				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				device->UAVBarrier((GPUResource**)&texture, 1, threadID);
 			}
 		}
 		else
@@ -6599,19 +6592,19 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 			switch (filter)
 			{
 			case MIPGENFILTER_POINT:
-				GetDevice()->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
-				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
+				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR:
-				GetDevice()->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
-				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
+				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR_MAXIMUM:
-				GetDevice()->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
-				GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
+				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			default:
 				assert(0); // not implemented
@@ -6620,8 +6613,8 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 
 			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 			{
-				GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
-				GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+				device->BindUAV(CS, texture, 0, threadID, i + 1);
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 				desc.Width = max(1, desc.Width / 2);
 				desc.Height = max(1, desc.Height / 2);
 
@@ -6629,16 +6622,16 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 				cb.outputResolution.x = desc.Width;
 				cb.outputResolution.y = desc.Height;
 				cb.arrayIndex = 0;
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-				GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
-				GetDevice()->Dispatch(
+				device->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					threadID);
 
-				GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				device->UAVBarrier((GPUResource**)&texture, 1, threadID);
 			}
 		}
 
@@ -6649,27 +6642,27 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 		switch (filter)
 		{
 		case MIPGENFILTER_POINT:
-			GetDevice()->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
+			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
+			device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
 		case MIPGENFILTER_LINEAR:
-			GetDevice()->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
+			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
+			device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
 		case MIPGENFILTER_LINEAR_MAXIMUM:
-			GetDevice()->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
+			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
+			device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
 		case MIPGENFILTER_GAUSSIAN:
-			GetDevice()->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
+			device->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
+			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
 			break;
 		case MIPGENFILTER_BICUBIC:
-			GetDevice()->EventBegin("GenerateMipChain 2D - BicubicFilter", threadID);
-			GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], threadID);
+			device->EventBegin("GenerateMipChain 2D - BicubicFilter", threadID);
+			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], threadID);
 			break;
 		default:
 			assert(0);
@@ -6678,8 +6671,8 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 
 		for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 		{
-			GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
-			GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+			device->BindUAV(CS, texture, 0, threadID, i + 1);
+			device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 			desc.Width = max(1, desc.Width / 2);
 			desc.Height = max(1, desc.Height / 2);
 
@@ -6687,26 +6680,27 @@ void GenerateMipChain(Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 			cb.outputResolution.x = desc.Width;
 			cb.outputResolution.y = desc.Height;
 			cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-			GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-			GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+			device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+			device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
-			GetDevice()->Dispatch(
+			device->Dispatch(
 				max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 				max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 				1,
 				threadID);
 
-			GetDevice()->UAVBarrier((GPUResource**)&texture, 1, threadID);
+			device->UAVBarrier((GPUResource**)&texture, 1, threadID);
 		}
 	}
 
-	GetDevice()->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	GetDevice()->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	device->UnbindUAVs(0, 1, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 void GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
 {
+	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture->GetDesc();
 
 	if (desc.MipLevels < 2)
@@ -6715,39 +6709,30 @@ void GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 		return;
 	}
 
-	bool hdr = false;
-	switch (desc.Format)
-	{
-	case FORMAT_R16G16B16A16_FLOAT:
-	case FORMAT_R32G32B32A32_FLOAT:
-		hdr = true;
-		break;
-	default:
-		break;
-	}
+	bool hdr = !device->IsFormatUnorm(desc.Format);
 
-	GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 	switch (filter)
 	{
 	case MIPGENFILTER_POINT:
-		GetDevice()->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
-		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		GetDevice()->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
+		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
+		device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case MIPGENFILTER_LINEAR:
-		GetDevice()->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
-		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		GetDevice()->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
+		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
+		device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case MIPGENFILTER_LINEAR_MAXIMUM:
-		GetDevice()->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
-		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		GetDevice()->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
+		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
+		device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case MIPGENFILTER_GAUSSIAN:
-		GetDevice()->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
-		GetDevice()->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
+		device->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
+		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
 		break;
 	default:
 		assert(0); // not implemented
@@ -6756,8 +6741,8 @@ void GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
-		GetDevice()->BindUAV(CS, texture, 0, threadID, i + 1);
-		GetDevice()->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+		device->BindUAV(CS, texture, 0, threadID, i + 1);
+		device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
 		desc.Width = max(1, desc.Width / 2);
 		desc.Height = max(1, desc.Height / 2);
 		desc.Depth = max(1, desc.Depth / 2);
@@ -6767,20 +6752,20 @@ void GenerateMipChain(Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD th
 		cb.outputResolution.y = desc.Height;
 		cb.outputResolution.z = desc.Depth;
 		cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-		GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+		device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
-		GetDevice()->Dispatch(
+		device->Dispatch(
 			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
 			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
 			max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
 			threadID);
 	}
 
-	GetDevice()->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	GetDevice()->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
+	device->UnbindUAVs(0, 1, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 
 void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, BORDEREXPANDSTYLE borderExpand)
@@ -6793,27 +6778,31 @@ void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D*
 	assert(desc_dst.BindFlags & BIND_UNORDERED_ACCESS);
 	assert(desc_src.BindFlags & BIND_SHADER_RESOURCE);
 
-	device->EventBegin("CopyTexture2D_Region_UNORM4", threadID);
+	bool hdr = !device->IsFormatUnorm(desc_dst.Format);
 
 	if (borderExpand == BORDEREXPAND_DISABLE)
 	{
-		if (desc_dst.Format == RTFormat_hdr)
+		if (hdr)
 		{
+			device->EventBegin("CopyTexture2D_FLOAT4", threadID);
 			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4], threadID);
 		}
 		else
 		{
+			device->EventBegin("CopyTexture2D_UNORM4", threadID);
 			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
 		}
 	}
 	else
 	{
-		if (desc_dst.Format == RTFormat_hdr)
+		if (hdr)
 		{
+			device->EventBegin("CopyTexture2D_BORDEREXPAND_FLOAT4", threadID);
 			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], threadID);
 		}
 		else
 		{
+			device->EventBegin("CopyTexture2D_BORDEREXPAND_UNORM4", threadID);
 			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
 		}
 	}
@@ -7542,14 +7531,23 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 		{
 			packedLightmaps.erase(object.lightmap);
 		}
+
+		if (RTFormat_lightmap_object == FORMAT_R32G32B32A32_FLOAT)
+		{
+			// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
+			object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
+			object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
+		}
+
 		SAFE_DELETE(object.lightmap);
 		desc.Width = object.lightmapWidth;
 		desc.Height = object.lightmapHeight;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		// Note: we need the full precision format to achieve correct accumulative blending! But the atlas will be half, so not a huge deal
-		desc.Format = FORMAT_R32G32B32A32_FLOAT;
+		// Note: we need the full precision format to achieve correct accumulative blending! But the global atlas will be half, so not a huge deal
+		desc.Format = RTFormat_lightmap_object;
 		hr = device->CreateTexture2D(&desc, nullptr, &object.lightmap);
 		assert(SUCCEEDED(hr));
+		device->SetName(object.lightmap, "objectLightmap");
 	}
 	else
 	{
@@ -7601,6 +7599,8 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	XMFLOAT4 halton = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
 	cb.xTracePixelOffset.x = (halton.x * 2 - 1) / vp.Width;
 	cb.xTracePixelOffset.y = (halton.y * 2 - 1) / vp.Height;
+	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
+	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 	cb.xTraceRandomSeed = renderTime; // random seed
 	cb.xTraceUserData = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
@@ -7712,7 +7712,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 			desc.Height = (UINT)bins[0].size.h;
 			desc.MipLevels = 1;
 			desc.ArraySize = 1;
-			desc.Format = RTFormat_hdr;
+			desc.Format = RTFormat_lightmap_global;
 			desc.SampleDesc.Count = 1;
 			desc.SampleDesc.Quality = 0;
 			desc.Usage = USAGE_DEFAULT;
@@ -7721,6 +7721,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 			desc.MiscFlags = 0;
 
 			device->CreateTexture2D(&desc, nullptr, &globalLightmap);
+			device->SetName(globalLightmap, "globalLightmap");
 		}
 		else
 		{
