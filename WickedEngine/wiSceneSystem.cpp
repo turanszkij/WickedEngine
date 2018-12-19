@@ -471,6 +471,7 @@ namespace wiSceneSystem
 		}
 
 		// vertexBuffer_PRE will be created on demand later!
+		vertexBuffer_PRE.release();
 
 	}
 	void MeshComponent::ComputeNormals(bool smooth)
