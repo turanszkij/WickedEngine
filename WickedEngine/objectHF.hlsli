@@ -189,7 +189,6 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 	color.a = 1;
 }
 
-
 inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
 #ifndef DISABLE_ENVMAPS
@@ -247,7 +246,6 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout f
 		specular += max(0.0f, result.specular);
 	}
 }
-
 
 inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
@@ -575,7 +573,16 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	LightMapping(input.atl, diffuse, specular, ao);
 
 
-#ifndef DEFERRED
+#ifdef DEFERRED
+
+
+#ifdef PLANARREFLECTION
+	specular += PlanarReflection(refUV, surface) * surface.F;
+#endif
+
+
+
+#else // not DEFERRED
 
 #ifdef FORWARD
 	ForwardLighting(surface, diffuse, specular, reflection);

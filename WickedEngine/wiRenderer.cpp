@@ -872,6 +872,10 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			{
 				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP;
 			}
+			if (planarreflection)
+			{
+				realPS = PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION;
+			}
 		}
 		else
 		{
@@ -882,6 +886,10 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			else
 			{
 				realPS = PSTYPE_OBJECT_DEFERRED;
+			}
+			if (planarreflection)
+			{
+				realPS = PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION;
 			}
 		}
 		break;
@@ -1880,7 +1888,9 @@ void LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_normalmap.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_planarreflection.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_POM] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_normalmap_pom.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_OBJECT_DEFERRED_NORMALMAP_PLANARREFLECTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred_normalmap_planarreflection.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_IMPOSTOR_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_deferred.cso", wiResourceManager::PIXELSHADER));
 
 	pixelShaders[PSTYPE_OBJECT_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_forward.cso", wiResourceManager::PIXELSHADER));
