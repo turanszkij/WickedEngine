@@ -77,10 +77,19 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	windSpeedSlider = new wiSlider(0.001f, 0.2f, 0.1f, 10000, "Wind Speed: ");
 	windSpeedSlider->SetSize(XMFLOAT2(100, 30));
 	windSpeedSlider->SetPos(XMFLOAT2(x, y += step));
-	windSpeedSlider->OnSlide([&](wiEventArgs args) {
-		GetWeather().windDirection = XMFLOAT3(args.fValue, 0, 0);
-	});
 	weatherWindow->AddWidget(windSpeedSlider);
+
+	windDirectionSlider = new wiSlider(0, 1, 0, 10000, "Wind Direction: ");
+	windDirectionSlider->SetSize(XMFLOAT2(100, 30));
+	windDirectionSlider->SetPos(XMFLOAT2(x, y += step));
+	windDirectionSlider->OnSlide([&](wiEventArgs args) {
+		XMMATRIX rot = XMMatrixRotationY(args.fValue * XM_PI * 2);
+		XMVECTOR dir = XMVectorSet(1, 0, 0, 0);
+		dir = XMVector3TransformNormal(dir, rot);
+		dir *= windSpeedSlider->GetValue();
+		XMStoreFloat3(&GetWeather().windDirection, dir);
+	});
+	weatherWindow->AddWidget(windDirectionSlider);
 
 
 	skyButton = new wiButton("Load Sky");
@@ -290,7 +299,7 @@ void WeatherWindow::UpdateFromRenderer()
 	cloudinessSlider->SetValue(weather.cloudiness);
 	cloudScaleSlider->SetValue(weather.cloudScale);
 	cloudSpeedSlider->SetValue(weather.cloudSpeed);
-	windSpeedSlider->SetValue(weather.windDirection.x);
+	windSpeedSlider->SetValue(wiMath::Length(weather.windDirection));
 }
 
 WeatherComponent& WeatherWindow::GetWeather() const

@@ -76,6 +76,8 @@ namespace wiSceneSystem
 	}
 	void MaterialComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
+		std::string dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -104,22 +106,21 @@ namespace wiSceneSystem
 
 			SetDirty();
 
-			std::string texturesDir = archive.GetSourceDirectory();
 			if (!baseColorMapName.empty())
 			{
-				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + baseColorMapName);
+				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
-				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + surfaceMapName);
+				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
-				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + normalMapName);
+				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
-				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(texturesDir + displacementMapName);
+				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
 			}
 
 		}
@@ -143,6 +144,33 @@ namespace wiSceneSystem
 			archive << texAnimDirection;
 			archive << texAnimFrameRate;
 			archive << texAnimElapsedTime;
+
+			// If detecting an absolute path in textures, remove it and convert to relative:
+			{
+				size_t found = baseColorMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					baseColorMapName = baseColorMapName.substr(found + dir.length());
+				}
+
+				found = surfaceMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					surfaceMapName = surfaceMapName.substr(found + dir.length());
+				}
+
+				found = normalMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					normalMapName = normalMapName.substr(found + dir.length());
+				}
+
+				found = displacementMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					displacementMapName = displacementMapName.substr(found + dir.length());
+				}
+			}
 
 			archive << baseColorMapName;
 			archive << surfaceMapName;

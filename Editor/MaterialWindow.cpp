@@ -174,7 +174,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	pomSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->parallaxOcclusionMapping = args.fValue;
+			material->SetParallaxOcclusionMapping(args.fValue);
 	});
 	materialWindow->AddWidget(pomSlider);
 
@@ -356,8 +356,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
-				material->baseColorMapName = wiHelper::GetFileNameFromPath(fileName);
-				texture_baseColor_Button->SetText(material->baseColorMapName);
+				material->baseColorMapName = fileName;
+				fileName = wiHelper::GetFileNameFromPath(fileName);
+				texture_baseColor_Button->SetText(fileName);
 			}
 		}
 	});
@@ -408,8 +409,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
-				material->normalMapName = wiHelper::GetFileNameFromPath(fileName);
-				texture_normal_Button->SetText(material->normalMapName);
+				material->normalMapName = fileName;
+				fileName = wiHelper::GetFileNameFromPath(fileName);
+				texture_normal_Button->SetText(fileName);
 			}
 		}
 	});
@@ -460,8 +462,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
-				material->surfaceMapName = wiHelper::GetFileNameFromPath(fileName);
-				texture_surface_Button->SetText(material->surfaceMapName);
+				material->surfaceMapName = fileName;
+				fileName = wiHelper::GetFileNameFromPath(fileName);
+				texture_surface_Button->SetText(fileName);
 			}
 		}
 	});
@@ -512,8 +515,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			if (GetSaveFileNameA(&ofn) == TRUE) {
 				string fileName = ofn.lpstrFile;
 				material->displacementMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
-				material->displacementMapName = wiHelper::GetFileNameFromPath(fileName);
-				texture_displacement_Button->SetText(material->displacementMapName);
+				material->displacementMapName = fileName;
+				fileName = wiHelper::GetFileNameFromPath(fileName);
+				texture_displacement_Button->SetText(fileName);
 			}
 		}
 	});
