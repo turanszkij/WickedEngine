@@ -178,15 +178,19 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	UV = finalTexCoords;
 }
 
-inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout Surface surface, inout float4 color)
+inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout Surface surface, inout float4 color, inout float3 diffuse)
 {
-	float2 size;
-	float mipLevels;
-	xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
-	float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
-	float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0));
-	surface.albedo.rgb *= lerp(refractiveColor.rgb, 1, color.a);
-	color.a = 1;
+	if (g_xMat_refractionIndex > 0)
+	{
+		float2 size;
+		float mipLevels;
+		xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
+		float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
+		float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0));
+		surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
+		diffuse = lerp(1, diffuse, color.a);
+		color.a = 1;
+	}
 }
 
 inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
@@ -604,8 +608,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 #ifdef TRANSPARENT
-	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color);
-	diffuse = lerp(1, diffuse, opacity);
+	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color, diffuse);
 #else
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	reflection = lerp(reflection, ssr.rgb, ssr.a);

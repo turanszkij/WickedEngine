@@ -113,7 +113,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(metalnessSlider);
 
 	alphaSlider = new wiSlider(0, 1, 1.0f, 1000, "Alpha: ");
-	alphaSlider->SetTooltip("Adjusts the overall transparency of the surface.");
+	alphaSlider->SetTooltip("Adjusts the overall transparency of the surface. Don't forget to set a Blend mode or refraction index to take effect.");
 	alphaSlider->SetSize(XMFLOAT2(100, 30));
 	alphaSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaSlider->OnSlide([&](wiEventArgs args) {

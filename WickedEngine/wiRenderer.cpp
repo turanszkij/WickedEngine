@@ -614,7 +614,7 @@ enum OBJECTRENDERING_POM
 	OBJECTRENDERING_POM_ENABLED,
 	OBJECTRENDERING_POM_COUNT
 };
-GraphicsPSO* PSO_object[SHADERTYPE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
+GraphicsPSO* PSO_object[SHADERTYPE_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
 GraphicsPSO* PSO_object_water[SHADERTYPE_COUNT] = {};
 GraphicsPSO* PSO_object_wire = nullptr;
 GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
@@ -637,13 +637,14 @@ GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessella
 		return PSO_object_water[shaderType];
 	}
 
-	bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-	bool transparent = material.IsTransparent();
-	bool normalmap = material.GetNormalMap() != nullptr;
-	bool planarreflection = material.HasPlanarReflection();
-	bool pom = material.parallaxOcclusionMapping > 0;
+	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+	const bool transparent = material.IsTransparent();
+	const bool normalmap = material.GetNormalMap() != nullptr;
+	const bool planarreflection = material.HasPlanarReflection();
+	const bool pom = material.parallaxOcclusionMapping > 0;
+	const BLENDMODE blendMode = material.blendMode;
 
-	return PSO_object[shaderType][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+	return PSO_object[shaderType][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
 }
 
 
@@ -2022,169 +2023,190 @@ void LoadShaders()
 	// default objectshaders:
 	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
 	{
-		for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
+		for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 		{
-			for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
+			for (int doublesided = 0; doublesided < OBJECTRENDERING_DOUBLESIDED_COUNT; ++doublesided)
 			{
-				for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
+				for (int tessellation = 0; tessellation < OBJECTRENDERING_TESSELLATION_COUNT; ++tessellation)
 				{
-					for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
+					for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 					{
-						for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+						for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
 						{
-							for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+							for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
 							{
-								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
+								for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
 								{
-									VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
-									VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
-									HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
-									DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
-									GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
-									PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
-
-									if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
+									for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 									{
-										continue;
-									}
+										VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
+										VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
+										HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
+										DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
+										GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
+										PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
 
-									GraphicsPSODesc desc;
-									desc.vs = vertexShaders[realVS];
-									desc.il = vertexLayouts[realVL];
-									desc.hs = hullShaders[realHS];
-									desc.ds = domainShaders[realDS];
-									desc.gs = geometryShaders[realGS];
-									desc.ps = pixelShaders[realPS];
-
-									switch (shaderType)
-									{
-									case SHADERTYPE_DEPTHONLY:
-									case SHADERTYPE_SHADOW:
-									case SHADERTYPE_SHADOWCUBE:
-										desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
-										break;
-									default:
-										desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENT : BSTYPE_OPAQUE];
-										break;
-									}
-
-									switch (shaderType)
-									{
-									case SHADERTYPE_SHADOW:
-									case SHADERTYPE_SHADOWCUBE:
-										desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-										break;
-									case SHADERTYPE_TILEDFORWARD:
-										desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-										break;
-									case SHADERTYPE_ENVMAPCAPTURE:
-										desc.dss = depthStencils[DSSTYPE_ENVMAP];
-										break;
-									case SHADERTYPE_VOXELIZE:
-										desc.dss = depthStencils[DSSTYPE_XRAY];
-										break;
-									default:
-										desc.dss = depthStencils[DSSTYPE_DEFAULT];
-										break;
-									}
-
-									switch (shaderType)
-									{
-									case SHADERTYPE_SHADOW:
-									case SHADERTYPE_SHADOWCUBE:
-										desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-										break;
-									case SHADERTYPE_VOXELIZE:
-										desc.rs = rasterizers[RSTYPE_VOXELIZE];
-										break;
-									default:
-										desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
-										break;
-									}
-
-									switch (shaderType)
-									{
-									case SHADERTYPE_TEXTURE:
-										desc.numRTs = 1;
-										desc.RTFormats[0] = RTFormat_hdr;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case SHADERTYPE_DEFERRED:
-										desc.numRTs = 5;
-										desc.RTFormats[0] = RTFormat_gbuffer_0;
-										desc.RTFormats[1] = RTFormat_gbuffer_1;
-										desc.RTFormats[2] = RTFormat_gbuffer_2;
-										desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
-										desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case SHADERTYPE_FORWARD:
-										if (transparency)
+										if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
 										{
+											continue;
+										}
+
+										GraphicsPSODesc desc;
+										desc.vs = vertexShaders[realVS];
+										desc.il = vertexLayouts[realVL];
+										desc.hs = hullShaders[realHS];
+										desc.ds = domainShaders[realDS];
+										desc.gs = geometryShaders[realGS];
+										desc.ps = pixelShaders[realPS];
+
+										switch (blendMode)
+										{
+										case BLENDMODE_OPAQUE:
+											desc.bs = blendStates[BSTYPE_OPAQUE];
+											break;
+										case BLENDMODE_ALPHA:
+											desc.bs = blendStates[BSTYPE_TRANSPARENT];
+											break;
+										case BLENDMODE_ADDITIVE:
+											desc.bs = blendStates[BSTYPE_ADDITIVE];
+											break;
+										case BLENDMODE_PREMULTIPLIED:
+											desc.bs = blendStates[BSTYPE_PREMULTIPLIED];
+											break;
+										default:
+											assert(0);
+											break;
+										}
+
+										switch (shaderType)
+										{
+										case SHADERTYPE_DEPTHONLY:
+										case SHADERTYPE_SHADOW:
+										case SHADERTYPE_SHADOWCUBE:
+											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+											break;
+										default:
+											break;
+										}
+
+										switch (shaderType)
+										{
+										case SHADERTYPE_SHADOW:
+										case SHADERTYPE_SHADOWCUBE:
+											desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+											break;
+										case SHADERTYPE_TILEDFORWARD:
+											desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+											break;
+										case SHADERTYPE_ENVMAPCAPTURE:
+											desc.dss = depthStencils[DSSTYPE_ENVMAP];
+											break;
+										case SHADERTYPE_VOXELIZE:
+											desc.dss = depthStencils[DSSTYPE_XRAY];
+											break;
+										default:
+											desc.dss = depthStencils[DSSTYPE_DEFAULT];
+											break;
+										}
+
+										switch (shaderType)
+										{
+										case SHADERTYPE_SHADOW:
+										case SHADERTYPE_SHADOWCUBE:
+											desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+											break;
+										case SHADERTYPE_VOXELIZE:
+											desc.rs = rasterizers[RSTYPE_VOXELIZE];
+											break;
+										default:
+											desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+											break;
+										}
+
+										switch (shaderType)
+										{
+										case SHADERTYPE_TEXTURE:
 											desc.numRTs = 1;
-										}
-										else
-										{
-											desc.numRTs = 2;
-										}
-										desc.RTFormats[0] = RTFormat_hdr;
-										desc.RTFormats[1] = RTFormat_gbuffer_1;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case SHADERTYPE_TILEDFORWARD:
-										if (transparency)
-										{
-											desc.numRTs = 1;
-										}
-										else
-										{
-											desc.numRTs = 2;
-										}
-										desc.RTFormats[0] = RTFormat_hdr;
-										desc.RTFormats[1] = RTFormat_gbuffer_1;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case SHADERTYPE_DEPTHONLY:
-										desc.numRTs = 0;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case SHADERTYPE_ENVMAPCAPTURE:
-										desc.numRTs = 1;
-										desc.RTFormats[0] = RTFormat_envprobe;
-										desc.DSFormat = DSFormat_small;
-										break;
-									case SHADERTYPE_SHADOW:
-										if (transparency)
-										{
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_ldr;
-										}
-										else
-										{
+											desc.RTFormats[0] = RTFormat_hdr;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case SHADERTYPE_DEFERRED:
+											desc.numRTs = 5;
+											desc.RTFormats[0] = RTFormat_gbuffer_0;
+											desc.RTFormats[1] = RTFormat_gbuffer_1;
+											desc.RTFormats[2] = RTFormat_gbuffer_2;
+											desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
+											desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case SHADERTYPE_FORWARD:
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
+											desc.RTFormats[0] = RTFormat_hdr;
+											desc.RTFormats[1] = RTFormat_gbuffer_1;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case SHADERTYPE_TILEDFORWARD:
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
+											desc.RTFormats[0] = RTFormat_hdr;
+											desc.RTFormats[1] = RTFormat_gbuffer_1;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case SHADERTYPE_DEPTHONLY:
 											desc.numRTs = 0;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case SHADERTYPE_ENVMAPCAPTURE:
+											desc.numRTs = 1;
+											desc.RTFormats[0] = RTFormat_envprobe;
+											desc.DSFormat = DSFormat_small;
+											break;
+										case SHADERTYPE_SHADOW:
+											if (transparency)
+											{
+												desc.numRTs = 1;
+												desc.RTFormats[0] = RTFormat_ldr;
+											}
+											else
+											{
+												desc.numRTs = 0;
+											}
+											desc.DSFormat = DSFormat_small;
+											break;
+										case SHADERTYPE_SHADOWCUBE:
+											desc.numRTs = 0;
+											desc.DSFormat = DSFormat_small;
+											break;
+										case SHADERTYPE_VOXELIZE:
+											desc.numRTs = 0;
+											break;
 										}
-										desc.DSFormat = DSFormat_small;
-										break;
-									case SHADERTYPE_SHADOWCUBE:
-										desc.numRTs = 0;
-										desc.DSFormat = DSFormat_small;
-										break;
-									case SHADERTYPE_VOXELIZE:
-										desc.numRTs = 0;
-										break;
-									}
 
-									if (tessellation)
-									{
-										desc.pt = PATCHLIST;
-									}
-									else
-									{
-										desc.pt = TRIANGLELIST;
-									}
+										if (tessellation)
+										{
+											desc.pt = PATCHLIST;
+										}
+										else
+										{
+											desc.pt = TRIANGLELIST;
+										}
 
-									RECREATE(PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
-									device->CreateGraphicsPSO(&desc, PSO_object[shaderType][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										RECREATE(PSO_object[shaderType][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										device->CreateGraphicsPSO(&desc, PSO_object[shaderType][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+									}
 								}
 							}
 						}
@@ -3267,6 +3289,18 @@ void SetUpStates()
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
 	device->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENT]);
+
+	bd.RenderTarget[0].BlendEnable = true;
+	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.IndependentBlendEnable = false;
+	bd.AlphaToCoverageEnable = false;
+	device->CreateBlendState(&bd, blendStates[BSTYPE_PREMULTIPLIED]);
 
 
 	bd.RenderTarget[0].BlendEnable = true;

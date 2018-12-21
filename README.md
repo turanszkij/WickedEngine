@@ -155,6 +155,6 @@ The Editor supports the importing of some common model formats (the list will po
 The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
 The old Blender exporter script is now not supported! (from version 0.21.0)
 
-![Sponza](https://turanszkij.files.wordpress.com/2018/11/sponza.png)
+![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
 	
 

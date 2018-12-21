@@ -163,7 +163,7 @@ namespace wiSceneSystem
 		inline void SetPlanarReflections(bool value) { if (value) { _flags |= PLANAR_REFLECTION; } else { _flags &= ~PLANAR_REFLECTION; } }
 		inline void SetWater(bool value) { if (value) { _flags |= WATER; } else { _flags &= ~WATER; } }
 
-		inline bool IsTransparent() const { return GetOpacity() < 1.0f; }
+		inline bool IsTransparent() const { return GetOpacity() < 1.0f || blendMode != BLENDMODE_OPAQUE; }
 		inline bool IsWater() const { return _flags & WATER; }
 		inline bool HasPlanarReflection() const { return (_flags & PLANAR_REFLECTION) || IsWater(); }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
