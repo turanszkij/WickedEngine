@@ -74,7 +74,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			float3 L = 0;
 			float dist = 0;
 		
-			switch (light.type)
+			switch (light.GetType())
 			{
 			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{

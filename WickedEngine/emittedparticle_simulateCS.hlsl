@@ -38,7 +38,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		uint forceFieldID = g_xFrame_ForceFieldArrayOffset + Gid;
 		ShaderEntityType forceField = EntityArray[forceFieldID];
 
-		forceFields[Gid].type = (uint)forceField.type;
+		forceFields[Gid].type = (uint)forceField.GetType();
 		forceFields[Gid].position = forceField.positionWS;
 		forceFields[Gid].gravity = forceField.energy;
 		forceFields[Gid].range_inverse = forceField.range;

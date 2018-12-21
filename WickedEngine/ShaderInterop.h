@@ -143,9 +143,11 @@ typedef XMINT4 int4;
 #define ENTITY_TYPE_FORCEFIELD_POINT	200
 #define ENTITY_TYPE_FORCEFIELD_PLANE	201
 
+#define ENTITY_FLAG_LIGHT_STATIC		1 << 0
+
 struct ShaderEntityType
 {
-	uint type;
+	uint params;
 	float3 positionVS;
 	float range;
 	float3 directionVS;
@@ -158,6 +160,24 @@ struct ShaderEntityType
 	float shadowBias;
 	int additionalData_index;
 	float4 texMulAdd;
+
+	inline uint GetType()
+	{
+		return params & 0xFFFF;
+	}
+	inline uint GetFlags()
+	{
+		return (params >> 16) & 0xFFFF;
+	}
+
+	inline void SetType(uint type)
+	{
+		params = type & 0xFFFF; // also initializes to zero, so flags must be set after the type
+	}
+	inline void SetFlags(uint flags)
+	{
+		params |= (flags & 0xFFFF) << 16;
+	}
 
 	// Load uncompressed color:
 	inline float4 GetColor()

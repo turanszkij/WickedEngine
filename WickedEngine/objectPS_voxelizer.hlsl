@@ -25,9 +25,14 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 		{
 			ShaderEntityType light = EntityArray[i];
 
+			if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+			{
+				continue; // static lights will be skipped (they are used in lightmap baking)
+			}
+
 			LightingResult result = (LightingResult)0;
 
-			switch (light.type)
+			switch (light.GetType())
 			{
 			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{

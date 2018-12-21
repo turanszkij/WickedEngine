@@ -125,7 +125,7 @@ struct VoxelizedSceneData
 	int numCones = 8;
 	float rayStepSize = 0.5f;
 	bool secondaryBounceEnabled = true;
-	bool reflectionsEnabled = false;
+	bool reflectionsEnabled = true;
 	bool centerChangedThisFrame = true;
 	UINT mips = 7;
 } voxelSceneData;
@@ -1110,7 +1110,8 @@ GraphicsPSO* PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT] = {};
 GraphicsPSO* PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT] = {};
 GraphicsPSO* PSO_enviromentallight = nullptr;
 
-GraphicsPSO* PSO_renderlightmap = nullptr;
+GraphicsPSO* PSO_renderlightmap_indirect = nullptr;
+GraphicsPSO* PSO_renderlightmap_direct = nullptr;
 
 enum SKYRENDERING
 {
@@ -1967,7 +1968,8 @@ void LoadShaders()
 	pixelShaders[PSTYPE_VOXELIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_RENDERLIGHTMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_indirect.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_direct.cso", wiResourceManager::PIXELSHADER));
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -2570,7 +2572,7 @@ void LoadShaders()
 		GraphicsPSODesc desc;
 		desc.il = vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
-		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP];
+		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT];
 		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = depthStencils[DSSTYPE_XRAY];
@@ -2579,8 +2581,24 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
-		RECREATE(PSO_renderlightmap);
-		device->CreateGraphicsPSO(&desc, PSO_renderlightmap);
+		RECREATE(PSO_renderlightmap_indirect);
+		device->CreateGraphicsPSO(&desc, PSO_renderlightmap_indirect);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.il = vertexLayouts[VLTYPE_RENDERLIGHTMAP];
+		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
+		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT];
+		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = depthStencils[DSSTYPE_XRAY];
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_lightmap_object;
+		desc.DSFormat = FORMAT_UNKNOWN;
+
+		RECREATE(PSO_renderlightmap_direct);
+		device->CreateGraphicsPSO(&desc, PSO_renderlightmap_direct);
 	}
 	for (int type = 0; type < SKYRENDERING_COUNT; ++type)
 	{
@@ -3731,7 +3749,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			const int shadowIndex = light.shadowMap_index;
 
-			entityArray[entityCounter].type = light.GetType();
+			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].positionWS = light.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
 			entityArray[entityCounter].range = light.range;
@@ -3792,6 +3810,11 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			break;
 			}
 
+			if (light.IsStatic())
+			{
+				entityArray[entityCounter].SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
 			entityCounter++;
 		}
 		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
@@ -3818,7 +3841,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			entityArray[entityCounter].type = ENTITY_TYPE_ENVMAP;
+			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
 			entityArray[entityCounter].positionWS = probe.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
 			entityArray[entityCounter].range = probe.range;
@@ -3849,7 +3872,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 			const DecalComponent& decal = scene.decals[decalIndex];
 
-			entityArray[entityCounter].type = ENTITY_TYPE_DECAL;
+			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
 			entityArray[entityCounter].positionWS = decal.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
 			entityArray[entityCounter].range = decal.range;
@@ -3877,7 +3900,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			const ForceFieldComponent& force = scene.forces[i];
 
-			entityArray[entityCounter].type = force.type;
+			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].positionWS = force.position;
 			entityArray[entityCounter].energy = force.gravity;
 			entityArray[entityCounter].range = 1.0f / max(0.0001f, force.range); // avoid division in shader
@@ -4330,7 +4353,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		for (uint32_t lightIndex : culling.culledLights)
 		{
 			const LightComponent& light = scene.lights[lightIndex];
-			if (light.GetType() != type)
+			if (light.GetType() != type || light.IsStatic())
 				continue;
 
 			switch (type)
@@ -4774,7 +4797,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 			for (uint32_t lightIndex : culling.culledLights)
 			{
 				const LightComponent& light = scene.lights[lightIndex];
-				if (light.GetType() != type || !light.IsCastingShadow())
+				if (light.GetType() != type || !light.IsCastingShadow() || light.IsStatic())
 				{
 					continue;
 				}
@@ -7619,8 +7642,6 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	instance->Create(transform.world);
 	device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
-	device->BindGraphicsPSO(PSO_renderlightmap, threadID);
-
 	GPUBuffer* vbs[] = {
 		mesh.vertexBuffer_POS.get(),
 		mesh.vertexBuffer_ATL.get(),
@@ -7651,6 +7672,12 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
+	// Render direct lighting part:
+	device->BindGraphicsPSO(PSO_renderlightmap_direct, threadID);
+	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+
+	// Render indirect lighting part:
+	device->BindGraphicsPSO(PSO_renderlightmap_indirect, threadID);
 	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
 
 	object.lightmapIterationCount++;

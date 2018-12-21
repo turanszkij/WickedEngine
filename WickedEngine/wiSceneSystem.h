@@ -581,6 +581,7 @@ namespace wiSceneSystem
 			CAST_SHADOW = 1 << 0,
 			VOLUMETRICS = 1 << 1,
 			VISUALIZER = 1 << 2,
+			LIGHTMAPONLY_STATIC = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
 		XMFLOAT3 color = XMFLOAT3(1, 1, 1);
@@ -622,10 +623,12 @@ namespace wiSceneSystem
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
 		inline void SetVisualizerEnabled(bool value) { if (value) { _flags |= VISUALIZER; } else { _flags &= ~VISUALIZER; } }
+		inline void SetStatic(bool value) { if (value) { _flags |= LIGHTMAPONLY_STATIC; } else { _flags &= ~LIGHTMAPONLY_STATIC; } }
 
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsVolumetricsEnabled() const { return _flags & VOLUMETRICS; }
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
+		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 
 		inline float GetRange() const { return range; }
 

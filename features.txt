@@ -82,3 +82,5 @@ Volumetric light scattering
 Smooth Particle Hydrodynamics (SPH) Fluid Simulation
 GPU Path Tracing
 Entity-Component System
+Lightmaps
+Lightmap baking with GPU Path Trace

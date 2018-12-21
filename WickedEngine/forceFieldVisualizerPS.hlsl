@@ -14,7 +14,7 @@ float4 main(PSIn input) : SV_TARGET
 
 	float4 color = forceField.energy < 0 ? float4(0, 0, 1, 1) : float4(1, 0, 0, 1);
 
-	if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT)
+	if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT)
 	{
 		// point-like forcefield:
 		float3 centerToPos = normalize(input.pos3D.xyz - forceField.positionWS.xyz);

@@ -284,7 +284,12 @@ void main(ComputeShaderInput IN)
 	{
 		ShaderEntityType entity = EntityArray[i];
 
-		switch (entity.type)
+		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+		{
+			continue; // static lights will be skipped here (they are used at lightmap baking)
+		}
+
+		switch (entity.GetType())
 		{
 		case ENTITY_TYPE_POINTLIGHT:
 		{
@@ -360,7 +365,7 @@ void main(ComputeShaderInput IN)
 			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				if (entity.type == ENTITY_TYPE_DECAL)
+				if (entity.GetType() == ENTITY_TYPE_DECAL)
 				{
 					InterlockedAdd(t_decalCount, 1);
 				}
@@ -386,7 +391,7 @@ void main(ComputeShaderInput IN)
 					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
-						if (entity.type == ENTITY_TYPE_DECAL)
+						if (entity.GetType() == ENTITY_TYPE_DECAL)
 						{
 							InterlockedAdd(o_decalCount, 1);
 						}
@@ -529,7 +534,7 @@ void main(ComputeShaderInput IN)
 
 		LightingResult result = (LightingResult)0;
 
-		switch (light.type)
+		switch (light.GetType())
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{

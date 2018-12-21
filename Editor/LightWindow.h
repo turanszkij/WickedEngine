@@ -33,6 +33,7 @@ public:
 	wiCheckBox*	shadowCheckBox;
 	wiCheckBox*	haloCheckBox;
 	wiCheckBox*	volumetricsCheckBox;
+	wiCheckBox*	staticCheckBox;
 	wiButton*	addLightButton;
 	wiColorPicker*	colorPicker;
 	wiComboBox*	typeSelectorComboBox;

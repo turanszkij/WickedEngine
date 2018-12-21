@@ -13,7 +13,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	lightWindow = new wiWindow(GUI, "Light Window");
-	lightWindow->SetSize(XMFLOAT2(650, 500));
+	lightWindow->SetSize(XMFLOAT2(650, 520));
 	//lightWindow->SetEnabled(false);
 	GUI->AddWidget(lightWindow);
 
@@ -157,6 +157,19 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	haloCheckBox->SetEnabled(false);
 	haloCheckBox->SetTooltip("Visualize light source emission");
 	lightWindow->AddWidget(haloCheckBox);
+
+	staticCheckBox = new wiCheckBox("Static: ");
+	staticCheckBox->SetPos(XMFLOAT2(x, y += step));
+	staticCheckBox->OnClick([&](wiEventArgs args) {
+		LightComponent* light = wiRenderer::GetScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->SetStatic(args.bValue);
+		}
+	});
+	staticCheckBox->SetEnabled(false);
+	staticCheckBox->SetTooltip("Static lights will only be used for baking into lightmaps.");
+	lightWindow->AddWidget(staticCheckBox);
 
 	addLightButton = new wiButton("Add Light");
 	addLightButton->SetPos(XMFLOAT2(x, y += step));

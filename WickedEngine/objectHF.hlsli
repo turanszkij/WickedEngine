@@ -205,9 +205,14 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout f
 	{
 		ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
 
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+		{
+			continue; // static lights will be skipped (they are used in lightmap baking)
+		}
+
 		LightingResult result = (LightingResult)0;
 
-		switch (light.type)
+		switch (light.GetType())
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
@@ -357,9 +362,14 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 	{
 		ShaderEntityType light = EntityArray[EntityIndexList[startOffset + iterator]];
 
+		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+		{
+			continue; // static lights will be skipped (they are used in lightmap baking)
+		}
+
 		LightingResult result = (LightingResult)0;
 
-		switch (light.type)
+		switch (light.GetType())
 		{
 		case ENTITY_TYPE_DIRECTIONALLIGHT:
 		{
