@@ -134,7 +134,7 @@ float4 main(Input input) : SV_TARGET
 			newRay.direction_inverse = rcp(newRay.direction);
 			newRay.energy = 0;
 			bool hit = TraceSceneANY(newRay, dist);
-			finalResult = (hit ? 0 : NdotL) * (result.diffuse);
+			finalResult += (hit ? 0 : NdotL) * (result.diffuse);
 		}
 	}
 

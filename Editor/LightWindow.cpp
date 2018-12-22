@@ -260,6 +260,8 @@ void LightWindow::SetEntity(Entity entity)
 		haloCheckBox->SetCheck(light->IsVisualizerEnabled());
 		volumetricsCheckBox->SetEnabled(true);
 		volumetricsCheckBox->SetCheck(light->IsVolumetricsEnabled());
+		staticCheckBox->SetEnabled(true);
+		staticCheckBox->SetCheck(light->IsStatic());
 		colorPicker->SetEnabled(true);
 		typeSelectorComboBox->SetEnabled(true);
 		typeSelectorComboBox->SetSelected((int)light->GetType());
@@ -277,6 +279,7 @@ void LightWindow::SetEntity(Entity entity)
 		shadowCheckBox->SetEnabled(false);
 		haloCheckBox->SetEnabled(false);
 		volumetricsCheckBox->SetEnabled(false);
+		staticCheckBox->SetEnabled(false);
 		energySlider->SetEnabled(false);
 		colorPicker->SetEnabled(false);
 		typeSelectorComboBox->SetEnabled(false);
