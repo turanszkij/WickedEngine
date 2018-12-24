@@ -269,7 +269,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 			ray.energy *= (1.0f / diffChance) * albedo;
 		}
 
-		ray.origin = hit.position + ray.direction * EPSILON;
+		ray.origin = trace_bias_position(hit.position, hit.N);
 		ray.primitiveID = hit.primitiveID;
 		ray.bary = hit.bary;
 

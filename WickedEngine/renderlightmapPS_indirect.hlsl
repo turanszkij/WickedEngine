@@ -18,11 +18,12 @@ struct Input
 
 float4 main(Input input) : SV_TARGET
 {
+	float3 P = input.pos3D;
 	float3 N = normalize(input.normal);
 	float2 uv = input.uv;
 	float seed = xTraceRandomSeed;
 	float3 direction = SampleHemisphere(N, 1.0f, seed, uv);
-	Ray ray = CreateRay(input.pos3D + direction * EPSILON, direction);
+	Ray ray = CreateRay(trace_bias_position(P, N), direction);
 
 	// Sample primary ray (scene materials, sky, etc):
 	RayHit hit = TraceScene(ray);

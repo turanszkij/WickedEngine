@@ -129,7 +129,7 @@ float4 main(Input input) : SV_TARGET
 			float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 
 			Ray newRay;
-			newRay.origin = P;
+			newRay.origin = trace_bias_position(P, N);
 			newRay.direction = L + sampling_offset * 0.025f;
 			newRay.direction_inverse = rcp(newRay.direction);
 			newRay.energy = 0;

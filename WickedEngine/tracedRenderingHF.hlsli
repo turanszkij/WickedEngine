@@ -10,6 +10,15 @@
 static const float INFINITE_RAYHIT = 1000000;
 static const float EPSILON = 0.0001f;
 
+// returns a position that is sligtly above the surface position to avoid self intersection
+//	P	: surface postion
+//	N	: surface normal
+inline float3 trace_bias_position(in float3 P, in float3 N)
+{
+	return P + N * EPSILON; // this is the original version
+	//return P + sign(N) * abs(P * 0.0000002); // this is from https://ndotl.wordpress.com/2018/08/29/baking-artifact-free-lightmaps/ 
+}
+
 
 //struct Sphere
 //{
