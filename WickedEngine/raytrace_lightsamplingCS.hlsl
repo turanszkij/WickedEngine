@@ -59,7 +59,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float reflectance = mat.reflectance * surfaceMap.r;
 		float metalness = mat.metalness * surfaceMap.g;
 		float emissive = mat.emissive * surfaceMap.b;
-		float roughness = mat.roughness /** normalMap.a*/;
+		float roughness = mat.roughness * normalMap.a;
 		float sss = mat.subsurfaceScattering;
 
 		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness, emissive, sss);

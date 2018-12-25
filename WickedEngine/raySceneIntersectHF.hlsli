@@ -236,40 +236,58 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		float reflectance = mat.reflectance * surfaceMap.r;
 		float metalness = mat.metalness * surfaceMap.g;
 		float3 emissive = baseColor.rgb * mat.emissive * surfaceMap.b;
-		float roughness = mat.roughness /** normalMap.a*/;
+		float roughness = mat.roughness * normalMap.a;
+		roughness = sqr(roughness); // convert linear roughness to cone aperture
 		float sss = mat.subsurfaceScattering;
 
-		float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
-		float3 specular = ComputeF0(baseColor, reflectance, metalness);
 
-
-		// Calculate chances of diffuse and specular reflection
-		albedo = min(1.0f - specular, albedo);
-		float specChance = dot(specular, 0.33);
-		float diffChance = dot(albedo, 0.33);
-		float inv = 1.0f / (specChance + diffChance);
-		specChance *= inv;
-		diffChance *= inv;
+		// Calculate chances of reflection types:
+		float refractChance = 1 - baseColor.a;
 
 		// Roulette-select the ray's path
 		float roulette = rand(seed, pixel);
-		if (roulette < specChance)
+		if (roulette < refractChance)
 		{
-			// Specular reflection
-			//float alpha = 150.0f;
-			float alpha = sqr(1 - roughness) * 1000;
-			ray.direction = SampleHemisphere(reflect(ray.direction, hit.N), alpha, seed, pixel);
-			float f = (alpha + 2) / (alpha + 1);
-			ray.energy *= (1.0f / specChance) * specular * saturate(dot(hit.N, ray.direction) * f);
+			// Refraction
+			float3 R = refract(ray.direction, hit.N, 1 - mat.refractionIndex);
+			ray.direction = lerp(R, SampleHemisphere(R, seed, pixel), roughness);
+			ray.energy *= lerp(baseColor.rgb, 1, refractChance);
+
+			// The ray penetrates the surface, so push DOWN along normal to avoid self-intersection:
+			ray.origin = trace_bias_position(hit.position, -hit.N);
 		}
 		else
 		{
-			// Diffuse reflection
-			ray.direction = SampleHemisphere(hit.N, 1.0f, seed, pixel);
-			ray.energy *= (1.0f / diffChance) * albedo;
+			// Calculate chances of reflection types:
+			float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
+			float3 f0 = ComputeF0(baseColor, reflectance, metalness);
+			float3 F = F_Fresnel(f0, saturate(dot(-ray.direction, hit.N)));
+			albedo = min(1.0f - F, albedo);
+			float specChance = dot(F, 0.33);
+			float diffChance = dot(albedo, 0.33);
+			float inv = rcp(specChance + diffChance);
+			specChance *= inv;
+			diffChance *= inv;
+
+			roulette = rand(seed, pixel);
+			if (roulette < specChance)
+			{
+				// Specular reflection
+				float3 R = reflect(ray.direction, hit.N);
+				ray.direction = lerp(R, SampleHemisphere(R, seed, pixel), roughness);
+				ray.energy *= rcp(specChance) * F;
+			}
+			else
+			{
+				// Diffuse reflection
+				ray.direction = SampleHemisphere(hit.N, seed, pixel);
+				ray.energy *= rcp(diffChance) * albedo;
+			}
+
+			// Ray reflects from surface, so push UP along normal to avoid self-intersection:
+			ray.origin = trace_bias_position(hit.position, hit.N);
 		}
 
-		ray.origin = trace_bias_position(hit.position, hit.N);
 		ray.primitiveID = hit.primitiveID;
 		ray.bary = hit.bary;
 

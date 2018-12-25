@@ -278,10 +278,10 @@ inline float3x3 GetTangentSpace(float3 normal)
 	return float3x3(tangent, binormal, normal);
 }
 
-inline float3 SampleHemisphere(float3 normal, float alpha, inout float seed, in float2 pixel)
+inline float3 SampleHemisphere(float3 normal, inout float seed, in float2 pixel)
 {
 	// Sample the hemisphere, where alpha determines the kind of the sampling
-	float cosTheta = pow(rand(seed, pixel), 1.0f / (alpha + 1.0f));
+	float cosTheta = rand(seed, pixel);
 	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
 	float phi = 2 * PI * rand(seed, pixel);
 	float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);

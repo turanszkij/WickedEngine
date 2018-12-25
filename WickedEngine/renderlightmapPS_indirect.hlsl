@@ -22,7 +22,7 @@ float4 main(Input input) : SV_TARGET
 	float3 N = normalize(input.normal);
 	float2 uv = input.uv;
 	float seed = xTraceRandomSeed;
-	float3 direction = SampleHemisphere(N, 1.0f, seed, uv);
+	float3 direction = SampleHemisphere(N, seed, uv);
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
 
 	// Sample primary ray (scene materials, sky, etc):
