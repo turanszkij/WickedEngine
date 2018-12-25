@@ -73,6 +73,7 @@ public:
 	wiCheckBox* temporalAADebugCheckBox;
 	wiComboBox* textureQualityComboBox;
 	wiSlider*	mipLodBiasSlider;
+	wiSlider*	lightmapBakeBounceCountSlider;
 
 	wiCheckBox* freezeCullingCameraCheckBox;
 

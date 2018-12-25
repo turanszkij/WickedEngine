@@ -114,6 +114,7 @@ bool debugLightCulling = false;
 bool occlusionCulling = false;
 bool temporalAA = false;
 bool temporalAADEBUG = false;
+uint32_t lightmapBakeBounceCount = 4;
 
 struct VoxelizedSceneData
 {
@@ -7668,6 +7669,7 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 	cb.xTraceRandomSeed = renderTime; // random seed
 	cb.xTraceUserData = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+	cb.xTraceUserData2.x = lightmapBakeBounceCount;
 	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
@@ -7676,9 +7678,12 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	device->BindGraphicsPSO(PSO_renderlightmap_direct, threadID);
 	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
 
-	// Render indirect lighting part:
-	device->BindGraphicsPSO(PSO_renderlightmap_indirect, threadID);
-	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+	if (lightmapBakeBounceCount > 0)
+	{
+		// Render indirect lighting part:
+		device->BindGraphicsPSO(PSO_renderlightmap_indirect, threadID);
+		device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+	}
 
 	object.lightmapIterationCount++;
 
@@ -8497,5 +8502,13 @@ void SetOceanEnabled(bool enabled)
 }
 bool GetOceanEnabled() { return ocean != nullptr; }
 void InvalidateBVH() { scene_bvh_invalid = true; }
+void SetLightmapBakeBounceCount(uint32_t bounces)
+{
+	lightmapBakeBounceCount = bounces;
+}
+uint32_t GetLightmapBakeBounceCount()
+{
+	return lightmapBakeBounceCount;
+}
 
 }

@@ -262,7 +262,6 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 			float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
 			float3 f0 = ComputeF0(baseColor, reflectance, metalness);
 			float3 F = F_Fresnel(f0, saturate(dot(-ray.direction, hit.N)));
-			albedo = min(1.0f - F, albedo);
 			float specChance = dot(F, 0.33);
 			float diffChance = dot(albedo, 0.33);
 			float inv = rcp(specChance + diffChance);
@@ -275,13 +274,13 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 				// Specular reflection
 				float3 R = reflect(ray.direction, hit.N);
 				ray.direction = lerp(R, SampleHemisphere(R, seed, pixel), roughness);
-				ray.energy *= rcp(specChance) * F;
+				ray.energy *= F / specChance;
 			}
 			else
 			{
 				// Diffuse reflection
 				ray.direction = SampleHemisphere(hit.N, seed, pixel);
-				ray.energy *= rcp(diffChance) * albedo;
+				ray.energy *= albedo / diffChance;
 			}
 
 			// Ray reflects from surface, so push UP along normal to avoid self-intersection:
@@ -290,6 +289,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 
 		ray.primitiveID = hit.primitiveID;
 		ray.bary = hit.bary;
+		ray.Update();
 
 		return emissive;
 	}

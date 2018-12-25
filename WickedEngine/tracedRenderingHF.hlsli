@@ -37,6 +37,11 @@ struct Ray
 	float3 energy;
 	uint primitiveID;
 	float2 bary;
+
+	inline void Update()
+	{
+		direction_inverse = rcp(direction);
+	}
 };
 
 inline TracedRenderingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
@@ -57,10 +62,10 @@ inline void LoadRay(in TracedRenderingStoredRay storedray, out Ray ray, out uint
 
 	ray.origin = storedray.origin;
 	ray.direction = asfloat(f16tof32(storedray.direction_energy));
-	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
 	ray.primitiveID = storedray.primitiveID;
 	ray.bary = storedray.bary;
+	ray.Update();
 }
 
 inline Ray CreateRay(float3 origin, float3 direction)
@@ -68,10 +73,10 @@ inline Ray CreateRay(float3 origin, float3 direction)
 	Ray ray;
 	ray.origin = origin;
 	ray.direction = direction;
-	ray.direction_inverse = rcp(ray.direction);
 	ray.energy = float3(1, 1, 1);
 	ray.primitiveID = 0xFFFFFFFF;
 	ray.bary = 0;
+	ray.Update();
 	return ray;
 }
 
