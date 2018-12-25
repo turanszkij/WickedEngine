@@ -1,5 +1,5 @@
 #define RAYTRACE_EXIT 128 // doing the path trace in pixel shader will hang the GPU for some reason if we don't set a cap on the trace loop...
-//#define RAY_BACKFACE_CULLING
+#define RAY_BACKFACE_CULLING
 #include "globals.hlsli"
 #include "ShaderInterop_TracedRendering.h"
 #include "tracedRenderingHF.hlsli"
