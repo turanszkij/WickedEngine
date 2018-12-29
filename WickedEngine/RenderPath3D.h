@@ -9,10 +9,7 @@ class RenderPath3D :
 private:
 	float exposure = 1.0f;
 	float lightShaftQuality;
-	float bloomDownSample;
-	float bloomStren;
 	float bloomThreshold;
-	float bloomSaturation;
 	float particleDownSample;
 	float reflectionQuality;
 	float ssaoQuality;
@@ -59,8 +56,9 @@ protected:
 		, rtFinal[2]
 		, rtDof[3]
 		, rtTemporalAA[2]
+		, rtBloom
 		;
-	static std::vector<wiRenderTarget> rtSun, rtBloom, rtSSAO;
+	static std::vector<wiRenderTarget> rtSun, rtSSAO;
 	static wiGraphicsTypes::Texture2D* depthBuffer;
 	static wiDepthTarget dtDepthCopy;
 	static wiGraphicsTypes::Texture2D* smallDepth;
@@ -80,10 +78,7 @@ public:
 
 	inline float getExposure() { return exposure; }
 	inline float getLightShaftQuality(){ return lightShaftQuality; }
-	inline float getBloomDownSample(){ return bloomDownSample; }
-	inline float getBloomStrength(){ return bloomStren; }
 	inline float getBloomThreshold(){ return bloomThreshold; }
-	inline float getBloomSaturation(){ return bloomSaturation; }
 	inline float getParticleDownSample(){ return particleDownSample; }
 	inline float getReflectionQuality(){ return reflectionQuality; }
 	inline float getSSAOQuality(){ return ssaoQuality; }
@@ -119,10 +114,7 @@ public:
 
 	inline void setExposure(float value) { exposure = value; }
 	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
-	inline void setBloomDownSample(float value){ bloomDownSample = value; }
-	inline void setBloomStrength(float value){ bloomStren = value; }
 	inline void setBloomThreshold(float value){ bloomThreshold = value; }
-	inline void setBloomSaturation(float value){ bloomSaturation = value; }
 	inline void setParticleDownSample(float value){ particleDownSample = value; }
 	inline void setReflectionQuality(float value){ reflectionQuality = value; }
 	inline void setSSAOQuality(float value){ ssaoQuality = value; }

@@ -28,8 +28,9 @@ wiRenderTarget
 	, RenderPath3D::rtFinal[2]
 	, RenderPath3D::rtDof[3]
 	, RenderPath3D::rtTemporalAA[2]
+	, RenderPath3D::rtBloom
 ;
-std::vector<wiRenderTarget> RenderPath3D::rtSun, RenderPath3D::rtBloom, RenderPath3D::rtSSAO;
+std::vector<wiRenderTarget> RenderPath3D::rtSun, RenderPath3D::rtSSAO;
 wiDepthTarget RenderPath3D::dtDepthCopy;
 Texture2D* RenderPath3D::smallDepth = nullptr;
 void RenderPath3D::ResizeBuffers()
@@ -121,15 +122,7 @@ void RenderPath3D::ResizeBuffers()
 		, false, defaultTextureFormat
 	);
 
-	rtBloom.resize(3);
-	rtBloom[0].Initialize(
-		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, defaultTextureFormat, 0);
-	for (unsigned int i = 1; i<rtBloom.size(); ++i)
-		rtBloom[i].Initialize(
-			(UINT)(wiRenderer::GetInternalResolution().x / getBloomDownSample())
-			, (UINT)(wiRenderer::GetInternalResolution().y / getBloomDownSample())
-			, false, defaultTextureFormat);
+	rtBloom.Initialize(wiRenderer::GetInternalResolution().x / 4, wiRenderer::GetInternalResolution().y / 4, false, defaultTextureFormat, 5);
 
 	rtTemporalAA[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
@@ -159,14 +152,11 @@ void RenderPath3D::setProperties()
 {
 	setExposure(1.0f);
 	setLightShaftQuality(0.4f);
-	setBloomDownSample(4.0f);
 	setParticleDownSample(1.0f);
 	setReflectionQuality(0.5f);
 	setSSAOQuality(0.5f);
 	setSSAOBlur(2.3f);
-	setBloomStrength(19.3f);
-	setBloomThreshold(0.99f);
-	setBloomSaturation(-3.86f);
+	setBloomThreshold(1.0f);
 	setDepthOfFieldFocus(10.f);
 	setDepthOfFieldStrength(2.2f);
 	setSharpenFilterAmount(0.28f); 
@@ -469,12 +459,12 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	wiProfiler::BeginRange("Post Processing", wiProfiler::DOMAIN_GPU, threadID);
 
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-	fx.enableHDR();
 
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Temporal AA Resolve", threadID);
 		wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+		fx.enableHDR();
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		int current = wiRenderer::GetDevice()->GetFrameCount() % 2 == 0 ? 0 : 1;
 		int history = 1 - current;
@@ -494,6 +484,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 			wiImage::Draw(rtTemporalAA[current].GetTexture(), fx, threadID);
 			fx.disableFullScreen();
 		}
+		fx.disableHDR();
 		wiProfiler::EndRange(threadID);
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
@@ -501,42 +492,34 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 	if (getBloomEnabled())
 	{
 		wiRenderer::GetDevice()->EventBegin("Bloom", threadID);
+		fx.setMaskMap(nullptr);
 		fx.process.clear();
 		fx.disableFullScreen();
 		fx.quality = QUALITY_BILINEAR;
-		rtBloom[0].Set(threadID); // separate bright parts
+		fx.blendFlag = BLENDMODE_OPAQUE;
+		fx.sampleFlag = SAMPLEMODE_CLAMP;
+		rtBloom.Set(threadID); // separate bright parts
 		{
-			fx.process.setBloom(getBloomThreshold(), getBloomSaturation());
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			fx.sampleFlag = SAMPLEMODE_CLAMP;
+			fx.process.setBloom(getBloomThreshold());
 			wiImage::Draw(shadedSceneRT.GetTextureResolvedMSAA(threadID), fx, threadID);
+			wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 		}
 		fx.process.clear();
 
-		wiRenderer::GenerateMipChain(rtBloom[0].GetTexture(), wiRenderer::MIPGENFILTER_LINEAR, threadID);
-
-		rtBloom[1].Set(threadID); //horizontal
-		{
-			fx.mipLevel = 5.32f;
-			fx.process.setBlur(XMFLOAT2(getBloomStrength(), 0));
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(rtBloom[0].GetTexture(), fx, threadID);
-		}
-		rtBloom[2].Set(threadID); //vertical
-		{
-			fx.process.setBlur(XMFLOAT2(0, getBloomStrength()));
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(rtBloom[1].GetTexture(), fx, threadID);
-		}
-		fx.process.clear();
-
+		wiRenderer::GenerateMipChain(rtBloom.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
 		shadedSceneRT.Set(threadID, false, 0); { // add to the scene
 			fx.blendFlag = BLENDMODE_ADDITIVE;
-			fx.enableFullScreen();
+			//fx.quality = QUALITY_BICUBIC;
 			fx.process.clear();
-			wiImage::Draw(rtBloom.back().GetTexture(), fx, threadID);
-			fx.disableFullScreen();
+			fx.mipLevel = 1.5f;
+			wiImage::Draw(rtBloom.GetTexture(), fx, threadID);
+			fx.mipLevel = 3.5f;
+			wiImage::Draw(rtBloom.GetTexture(), fx, threadID);
+			fx.mipLevel = 5.5f;
+			wiImage::Draw(rtBloom.GetTexture(), fx, threadID);
+			fx.quality = QUALITY_BILINEAR;
 		}
+
 		wiRenderer::GetDevice()->EventEnd(threadID);
 	}
 

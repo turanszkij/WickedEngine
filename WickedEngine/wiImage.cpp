@@ -32,12 +32,18 @@ namespace wiImage
 		IMAGE_HDR_ENABLED,
 		IMAGE_HDR_COUNT
 	};
+	enum IMAGE_SAMPLING
+	{
+		IMAGE_SAMPLING_SIMPLE,
+		IMAGE_SAMPLING_BICUBIC,
+		IMAGE_SAMPLING_COUNT,
+	};
 
 	GPUBuffer			constantBuffer;
 	GPUBuffer			processCb;
 	VertexShader*		vertexShader = nullptr;
 	VertexShader*		screenVS = nullptr;
-	PixelShader*		imagePS[IMAGE_SHADER_COUNT];
+	PixelShader*		imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
 	PixelShader*		postprocessPS[wiImageParams::PostProcess::POSTPROCESS_COUNT];
 	PixelShader*		deferredPS = nullptr;
 	BlendState			blendStates[BLENDMODE_COUNT];
@@ -45,7 +51,7 @@ namespace wiImage
 	DepthStencilState	depthStencilStates[STENCILMODE_COUNT];
 	BlendState			blendStateDisableColor;
 	DepthStencilState	depthStencilStateDepthWrite;
-	GraphicsPSO			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT];
+	GraphicsPSO			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT][IMAGE_SAMPLING_COUNT];
 	GraphicsPSO			postprocessPSO[wiImageParams::PostProcess::POSTPROCESS_COUNT];
 	GraphicsPSO			deferredPSO;
 
@@ -67,6 +73,8 @@ namespace wiImage
 		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
 
 		device->BindStencilRef(params.stencilRef, threadID);
+
+		IMAGE_SAMPLING sampling_type = params.quality == QUALITY_BICUBIC ? IMAGE_SAMPLING_BICUBIC : IMAGE_SAMPLING_SIMPLE;
 
 		if (params.quality == QUALITY_NEAREST)
 		{
@@ -98,7 +106,7 @@ namespace wiImage
 
 		if (params.isFullScreenEnabled())
 		{
-			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.isHDREnabled()], threadID);
+			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], threadID);
 			device->Draw(3, 0, threadID);
 			device->EventEnd(threadID);
 			return;
@@ -213,7 +221,7 @@ namespace wiImage
 				}
 			}
 
-			device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()], threadID);
+			device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], threadID);
 
 			fullScreenEffect = false;
 		}
@@ -251,8 +259,7 @@ namespace wiImage
 			case wiImageParams::PostProcess::MOTIONBLUR:
 				break;
 			case wiImageParams::PostProcess::BLOOMSEPARATE:
-				prcb.xPPParams1.y = params.process.params.bloom.threshold;
-				prcb.xPPParams1.z = params.process.params.bloom.saturation;
+				prcb.xPPParams0.x = params.process.params.bloomThreshold;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 				break;
 			case wiImageParams::PostProcess::FXAA:
@@ -334,12 +341,19 @@ namespace wiImage
 		vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "imageVS.cso", wiResourceManager::VERTEXSHADER));
 		screenVS = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "screenVS.cso", wiResourceManager::VERTEXSHADER));
 
-		imagePS[IMAGE_SHADER_STANDARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_SEPARATENORMALMAP] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_DISTORTION] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_DISTORTION_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_MASKED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
-		imagePS[IMAGE_SHADER_FULLSCREEN] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_separatenormalmap.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_DISTORTION][IMAGE_SAMPLING_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_DISTORTION_MASKED][IMAGE_SAMPLING_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion_masked.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS.cso", wiResourceManager::PIXELSHADER));
+
+		imagePS[IMAGE_SHADER_STANDARD][IMAGE_SAMPLING_BICUBIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_bicubic.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_SEPARATENORMALMAP][IMAGE_SAMPLING_BICUBIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_separatenormalmap_bicubic.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_DISTORTION][IMAGE_SAMPLING_BICUBIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion_bicubic.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_DISTORTION_MASKED][IMAGE_SAMPLING_BICUBIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_distortion_masked_bicubic.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked_bicubic.cso", wiResourceManager::PIXELSHADER));
+		imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS_bicubic.cso", wiResourceManager::PIXELSHADER));
 
 		postprocessPS[wiImageParams::PostProcess::BLUR] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "blurPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::LIGHTSHAFT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
@@ -373,33 +387,38 @@ namespace wiImage
 			{
 				desc.vs = screenVS;
 			}
-			desc.ps = imagePS[i];
 			desc.rs = &rasterizerState;
 			desc.pt = TRIANGLESTRIP;
 
-			for (int j = 0; j < BLENDMODE_COUNT; ++j)
+			for (int l = 0; l < IMAGE_SAMPLING_COUNT; ++l)
 			{
-				desc.bs = &blendStates[j];
-				for (int k = 0; k < STENCILMODE_COUNT; ++k)
+				desc.ps = imagePS[i][l];
+
+				for (int j = 0; j < BLENDMODE_COUNT; ++j)
 				{
-					desc.dss = &depthStencilStates[k];
-
-					if (k == STENCILMODE_DISABLED)
+					desc.bs = &blendStates[j];
+					for (int k = 0; k < STENCILMODE_COUNT; ++k)
 					{
-						desc.DSFormat = FORMAT_UNKNOWN;
+						desc.dss = &depthStencilStates[k];
+
+						if (k == STENCILMODE_DISABLED)
+						{
+							desc.DSFormat = FORMAT_UNKNOWN;
+						}
+						else
+						{
+							desc.DSFormat = wiRenderer::DSFormat_full;
+						}
+
+						desc.numRTs = 1;
+
+						desc.RTFormats[0] = device->GetBackBufferFormat();
+						device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0][l]);
+
+						desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+						device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][1][l]);
+
 					}
-					else
-					{
-						desc.DSFormat = wiRenderer::DSFormat_full;
-					}
-
-					desc.numRTs = 1;
-
-					desc.RTFormats[0] = device->GetBackBufferFormat();
-					device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0]);
-
-					desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-					device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][1]);
 				}
 			}
 		}

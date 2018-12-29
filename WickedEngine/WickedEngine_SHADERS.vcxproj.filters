@@ -843,6 +843,24 @@
     <FxCompile Include="renderlightmapPS_indirect.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="imagePS_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_distortion_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_distortion_masked_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_masked_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="imagePS_separatenormalmap_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="screenPS_bicubic.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

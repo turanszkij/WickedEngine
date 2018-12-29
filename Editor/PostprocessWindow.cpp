@@ -146,13 +146,13 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(bloomCheckBox);
 
-	bloomStrengthSlider = new wiSlider(0.0f, 40, 10, 1000, "Radius: ");
-	bloomStrengthSlider->SetTooltip("Set bloom strength.");
+	bloomStrengthSlider = new wiSlider(0.0f, 10, 1, 1000, "Threshold: ");
+	bloomStrengthSlider->SetTooltip("Set bloom threshold. The values below this will not glow on the screen.");
 	bloomStrengthSlider->SetSize(XMFLOAT2(100, 20));
 	bloomStrengthSlider->SetPos(XMFLOAT2(x + 100, y));
-	bloomStrengthSlider->SetValue(component->getBloomStrength());
+	bloomStrengthSlider->SetValue(component->getBloomThreshold());
 	bloomStrengthSlider->OnSlide([&](wiEventArgs args) {
-		component->setBloomStrength(args.fValue);
+		component->setBloomThreshold(args.fValue);
 	});
 	ppWindow->AddWidget(bloomStrengthSlider);
 

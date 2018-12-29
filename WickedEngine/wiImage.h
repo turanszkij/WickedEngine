@@ -38,6 +38,7 @@ enum QUALITY
 	QUALITY_NEAREST,
 	QUALITY_BILINEAR,
 	QUALITY_ANISOTROPIC,
+	QUALITY_BICUBIC,
 	QUALITY_COUNT
 };
 enum ImageType
@@ -117,11 +118,6 @@ struct wiImageParams
 
 		union PostProcessParams
 		{
-			struct Bloom
-			{
-				float threshold;
-				float saturation;
-			} bloom;
 			struct Blur
 			{
 				float x;
@@ -132,12 +128,13 @@ struct wiImageParams
 			float dofStrength;
 			float sharpen;
 			float exposure;
+			float bloomThreshold;
 		} params;
 
 		bool isActive() const { return type != DISABLED; }
 		void clear() { type = DISABLED; }
 		void setBlur(const XMFLOAT2& direction) { type = BLUR; params.blur.x = direction.x; params.blur.y = direction.y; }
-		void setBloom(float threshold, float saturation) { type = BLOOMSEPARATE; params.bloom.saturation = saturation; params.bloom.threshold = threshold; }
+		void setBloom(float threshold) { type = BLOOMSEPARATE; params.bloomThreshold = threshold; }
 		void setDOF(float value) { if (value > 0) { type = DEPTHOFFIELD; params.dofStrength = value; } }
 		void setMotionBlur() { type = MOTIONBLUR; }
 		void setOutline() { type = OUTLINE; }
