@@ -200,7 +200,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO();
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
-			fx.quality = QUALITY_BILINEAR;
+			fx.quality = QUALITY_LINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, threadID);
 			fx.process.clear();
@@ -226,7 +226,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		device->EventBegin("SSS", threadID);
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = STENCILMODE_LESS;
-		fx.quality = QUALITY_BILINEAR;
+		fx.quality = QUALITY_LINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		rtSSS[1].Activate(threadID, 0, 0, 0, 0);
 		rtSSS[0].Activate(threadID, 0, 0, 0, 0);

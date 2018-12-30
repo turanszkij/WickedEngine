@@ -36,7 +36,7 @@ enum SAMPLEMODE
 enum QUALITY
 {
 	QUALITY_NEAREST,
-	QUALITY_BILINEAR,
+	QUALITY_LINEAR,
 	QUALITY_ANISOTROPIC,
 	QUALITY_BICUBIC,
 	QUALITY_COUNT
@@ -173,7 +173,7 @@ struct wiImageParams
 		blendFlag = BLENDMODE_ALPHA;
 		typeFlag = SCREEN;
 		sampleFlag = SAMPLEMODE_MIRROR;
-		quality = QUALITY_BILINEAR;
+		quality = QUALITY_LINEAR;
 		maskMap = nullptr;
 		distortionMap = nullptr;
 		refractionSource = nullptr;

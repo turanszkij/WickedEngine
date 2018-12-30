@@ -356,7 +356,7 @@ void TestsRenderer::RunSpriteTest()
 	params.pos = startPos;
 	params.siz = XMFLOAT2(128, 128);
 	params.pivot = XMFLOAT2(0.5f, 0.5f);
-	params.quality = QUALITY_BILINEAR;
+	params.quality = QUALITY_LINEAR;
 	params.sampleFlag = SAMPLEMODE_CLAMP;
 	params.blendFlag = BLENDMODE_ALPHA;
 

@@ -495,7 +495,7 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 		fx.setMaskMap(nullptr);
 		fx.process.clear();
 		fx.disableFullScreen();
-		fx.quality = QUALITY_BILINEAR;
+		fx.quality = QUALITY_LINEAR;
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		rtBloom.Set(threadID); // separate bright parts
@@ -508,6 +508,9 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 
 		wiRenderer::GenerateMipChain(rtBloom.GetTexture(), wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
 		shadedSceneRT.Set(threadID, false, 0); { // add to the scene
+			// not full screen effect, because we draw specific mip levels, so some setup is required
+			XMFLOAT2 siz = fx.siz;
+			fx.siz = XMFLOAT2((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 			fx.blendFlag = BLENDMODE_ADDITIVE;
 			//fx.quality = QUALITY_BICUBIC;
 			fx.process.clear();
@@ -517,7 +520,8 @@ void RenderPath3D::RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarg
 			wiImage::Draw(rtBloom.GetTexture(), fx, threadID);
 			fx.mipLevel = 5.5f;
 			wiImage::Draw(rtBloom.GetTexture(), fx, threadID);
-			fx.quality = QUALITY_BILINEAR;
+			fx.quality = QUALITY_LINEAR;
+			fx.siz = siz;
 		}
 
 		wiRenderer::GetDevice()->EventEnd(threadID);
@@ -625,7 +629,7 @@ void RenderPath3D::RenderColorGradedComposition()
 {
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-	fx.quality = QUALITY_BILINEAR;
+	fx.quality = QUALITY_LINEAR;
 
 	if (getStereogramEnabled())
 	{

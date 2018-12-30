@@ -79,7 +79,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
-	sprite.params.quality = QUALITY_BILINEAR;
+	sprite.params.quality = QUALITY_LINEAR;
 	sprite.params.blendFlag = BLENDMODE_ALPHA;
 	addSprite(&sprite);
 

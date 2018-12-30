@@ -85,7 +85,7 @@ namespace wiImage
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_CLAMP), SSLOT_ONDEMAND0, threadID);
 		}
-		else if (params.quality == QUALITY_BILINEAR)
+		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
 				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR), SSLOT_ONDEMAND0, threadID);

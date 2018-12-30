@@ -125,7 +125,7 @@ void RenderPath3D_Forward::RenderScene(GRAPHICSTHREAD threadID)
 		rtSSAO[0].Activate(threadID); {
 			fx.process.setSSAO();
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
-			fx.quality = QUALITY_BILINEAR;
+			fx.quality = QUALITY_LINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, threadID);
 			fx.process.clear();
