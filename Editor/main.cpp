@@ -214,12 +214,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		break;
-	case WM_MBUTTONDOWN:
-		ShowCursor(false);
-		break;
-	case WM_MBUTTONUP:
-		ShowCursor(true);
-		break;
 	case WM_MOUSEWHEEL:
 		{
 		XMFLOAT4 pointer = wiInputManager::getpointer();

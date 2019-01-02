@@ -730,19 +730,29 @@ void EditorComponent::Update(float dt)
 
 		// Camera control:
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
+		static bool camControlStart = true;
+		if (camControlStart)
+		{
+			originalMouse = wiInputManager::getpointer();
+		}
+
 		XMFLOAT4 currentMouse = wiInputManager::getpointer();
 		float xDif = 0, yDif = 0;
+
 		if (wiInputManager::down(VK_MBUTTON))
 		{
+			camControlStart = false;
 			xDif = currentMouse.x - originalMouse.x;
 			yDif = currentMouse.y - originalMouse.y;
 			xDif = 0.1f*xDif*(1.0f / 60.0f);
 			yDif = 0.1f*yDif*(1.0f / 60.0f);
 			wiInputManager::setpointer(originalMouse);
+			wiInputManager::hidepointer(false);
 		}
 		else
 		{
-			originalMouse = wiInputManager::getpointer();
+			camControlStart = true;
+			wiInputManager::hidepointer(true);
 		}
 
 		const float buttonrotSpeed = 2.0f / 60.0f;

@@ -187,7 +187,14 @@ namespace wiInputManager
 	void hidepointer(bool value)
 	{
 #ifndef WINSTORE_SUPPORT
-		ShowCursor(!value);
+		if (value)
+		{
+			while (ShowCursor(true) < 0) {};
+		}
+		else
+		{
+			while (ShowCursor(false) >= 0) {};
+		}
 #endif
 	}
 
