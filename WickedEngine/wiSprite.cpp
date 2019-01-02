@@ -2,6 +2,7 @@
 #include "wiResourceManager.h"
 #include "wiImage.h"
 #include "wiRenderer.h"
+#include "wiRandom.h"
 
 using namespace wiGraphicsTypes;
 
@@ -162,6 +163,28 @@ void wiSprite::Update(float dt)
 				anim.drawRectAnim._currentFrame = 0;
 			}
 
+		}
+	}
+
+	// Wobble anim:
+	if (anim.wobbleAnim.amount.x > 0 || anim.wobbleAnim.amount.y > 0)
+	{
+		// offset a random corner of the sprite:
+		int corner = wiRandom::getRandom(0, 4);
+		anim.wobbleAnim.corner_target_offsets[corner].x = (wiRandom::getRandom(0, 1000) * 0.001f - 0.5f) * anim.wobbleAnim.amount.x;
+		anim.wobbleAnim.corner_target_offsets[corner].y = (wiRandom::getRandom(0, 1000) * 0.001f - 0.5f) * anim.wobbleAnim.amount.y;
+
+		// All corners of the sprite will always follow the offset corners to obtain the wobble effect:
+		wiImageParams default_params;
+		for (int i = 0; i < 4; ++i)
+		{
+			XMVECTOR I = XMLoadFloat2(&default_params.corners[i]);
+			XMVECTOR V = XMLoadFloat2(&params.corners[i]);
+			XMVECTOR O = XMLoadFloat2(&anim.wobbleAnim.corner_target_offsets[i]);
+
+			V = XMVectorLerp(V, I + O, 0.01f);
+
+			XMStoreFloat2(&params.corners[i], V);
 		}
 	}
 

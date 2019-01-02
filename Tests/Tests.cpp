@@ -389,7 +389,7 @@ void TestsRenderer::RunSpriteTest()
 		static wiSprite sprite("../logo/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
-		sprite.anim.fad = 1.2f;
+		sprite.anim.fad = 1.2f; // (you can also do opacity animation with sprite.anim.opa)
 		sprite.anim.repeatable = true;
 		addSprite(&sprite);
 
@@ -403,16 +403,15 @@ void TestsRenderer::RunSpriteTest()
 		params.pos.x += sprite.params.siz.x + step;
 	}
 
-	// Simple sprite, opacity animation:
+	// Simple sprite, wobble animation:
 	{
 		static wiSprite sprite("../logo/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
-		sprite.anim.opa = 2.2f;
-		sprite.anim.repeatable = true;
+		sprite.anim.wobbleAnim.amount = XMFLOAT2(1.2, 0.8);
 		addSprite(&sprite);
 
-		static wiFont font("Opacity animation: ");
+		static wiFont font("Wobble animation: ");
 		font.params.h_align = WIFALIGN_CENTER;
 		font.params.v_align = WIFALIGN_BOTTOM;
 		font.params.posX = int(sprite.params.pos.x);

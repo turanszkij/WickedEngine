@@ -187,9 +187,6 @@ wiFont::wiFont(const std::wstring& text, wiFontParams params, int style) : param
 {
 	SetText(text);
 }
-wiFont::~wiFont()
-{
-}
 
 void wiFont::Initialize()
 {

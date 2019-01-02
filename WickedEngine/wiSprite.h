@@ -45,6 +45,12 @@ public:
 			float _elapsedTime = 0; // internal use; you don't need to initialize
 			int _currentFrame = 0; // internal use; you don't need to initialize
 		};
+		struct WobbleAnim
+		{
+			XMFLOAT2 amount = XMFLOAT2(0, 0);	// how much the sprite wobbles in X and Y direction
+
+			XMFLOAT2 corner_target_offsets[4] = {}; // internal use; you don't need to initialize
+		};
 
 		bool repeatable = false;
 		XMFLOAT3 vel = XMFLOAT3(0, 0, 0);
@@ -55,6 +61,7 @@ public:
 		float fad = 0;
 		MovingTexAnim movingTexAnim;
 		DrawRectAnim drawRectAnim;
+		WobbleAnim wobbleAnim;
 	};
 	Anim anim;
 	

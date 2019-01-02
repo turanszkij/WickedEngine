@@ -72,6 +72,7 @@ struct wiImageParams
 	float mipLevel;
 	float fade;
 	float opacity;
+	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 
 	UINT stencilRef;
 	STENCILMODE stencilComp;
@@ -177,6 +178,10 @@ struct wiImageParams
 		maskMap = nullptr;
 		distortionMap = nullptr;
 		refractionSource = nullptr;
+		corners[0] = XMFLOAT2(0, 0);
+		corners[1] = XMFLOAT2(1, 0);
+		corners[2] = XMFLOAT2(0, 1);
+		corners[3] = XMFLOAT2(1, 1);
 	}
 
 	constexpr bool isDrawRectEnabled() const { return _flags & DRAWRECT; }

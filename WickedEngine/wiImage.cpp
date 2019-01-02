@@ -115,15 +115,16 @@ namespace wiImage
 
 		if (!params.process.isActive()) // not post process, just regular image
 		{
-			ImageCB cb;
+
+			XMMATRIX M;
 			if (params.typeFlag == SCREEN)
 			{
-				XMStoreFloat4x4(&cb.xTransform, XMMatrixTranspose(
+				M = 
 					XMMatrixScaling(params.scale.x*params.siz.x, params.scale.y*params.siz.y, 1)
 					* XMMatrixRotationZ(params.rotation)
 					* XMMatrixTranslation(params.pos.x, params.pos.y, 0)
 					* device->GetScreenProjection()
-				));
+				;
 			}
 			else if (params.typeFlag == WORLD)
 			{
@@ -150,15 +151,23 @@ namespace wiImage
 				projection.r[2] = XMVectorSetX(projection.r[2], 0);
 				projection.r[2] = XMVectorSetY(projection.r[2], 0);
 
-				XMStoreFloat4x4(&cb.xTransform, XMMatrixTranspose(
+				M = 
 					XMMatrixScaling(params.scale.x*params.siz.x, -1 * params.scale.y*params.siz.y, 1)
 					*XMMatrixRotationZ(params.rotation)
 					*faceRot
 					*XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z)
 					*view * projection
-				));
+				;
 			}
 
+			ImageCB cb;
+			
+			for (int i = 0; i < 4; ++i)
+			{
+				XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
+				V = XMVector2Transform(V, M);
+				XMStoreFloat4(&cb.xCorners[i], V);
+			}
 
 			const TextureDesc& desc = texture->GetDesc();
 			const float inv_width = 1.0f / float(desc.Width);
@@ -183,7 +192,6 @@ namespace wiImage
 			cb.xColor.y *= darken;
 			cb.xColor.z *= darken;
 			cb.xColor.w *= params.opacity;
-			cb.xPivot = params.pivot;
 			cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
 			cb.xMipLevel = params.mipLevel;
 
