@@ -259,6 +259,12 @@ namespace wiImage
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 				break;
 			case wiImageParams::PostProcess::OUTLINE:
+				prcb.xPPParams0.x = params.process.params.outline.threshold;
+				prcb.xPPParams0.y = params.process.params.outline.thickness;
+				prcb.xPPParams1.x = params.process.params.outline.colorR;
+				prcb.xPPParams1.y = params.process.params.outline.colorG;
+				prcb.xPPParams1.z = params.process.params.outline.colorB;
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 				break;
 			case wiImageParams::PostProcess::DEPTHOFFIELD:
 				prcb.xPPParams0.z = params.process.params.dofStrength;
@@ -468,6 +474,12 @@ namespace wiImage
 			{
 				desc.numRTs = 1;
 				desc.RTFormats[0] = device->GetBackBufferFormat();
+			}
+			else if (i == wiImageParams::PostProcess::OUTLINE)
+			{
+				desc.numRTs = 1;
+				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+				desc.bs = &blendStates[BLENDMODE_ALPHA];
 			}
 			else if (i == wiImageParams::PostProcess::BLOOMSEPARATE || i == wiImageParams::PostProcess::BLUR)
 			{

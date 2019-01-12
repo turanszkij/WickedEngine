@@ -159,7 +159,10 @@ void RenderPath3D::setProperties()
 	setBloomThreshold(1.0f);
 	setDepthOfFieldFocus(10.f);
 	setDepthOfFieldStrength(2.2f);
-	setSharpenFilterAmount(0.28f); 
+	setSharpenFilterAmount(0.28f);
+	setOutlineThreshold(0.2f);
+	setOutlineThickness(1.0f);
+	setOutlineColor(XMFLOAT3(0, 0, 0));
 
 	setSSAOEnabled(true);
 	setSSREnabled(true);
@@ -181,6 +184,7 @@ void RenderPath3D::setProperties()
 	setEyeAdaptionEnabled(false);
 	setTessellationEnabled(false);
 	setSharpenFilterEnabled(false);
+	setOutlineEnabled(false);
 
 	setMSAASampleCount(1);
 }
@@ -335,6 +339,16 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 		return;
 	}
 	wiProfiler::BeginRange("Secondary Scene", wiProfiler::DOMAIN_GPU, threadID);
+
+	if (getOutlineEnabled())
+	{
+		wiRenderer::GetDevice()->EventBegin("Outline", threadID);
+		shadedSceneRT.Set(threadID);
+		fx.process.setOutline(getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
+		wiImage::Draw(nullptr, fx, threadID);
+		fx.process.clear();
+		wiRenderer::GetDevice()->EventEnd(threadID);
+	}
 
 	XMVECTOR sunDirection = XMLoadFloat3(&wiRenderer::GetScene().weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)

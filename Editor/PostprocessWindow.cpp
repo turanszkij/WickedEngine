@@ -18,7 +18,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(360, 550));
+	ppWindow->SetSize(XMFLOAT2(360, 640));
 	GUI->AddWidget(ppWindow);
 
 	float x = 110;
@@ -255,6 +255,35 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		component->setSharpenFilterAmount(args.fValue);
 	});
 	ppWindow->AddWidget(sharpenFilterAmountSlider);
+
+	outlineCheckBox = new wiCheckBox("Cartoon Outline: ");
+	outlineCheckBox->SetTooltip("Toggle the full screen cartoon outline effect.");
+	outlineCheckBox->SetPos(XMFLOAT2(x, y += 35));
+	outlineCheckBox->SetCheck(component->getOutlineEnabled());
+	outlineCheckBox->OnClick([&](wiEventArgs args) {
+		component->setOutlineEnabled(args.bValue);
+	});
+	ppWindow->AddWidget(outlineCheckBox);
+
+	outlineThresholdSlider = new wiSlider(0, 1, 0.1f, 1000, "Threshold: ");
+	outlineThresholdSlider->SetTooltip("Outline edge detection threshold. Increase if not enough otlines are detected, decrease if too many outlines are detected.");
+	outlineThresholdSlider->SetSize(XMFLOAT2(100, 20));
+	outlineThresholdSlider->SetPos(XMFLOAT2(x + 100, y));
+	outlineThresholdSlider->SetValue(component->getOutlineThreshold());
+	outlineThresholdSlider->OnSlide([&](wiEventArgs args) {
+		component->setOutlineThreshold(args.fValue);
+	});
+	ppWindow->AddWidget(outlineThresholdSlider);
+
+	outlineThicknessSlider = new wiSlider(0, 4, 1, 1000, "Thickness: ");
+	outlineThicknessSlider->SetTooltip("Set outline thickness.");
+	outlineThicknessSlider->SetSize(XMFLOAT2(100, 20));
+	outlineThicknessSlider->SetPos(XMFLOAT2(x + 100, y += 35));
+	outlineThicknessSlider->SetValue(component->getOutlineThickness());
+	outlineThicknessSlider->OnSlide([&](wiEventArgs args) {
+		component->setOutlineThickness(args.fValue);
+	});
+	ppWindow->AddWidget(outlineThicknessSlider);
 
 
 	ppWindow->Translate(XMFLOAT3(screenW - 380, 50, 0));

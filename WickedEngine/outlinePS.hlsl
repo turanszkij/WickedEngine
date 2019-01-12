@@ -1,105 +1,66 @@
 #include "postProcessHF.hlsli"
 
-
-static const float OUTLINETHRESHOLDDEPTH = 0.0011f;
-static const float OUTLINEWIDTHDEPTH = 1.0f;
-static const float OUTLINETHRESHOLDNORMAL = 0.6f;
-static const float OUTLINEWIDTHNORMAL = 2.0f;
-inline float edgeValueDepth(float2 texCo, float2 texDim, float Thickness, float Threshold)
-{
-	float2 QuadScreenSize = float2(texDim.x,texDim.y);
-	float result = 1;
-
-		
-	float2 uv = texCo.xy;
-	float midDepth = texture_lineardepth.SampleLevel(Sampler,uv,0);
-
-	//[branch]if(abs(midDepth-zFarP)>0.01)
-	{
-	
-		//Thickness/=midDepth;
-		Threshold*=midDepth;
-		
-		float2 ox = float2(Thickness/QuadScreenSize.x,0.0);
-		float2 oy = float2(0.0,Thickness/QuadScreenSize.y);
-		float2 PP = uv - oy;
-
-		float CC = texture_lineardepth.SampleLevel(Sampler,(PP-ox),0); float g00 = (CC)*0.01f;
-		CC = texture_lineardepth.SampleLevel(Sampler,PP,0);    float g01 = (CC)*0.01f;
-		CC = texture_lineardepth.SampleLevel(Sampler,(PP+ox),0); float g02 = (CC)*0.01f;
-		PP = uv;
-		CC = texture_lineardepth.SampleLevel(Sampler,(PP-ox),0); float g10 = (CC)*0.01f;
-		CC = midDepth;    float g11 = (CC)*0.01f;
-		CC = texture_lineardepth.SampleLevel(Sampler,(PP+ox),0); float g12 = (CC)*0.01f;
-		PP = uv + oy;			   
-		CC = texture_lineardepth.SampleLevel(Sampler,(PP-ox),0); float g20 = (CC)*0.01f;
-		CC = texture_lineardepth.SampleLevel(Sampler,PP,0);    float g21 = (CC)*0.01f;
-		CC = texture_lineardepth.SampleLevel(Sampler,(PP+ox),0); float g22 = (CC)*0.01f;
-		float K00 = -1;
-		float K01 = -2;
-		float K02 = -1;
-		float K10 = 0;
-		float K11 = 0;
-		float K12 = 0;
-		float K20 = 1;
-		float K21 = 2;
-		float K22 = 1;
-		float sx = 0;
-		float sy = 0;
-		sx += g00 * K00;
-		sx += g01 * K01;
-		sx += g02 * K02;
-		sx += g10 * K10;
-		sx += g11 * K11;
-		sx += g12 * K12;
-		sx += g20 * K20;
-		sx += g21 * K21;
-		sx += g22 * K22; 
-		sy += g00 * K00;
-		sy += g01 * K10;
-		sy += g02 * K20;
-		sy += g10 * K01;
-		sy += g11 * K11;
-		sy += g12 * K21;
-		sy += g20 * K02;
-		sy += g21 * K12;
-		sy += g22 * K22; 
-		float dist = sqrt(sx*sx+sy*sy);
-		if (dist>Threshold) { result = 0.0f; }
-
-	}
-	
-	return result;
-}
-inline float edgeValueNormal(float2 texCo, float2 texDim, float Thickness, float Threshold)
-{
-	float2 screen = float2(texDim.x,texDim.y)/Thickness;
-	float3 baseNor = texture_gbuffer1.Sample(Sampler,texCo).rgb;
-	float4 sum = float4(0,0,0,0);
-	sum.x = abs(dot(baseNor,texture_gbuffer1.SampleLevel(Sampler,texCo+float2(-1,-1)/screen,0).xyz));
-	if(sum.x){
-		sum.y = abs(dot(baseNor,texture_gbuffer1.SampleLevel(Sampler,texCo+float2(1,-1)/screen,0).xyz));
-		sum.z = abs(dot(baseNor,texture_gbuffer1.SampleLevel(Sampler,texCo+float2(-1,1)/screen,0).xyz));
-		sum.w = abs(dot(baseNor,texture_gbuffer1.SampleLevel(Sampler,texCo+float2(1,1)/screen,0).xyz));
-		return step(Threshold.xxxx,sum).x;
-	}
-	return 1;
-}
-
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
-	float4 color = float4(0,0,0,1);
-	float numSampling = 0.0f;
+	float outlineThreshold = xPPParams0.x;
+	float outlineThickness = xPPParams0.y;
+	float3 outlineColor = xPPParams1.xyz;
 
-	color += xTexture.SampleLevel(Sampler,PSIn.tex,0);
-	numSampling++;
+	float2 dim;
+	texture_lineardepth.GetDimensions(dim.x, dim.y);
 
-	/*float2 depthMapSize;
-	texture_lineardepth.GetDimensions(depthMapSize.x,depthMapSize.y);
-	color = texture_lineardepth.Load(int3(depthMapSize.xy*PSIn.tex,0));*/
-	
-	color.rgb*=edgeValueDepth(PSIn.tex, GetScreenResolution(),OUTLINEWIDTHDEPTH,OUTLINETHRESHOLDDEPTH);
-	//color.rgb*=edgeValueNormal(PSIn.tex,xDimension.xy,OUTLINEWIDTHNORMAL,OUTLINETHRESHOLDNORMAL);
+	float2 uv = PSIn.tex.xy;
+	float midDepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0);
 
-	return color/numSampling;
+	outlineThreshold *= midDepth;
+
+	float2 ox = float2(outlineThickness / dim.x, 0.0);
+	float2 oy = float2(0.0, outlineThickness / dim.y);
+	float2 PP = uv - oy;
+
+	float CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP - ox), 0); float g00 = (CC);
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, PP, 0);				float g01 = (CC);
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP + ox), 0);		float g02 = (CC);
+	PP = uv;
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP - ox), 0);		float g10 = (CC);
+	CC = midDepth;																	float g11 = (CC)*0.01f;
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP + ox), 0);		float g12 = (CC);
+	PP = uv + oy;
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP - ox), 0);		float g20 = (CC);
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, PP, 0);				float g21 = (CC);
+	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP + ox), 0);		float g22 = (CC);
+	float K00 = -1;
+	float K01 = -2;
+	float K02 = -1;
+	float K10 = 0;
+	float K11 = 0;
+	float K12 = 0;
+	float K20 = 1;
+	float K21 = 2;
+	float K22 = 1;
+	float sx = 0;
+	float sy = 0;
+	sx += g00 * K00;
+	sx += g01 * K01;
+	sx += g02 * K02;
+	sx += g10 * K10;
+	sx += g11 * K11;
+	sx += g12 * K12;
+	sx += g20 * K20;
+	sx += g21 * K21;
+	sx += g22 * K22;
+	sy += g00 * K00;
+	sy += g01 * K10;
+	sy += g02 * K20;
+	sy += g10 * K01;
+	sy += g11 * K11;
+	sy += g12 * K21;
+	sy += g20 * K02;
+	sy += g21 * K12;
+	sy += g22 * K22;
+	float dist = sqrt(sx*sx + sy*sy);
+
+	float edge = dist > outlineThreshold ? 1 : 0;
+
+	return float4(outlineColor.rgb, edge);
 }

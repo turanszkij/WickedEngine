@@ -119,6 +119,14 @@ struct wiImageParams
 
 		union PostProcessParams
 		{
+			struct Outline
+			{
+				float colorR;
+				float colorG;
+				float colorB;
+				float threshold;
+				float thickness;
+			} outline;
 			struct Blur
 			{
 				float x;
@@ -138,7 +146,15 @@ struct wiImageParams
 		void setBloom(float threshold) { type = BLOOMSEPARATE; params.bloomThreshold = threshold; }
 		void setDOF(float value) { if (value > 0) { type = DEPTHOFFIELD; params.dofStrength = value; } }
 		void setMotionBlur() { type = MOTIONBLUR; }
-		void setOutline() { type = OUTLINE; }
+		void setOutline(float threshold = 0.1f, float thickness = 1.0f, const XMFLOAT3& color = XMFLOAT3(0, 0, 0)) 
+		{ 
+			type = OUTLINE; 
+			params.outline.threshold = threshold; 
+			params.outline.thickness = thickness; 
+			params.outline.colorR = color.x;
+			params.outline.colorG = color.y;
+			params.outline.colorB = color.z;
+		}
 		void setFXAA() { type = FXAA; }
 		void setSSAO() { type = SSAO; }
 		void setLinDepth() { type = LINEARDEPTH; }

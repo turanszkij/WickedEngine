@@ -79,8 +79,8 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 
 float4 main(VertexToPixelPostProcess input) : SV_Target
 {
-	float3 N = decode(texture_gbuffer1.Load(int3(input.pos.xy, 0)).xy);
-	float3 P = getPosition(input.tex, texture_depth.Load(int3(input.pos.xy, 0)));
+	float3 N = decode(texture_gbuffer1[input.pos.xy].xy);
+	float3 P = getPosition(input.tex, texture_depth[input.pos.xy]);
 
 
 	//Reflection vector

@@ -110,7 +110,7 @@ inline void ApplyEmissive(in Surface surface, inout float3 specular)
 	specular += surface.baseColor.rgb * surface.emissive;
 }
 
-inline void LightMapping(in float2 ATLAS, inout float3 diffuse, inout float3 specular, inout float ao)
+inline void LightMapping(in float2 ATLAS, inout float3 diffuse, inout float3 specular, inout float ao, in float ssao)
 {
 	if (any(ATLAS))
 	{
@@ -119,7 +119,7 @@ inline void LightMapping(in float2 ATLAS, inout float3 diffuse, inout float3 spe
 #else
 		float4 lightmap = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0);
 #endif // LIGHTMAP_QUALITY_BICUBIC
-		diffuse += lightmap.rgb;
+		diffuse += lightmap.rgb * ssao;
 		ao *= saturate(1 - lightmap.a);
 	}
 }
@@ -516,6 +516,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float opacity = color.a;
 	float depth = input.pos.z;
 	float ao = 1;
+	float ssao = 1;
 #ifndef ENVMAPRENDERING
 	float lineardepth = input.pos2D.w;
 	input.pos2D.xy /= input.pos2D.w;
@@ -580,11 +581,21 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // WATER
 
 
+#ifndef ENVMAPRENDERING
+#ifndef TRANSPARENT
+	ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
+	ao *= ssao;
+#endif // TRANSPARENT
+#endif // ENVMAPRENDERING
+
+
+
 	SpecularAA(surface.N, surface.roughness);
 
 	ApplyEmissive(surface, specular);
 
-	LightMapping(input.atl, diffuse, specular, ao);
+	LightMapping(input.atl, diffuse, specular, ao, ssao);
+
 
 
 #ifdef DEFERRED
@@ -622,8 +633,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #else
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	reflection = lerp(reflection, ssr.rgb, ssr.a);
-	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
-	ao *= ssao;
 #endif // TRANSPARENT
 
 

@@ -4,7 +4,6 @@
 #include "packHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
-#define	xSSAO texture_8
 #define	xSSR texture_9
 
 #ifdef DEBUG_TILEDLIGHTCULLING
@@ -582,13 +581,12 @@ void main(ComputeShaderInput IN)
 	float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
 	float2 velocity = g1.zw;
 	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
 	reflection = lerp(reflection, ssr.rgb, ssr.a);
 
 	specular += reflection * surface.F;
 
-	float3 ambient = GetAmbient(N) * ao * ssao;
+	float3 ambient = GetAmbient(N) * ao;
 	diffuse += ambient;
 
 	deferred_Diffuse[pixel] += float4(diffuse, 1);

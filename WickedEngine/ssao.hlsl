@@ -1,82 +1,81 @@
 #include "postProcessHF.hlsli"
-static const float strength = 8.f;
-static const float falloff  = -0.4f;
-static const float rad = 0.26f;
-static const float darkness = 2.3f;
+#include "reconstructPositionHF.hlsli"
 
-#define NUM_SAMPLES	 16
-static const float invSamples = 1.0 / (float)NUM_SAMPLES;
 
-// AO sampling directions 
-static const float3 AO_SAMPLES[ NUM_SAMPLES ] = 
+// Hemisphere point generation from:
+//	http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+
+float radicalInverse_VdC(uint bits) {
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+float2 hammersley2d(uint i, uint N) {
+	return float2(float(i) / float(N), radicalInverse_VdC(i));
+}
+
+float3 hemisphereSample_uniform(float u, float v) {
+	float phi = v * 2.0 * PI;
+	float cosTheta = 1.0 - u;
+	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+
+float3 hemisphereSample_cos(float u, float v) {
+	float phi = v * 2.0 * PI;
+	float cosTheta = sqrt(1.0 - u);
+	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+
+inline float3x3 GetTangentSpace(float3 normal)
 {
-#if NUM_SAMPLES==16
-    float3(0.355512, -0.709318, -0.102371 ),
-	float3(0.534186, 0.71511, -0.115167 ),
-	float3(-0.87866, 0.157139, -0.115167 ),
-	float3(0.140679, -0.475516, -0.0639818 ),
-	float3(-0.0796121, 0.158842, -0.677075 ),
-	float3(-0.0759516, -0.101676, -0.483625 ),
-	float3(0.12493, -0.0223423, -0.483625 ),
-	float3(-0.0720074, 0.243395, -0.967251 ),
-	float3(-0.207641, 0.414286, 0.187755 ),
-	float3(-0.277332, -0.371262, 0.187755 ),
-	float3(0.63864, -0.114214, 0.262857 ),
-	float3(-0.184051, 0.622119, 0.262857 ),
-	float3(0.110007, -0.219486, 0.435574 ),
-	float3(0.235085, 0.314707, 0.696918 ),
-	float3(-0.290012, 0.0518654, 0.522688 ),
-	float3(0.0975089, -0.329594, 0.609803 )
-#elif NUM_SAMPLES==10
-	float3(-0.010735935, 0.01647018, 0.0062425877),
-	float3(-0.06533369, 0.3647007, -0.13746321),
-	float3(-0.6539235, -0.016726388, -0.53000957),
-	float3(0.40958285, 0.0052428036, -0.5591124),
-	float3(-0.1465366, 0.09899267, 0.15571679),
-	float3(-0.44122112, -0.5458797, 0.04912532),
-	float3(0.03755566, -0.10961345, -0.33040273),
-	float3(0.019100213, 0.29652783, 0.066237666),
-	float3(0.8765323, 0.011236004, 0.28265962),
-	float3(0.29264435, -0.40794238, 0.15964167)
-#endif
-};
+	// Choose a helper vector for the cross product
+	float3 helper = abs(normal.x) > 0.99f ? float3(0, 0, 1) : float3(1, 0, 0);
 
-
+	// Generate vectors
+	float3 tangent = normalize(cross(normal, helper));
+	float3 binormal = normalize(cross(normal, tangent));
+	return float3x3(tangent, binormal, normal);
+}
 
 float4 main(VertexToPixelPostProcess input):SV_Target
 {
-	float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp,input.tex.xy,0).xy);
+	float3 noise = xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0;
+	float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
+	float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_point_clamp, input.tex, 0));
 
-	float3 fres = normalize(xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0);
+	float3 tangent = normalize(noise - normal * dot(noise, normal));
+	float3 bitangent = cross(normal, tangent);
+	float3x3 tangentSpace = float3x3(tangent, bitangent, normal);
 
-	float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, input.tex, 0) * g_xFrame_MainCamera_ZFarP;
+	float center_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, input.tex, 0);
 
-	float3 ep = float3(input.tex, depth);
-	float bl = 0.0;
-	float radD = rad / depth;
+	float ao = 0;
 
-	float3 ray;
-	float3 occFrag;
-	float  depthDiff;
-
-
-	for (int i = 0; i < NUM_SAMPLES; ++i)
+	const uint sampleCount = 16;
+	for (uint i = 0; i < sampleCount; ++i)
 	{
-		ray = radD * reflect(AO_SAMPLES[i], fres);
-		float2 newTex = ep.xy + ray.xy;
+		float2 hamm = hammersley2d(i, sampleCount);
+		float3 hemisphere = hemisphereSample_uniform(hamm.x, hamm.y);
+		float3 cone = mul(hemisphere, tangentSpace);
+		float3 sam = P + cone;
 
-		occFrag = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, newTex, 0).xy);
-		if (!occFrag.x && !occFrag.y && !occFrag.z)
-			break;
+		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xCamera_VP);
+		vProjectedCoord.xy /= vProjectedCoord.w;
+		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		depthDiff = (depth - (texture_lineardepth.SampleLevel(Sampler, newTex, 0).r * g_xFrame_MainCamera_ZFarP));
+		float ray_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
+		ray_depth += 0.0008f; // self-occlusion bias
 
-		bl += step(falloff, depthDiff) * (1.0 - saturate(dot(occFrag.xyz, normal)))
-			* (1 - smoothstep(falloff, strength, depthDiff));
+		float depth_fix = 1 - saturate(abs(center_depth - ray_depth) * 200); // to much depth difference cancels the effect
 
+		ao += (ray_depth <= center_depth ? 1 : 0) * depth_fix;
 	}
+	ao /= (float)sampleCount;
 
-	float ao = 1.0 - bl * invSamples/**darkness*/;
-
-	return saturate(ao.xxxx);
+	return saturate(1 - ao.xxxx);
 }

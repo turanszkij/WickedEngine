@@ -17,6 +17,9 @@ private:
 	float dofFocus;
 	float dofStrength;
 	float sharpenFilterAmount;
+	float outlineThreshold;
+	float outlineThickness;
+	XMFLOAT3 outlineColor;
 
 	bool fxaaEnabled;
 	bool ssaoEnabled;
@@ -38,6 +41,7 @@ private:
 	bool eyeAdaptionEnabled;
 	bool tessellationEnabled;
 	bool sharpenFilterEnabled;
+	bool outlineEnabled;
 
 	wiGraphicsTypes::Texture2D* colorGradingTex = nullptr;
 
@@ -86,6 +90,9 @@ public:
 	inline float getDepthOfFieldFocus(){ return dofFocus; }
 	inline float getDepthOfFieldStrength(){ return dofStrength; }
 	inline float getSharpenFilterAmount() { return sharpenFilterAmount; }
+	inline float getOutlineThreshold() { return outlineThreshold; }
+	inline float getOutlineThickness() { return outlineThickness; }
+	inline XMFLOAT3 getOutlineColor() { return outlineColor; }
 
 	inline bool getSSAOEnabled(){ return ssaoEnabled; }
 	inline bool getSSREnabled(){ return ssrEnabled; }
@@ -107,6 +114,7 @@ public:
 	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
 	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	inline bool getSharpenFilterEnabled() { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
+	inline bool getOutlineEnabled() { return outlineEnabled; }
 
 	inline wiGraphicsTypes::Texture2D* getColorGradingTexture() { return colorGradingTex; }
 
@@ -122,6 +130,9 @@ public:
 	inline void setDepthOfFieldFocus(float value){ dofFocus = value; }
 	inline void setDepthOfFieldStrength(float value){ dofStrength = value; }
 	inline void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
+	inline void setOutlineThreshold(float value) { outlineThreshold = value; }
+	inline void setOutlineThickness(float value) { outlineThickness = value; }
+	inline void setOutlineColor(const XMFLOAT3& value) { outlineColor = value; }
 
 	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
 	inline void setSSREnabled(bool value){ ssrEnabled = value; }
@@ -143,6 +154,7 @@ public:
 	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
 	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
+	inline void setOutlineEnabled(bool value) { outlineEnabled = value; }
 
 	inline void setColorGradingTexture(wiGraphicsTypes::Texture2D* tex) { colorGradingTex = tex; }
 

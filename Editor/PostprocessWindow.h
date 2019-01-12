@@ -38,6 +38,9 @@ public:
 	wiButton*	colorGradingButton;
 	wiCheckBox* sharpenFilterCheckBox;
 	wiSlider*	sharpenFilterAmountSlider;
+	wiCheckBox* outlineCheckBox;
+	wiSlider*	outlineThresholdSlider;
+	wiSlider*	outlineThicknessSlider;
 
 
 };

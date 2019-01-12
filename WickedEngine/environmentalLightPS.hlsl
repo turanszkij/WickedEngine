@@ -1,6 +1,5 @@
 #include "deferredLightHF.hlsli"
 
-#define	xSSAO texture_8
 #define	xSSR texture_9
 
 
@@ -13,8 +12,7 @@ LightOutputType main(VertexToPixel PSIn)
 	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 
 	VoxelGI(surface, diffuse, specular, ao);
-	float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
-	float3 ambient = GetAmbient(N) * ao * ssao;
+	float3 ambient = GetAmbient(N) * ao;
 	diffuse += ambient;
 
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
