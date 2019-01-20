@@ -121,25 +121,35 @@ When your project settings are set up, time to #include "WickedEngine.h" in your
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
 
+Initialization example:
 ```
-// Initialization example:
-MainComponent main; // Declare the Wicked Engine Main Runtime Component (you can also override its Update, Render, etc. functions)
-main.SetWindow(hWnd, hInst); // Assign window handle and instance from Windows API (you must do this once if you want to render)
-while(true) {
-   main.Run(); // Run the application until the user exits (preferably you would call this inside the Windows API message loop)
-}
+// Include engine headers:
+#include "WickedEngine.h"
 
-// Basic usage example:
+// Declare main component once per application:
+MainComponent main;
+
+// If you want to render, interface with Windows API like this:
+main.SetWindow(hWnd, hInst);
+
+// Run the application:
+while(true) {
+   main.Run(); 
+}
+```
+
+Some basic usage examples:
+```
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
-main.ActivatePath(myGame); // The myGame will call Start(), Update(), Render(), etc. from now on...
+main.ActivatePath(myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
 wiRenderer::LoadModel("myModel.wimf"); // Simply load a model into the current render scene
 wiRenderer::ClearWorld(); // Delete every model, etc. from the current render scene
 
 myGame.setSSAOEnabled(true); // You can enable post process effects this way...
 
-RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one.
-main.ActivatePath(myMenuScreen); // 2D render path can only render 2D graphics by default (like a menu for example)
+RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
+main.ActivatePath(myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
 
 wiSprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
 myMenuScreen.addSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
