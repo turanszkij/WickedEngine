@@ -106,7 +106,7 @@ widely popular Lua scripting language for faster iteration times and more flexib
 
 Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
 For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
-Then set the following dependencies to this library in Visual Studio this way in the implementing project:
+Then set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
@@ -119,10 +119,44 @@ Then set the following dependencies to this library in Visual Studio this way in
 <img align="left" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
 
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
-in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. 
-But this will not render anything for you yet, because first you must initialize the engine. For this, you should create a main program component by deriving from MainComponent class of 
-Wicked Engine and initialize it appropriately by calling the SetWindow() and Run() functions inside the main message loop. 
-You should also ActivatePath() for the rendering to begin. You can see an example for this inside the Tests and Editor projects.
+in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
+Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
+
+```
+// Initialization example:
+MainComponent main; // Declare the Wicked Engine Main Runtime Component (you can also override its Update, Render, etc. functions)
+main.SetWindow(hWnd, hInst); // Assign window handle and instance from Windows API (you must do this once if you want to render)
+while(true) {
+   main.Run(); // Run the application until the user exits (preferably you would call this inside the Windows API message loop)
+}
+
+// Basic usage example:
+RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
+main.ActivatePath(myGame); // The myGame will call Start(), Update(), Render(), etc. from now on...
+
+wiRenderer::LoadModel("myModel.wimf"); // Simply load a model into the current render scene
+wiRenderer::ClearWorld(); // Delete every model, etc. from the current render scene
+
+myGame.setSSAOEnabled(true); // You can enable post process effects this way...
+
+RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one.
+main.ActivatePath(myMenuScreen); // 2D render path can only render 2D graphics by default (like a menu for example)
+
+wiSprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
+myMenuScreen.addSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
+
+wiSoundEffect soundEffect("explosion.wav"); // you can load sound effects, or music
+soundEffect.Play(); // you can play sounds
+soundEffect.Stop(); // you can stop sounds
+
+wiMusic myMusic("music.wav"); // music is the same as sound effects, but they can be controlled independently
+myMusic.Play(); // plays a music
+wiMusic::SetVolume(0.5f); // set volume for every music, but don't modify sound effect volume
+
+if (wiInputManager::press(VK_SPACE)) { soundEffect.Stop(); } // You can check if a button is pressed or not (this only triggers once)
+if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if a button is pushed down or not (this triggers repeatedly)
+```
+For more information and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project.
 
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 
