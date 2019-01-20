@@ -107,6 +107,7 @@ widely popular Lua scripting language for faster iteration times and more flexib
 Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
 For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
 Then set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
@@ -116,8 +117,6 @@ Then set the following dependencies to this library in Visual Studio this way in
 4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 	
-<img align="left" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
-
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
