@@ -163,6 +163,8 @@ void RenderPath3D::setProperties()
 	setOutlineThreshold(0.2f);
 	setOutlineThickness(1.0f);
 	setOutlineColor(XMFLOAT3(0, 0, 0));
+	setSSAORange(1.0f);
+	setSSAOSampleCount(16);
 
 	setSSAOEnabled(true);
 	setSSREnabled(true);

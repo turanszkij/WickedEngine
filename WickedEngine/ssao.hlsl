@@ -44,6 +44,9 @@ inline float3x3 GetTangentSpace(float3 normal)
 
 float4 main(VertexToPixelPostProcess input):SV_Target
 {
+	const float range = xPPParams0.x;
+	const uint sampleCount = xPPParams0.y;
+
 	float3 noise = xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0;
 	float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
 	float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_point_clamp, input.tex, 0));
@@ -53,27 +56,25 @@ float4 main(VertexToPixelPostProcess input):SV_Target
 	float3x3 tangentSpace = float3x3(tangent, bitangent, normal);
 
 	float center_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, input.tex, 0);
+	center_depth -= 0.0006f; // self-occlusion bias
 
 	float ao = 0;
-
-	const uint sampleCount = 16;
 	for (uint i = 0; i < sampleCount; ++i)
 	{
 		float2 hamm = hammersley2d(i, sampleCount);
 		float3 hemisphere = hemisphereSample_uniform(hamm.x, hamm.y);
 		float3 cone = mul(hemisphere, tangentSpace);
-		float3 sam = P + cone;
+		float3 sam = P + cone * range;
 
 		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xCamera_VP);
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
 		float ray_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
-		ray_depth += 0.0008f; // self-occlusion bias
 
-		float depth_fix = 1 - saturate(abs(center_depth - ray_depth) * 200); // to much depth difference cancels the effect
+		float depth_fix = 1 - saturate(abs(center_depth - ray_depth) * 200); // too much depth difference cancels the effect
 
-		ao += (ray_depth <= center_depth ? 1 : 0) * depth_fix;
+		ao += (ray_depth < center_depth ? 1 : 0) * depth_fix;
 	}
 	ao /= (float)sampleCount;
 

@@ -73,7 +73,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
 		rtSSAO[0].Activate(threadID); {
-			fx.process.setSSAO();
+			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_LINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;

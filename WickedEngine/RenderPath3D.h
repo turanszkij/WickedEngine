@@ -20,6 +20,8 @@ private:
 	float outlineThreshold;
 	float outlineThickness;
 	XMFLOAT3 outlineColor;
+	float ssaoRange;
+	UINT ssaoSampleCount;
 
 	bool fxaaEnabled;
 	bool ssaoEnabled;
@@ -93,6 +95,8 @@ public:
 	inline float getOutlineThreshold() { return outlineThreshold; }
 	inline float getOutlineThickness() { return outlineThickness; }
 	inline XMFLOAT3 getOutlineColor() { return outlineColor; }
+	inline float getSSAORange() { return ssaoRange; }
+	inline UINT getSSAOSampleCount() { return ssaoSampleCount; }
 
 	inline bool getSSAOEnabled(){ return ssaoEnabled; }
 	inline bool getSSREnabled(){ return ssrEnabled; }
@@ -133,6 +137,8 @@ public:
 	inline void setOutlineThreshold(float value) { outlineThreshold = value; }
 	inline void setOutlineThickness(float value) { outlineThickness = value; }
 	inline void setOutlineColor(const XMFLOAT3& value) { outlineColor = value; }
+	inline void setSSAORange(float value) { ssaoRange = value; }
+	inline void setSSAOSampleCount(UINT value) { ssaoSampleCount = value; }
 
 	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
 	inline void setSSREnabled(bool value){ ssrEnabled = value; }

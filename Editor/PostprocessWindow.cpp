@@ -18,7 +18,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(360, 640));
+	ppWindow->SetSize(XMFLOAT2(360, 660));
 	GUI->AddWidget(ppWindow);
 
 	float x = 110;
@@ -64,6 +64,26 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		component->setSSAOEnabled(args.bValue);
 	});
 	ppWindow->AddWidget(ssaoCheckBox);
+
+	ssaoRangeSlider = new wiSlider(0, 2, 1, 1000, "Range: ");
+	ssaoRangeSlider->SetTooltip("Set SSAO Detection range.");
+	ssaoRangeSlider->SetSize(XMFLOAT2(100, 20));
+	ssaoRangeSlider->SetPos(XMFLOAT2(x + 100, y));
+	ssaoRangeSlider->SetValue(component->getSSAORange());
+	ssaoRangeSlider->OnSlide([&](wiEventArgs args) {
+		component->setSSAORange(args.fValue);
+	});
+	ppWindow->AddWidget(ssaoRangeSlider);
+
+	ssaoSampleCountSlider = new wiSlider(9, 64, 16, 64-9, "SampleCount: ");
+	ssaoSampleCountSlider->SetTooltip("Set SSAO Sample Count. Higher values produce better quality, but slower to compute");
+	ssaoSampleCountSlider->SetSize(XMFLOAT2(100, 20));
+	ssaoSampleCountSlider->SetPos(XMFLOAT2(x + 100, y += 35));
+	ssaoSampleCountSlider->SetValue((float)component->getSSAOSampleCount());
+	ssaoSampleCountSlider->OnSlide([&](wiEventArgs args) {
+		component->setSSAOSampleCount((UINT)args.iValue);
+	});
+	ppWindow->AddWidget(ssaoSampleCountSlider);
 
 	ssrCheckBox = new wiCheckBox("SSR: ");
 	ssrCheckBox->SetTooltip("Enable Screen Space Reflections.");

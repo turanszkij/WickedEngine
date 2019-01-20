@@ -408,7 +408,7 @@ void TestsRenderer::RunSpriteTest()
 		static wiSprite sprite("../logo/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
-		sprite.anim.wobbleAnim.amount = XMFLOAT2(1.2, 0.8);
+		sprite.anim.wobbleAnim.amount = XMFLOAT2(1.2f, 0.8f);
 		addSprite(&sprite);
 
 		static wiFont font("Wobble animation: ");

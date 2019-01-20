@@ -23,6 +23,8 @@ public:
 	wiCheckBox* lensFlareCheckBox;
 	wiCheckBox* lightShaftsCheckBox;
 	wiCheckBox* ssaoCheckBox;
+	wiSlider*	ssaoRangeSlider;
+	wiSlider*	ssaoSampleCountSlider;
 	wiCheckBox* ssrCheckBox;
 	wiCheckBox* sssCheckBox;
 	wiCheckBox* eyeAdaptionCheckBox;

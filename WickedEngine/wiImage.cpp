@@ -279,6 +279,9 @@ namespace wiImage
 			case wiImageParams::PostProcess::FXAA:
 				break;
 			case wiImageParams::PostProcess::SSAO:
+				prcb.xPPParams0.x = params.process.params.ssao.range;
+				prcb.xPPParams0.y = (float)params.process.params.ssao.sampleCount;
+				device->UpdateBuffer(&processCb, &prcb, threadID);
 				break;
 			case wiImageParams::PostProcess::SSSS:
 				prcb.xPPParams0.x = params.process.params.ssss.x;

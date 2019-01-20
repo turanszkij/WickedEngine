@@ -2324,14 +2324,14 @@ public:
 	void clear()
 	{
 		for (size_t i = 0; i < m_vertexArray.size(); i++)
-			delete m_vertexArray[i];
+			delete m_vertexArray[(uint32_t)i];
 		m_vertexArray.clear();
 		for (EdgeMap::PseudoIndex it = m_edgeMap.start(); !m_edgeMap.isDone(it); m_edgeMap.advance(it))
 			delete m_edgeMap[it].value;
 		m_edgeArray.clear();
 		m_edgeMap.clear();
 		for (size_t i = 0; i < m_faceArray.size(); i++)
-			delete m_faceArray[i];
+			delete m_faceArray[(uint32_t)i];
 		m_faceArray.clear();
 	}
 
@@ -2610,9 +2610,9 @@ public:
 		XA_DEBUG_ASSERT(m_faceArray.size() > faceCount); // triangle count > face count
 		linkBoundary();
 		for (size_t i = 0; i < edgeArray.size(); i++)
-			delete edgeArray[i];
+			delete edgeArray[(uint32_t)i];
 		for (size_t i = 0; i < faceArray.size(); i++)
-			delete faceArray[i];
+			delete faceArray[(uint32_t)i];
 	}
 
 	/// Link boundary edges once the mesh has been created.
@@ -5431,7 +5431,7 @@ struct AtlasBuilder
 		}
 		XA_DEBUG_ASSERT(maxDistance >= 0);
 		// In order to prevent k-means cyles we record all the previously chosen seeds.
-		uint32_t index = std::find(chart->seeds.begin(), chart->seeds.end(), mostCentral) - chart->seeds.begin();
+		uint32_t index = (uint32_t)(std::find(chart->seeds.begin(), chart->seeds.end(), mostCentral) - chart->seeds.begin());
 		if (index < chart->seeds.size()) {
 			// Move new seed to the end of the seed array.
 			uint32_t last = chart->seeds.size() - 1;
@@ -6470,7 +6470,7 @@ public:
 	~MeshCharts()
 	{
 		for (size_t i = 0; i < m_chartArray.size(); i++)
-			delete m_chartArray[i];
+			delete m_chartArray[(uint32_t)i];
 	}
 
 	uint32_t chartCount() const
@@ -6779,7 +6779,7 @@ public:
 	~Atlas()
 	{
 		for (size_t i = 0; i < m_meshChartsArray.size(); i++)
-			delete m_meshChartsArray[i];
+			delete m_meshChartsArray[(uint32_t)i];
 	}
 
 	uint32_t meshCount() const

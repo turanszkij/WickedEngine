@@ -134,6 +134,11 @@ struct wiImageParams
 			} blur;
 			Blur ssss;
 			Blur sun;
+			struct SSAO
+			{
+				float range;
+				UINT sampleCount;
+			} ssao;
 			float dofStrength;
 			float sharpen;
 			float exposure;
@@ -156,7 +161,7 @@ struct wiImageParams
 			params.outline.colorB = color.z;
 		}
 		void setFXAA() { type = FXAA; }
-		void setSSAO() { type = SSAO; }
+		void setSSAO(float range = 1.0f, UINT sampleCount = 16) { type = SSAO; params.ssao.range = range; params.ssao.sampleCount = sampleCount; }
 		void setLinDepth() { type = LINEARDEPTH; }
 		void setColorGrade() { type = COLORGRADE; }
 		void setSSSS(const XMFLOAT2& value) { type = SSSS; params.ssss.x = value.x; params.ssss.y = value.y; }
