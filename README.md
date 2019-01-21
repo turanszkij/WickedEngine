@@ -141,15 +141,16 @@ while(true) {
 Some basic usage examples:
 ```
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
-main.ActivatePath(myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
+main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
-wiRenderer::LoadModel("myModel.wimf"); // Simply load a model into the current render scene
+wiRenderer::LoadModel("myModel.wiscene"); // Simply load a model into the current render scene
+wiRenderer::GetScene(); // Get the current render scene
 wiRenderer::ClearWorld(); // Delete every model, etc. from the current render scene
 
 myGame.setSSAOEnabled(true); // You can enable post process effects this way...
 
 RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
-main.ActivatePath(myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
+main.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
 
 wiSprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
 myMenuScreen.addSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
@@ -165,7 +166,43 @@ wiMusic::SetVolume(0.5f); // set volume for every music, but don't modify sound 
 if (wiInputManager::press(VK_SPACE)) { soundEffect.Stop(); } // You can check if a button is pressed or not (this only triggers once)
 if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
-For more information and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project.
+
+Some basic lua scripting examples: <br/>
+(You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)
+```
+-- Set a rendering path for the application main component
+path = RenderPath3D_Deferred;
+main.SetActivePath(path);
+
+-- Load a model:
+model = LoadModel("myModel.wiscene");
+
+-- Get the current render scene:
+scene = GetScene();
+
+-- Move model to the right using the entity-component system:
+transform = scene.Component_GetTransform(entity);
+transform.Translate(Vector(2, 0, 0));
+
+-- Clear every model from the current render scene:
+ClearWorld();
+
+-- Print any WickedEngine class information to the backlog:
+getprops(main);    -- prints the main component methods
+getprops(scene);    -- prints the Scene class methods
+getprops(path);    -- prints the deferred render path methods
+
+-- Play a sound:
+sound = SoundEffect("whoosh.wav");
+sound.Play();
+
+-- Check for input:
+if(input.press(VK_LEFT)) then
+   sound.Play(); -- this will play the sound if you press the left arrow on the keyboard
+end
+```
+
+For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project.
 
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 
