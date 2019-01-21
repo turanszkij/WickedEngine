@@ -121,7 +121,7 @@ When your project settings are set up, time to #include "WickedEngine.h" in your
 in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
 Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
 
-Initialization example:
+Initialization example (C++):
 ```
 // Include engine headers:
 #include "WickedEngine.h"
@@ -138,7 +138,7 @@ while(true) {
 }
 ```
 
-Some basic usage examples:
+Some basic usage examples (C++):
 ```
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
@@ -167,15 +167,15 @@ if (wiInputManager::press(VK_SPACE)) { soundEffect.Stop(); } // You can check if
 if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
 
-Some basic lua scripting examples: <br/>
+Some scripting examples (LUA): <br/>
 (You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)
 ```
 -- Set a rendering path for the application main component
 path = RenderPath3D_Deferred;
-main.SetActivePath(path);
+main.SetActivePath(path);    -- "main" is created automatically
 
--- Load a model:
-model = LoadModel("myModel.wiscene");
+-- Load a model entity:
+entity = LoadModel("myModel.wiscene");
 
 -- Get the current render scene:
 scene = GetScene();
@@ -206,8 +206,6 @@ For more code samples and advanced use cases, please see the example projects, l
 
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 
-When everything is initialized properly, you should see a black screen. From this point, you can make an application by writing scripts in either C++ or Lua code. Please see the Tests project for such examples.
-
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
 
 ### Contents:
@@ -235,6 +233,25 @@ The Editor supports the importing of some common model formats (the list will po
 The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
 The old Blender exporter script is now not supported! (from version 0.21.0)
 
-![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
-	
+### Take a look at some screenshots:
 
+Sponza scene with voxel GI enabled:
+![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
+
+City scene with a light map, model from <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie</a>:
+![City](https://turanszkij.files.wordpress.com/2019/01/city1.png)
+
+Path tracing in the city:
+![Balcony](https://turanszkij.files.wordpress.com/2019/01/city2.png)
+
+Path traced caustics:
+![Caustics](https://turanszkij.files.wordpress.com/2019/01/trace.png)
+
+Lots of instanced boxes with a light map:
+![Lightmap](https://turanszkij.files.wordpress.com/2019/01/lightmap.png)
+
+Lots of boxes path traced in the editor:
+![EditorBoxes](https://turanszkij.files.wordpress.com/2019/01/boxes.png)
+
+Bloom and post processing:
+![Bloom](https://turanszkij.files.wordpress.com/2019/01/bloom.png)
