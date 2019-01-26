@@ -2,6 +2,7 @@
 #define WHELPER
 
 #include "CommonInclude.h"
+#include "wiGraphicsDevice.h"
 
 #include <string>
 #include <vector>
@@ -36,6 +37,10 @@ namespace wiHelper
 
 	void screenshot(const std::string& name = "");
 
+	bool saveTextureToFile(wiGraphicsTypes::Texture2D& texture, const std::string& fileName);
+
+	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphicsTypes::TextureDesc& desc, const std::string& fileName);
+
 	std::string getCurrentDateTimeAsString();
 
 	std::string GetApplicationDirectory();
@@ -57,6 +62,8 @@ namespace wiHelper
 	std::string GetExtensionFromFileName(const std::string& filename);
 
 	void RemoveExtensionFromFileName(std::string& filename);
+
+	bool FileExists(const std::string& fileName);
 
 	// Puts the current thread to sleeping state for a given time (OS can overtake)
 	void Sleep(float milliseconds);

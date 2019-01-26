@@ -150,7 +150,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 		auto& weather = GetWeather();
 		weather.ambient = XMFLOAT3(0.1f, 0.1f, 0.1f);
 		weather.horizon = XMFLOAT3(0.3f, 0.3f, 0.4f);
-		weather.zenith = XMFLOAT3(0.05f, 0.05f, 0.5f);
+		weather.zenith = XMFLOAT3(37.0f / 255.0f, 61.0f / 255.0f, 142.0f / 255.0f);
 		weather.cloudiness = 0.4f;
 		weather.fogStart = 100;
 		weather.fogEnd = 1000;

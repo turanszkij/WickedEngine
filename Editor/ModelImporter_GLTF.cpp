@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "wiSceneSystem.h"
 #include "ModelImporter.h"
+#include "wiRandom.h"
 
 #include "Utility/stb_image.h"
 
@@ -97,9 +98,8 @@ void RegisterTexture2D(tinygltf::Image *image)
 		int width = image->width;
 		int height = image->height;
 		int channelCount = image->component;
-		const unsigned char* rgb = image->image.data();
 
-		if (rgb != nullptr)
+		if (!image->image.empty())
 		{
 			TextureDesc desc;
 			desc.ArraySize = 1;
@@ -116,7 +116,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 			SubresourceData* InitData = new SubresourceData[desc.MipLevels];
 			for (UINT mip = 0; mip < desc.MipLevels; ++mip)
 			{
-				InitData[mip].pSysMem = rgb;
+				InitData[mip].pSysMem = image->image.data();
 				InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
 				mipwidth = max(1, mipwidth / 2);
 			}
@@ -131,12 +131,17 @@ void RegisterTexture2D(tinygltf::Image *image)
 			{
 				wiRenderer::AddDeferredMIPGen(tex);
 
-				if (image->uri.empty())
+				//if (image->uri.empty())
 				{
-					static UINT imgcounter = 0;
-					stringstream ss("");
-					ss << "gltfLoader_image" << imgcounter++;
+					// Always export the images, because they were interleaved to engine layout after importing from gltf:
+					stringstream ss;
+					do {
+						ss.str("");
+						ss << "gltfLoader_image_" << wiRandom::getRandom(INT_MAX) << ".png";
+					} while (wiHelper::FileExists(ss.str())); // this is to avoid overwriting an existing exported image
 					image->uri = ss.str();
+					bool success = wiHelper::saveTextureToFile(image->image, desc, ss.str());
+					assert(success);
 				}
 
 				// We loaded the texture2d, so register to the resource manager to be retrieved later:
