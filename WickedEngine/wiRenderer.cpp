@@ -5810,7 +5810,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
-		desc.Format = RTFormat_hdr;
+		desc.Format = RTFormat_envprobe;
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = envmapMIPs;
@@ -7100,6 +7100,11 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 				materialArray.push_back(global_material);
 			}
 		}
+	}
+
+	if (materialArray.empty())
+	{
+		return;
 	}
 
 	if (globalMaterialBuffer == nullptr || globalMaterialBuffer->GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())

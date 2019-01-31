@@ -7,6 +7,8 @@
 #include "wiGPUSortLib.h"
 
 #include <string>
+#include <vector>
+#include <set>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -36,7 +38,7 @@ wiGPUBVH::~wiGPUBVH()
 {
 }
 
-
+//#define BVH_VALIDATE // slow but great for debug!
 void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -397,6 +399,92 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 	}
 	device->EventEnd(threadID);
+
+#ifdef BVH_VALIDATE
+
+	GPUBufferDesc readback_desc;
+	bool download_success;
+
+	// Download cluster count:
+	readback_desc = clusterCounterBuffer->GetDesc();
+	readback_desc.Usage = USAGE_STAGING;
+	readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
+	readback_desc.BindFlags = 0;
+	readback_desc.MiscFlags = 0;
+	GPUBuffer readback_clusterCounterBuffer;
+	device->CreateBuffer(&readback_desc, nullptr, &readback_clusterCounterBuffer);
+	uint clusterCount;
+	download_success = device->DownloadResource(clusterCounterBuffer.get(), &readback_clusterCounterBuffer, &clusterCount, threadID);
+	assert(download_success);
+
+	if (clusterCount > 0)
+	{
+		const uint leafNodeOffset = clusterCount - 1;
+
+		// Validate node buffer:
+		readback_desc = bvhNodeBuffer->GetDesc();
+		readback_desc.Usage = USAGE_STAGING;
+		readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
+		readback_desc.BindFlags = 0;
+		readback_desc.MiscFlags = 0;
+		GPUBuffer readback_nodeBuffer;
+		device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
+		vector<BVHNode> nodes(readback_desc.ByteWidth / sizeof(BVHNode));
+		download_success = device->DownloadResource(bvhNodeBuffer.get(), &readback_nodeBuffer, nodes.data(), threadID);
+		assert(download_success);
+		set<uint> visitedLeafs;
+		vector<uint> stack;
+		stack.push_back(0);
+		while (!stack.empty())
+		{
+			uint nodeIndex = stack.back();
+			stack.pop_back();
+
+			if (nodeIndex >= leafNodeOffset)
+			{
+				// leaf node
+				assert(visitedLeafs.count(nodeIndex) == 0); // leaf node was already visited, this must not happen!
+				visitedLeafs.insert(nodeIndex);
+			}
+			else
+			{
+				// internal node
+				BVHNode& node = nodes[nodeIndex];
+				stack.push_back(node.LeftChildIndex);
+				stack.push_back(node.RightChildIndex);
+			}
+		}
+		for (uint i = 0; i < clusterCount; ++i)
+		{
+			uint nodeIndex = leafNodeOffset + i;
+			BVHNode& leaf = nodes[nodeIndex];
+			assert(leaf.LeftChildIndex == 0 && leaf.RightChildIndex == 0); // a leaf must have no children
+			assert(visitedLeafs.count(nodeIndex) > 0); // every leaf node must have been visited in the traversal above
+		}
+
+		// Validate flag buffer:
+		readback_desc = bvhFlagBuffer->GetDesc();
+		readback_desc.Usage = USAGE_STAGING;
+		readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
+		readback_desc.BindFlags = 0;
+		readback_desc.MiscFlags = 0;
+		GPUBuffer readback_flagBuffer;
+		device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
+		vector<uint> flags(readback_desc.ByteWidth / sizeof(uint));
+		download_success = device->DownloadResource(bvhFlagBuffer.get(), &readback_flagBuffer, flags.data(), threadID);
+		assert(download_success);
+		for (auto& x : flags)
+		{
+			if (x > 2)
+			{
+				assert(0); // flagbuffer anomaly detected: node can't have more than two children (AABB propagation step)!
+				break;
+			}
+		}
+	}
+
+#endif // BVH_VALIDATE
+
 
 	wiProfiler::EndRange(threadID); // BVH rebuild
 }
