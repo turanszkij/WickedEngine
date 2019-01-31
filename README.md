@@ -21,10 +21,9 @@
 [dt]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
-### Overview:
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
-The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code shall not contain any parts with other licensing. The code is hosted on GitHub: https://github.com/turanszkij/WickedEngine For any questions, please open an issue there.
+The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code will not contain any parts with other licensing. The code is hosted on GitHub: https://github.com/turanszkij/WickedEngine For any questions, please open an issue there.
 
 From version <b>0.21.0</b> onwards, the engine was changed to use Entity-Component System and the old Object-Oriented system was dropped. <b>It is not backwards-compatible</b>, so assets/scripts made with the old system are unfortunately not usable.
 You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba], but it will not be updated anymore.
@@ -100,9 +99,9 @@ This feature is experimental, not tested thoroughly yet.
 
 ### Getting started: 
 
-The interface is designed to be somewhat similar to the XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers and all together project structure. 
+The interface is designed to be somewhat similar to the XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers. 
 However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the 
-widely popular Lua scripting language for faster iteration times and more flexible code structure.
+popular Lua scripting language for faster iteration times and more flexible code structure.
 
 Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
 For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
@@ -118,7 +117,7 @@ Then set the following dependencies to this library in Visual Studio this way in
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 	
 When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
-in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
+in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. If you are having difficulties, there are some projects that  you can compare against, such as the Editor, Tests or Template projects.
 Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
 
 Initialization example (C++):
@@ -255,3 +254,15 @@ Lots of boxes path traced in the editor:
 
 Bloom and post processing:
 ![Bloom](https://turanszkij.files.wordpress.com/2019/01/bloom.png)
+
+Bistro scene from Amazon Lumberyard (from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
+![Bloom](https://turanszkij.files.wordpress.com/2019/01/bistro_out_0.png)
+
+Bistro scene from the inside:
+![Bloom](https://turanszkij.files.wordpress.com/2019/01/bistro_in_2.png)
+
+Parallax occlusion mapping:
+![Bloom](https://turanszkij.files.wordpress.com/2019/01/pom.png)
+
+Large scale particle simulation on the GPU:
+![Bloom](https://turanszkij.files.wordpress.com/2019/01/gpuparticles3.png)
