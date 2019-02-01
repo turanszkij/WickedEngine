@@ -4116,6 +4116,12 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, GRAPHICSTHREAD_IMMEDIATE);
 	}
 
+	if (enviroMap != nullptr)
+	{
+		device->BindResource(CS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+		device->BindResource(PS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+	}
+
 	ManageLightmapAtlas(threadID);
 	RefreshEnvProbes(threadID);
 	RefreshImpostors(threadID);
@@ -7968,6 +7974,7 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_WindRandomness = scene.weather.windRandomness;
 	cb.g_xFrame_WindWaveSize = scene.weather.windWaveSize;
 	cb.g_xFrame_WindDirection = scene.weather.windDirection;
+	cb.g_xFrame_StaticSky = (enviroMap != nullptr);
 	cb.g_xFrame_FrameCount = (uint)GetDevice()->GetFrameCount();
 	cb.g_xFrame_TemporalAASampleRotation = 0;
 	if (GetTemporalAAEnabled())

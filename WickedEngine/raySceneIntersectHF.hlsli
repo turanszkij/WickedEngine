@@ -298,7 +298,18 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		// Erase the ray's energy - the sky doesn't reflect anything
 		ray.energy = 0.0f;
 
-		return GetDynamicSkyColor(ray.direction);
+		float3 envColor;
+		[branch]
+		if (g_xFrame_StaticSky)
+		{
+			// We have envmap information in a texture:
+			envColor = DEGAMMA(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.direction, 0).rgb); // todo: only degamma for unorm!
+		}
+		else
+		{
+			envColor = GetDynamicSkyColor(ray.direction);
+		}
+		return envColor;
 	}
 }
 
