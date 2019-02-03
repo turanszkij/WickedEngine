@@ -5703,7 +5703,6 @@ void DrawSky(GRAPHICSTHREAD threadID)
 	if (enviroMap != nullptr)
 	{
 		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_STATIC], threadID);
-		GetDevice()->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
 	}
 	else
 	{
@@ -7974,7 +7973,12 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_WindRandomness = scene.weather.windRandomness;
 	cb.g_xFrame_WindWaveSize = scene.weather.windWaveSize;
 	cb.g_xFrame_WindDirection = scene.weather.windDirection;
-	cb.g_xFrame_StaticSky = (enviroMap != nullptr);
+	cb.g_xFrame_StaticSkyGamma = 0.0f;
+	if (enviroMap != nullptr)
+	{
+		bool hdr = !GetDevice()->IsFormatUnorm(enviroMap->GetDesc().Format);
+		cb.g_xFrame_StaticSkyGamma = hdr ? 1.0f : cb.g_xFrame_Gamma;
+	}
 	cb.g_xFrame_FrameCount = (uint)GetDevice()->GetFrameCount();
 	cb.g_xFrame_TemporalAASampleRotation = 0;
 	if (GetTemporalAAEnabled())

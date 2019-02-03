@@ -300,10 +300,10 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 
 		float3 envColor;
 		[branch]
-		if (g_xFrame_StaticSky)
+		if (IsStaticSky())
 		{
 			// We have envmap information in a texture:
-			envColor = DEGAMMA(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.direction, 0).rgb); // todo: only degamma for unorm!
+			envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.direction, 0).rgb);
 		}
 		else
 		{

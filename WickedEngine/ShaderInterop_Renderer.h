@@ -70,7 +70,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_WindWaveSize;
 
 	float		g_xFrame_WindRandomness;
-	uint		g_xFrame_StaticSky;					// is the sky static?
+	float		g_xFrame_StaticSkyGamma;					// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
 	uint		g_xFrame_VoxelRadianceRetargetted;
 	uint		g_xFrame_TemporalAASampleRotation;
 

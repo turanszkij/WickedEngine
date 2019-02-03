@@ -77,6 +77,7 @@ bool GraphicsDevice::IsFormatUnorm(FORMAT value) const
 {
 	switch (value)
 	{
+	case FORMAT_B8G8R8A8_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
 	case FORMAT_R10G10B10A2_UNORM:
 	case FORMAT_R16_UNORM:

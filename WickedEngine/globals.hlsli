@@ -77,6 +77,7 @@ static const int gaussianOffsets[9] = {
 #define ALPHATEST(x)	clip((x) - (1.0f - g_xAlphaRef));
 #endif
 
+#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame_StaticSkyGamma)
 #define DEGAMMA(x)		pow(abs(x),g_xFrame_Gamma)
 #define GAMMA(x)		pow(abs(x),1.0/g_xFrame_Gamma)
 
@@ -92,6 +93,7 @@ inline float GetScreenHeight() { return g_xFrame_ScreenWidthHeight.y; }
 inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline uint2 GetTemporalAASampleRotation() { return float2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
+inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0f; }
 
 struct ComputeShaderInput
 {
