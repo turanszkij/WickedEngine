@@ -145,7 +145,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 				}
 
 				// We loaded the texture2d, so register to the resource manager to be retrieved later:
-				wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE);
+				wiResourceManager::GetGlobal().Register(image->uri, tex, wiResourceManager::IMAGE_2D);
 			}
 		}
 	}

@@ -2233,7 +2233,7 @@ namespace wiGraphicsTypes
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 			bufferInfo.size = 4;
-			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			bufferInfo.flags = 0;
 
 			VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &nullBuffer);
@@ -2725,48 +2725,53 @@ namespace wiGraphicsTypes
 			{
 				uint8_t* dest = textureUploader->allocate(static_cast<size_t>(memRequirements.size), static_cast<size_t>(memRequirements.alignment));
 
-				VkBufferImageCopy copyRegions[16] = {};
-				assert(pDesc->ArraySize < 16);
+				std::vector<VkBufferImageCopy> copyRegions;
 
 				size_t cpyoffset = 0;
-				uint32_t width = pDesc->Width;
-				uint32_t height = pDesc->Height;
-				for (UINT slice = 0; slice < pDesc->MipLevels; ++slice)
+				UINT initDataIdx = 0;
+				for (UINT arrayIndex = 0; arrayIndex < pDesc->ArraySize; ++arrayIndex)
 				{
-					size_t cpysize = pInitialData[slice].SysMemPitch * height;
-					switch (pDesc->Format)
+					uint32_t width = pDesc->Width;
+					uint32_t height = pDesc->Height;
+					for (UINT mip = 0; mip < pDesc->MipLevels; ++mip)
 					{
-					case FORMAT_BC1_UNORM:
-					case FORMAT_BC2_UNORM:
-					case FORMAT_BC3_UNORM:
-						cpysize /= 4;
-					default:
-						break;
+						const SubresourceData& subresourceData = pInitialData[initDataIdx++];
+						size_t cpysize = subresourceData.SysMemPitch * height;
+						switch (pDesc->Format)
+						{
+						case FORMAT_BC1_UNORM:
+						case FORMAT_BC2_UNORM:
+						case FORMAT_BC3_UNORM:
+							cpysize /= 4;
+						default:
+							break;
+						}
+						uint8_t* cpyaddr = dest + cpyoffset;
+						memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
+						cpyoffset += cpysize;
+
+						VkBufferImageCopy copyRegion = {};
+						copyRegion.bufferOffset = textureUploader->calculateOffset(cpyaddr);
+						copyRegion.bufferRowLength = 0;
+						copyRegion.bufferImageHeight = 0;
+
+						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						copyRegion.imageSubresource.mipLevel = mip;
+						copyRegion.imageSubresource.baseArrayLayer = arrayIndex;
+						copyRegion.imageSubresource.layerCount = 1;
+
+						copyRegion.imageOffset = { 0, 0, 0 };
+						copyRegion.imageExtent = {
+							width,
+							height,
+							1
+						};
+
+						width = max(1, width / 2);
+						height /= max(1, height / 2);
+
+						copyRegions.push_back(copyRegion);
 					}
-					uint8_t* cpyaddr = dest + cpyoffset;
-					memcpy(cpyaddr, pInitialData[slice].pSysMem, cpysize);
-					cpyoffset += cpysize;
-
-					VkBufferImageCopy& copyRegion = copyRegions[slice];
-					copyRegion.bufferOffset = textureUploader->calculateOffset(cpyaddr);
-					copyRegion.bufferRowLength = 0;
-					copyRegion.bufferImageHeight = 0;
-
-					// for now, only mips can be filled like this:
-					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					copyRegion.imageSubresource.mipLevel = slice;
-					copyRegion.imageSubresource.baseArrayLayer = 0;
-					copyRegion.imageSubresource.layerCount = 1;
-
-					copyRegion.imageOffset = { 0, 0, 0 };
-					copyRegion.imageExtent = {
-						width,
-						height,
-						1
-					};
-
-					width = max(1, width / 2);
-					height /= max(1, height / 2);
 				}
 
 				VkImageMemoryBarrier barrier = {};
@@ -2796,7 +2801,7 @@ namespace wiGraphicsTypes
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)(*ppTexture2D)->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pDesc->ArraySize, copyRegions);
+				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)(*ppTexture2D)->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -4821,24 +4826,16 @@ namespace wiGraphicsTypes
 		VkDeviceSize voffsets[8] = {};
 		VkBuffer vbuffers[8] = {};
 		assert(count <= 8);
-		bool valid = false;
 		for (int i = 0; i < count; ++i)
 		{
-			if (vertexBuffers[i] != nullptr)
-			{
-				valid = true;
-				vbuffers[i] = (VkBuffer)vertexBuffers[i]->resource;
-			}
+			vbuffers[i] = (vertexBuffers[i] == nullptr ? nullBuffer : (VkBuffer)vertexBuffers[i]->resource);
 			if (offsets != nullptr)
 			{
 				voffsets[i] = offsets[i];
 			}
 		}
 
-		if (valid)
-		{
-			vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
-		}
+		vkCmdBindVertexBuffers(GetDirectCommandList(threadID), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 	}
 	void GraphicsDevice_Vulkan::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 	{

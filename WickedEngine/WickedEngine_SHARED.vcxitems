@@ -254,7 +254,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\nv_dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
@@ -525,7 +524,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
@@ -718,7 +716,6 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
   </ItemGroup>
@@ -728,6 +725,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
     <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
       <DeploymentContent>true</DeploymentContent>

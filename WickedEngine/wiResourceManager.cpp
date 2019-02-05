@@ -5,16 +5,16 @@
 #include "wiTextureHelper.h"
 
 #include "Utility/stb_image.h"
-#include "Utility/nv_dds.h"
+#include "Utility/tinyddsloader.h"
 
 using namespace std;
 using namespace wiGraphicsTypes;
 
 static const std::unordered_map<std::string, wiResourceManager::Data_Type> types = {
-	make_pair("JPG", wiResourceManager::IMAGE),
-	make_pair("PNG", wiResourceManager::IMAGE),
-	make_pair("DDS", wiResourceManager::IMAGE),
-	make_pair("TGA", wiResourceManager::IMAGE),
+	make_pair("JPG", wiResourceManager::IMAGE_2D),
+	make_pair("PNG", wiResourceManager::IMAGE_2D),
+	make_pair("DDS", wiResourceManager::IMAGE_2D),
+	make_pair("TGA", wiResourceManager::IMAGE_2D),
 	make_pair("WAV", wiResourceManager::SOUND)
 };
 
@@ -69,114 +69,160 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 
 		void* success = nullptr;
 
-		switch(type){
-		case Data_Type::IMAGE:
+		switch(type)
 		{
-			Texture2D* image = nullptr;
-
+		case Data_Type::IMAGE_1D:
+		case Data_Type::IMAGE_2D:
+		case Data_Type::IMAGE_3D:
+		{
 			if (!ext.compare(std::string("DDS")))
 			{
 				// Load dds
 
-				nv_dds::CDDSImage img;
-				img.load(nameStr, false);
+				tinyddsloader::DDSFile dds;
+				auto result = dds.Load(nameStr.c_str());
 
-				if (img.is_valid())
+				if (result == tinyddsloader::Result::Success)
 				{
 					TextureDesc desc;
 					desc.ArraySize = 1;
 					desc.BindFlags = BIND_SHADER_RESOURCE;
 					desc.CPUAccessFlags = 0;
-					desc.Height = img.get_height();
-					desc.Width = img.get_width();
-					desc.MipLevels = 1;
+					desc.Height = dds.GetWidth();
+					desc.Width = dds.GetHeight();
+					desc.Depth = dds.GetDepth();
+					desc.MipLevels = dds.GetMipCount();
+					desc.ArraySize = dds.GetArraySize();
 					desc.MiscFlags = 0;
 					desc.Usage = USAGE_IMMUTABLE;
+					desc.Format = FORMAT_R8G8B8A8_UNORM;
 
-					switch (img.get_format())
+					if (dds.IsCubemap())
 					{
-					case GL_RGB:
-					case GL_RGBA:
-						desc.Format = FORMAT_R8G8B8A8_UNORM;
-						break;
-					case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-						desc.Format = FORMAT_BC1_UNORM;
-						break;
-					case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-						desc.Format = FORMAT_BC1_UNORM;
-						break;
-					case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-						desc.Format = FORMAT_BC2_UNORM;
-						break;
-					case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-						desc.Format = FORMAT_BC3_UNORM;
-						break;
+						desc.MiscFlags |= RESOURCE_MISC_TEXTURECUBE;
+					}
+
+					auto ddsFormat = dds.GetFormat();
+
+					switch (ddsFormat)
+					{
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_Float: desc.Format = FORMAT_R32G32B32A32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_UInt: desc.Format = FORMAT_R32G32B32A32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_SInt: desc.Format = FORMAT_R32G32B32A32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_Float: desc.Format = FORMAT_R32G32B32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_UInt: desc.Format = FORMAT_R32G32B32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_SInt: desc.Format = FORMAT_R32G32B32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_Float: desc.Format = FORMAT_R16G16B16A16_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_UNorm: desc.Format = FORMAT_R16G16B16A16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_UInt: desc.Format = FORMAT_R16G16B16A16_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_SNorm: desc.Format = FORMAT_R16G16B16A16_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_SInt: desc.Format = FORMAT_R16G16B16A16_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32_Float: desc.Format = FORMAT_R32G32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32_UInt: desc.Format = FORMAT_R32G32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32_SInt: desc.Format = FORMAT_R32G32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UNorm: desc.Format = FORMAT_R10G10B10A2_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UInt: desc.Format = FORMAT_R10G10B10A2_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R11G11B10_Float: desc.Format = FORMAT_R11G11B10_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm: desc.Format = FORMAT_B8G8R8A8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm_SRGB: desc.Format = FORMAT_B8G8R8A8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm: desc.Format = FORMAT_R8G8B8A8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm_SRGB: desc.Format = FORMAT_R8G8B8A8_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UInt: desc.Format = FORMAT_R8G8B8A8_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SNorm: desc.Format = FORMAT_R8G8B8A8_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SInt: desc.Format = FORMAT_R8G8B8A8_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_Float: desc.Format = FORMAT_R16G16_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_UNorm: desc.Format = FORMAT_R16G16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_UInt: desc.Format = FORMAT_R16G16_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_SNorm: desc.Format = FORMAT_R16G16_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_SInt: desc.Format = FORMAT_R16G16_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::D32_Float: desc.Format = FORMAT_D32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32_Float: desc.Format = FORMAT_R32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32_UInt: desc.Format = FORMAT_R32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32_SInt: desc.Format = FORMAT_R32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_UNorm: desc.Format = FORMAT_R8G8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_UInt: desc.Format = FORMAT_R8G8_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_SNorm: desc.Format = FORMAT_R8G8_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_SInt: desc.Format = FORMAT_R8G8_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_Float: desc.Format = FORMAT_R16_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::D16_UNorm: desc.Format = FORMAT_D16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_UNorm: desc.Format = FORMAT_R16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_UInt: desc.Format = FORMAT_R16_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_SNorm: desc.Format = FORMAT_R16_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_SInt: desc.Format = FORMAT_R16_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_UNorm: desc.Format = FORMAT_R8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_UInt: desc.Format = FORMAT_R8_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_SNorm: desc.Format = FORMAT_R8_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_SInt: desc.Format = FORMAT_R8_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: desc.Format = FORMAT_BC1_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm_SRGB: desc.Format = FORMAT_BC1_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: desc.Format = FORMAT_BC2_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm_SRGB: desc.Format = FORMAT_BC2_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: desc.Format = FORMAT_BC3_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm_SRGB: desc.Format = FORMAT_BC3_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC4_UNorm: desc.Format = FORMAT_BC4_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: desc.Format = FORMAT_BC4_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: desc.Format = FORMAT_BC5_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: desc.Format = FORMAT_BC5_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: desc.Format = FORMAT_BC7_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: desc.Format = FORMAT_BC7_UNORM_SRGB; break;
 					default:
-						desc.Format = FORMAT_B8G8R8A8_UNORM;
+						assert(0); // incoming format is not supported 
 						break;
 					}
 
 					std::vector<SubresourceData> InitData;
-
-					if (img.is_volume())
+					for (UINT arrayIndex = 0; arrayIndex < desc.ArraySize; ++arrayIndex)
 					{
-						assert(0); // TODO
-					}
-
-					if (img.is_cubemap())
-					{
-						desc.ArraySize = 6;
-						desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-
-						desc.MipLevels = 1 + img.get_num_mipmaps();
-						InitData.resize(desc.MipLevels * 6);
-
-						for (UINT dir = 0; dir < 6; ++dir)
+						for (UINT mip = 0; mip < desc.MipLevels; ++mip)
 						{
-							const nv_dds::CTexture& face = img.get_cubemap_face(dir);
-
-							const UINT idx = dir * desc.MipLevels;
-							InitData[idx].pSysMem = face.operator uint8_t *();
-							InitData[idx].SysMemPitch = static_cast<UINT>(face.get_width() * 4);
-
-							if (face.get_num_mipmaps() > 0)
-							{
-								for (UINT i = 0; i < face.get_num_mipmaps(); ++i)
-								{
-									const nv_dds::CSurface& surf = face.get_mipmap(i);
-
-									InitData[idx + i + 1].pSysMem = surf.operator uint8_t *();
-									InitData[idx + i + 1].SysMemPitch = InitData[idx + i].SysMemPitch / 2;
-								}
-							}
-						}
-					}
-					else
-					{
-						desc.MipLevels = 1 + img.get_num_mipmaps();
-						InitData.resize(desc.MipLevels);
-
-						InitData[0].pSysMem = img.operator uint8_t *();
-						InitData[0].SysMemPitch = static_cast<UINT>(img.get_size() / img.get_height() * 4 /* img.get_components()*/); // todo: review + vulkan api slightly different
-
-						if (img.get_num_mipmaps() > 0)
-						{
-							for (UINT i = 0; i < img.get_num_mipmaps(); ++i)
-							{
-								const nv_dds::CSurface& surf = img.get_mipmap(i);
-
-								InitData[i + 1].pSysMem = surf.operator uint8_t *();
-								//InitData[i + 1].SysMemPitch = static_cast<UINT>(surf.get_size() / surf.get_height() * img.get_components());
-								InitData[i + 1].SysMemPitch = InitData[i].SysMemPitch / 2;
-							}
+							auto imageData = dds.GetImageData(mip, arrayIndex);
+							SubresourceData subresourceData;
+							subresourceData.pSysMem = imageData->m_mem;
+							subresourceData.SysMemPitch = imageData->m_memPitch;
+							subresourceData.SysMemSlicePitch = imageData->m_memSlicePitch;
+							InitData.push_back(subresourceData);
 						}
 					}
 
-					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), &image);
-					assert(SUCCEEDED(hr));
-					wiRenderer::GetDevice()->SetName(image, nameStr);
-
+					auto dim = dds.GetTextureDimension();
+					switch (dim)
+					{
+					case tinyddsloader::DDSFile::TextureDimension::Texture1D:
+					{
+						Texture1D* image = nullptr;
+						HRESULT hr = wiRenderer::GetDevice()->CreateTexture1D(&desc, InitData.data(), &image);
+						assert(SUCCEEDED(hr));
+						wiRenderer::GetDevice()->SetName(image, nameStr);
+						success = image;
+						type = Data_Type::IMAGE_1D;
+					}
+					break;
+					case tinyddsloader::DDSFile::TextureDimension::Texture2D:
+					{
+						Texture2D* image = nullptr;
+						HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), &image);
+						assert(SUCCEEDED(hr));
+						wiRenderer::GetDevice()->SetName(image, nameStr);
+						success = image;
+						type = Data_Type::IMAGE_2D;
+					}
+					break;
+					case tinyddsloader::DDSFile::TextureDimension::Texture3D:
+					{
+						Texture3D* image = nullptr;
+						HRESULT hr = wiRenderer::GetDevice()->CreateTexture3D(&desc, InitData.data(), &image);
+						assert(SUCCEEDED(hr));
+						wiRenderer::GetDevice()->SetName(image, nameStr);
+						success = image;
+						type = Data_Type::IMAGE_3D;
+					}
+					break;
+					default:
+						assert(0);
+						break;
+					}
 				}
+				else assert(0); // failed to load DDS
 
 			}
 			else
@@ -209,7 +255,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 						mipwidth = max(1, mipwidth / 2);
 					}
 
-					image = new Texture2D;
+					Texture2D* image = new Texture2D;
 					image->RequestIndependentShaderResourcesForMIPs(true);
 					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &image);
@@ -220,12 +266,12 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					{
 						wiRenderer::AddDeferredMIPGen(image);
 					}
+
+					success = image;
 				}
 
 				stbi_image_free(rgb);
 			}
-
-			success = image;
 		}
 		break;
 		case Data_Type::SOUND:
@@ -246,9 +292,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 				wiRenderer::GetDevice()->CreateVertexShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
-			else{
-				success = nullptr;
-			}
 		}
 		break;
 		case Data_Type::PIXELSHADER:
@@ -258,9 +301,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 				PixelShader* shader = new PixelShader;
 				wiRenderer::GetDevice()->CreatePixelShader(buffer.data(), buffer.size(), shader);
 				success = shader;
-			}
-			else{
-				success = nullptr;
 			}
 		}
 		break;
@@ -272,9 +312,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 				wiRenderer::GetDevice()->CreateGeometryShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
-			else{
-				success = nullptr;
-			}
 		}
 		break;
 		case Data_Type::HULLSHADER:
@@ -284,9 +321,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 				HullShader* shader = new HullShader;
 				wiRenderer::GetDevice()->CreateHullShader(buffer.data(), buffer.size(), shader);
 				success = shader;
-			}
-			else{
-				success = nullptr;
 			}
 		}
 		break;
@@ -298,9 +332,6 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 				wiRenderer::GetDevice()->CreateDomainShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
-			else{
-				success = nullptr;
-			}
 		}
 		break;
 		case Data_Type::COMPUTESHADER:
@@ -311,17 +342,13 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 				wiRenderer::GetDevice()->CreateComputeShader(buffer.data(), buffer.size(), shader);
 				success = shader;
 			}
-			else {
-				success = nullptr;
-			}
 		}
 		break;
 		default:
-			success=nullptr;
 			break;
 		};
 
-		if (success)
+		if (success != nullptr)
 		{
 			LOCK();
 			resources.insert(pair<wiHashString, Resource*>(name, new Resource(success, type)));
@@ -355,8 +382,14 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 
 		if(res->data)
 			switch(res->type){
-			case Data_Type::IMAGE:
+			case Data_Type::IMAGE_1D:
+				SAFE_DELETE(reinterpret_cast<Texture1D*&>(res->data));
+				break;
+			case Data_Type::IMAGE_2D:
 				SAFE_DELETE(reinterpret_cast<Texture2D*&>(res->data));
+				break;
+			case Data_Type::IMAGE_3D:
+				SAFE_DELETE(reinterpret_cast<Texture3D*&>(res->data));
 				break;
 			case Data_Type::VERTEXSHADER:
 				SAFE_DELETE(reinterpret_cast<VertexShader*&>(res->data));

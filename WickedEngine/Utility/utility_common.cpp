@@ -9,3 +9,6 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+
+#define TINYDDSLOADER_IMPLEMENTATION
+#include "tinyddsloader.h"

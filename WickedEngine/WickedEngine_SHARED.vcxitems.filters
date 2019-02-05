@@ -1020,9 +1020,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\nv_dds.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
@@ -1844,9 +1841,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\nv_dds.cpp">
-      <Filter>UTILITY</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
@@ -1950,7 +1944,6 @@
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
     <Text Include="$(MSBuildThisFileDirectory)ArchiveVersionHistory.txt" />
     <Text Include="$(MSBuildThisFileDirectory)..\other_licenses.txt" />
-    <Text Include="$(MSBuildThisFileDirectory)..\LICENSE.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
@@ -1966,6 +1959,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
     <None Include="$(MSBuildThisFileDirectory)..\CODE_OF_CONDUCT.md" />
     <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">
