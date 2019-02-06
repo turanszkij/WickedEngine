@@ -1512,6 +1512,10 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	CreateBackBufferResources();
 
+	// Create temporary allocator:
+	CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer);
+	SetName(&frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer, "frame_allocator[immediate]");
+
 	wiBackLog::post("Created GraphicsDevice_DX11");
 }
 GraphicsDevice_DX11::~GraphicsDevice_DX11()
@@ -1578,9 +1582,9 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 	return result;
 }
 
-HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer)
+HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 {
-	ppBuffer->Register(this);
+	pBuffer->Register(this);
 
 	D3D11_BUFFER_DESC desc; 
 	desc.ByteWidth = pDesc->ByteWidth;
@@ -1600,8 +1604,8 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 		}
 	}
 
-	ppBuffer->desc = *pDesc;
-	HRESULT hr = device->CreateBuffer(&desc, data, (ID3D11Buffer**)&ppBuffer->resource);
+	pBuffer->desc = *pDesc;
+	HRESULT hr = device->CreateBuffer(&desc, data, (ID3D11Buffer**)&pBuffer->resource);
 	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "GPUBuffer creation failed!");
 
@@ -1643,7 +1647,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 				srv_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
 			}
 
-			hr = device->CreateShaderResourceView((ID3D11Resource*)ppBuffer->resource, &srv_desc, (ID3D11ShaderResourceView**)&ppBuffer->SRV);
+			hr = device->CreateShaderResourceView((ID3D11Resource*)pBuffer->resource, &srv_desc, (ID3D11ShaderResourceView**)&pBuffer->SRV);
 
 			assert(SUCCEEDED(hr) && "ShaderResourceView of the GPUBuffer could not be created!");
 		}
@@ -1677,7 +1681,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 				uav_desc.Buffer.NumElements = desc.ByteWidth / desc.StructureByteStride;
 			}
 
-			hr = device->CreateUnorderedAccessView((ID3D11Resource*)ppBuffer->resource, &uav_desc, (ID3D11UnorderedAccessView**)&ppBuffer->UAV);
+			hr = device->CreateUnorderedAccessView((ID3D11Resource*)pBuffer->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pBuffer->UAV);
 
 			assert(SUCCEEDED(hr) && "UnorderedAccessView of the GPUBuffer could not be created!");
 		}
@@ -1685,17 +1689,13 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D)
+HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
 {
-	if ((*ppTexture1D) == nullptr)
-	{
-		(*ppTexture1D) = new Texture1D;
-	}
-	(*ppTexture1D)->Register(this);
+	pTexture1D->Register(this);
 
-	(*ppTexture1D)->desc = *pDesc;
+	pTexture1D->desc = *pDesc;
 
-	D3D11_TEXTURE1D_DESC desc = _ConvertTextureDesc1D(&(*ppTexture1D)->desc);
+	D3D11_TEXTURE1D_DESC desc = _ConvertTextureDesc1D(&pTexture1D->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1709,58 +1709,54 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const Sub
 
 	HRESULT hr = S_OK;
 
-	hr = device->CreateTexture1D(&desc, data, (ID3D11Texture1D**)&((*ppTexture1D)->resource));
+	hr = device->CreateTexture1D(&desc, data, (ID3D11Texture1D**)&(pTexture1D->resource));
 	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "Texture1D creation failed!");
 	if (FAILED(hr))
 		return hr;
 
-	if ((*ppTexture1D)->desc.MipLevels == 0)
+	if (pTexture1D->desc.MipLevels == 0)
 	{
-		(*ppTexture1D)->desc.MipLevels = (UINT)log2((*ppTexture1D)->desc.Width);
+		pTexture1D->desc.MipLevels = (UINT)log2(pTexture1D->desc.Width);
 	}
 
-	CreateShaderResourceView(*ppTexture1D);
+	CreateShaderResourceView(pTexture1D);
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		assert((*ppTexture1D)->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
+		assert(pTexture1D->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
 
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
 		ZeroMemory(&uav_desc, sizeof(uav_desc));
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE1D;
 		uav_desc.Texture2D.MipSlice = 0;
 
-		hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture1D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture1D)->UAV);
+		hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture1D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture1D->UAV);
 
 		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture1D could not be created!");
 	}
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D)
+HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
 {
-	if ((*ppTexture2D) == nullptr)
-	{
-		(*ppTexture2D) = new Texture2D;
-	}
-	(*ppTexture2D)->Register(this);
+	pTexture2D->Register(this);
 
-	(*ppTexture2D)->desc = *pDesc;
+	pTexture2D->desc = *pDesc;
 
-	if ((*ppTexture2D)->desc.SampleDesc.Count > 1)
+	if (pTexture2D->desc.SampleDesc.Count > 1)
 	{
 		UINT quality;
-		device->CheckMultisampleQualityLevels(_ConvertFormat((*ppTexture2D)->desc.Format), (*ppTexture2D)->desc.SampleDesc.Count, &quality);
-		(*ppTexture2D)->desc.SampleDesc.Quality = quality - 1;
+		device->CheckMultisampleQualityLevels(_ConvertFormat(pTexture2D->desc.Format), pTexture2D->desc.SampleDesc.Count, &quality);
+		pTexture2D->desc.SampleDesc.Quality = quality - 1;
 		if (quality == 0)
 		{
 			assert(0 && "MSAA Samplecount not supported!");
-			(*ppTexture2D)->desc.SampleDesc.Count = 1;
+			pTexture2D->desc.SampleDesc.Count = 1;
 		}
 	}
 
-	D3D11_TEXTURE2D_DESC desc = _ConvertTextureDesc2D(&(*ppTexture2D)->desc);
+	D3D11_TEXTURE2D_DESC desc = _ConvertTextureDesc2D(&pTexture2D->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1775,20 +1771,20 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 	HRESULT hr = S_OK;
 	
-	hr = device->CreateTexture2D(&desc, data, (ID3D11Texture2D**)&((*ppTexture2D)->resource));
+	hr = device->CreateTexture2D(&desc, data, (ID3D11Texture2D**)&(pTexture2D->resource));
 	assert(SUCCEEDED(hr) && "Texture2D creation failed!");
 	SAFE_DELETE_ARRAY(data);
 	if (FAILED(hr))
 		return hr;
 
-	if ((*ppTexture2D)->desc.MipLevels == 0)
+	if (pTexture2D->desc.MipLevels == 0)
 	{
-		(*ppTexture2D)->desc.MipLevels = (UINT)log2(max((*ppTexture2D)->desc.Width, (*ppTexture2D)->desc.Height));
+		pTexture2D->desc.MipLevels = (UINT)log2(max(pTexture2D->desc.Width, pTexture2D->desc.Height));
 	}
 
-	CreateRenderTargetView(*ppTexture2D);
-	CreateShaderResourceView(*ppTexture2D);
-	CreateDepthStencilView(*ppTexture2D);
+	CreateRenderTargetView(pTexture2D);
+	CreateShaderResourceView(pTexture2D);
+	CreateDepthStencilView(pTexture2D);
 
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
@@ -1803,16 +1799,16 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 			uav_desc.Texture2DArray.ArraySize = desc.ArraySize;
 			uav_desc.Texture2DArray.MipSlice = 0;
 
-			if ((*ppTexture2D)->independentUAVMIPs)
+			if (pTexture2D->independentUAVMIPs)
 			{
 				// Create subresource UAVs:
-				UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+				UINT miplevels = pTexture2D->desc.MipLevels;
 				for (UINT i = 0; i < miplevels; ++i)
 				{
 					uav_desc.Texture2DArray.MipSlice = i;
 
-					(*ppTexture2D)->additionalUAVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture2D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture2D)->additionalUAVs[i]);
+					pTexture2D->additionalUAVs.push_back(WI_NULL_HANDLE);
+					hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->additionalUAVs[i]);
 					assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
 				}
 			}
@@ -1820,7 +1816,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 			{
 				// Create main resource UAV:
 				uav_desc.Texture2DArray.MipSlice = 0;
-				hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture2D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture2D)->UAV);
+				hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->UAV);
 			}
 		}
 		else
@@ -1829,16 +1825,16 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 			ZeroMemory(&uav_desc, sizeof(uav_desc));
 			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
 
-			if ((*ppTexture2D)->independentUAVMIPs)
+			if (pTexture2D->independentUAVMIPs)
 			{
 				// Create subresource UAVs:
-				UINT miplevels = (*ppTexture2D)->desc.MipLevels;
+				UINT miplevels = pTexture2D->desc.MipLevels;
 				for (UINT i = 0; i < miplevels; ++i)
 				{
 					uav_desc.Texture2D.MipSlice = i;
 
-					(*ppTexture2D)->additionalUAVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture2D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture2D)->additionalUAVs[i]);
+					pTexture2D->additionalUAVs.push_back(WI_NULL_HANDLE);
+					hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->additionalUAVs[i]);
 					assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
 				}
 			}
@@ -1846,7 +1842,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 			{
 				// Create main resource UAV:
 				uav_desc.Texture2D.MipSlice = 0;
-				hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture2D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture2D)->UAV);
+				hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->UAV);
 			}
 		}
 
@@ -1855,17 +1851,13 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 	return hr;
 }
-HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D)
+HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
 {
-	if ((*ppTexture3D) == nullptr)
-	{
-		(*ppTexture3D) = new Texture3D;
-	}
-	(*ppTexture3D)->Register(this);
+	pTexture3D->Register(this);
 
-	(*ppTexture3D)->desc = *pDesc;
+	pTexture3D->desc = *pDesc;
 
-	D3D11_TEXTURE3D_DESC desc = _ConvertTextureDesc3D(&(*ppTexture3D)->desc);
+	D3D11_TEXTURE3D_DESC desc = _ConvertTextureDesc3D(&pTexture3D->desc);
 
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
@@ -1879,19 +1871,19 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 
 	HRESULT hr = S_OK;
 
-	hr = device->CreateTexture3D(&desc, data, (ID3D11Texture3D**)&((*ppTexture3D)->resource));
+	hr = device->CreateTexture3D(&desc, data, (ID3D11Texture3D**)&(pTexture3D->resource));
 	SAFE_DELETE_ARRAY(data);
 	assert(SUCCEEDED(hr) && "Texture3D creation failed!");
 	if (FAILED(hr))
 		return hr;
 
-	if ((*ppTexture3D)->desc.MipLevels == 0)
+	if (pTexture3D->desc.MipLevels == 0)
 	{
-		(*ppTexture3D)->desc.MipLevels = (UINT)log2(max((*ppTexture3D)->desc.Width, max((*ppTexture3D)->desc.Height, (*ppTexture3D)->desc.Depth)));
+		pTexture3D->desc.MipLevels = (UINT)log2(max(pTexture3D->desc.Width, max(pTexture3D->desc.Height, pTexture3D->desc.Depth)));
 	}
 
-	CreateShaderResourceView(*ppTexture3D);
-	CreateRenderTargetView(*ppTexture3D);
+	CreateShaderResourceView(pTexture3D);
+	CreateRenderTargetView(pTexture3D);
 
 
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
@@ -1901,17 +1893,17 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
 		uav_desc.Texture3D.FirstWSlice = 0;
 
-		if ((*ppTexture3D)->independentUAVMIPs)
+		if (pTexture3D->independentUAVMIPs)
 		{
 			// Create subresource UAVs:
-			UINT miplevels = (*ppTexture3D)->desc.MipLevels;
+			UINT miplevels = pTexture3D->desc.MipLevels;
 			uav_desc.Texture3D.WSize = desc.Depth;
 			for (UINT i = 0; i < miplevels; ++i)
 			{
 				uav_desc.Texture3D.MipSlice = i;
 
-				(*ppTexture3D)->additionalUAVs.push_back(WI_NULL_HANDLE);
-				hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture3D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture3D)->additionalUAVs[i]);
+				pTexture3D->additionalUAVs.push_back(WI_NULL_HANDLE);
+				hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture3D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture3D->additionalUAVs[i]);
 				assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture3D could not be created!");
 
 				uav_desc.Texture3D.WSize /= 2;
@@ -1922,7 +1914,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 			// Create main resource UAV:
 			uav_desc.Texture3D.MipSlice = 0;
 			uav_desc.Texture3D.WSize = desc.Depth;
-			hr = device->CreateUnorderedAccessView((ID3D11Resource*)(*ppTexture3D)->resource, &uav_desc, (ID3D11UnorderedAccessView**)&(*ppTexture3D)->UAV);
+			hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture3D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture3D->UAV);
 			assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture3D could not be created!");
 		}
 	}
@@ -3097,6 +3089,9 @@ void GraphicsDevice_DX11::CreateCommandLists()
 
 			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
 				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
+
+			hr = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[i].buffer);
+			SetName(&frame_allocators[i].buffer, "frame_allocator[deferred]");
 		}
 	}
 	MULTITHREADED_RENDERING = true;
@@ -3142,6 +3137,16 @@ void GraphicsDevice_DX11::validate_raster_uavs(GRAPHICSTHREAD threadID)
 
 		raster_uavs_count[threadID] = 0;
 		raster_uavs_slot[threadID] = 8;
+	}
+}
+void GraphicsDevice_DX11::commit_allocations(GRAPHICSTHREAD threadID)
+{
+	// DX11 needs to unmap allocations before it can execute safely
+
+	if (frame_allocators[threadID].dirty)
+	{
+		deviceContexts[threadID]->Unmap((ID3D11Resource*)frame_allocators[threadID].buffer.resource, 0);
+		frame_allocators[threadID].dirty = false;
 	}
 }
 
@@ -3592,45 +3597,55 @@ void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadI
 void GraphicsDevice_DX11::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
 {
 	validate_raster_uavs(threadID);
+	commit_allocations(threadID);
 
 	deviceContexts[threadID]->Draw(vertexCount, startVertexLocation);
 }
 void GraphicsDevice_DX11::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
+	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
 void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) 
 {
 	validate_raster_uavs(threadID);
+	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
+	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
+	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
 void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
+	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawIndexedInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
 void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
 {
+	commit_allocations(threadID);
+
 	deviceContexts[threadID]->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
 void GraphicsDevice_DX11::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
+	commit_allocations(threadID);
+
 	deviceContexts[threadID]->DispatchIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
 void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
@@ -3682,39 +3697,6 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 		box.back = 1;
 		deviceContexts[threadID]->UpdateSubresource((ID3D11Resource*)buffer->resource, 0, &box, data, 0, 0);
 	}
-}
-void* GraphicsDevice_DX11::AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID)
-{
-	assert(buffer->desc.Usage == USAGE_DYNAMIC && (buffer->desc.CPUAccessFlags & CPU_ACCESS_WRITE) && "Ringbuffer must be writable by the CPU!");
-	assert(buffer->desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
-
-	if (dataSize == 0)
-	{
-		return nullptr;
-	}
-
-	dataSize = min(buffer->desc.ByteWidth, dataSize);
-
-	size_t position = buffer->byteOffset;
-	bool wrap = position + dataSize > buffer->desc.ByteWidth || buffer->residentFrame != FRAMECOUNT;
-	position = wrap ? 0 : position;
-
-	// Issue buffer rename (realloc) on wrap, otherwise just append data:
-	D3D11_MAP mapping = wrap ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	HRESULT hr = deviceContexts[threadID]->Map((ID3D11Resource*)buffer->resource, 0, mapping, 0, &mappedResource);
-	assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
-	
-	// Thread safety is compromised!
-	buffer->byteOffset = position + dataSize;
-	buffer->residentFrame = FRAMECOUNT;
-
-	offsetIntoBuffer = (UINT)position;
-	return reinterpret_cast<void*>(reinterpret_cast<size_t>(mappedResource.pData) + position);
-}
-void GraphicsDevice_DX11::InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID)
-{
-	deviceContexts[threadID]->Unmap((ID3D11Resource*)buffer->resource, 0);
 }
 bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 {
@@ -3832,6 +3814,41 @@ bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
 	return hr != S_FALSE;
 }
 
+GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID)
+{
+	GPUAllocator& allocator = frame_allocators[threadID];
+	assert(allocator.buffer.desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
+
+	GPUAllocation result;
+
+	if (dataSize == 0)
+	{
+		return result;
+	}
+
+	allocator.dirty = true;
+
+
+	dataSize = min(allocator.buffer.desc.ByteWidth, dataSize);
+
+	size_t position = allocator.byteOffset;
+	bool wrap = position + dataSize > allocator.buffer.desc.ByteWidth || allocator.residentFrame != FRAMECOUNT;
+	position = wrap ? 0 : position;
+
+	// Issue buffer rename (realloc) on wrap, otherwise just append data:
+	D3D11_MAP mapping = wrap ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE;
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	HRESULT hr = deviceContexts[threadID]->Map((ID3D11Resource*)allocator.buffer.resource, 0, mapping, 0, &mappedResource);
+	assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
+
+	allocator.byteOffset = position + dataSize;
+	allocator.residentFrame = FRAMECOUNT;
+
+	result.buffer = &allocator.buffer;
+	result.offset = (UINT)position;
+	result.data = (void*)((size_t)mappedResource.pData + position);
+	return result;
+}
 
 void GraphicsDevice_DX11::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
 {

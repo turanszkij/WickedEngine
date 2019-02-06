@@ -29,7 +29,6 @@ using namespace wiRectPacker;
 namespace wiFont_Internal
 {
 	std::string			FONTPATH = "fonts/";
-	GPURingBuffer		vertexBuffers[GRAPHICSTHREAD_COUNT];
 	GPUBuffer			indexBuffer;
 	GPUBuffer			constantBuffer;
 	BlendState			blendState;
@@ -44,7 +43,7 @@ namespace wiFont_Internal
 
 	atomic_bool initialized = false;
 
-	Texture2D* texture = nullptr;
+	std::unique_ptr<Texture2D> texture;
 
 	struct Glyph
 	{
@@ -204,20 +203,6 @@ void wiFont::Initialize()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	{
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DYNAMIC;
-		bd.ByteWidth = 256 * 1024; // just allocate 256KB to font renderer ring buffer..
-		bd.BindFlags = BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
-		{
-			HRESULT hr = device->CreateBuffer(&bd, nullptr, &vertexBuffers[i]);
-			assert(SUCCEEDED(hr));
-		}
-	}
-
-	{
 		uint16_t indices[MAX_TEXT * 6];
 		for (uint16_t i = 0; i < MAX_TEXT * 4; i += 4) 
 		{
@@ -307,7 +292,6 @@ void wiFont::Initialize()
 void wiFont::CleanUp()
 {
 	fontStyles.clear();
-	SAFE_DELETE(texture);
 	SAFE_DELETE(vertexShader);
 	SAFE_DELETE(pixelShader);
 }
@@ -455,17 +439,18 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
-			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
+			texture.reset(new Texture2D);
+			HRESULT hr = wiTextureHelper::CreateTexture(*texture.get(), bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 			assert(SUCCEEDED(hr));
 		}
 	}
 
 	// Bind the whole font atlas once for the whole frame:
-	device->BindResource(PS, texture, TEXSLOT_FONTATLAS, threadID);
+	device->BindResource(PS, texture.get(), TEXSLOT_FONTATLAS, threadID);
 }
 Texture2D* wiFont::GetAtlas()
 {
-	return texture;
+	return texture.get();
 }
 std::string& wiFont::GetFontPath()
 {
@@ -508,14 +493,13 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	UINT vboffset;
-	volatile FontVertex* textBuffer = (volatile FontVertex*)device->AllocateFromRingBuffer(&vertexBuffers[threadID], sizeof(FontVertex) * text.length() * 4, vboffset, threadID);
-	if (textBuffer == nullptr)
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text.length() * 4, threadID);
+	if (!mem.IsValid())
 	{
 		return;
 	}
+	volatile FontVertex* textBuffer = (volatile FontVertex*)mem.data;
 	const int quadCount = WriteVertices(textBuffer, text, newProps, style);
-	device->InvalidateBufferAccess(&vertexBuffers[threadID], threadID);
 
 	device->EventBegin("Font", threadID);
 
@@ -523,13 +507,13 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
 
 	GPUBuffer* vbs[] = {
-		&vertexBuffers[threadID],
+		mem.buffer,
 	};
 	const UINT strides[] = {
 		sizeof(FontVertex),
 	};
 	const UINT offsets[] = {
-		vboffset,
+		mem.offset,
 	};
 	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 

@@ -778,19 +778,18 @@ namespace wiSceneSystem
 		lightmapTextureData.clear();
 		lightmapTextureData.resize(data_size);
 
-		Texture2D* stagingTex = nullptr;
 		TextureDesc staging_desc = desc;
 		staging_desc.Usage = USAGE_STAGING;
 		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
+
+		Texture2D stagingTex;
 		hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
 		assert(SUCCEEDED(hr));
 
-		bool download_success = device->DownloadResource(lightmap, stagingTex, lightmapTextureData.data(), GRAPHICSTHREAD_IMMEDIATE);
+		bool download_success = device->DownloadResource(lightmap.get(), &stagingTex, lightmapTextureData.data(), GRAPHICSTHREAD_IMMEDIATE);
 		assert(download_success);
-
-		delete stagingTex;
 	}
 	FORMAT ObjectComponent::GetLightmapFormat()
 	{

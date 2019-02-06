@@ -10,8 +10,8 @@
 using namespace wiGraphicsTypes;
 
 wiRenderTarget RenderPath3D_Deferred::rtGBuffer, RenderPath3D_Deferred::rtDeferred, RenderPath3D_Deferred::rtSSS[2];
-Texture2D* RenderPath3D_Deferred::lightbuffer_diffuse = nullptr;
-Texture2D* RenderPath3D_Deferred::lightbuffer_specular = nullptr;
+std::unique_ptr<Texture2D> RenderPath3D_Deferred::lightbuffer_diffuse;
+std::unique_ptr<Texture2D> RenderPath3D_Deferred::lightbuffer_specular;
 
 RenderPath3D_Deferred::RenderPath3D_Deferred()
 {
@@ -61,10 +61,10 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	desc.Height = wiRenderer::GetInternalResolution().y;
 	desc.Format = wiRenderer::RTFormat_deferred_lightbuffer;
 	desc.BindFlags = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	SAFE_DELETE(lightbuffer_diffuse);
-	SAFE_DELETE(lightbuffer_specular);
-	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &lightbuffer_diffuse);
-	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &lightbuffer_specular);
+	lightbuffer_diffuse.reset(new Texture2D);
+	lightbuffer_specular.reset(new Texture2D);
+	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, lightbuffer_diffuse.get());
+	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, lightbuffer_specular.get());
 
 	rtSSS[0].Initialize(
 		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
@@ -120,8 +120,8 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 			rtGBuffer.GetTexture(0),
 			rtGBuffer.GetTexture(1),
 			rtGBuffer.GetTexture(2),
-			lightbuffer_diffuse,
-			lightbuffer_specular,
+			lightbuffer_diffuse.get(),
+			lightbuffer_specular.get(),
 		};
 		device->BindRenderTargets(ARRAYSIZE(rts), rts, rtGBuffer.depth->GetTexture(), threadID);
 		device->ClearDepthStencil(rtGBuffer.depth->GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
@@ -178,8 +178,8 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 	// Deferred lights:
 	{
 		Texture2D* rts[] = {
-			lightbuffer_diffuse,
-			lightbuffer_specular
+			lightbuffer_diffuse.get(),
+			lightbuffer_specular.get()
 		};
 		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
 		ViewPort vp;
@@ -249,7 +249,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.setSSSS(dir);
 			if (i == 0)
 			{
-				wiImage::Draw(lightbuffer_diffuse, fx, threadID);
+				wiImage::Draw(lightbuffer_diffuse.get(), fx, threadID);
 			}
 			else
 			{
@@ -267,7 +267,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.enableFullScreen();
 			fx.enableHDR();
-			wiImage::Draw(lightbuffer_diffuse, fx, threadID);
+			wiImage::Draw(lightbuffer_diffuse.get(), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;
 			wiImage::Draw(rtSSS[1].GetTexture(), fx, threadID);
@@ -279,7 +279,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
-		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : lightbuffer_diffuse), lightbuffer_specular
+		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : lightbuffer_diffuse.get()), lightbuffer_specular.get()
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite()
 			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);

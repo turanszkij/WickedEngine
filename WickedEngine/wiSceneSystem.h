@@ -410,7 +410,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-		wiGraphicsTypes::Texture2D* lightmap = nullptr;
+		std::unique_ptr<wiGraphicsTypes::Texture2D> lightmap;
 		uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);

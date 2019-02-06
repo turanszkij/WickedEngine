@@ -2,6 +2,16 @@
 
 using namespace wiGraphicsTypes;
 
+GraphicsDevice::GraphicsDevice()
+{
+	// Temporary allocations will use the following buffer type:
+	frameAllocatorDesc.ByteWidth = 16 * 1024 * 1024;
+	frameAllocatorDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_INDEX_BUFFER | BIND_VERTEX_BUFFER;
+	frameAllocatorDesc.Usage = USAGE_DYNAMIC;
+	frameAllocatorDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+	frameAllocatorDesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+}
+
 bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 {
 	switch (capability)

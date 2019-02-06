@@ -23,17 +23,6 @@ int CountLeadingZeroes(uint num)
 	return 31 - firstbithigh(num);
 }
 
-void WriteChild(uint childIndex, uint parentIndex)
-{
-	bvhNodeBuffer[childIndex].ParentIndex = parentIndex;
-}
-
-void WriteParent(uint parentIndex, int leftBoxIndex, int rightBoxIndex)
-{
-	bvhNodeBuffer[parentIndex].LeftChildIndex = leftBoxIndex;
-	bvhNodeBuffer[parentIndex].RightChildIndex = rightBoxIndex;
-}
-
 int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 {
 	if (indexA >= elementCount || indexB >= elementCount)
@@ -46,7 +35,7 @@ int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 		uint mortonCodeB = clusterMortonBuffer[indexB];
 		if (mortonCodeA != mortonCodeB)
 		{
-			return CountLeadingZeroes(clusterMortonBuffer[indexA] ^ clusterMortonBuffer[indexB]);
+			return CountLeadingZeroes(mortonCodeA ^ mortonCodeB);
 		}
 		else
 		{
@@ -134,9 +123,12 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		else
 			childBIndex = internalNodeOffset + split + 1;
 
-		WriteParent(idx, childAIndex, childBIndex);
-		WriteChild(childAIndex, idx);
-		WriteChild(childBIndex, idx);
+		// write to parent:
+		bvhNodeBuffer[idx].LeftChildIndex = childAIndex;
+		bvhNodeBuffer[idx].RightChildIndex = childBIndex;
+		// write to children:
+		bvhNodeBuffer[childAIndex].ParentIndex = idx;
+		bvhNodeBuffer[childBIndex].ParentIndex = idx;
 
 		// Reset bvh node flag (only internal nodes):
 		bvhFlagBuffer[idx] = 0;

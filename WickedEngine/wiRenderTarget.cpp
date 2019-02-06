@@ -66,15 +66,14 @@ void wiRenderTarget::Initialize(UINT width, UINT height, bool hasDepth
 			texture->RequestIndependentShaderResourcesForMIPs(true);
 			texture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 			textureDesc.BindFlags |= BIND_UNORDERED_ACCESS;
-			//textureDesc.MiscFlags = RESOURCE_MISC_GENERATE_MIPS;
 		}
 		renderTargets.push_back(texture);
-		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
+		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, renderTargets[0]);
 		if (MSAAC > 1)
 		{
 			textureDesc.SampleDesc.Count = 1;
-			renderTargets_resolvedMSAA.push_back(nullptr);
-			wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets_resolvedMSAA[0]);
+			renderTargets_resolvedMSAA.push_back(new Texture2D);
+			wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, renderTargets_resolvedMSAA[0]);
 			resolvedMSAAUptodate.push_back(false);
 		}
 		else
@@ -126,7 +125,7 @@ void wiRenderTarget::InitializeCube(UINT size, bool hasDepth, FORMAT format, UIN
 
 		numViews = 1;
 		renderTargets.push_back(texture);
-		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, &renderTargets[0]);
+		wiRenderer::GetDevice()->CreateTexture2D(&textureDesc, nullptr, renderTargets[0]);
 		resolvedMSAAUptodate.push_back(true);
 	}
 	
@@ -150,13 +149,13 @@ void wiRenderTarget::Add(FORMAT format)
 	if (!renderTargets.empty())
 	{
 		numViews++;
-		renderTargets.push_back(nullptr);
-		wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &renderTargets.back());
+		renderTargets.push_back(new Texture2D);
+		wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, renderTargets.back());
 		if (desc.SampleDesc.Count > 1)
 		{
 			desc.SampleDesc.Count = 1;
-			renderTargets_resolvedMSAA.push_back(nullptr);
-			wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &renderTargets_resolvedMSAA.back());
+			renderTargets_resolvedMSAA.push_back(new Texture2D);
+			wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, renderTargets_resolvedMSAA.back());
 			resolvedMSAAUptodate.push_back(false);
 		}
 		else

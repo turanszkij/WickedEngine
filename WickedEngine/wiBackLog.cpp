@@ -38,7 +38,7 @@ namespace wiBackLog
 	wiFont font;
 	wiSpinLock logLock;
 
-	Texture2D* backgroundTex = nullptr;
+	std::unique_ptr<Texture2D> backgroundTex;
 
 	void Toggle() 
 	{
@@ -86,14 +86,15 @@ namespace wiBackLog
 			if (backgroundTex == nullptr)
 			{
 				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
-				HRESULT hr = wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2);
+				backgroundTex.reset(new Texture2D);
+				HRESULT hr = wiTextureHelper::CreateTexture(*backgroundTex.get(), colorData, 1, 2);
 				assert(SUCCEEDED(hr));
 			}
 
 			wiImageParams fx = wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
 			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
-			wiImage::Draw(backgroundTex, fx, GRAPHICSTHREAD_IMMEDIATE);
+			wiImage::Draw(backgroundTex.get(), fx, GRAPHICSTHREAD_IMMEDIATE);
 			font.SetText(getText());
 			font.params.posX = 50;
 			font.params.posY = (int)pos + (int)scroll;
@@ -182,7 +183,7 @@ namespace wiBackLog
 
 	void setBackground(Texture2D* texture)
 	{
-		backgroundTex = texture;
+		backgroundTex.reset(texture);
 	}
 	void setFontSize(int value)
 	{

@@ -67,7 +67,6 @@ Sampler				*customsamplers[SSTYPE_LAST] = {};
 string SHADERPATH = "shaders/";
 
 LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
-GPURingBuffer	dynamicVertexBufferPools[GRAPHICSTHREAD_COUNT] = {};
 
 float GAMMA = 2.2f;
 int SHADOWRES_2D = 1024;
@@ -133,9 +132,9 @@ struct VoxelizedSceneData
 
 wiOcean* ocean = nullptr;
 
-Texture2D* shadowMapArray_2D = nullptr;
-Texture2D* shadowMapArray_Cube = nullptr;
-Texture2D* shadowMapArray_Transparent = nullptr;
+std::unique_ptr<Texture2D> shadowMapArray_2D;
+std::unique_ptr<Texture2D> shadowMapArray_Cube;
+std::unique_ptr<Texture2D> shadowMapArray_Transparent;
 
 deque<wiSprite*> waterRipples;
 
@@ -1354,9 +1353,8 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
-		UINT instancesOffset;
 		const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
-		void* instances = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], alloc_size, instancesOffset, threadID);
+		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, threadID);
 
 		// Purpose of InstancedBatch:
 		//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
@@ -1386,7 +1384,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 				InstancedBatch* instancedBatch = (InstancedBatch*)frameAllocators[threadID].allocate(sizeof(InstancedBatch));
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
-				instancedBatch->dataOffset = instancesOffset + batchID * instanceDataSize;
+				instancedBatch->dataOffset = instances.offset + batchID * instanceDataSize;
 				instancedBatch->forceAlphatestForDithering = 0;
 				if (instancedBatchArray == nullptr)
 				{
@@ -1416,20 +1414,19 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 			// Write into actual GPU-buffer:
 			if (advancedVBRequest)
 			{
-				((volatile InstBuf*)instances)[batchID].instance.Create(worldMatrix, instance.color, dither);
+				((volatile InstBuf*)instances.data)[batchID].instance.Create(worldMatrix, instance.color, dither);
 
 				const XMFLOAT4X4& prev_worldMatrix = instance.prev_transform_index >= 0 ? scene.prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX;
-				((volatile InstBuf*)instances)[batchID].instancePrev.Create(prev_worldMatrix);
-				((volatile InstBuf*)instances)[batchID].instanceAtlas.Create(instance.globalLightMapMulAdd);
+				((volatile InstBuf*)instances.data)[batchID].instancePrev.Create(prev_worldMatrix);
+				((volatile InstBuf*)instances.data)[batchID].instanceAtlas.Create(instance.globalLightMapMulAdd);
 			}
 			else
 			{
-				((volatile Instance*)instances)[batchID].Create(worldMatrix, instance.color, dither);
+				((volatile Instance*)instances.data)[batchID].Create(worldMatrix, instance.color, dither);
 			}
 
 			instancedBatchArray[instancedBatchCount - 1].instanceCount++; // next instance in current InstancedBatch
 		}
-		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID); // closes instance GPU-buffer, ready to draw!
 
 
 		// Render instanced batches:
@@ -1547,7 +1544,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 					{
 						GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-							&dynamicVertexBufferPools[threadID]
+							instances.buffer
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
@@ -1565,7 +1562,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 						GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
-							&dynamicVertexBufferPools[threadID]
+							instances.buffer
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
@@ -1587,7 +1584,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 							mesh.vertexBuffer_TEX.get(),
 							mesh.vertexBuffer_ATL.get(),
 							mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
-							&dynamicVertexBufferPools[threadID]
+							instances.buffer
 						};
 						UINT strides[] = {
 							sizeof(MeshComponent::Vertex_POS),
@@ -1673,9 +1670,8 @@ void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPH
 
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const UINT instanceDataSize = sizeof(Instance);
-		UINT instancesOffset;
 		const size_t alloc_size = instanceCount * instanceDataSize;
-		void* instances = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], alloc_size, instancesOffset, threadID);
+		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, threadID);
 
 		int drawableInstanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
@@ -1698,22 +1694,21 @@ void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPH
 
 				float dither = max(0, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-				((volatile Instance*)instances)[drawableInstanceCount].Create(mat, XMFLOAT4((float)impostorID * impostorCaptureAngles * 3, 1, 1, 1), dither);
+				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, XMFLOAT4((float)impostorID * impostorCaptureAngles * 3, 1, 1, 1), dither);
 
 				drawableInstanceCount++;
 			}
 		}
-		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID); // close buffer, ready to draw all!
 
 		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
 		device->BindGraphicsPSO(impostorRequest, threadID);
 		SetAlphaRef(0.75f, threadID);
 
 		MiscCB cb;
-		cb.g_xColor.x = (float)instancesOffset;
+		cb.g_xColor.x = (float)instances.offset;
 		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
-		device->BindResource(VS, &dynamicVertexBufferPools[threadID], TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND0, threadID);
 		device->BindResource(PS, textures[TEXTYPE_2D_IMPOSTORARRAY], TEXSLOT_ONDEMAND0, threadID);
 
 		device->Draw(drawableInstanceCount * 6, 0, threadID);
@@ -2788,27 +2783,12 @@ void LoadBuffers()
 {
 	GraphicsDevice* device = GetDevice();
 
-	GPUBufferDesc bd;
-
-	// Ring buffer allows fast allocation of dynamic buffers for one frame:
-	for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
-	{
-		bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-		bd.ByteWidth = 1024 * 1024 * 64;
-		bd.Usage = USAGE_DYNAMIC;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		device->CreateBuffer(&bd, nullptr, &dynamicVertexBufferPools[threadID]);
-		device->SetName(&dynamicVertexBufferPools[threadID], "DynamicVertexBufferPool");
-	}
-
-
 	for (int i = 0; i < CBTYPE_LAST; ++i)
 	{
 		constantBuffers[i] = new GPUBuffer;
 	}
 
-	ZeroMemory(&bd, sizeof(bd));
+	GPUBufferDesc bd;
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 
 	//Persistent buffers...
@@ -4109,7 +4089,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			desc.MiscFlags = 0;
 			desc.Usage = USAGE_DEFAULT;
 
-			device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_CLOUDS]);
+			textures[TEXTYPE_2D_CLOUDS] = new Texture2D;
+			device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_CLOUDS]);
 		}
 
 		float cloudPhase = renderTime * scene.weather.cloudSpeed;
@@ -4667,18 +4648,15 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		SOFTSHADOWQUALITY_2D = softShadowQuality;
 	}
 
-	if (SHADOWCOUNT_2D > 0)
+	if (SHADOWCOUNT_2D > 0 && SHADOWRES_2D > 0)
 	{
-		SAFE_DELETE(shadowMapArray_2D);
-		shadowMapArray_2D = new Texture2D;
+		shadowMapArray_2D.reset(new Texture2D);
 		shadowMapArray_2D->RequestIndependentRenderTargetArraySlices(true);
 
-		SAFE_DELETE(shadowMapArray_Transparent);
-		shadowMapArray_Transparent = new Texture2D;
+		shadowMapArray_Transparent.reset(new Texture2D);
 		shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
 
 		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = SHADOWRES_2D;
 		desc.Height = SHADOWRES_2D;
 		desc.MipLevels = 1;
@@ -4691,11 +4669,11 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = DSFormat_small_alias;
-		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
+		GetDevice()->CreateTexture2D(&desc, nullptr, shadowMapArray_2D.get());
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = RTFormat_ldr;
-		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+		GetDevice()->CreateTexture2D(&desc, nullptr, shadowMapArray_Transparent.get());
 	}
 
 }
@@ -4710,16 +4688,13 @@ void SetShadowPropsCube(int resolution, int count)
 		SHADOWCOUNT_CUBE = count;
 	}
 
-	if (SHADOWCOUNT_CUBE > 0)
+	if (SHADOWCOUNT_CUBE > 0 && SHADOWRES_CUBE > 0)
 	{
-
-		SAFE_DELETE(shadowMapArray_Cube);
-		shadowMapArray_Cube = new Texture2D;
+		shadowMapArray_Cube.reset(new Texture2D);
 		shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
 		shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
 
 		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = SHADOWRES_CUBE;
 		desc.Height = SHADOWRES_CUBE;
 		desc.MipLevels = 1;
@@ -4731,7 +4706,7 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
+		GetDevice()->CreateTexture2D(&desc, nullptr, shadowMapArray_Cube.get());
 	}
 
 }
@@ -4865,22 +4840,22 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
 							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-							GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
+							GetDevice()->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
 
 							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
+							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
 
 							// render opaque shadowmap:
-							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
+							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
 							RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
 								// render transparent shadowmap:
 								Texture2D* rts[] = {
-									shadowMapArray_Transparent
+									shadowMapArray_Transparent.get()
 								};
-								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
+								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
 								RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 							}
 							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -4939,22 +4914,22 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
 						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-						GetDevice()->ClearDepthStencil(shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						GetDevice()->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 						// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-						GetDevice()->ClearRenderTarget(shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index);
+						GetDevice()->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index);
 
 						// render opaque shadowmap:
-						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D, threadID, light.shadowMap_index);
+						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
 						RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
 							// render transparent shadowmap:
 							Texture2D* rts[] = {
-								shadowMapArray_Transparent
+								shadowMapArray_Transparent.get()
 							};
-							GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D, threadID, light.shadowMap_index);
+							GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
 							RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 						}
 						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -5000,8 +4975,8 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					}
 					if (!renderQueue.empty())
 					{
-						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube, threadID, light.shadowMap_index);
-						GetDevice()->ClearDepthStencil(shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube.get(), threadID, light.shadowMap_index);
+						GetDevice()->ClearDepthStencil(shadowMapArray_Cube.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 						MiscCB miscCb;
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
@@ -5045,11 +5020,11 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		GetDevice()->EventEnd(threadID);
 	}
 
-	GetDevice()->BindResource(PS, shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-	GetDevice()->BindResource(PS, shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	GetDevice()->BindResource(PS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
+	GetDevice()->BindResource(PS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
 	if (GetTransparentShadowsEnabled())
 	{
-		GetDevice()->BindResource(PS, shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+		GetDevice()->BindResource(PS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 	}
 }
 
@@ -5236,8 +5211,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			{
 				XMFLOAT4 a, colorA, b, colorB;
 			};
-			UINT offset;
-			void* mem = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(LineSegment) * armature.boneCollection.size(), offset, threadID);
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * armature.boneCollection.size(), threadID);
 
 			int j = 0;
 			for (Entity entity : armature.boneCollection)
@@ -5256,20 +5230,18 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				XMStoreFloat4(&segment.a, a);
 				XMStoreFloat4(&segment.b, b);
 
-				memcpy((void*)((size_t)mem + j * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+				memcpy((void*)((size_t)mem.data + j * sizeof(LineSegment)), &segment, sizeof(LineSegment));
 				j++;
 			}
 
-			device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
-
 			GPUBuffer* vbs[] = {
-				&dynamicVertexBufferPools[threadID],
+				mem.buffer
 			};
 			const UINT strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 			};
 			const UINT offsets[] = {
-				offset,
+				mem.offset,
 			};
 			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
@@ -5295,8 +5267,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		{
 			XMFLOAT4 a, colorA, b, colorB;
 		};
-		UINT offset;
-		void* mem = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(LineSegment) * renderableLines.size(), offset, threadID);
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderableLines.size(), threadID);
 
 		int i = 0;
 		for (auto& line : renderableLines)
@@ -5306,20 +5277,18 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			segment.b = XMFLOAT4(line.end.x, line.end.y, line.end.z, 1);
 			segment.colorA = segment.colorB = line.color;
 
-			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
 			i++;
 		}
 
-		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
-
 		GPUBuffer* vbs[] = {
-			&dynamicVertexBufferPools[threadID],
+			mem.buffer,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		const UINT offsets[] = {
-			offset,
+			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
@@ -5346,8 +5315,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		{
 			XMFLOAT4 a, colorA, b, colorB;
 		};
-		UINT offset;
-		void* mem = device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(LineSegment) * renderablePoints.size() * 2, offset, threadID);
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderablePoints.size() * 2, threadID);
 
 		XMMATRIX V = camera.GetView();
 
@@ -5365,27 +5333,25 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMVECTOR _b = _c + XMVectorSet(1, 1, 0, 0) * point.size;
 			XMStoreFloat4(&segment.a, _a);
 			XMStoreFloat4(&segment.b, _b);
-			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
 			i++;
 
 			_a = _c + XMVectorSet(-1, 1, 0, 0) * point.size;
 			_b = _c + XMVectorSet(1, -1, 0, 0) * point.size;
 			XMStoreFloat4(&segment.a, _a);
 			XMStoreFloat4(&segment.b, _b);
-			memcpy((void*)((size_t)mem + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
+			memcpy((void*)((size_t)mem.data + i * sizeof(LineSegment)), &segment, sizeof(LineSegment));
 			i++;
 		}
 
-		device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
-
 		GPUBuffer* vbs[] = {
-			&dynamicVertexBufferPools[threadID],
+			mem.buffer,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		const UINT offsets[] = {
-			offset,
+			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
@@ -5827,11 +5793,11 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+		HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
 	}
 
-	static Texture2D* envrenderingDepthBuffer = nullptr;
+	static std::unique_ptr<Texture2D> envrenderingDepthBuffer;
 	if (envrenderingDepthBuffer == nullptr)
 	{
 		TextureDesc desc;
@@ -5845,7 +5811,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
 
-		HRESULT hr = device->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
+		envrenderingDepthBuffer.reset(new Texture2D);
+		HRESULT hr = device->CreateTexture2D(&desc, nullptr, envrenderingDepthBuffer.get());
 		assert(SUCCEEDED(hr));
 	}
 
@@ -5907,10 +5874,10 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			probe.SetDirty(false);
 		}
 
-		device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer, threadID, probe.textureIndex);
+		device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer.get(), threadID, probe.textureIndex);
 		const float clearColor[4] = { 0,0,0,1 };
 		device->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe.textureIndex);
-		device->ClearDepthStencil(envrenderingDepthBuffer, CLEAR_DEPTH, 0.0f, 0, threadID);
+		device->ClearDepthStencil(envrenderingDepthBuffer.get(), CLEAR_DEPTH, 0.0f, 0, threadID);
 
 		SHCAM cameras[] = {
 			SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -5991,7 +5958,6 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		}
 
 		device->BindRenderTargets(0, nullptr, nullptr, threadID);
-		//device->GenerateMips(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], threadID, probe->textureIndex);
 		GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
@@ -6056,7 +6022,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 		static const UINT maxImpostorCount = 8;
 		static const UINT textureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
 		static const UINT textureDim = 128;
-		static Texture2D* depthStencil = nullptr;
+		static Texture2D depthStencil;
 
 		if (textures[TEXTYPE_2D_IMPOSTORARRAY] == nullptr)
 		{
@@ -6074,7 +6040,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 
 			textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
 			textures[TEXTYPE_2D_IMPOSTORARRAY]->RequestIndependentRenderTargetArraySlices(true);
-			HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY]);
+			HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
 			assert(SUCCEEDED(hr));
 			device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
 
@@ -6083,11 +6049,11 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			desc.Format = DSFormat_small;
 			hr = device->CreateTexture2D(&desc, nullptr, &depthStencil);
 			assert(SUCCEEDED(hr));
-			device->SetName(depthStencil, "ImpostorDepthTarget");
+			device->SetName(&depthStencil, "ImpostorDepthTarget");
 		}
 
-		bool state_set = false;
-		UINT instancesOffset;
+		bool state_set = false; 
+		GraphicsDevice::GPUAllocation mem;
 		struct InstBuf
 		{
 			Instance instance;
@@ -6106,11 +6072,11 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 
 			if (!state_set)
 			{
-				volatile InstBuf* buff = (volatile InstBuf*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstBuf), instancesOffset, threadID);
+				mem = device->AllocateGPU(sizeof(InstBuf), threadID);
+				volatile InstBuf* buff = (volatile InstBuf*)mem.data;
 				buff->instance.Create(IDENTITYMATRIX);
 				buff->instancePrev.Create(IDENTITYMATRIX);
 				buff->instanceAtlas.Create(XMFLOAT4(1, 1, 0, 0));
-				device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 				state_set = true;
 			}
@@ -6125,7 +6091,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mesh.vertexBuffer_TEX.get(),
 				mesh.vertexBuffer_POS.get(),
-				&dynamicVertexBufferPools[threadID]
+				mem.buffer
 			};
 			UINT strides[] = {
 				sizeof(MeshComponent::Vertex_POS),
@@ -6137,7 +6103,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				0,
 				0,
 				0,
-				instancesOffset
+				mem.offset
 			};
 			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 
@@ -6161,10 +6127,10 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				for (size_t i = 0; i < impostorCaptureAngles; ++i)
 				{
 					int textureIndex = (int)(impostorID * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-					device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY], depthStencil, threadID, textureIndex);
+					device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY], &depthStencil, threadID, textureIndex);
 					const float clearColor[4] = { 0,0,0,0 };
 					device->ClearRenderTarget(textures[TEXTYPE_2D_IMPOSTORARRAY], clearColor, threadID, textureIndex);
-					device->ClearDepthStencil(depthStencil, CLEAR_DEPTH, 0.0f, 0, threadID);
+					device->ClearDepthStencil(&depthStencil, CLEAR_DEPTH, 0.0f, 0, threadID);
 
 					ViewPort viewPort;
 					viewPort.Height = (float)textureDim;
@@ -6253,7 +6219,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
 		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE]);
+		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
@@ -6262,7 +6228,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D**)&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
+		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 	}
 	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
@@ -6487,7 +6453,6 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 		SAFE_DELETE(textures[TEXTYPE_2D_DEBUGUAV]);
 
 		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = (UINT)_width;
 		desc.Height = (UINT)_height;
 		desc.MipLevels = 1;
@@ -6500,7 +6465,8 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		device->CreateTexture2D(&desc, nullptr, (Texture2D**)&textures[TEXTYPE_2D_DEBUGUAV]);
+		textures[TEXTYPE_2D_DEBUGUAV] = new Texture2D;
+		device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_DEBUGUAV]);
 	}
 
 	// Perform the culling
@@ -6542,9 +6508,9 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
-			GetDevice()->BindResource(CS, shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-			GetDevice()->BindResource(CS, shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
-			GetDevice()->BindResource(CS, shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+			GetDevice()->BindResource(CS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
+			GetDevice()->BindResource(CS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
+			GetDevice()->BindResource(CS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -6912,8 +6878,8 @@ void CopyTexture2D(Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, Texture2D*
 
 
 // These will hold all materials in the scene, ready to be accessed randomly in shaders:
-GPUBuffer* globalMaterialBuffer = nullptr;
-Texture2D* globalMaterialAtlas = nullptr;
+std::unique_ptr<GPUBuffer> globalMaterialBuffer;
+std::unique_ptr<Texture2D> globalMaterialAtlas;
 void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
@@ -6983,10 +6949,7 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
-			SAFE_DELETE(globalMaterialAtlas);
-
 			TextureDesc desc;
-			ZeroMemory(&desc, sizeof(desc));
 			desc.Width = (UINT)bins[0].size.w;
 			desc.Height = (UINT)bins[0].size.h;
 			desc.MipLevels = 1;
@@ -6999,11 +6962,12 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &globalMaterialAtlas);
+			globalMaterialAtlas.reset(new Texture2D);
+			device->CreateTexture2D(&desc, nullptr, globalMaterialAtlas.get());
 
 			for (auto& it : storedTextures)
 			{
-				CopyTexture2D(globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
+				CopyTexture2D(globalMaterialAtlas.get(), 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
 			}
 		}
 		else
@@ -7117,9 +7081,6 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 		GPUBufferDesc desc;
 		HRESULT hr;
 
-		SAFE_DELETE(globalMaterialBuffer);
-		globalMaterialBuffer = new GPUBuffer;
-
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
 		desc.ByteWidth = desc.StructureByteStride * (UINT)materialArray.size();
@@ -7127,10 +7088,12 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, globalMaterialBuffer);
+
+		globalMaterialBuffer.reset(new GPUBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, globalMaterialBuffer.get());
 		assert(SUCCEEDED(hr));
 	}
-	device->UpdateBuffer(globalMaterialBuffer, materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
+	device->UpdateBuffer(globalMaterialBuffer.get(), materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
 
 }
 void BuildSceneBVH(GRAPHICSTHREAD threadID)
@@ -7276,13 +7239,13 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 	sceneBVH.Bind(CS, threadID);
 
 	GPUResource* res[] = {
-		globalMaterialBuffer,
+		globalMaterialBuffer.get(),
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
 	if (globalMaterialAtlas != nullptr)
 	{
-		device->BindResource(CS, globalMaterialAtlas, TEXSLOT_ONDEMAND8, threadID);
+		device->BindResource(CS, globalMaterialAtlas.get(), TEXSLOT_ONDEMAND8, threadID);
 	}
 	else
 	{
@@ -7444,7 +7407,7 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 
 
-	static Texture2D* atlasTexture = nullptr;
+	static std::unique_ptr<Texture2D> atlasTexture;
 	bool repackAtlas = false;
 	const int atlasClampBorder = 1;
 
@@ -7488,8 +7451,6 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
-			SAFE_DELETE(atlasTexture);
-
 			TextureDesc desc;
 			ZeroMemory(&desc, sizeof(desc));
 			desc.Width = (UINT)bins[0].size.w;
@@ -7504,10 +7465,10 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			atlasTexture = new Texture2D;
+			atlasTexture.reset(new Texture2D);
 			atlasTexture->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 
-			device->CreateTexture2D(&desc, nullptr, &atlasTexture);
+			device->CreateTexture2D(&desc, nullptr, atlasTexture.get());
 
 			for (UINT mip = 0; mip < atlasTexture->GetDesc().MipLevels; ++mip)
 			{
@@ -7515,10 +7476,7 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 				{
 					if (mip < it.first->GetDesc().MipLevels)
 					{
-						//device->CopyTexture2D_Region(atlasTexture, mip, it.second.x >> mip, it.second.y >> mip, it.first, mip, threadID);
-
-						// This is better because it implements format conversion so we can use multiple decal source texture formats in the atlas:
-						CopyTexture2D(atlasTexture, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
+						CopyTexture2D(atlasTexture.get(), mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
 					}
 				}
 			}
@@ -7559,11 +7517,11 @@ void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 
 	if (atlasTexture != nullptr)
 	{
-		device->BindResource(PS, atlasTexture, TEXSLOT_DECALATLAS, threadID);
+		device->BindResource(PS, atlasTexture.get(), TEXSLOT_DECALATLAS, threadID);
 	}
 }
 
-Texture2D* globalLightmap = nullptr;
+std::unique_ptr<Texture2D> globalLightmap;
 unordered_map<Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
 void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPHICSTHREAD threadID)
 {
@@ -7584,16 +7542,16 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 			scene_bvh_invalid = false;
 			BuildSceneBVH(threadID);
 		}
-	UpdateGlobalMaterialResources(threadID);
+		UpdateGlobalMaterialResources(threadID);
 
 		GPUResource* res[] = {
-			globalMaterialBuffer,
+			globalMaterialBuffer.get(),
 		};
 		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
 		if (globalMaterialAtlas != nullptr)
 		{
-			device->BindResource(PS, globalMaterialAtlas, TEXSLOT_ONDEMAND8, threadID);
+			device->BindResource(PS, globalMaterialAtlas.get(), TEXSLOT_ONDEMAND8, threadID);
 		}
 		else
 		{
@@ -7607,7 +7565,7 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	{
 		if (object.lightmap != nullptr)
 		{
-			packedLightmaps.erase(object.lightmap);
+			packedLightmaps.erase(object.lightmap.get());
 		}
 
 		if (RTFormat_lightmap_object == FORMAT_R32G32B32A32_FLOAT)
@@ -7617,27 +7575,29 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 			object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
 		}
 
-		SAFE_DELETE(object.lightmap);
 		desc.Width = object.lightmapWidth;
 		desc.Height = object.lightmapHeight;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		// Note: we need the full precision format to achieve correct accumulative blending! But the global atlas will be half, so not a huge deal
 		desc.Format = RTFormat_lightmap_object;
-		hr = device->CreateTexture2D(&desc, nullptr, &object.lightmap);
+
+		object.lightmap.reset(new Texture2D);
+		hr = device->CreateTexture2D(&desc, nullptr, object.lightmap.get());
 		assert(SUCCEEDED(hr));
-		device->SetName(object.lightmap, "objectLightmap");
+		device->SetName(object.lightmap.get(), "objectLightmap");
 	}
 	else
 	{
 		desc = object.lightmap->GetDesc();
 	}
 
-	device->BindRenderTargets(1, &object.lightmap, nullptr, threadID);
+	Texture2D* rts[] = { object.lightmap.get() };
+	device->BindRenderTargets(1, rts, nullptr, threadID);
 
 	if (object.lightmapIterationCount == 0)
 	{
 		float clearColor[4] = { 0,0,0,0 };
-		device->ClearRenderTarget(object.lightmap, clearColor, threadID);
+		device->ClearRenderTarget(rts[0], clearColor, threadID);
 	}
 
 	ViewPort vp;
@@ -7648,15 +7608,14 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	const TransformComponent& transform = scene.transforms[object.transform_index];
 
 	// Note: using InstancePrev, because we just need the matrix, nothing else here...
-	UINT instanceOffset;
-	volatile InstancePrev* instance = (volatile InstancePrev*)device->AllocateFromRingBuffer(&dynamicVertexBufferPools[threadID], sizeof(InstancePrev), instanceOffset, threadID);
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstancePrev), threadID);
+	volatile InstancePrev* instance = (volatile InstancePrev*)mem.data;
 	instance->Create(transform.world);
-	device->InvalidateBufferAccess(&dynamicVertexBufferPools[threadID], threadID);
 
 	GPUBuffer* vbs[] = {
 		mesh.vertexBuffer_POS.get(),
 		mesh.vertexBuffer_ATL.get(),
-		&dynamicVertexBufferPools[threadID],
+		mem.buffer,
 	};
 	UINT strides[] = {
 		sizeof(MeshComponent::Vertex_POS),
@@ -7666,7 +7625,7 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 	UINT offsets[] = {
 		0,
 		0,
-		instanceOffset,
+		mem.offset,
 	};
 	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
 	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
@@ -7727,8 +7686,8 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		{
 			// If we get here, it means that the lightmap GPU texture contains the rendered lightmap, but the CPU-side data was erased.
 			//	In this case, we delete the GPU side lightmap data from the object and the atlas too.
-			packedLightmaps.erase(object.lightmap);
-			SAFE_DELETE(object.lightmap);
+			packedLightmaps.erase(object.lightmap.get());
+			object.lightmap.reset(nullptr);
 			repackAtlas = true;
 			refresh = false;
 		}
@@ -7744,16 +7703,17 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		{
 			refresh = true;
 			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
+			object.lightmap.reset(new Texture2D);
+			wiTextureHelper::CreateTexture(*object.lightmap.get(), object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
 		}
 
 		if (object.lightmap != nullptr)
 		{
-			if (packedLightmaps.find(object.lightmap) == packedLightmaps.end())
+			if (packedLightmaps.find(object.lightmap.get()) == packedLightmaps.end())
 			{
 				// we need to pack this lightmap texture into the atlas
 				rect_xywh newRect = rect_xywh(0, 0, object.lightmap->GetDesc().Width + atlasClampBorder * 2, object.lightmap->GetDesc().Height + atlasClampBorder * 2);
-				packedLightmaps[object.lightmap] = newRect;
+				packedLightmaps[object.lightmap.get()] = newRect;
 
 				repackAtlas = true;
 				refresh = true;
@@ -7790,10 +7750,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 		{
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
-			SAFE_DELETE(globalLightmap);
-
 			TextureDesc desc;
-			ZeroMemory(&desc, sizeof(desc));
 			desc.Width = (UINT)bins[0].size.w;
 			desc.Height = (UINT)bins[0].size.h;
 			desc.MipLevels = 1;
@@ -7806,8 +7763,9 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			device->CreateTexture2D(&desc, nullptr, &globalLightmap);
-			device->SetName(globalLightmap, "globalLightmap");
+			globalLightmap.reset(new Texture2D);
+			device->CreateTexture2D(&desc, nullptr, globalLightmap.get());
+			device->SetName(globalLightmap.get(), "globalLightmap");
 		}
 		else
 		{
@@ -7828,8 +7786,8 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 				const ObjectComponent& object = scene.objects[i];
 				if (object.lightmap != nullptr)
 				{
-					auto& rec = packedLightmaps.at(object.lightmap);
-					CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID);
+					auto& rec = packedLightmaps.at(object.lightmap.get());
+					CopyTexture2D(globalLightmap.get(), 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
 				}
 			}
 		}
@@ -7840,8 +7798,8 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 			{
 				uint32_t ind = refreshArray[i];
 				const ObjectComponent& object = scene.objects[ind];
-				auto& rec = packedLightmaps.at(object.lightmap);
-				CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, threadID);
+				auto& rec = packedLightmaps.at(object.lightmap.get());
+				CopyTexture2D(globalLightmap.get(), 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
 			}
 		}
 		device->EventEnd(threadID);
@@ -7855,7 +7813,7 @@ void ManageLightmapAtlas(GRAPHICSTHREAD threadID)
 			{
 				const TextureDesc& desc = globalLightmap->GetDesc();
 
-				rect_xywh rect = packedLightmaps[object.lightmap];
+				rect_xywh rect = packedLightmaps[object.lightmap.get()];
 
 				// eliminate border expansion:
 				rect.x += atlasClampBorder;
@@ -7889,7 +7847,7 @@ Texture2D* GetGlobalLightmap()
 	{
 		return wiTextureHelper::getTransparent();
 	}
-	return globalLightmap;
+	return globalLightmap.get();
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)
@@ -8103,22 +8061,17 @@ Texture2D* GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	static Texture2D* luminance_map = nullptr;
+	static std::unique_ptr<Texture2D> luminance_map;
 	static std::vector<Texture2D*> luminance_avg(0);
 	if (luminance_map == nullptr)
 	{
-		SAFE_DELETE(luminance_map);
 		for (auto& x : luminance_avg)
 		{
 			SAFE_DELETE(x);
 		}
 		luminance_avg.clear();
 
-		// lower power of two
-		//UINT minRes = wiMath::GetNextPowerOfTwo(min(device->GetScreenWidth(), device->GetScreenHeight())) / 2;
-
 		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = 256;
 		desc.Height = desc.Width;
 		desc.MipLevels = 1;
@@ -8131,15 +8084,16 @@ Texture2D* GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = 0;
 
-		device->CreateTexture2D(&desc, nullptr, &luminance_map);
+		luminance_map.reset(new Texture2D);
+		device->CreateTexture2D(&desc, nullptr, luminance_map.get());
 
 		while (desc.Width > 1)
 		{
 			desc.Width = max(desc.Width / 16, 1);
 			desc.Height = desc.Width;
 
-			Texture2D* tex = nullptr;
-			device->CreateTexture2D(&desc, nullptr, &tex);
+			Texture2D* tex = new Texture2D;
+			device->CreateTexture2D(&desc, nullptr, tex);
 
 			luminance_avg.push_back(tex);
 		}
@@ -8150,7 +8104,7 @@ Texture2D* GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 		TextureDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
 		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
-		device->BindUAV(CS, luminance_map, 0, threadID);
+		device->BindUAV(CS, luminance_map.get(), 0, threadID);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
@@ -8166,7 +8120,7 @@ Texture2D* GetLuminance(Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 			}
 			else
 			{
-				device->BindResource(CS, luminance_map, TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, threadID);
 			}
 			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
 		}

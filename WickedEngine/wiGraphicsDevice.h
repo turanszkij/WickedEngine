@@ -26,12 +26,23 @@ namespace wiGraphicsTypes
 		bool CONSERVATIVE_RASTERIZATION = false;
 		bool RASTERIZER_ORDERED_VIEWS = false;
 		bool UNORDEREDACCESSTEXTURE_LOAD_EXT = false;
-	public:
 
-		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *ppBuffer) = 0;
-		virtual HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D **ppTexture1D) = 0;
-		virtual HRESULT CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D **ppTexture2D) = 0;
-		virtual HRESULT CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D **ppTexture3D) = 0;
+		struct GPUAllocator
+		{
+			GPUBuffer buffer;
+			size_t byteOffset = 0;
+			uint64_t residentFrame = 0;
+			bool dirty = false;
+		} frame_allocators[GRAPHICSTHREAD_COUNT];
+		GPUBufferDesc frameAllocatorDesc;
+
+	public:
+		GraphicsDevice();
+
+		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
+		virtual HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D) = 0;
+		virtual HRESULT CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D) = 0;
+		virtual HRESULT CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D) = 0;
 		virtual HRESULT CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout) = 0;
 		virtual HRESULT CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader) = 0;
 		virtual HRESULT CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader) = 0;
@@ -147,14 +158,24 @@ namespace wiGraphicsTypes
 		virtual void CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID) = 0;
 		virtual void MSAAResolve(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID) = 0;
 		virtual void UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) = 0;
-		virtual void* AllocateFromRingBuffer(GPURingBuffer* buffer, size_t dataSize, UINT& offsetIntoBuffer, GRAPHICSTHREAD threadID) = 0;
-		virtual void InvalidateBufferAccess(GPUBuffer* buffer, GRAPHICSTHREAD threadID) = 0;
 		virtual bool DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual bool QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void UAVBarrier(GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) = 0;
 		virtual void TransitionBarrier(GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) = 0;
+
+		struct GPUAllocation
+		{
+			void* data = nullptr;				// application can write to this, but not read. offsetIntoBuffer is already applied
+			GPUBuffer* buffer = nullptr;		// application can bind it to the GPU
+			UINT offset = 0;					// allocation's offset from the GPUbuffer's beginning
+
+			// Returns true if the allocation was successful
+			inline bool IsValid() const { return data != nullptr && buffer != nullptr; }
+		};
+		// Allocates temporary memory that the CPU can write and GPU can read. It is only alive for one frame and automatically invalidated after that.
+		virtual GPUAllocation AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID) = 0;
 		
 		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) = 0;
 		virtual void EventEnd(GRAPHICSTHREAD threadID) = 0;

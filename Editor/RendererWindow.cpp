@@ -226,7 +226,7 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 		switch (args.iValue)
 		{
 		case 0:
-			wiRenderer::SetShadowProps2D(64, 0, -1);
+			wiRenderer::SetShadowProps2D(0, -1, -1);
 			break;
 		case 1:
 			wiRenderer::SetShadowProps2D(128, -1, -1);
@@ -270,7 +270,7 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 		switch (args.iValue)
 		{
 		case 0:
-			wiRenderer::SetShadowPropsCube(128, 0);
+			wiRenderer::SetShadowPropsCube(0, -1);
 			break;
 		case 1:
 			wiRenderer::SetShadowPropsCube(128, -1);

@@ -65,9 +65,8 @@ protected:
 		, rtBloom
 		;
 	static std::vector<wiRenderTarget> rtSun, rtSSAO;
-	static wiGraphicsTypes::Texture2D* depthBuffer;
 	static wiDepthTarget dtDepthCopy;
-	static wiGraphicsTypes::Texture2D* smallDepth;
+	static std::unique_ptr<wiGraphicsTypes::Texture2D> smallDepth;
 
 	virtual void ResizeBuffers() override;
 

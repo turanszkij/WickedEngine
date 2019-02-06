@@ -120,15 +120,6 @@ namespace wiGraphicsTypes
 		GPUBufferDesc GetDesc() { return desc; }
 	};
 
-	struct GPURingBuffer : public GPUBuffer
-	{
-		size_t byteOffset = 0;
-		uint64_t residentFrame = 0;
-
-		// The next appending to buffer will start at this offset
-		size_t GetByteOffset() { return byteOffset; }
-	};
-
 	struct VertexLayout : public GraphicsDeviceChild
 	{
 		wiCPUHandle	resource = WI_NULL_HANDLE;

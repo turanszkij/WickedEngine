@@ -9,7 +9,7 @@ private:
 	int sam = -1;
 
 protected:
-	static wiGraphicsTypes::Texture2D* traceResult;
+	static std::unique_ptr<wiGraphicsTypes::Texture2D> traceResult;
 	static wiRenderTarget rtAccumulation;
 
 	void ResizeBuffers() override;

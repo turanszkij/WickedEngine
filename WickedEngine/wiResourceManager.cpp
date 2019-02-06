@@ -189,8 +189,8 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					{
 					case tinyddsloader::DDSFile::TextureDimension::Texture1D:
 					{
-						Texture1D* image = nullptr;
-						HRESULT hr = wiRenderer::GetDevice()->CreateTexture1D(&desc, InitData.data(), &image);
+						Texture1D* image = new Texture1D;
+						HRESULT hr = wiRenderer::GetDevice()->CreateTexture1D(&desc, InitData.data(), image);
 						assert(SUCCEEDED(hr));
 						wiRenderer::GetDevice()->SetName(image, nameStr);
 						success = image;
@@ -199,8 +199,8 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					break;
 					case tinyddsloader::DDSFile::TextureDimension::Texture2D:
 					{
-						Texture2D* image = nullptr;
-						HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), &image);
+						Texture2D* image = new Texture2D;
+						HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), image);
 						assert(SUCCEEDED(hr));
 						wiRenderer::GetDevice()->SetName(image, nameStr);
 						success = image;
@@ -209,8 +209,8 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					break;
 					case tinyddsloader::DDSFile::TextureDimension::Texture3D:
 					{
-						Texture3D* image = nullptr;
-						HRESULT hr = wiRenderer::GetDevice()->CreateTexture3D(&desc, InitData.data(), &image);
+						Texture3D* image = new Texture3D;
+						HRESULT hr = wiRenderer::GetDevice()->CreateTexture3D(&desc, InitData.data(), image);
 						assert(SUCCEEDED(hr));
 						wiRenderer::GetDevice()->SetName(image, nameStr);
 						success = image;
@@ -258,7 +258,7 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					Texture2D* image = new Texture2D;
 					image->RequestIndependentShaderResourcesForMIPs(true);
 					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &image);
+					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, image);
 					assert(SUCCEEDED(hr));
 					wiRenderer::GetDevice()->SetName(image, nameStr);
 

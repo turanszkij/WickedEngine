@@ -20,7 +20,7 @@ RenderPath3D_PathTracing::~RenderPath3D_PathTracing()
 }
 
 
-wiGraphicsTypes::Texture2D* RenderPath3D_PathTracing::traceResult = nullptr;
+std::unique_ptr<wiGraphicsTypes::Texture2D> RenderPath3D_PathTracing::traceResult;
 wiRenderTarget RenderPath3D_PathTracing::rtAccumulation;
 void RenderPath3D_PathTracing::ResizeBuffers()
 {
@@ -47,8 +47,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	}
 
 	
-	SAFE_DELETE(traceResult);
-	
 	TextureDesc desc;
 	desc.Width = lastBufferResWidth;
 	desc.Height = lastBufferResHeight;
@@ -60,8 +58,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	desc.ArraySize = 1;
 	desc.MipLevels = 1;
 	desc.Depth = 1;
-
-	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &traceResult);
+	traceResult.reset(new Texture2D);
+	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, traceResult.get());
 
 
 	rtAccumulation.Initialize(
@@ -140,7 +138,7 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult, threadID);
+	wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult.get(), threadID);
 
 
 
@@ -154,7 +152,7 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 	fx.blendFlag = BLENDMODE_ALPHA;
 
 	rtAccumulation.Set(threadID);
-	wiImage::Draw(traceResult, fx, threadID);
+	wiImage::Draw(traceResult.get(), fx, threadID);
 
 
 	wiProfiler::EndRange(threadID); // Traced Scene

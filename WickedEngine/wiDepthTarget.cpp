@@ -13,18 +13,13 @@ wiDepthTarget::wiDepthTarget()
 
 wiDepthTarget::~wiDepthTarget()
 {
-	SAFE_DELETE(texture);
-	SAFE_DELETE(texture_resolvedMSAA);
 }
 
 void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 {
-	SAFE_DELETE(texture);
-	SAFE_DELETE(texture_resolvedMSAA);
 	resolvedMSAAUptodate = false;
 
 	TextureDesc depthDesc;
-	ZeroMemory(&depthDesc, sizeof(depthDesc));
 
 	// Set up the description of the depth buffer.
 	depthDesc.Width = width;
@@ -39,24 +34,23 @@ void wiDepthTarget::Initialize(int width, int height, UINT MSAAC)
 	depthDesc.CPUAccessFlags = 0;
 	depthDesc.MiscFlags = 0;
 
-	wiRenderer::GetDevice()->CreateTexture2D(&depthDesc, nullptr, &texture);
+	texture.reset(new Texture2D);
+	wiRenderer::GetDevice()->CreateTexture2D(&depthDesc, nullptr, texture.get());
 
 	if (MSAAC > 1)
 	{
 		depthDesc.SampleDesc.Count = 1;
 		depthDesc.Format = wiRenderer::RTFormat_depthresolve;
 		depthDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		wiRenderer::GetDevice()->CreateTexture2D(&depthDesc, nullptr, &texture_resolvedMSAA);
+		texture_resolvedMSAA.reset(new Texture2D);
+		wiRenderer::GetDevice()->CreateTexture2D(&depthDesc, nullptr, texture_resolvedMSAA.get());
 	}
 }
 void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 {
-	SAFE_DELETE(texture);
-	SAFE_DELETE(texture_resolvedMSAA);
 	resolvedMSAAUptodate = false;
 
 	TextureDesc depthGPUBufferDesc;
-	ZeroMemory(&depthGPUBufferDesc, sizeof(depthGPUBufferDesc));
 
 	// Set up the description of the depth buffer.
 	depthGPUBufferDesc.Width = size;
@@ -71,9 +65,9 @@ void wiDepthTarget::InitializeCube(int size, bool independentFaces)
 	depthGPUBufferDesc.CPUAccessFlags = 0;
 	depthGPUBufferDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
-	texture = new Texture2D;
+	texture.reset(new Texture2D);
 	texture->RequestIndependentRenderTargetCubemapFaces(independentFaces);
-	wiRenderer::GetDevice()->CreateTexture2D(&depthGPUBufferDesc, nullptr, &texture);
+	wiRenderer::GetDevice()->CreateTexture2D(&depthGPUBufferDesc, nullptr, texture.get());
 }
 
 void wiDepthTarget::Clear(GRAPHICSTHREAD threadID)
@@ -93,10 +87,10 @@ Texture2D* wiDepthTarget::GetTextureResolvedMSAA(GRAPHICSTHREAD threadID)
 	{
 		if (!resolvedMSAAUptodate)
 		{
-			wiRenderer::ResolveMSAADepthBuffer(texture_resolvedMSAA, texture, threadID);
+			wiRenderer::ResolveMSAADepthBuffer(texture_resolvedMSAA.get(), texture.get(), threadID);
 			resolvedMSAAUptodate = true;
 		}
-		return texture_resolvedMSAA;
+		return texture_resolvedMSAA.get();
 	}
-	return texture;
+	return texture.get();
 }

@@ -103,7 +103,7 @@ namespace wiHelper
 
 		vector<uint8_t> data(data_size);
 
-		Texture2D* stagingTex = nullptr;
+		Texture2D stagingTex;
 		TextureDesc staging_desc = desc;
 		staging_desc.Usage = USAGE_STAGING;
 		staging_desc.CPUAccessFlags = CPU_ACCESS_READ;
@@ -112,9 +112,8 @@ namespace wiHelper
 		HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
 		assert(SUCCEEDED(hr));
 
-		bool download_success = device->DownloadResource(&texture, stagingTex, data.data(), GRAPHICSTHREAD_IMMEDIATE);
+		bool download_success = device->DownloadResource(&texture, &stagingTex, data.data(), GRAPHICSTHREAD_IMMEDIATE);
 		assert(download_success);
-		SAFE_DELETE(stagingTex);
 
 		return saveTextureToFile(data, desc, fileName);
 	}

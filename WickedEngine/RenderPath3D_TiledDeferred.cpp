@@ -41,8 +41,8 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			rtGBuffer.GetTexture(0),
 			rtGBuffer.GetTexture(1),
 			rtGBuffer.GetTexture(2),
-			lightbuffer_diffuse,
-			lightbuffer_specular,
+			lightbuffer_diffuse.get(),
+			lightbuffer_specular.get(),
 		};
 		device->BindRenderTargets(ARRAYSIZE(rts), rts, rtGBuffer.depth->GetTexture(), threadID);
 		device->ClearDepthStencil(rtGBuffer.depth->GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
@@ -101,7 +101,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 	device->BindResource(CS, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
 	device->BindResource(CS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 
-	wiRenderer::ComputeTiledLightCulling(threadID, lightbuffer_diffuse, lightbuffer_specular);
+	wiRenderer::ComputeTiledLightCulling(threadID, lightbuffer_diffuse.get(), lightbuffer_specular.get());
 
 
 	if (getSSAOEnabled()) {
@@ -160,7 +160,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.process.setSSSS(dir);
 			if (i == 0)
 			{
-				wiImage::Draw(static_cast<Texture2D*>(lightbuffer_diffuse), fx, threadID);
+				wiImage::Draw(static_cast<Texture2D*>(lightbuffer_diffuse.get()), fx, threadID);
 			}
 			else
 			{
@@ -178,7 +178,7 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 			fx.stencilComp = STENCILMODE_DISABLED;
 			fx.enableFullScreen();
 			fx.enableHDR();
-			wiImage::Draw(static_cast<Texture2D*>(lightbuffer_diffuse), fx, threadID);
+			wiImage::Draw(static_cast<Texture2D*>(lightbuffer_diffuse.get()), fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_LESS;
 			wiImage::Draw(rtSSS[1].GetTexture(), fx, threadID);
@@ -190,8 +190,8 @@ void RenderPath3D_TiledDeferred::RenderScene(GRAPHICSTHREAD threadID)
 	}
 
 	rtDeferred.Activate(threadID, rtGBuffer.depth); {
-		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : lightbuffer_diffuse), 
-			lightbuffer_specular
+		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : lightbuffer_diffuse.get()),
+			lightbuffer_specular.get()
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite()
 			, threadID, STENCILREF_DEFAULT);
 		wiRenderer::DrawSky(threadID);

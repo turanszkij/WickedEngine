@@ -32,7 +32,7 @@ wiRenderTarget
 ;
 std::vector<wiRenderTarget> RenderPath3D::rtSun, RenderPath3D::rtSSAO;
 wiDepthTarget RenderPath3D::dtDepthCopy;
-Texture2D* RenderPath3D::smallDepth = nullptr;
+std::unique_ptr<Texture2D> RenderPath3D::smallDepth;
 void RenderPath3D::ResizeBuffers()
 {
 	RenderPath2D::ResizeBuffers();
@@ -132,7 +132,6 @@ void RenderPath3D::ResizeBuffers()
 		, false, wiRenderer::RTFormat_hdr);
 
 
-	SAFE_DELETE(smallDepth);
 	TextureDesc desc;
 	desc.ArraySize = 1;
 	desc.BindFlags = BIND_DEPTH_STENCIL;
@@ -145,7 +144,8 @@ void RenderPath3D::ResizeBuffers()
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = USAGE_DEFAULT;
-	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &smallDepth);
+	smallDepth.reset(new Texture2D);
+	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, smallDepth.get());
 }
 
 void RenderPath3D::setProperties()
@@ -243,9 +243,9 @@ void RenderPath3D::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 	viewPort.MinDepth = 0.0f;
 	viewPort.MaxDepth = 1.0f;
 	wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
+	wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth.get(), threadID);
 
-	GPUResource* dsv[] = { smallDepth };
+	GPUResource* dsv[] = { smallDepth.get() };
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 	wiRenderer::OcclusionCulling_Render(threadID);
@@ -321,10 +321,10 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 		viewPort.MinDepth = 0.0f;
 		viewPort.MaxDepth = 1.0f;
 		wiRenderer::GetDevice()->BindViewports(1, &viewPort, threadID);
-		wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth, threadID);
+		wiRenderer::GetDevice()->BindRenderTargets(0, nullptr, smallDepth.get(), threadID);
 		// This depth buffer is not cleared because we don't have to (we overwrite it anyway because depthfunc is ALWAYS)
 
-		GPUResource* dsv[] = { smallDepth };
+		GPUResource* dsv[] = { smallDepth.get() };
 		wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
 		fx.process.setDepthBufferDownsampling();

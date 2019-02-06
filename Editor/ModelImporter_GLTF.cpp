@@ -124,7 +124,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 			Texture2D* tex = new Texture2D;
 			tex->RequestIndependentShaderResourcesForMIPs(true);
 			tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, &tex);
+			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, tex);
 			assert(SUCCEEDED(hr));
 
 			if (tex != nullptr)
