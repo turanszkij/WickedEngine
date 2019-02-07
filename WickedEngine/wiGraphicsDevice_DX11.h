@@ -47,6 +47,14 @@ namespace wiGraphicsTypes
 		uint8_t raster_uavs_count[GRAPHICSTHREAD_COUNT] = {};
 		void validate_raster_uavs(GRAPHICSTHREAD threadID);
 
+		struct GPUAllocator
+		{
+			GPUBuffer buffer;
+			size_t byteOffset = 0;
+			uint64_t residentFrame = 0;
+			bool dirty = false;
+		} frame_allocators[GRAPHICSTHREAD_COUNT];
+		GPUBufferDesc frameAllocatorDesc;
 		void commit_allocations(GRAPHICSTHREAD threadID);
 
 		void CreateBackBufferResources();

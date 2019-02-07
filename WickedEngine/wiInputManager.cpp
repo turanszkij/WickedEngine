@@ -22,8 +22,6 @@ namespace wiInputManager
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 	static float mousewheel_scrolled = 0.0f;
 
-	wiSpinLock locker;
-
 	std::map<Input, DWORD, Input::LessComparer> inputs;
 	std::vector<Touch> touches;
 
@@ -37,7 +35,6 @@ namespace wiInputManager
 
 	void Update()
 	{
-		locker.lock();
 
 		if (dinput) {
 			dinput->Frame();
@@ -80,7 +77,6 @@ namespace wiInputManager
 
 		mousewheel_scrolled = 0.0f;
 
-		locker.unlock();
 	}
 
 	bool down(DWORD button, InputType inputType, short playerindex)
@@ -118,20 +114,16 @@ namespace wiInputManager
 		input.button = button;
 		input.type = inputType;
 		input.playerIndex = playerindex;
-		locker.lock();
 		auto iter = inputs.find(input);
 		if (iter == inputs.end())
 		{
 			inputs.insert(make_pair(input, 0));
-			locker.unlock();
 			return true;
 		}
 		if (iter->second <= 0)
 		{
-			locker.unlock();
 			return true;
 		}
-		locker.unlock();
 		return false;
 	}
 	bool hold(DWORD button, DWORD frames, bool continuous, InputType inputType, short playerIndex)
@@ -144,20 +136,16 @@ namespace wiInputManager
 		input.button = button;
 		input.type = inputType;
 		input.playerIndex = playerIndex;
-		locker.lock();
 		auto iter = inputs.find(input);
 		if (iter == inputs.end())
 		{
 			inputs.insert(make_pair(input, 0));
-			locker.unlock();
 			return false;
 		}
 		else if ((!continuous && iter->second == frames) || (continuous && iter->second >= frames))
 		{
-			locker.unlock();
 			return true;
 		}
-		locker.unlock();
 		return false;
 	}
 	XMFLOAT4 getpointer()
@@ -201,9 +189,7 @@ namespace wiInputManager
 
 	void AddTouch(const Touch& touch)
 	{
-		locker.lock();
 		touches.push_back(touch);
-		locker.unlock();
 	}
 
 #ifdef WINSTORE_SUPPORT

@@ -2,7 +2,7 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiMath.h"
-#include "wiFrustum.h"
+#include "wiIntersect.h"
 #include "wiRandom.h"
 #include "ResourceMapping.h"
 #include "wiArchive.h"
@@ -19,13 +19,13 @@ namespace wiSceneSystem
 {
 
 static VertexShader *vs = nullptr;
-static PixelShader *ps[SHADERTYPE_COUNT] = {};
+static PixelShader *ps[RENDERPASS_COUNT] = {};
 static PixelShader *ps_simplest = nullptr;
 static ComputeShader *cs_simulate = nullptr;
 static DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
 static RasterizerState rs, ncrs, wirers;
 static BlendState bs[2]; 
-static GraphicsPSO PSO[SHADERTYPE_COUNT][2];
+static GraphicsPSO PSO[RENDERPASS_COUNT][2];
 static GraphicsPSO PSO_wire;
 static ComputePSO CPSO_simulate;
 
@@ -113,7 +113,7 @@ void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialC
 	device->EventEnd(threadID);
 }
 
-void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const
+void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, GRAPHICSTHREAD threadID) const
 {
 	if (strandCount == 0 || cb == nullptr)
 	{
@@ -127,7 +127,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 
 	if (wiRenderer::IsWireRender())
 	{
-		if (transparent || shaderType == SHADERTYPE_DEPTHONLY)
+		if (transparent || renderPass == RENDERPASS_DEPTHONLY)
 		{
 			return;
 		}
@@ -136,7 +136,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO[shaderType][transparent], threadID);
+		device->BindGraphicsPSO(&PSO[renderPass][transparent], threadID);
 
 		GPUResource* res[] = {
 			material.GetBaseColorMap()
@@ -190,15 +190,15 @@ void wiHairParticle::LoadShaders()
 
 	vs = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticleVS.cso", wiResourceManager::VERTEXSHADER));
 
-	ps[SHADERTYPE_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
-	ps[SHADERTYPE_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
+	ps[RENDERPASS_DEPTHONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
+	ps[RENDERPASS_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_deferred.cso", wiResourceManager::PIXELSHADER));
+	ps[RENDERPASS_FORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_forward.cso", wiResourceManager::PIXELSHADER));
+	ps[RENDERPASS_TILEDFORWARD] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_tiledforward.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
+	for (int i = 0; i < RENDERPASS_COUNT; ++i)
 	{
 		if (ps[i] == nullptr)
 		{
@@ -207,7 +207,7 @@ void wiHairParticle::LoadShaders()
 
 		for (int j = 0; j < 2; ++j)
 		{
-			if ((i == SHADERTYPE_DEPTHONLY || i == SHADERTYPE_DEFERRED) && j == 1)
+			if ((i == RENDERPASS_DEPTHONLY || i == RENDERPASS_DEFERRED) && j == 1)
 			{
 				continue;
 			}
@@ -223,17 +223,17 @@ void wiHairParticle::LoadShaders()
 
 			switch (i)
 			{
-			case SHADERTYPE_TEXTURE:
+			case RENDERPASS_TEXTURE:
 				desc.numRTs = 1;
 				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 				break;
-			case SHADERTYPE_FORWARD:
-			case SHADERTYPE_TILEDFORWARD:
+			case RENDERPASS_FORWARD:
+			case RENDERPASS_TILEDFORWARD:
 				desc.numRTs = 2;
 				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
 				break;
-			case SHADERTYPE_DEFERRED:
+			case RENDERPASS_DEFERRED:
 				desc.numRTs = 3;
 				desc.RTFormats[0] = wiRenderer::RTFormat_gbuffer_0;
 				desc.RTFormats[1] = wiRenderer::RTFormat_gbuffer_1;
@@ -242,7 +242,7 @@ void wiHairParticle::LoadShaders()
 				break;
 			}
 
-			if (i == SHADERTYPE_TILEDFORWARD)
+			if (i == RENDERPASS_TILEDFORWARD)
 			{
 				desc.dss = &dss_equal; // opaque
 			}
@@ -283,7 +283,7 @@ void wiHairParticle::LoadShaders()
 void wiHairParticle::CleanUp()
 {
 	SAFE_DELETE(vs);
-	for (int i = 0; i < SHADERTYPE_COUNT; ++i)
+	for (int i = 0; i < RENDERPASS_COUNT; ++i)
 	{
 		SAFE_DELETE(ps[i]);
 	}

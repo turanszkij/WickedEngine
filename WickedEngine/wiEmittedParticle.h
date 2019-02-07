@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiIntersectables.h"
+#include "wiIntersect.h"
 #include "ShaderInterop_EmittedParticle.h"
 #include "wiEnums.h"
 #include "wiSceneSystem_Decl.h"
@@ -54,7 +54,7 @@ public:
 
 	// Must have a transform and material component, but mesh is optional
 	void UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID);
-	void Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID);
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID) const;
 
 	ParticleCounters GetDebugData() { return debugData; }
 

@@ -27,7 +27,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 	wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
 	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
 	{
-		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_DEPTHONLY, getHairParticlesEnabled(), true, getLayerMask());
+		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true, getLayerMask());
 	}
 	wiProfiler::EndRange(threadID);
 
@@ -59,7 +59,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 		wiRenderer::GetDevice()->BindResource(PS, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
 		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
-		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, SHADERTYPE_TILEDFORWARD, true, true);
+		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_TILEDFORWARD, true, true);
 		wiRenderer::DrawSky(threadID);
 	}
 	rtMain.Deactivate(threadID);
@@ -119,7 +119,7 @@ void RenderPath3D_TiledForward::RenderTransparentScene(wiRenderTarget& refractio
 	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 	wiRenderer::GetDevice()->BindResource(PS, rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
-	wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), SHADERTYPE_TILEDFORWARD, threadID, getHairParticlesEnabled(), true);
+	wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), RENDERPASS_TILEDFORWARD, threadID, getHairParticlesEnabled(), true);
 
 	wiProfiler::EndRange(threadID); // Transparent Scene
 }

@@ -3,7 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
-#include "wiIntersectables.h"
+#include "wiIntersect.h"
 
 class wiArchive;
 
@@ -19,7 +19,7 @@ private:
 public:
 
 	void UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID);
-	void Draw(const CameraComponent& camera, const MaterialComponent& material, SHADERTYPE shaderType, bool transparent, GRAPHICSTHREAD threadID) const;
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, GRAPHICSTHREAD threadID) const;
 
 	enum FLAGS
 	{

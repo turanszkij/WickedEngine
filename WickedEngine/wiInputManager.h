@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiThreadSafeManager.h"
 
 #include <vector>
 

@@ -875,7 +875,7 @@ namespace wiSceneSystem
 		XMStoreFloat4x4(&Projection, _P);
 		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
 
-		frustum.ConstructFrustum(zFarP, realProjection, View);
+		frustum.Create(realProjection, View, zFarP);
 	}
 	void CameraComponent::TransformCamera(const TransformComponent& transform)
 	{

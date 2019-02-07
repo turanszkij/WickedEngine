@@ -1175,7 +1175,7 @@ namespace wiGraphicsTypes
 
 	// Allocator heaps:
 
-	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount) : wiThreadSafeManager()
+	GraphicsDevice_DX12::DescriptorAllocator::DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 		heapDesc.NodeMask = 0;
@@ -1206,7 +1206,7 @@ namespace wiGraphicsTypes
 	{
 		size_t addr = 0;
 
-		LOCK();
+		lock.lock();
 		if (itemCount < maxCount - 1)
 		{
 			while (itemsAlive[lastAlloc] == true)
@@ -1222,19 +1222,19 @@ namespace wiGraphicsTypes
 		{
 			assert(0);
 		}
-		UNLOCK();
+		lock.unlock();
 
 		return addr;
 	}
 	void GraphicsDevice_DX12::DescriptorAllocator::clear()
 	{
-		LOCK();
+		lock.lock();
 		for (uint32_t i = 0; i < maxCount; ++i)
 		{
 			itemsAlive[i] = false;
 		}
 		itemCount = 0;
-		UNLOCK();
+		lock.unlock();
 	}
 	void GraphicsDevice_DX12::DescriptorAllocator::free(wiCPUHandle descriptorHandle)
 	{
@@ -1249,11 +1249,11 @@ namespace wiGraphicsTypes
 		assert(offset % itemSize == 0);
 		offset = offset / itemSize;
 
-		LOCK();
+		lock.lock();
 		itemsAlive[offset] = false;
 		assert(itemCount > 0);
 		itemCount--;
-		UNLOCK();
+		lock.unlock();
 	}
 
 
@@ -1428,7 +1428,7 @@ namespace wiGraphicsTypes
 			D3D12_HEAP_FLAG_NONE,
 			&CD3DX12_RESOURCE_DESC::Buffer(size),
 			D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-			__uuidof(ID3D12Resource), (void**)&resource);
+			__uuidof(ID3D12Resource), (void**)&buffer.resource);
 
 		assert(SUCCEEDED(hr));
 
@@ -1437,13 +1437,17 @@ namespace wiGraphicsTypes
 		// No CPU reads will be done from the resource.
 		//
 		CD3DX12_RANGE readRange(0, 0);
-		resource->Map(0, &readRange, &pData);
-		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		((ID3D12Resource*)buffer.resource)->Map(0, &readRange, &pData);
+		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
 		dataEnd = dataBegin + size;
 	}
 	GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
 	{
-		SAFE_RELEASE(resource);
+		if (buffer.resource != WI_NULL_HANDLE)
+		{
+			((ID3D12Resource*)buffer.resource)->Release();
+			buffer.resource = WI_NULL_HANDLE;
+		}
 	}
 	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{
@@ -1494,7 +1498,7 @@ namespace wiGraphicsTypes
 	}
 	uint8_t* GraphicsDevice_DX12::UploadBuffer::allocate(size_t dataSize, size_t alignment)
 	{
-		LOCK();
+		lock.lock();
 
 		//dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
 
@@ -1505,15 +1509,15 @@ namespace wiGraphicsTypes
 
 		dataCur += dataSize;
 
-		UNLOCK();
+		lock.unlock();
 
 		return retVal;
 	}
 	void GraphicsDevice_DX12::UploadBuffer::clear()
 	{
-		LOCK();
+		lock.lock();
 		dataCur = dataBegin;
-		UNLOCK();
+		lock.unlock();
 	}
 	uint64_t GraphicsDevice_DX12::UploadBuffer::calculateOffset(uint8_t* address)
 	{
@@ -1691,7 +1695,7 @@ namespace wiGraphicsTypes
 
 				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
 				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 256);
+				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
 			}
 		}
 
@@ -1934,11 +1938,6 @@ namespace wiGraphicsTypes
 		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawIndexedInstancedIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
-
-
-		// Create temporary allocator:
-		CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer);
-		SetName(&frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer, "frame_allocator[immediate]");
 
 
 		// Set the starting device state:
@@ -3821,6 +3820,12 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_DX12::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 	{
+		// This will fully update the buffer on the GPU timeline
+		//	But on the CPU side we need to keep the in flight data versioned, and we use the temporary buffer for that
+		//	This is like a USAGE_DEFAULT buffer updater on DX11
+		// TODO: USAGE_DYNAMIC would not use GPU copies, but then it would need to handle assigning descriptor pointer dynamically. 
+		//	However, now descriptors are created ahead of time in CreateBuffer
+
 		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 
@@ -3855,7 +3860,7 @@ namespace wiGraphicsTypes
 		memcpy(dest, data, dataSize);
 		GetDirectCommandList(threadID)->CopyBufferRegion(
 			(ID3D12Resource*)buffer->resource, 0,
-			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest), 
+			(ID3D12Resource*)GetFrameResources().resourceBuffer[threadID]->buffer.resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest),
 			dataSize
 		);
 
@@ -3911,7 +3916,10 @@ namespace wiGraphicsTypes
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID)
 	{
-		GPUAllocator& allocator = frame_allocators[threadID];
+		// This case allocates a CPU write access and GPU read access memory from the temporary buffer
+		// The application can write into this, but better to not read from it
+
+		FrameResources::ResourceFrameAllocator& allocator = *GetFrameResources().resourceBuffer[threadID];
 		assert(allocator.buffer.desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
 
 		GPUAllocation result;
@@ -3921,51 +3929,12 @@ namespace wiGraphicsTypes
 			return result;
 		}
 
-		allocator.dirty = true;
+		uint8_t* dest = allocator.allocate(dataSize, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
-		dataSize = min(allocator.buffer.desc.ByteWidth, dataSize);
-
-		size_t position = allocator.byteOffset;
-		bool wrap = position + dataSize > allocator.buffer.desc.ByteWidth || allocator.residentFrame != FRAMECOUNT;
-		position = wrap ? 0 : position;
-
-		// TODO: realloc on wrap or something
-
-		size_t alignment = allocator.buffer.desc.BindFlags & BIND_CONSTANT_BUFFER ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = (ID3D12Resource*)allocator.buffer.resource;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-		if (allocator.buffer.desc.BindFlags & BIND_CONSTANT_BUFFER || allocator.buffer.desc.BindFlags & BIND_VERTEX_BUFFER)
-		{
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		}
-		else if (allocator.buffer.desc.BindFlags & BIND_INDEX_BUFFER)
-		{
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_INDEX_BUFFER;
-		}
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
-
-		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
-		GetDirectCommandList(threadID)->CopyBufferRegion(
-			(ID3D12Resource*)allocator.buffer.resource, (UINT64)position,
-			GetFrameResources().resourceBuffer[threadID]->resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest),
-			dataSize
-		);
-
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-		GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
-
-		allocator.byteOffset = position + dataSize;
-		allocator.residentFrame = FRAMECOUNT;
+		assert(dest != nullptr); // todo: this needs to be handled as well
 
 		result.buffer = &allocator.buffer;
-		result.offset = (UINT)position;
+		result.offset = (UINT)allocator.calculateOffset(dest);
 		result.data = (void*)dest;
 		return result;
 	}

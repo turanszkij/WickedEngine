@@ -1,8 +1,8 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiEnums.h"
-#include "wiIntersectables.h"
-#include "wiFrustum.h"
+#include "wiIntersect.h"
+#include "wiIntersect.h"
 #include "wiRenderTarget.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"

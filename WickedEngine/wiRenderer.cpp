@@ -4,7 +4,7 @@
 #include "wiResourceManager.h"
 #include "wiSprite.h"
 #include "wiSceneSystem.h"
-#include "wiFrustum.h"
+#include "wiIntersect.h"
 #include "wiRenderTarget.h"
 #include "wiDepthTarget.h"
 #include "wiHelper.h"
@@ -30,6 +30,7 @@
 #include "wiAllocators.h"
 #include "wiGPUBVH.h"
 #include "wiJobSystem.h"
+#include "wiSpinLock.h"
 
 #include <algorithm>
 #include <unordered_set>
@@ -614,19 +615,19 @@ enum OBJECTRENDERING_POM
 	OBJECTRENDERING_POM_ENABLED,
 	OBJECTRENDERING_POM_COUNT
 };
-GraphicsPSO* PSO_object[SHADERTYPE_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
-GraphicsPSO* PSO_object_water[SHADERTYPE_COUNT] = {};
+GraphicsPSO* PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
+GraphicsPSO* PSO_object_water[RENDERPASS_COUNT] = {};
 GraphicsPSO* PSO_object_wire = nullptr;
-GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
+GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
 {
 	if (IsWireRender())
 	{
-		switch (shaderType)
+		switch (renderPass)
 		{
-		case SHADERTYPE_TEXTURE:
-		case SHADERTYPE_DEFERRED:
-		case SHADERTYPE_FORWARD:
-		case SHADERTYPE_TILEDFORWARD:
+		case RENDERPASS_TEXTURE:
+		case RENDERPASS_DEFERRED:
+		case RENDERPASS_FORWARD:
+		case RENDERPASS_TILEDFORWARD:
 			return PSO_object_wire;
 		}
 		return nullptr;
@@ -634,7 +635,7 @@ GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessella
 
 	if (material.IsWater())
 	{
-		return PSO_object_water[shaderType];
+		return PSO_object_water[renderPass];
 	}
 
 	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
@@ -644,17 +645,17 @@ GraphicsPSO* GetObjectPSO(SHADERTYPE shaderType, bool doublesided, bool tessella
 	const bool pom = material.parallaxOcclusionMapping > 0;
 	const BLENDMODE blendMode = material.blendMode;
 
-	return PSO_object[shaderType][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+	return PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
 }
 
 
-VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool transparent)
+VLTYPES GetVLTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
 	VLTYPES realVL = VLTYPE_OBJECT_POS_TEX;
 
-	switch (shaderType)
+	switch (renderPass)
 	{
-	case SHADERTYPE_TEXTURE:
+	case RENDERPASS_TEXTURE:
 		if (tessellation)
 		{
 			realVL = VLTYPE_OBJECT_ALL;
@@ -664,13 +665,13 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			realVL = VLTYPE_OBJECT_POS_TEX;
 		}
 		break;
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
-	case SHADERTYPE_ENVMAPCAPTURE:
+	case RENDERPASS_DEFERRED:
+	case RENDERPASS_FORWARD:
+	case RENDERPASS_TILEDFORWARD:
+	case RENDERPASS_ENVMAPCAPTURE:
 		realVL = VLTYPE_OBJECT_ALL;
 		break;
-	case SHADERTYPE_DEPTHONLY:
+	case RENDERPASS_DEPTHONLY:
 		if (tessellation)
 		{
 			realVL = VLTYPE_OBJECT_ALL;
@@ -687,8 +688,8 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			}
 		}
 		break;
-	case SHADERTYPE_SHADOW:
-	case SHADERTYPE_SHADOWCUBE:
+	case RENDERPASS_SHADOW:
+	case RENDERPASS_SHADOWCUBE:
 		if (alphatest || transparent)
 		{
 			realVL = VLTYPE_OBJECT_POS_TEX;
@@ -698,20 +699,20 @@ VLTYPES GetVLTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			realVL = VLTYPE_OBJECT_POS;
 		}
 		break;
-	case SHADERTYPE_VOXELIZE:
+	case RENDERPASS_VOXELIZE:
 		realVL = VLTYPE_OBJECT_POS_TEX;
 		break;
 	}
 
 	return realVL;
 }
-VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool transparent)
+VSTYPES GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
 	VSTYPES realVS = VSTYPE_OBJECT_SIMPLE;
 
-	switch (shaderType)
+	switch (renderPass)
 	{
-	case SHADERTYPE_TEXTURE:
+	case RENDERPASS_TEXTURE:
 		if (tessellation)
 		{
 			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
@@ -721,9 +722,9 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			realVS = VSTYPE_OBJECT_SIMPLE;
 		}
 		break;
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
+	case RENDERPASS_DEFERRED:
+	case RENDERPASS_FORWARD:
+	case RENDERPASS_TILEDFORWARD:
 		if (tessellation)
 		{
 			realVS = VSTYPE_OBJECT_COMMON_TESSELLATION;
@@ -733,7 +734,7 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			realVS = VSTYPE_OBJECT_COMMON;
 		}
 		break;
-	case SHADERTYPE_DEPTHONLY:
+	case RENDERPASS_DEPTHONLY:
 		if (tessellation)
 		{
 			realVS = VSTYPE_OBJECT_SIMPLE_TESSELLATION;
@@ -750,10 +751,10 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			}
 		}
 		break;
-	case SHADERTYPE_ENVMAPCAPTURE:
+	case RENDERPASS_ENVMAPCAPTURE:
 		realVS = VSTYPE_ENVMAP;
 		break;
-	case SHADERTYPE_SHADOW:
+	case RENDERPASS_SHADOW:
 		if (transparent)
 		{
 			realVS = VSTYPE_SHADOW_TRANSPARENT;
@@ -770,7 +771,7 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 			}
 		}
 		break;
-	case SHADERTYPE_SHADOWCUBE:
+	case RENDERPASS_SHADOWCUBE:
 		if (alphatest)
 		{
 			realVS = VSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
@@ -781,35 +782,35 @@ VSTYPES GetVSTYPE(SHADERTYPE shaderType, bool tessellation, bool alphatest, bool
 		}
 		break;
 		break;
-	case SHADERTYPE_VOXELIZE:
+	case RENDERPASS_VOXELIZE:
 		realVS = VSTYPE_VOXELIZER;
 		break;
 	}
 
 	return realVS;
 }
-GSTYPES GetGSTYPE(SHADERTYPE shaderType, bool alphatest)
+GSTYPES GetGSTYPE(RENDERPASS renderPass, bool alphatest)
 {
 	GSTYPES realGS = GSTYPE_NULL;
 
-	switch (shaderType)
+	switch (renderPass)
 	{
-	case SHADERTYPE_TEXTURE:
+	case RENDERPASS_TEXTURE:
 		break;
-	case SHADERTYPE_DEFERRED:
+	case RENDERPASS_DEFERRED:
 		break;
-	case SHADERTYPE_FORWARD:
+	case RENDERPASS_FORWARD:
 		break;
-	case SHADERTYPE_TILEDFORWARD:
+	case RENDERPASS_TILEDFORWARD:
 		break;
-	case SHADERTYPE_DEPTHONLY:
+	case RENDERPASS_DEPTHONLY:
 		break;
-	case SHADERTYPE_ENVMAPCAPTURE:
+	case RENDERPASS_ENVMAPCAPTURE:
 		realGS = GSTYPE_ENVMAP;
 		break;
-	case SHADERTYPE_SHADOW:
+	case RENDERPASS_SHADOW:
 		break;
-	case SHADERTYPE_SHADOWCUBE:
+	case RENDERPASS_SHADOWCUBE:
 		if (alphatest)
 		{
 			realGS = GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
@@ -819,50 +820,50 @@ GSTYPES GetGSTYPE(SHADERTYPE shaderType, bool alphatest)
 			realGS = GSTYPE_SHADOWCUBEMAPRENDER;
 		}
 		break;
-	case SHADERTYPE_VOXELIZE:
+	case RENDERPASS_VOXELIZE:
 		realGS = GSTYPE_VOXELIZER;
 		break;
 	}
 
 	return realGS;
 }
-HSTYPES GetHSTYPE(SHADERTYPE shaderType, bool tessellation)
+HSTYPES GetHSTYPE(RENDERPASS renderPass, bool tessellation)
 {
-	switch (shaderType)
+	switch (renderPass)
 	{
-	case SHADERTYPE_TEXTURE:
-	case SHADERTYPE_DEPTHONLY:
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
+	case RENDERPASS_TEXTURE:
+	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_DEFERRED:
+	case RENDERPASS_FORWARD:
+	case RENDERPASS_TILEDFORWARD:
 		return tessellation ? HSTYPE_OBJECT : HSTYPE_NULL;
 		break;
 	}
 
 	return HSTYPE_NULL;
 }
-DSTYPES GetDSTYPE(SHADERTYPE shaderType, bool tessellation)
+DSTYPES GetDSTYPE(RENDERPASS renderPass, bool tessellation)
 {
-	switch (shaderType)
+	switch (renderPass)
 	{
-	case SHADERTYPE_TEXTURE:
-	case SHADERTYPE_DEPTHONLY:
-	case SHADERTYPE_DEFERRED:
-	case SHADERTYPE_FORWARD:
-	case SHADERTYPE_TILEDFORWARD:
+	case RENDERPASS_TEXTURE:
+	case RENDERPASS_DEPTHONLY:
+	case RENDERPASS_DEFERRED:
+	case RENDERPASS_FORWARD:
+	case RENDERPASS_TILEDFORWARD:
 		return tessellation ? DSTYPE_OBJECT : DSTYPE_NULL;
 		break;
 	}
 
 	return DSTYPE_NULL;
 }
-PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom)
+PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool normalmap, bool planarreflection, bool pom)
 {
 	PSTYPES realPS = PSTYPE_OBJECT_SIMPLEST;
 
-	switch (shaderType)
+	switch (renderPass)
 	{
-	case SHADERTYPE_DEFERRED:
+	case RENDERPASS_DEFERRED:
 		if (normalmap)
 		{
 			if (pom)
@@ -894,7 +895,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			}
 		}
 		break;
-	case SHADERTYPE_FORWARD:
+	case RENDERPASS_FORWARD:
 		if (transparent)
 		{
 			if (normalmap)
@@ -962,7 +963,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			}
 		}
 		break;
-	case SHADERTYPE_TILEDFORWARD:
+	case RENDERPASS_TILEDFORWARD:
 		if (transparent)
 		{
 			if (normalmap)
@@ -1030,7 +1031,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			}
 		}
 		break;
-	case SHADERTYPE_SHADOW:
+	case RENDERPASS_SHADOW:
 		if (transparent)
 		{
 			realPS = PSTYPE_SHADOW_TRANSPARENT;
@@ -1047,7 +1048,7 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			}
 		}
 		break;
-	case SHADERTYPE_SHADOWCUBE:
+	case RENDERPASS_SHADOWCUBE:
 		if (alphatest)
 		{
 			realPS = PSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST;
@@ -1057,10 +1058,10 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			realPS = PSTYPE_SHADOWCUBEMAPRENDER;
 		}
 		break;
-	case SHADERTYPE_ENVMAPCAPTURE:
+	case RENDERPASS_ENVMAPCAPTURE:
 		realPS = PSTYPE_ENVMAP;
 		break;
-	case SHADERTYPE_DEPTHONLY:
+	case RENDERPASS_DEPTHONLY:
 		if (alphatest)
 		{
 			realPS = PSTYPE_OBJECT_ALPHATESTONLY;
@@ -1070,10 +1071,10 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 			realPS = PSTYPE_NULL;
 		}
 		break;
-	case SHADERTYPE_VOXELIZE:
+	case RENDERPASS_VOXELIZE:
 		realPS = PSTYPE_VOXELIZER;
 		break;
-	case SHADERTYPE_TEXTURE:
+	case RENDERPASS_TEXTURE:
 		realPS = PSTYPE_OBJECT_TEXTUREONLY;
 		break;
 	}
@@ -1083,26 +1084,26 @@ PSTYPES GetPSTYPE(SHADERTYPE shaderType, bool alphatest, bool transparent, bool 
 
 GraphicsPSO* PSO_decal = nullptr;
 GraphicsPSO* PSO_occlusionquery = nullptr;
-GraphicsPSO* PSO_impostor[SHADERTYPE_COUNT] = {};
+GraphicsPSO* PSO_impostor[RENDERPASS_COUNT] = {};
 GraphicsPSO* PSO_captureimpostor_albedo = nullptr;
 GraphicsPSO* PSO_captureimpostor_normal = nullptr;
 GraphicsPSO* PSO_captureimpostor_surface = nullptr;
-GraphicsPSO* GetImpostorPSO(SHADERTYPE shaderType)
+GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
 {
 	if (IsWireRender())
 	{
-		switch (shaderType)
+		switch (renderPass)
 		{
-		case SHADERTYPE_TEXTURE:
-		case SHADERTYPE_DEFERRED:
-		case SHADERTYPE_FORWARD:
-		case SHADERTYPE_TILEDFORWARD:
+		case RENDERPASS_TEXTURE:
+		case RENDERPASS_DEFERRED:
+		case RENDERPASS_FORWARD:
+		case RENDERPASS_TILEDFORWARD:
 			return PSO_object_wire;
 		}
 		return nullptr;
 	}
 
-	return PSO_impostor[shaderType];
+	return PSO_impostor[renderPass];
 }
 
 GraphicsPSO* PSO_deferredlight[LightComponent::LIGHTTYPE_COUNT] = {};
@@ -1317,12 +1318,12 @@ void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent
 
 
 
-void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false)
+void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false)
 {
 	if (!renderQueue.empty())
 	{
 		GraphicsDevice* device = GetDevice();
-		Scene& scene = GetScene();
+		const Scene& scene = GetScene();
 
 		device->EventBegin("RenderMeshes", threadID);
 
@@ -1337,18 +1338,18 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 
 		const bool advancedVBRequest =
 			!IsWireRender() && (
-				shaderType == SHADERTYPE_FORWARD ||
-				shaderType == SHADERTYPE_DEFERRED ||
-				shaderType == SHADERTYPE_TILEDFORWARD ||
-				shaderType == SHADERTYPE_ENVMAPCAPTURE
+				renderPass == RENDERPASS_FORWARD ||
+				renderPass == RENDERPASS_DEFERRED ||
+				renderPass == RENDERPASS_TILEDFORWARD ||
+				renderPass == RENDERPASS_ENVMAPCAPTURE
 				);
 
 		const bool easyTextureBind =
-			shaderType == SHADERTYPE_TEXTURE ||
-			shaderType == SHADERTYPE_SHADOW ||
-			shaderType == SHADERTYPE_SHADOWCUBE ||
-			shaderType == SHADERTYPE_DEPTHONLY ||
-			shaderType == SHADERTYPE_VOXELIZE;
+			renderPass == RENDERPASS_TEXTURE ||
+			renderPass == RENDERPASS_SHADOW ||
+			renderPass == RENDERPASS_SHADOWCUBE ||
+			renderPass == RENDERPASS_DEPTHONLY ||
+			renderPass == RENDERPASS_VOXELIZE;
 
 
 		// Pre-allocate space for all the instances in GPU-buffer:
@@ -1468,7 +1469,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				GraphicsPSO* pso = GetObjectPSO(shaderType, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
+				GraphicsPSO* pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
 				if (pso == nullptr)
 				{
 					continue;
@@ -1488,7 +1489,7 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 				{
 					subsetRenderable = subsetRenderable || material.IsWater();
 				}
-				if (shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE)
+				if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
 				{
 					subsetRenderable = subsetRenderable && material.IsCastingShadow();
 				}
@@ -1506,9 +1507,9 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 				else
 				{
 					// simple vertex buffers are used in some passes (note: tessellator requires more attributes)
-					if ((shaderType == SHADERTYPE_DEPTHONLY || shaderType == SHADERTYPE_SHADOW || shaderType == SHADERTYPE_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
+					if ((renderPass == RENDERPASS_DEPTHONLY || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE) && !material.IsAlphaTestEnabled() && !forceAlphaTestForDithering)
 					{
-						if (shaderType == SHADERTYPE_SHADOW && material.IsTransparent())
+						if (renderPass == RENDERPASS_SHADOW && material.IsTransparent())
 						{
 							boundVBType = BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD;
 						}
@@ -1642,10 +1643,10 @@ void RenderMeshes(const RenderQueue& renderQueue, SHADERTYPE shaderType, UINT re
 	}
 }
 
-void RenderImpostors(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID)
+void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID)
 {
-	Scene& scene = GetScene();
-	GraphicsPSO* impostorRequest = GetImpostorPSO(shaderType);
+	const Scene& scene = GetScene();
+	GraphicsPSO* impostorRequest = GetImpostorPSO(renderPass);
 
 	if (scene.impostors.GetCount() > 0 && impostorRequest != nullptr)
 	{
@@ -2019,7 +2020,7 @@ void LoadShaders()
 
 
 	// default objectshaders:
-	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
 		for (int blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 		{
@@ -2037,12 +2038,12 @@ void LoadShaders()
 								{
 									for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 									{
-										VSTYPES realVS = GetVSTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
-										VLTYPES realVL = GetVLTYPE((SHADERTYPE)shaderType, tessellation, alphatest, transparency);
-										HSTYPES realHS = GetHSTYPE((SHADERTYPE)shaderType, tessellation);
-										DSTYPES realDS = GetDSTYPE((SHADERTYPE)shaderType, tessellation);
-										GSTYPES realGS = GetGSTYPE((SHADERTYPE)shaderType, alphatest);
-										PSTYPES realPS = GetPSTYPE((SHADERTYPE)shaderType, alphatest, transparency, normalmap, planarreflection, pom);
+										VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+										VLTYPES realVL = GetVLTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+										HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
+										DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
+										GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
+										PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
 
 										if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
 										{
@@ -2076,30 +2077,30 @@ void LoadShaders()
 											break;
 										}
 
-										switch (shaderType)
+										switch (renderPass)
 										{
-										case SHADERTYPE_DEPTHONLY:
-										case SHADERTYPE_SHADOW:
-										case SHADERTYPE_SHADOWCUBE:
+										case RENDERPASS_DEPTHONLY:
+										case RENDERPASS_SHADOW:
+										case RENDERPASS_SHADOWCUBE:
 											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
 											break;
 										default:
 											break;
 										}
 
-										switch (shaderType)
+										switch (renderPass)
 										{
-										case SHADERTYPE_SHADOW:
-										case SHADERTYPE_SHADOWCUBE:
+										case RENDERPASS_SHADOW:
+										case RENDERPASS_SHADOWCUBE:
 											desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
 											break;
-										case SHADERTYPE_TILEDFORWARD:
+										case RENDERPASS_TILEDFORWARD:
 											desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
 											break;
-										case SHADERTYPE_ENVMAPCAPTURE:
+										case RENDERPASS_ENVMAPCAPTURE:
 											desc.dss = depthStencils[DSSTYPE_ENVMAP];
 											break;
-										case SHADERTYPE_VOXELIZE:
+										case RENDERPASS_VOXELIZE:
 											desc.dss = depthStencils[DSSTYPE_XRAY];
 											break;
 										default:
@@ -2107,13 +2108,13 @@ void LoadShaders()
 											break;
 										}
 
-										switch (shaderType)
+										switch (renderPass)
 										{
-										case SHADERTYPE_SHADOW:
-										case SHADERTYPE_SHADOWCUBE:
+										case RENDERPASS_SHADOW:
+										case RENDERPASS_SHADOWCUBE:
 											desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
 											break;
-										case SHADERTYPE_VOXELIZE:
+										case RENDERPASS_VOXELIZE:
 											desc.rs = rasterizers[RSTYPE_VOXELIZE];
 											break;
 										default:
@@ -2121,14 +2122,14 @@ void LoadShaders()
 											break;
 										}
 
-										switch (shaderType)
+										switch (renderPass)
 										{
-										case SHADERTYPE_TEXTURE:
+										case RENDERPASS_TEXTURE:
 											desc.numRTs = 1;
 											desc.RTFormats[0] = RTFormat_hdr;
 											desc.DSFormat = DSFormat_full;
 											break;
-										case SHADERTYPE_DEFERRED:
+										case RENDERPASS_DEFERRED:
 											desc.numRTs = 5;
 											desc.RTFormats[0] = RTFormat_gbuffer_0;
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
@@ -2137,7 +2138,7 @@ void LoadShaders()
 											desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
 											desc.DSFormat = DSFormat_full;
 											break;
-										case SHADERTYPE_FORWARD:
+										case RENDERPASS_FORWARD:
 											if (transparency)
 											{
 												desc.numRTs = 1;
@@ -2150,7 +2151,7 @@ void LoadShaders()
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
 											desc.DSFormat = DSFormat_full;
 											break;
-										case SHADERTYPE_TILEDFORWARD:
+										case RENDERPASS_TILEDFORWARD:
 											if (transparency)
 											{
 												desc.numRTs = 1;
@@ -2163,16 +2164,16 @@ void LoadShaders()
 											desc.RTFormats[1] = RTFormat_gbuffer_1;
 											desc.DSFormat = DSFormat_full;
 											break;
-										case SHADERTYPE_DEPTHONLY:
+										case RENDERPASS_DEPTHONLY:
 											desc.numRTs = 0;
 											desc.DSFormat = DSFormat_full;
 											break;
-										case SHADERTYPE_ENVMAPCAPTURE:
+										case RENDERPASS_ENVMAPCAPTURE:
 											desc.numRTs = 1;
 											desc.RTFormats[0] = RTFormat_envprobe;
 											desc.DSFormat = DSFormat_small;
 											break;
-										case SHADERTYPE_SHADOW:
+										case RENDERPASS_SHADOW:
 											if (transparency)
 											{
 												desc.numRTs = 1;
@@ -2184,11 +2185,11 @@ void LoadShaders()
 											}
 											desc.DSFormat = DSFormat_small;
 											break;
-										case SHADERTYPE_SHADOWCUBE:
+										case RENDERPASS_SHADOWCUBE:
 											desc.numRTs = 0;
 											desc.DSFormat = DSFormat_small;
 											break;
-										case SHADERTYPE_VOXELIZE:
+										case RENDERPASS_VOXELIZE:
 											desc.numRTs = 0;
 											break;
 										}
@@ -2202,8 +2203,8 @@ void LoadShaders()
 											desc.pt = TRIANGLELIST;
 										}
 
-										RECREATE(PSO_object[shaderType][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
-										device->CreateGraphicsPSO(&desc, PSO_object[shaderType][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										RECREATE(PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										device->CreateGraphicsPSO(&desc, PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
 									}
 								}
 							}
@@ -2223,8 +2224,8 @@ void LoadShaders()
 
 	//// Hologram:
 	//{
-	//	VSTYPES realVS = GetVSTYPE(SHADERTYPE_FORWARD, false, false, true);
-	//	VLTYPES realVL = GetVLTYPE(SHADERTYPE_FORWARD, false, false, true);
+	//	VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
+	//	VLTYPES realVL = GetVLTYPE(RENDERPASS_FORWARD, false, false, true);
 
 	//	GraphicsPSODesc desc;
 	//	desc.vs = vertexShaders[realVS];
@@ -2242,10 +2243,10 @@ void LoadShaders()
 
 	//	Material::CustomShader* customShader = new Material::CustomShader;
 	//	customShader->name = "Hologram";
-	//	customShader->passes[SHADERTYPE_FORWARD].pso = new GraphicsPSO;
-	//	device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_FORWARD].pso);
-	//	customShader->passes[SHADERTYPE_TILEDFORWARD].pso = new GraphicsPSO;
-	//	device->CreateGraphicsPSO(&desc, customShader->passes[SHADERTYPE_TILEDFORWARD].pso);
+	//	customShader->passes[RENDERPASS_FORWARD].pso = new GraphicsPSO;
+	//	device->CreateGraphicsPSO(&desc, customShader->passes[RENDERPASS_FORWARD].pso);
+	//	customShader->passes[RENDERPASS_TILEDFORWARD].pso = new GraphicsPSO;
+	//	device->CreateGraphicsPSO(&desc, customShader->passes[RENDERPASS_TILEDFORWARD].pso);
 	//	Material::customShaderPresets.push_back(customShader);
 	//}
 
@@ -2263,20 +2264,20 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_full;
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
-		RECREATE(PSO_object_water[SHADERTYPE_FORWARD]);
-		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_FORWARD]);
+		RECREATE(PSO_object_water[RENDERPASS_FORWARD]);
+		device->CreateGraphicsPSO(&desc, PSO_object_water[RENDERPASS_FORWARD]);
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
-		RECREATE(PSO_object_water[SHADERTYPE_TILEDFORWARD]);
-		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_TILEDFORWARD]);
+		RECREATE(PSO_object_water[RENDERPASS_TILEDFORWARD]);
+		device->CreateGraphicsPSO(&desc, PSO_object_water[RENDERPASS_TILEDFORWARD]);
 
 		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
 		desc.rs = rasterizers[RSTYPE_SHADOW];
 		desc.bs = blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
 		desc.vs = vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
 		desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
-		RECREATE(PSO_object_water[SHADERTYPE_SHADOW]);
-		device->CreateGraphicsPSO(&desc, PSO_object_water[SHADERTYPE_SHADOW]);
+		RECREATE(PSO_object_water[RENDERPASS_SHADOW]);
+		device->CreateGraphicsPSO(&desc, PSO_object_water[RENDERPASS_SHADOW]);
 	}
 	{
 		GraphicsPSODesc desc;
@@ -2323,13 +2324,13 @@ void LoadShaders()
 		RECREATE(PSO_occlusionquery);
 		device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
 	}
-	for (int shaderType = 0; shaderType < SHADERTYPE_COUNT; ++shaderType)
+	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
 		const bool impostorRequest =
-			shaderType != SHADERTYPE_VOXELIZE &&
-			shaderType != SHADERTYPE_SHADOW &&
-			shaderType != SHADERTYPE_SHADOWCUBE &&
-			shaderType != SHADERTYPE_ENVMAPCAPTURE;
+			renderPass != RENDERPASS_VOXELIZE &&
+			renderPass != RENDERPASS_SHADOW &&
+			renderPass != RENDERPASS_SHADOWCUBE &&
+			renderPass != RENDERPASS_ENVMAPCAPTURE;
 		if (!impostorRequest)
 		{
 			continue;
@@ -2338,12 +2339,12 @@ void LoadShaders()
 		GraphicsPSODesc desc;
 		desc.rs = rasterizers[RSTYPE_FRONT];
 		desc.bs = blendStates[BSTYPE_OPAQUE];
-		desc.dss = depthStencils[shaderType == SHADERTYPE_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+		desc.dss = depthStencils[renderPass == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
 		desc.il = nullptr;
 
-		switch (shaderType)
+		switch (renderPass)
 		{
-		case SHADERTYPE_DEFERRED:
+		case RENDERPASS_DEFERRED:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_DEFERRED];
 			desc.numRTs = 3;
@@ -2351,21 +2352,21 @@ void LoadShaders()
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			desc.RTFormats[2] = RTFormat_gbuffer_2;
 			break;
-		case SHADERTYPE_FORWARD:
+		case RENDERPASS_FORWARD:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_FORWARD];
 			desc.numRTs = 2;
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
-		case SHADERTYPE_TILEDFORWARD:
+		case RENDERPASS_TILEDFORWARD:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_TILEDFORWARD];
 			desc.numRTs = 2;
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.RTFormats[1] = RTFormat_gbuffer_1;
 			break;
-		case SHADERTYPE_DEPTHONLY:
+		case RENDERPASS_DEPTHONLY:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 			desc.ps = pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY];
 			break;
@@ -2378,8 +2379,8 @@ void LoadShaders()
 		}
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_impostor[shaderType]);
-		device->CreateGraphicsPSO(&desc, PSO_impostor[shaderType]);
+		RECREATE(PSO_impostor[renderPass]);
+		device->CreateGraphicsPSO(&desc, PSO_impostor[renderPass]);
 	}
 	{
 		GraphicsPSODesc desc;
@@ -4114,6 +4115,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		return;
 	}
 
+	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings[&GetCamera()];
 
 	wiProfiler::BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
@@ -4122,9 +4124,9 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 	if (!culling.culledObjects.empty())
 	{
-		GetDevice()->EventBegin("Occlusion Culling Render", threadID);
+		device->EventBegin("Occlusion Culling Render", threadID);
 
-		GetDevice()->BindGraphicsPSO(PSO_occlusionquery, threadID);
+		device->BindGraphicsPSO(PSO_occlusionquery, threadID);
 
 		Scene& scene = GetScene();
 
@@ -4168,16 +4170,16 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 				// previous frame view*projection because these are drawn against the previous depth buffer:
 				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*GetPrevCamera().GetViewProjection())); // todo: obb
-				GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 				// render bounding box to later read the occlusion status
-				GetDevice()->QueryBegin(&query, threadID);
-				GetDevice()->Draw(14, 0, threadID);
-				GetDevice()->QueryEnd(&query, threadID);
+				device->QueryBegin(&query, threadID);
+				device->Draw(14, 0, threadID);
+				device->QueryEnd(&query, threadID);
 			}
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
 	wiProfiler::EndRange(threadID); // Occlusion Culling Render
@@ -4191,11 +4193,12 @@ void OcclusionCulling_Read()
 
 	wiProfiler::BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
 
+	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings[&GetCamera()];
 
 	if (!culling.culledObjects.empty())
 	{
-		GetDevice()->EventBegin("Occlusion Culling Read", GRAPHICSTHREAD_IMMEDIATE);
+		device->EventBegin("Occlusion Culling Read", GRAPHICSTHREAD_IMMEDIATE);
 
 		Scene& scene = GetScene();
 
@@ -4220,7 +4223,7 @@ void OcclusionCulling_Read()
 				continue;
 			}
 
-			while (!GetDevice()->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
+			while (!device->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
 
 			if (query.result_passed == TRUE)
 			{
@@ -4232,7 +4235,7 @@ void OcclusionCulling_Read()
 			}
 		}
 
-		GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+		device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	wiProfiler::EndRange(); // Occlusion Culling Read
@@ -4283,7 +4286,7 @@ void DrawWaterRipples(GRAPHICSTHREAD threadID)
 
 void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
 {
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 	size_t emitterCount = scene.emitters.GetCount();
 
 	// Sort emitters based on distance:
@@ -4291,7 +4294,7 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 	uint32_t* emitterSortingHashes = (uint32_t*)frameAllocators[threadID].allocate(sizeof(uint32_t) * emitterCount);
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
-		wiEmittedParticle& emitter = scene.emitters[i];
+		const wiEmittedParticle& emitter = scene.emitters[i];
 		float distance = wiMath::DistanceEstimated(emitter.center, camera.Eye);
 		emitterSortingHashes[i] = 0;
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
@@ -4302,7 +4305,7 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		uint32_t emitterIndex = emitterSortingHashes[i] & 0x0000FFFF;
-		wiEmittedParticle& emitter = scene.emitters[emitterIndex];
+		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
 		Entity entity = scene.emitters.GetEntity(emitterIndex);
 		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
@@ -4321,22 +4324,23 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 }
 void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings[&camera];
 
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
-	GetDevice()->EventBegin("Light Render", threadID);
+	device->EventBegin("Light Render", threadID);
 	wiProfiler::BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
-		GetDevice()->BindGraphicsPSO(PSO_enviromentallight, threadID);
-		GetDevice()->Draw(3, 0, threadID); // full screen triangle
+		device->BindGraphicsPSO(PSO_enviromentallight, threadID);
+		device->Draw(3, 0, threadID); // full screen triangle
 	}
 
 	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 	{
-		GetDevice()->BindGraphicsPSO(PSO_deferredlight[type], threadID);
+		device->BindGraphicsPSO(PSO_deferredlight[type], threadID);
 
 		for (uint32_t lightIndex : culling.culledLights)
 		{
@@ -4354,9 +4358,9 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				{
 					MiscCB miscCb;
 					miscCb.g_xColor.x = (float)light.entityArray_index;
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-					GetDevice()->Draw(3, 0, threadID); // full screen triangle
+					device->Draw(3, 0, threadID); // full screen triangle
 				}
 				break;
 			case LightComponent::POINT:
@@ -4365,9 +4369,9 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					miscCb.g_xColor.x = (float)light.entityArray_index;
 					float sca = light.range + 1;
 					XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-					GetDevice()->Draw(240, 0, threadID); // icosphere
+					device->Draw(240, 0, threadID); // icosphere
 				}
 				break;
 			case LightComponent::SPOT:
@@ -4381,9 +4385,9 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 						camera.GetViewProjection()
 					));
-					GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-					GetDevice()->Draw(192, 0, threadID); // cone
+					device->Draw(192, 0, threadID); // cone
 				}
 				break;
 			}
@@ -4393,7 +4397,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	}
 
 	wiProfiler::EndRange(threadID);
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
@@ -4401,23 +4405,24 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 
 	if (!culling.culledLights.empty())
 	{
-		Scene& scene = GetScene();
+		GraphicsDevice* device = GetDevice();
+		const Scene& scene = GetScene();
 
-		GetDevice()->EventBegin("Light Visualizer Render", threadID);
+		device->EventBegin("Light Visualizer Render", threadID);
 
-		GetDevice()->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-		GetDevice()->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		device->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		device->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
 
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			GetDevice()->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
+			device->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
 
 			for (uint32_t lightIndex : culling.culledLights)
 			{
-				LightComponent& light = scene.lights[lightIndex];
+				const LightComponent& light = scene.lights[lightIndex];
 
 				if (light.GetType() == type && light.IsVisualizerEnabled())
 				{
@@ -4435,9 +4440,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						));
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(108, 0, threadID); // circle
+						device->Draw(108, 0, threadID); // circle
 					}
 					else if (type == LightComponent::SPOT)
 					{
@@ -4449,9 +4454,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						));
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(192, 0, threadID); // cone
+						device->Draw(192, 0, threadID); // cone
 					}
 					else if (type == LightComponent::SPHERE)
 					{
@@ -4462,9 +4467,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(2880, 0, threadID); // uv-sphere
+						device->Draw(2880, 0, threadID); // uv-sphere
 					}
 					else if (type == LightComponent::DISC)
 					{
@@ -4475,9 +4480,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(108, 0, threadID); // circle
+						device->Draw(108, 0, threadID); // circle
 					}
 					else if (type == LightComponent::RECTANGLE)
 					{
@@ -4488,9 +4493,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(6, 0, threadID); // quad
+						device->Draw(6, 0, threadID); // quad
 					}
 					else if (type == LightComponent::TUBE)
 					{
@@ -4501,16 +4506,16 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
-						GetDevice()->Draw(384, 0, threadID); // cylinder
+						device->Draw(384, 0, threadID); // cylinder
 					}
 				}
 			}
 
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 
 	}
 }
@@ -4520,9 +4525,10 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	if (!culling.culledLights.empty())
 	{
-		GetDevice()->EventBegin("Volumetric Light Render", threadID);
+		GraphicsDevice* device = GetDevice();
+		device->EventBegin("Volumetric Light Render", threadID);
 
-		Scene& scene = GetScene();
+		const Scene& scene = GetScene();
 
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
@@ -4533,7 +4539,7 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				continue;
 			}
 
-			GetDevice()->BindGraphicsPSO(pso, threadID);
+			device->BindGraphicsPSO(pso, threadID);
 
 			for (uint32_t lightIndex : culling.culledLights)
 			{
@@ -4551,9 +4557,9 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = (float)light.entityArray_index;
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-						GetDevice()->Draw(3, 0, threadID); // full screen triangle
+						device->Draw(3, 0, threadID); // full screen triangle
 					}
 					break;
 					case LightComponent::POINT:
@@ -4562,9 +4568,9 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						miscCb.g_xColor.x = (float)light.entityArray_index;
 						float sca = light.range + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-						GetDevice()->Draw(240, 0, threadID); // icosphere
+						device->Draw(240, 0, threadID); // icosphere
 					}
 					break;
 					case LightComponent::SPOT:
@@ -4578,9 +4584,9 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							camera.GetViewProjection()
 						));
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
-						GetDevice()->Draw(192, 0, threadID); // cone
+						device->Draw(192, 0, threadID); // cone
 					}
 					break;
 					}
@@ -4590,18 +4596,19 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		}
 
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
 
 }
-void DrawLensFlares(GRAPHICSTHREAD threadID)
+void DrawLensFlares(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
-	const CameraComponent& camera = GetCamera();
+	if (IsWireRender())
+		return;
 
 	const FrameCulling& culling = frameCullings[&camera];
 
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	for(uint32_t lightIndex : culling.culledLights)
 	{
@@ -4715,11 +4722,12 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 	if (IsWireRender())
 		return;
 
+	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings[&GetCamera()];
 
 	if (!culling.culledLights.empty())
 	{
-		GetDevice()->EventBegin("ShadowMap Render", threadID);
+		device->EventBegin("ShadowMap Render", threadID);
 		wiProfiler::BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 		const bool all_layers = layerMask == 0xFFFFFFFF;
@@ -4733,7 +4741,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 		Scene& scene = GetScene();
 
-		GetDevice()->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
 		int shadowCounter_2D = 0;
 		int shadowCounter_Cube = 0;
@@ -4750,7 +4758,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 				vp.Height = (float)SHADOWRES_2D;
 				vp.MinDepth = 0.0f;
 				vp.MaxDepth = 1.0f;
-				GetDevice()->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, threadID);
 				break;
 			}
 			break;
@@ -4766,9 +4774,9 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 				vp.Height = (float)SHADOWRES_CUBE;
 				vp.MinDepth = 0.0f;
 				vp.MaxDepth = 1.0f;
-				GetDevice()->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, threadID);
 
-				GetDevice()->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+				device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
 				break;
 			}
 			break;
@@ -4838,16 +4846,16 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						{
 							CameraCB cb;
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
-							GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+							device->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-							GetDevice()->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
+							device->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
 
 							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-							GetDevice()->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
+							device->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
 
 							// render opaque shadowmap:
-							GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
-							RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+							device->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
+							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
@@ -4855,8 +4863,8 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 								Texture2D* rts[] = {
 									shadowMapArray_Transparent.get()
 								};
-								GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
-								RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								device->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
+								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 							}
 							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
@@ -4875,7 +4883,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 					const float zFarP = max(1.0f, light.range);
 					Frustum frustum;
-					frustum.ConstructFrustum(zFarP, shcam.realProjection, shcam.View);
+					frustum.Create(shcam.realProjection, shcam.View, zFarP);
 
 					RenderQueue renderQueue;
 					bool transparentShadowsRequested = false;
@@ -4912,16 +4920,16 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					{
 						CameraCB cb;
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-						GetDevice()->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						device->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 						// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-						GetDevice()->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index);
+						device->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index);
 
 						// render opaque shadowmap:
-						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
-						RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_OPAQUE, threadID);
+						device->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
@@ -4929,8 +4937,8 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							Texture2D* rts[] = {
 								shadowMapArray_Transparent.get()
 							};
-							GetDevice()->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
-							RenderMeshes(renderQueue, SHADERTYPE_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+							device->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
+							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 						}
 						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -4975,12 +4983,12 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					}
 					if (!renderQueue.empty())
 					{
-						GetDevice()->BindRenderTargets(0, nullptr, shadowMapArray_Cube.get(), threadID, light.shadowMap_index);
-						GetDevice()->ClearDepthStencil(shadowMapArray_Cube.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						device->BindRenderTargets(0, nullptr, shadowMapArray_Cube.get(), threadID, light.shadowMap_index);
+						device->ClearDepthStencil(shadowMapArray_Cube.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 						MiscCB miscCb;
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						const float zNearP = 0.1f;
 						const float zFarP = max(1.0f, light.range);
@@ -4999,9 +5007,9 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							cameras[shcam].Update(XMLoadFloat3(&light.position));
 							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].getVP());
 						}
-						GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+						device->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
-						RenderMeshes(renderQueue, SHADERTYPE_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
 
 						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -5013,31 +5021,32 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 		}
 
-		GetDevice()->BindRenderTargets(0, nullptr, nullptr, threadID);
+		device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 
 		wiProfiler::EndRange(); // Shadow Rendering
-		GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
-	GetDevice()->BindResource(PS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
-	GetDevice()->BindResource(PS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	device->BindResource(PS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
+	device->BindResource(PS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
 	if (GetTransparentShadowsEnabled())
 	{
-		GetDevice()->BindResource(PS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+		device->BindResource(PS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 	}
 }
 
-void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
-	Scene& scene = GetScene();
+	GraphicsDevice* device = GetDevice();
+	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings[&camera];
 
-	GetDevice()->EventBegin("DrawScene", threadID);
+	device->EventBegin("DrawScene", threadID);
 
-	if (shaderType == SHADERTYPE_TILEDFORWARD)
+	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
+		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
 	if (grass)
@@ -5057,12 +5066,12 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 				Entity entity = scene.hairs.GetEntity(i);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-				hair.Draw(camera, material, shaderType, false, threadID);
+				hair.Draw(camera, material, renderPass, false, threadID);
 			}
 		}
 	}
 
-	RenderImpostors(camera, shaderType, threadID);
+	RenderImpostors(camera, renderPass, threadID);
 
 	RenderQueue renderQueue;
 	for (uint32_t instanceIndex : culling.culledObjects)
@@ -5098,25 +5107,26 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(renderQueue, shaderType, RENDERTYPE_OPAQUE, threadID, tessellation);
+		RenderMeshes(renderQueue, renderPass, RENDERTYPE_OPAQUE, threadID, tessellation);
 
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 
 }
 
-void DrawScene_Transparent(const CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
 {
-	Scene& scene = GetScene();
+	GraphicsDevice* device = GetDevice();
+	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings[&camera];
 
-	GetDevice()->EventBegin("DrawScene_Transparent", threadID);
+	device->EventBegin("DrawScene_Transparent", threadID);
 
-	if (shaderType == SHADERTYPE_TILEDFORWARD)
+	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		GetDevice()->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
+		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
 	}
 
 	if (ocean != nullptr)
@@ -5137,7 +5147,7 @@ void DrawScene_Transparent(const CameraComponent& camera, SHADERTYPE shaderType,
 				Entity entity = scene.hairs.GetEntity(i);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-				hair.Draw(camera, material, shaderType, true, threadID);
+				hair.Draw(camera, material, renderPass, true, threadID);
 			}
 		}
 	}
@@ -5171,19 +5181,18 @@ void DrawScene_Transparent(const CameraComponent& camera, SHADERTYPE shaderType,
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
-		RenderMeshes(renderQueue, shaderType, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
+		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
 
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 
 void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	device->EventBegin("DrawDebugWorld", threadID);
 
@@ -5601,7 +5610,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		MiscCB sb;
 		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 		{
-			ForceFieldComponent& force = scene.forces[i];
+			const ForceFieldComponent& force = scene.forces[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
@@ -5664,47 +5673,51 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 void DrawSky(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("DrawSky", threadID);
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("DrawSky", threadID);
 	
 	if (enviroMap != nullptr)
 	{
-		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_STATIC], threadID);
+		device->BindGraphicsPSO(PSO_sky[SKYRENDERING_STATIC], threadID);
 	}
 	else
 	{
-		GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
+		device->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
 		if (GetScene().weather.cloudiness > 0)
 		{
-			GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+			device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 		}
 		else
 		{
-			GetDevice()->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
+			device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
 		}
 	}
 
-	GetDevice()->Draw(240, 0, threadID);
+	device->Draw(240, 0, threadID); // icosphere
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 void DrawSun(GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("DrawSun", threadID);
+	GraphicsDevice* device = GetDevice();
 
-	GetDevice()->BindGraphicsPSO(PSO_sky[SKYRENDERING_SUN], threadID);
+	device->EventBegin("DrawSun", threadID);
+
+	device->BindGraphicsPSO(PSO_sky[SKYRENDERING_SUN], threadID);
 
 	if (enviroMap != nullptr)
 	{
-		GetDevice()->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
 	}
 	else
 	{
-		GetDevice()->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 	}
 
-	GetDevice()->Draw(240, 0, threadID);
+	device->Draw(240, 0, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 
 void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
@@ -5717,7 +5730,7 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		device->EventBegin("Decals", threadID);
 
-		Scene& scene = GetScene();
+		const Scene& scene = GetScene();
 
 		device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
 
@@ -5935,7 +5948,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		if (!renderQueue.empty())
 		{
-			RenderMeshes(renderQueue, SHADERTYPE_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
+			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
 
 			frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
@@ -6200,7 +6213,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	device->EventBegin("Voxel Radiance", threadID);
 	wiProfiler::BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
@@ -6285,7 +6298,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
-		RenderMeshes(renderQueue, SHADERTYPE_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
+		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
@@ -6370,7 +6383,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 
 	static int _savedWidth = 0;
 	static int _savedHeight = 0;
-	bool _resolutionChanged = GetDevice()->ResolutionChanged();
+	bool _resolutionChanged = device->ResolutionChanged();
 	if (_savedWidth != _width || _savedHeight != _height)
 	{
 		_resolutionChanged = true;
@@ -6508,9 +6521,9 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
-			GetDevice()->BindResource(CS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
-			GetDevice()->BindResource(CS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
-			GetDevice()->BindResource(CS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+			device->BindResource(CS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
+			device->BindResource(CS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
+			device->BindResource(CS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -6536,21 +6549,22 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 }
 void ResolveMSAADepthBuffer(Texture2D* dst, Texture2D* src, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("Resolve MSAA DepthBuffer", threadID);
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("Resolve MSAA DepthBuffer", threadID);
 
-	GetDevice()->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
-	GetDevice()->BindUAV(CS, dst, 0, threadID);
+	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
+	device->BindUAV(CS, dst, 0, threadID);
 
 	TextureDesc desc = src->GetDesc();
 
-	GetDevice()->BindComputePSO(CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
-	GetDevice()->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
+	device->BindComputePSO(CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
+	device->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
 
 
-	GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	GetDevice()->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	device->UnbindUAVs(0, 1, threadID);
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 void GenerateMipChain(Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
 {
@@ -7098,7 +7112,7 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 }
 void BuildSceneBVH(GRAPHICSTHREAD threadID)
 {
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	sceneBVH.Build(scene, threadID);
 }
@@ -7368,15 +7382,16 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 void GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->EventBegin("Cloud Generator", threadID);
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("Cloud Generator", threadID);
 
 	TextureDesc src_desc = wiTextureHelper::getRandom64x64()->GetDesc();
 
 	TextureDesc dst_desc = dst->GetDesc();
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
-	GetDevice()->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
-	GetDevice()->BindUAV(CS, dst, 0, threadID);
+	device->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
+	device->BindUAV(CS, dst, 0, threadID);
 
 	CloudGeneratorCB cb;
 	cb.xNoiseTexDim = XMFLOAT2((float)src_desc.Width, (float)src_desc.Height);
@@ -7389,23 +7404,22 @@ void GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAP
 	{
 		cb.xRefinementCount = refinementCount;
 	}
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, threadID);
-	GetDevice()->BindConstantBuffer(CS, constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), threadID);
+	device->UpdateBuffer(constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, threadID);
+	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), threadID);
 
-	GetDevice()->BindComputePSO(CPSO[CSTYPE_CLOUDGENERATOR], threadID);
-	GetDevice()->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, threadID);
+	device->BindComputePSO(CPSO[CSTYPE_CLOUDGENERATOR], threadID);
+	device->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, threadID);
 
-	GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	GetDevice()->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	device->UnbindUAVs(0, 1, threadID);
 
 
-	GetDevice()->EventEnd(threadID);
+	device->EventEnd(threadID);
 }
 
 void ManageDecalAtlas(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-
 
 	static std::unique_ptr<Texture2D> atlasTexture;
 	bool repackAtlas = false;
@@ -8035,25 +8049,29 @@ void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 }
 void BindGBufferTextures(Texture2D* slot0, Texture2D* slot1, Texture2D* slot2, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
-	GetDevice()->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
-	GetDevice()->BindResource(PS, slot2, TEXSLOT_GBUFFER2, threadID);
+	GraphicsDevice* device = GetDevice();
 
-	GetDevice()->BindResource(CS, slot0, TEXSLOT_GBUFFER0, threadID);
-	GetDevice()->BindResource(CS, slot1, TEXSLOT_GBUFFER1, threadID);
-	GetDevice()->BindResource(CS, slot2, TEXSLOT_GBUFFER2, threadID);
+	device->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
+	device->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
+	device->BindResource(PS, slot2, TEXSLOT_GBUFFER2, threadID);
+
+	device->BindResource(CS, slot0, TEXSLOT_GBUFFER0, threadID);
+	device->BindResource(CS, slot1, TEXSLOT_GBUFFER1, threadID);
+	device->BindResource(CS, slot2, TEXSLOT_GBUFFER2, threadID);
 }
 void BindDepthTextures(Texture2D* depth, Texture2D* linearDepth, GRAPHICSTHREAD threadID)
 {
-	GetDevice()->BindResource(PS, depth, TEXSLOT_DEPTH, threadID);
-	GetDevice()->BindResource(VS, depth, TEXSLOT_DEPTH, threadID);
-	GetDevice()->BindResource(GS, depth, TEXSLOT_DEPTH, threadID);
-	GetDevice()->BindResource(CS, depth, TEXSLOT_DEPTH, threadID);
+	GraphicsDevice* device = GetDevice();
 
-	GetDevice()->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	GetDevice()->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	GetDevice()->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	GetDevice()->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	device->BindResource(PS, depth, TEXSLOT_DEPTH, threadID);
+	device->BindResource(VS, depth, TEXSLOT_DEPTH, threadID);
+	device->BindResource(GS, depth, TEXSLOT_DEPTH, threadID);
+	device->BindResource(CS, depth, TEXSLOT_DEPTH, threadID);
+
+	device->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	device->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	device->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
 }
 
 

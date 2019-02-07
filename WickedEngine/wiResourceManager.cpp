@@ -33,17 +33,17 @@ wiResourceManager& wiResourceManager::GetShaderManager()
 
 const wiResourceManager::Resource* wiResourceManager::get(const wiHashString& name, bool incRefCount)
 {
-	LOCK();
+	lock.lock();
 	auto& it = resources.find(name);
 	if (it != resources.end())
 	{
 		if(incRefCount)
 			it->second->refCount++;
-		UNLOCK();
+		lock.unlock();
 		return it->second;
 	}
 
-	UNLOCK();
+	lock.unlock();
 	return nullptr;
 }
 
@@ -350,9 +350,9 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 
 		if (success != nullptr)
 		{
-			LOCK();
+			lock.lock();
 			resources.insert(pair<wiHashString, Resource*>(name, new Resource(success, type)));
-			UNLOCK();
+			lock.unlock();
 		}
 
 		return success;
@@ -363,21 +363,21 @@ void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 
 bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 {
-	LOCK();
+	lock.lock();
 	Resource* res = nullptr;
 	auto& it = resources.find(name);
 	if (it != resources.end())
 		res = it->second;
 	else
 	{
-		UNLOCK();
+		lock.unlock();
 		return false;
 	}
-	UNLOCK();
+	lock.unlock();
 
 	if(res && (res->refCount<=1 || forceDelete))
 	{
-		LOCK();
+		lock.lock();
 		bool success = true;
 
 		if(res->data)
@@ -421,7 +421,7 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 		delete res;
 		resources.erase(name);
 
-		UNLOCK();
+		lock.unlock();
 
 		return success;
 	}
@@ -434,14 +434,14 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 
 bool wiResourceManager::Register(const wiHashString& name, void* resource, Data_Type newType)
 {
-	LOCK();
+	lock.lock();
 	if (resources.find(name) == resources.end())
 	{
 		resources.insert(make_pair(name, new Resource(resource, newType)));
-		UNLOCK();
+		lock.unlock();
 		return true;
 	}
-	UNLOCK();
+	lock.unlock();
 
 	return false;
 }
@@ -460,8 +460,8 @@ bool wiResourceManager::Clear()
 	{
 		del(x);
 	}
-	LOCK();
+	lock.lock();
 	resources.clear();
-	UNLOCK();
+	lock.unlock();
 	return true;
 }

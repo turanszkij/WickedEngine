@@ -7,6 +7,7 @@
 #include "wiBackLog.h"
 #include "wiTextureHelper.h"
 #include "wiRectPacker.h"
+#include "wiSpinLock.h"
 
 #include "Utility/stb_truetype.h"
 

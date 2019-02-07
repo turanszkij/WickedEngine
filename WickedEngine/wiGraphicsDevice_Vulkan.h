@@ -4,6 +4,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
+#include "wiSpinLock.h"
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice_SharedInternals.h"
@@ -156,8 +157,7 @@ namespace wiGraphicsTypes
 			struct ResourceFrameAllocator
 			{
 				VkDevice				device;
-				VkBuffer				resource;
-				VkDeviceMemory			resourceMemory;
+				GPUBuffer				buffer;
 				uint8_t*				dataBegin;
 				uint8_t*				dataCur;
 				uint8_t*				dataEnd;
@@ -176,7 +176,7 @@ namespace wiGraphicsTypes
 		VkCommandBuffer GetDirectCommandList(GRAPHICSTHREAD threadID);
 
 
-		struct UploadBuffer : wiThreadSafeManager
+		struct UploadBuffer
 		{
 			VkDevice				device;
 			VkBuffer				resource;
@@ -184,6 +184,7 @@ namespace wiGraphicsTypes
 			uint8_t*				dataBegin;
 			uint8_t*				dataCur;
 			uint8_t*				dataEnd;
+			wiSpinLock				lock;
 
 			UploadBuffer(VkPhysicalDevice physicalDevice, VkDevice device, const QueueFamilyIndices& queueIndices, size_t size);
 			~UploadBuffer();

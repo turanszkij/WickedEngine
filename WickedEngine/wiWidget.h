@@ -3,7 +3,7 @@
 #include "wiHashString.h"
 #include "wiColor.h"
 #include "wiGraphicsDevice.h"
-#include "wiIntersectables.h"
+#include "wiIntersect.h"
 #include "wiSceneSystem.h"
 
 #include <string>

@@ -1512,6 +1512,13 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type windo
 
 	CreateBackBufferResources();
 
+	// Temporary allocations will use the following buffer type:
+	frameAllocatorDesc.ByteWidth = 4 * 1024 * 1024;
+	frameAllocatorDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_INDEX_BUFFER | BIND_VERTEX_BUFFER;
+	frameAllocatorDesc.Usage = USAGE_DYNAMIC;
+	frameAllocatorDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+	frameAllocatorDesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
 	// Create temporary allocator:
 	CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer);
 	SetName(&frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer, "frame_allocator[immediate]");

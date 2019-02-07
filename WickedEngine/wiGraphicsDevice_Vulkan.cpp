@@ -704,13 +704,13 @@ namespace wiGraphicsTypes
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.flags = 0;
 
-		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, &resource);
+		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, (VkBuffer*)&buffer.resource);
 		assert(res == VK_SUCCESS);
 
 
 		// Allocate resource backing memory:
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, resource, &memRequirements);
+		vkGetBufferMemoryRequirements(device, (VkBuffer)buffer.resource, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -718,11 +718,11 @@ namespace wiGraphicsTypes
 		allocInfo.memoryTypeIndex = findMemoryType(physicalDevice, memRequirements.memoryTypeBits,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-		if (vkAllocateMemory(device, &allocInfo, nullptr, &resourceMemory) != VK_SUCCESS) {
+		if (vkAllocateMemory(device, &allocInfo, nullptr, (VkDeviceMemory*)&buffer.resourceMemory) != VK_SUCCESS) {
 			throw std::runtime_error("failed to allocate staging memory!");
 		}
 
-		res = vkBindBufferMemory(device, resource, resourceMemory, 0);
+		res = vkBindBufferMemory(device, (VkBuffer)buffer.resource, (VkDeviceMemory)buffer.resourceMemory, 0);
 		assert(res == VK_SUCCESS);
 
 
@@ -732,13 +732,13 @@ namespace wiGraphicsTypes
 		//
 		// No CPU reads will be done from the resource.
 		//
-		vkMapMemory(device, resourceMemory, 0, bufferInfo.size, 0, &pData);
-		dataCur = dataBegin = reinterpret_cast< UINT8* >(pData);
+		vkMapMemory(device, (VkDeviceMemory)buffer.resourceMemory, 0, bufferInfo.size, 0, &pData);
+		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
 		dataEnd = dataBegin + size;
 	}
 	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
 	{
-		vkDestroyBuffer(device, resource, nullptr);
+		vkDestroyBuffer(device, (VkBuffer)buffer.resource, nullptr);
 	}
 	uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{
@@ -821,7 +821,7 @@ namespace wiGraphicsTypes
 	}
 	uint8_t* GraphicsDevice_Vulkan::UploadBuffer::allocate(size_t dataSize, size_t alignment)
 	{
-		LOCK();
+		lock.lock();
 
 		//dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
 
@@ -832,15 +832,15 @@ namespace wiGraphicsTypes
 
 		dataCur += dataSize;
 
-		UNLOCK();
+		lock.unlock();
 
 		return retVal;
 	}
 	void GraphicsDevice_Vulkan::UploadBuffer::clear()
 	{
-		LOCK();
+		lock.lock();
 		dataCur = dataBegin;
-		UNLOCK();
+		lock.unlock();
 	}
 	uint64_t GraphicsDevice_Vulkan::UploadBuffer::calculateOffset(uint8_t* address)
 	{
@@ -2161,7 +2161,7 @@ namespace wiGraphicsTypes
 				// Create immediate resource allocators:
 				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
 				{
-					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 256 * 1024 * 1024);
+					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
 				}
 
 
@@ -2335,10 +2335,6 @@ namespace wiGraphicsTypes
 				frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 			}
 		}
-
-		// Create temporary allocator:
-		CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer);
-		SetName(&frame_allocators[GRAPHICSTHREAD_IMMEDIATE].buffer, "frame_allocator[immediate]");
 
 
 		// Initiate first commands:
@@ -4949,6 +4945,12 @@ namespace wiGraphicsTypes
 	}
 	void GraphicsDevice_Vulkan::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 	{
+		// This will fully update the buffer on the GPU timeline
+		//	But on the CPU side we need to keep the in flight data versioned, and we use the temporary buffer for that
+		//	This is like a USAGE_DEFAULT buffer updater on DX11
+		// TODO: USAGE_DYNAMIC would not use GPU copies, but then it would need to handle assigning descriptor pointer dynamically. 
+		//	However, now descriptors are created ahead of time in CreateBuffer
+
 		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 
@@ -5017,7 +5019,7 @@ namespace wiGraphicsTypes
 		copyRegion.srcOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
 		copyRegion.dstOffset = 0;
 
-		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource, 
+		vkCmdCopyBuffer(GetDirectCommandList(threadID), (VkBuffer)GetFrameResources().resourceBuffer[threadID]->buffer.resource, 
 			(VkBuffer)buffer->resource, 1, &copyRegion);
 
 
@@ -5039,8 +5041,6 @@ namespace wiGraphicsTypes
 			0, nullptr
 		);
 
-
-		//renderPass[threadID].validate(device, GetDirectCommandList(threadID));
 
 	}
 	bool GraphicsDevice_Vulkan::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
@@ -5146,9 +5146,10 @@ namespace wiGraphicsTypes
 
 	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID)
 	{
-		GPUAllocator& allocator = frame_allocators[threadID];
-		assert(allocator.buffer.desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
+		// This case allocates a CPU write access and GPU read access memory from the temporary buffer
+		// The application can write into this, but better to not read from it
 
+		FrameResources::ResourceFrameAllocator& allocator = *GetFrameResources().resourceBuffer[threadID];
 		GPUAllocation result;
 
 		if (dataSize == 0)
@@ -5156,109 +5157,12 @@ namespace wiGraphicsTypes
 			return result;
 		}
 
-		allocator.dirty = true;
+		uint8_t* dest = allocator.allocate(dataSize, 256);
 
-
-		dataSize = min(allocator.buffer.desc.ByteWidth, dataSize);
-
-		size_t position = allocator.byteOffset;
-		bool wrap = position + dataSize > allocator.buffer.desc.ByteWidth || allocator.residentFrame != FRAMECOUNT;
-		position = wrap ? 0 : position;
-
-		// TODO: realloc on wrap or something
-
-
-
-
-
-		renderPass[threadID].disable(GetDirectCommandList(threadID));
-
-
-
-
-		VkPipelineStageFlags stages = 0;
-
-		VkBufferMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.buffer = (VkBuffer)allocator.buffer.resource;
-		barrier.srcAccessMask = 0;
-		if (allocator.buffer.desc.BindFlags & BIND_CONSTANT_BUFFER)
-		{
-			barrier.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
-			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-		}
-		else if (allocator.buffer.desc.BindFlags & BIND_VERTEX_BUFFER)
-		{
-			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
-			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-		}
-		else if (allocator.buffer.desc.BindFlags & BIND_INDEX_BUFFER)
-		{
-			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
-			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-		}
-		else
-		{
-			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-		}
-		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-		vkCmdPipelineBarrier(
-			GetDirectCommandList(threadID),
-			stages,
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_DEPENDENCY_BY_REGION_BIT,
-			0, nullptr,
-			1, &barrier,
-			0, nullptr
-		);
-
-
-
-		// provide immediate buffer allocation address and issue deferred data copy:
-		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, 256);
-
-		VkBufferCopy copyRegion = {};
-		copyRegion.size = dataSize;
-		copyRegion.srcOffset = GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest);
-		copyRegion.dstOffset = position;
-
-		vkCmdCopyBuffer(GetDirectCommandList(threadID), GetFrameResources().resourceBuffer[threadID]->resource,
-			(VkBuffer)allocator.buffer.resource, 1, &copyRegion);
-
-
-
-
-
-
-
-		VkAccessFlags tmp = barrier.srcAccessMask;
-		barrier.srcAccessMask = barrier.dstAccessMask;
-		barrier.dstAccessMask = tmp;
-
-		vkCmdPipelineBarrier(
-			GetDirectCommandList(threadID),
-			VK_PIPELINE_STAGE_TRANSFER_BIT,
-			stages,
-			VK_DEPENDENCY_BY_REGION_BIT,
-			0, nullptr,
-			1, &barrier,
-			0, nullptr
-		);
-
-
-		//renderPass[threadID].validate(device, GetDirectCommandList(threadID));
-
-
-		allocator.byteOffset = position + dataSize;
-		allocator.residentFrame = FRAMECOUNT;
-
+		assert(dest != nullptr); // todo: this needs to be handled as well
 
 		result.buffer = &allocator.buffer;
-		result.offset = (UINT)position;
+		result.offset = (UINT)allocator.calculateOffset(dest);
 		result.data = (void*)dest;
 		return result;
 	}

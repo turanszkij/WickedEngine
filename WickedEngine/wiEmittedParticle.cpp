@@ -3,7 +3,7 @@
 #include "wiSceneSystem.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "wiFrustum.h"
+#include "wiIntersect.h"
 #include "wiRandom.h"
 #include "ResourceMapping.h"
 #include "wiArchive.h"
@@ -582,7 +582,7 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 }
 
 
-void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID)
+void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", threadID);

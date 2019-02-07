@@ -267,7 +267,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersectables.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHashString.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.h" />
@@ -324,7 +324,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFadeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiFrustum.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDescriptors.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h" />
@@ -367,7 +366,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
@@ -661,7 +659,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiFrustum.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsResource.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp" />
@@ -672,7 +669,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersectables.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp" />
@@ -700,7 +697,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiThreadSafeManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTimer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp" />

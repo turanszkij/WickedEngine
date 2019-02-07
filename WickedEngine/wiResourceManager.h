@@ -1,13 +1,15 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiThreadSafeManager.h"
 #include "wiGraphicsDevice.h"
 #include "wiHashString.h"
 
+#include <mutex>
 #include <unordered_map>
 
-class wiResourceManager : public wiThreadSafeManager
+class wiResourceManager
 {
+private:
+	std::mutex lock;
 public:
 	enum Data_Type{
 		DYNAMIC,

@@ -3,6 +3,7 @@
 #include "wiRandom.h"
 #include "wiColor.h"
 #include "wiBackLog.h"
+#include "wiSpinLock.h"
 
 #include <unordered_map>
 

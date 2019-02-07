@@ -102,9 +102,9 @@ namespace wiRenderer
 	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(GRAPHICSTHREAD threadID);
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, SHADERTYPE shaderType, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, SHADERTYPE shaderType, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
@@ -118,7 +118,7 @@ namespace wiRenderer
 	// Draw volumetric light scattering effects. Linear depth should be already readable (see BindDepthTextures())
 	void DrawVolumeLights(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	// Draw Lens Flares for lights that have them enabled. Linear depth should be already readable (see BindDepthTextures())
-	void DrawLensFlares(GRAPHICSTHREAD threadID);
+	void DrawLensFlares(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	// Draw deferred decals. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
 	void DrawDecals(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	// Call once per frame to re-render out of date environment probes

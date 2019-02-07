@@ -4,6 +4,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
+#include "wiSpinLock.h"
 
 #include <dxgi1_4.h>
 #include <d3d12.h>
@@ -34,7 +35,7 @@ namespace wiGraphicsTypes
 		ID3D12CommandSignature*		drawInstancedIndirectCommandSignature = nullptr;
 		ID3D12CommandSignature*		drawIndexedInstancedIndirectCommandSignature = nullptr;
 
-		struct DescriptorAllocator : public wiThreadSafeManager
+		struct DescriptorAllocator
 		{
 			ID3D12DescriptorHeap*	heap = nullptr;
 			size_t					heap_begin;
@@ -43,6 +44,7 @@ namespace wiGraphicsTypes
 			UINT					itemSize;
 			bool*					itemsAlive = nullptr;
 			uint32_t				lastAlloc;
+			wiSpinLock				lock;
 
 			DescriptorAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxCount);
 			~DescriptorAllocator();
@@ -87,7 +89,7 @@ namespace wiGraphicsTypes
 
 			struct ResourceFrameAllocator
 			{
-				ID3D12Resource*			resource = nullptr;
+				GPUBuffer				buffer;
 				uint8_t*				dataBegin = nullptr;
 				uint8_t*				dataCur = nullptr;
 				uint8_t*				dataEnd = nullptr;
@@ -111,12 +113,13 @@ namespace wiGraphicsTypes
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
 
-		struct UploadBuffer : wiThreadSafeManager
+		struct UploadBuffer
 		{
 			ID3D12Resource*			resource = nullptr;
 			uint8_t*				dataBegin = nullptr;
 			uint8_t*				dataCur = nullptr;
 			uint8_t*				dataEnd = nullptr;
+			wiSpinLock				lock;
 
 			UploadBuffer(ID3D12Device* device, size_t size);
 			~UploadBuffer();

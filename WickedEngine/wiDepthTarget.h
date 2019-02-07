@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 
+#include <memory>
+
 class wiDepthTarget
 {
 private:

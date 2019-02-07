@@ -2,7 +2,6 @@
 #define _GRAPHICSDEVICE_H_
 
 #include "CommonInclude.h"
-#include "wiThreadSafeManager.h"
 #include "wiEnums.h"
 #include "wiGraphicsDescriptors.h"
 #include "wiGraphicsResource.h"
@@ -27,17 +26,7 @@ namespace wiGraphicsTypes
 		bool RASTERIZER_ORDERED_VIEWS = false;
 		bool UNORDEREDACCESSTEXTURE_LOAD_EXT = false;
 
-		struct GPUAllocator
-		{
-			GPUBuffer buffer;
-			size_t byteOffset = 0;
-			uint64_t residentFrame = 0;
-			bool dirty = false;
-		} frame_allocators[GRAPHICSTHREAD_COUNT];
-		GPUBufferDesc frameAllocatorDesc;
-
 	public:
-		GraphicsDevice();
 
 		virtual HRESULT CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) = 0;
 		virtual HRESULT CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D) = 0;

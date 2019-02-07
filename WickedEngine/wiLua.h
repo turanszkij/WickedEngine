@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiThreadSafeManager.h"
 
 extern "C"
 {
@@ -9,15 +8,18 @@ extern "C"
 #include "LUA\lauxlib.h"
 }
 
+#include <mutex>
+
 typedef int(*lua_CFunction) (lua_State *L);
 
-class wiLua : public wiThreadSafeManager
+class wiLua
 {
 private:
 	lua_State *m_luaState;
 	int m_status; //last call status
 
-	static wiLua* globalLua;
+	std::mutex lock;
+
 	static int DebugOut(lua_State *L);
 
 	//run the previously loaded script

@@ -5,6 +5,8 @@
 #include "wiGraphicsDevice.h"
 #include "wiSceneSystem_Decl.h"
 
+#include <memory>
+
 class wiGPUBVH
 {
 private:
