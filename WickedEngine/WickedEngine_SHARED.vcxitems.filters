@@ -1134,7 +1134,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\wiIntersect.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1913,7 +1913,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="C:\PROJECTS\WickedEngine\WickedEngine\wiIntersect.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
   </ItemGroup>

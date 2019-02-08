@@ -156,14 +156,17 @@ namespace wiGraphicsTypes
 
 		struct GPUAllocation
 		{
-			void* data = nullptr;				// application can write to this, but not read. offsetIntoBuffer is already applied
+			void* data = nullptr;				// application can write to this, but not read. The offset is already applied
 			GPUBuffer* buffer = nullptr;		// application can bind it to the GPU
 			UINT offset = 0;					// allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer != nullptr; }
 		};
-		// Allocates temporary memory that the CPU can write and GPU can read. It is only alive for one frame and automatically invalidated after that.
+		// Allocates temporary memory that the CPU can write and GPU can read. 
+		//	It is only alive for one frame and automatically invalidated after that.
+		//	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
+		//	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
 		virtual GPUAllocation AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID) = 0;
 		
 		virtual void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) = 0;

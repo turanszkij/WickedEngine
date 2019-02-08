@@ -702,6 +702,10 @@ namespace wiGraphicsTypes
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		bufferInfo.flags = 0;
 
 		VkResult res = vkCreateBuffer(device, &bufferInfo, nullptr, (VkBuffer*)&buffer.resource);
@@ -735,6 +739,12 @@ namespace wiGraphicsTypes
 		vkMapMemory(device, (VkDeviceMemory)buffer.resourceMemory, 0, bufferInfo.size, 0, &pData);
 		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
 		dataEnd = dataBegin + size;
+
+		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
+		buffer.desc.ByteWidth = (UINT)((size_t)dataEnd - (size_t)dataBegin);
+		buffer.desc.Usage = USAGE_DYNAMIC;
+		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	}
 	GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
 	{
@@ -743,7 +753,11 @@ namespace wiGraphicsTypes
 	uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{
 		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
-		assert(dataCur + dataSize <= dataEnd);
+
+		if (dataCur + dataSize > dataEnd)
+		{
+			return nullptr; // failed allocation
+		}
 
 		uint8_t* retVal = dataCur;
 

@@ -3641,7 +3641,7 @@ void UpdatePerFrameData(float dt)
 void UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene();
+	Scene& scene = GetScene(); // this is not const, so that means that later render passes will depend on this
 
 	// Process deferred MIP generation:
 	deferredMIPGenLock.lock();
@@ -3817,7 +3817,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				break;
 			}
 
-			EnvironmentProbeComponent& probe = scene.probes[probeIndex];
+			const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 			if (probe.textureIndex < 0)
 			{
 				continue;
@@ -3925,7 +3925,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
-			MeshComponent& mesh = scene.meshes[i];
+			const MeshComponent& mesh = scene.meshes[i];
 
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
@@ -4011,7 +4011,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
 	{
 		Entity entity = scene.softbodies.GetEntity(i);
-		MeshComponent& mesh = *scene.meshes.GetComponent(entity);
+		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
 		// Copy new simulation data to vertex buffer
 		const size_t vb_size = sizeof(MeshComponent::Vertex_POS) * mesh.vertex_positions.size();
@@ -4610,29 +4610,34 @@ void DrawLensFlares(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	const Scene& scene = GetScene();
 
-	for(uint32_t lightIndex : culling.culledLights)
+	for (uint32_t lightIndex : culling.culledLights)
 	{
 		const LightComponent& light = scene.lights[lightIndex];
 
-		if(!light.lensFlareRimTextures.empty())
+		if (!light.lensFlareRimTextures.empty())
 		{
 			XMVECTOR POS;
 
-			if(light.GetType() ==LightComponent::POINT || light.GetType() ==LightComponent::SPOT)
+			if (light.GetType() == LightComponent::POINT || light.GetType() == LightComponent::SPOT)
 			{
+				// point and spotlight flare will be placed to the source position:
 				POS = XMLoadFloat3(&light.position);
 			}
-
-			else{
+			else 
+			{
+				// directional light flare will be placed at infinite position along direction vector:
 				POS = XMVector3Normalize(
 					-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))
 				) * 100000;
 			}
-			
-			XMVECTOR flarePos = XMVector3Project(POS,0.f,0.f,(float)GetInternalResolution().x,(float)GetInternalResolution().y,0.0f,1.0f, camera.GetRealProjection(), camera.GetView(),XMMatrixIdentity());
 
-			if( XMVectorGetX(XMVector3Dot( XMVectorSubtract(POS, camera.GetEye()), camera.GetAt() ))>0 )
-				wiLensFlare::Draw(threadID,flarePos,light.lensFlareRimTextures);
+			// Get the screen position of the flare:
+			XMVECTOR flarePos = XMVector3Project(POS, 0.f, 0.f, (float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.0f, 1.0f, camera.GetRealProjection(), camera.GetView(), XMMatrixIdentity());
+
+			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, camera.GetEye()), camera.GetAt())) > 0) // check if the camera is facing towards the flare or not
+			{
+				wiLensFlare::Draw(threadID, flarePos, light.lensFlareRimTextures);
+			}
 
 		}
 
@@ -4739,7 +4744,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		const float transparentShadowClearColor[] = { 1,1,1,0 };
 
 
-		Scene& scene = GetScene();
+		const Scene& scene = GetScene();
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
@@ -6897,7 +6902,7 @@ std::unique_ptr<Texture2D> globalMaterialAtlas;
 void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	using namespace wiRectPacker;
 	static unordered_set<Texture2D*> sceneTextures;
@@ -7119,7 +7124,7 @@ void BuildSceneBVH(GRAPHICSTHREAD threadID)
 void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	device->EventBegin("DrawTracedScene", threadID);
 
@@ -8172,7 +8177,7 @@ RAY GetPickRay(long cursorX, long cursorY)
 
 RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask, uint32_t layerMask)
 {
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 
 	RayIntersectWorldResult result;
 
@@ -8343,7 +8348,7 @@ Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix, b
 		{
 			// Apply the optional transformation matrix to the new scene:
 
-			// Then all unparented(root) transforms will be parented to "parent"
+			// Parent all unparented(root) transforms to "parent"
 			for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "parent"
 			{
 				Entity entity = scene.transforms.GetEntity(i);
@@ -8353,7 +8358,7 @@ Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix, b
 				}
 			}
 
-			// The parent component is transformed, scene is updated, then parent is deleted:
+			// The parent component is transformed, scene is updated:
 			scene.transforms.GetComponent(parent)->MatrixTransform(transformMatrix);
 			scene.Update(0);
 		}
@@ -8484,7 +8489,7 @@ void SetOceanEnabled(bool enabled)
 
 	if (enabled)
 	{
-		Scene& scene = GetScene();
+		const Scene& scene = GetScene();
 		ocean = new wiOcean(scene.weather);
 	}
 }

@@ -1440,6 +1440,12 @@ namespace wiGraphicsTypes
 		((ID3D12Resource*)buffer.resource)->Map(0, &readRange, &pData);
 		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
 		dataEnd = dataBegin + size;
+
+		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
+		buffer.desc.ByteWidth = (UINT)((size_t)dataEnd - (size_t)dataBegin);
+		buffer.desc.Usage = USAGE_DYNAMIC;
+		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 	}
 	GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::~ResourceFrameAllocator()
 	{
@@ -1452,7 +1458,11 @@ namespace wiGraphicsTypes
 	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{
 		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
-		assert(dataCur + dataSize <= dataEnd);
+
+		if (dataCur + dataSize > dataEnd)
+		{
+			return nullptr; // failed allocation
+		}
 
 		uint8_t* retVal = dataCur;
 
@@ -3920,8 +3930,6 @@ namespace wiGraphicsTypes
 		// The application can write into this, but better to not read from it
 
 		FrameResources::ResourceFrameAllocator& allocator = *GetFrameResources().resourceBuffer[threadID];
-		assert(allocator.buffer.desc.ByteWidth > dataSize && "Data of the required size cannot fit!");
-
 		GPUAllocation result;
 
 		if (dataSize == 0)
