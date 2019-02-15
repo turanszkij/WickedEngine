@@ -1371,7 +1371,7 @@ inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
 
 
 // Local Helpers:
-const void* const __nullBlob[1024] = {}; // this is initialized to nullptrs!
+const void* const __nullBlob[128] = {}; // this is initialized to nullptrs and used to unbind resources!
 
 
 
@@ -1591,6 +1591,7 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 
 HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 {
+	pBuffer->type = GPUResource::BUFFER;
 	pBuffer->Register(this);
 
 	D3D11_BUFFER_DESC desc; 
@@ -1698,6 +1699,7 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 }
 HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
 {
+	pTexture1D->type = GPUResource::TEXTURE_1D;
 	pTexture1D->Register(this);
 
 	pTexture1D->desc = *pDesc;
@@ -1747,6 +1749,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const Sub
 }
 HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
 {
+	pTexture2D->type = GPUResource::TEXTURE_2D;
 	pTexture2D->Register(this);
 
 	pTexture2D->desc = *pDesc;
@@ -1860,6 +1863,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 }
 HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
 {
+	pTexture3D->type = GPUResource::TEXTURE_3D;
 	pTexture3D->Register(this);
 
 	pTexture3D->desc = *pDesc;
@@ -2553,7 +2557,7 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 		desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
 		desc[i].InputSlot = pInputElementDescs[i].InputSlot;
 		desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
-		if (desc[i].AlignedByteOffset == APPEND_ALIGNED_ELEMENT)
+		if (desc[i].AlignedByteOffset == VertexLayoutDesc::APPEND_ALIGNED_ELEMENT)
 			desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
 		desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
 		desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
@@ -2772,14 +2776,21 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 	HRESULT hr = E_FAIL;
 
 	pQuery->desc = *pDesc;
-	pQuery->async_frameshift = pQuery->desc.async_latency;
 
 	D3D11_QUERY_DESC desc;
 	desc.MiscFlags = 0;
-	desc.Query = D3D11_QUERY_OCCLUSION_PREDICATE;
-	if (pDesc->Type == GPU_QUERY_TYPE_OCCLUSION)
+	desc.Query = D3D11_QUERY_EVENT;
+	if (pDesc->Type == GPU_QUERY_TYPE_EVENT)
+	{
+		desc.Query = D3D11_QUERY_EVENT;
+	}
+	else if (pDesc->Type == GPU_QUERY_TYPE_OCCLUSION)
 	{
 		desc.Query = D3D11_QUERY_OCCLUSION;
+	}
+	else if (pDesc->Type == GPU_QUERY_TYPE_OCCLUSION_PREDICATE)
+	{
+		desc.Query = D3D11_QUERY_OCCLUSION_PREDICATE;
 	}
 	else if (pDesc->Type == GPU_QUERY_TYPE_TIMESTAMP)
 	{
@@ -2790,23 +2801,8 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 		desc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
 	}
 
-	if (pQuery->desc.async_latency > 0)
-	{
-		pQuery->resource.resize(pQuery->desc.async_latency + 1);
-		pQuery->active.resize(pQuery->desc.async_latency + 1);
-		for (size_t i = 0; i < pQuery->resource.size(); ++i)
-		{
-			hr = device->CreateQuery(&desc, (ID3D11Query**)&pQuery->resource[i]);
-			assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
-		}
-	}
-	else
-	{
-		pQuery->resource.resize(1);
-		pQuery->active.resize(1);
-		hr = device->CreateQuery(&desc, (ID3D11Query**)&pQuery->resource[0]);
-		assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
-	}
+	hr = device->CreateQuery(&desc, (ID3D11Query**)&pQuery->resource);
+	assert(SUCCEEDED(hr) && "GPUQuery creation failed!");
 
 	return hr;
 }
@@ -2995,12 +2991,9 @@ void GraphicsDevice_DX11::DestroySamplerState(Sampler *pSamplerState)
 }
 void GraphicsDevice_DX11::DestroyQuery(GPUQuery *pQuery)
 {
-	for (auto& x : pQuery->resource)
+	if (pQuery->resource != WI_NULL_HANDLE)
 	{
-		if (x != WI_NULL_HANDLE)
-		{
-			((ID3D11Query*)x)->Release();
-		}
+		((ID3D11Query*)pQuery->resource)->Release();
 	}
 }
 void GraphicsDevice_DX11::DestroyGraphicsPSO(GraphicsPSO* pso)
@@ -3184,7 +3177,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 	}
 	deviceContexts[threadID]->RSSetViewports(NumViewports, d3dViewPorts);
 }
-void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppRenderTargets, Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
 	ID3D11RenderTargetView* renderTargetViews[8];
@@ -3233,7 +3226,7 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, Texture2D* const *ppR
 		deviceContexts[threadID]->OMSetRenderTargets(NumViews, renderTargetViews, depthStencilView);
 	}
 }
-void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (arrayIndex < 0)
 	{
@@ -3245,7 +3238,7 @@ void GraphicsDevice_DX11::ClearRenderTarget(Texture* pTexture, const FLOAT Color
 		deviceContexts[threadID]->ClearRenderTargetView((ID3D11RenderTargetView*)pTexture->additionalRTVs[arrayIndex], ColorRGBA);
 	}
 }
-void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	UINT _flags = 0;
 	if (ClearFlags & CLEAR_DEPTH)
@@ -3263,7 +3256,7 @@ void GraphicsDevice_DX11::ClearDepthStencil(Texture2D* pTexture, UINT ClearFlags
 		deviceContexts[threadID]->ClearDepthStencilView((ID3D11DepthStencilView*)pTexture->additionalDSVs[arrayIndex], _flags, Depth, Stencil);
 	}
 }
-void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
 	{
@@ -3305,11 +3298,11 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, GPUResource* resource,
 		}
 	}
 }
-void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID)
 {
 	assert(count <= 8);
 	ID3D11ShaderResourceView* srvs[8];
-	for (int i = 0; i < count; ++i)
+	for (UINT i = 0; i < count; ++i)
 	{
 		srvs[i] = resources[i] != nullptr ? (ID3D11ShaderResourceView*)resources[i]->SRV : nullptr;
 	}
@@ -3339,7 +3332,7 @@ void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, GPUResource *const* r
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, GPUResource* resource, int slot, GRAPHICSTHREAD threadID, int arrayIndex)
+void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	if (resource != nullptr)
 	{
@@ -3367,11 +3360,11 @@ void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, GPUResource* resource, int 
 		}
 	}
 }
-void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, GPUResource *const* resources, int slot, int count, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID)
 {
 	assert(slot + count <= 8);
 	ID3D11UnorderedAccessView* uavs[8];
-	for (int i = 0; i < count; ++i)
+	for (UINT i = 0; i < count; ++i)
 	{
 		uavs[i] = resources[i] != nullptr ? (ID3D11UnorderedAccessView*)resources[i]->UAV : nullptr;
 
@@ -3391,7 +3384,7 @@ void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, GPUResource *const* resour
 		raster_uavs_count[threadID] = max(raster_uavs_count[threadID], count);
 	}
 }
-void GraphicsDevice_DX11::UnbindResources(int slot, int num, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::UnbindResources(UINT slot, UINT num, GRAPHICSTHREAD threadID)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[threadID]->PSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
@@ -3401,7 +3394,7 @@ void GraphicsDevice_DX11::UnbindResources(int slot, int num, GRAPHICSTHREAD thre
 	deviceContexts[threadID]->DSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 	deviceContexts[threadID]->CSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
 }
-void GraphicsDevice_DX11::UnbindUAVs(int slot, int num, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::UnbindUAVs(UINT slot, UINT num, GRAPHICSTHREAD threadID)
 {
 	assert(num <= ARRAYSIZE(__nullBlob) && "Extend nullBlob to support more resource unbinding!");
 	deviceContexts[threadID]->CSSetUnorderedAccessViews(slot, num, (ID3D11UnorderedAccessView**)__nullBlob, 0);
@@ -3409,7 +3402,7 @@ void GraphicsDevice_DX11::UnbindUAVs(int slot, int num, GRAPHICSTHREAD threadID)
 	raster_uavs_count[threadID] = 0;
 	raster_uavs_slot[threadID] = 8;
 }
-void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, Sampler* sampler, int slot, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, GRAPHICSTHREAD threadID)
 {
 	ID3D11SamplerState* SAM = (ID3D11SamplerState*)sampler->resource;
 
@@ -3438,7 +3431,7 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, Sampler* sampler, int s
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffer, int slot, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, GRAPHICSTHREAD threadID)
 {
 	ID3D11Buffer* res = buffer ? (ID3D11Buffer*)buffer->resource : nullptr;
 	switch (stage)
@@ -3466,17 +3459,17 @@ void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, GPUBuffer* buffe
 		break;
 	}
 }
-void GraphicsDevice_DX11::BindVertexBuffers(GPUBuffer* const *vertexBuffers, int slot, int count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
 {
 	assert(count <= 8);
 	ID3D11Buffer* res[8] = { 0 };
-	for (int i = 0; i < count; ++i)
+	for (UINT i = 0; i < count; ++i)
 	{
 		res[i] = vertexBuffers[i] != nullptr ? (ID3D11Buffer*)vertexBuffers[i]->resource : nullptr;
 	}
-	deviceContexts[threadID]->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const UINT*>(__nullBlob)));
+	deviceContexts[threadID]->IASetVertexBuffers(slot, count, res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const UINT*>(__nullBlob)));
 }
-void GraphicsDevice_DX11::BindIndexBuffer(GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
 {
 	ID3D11Buffer* res = indexBuffer != nullptr ? (ID3D11Buffer*)indexBuffer->resource : nullptr;
 	deviceContexts[threadID]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
@@ -3485,11 +3478,14 @@ void GraphicsDevice_DX11::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
 {
 	stencilRef[threadID] = value;
 }
-void GraphicsDevice_DX11::BindBlendFactor(XMFLOAT4 value, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindBlendFactor(float r, float g, float b, float a, GRAPHICSTHREAD threadID)
 {
-	blendFactor[threadID] = value;
+	blendFactor[threadID].x = r;
+	blendFactor[threadID].y = g;
+	blendFactor[threadID].z = b;
+	blendFactor[threadID].w = a;
 }
-void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID)
 {
 	const GraphicsPSODesc& desc = pso != nullptr ? pso->GetDesc() : GraphicsPSODesc();
 
@@ -3590,7 +3586,7 @@ void GraphicsDevice_DX11::BindGraphicsPSO(GraphicsPSO* pso, GRAPHICSTHREAD threa
 		prev_pt[threadID] = desc.pt;
 	}
 }
-void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID)
 {
 	const ComputePSODesc& desc = pso != nullptr ? pso->GetDesc() : ComputePSODesc();
 
@@ -3601,42 +3597,42 @@ void GraphicsDevice_DX11::BindComputePSO(ComputePSO* pso, GRAPHICSTHREAD threadI
 		prev_cs[threadID] = cs;
 	}
 }
-void GraphicsDevice_DX11::Draw(int vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::Draw(UINT vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) 
 {
 	validate_raster_uavs(threadID);
 	commit_allocations(threadID);
 
 	deviceContexts[threadID]->Draw(vertexCount, startVertexLocation);
 }
-void GraphicsDevice_DX11::DrawIndexed(int indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
 	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
-void GraphicsDevice_DX11::DrawInstanced(int vertexCount, int instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) 
+void GraphicsDevice_DX11::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) 
 {
 	validate_raster_uavs(threadID);
 	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
-void GraphicsDevice_DX11::DrawIndexedInstanced(int indexCount, int instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
 	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
-void GraphicsDevice_DX11::DrawInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
 	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DrawInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
-void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
 	validate_raster_uavs(threadID);
 	commit_allocations(threadID);
@@ -3649,27 +3645,27 @@ void GraphicsDevice_DX11::Dispatch(UINT threadGroupCountX, UINT threadGroupCount
 
 	deviceContexts[threadID]->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }
-void GraphicsDevice_DX11::DispatchIndirect(GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::DispatchIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
 {
 	commit_allocations(threadID);
 
 	deviceContexts[threadID]->DispatchIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
-void GraphicsDevice_DX11::CopyTexture2D(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->CopyResource((ID3D11Resource*)pDst->resource, (ID3D11Resource*)pSrc->resource);
 }
-void GraphicsDevice_DX11::CopyTexture2D_Region(Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
 {
 	deviceContexts[threadID]->CopySubresourceRegion((ID3D11Resource*)pDst->resource, D3D11CalcSubresource(dstMip, 0, pDst->GetDesc().MipLevels), dstX, dstY, 0,
 		(ID3D11Resource*)pSrc->resource, D3D11CalcSubresource(srcMip, 0, pSrc->GetDesc().MipLevels), nullptr);
 }
-void GraphicsDevice_DX11::MSAAResolve(Texture2D* pDst, Texture2D* pSrc, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
 {
 	assert(pDst != nullptr && pSrc != nullptr);
 	deviceContexts[threadID]->ResolveSubresource((ID3D11Resource*)pDst->resource, 0, (ID3D11Resource*)pSrc->resource, 0, _ConvertFormat(pDst->desc.Format));
 }
-void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
+void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
 {
 	assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 	assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
@@ -3705,12 +3701,14 @@ void GraphicsDevice_DX11::UpdateBuffer(GPUBuffer* buffer, const void* data, GRAP
 		deviceContexts[threadID]->UpdateSubresource((ID3D11Resource*)buffer->resource, 0, &box, data, 0, 0);
 	}
 }
-bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
+bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
 {
-	// Download Buffer:
+	assert(resourceToDownload->type == resourceDest->type);
+
+	if(resourceToDownload->IsBuffer())
 	{
-		GPUBuffer* bufferToDownload = dynamic_cast<GPUBuffer*>(resourceToDownload);
-		GPUBuffer* bufferDest = dynamic_cast<GPUBuffer*>(resourceDest);
+		const GPUBuffer* bufferToDownload = static_cast<const GPUBuffer*>(resourceToDownload);
+		const GPUBuffer* bufferDest = static_cast<const GPUBuffer*>(resourceDest);
 
 		if (bufferToDownload != nullptr && bufferDest != nullptr)
 		{
@@ -3732,11 +3730,10 @@ bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUR
 			return result;
 		}
 	}
-
-	// Download Texture:
+	else if(resourceToDownload->IsTexture())
 	{
-		Texture* textureToDownload = dynamic_cast<Texture*>(resourceToDownload);
-		Texture* textureDest = dynamic_cast<Texture*>(resourceDest);
+		const Texture* textureToDownload = static_cast<const Texture*>(resourceToDownload);
+		const Texture* textureDest = static_cast<const Texture*>(resourceDest);
 
 		if (textureToDownload != nullptr && textureDest != nullptr)
 		{
@@ -3767,56 +3764,44 @@ bool GraphicsDevice_DX11::DownloadResource(GPUResource* resourceToDownload, GPUR
 	return false;
 }
 
-void GraphicsDevice_DX11::QueryBegin(GPUQuery *query, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::QueryBegin(const GPUQuery* query, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->Begin((ID3D11Query*)query->resource[query->async_frameshift]);
-	query->active[query->async_frameshift] = true;
+	deviceContexts[threadID]->Begin((ID3D11Query*)query->resource);
 }
-void GraphicsDevice_DX11::QueryEnd(GPUQuery *query, GRAPHICSTHREAD threadID)
+void GraphicsDevice_DX11::QueryEnd(const GPUQuery* query, GRAPHICSTHREAD threadID)
 {
-	deviceContexts[threadID]->End((ID3D11Query*)query->resource[query->async_frameshift]);
-	query->active[query->async_frameshift] = true;
+	deviceContexts[threadID]->End((ID3D11Query*)query->resource);
 }
-bool GraphicsDevice_DX11::QueryRead(GPUQuery *query, GRAPHICSTHREAD threadID)
+bool GraphicsDevice_DX11::QueryRead(const GPUQuery* query, GPUQueryResult* result)
 {
-	query->async_frameshift = (query->async_frameshift + 1) % (query->desc.async_latency + 1);
-	const int _readQueryID = query->async_frameshift;
-	const UINT _flags = (query->desc.async_latency > 0 ? D3D11_ASYNC_GETDATA_DONOTFLUSH : 0);
+	const UINT _flags = D3D11_ASYNC_GETDATA_DONOTFLUSH;
 
-	if (!query->active[_readQueryID])
-	{
-		return true;
-	}
-
-	assert(threadID == GRAPHICSTHREAD_IMMEDIATE && "A query can only be read on the immediate graphics thread!");
-
-	ID3D11Query* QUERY = (ID3D11Query*)query->resource[_readQueryID];
+	ID3D11Query* QUERY = (ID3D11Query*)query->resource;
 
 	HRESULT hr = S_OK;
 	switch (query->desc.Type)
 	{
 	case GPU_QUERY_TYPE_TIMESTAMP:
-		hr = deviceContexts[threadID]->GetData(QUERY, &query->result_timestamp, sizeof(query->result_timestamp), _flags);
+		hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->GetData(QUERY, &result->result_timestamp, sizeof(result->result_timestamp), _flags);
 		break;
 	case GPU_QUERY_TYPE_TIMESTAMP_DISJOINT:
 		{
 			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT _temp;
-			hr = deviceContexts[threadID]->GetData(QUERY, &_temp, sizeof(_temp), _flags);
-			query->result_disjoint = _temp.Disjoint;
-			query->result_timestamp_frequency = _temp.Frequency;
+			hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->GetData(QUERY, &_temp, sizeof(_temp), _flags);
+			result->result_disjoint = _temp.Disjoint;
+			result->result_timestamp_frequency = _temp.Frequency;
 		}
 		break;
 	case GPU_QUERY_TYPE_OCCLUSION:
-		hr = deviceContexts[threadID]->GetData(QUERY, &query->result_passed_sample_count, sizeof(query->result_passed_sample_count), _flags);
-		query->result_passed = query->result_passed_sample_count != 0;
+		hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->GetData(QUERY, &result->result_passed_sample_count, sizeof(result->result_passed_sample_count), _flags);
+		result->result_passed = result->result_passed_sample_count != 0;
 		break;
+	case GPU_QUERY_TYPE_EVENT:
 	case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
 	default:
-		hr = deviceContexts[threadID]->GetData(QUERY, &query->result_passed, sizeof(query->result_passed), _flags);
+		hr = deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->GetData(QUERY, &result->result_passed, sizeof(result->result_passed), _flags);
 		break;
 	}
-
-	query->active[_readQueryID] = false;
 
 	return hr != S_FALSE;
 }

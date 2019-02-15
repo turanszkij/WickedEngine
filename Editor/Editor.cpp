@@ -50,8 +50,6 @@ void Editor::Initialize()
 
 	wiInputManager::addXInput(new wiXInput());
 
-	wiProfiler::SetEnabled(true);
-
 	renderComponent = new EditorComponent;
 	renderComponent->Initialize();
 	loader = new EditorLoadingScreen;
@@ -1416,7 +1414,7 @@ void EditorComponent::Render()
 	// Selected items box:
 	if (!cinemaModeCheckBox->GetCheck() && !selected.empty())
 	{
-		AABB selectedAABB = AABB(XMFLOAT3(FLOAT32_MAX, FLOAT32_MAX, FLOAT32_MAX),XMFLOAT3(-FLOAT32_MAX, -FLOAT32_MAX, -FLOAT32_MAX));
+		AABB selectedAABB = AABB(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
 		for (auto& picked : selected)
 		{
 			if (picked.entity != INVALID_ENTITY)

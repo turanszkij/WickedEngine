@@ -90,11 +90,22 @@ namespace wiGraphicsTypes
 		~Sampler();
 
 		bool IsValid() { return resource != WI_NULL_HANDLE; }
-		SamplerDesc GetDesc() { return desc; }
+		const SamplerDesc& GetDesc() const { return desc; }
 	};
 
 	struct GPUResource : public GraphicsDeviceChild
 	{
+		enum GPU_RESOURCE_TYPE
+		{
+			BUFFER,
+			TEXTURE_1D,
+			TEXTURE_2D,
+			TEXTURE_3D,
+			UNKNOWN_TYPE,
+		} type = UNKNOWN_TYPE;
+		inline bool IsTexture() const { return type == TEXTURE_1D || type == TEXTURE_2D || type == TEXTURE_3D; }
+		inline bool IsBuffer() const { return type == BUFFER; }
+
 		wiCPUHandle SRV = WI_NULL_HANDLE;			// main resource SRV
 		std::vector<wiCPUHandle> additionalSRVs;	// can be used for sub-resources if requested
 
@@ -117,7 +128,7 @@ namespace wiGraphicsTypes
 		virtual ~GPUBuffer();
 
 		bool IsValid() { return resource != WI_NULL_HANDLE; }
-		GPUBufferDesc GetDesc() { return desc; }
+		const GPUBufferDesc& GetDesc() const { return desc; }
 	};
 
 	struct VertexLayout : public GraphicsDeviceChild
@@ -138,7 +149,7 @@ namespace wiGraphicsTypes
 		BlendState();
 		~BlendState();
 
-		BlendStateDesc GetDesc() { return desc; }
+		const BlendStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct DepthStencilState : public GraphicsDeviceChild
@@ -149,7 +160,7 @@ namespace wiGraphicsTypes
 		DepthStencilState();
 		~DepthStencilState();
 
-		DepthStencilStateDesc GetDesc() { return desc; }
+		const DepthStencilStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct RasterizerState : public GraphicsDeviceChild
@@ -160,7 +171,7 @@ namespace wiGraphicsTypes
 		RasterizerState();
 		~RasterizerState();
 
-		RasterizerStateDesc GetDesc() { return desc; }
+		const RasterizerStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct Texture : public GPUResource
@@ -217,22 +228,14 @@ namespace wiGraphicsTypes
 
 	struct GPUQuery : public GraphicsDeviceChild
 	{
-		std::vector<wiCPUHandle>	resource;
-		std::vector<int>			active;
-		GPUQueryDesc				desc;
-		int							async_frameshift;
+		wiCPUHandle	resource;
+		GPUQueryDesc desc;
 
 		GPUQuery();
 		virtual ~GPUQuery();
 
-		bool IsValid() { return !resource.empty() && resource[0] != WI_NULL_HANDLE; }
-		GPUQueryDesc GetDesc() const { return desc; }
-
-		BOOL	result_passed;
-		UINT64	result_passed_sample_count;
-		UINT64	result_timestamp;
-		UINT64	result_timestamp_frequency;
-		BOOL	result_disjoint;
+		bool IsValid() { return resource != WI_NULL_HANDLE; }
+		const GPUQueryDesc& GetDesc() const { return desc; }
 	};
 
 

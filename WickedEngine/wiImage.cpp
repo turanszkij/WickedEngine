@@ -575,7 +575,7 @@ namespace wiImage
 		dsd.DepthFunc = COMPARISON_GREATER;
 
 		dsd.StencilEnable = true;
-		dsd.StencilReadMask = DEFAULT_STENCIL_READ_MASK;
+		dsd.StencilReadMask = 0xff;
 		dsd.StencilWriteMask = 0;
 		dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 		dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
@@ -597,7 +597,7 @@ namespace wiImage
 		dsd.DepthFunc = COMPARISON_GREATER;
 
 		dsd.StencilEnable = true;
-		dsd.StencilReadMask = DEFAULT_STENCIL_READ_MASK;
+		dsd.StencilReadMask = 0xff;
 		dsd.StencilWriteMask = 0;
 		dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
 		dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;

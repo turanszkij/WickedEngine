@@ -24,14 +24,16 @@ namespace wiProfiler
 		float time;
 
 		wiTimer cpuBegin, cpuEnd;
-		wiGraphicsTypes::GPUQuery gpuBegin, gpuEnd;
+
+		wiRenderer::GPUQueryRing<4> gpuBegin;
+		wiRenderer::GPUQueryRing<4> gpuEnd;
 
 		Range() :time(0), domain(DOMAIN_CPU) {}
 		~Range() {}
 	};
 	std::unordered_map<std::string, Range*> ranges;
 	std::stack<std::string> rangeStack;
-	wiGraphicsTypes::GPUQuery disjoint;
+	wiRenderer::GPUQueryRing<4> disjoint;
 
 	void BeginFrame()
 	{
@@ -45,38 +47,52 @@ namespace wiProfiler
 			ranges.reserve(100);
 
 			GPUQueryDesc desc;
-			desc.async_latency = 4;
-			desc.MiscFlags = 0;
 			desc.Type = GPU_QUERY_TYPE_TIMESTAMP_DISJOINT;
-			wiRenderer::GetDevice()->CreateQuery(&desc, &disjoint);
+			disjoint.Create(wiRenderer::GetDevice(), &desc);
 		}
 
-		wiRenderer::GetDevice()->QueryBegin(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->QueryBegin(disjoint.Get_GPU(), GRAPHICSTHREAD_IMMEDIATE);
 	}
 	void EndFrame()
 	{
 		if (!ENABLED || !initialized)
 			return;
 
-		wiRenderer::GetDevice()->QueryEnd(&disjoint, GRAPHICSTHREAD_IMMEDIATE);
-		while (!wiRenderer::GetDevice()->QueryRead(&disjoint, GRAPHICSTHREAD_IMMEDIATE));
+		wiRenderer::GetDevice()->QueryEnd(disjoint.Get_GPU(), GRAPHICSTHREAD_IMMEDIATE);
+
+		GPUQueryResult disjoint_result;
+		GPUQuery* disjoint_query = disjoint.Get_CPU();
+		if (disjoint_query != nullptr)
+		{
+			while (!wiRenderer::GetDevice()->QueryRead(disjoint_query, &disjoint_result));
+		}
 
 		assert(rangeStack.empty() && "There was a range which was not ended!");
 
-		if (disjoint.result_disjoint == FALSE)
+		if (disjoint_result.result_disjoint == FALSE)
 		{
 			for (auto& x : ranges)
 			{
-				x.second->time = 0;
-				switch (x.second->domain)
+				auto& range = x.second;
+
+				range->time = 0;
+				switch (range->domain)
 				{
 				case wiProfiler::DOMAIN_CPU:
-					x.second->time = (float)abs(x.second->cpuEnd.elapsed() - x.second->cpuBegin.elapsed());
+					range->time = (float)abs(range->cpuEnd.elapsed() - range->cpuBegin.elapsed());
 					break;
 				case wiProfiler::DOMAIN_GPU:
-					while (!wiRenderer::GetDevice()->QueryRead(&x.second->gpuBegin, GRAPHICSTHREAD_IMMEDIATE));
-					while (!wiRenderer::GetDevice()->QueryRead(&x.second->gpuEnd, GRAPHICSTHREAD_IMMEDIATE));
-					x.second->time = abs((float)(x.second->gpuEnd.result_timestamp - x.second->gpuBegin.result_timestamp) / disjoint.result_timestamp_frequency * 1000.0f);
+					{
+						GPUQuery* begin_query = range->gpuBegin.Get_CPU();
+						GPUQuery* end_query = range->gpuEnd.Get_CPU();
+						GPUQueryResult begin_result, end_result;
+						if (begin_query != nullptr && end_query != nullptr)
+						{
+							while (!wiRenderer::GetDevice()->QueryRead(begin_query, &begin_result));
+							while (!wiRenderer::GetDevice()->QueryRead(end_query, &end_result));
+						}
+						range->time = abs((float)(end_result.result_timestamp - begin_result.result_timestamp) / disjoint_result.result_timestamp_frequency * 1000.0f);
+					}
 					break;
 				default:
 					assert(0);
@@ -107,11 +123,9 @@ namespace wiProfiler
 			case wiProfiler::DOMAIN_GPU:
 			{
 				GPUQueryDesc desc;
-				desc.async_latency = 4;
-				desc.MiscFlags = 0;
 				desc.Type = GPU_QUERY_TYPE_TIMESTAMP;
-				wiRenderer::GetDevice()->CreateQuery(&desc, &range->gpuBegin);
-				wiRenderer::GetDevice()->CreateQuery(&desc, &range->gpuEnd);
+				range->gpuBegin.Create(wiRenderer::GetDevice(), &desc);
+				range->gpuEnd.Create(wiRenderer::GetDevice(), &desc);
 			}
 			break;
 			default:
@@ -129,7 +143,7 @@ namespace wiProfiler
 			ranges[name]->cpuBegin.record();
 			break;
 		case wiProfiler::DOMAIN_GPU:
-			wiRenderer::GetDevice()->QueryEnd(&ranges[name]->gpuBegin, threadID);
+			wiRenderer::GetDevice()->QueryEnd(ranges[name]->gpuBegin.Get_GPU(), threadID);
 			break;
 		default:
 			assert(0);
@@ -155,7 +169,7 @@ namespace wiProfiler
 				it->second->cpuEnd.record();
 				break;
 			case wiProfiler::DOMAIN_GPU:
-				wiRenderer::GetDevice()->QueryEnd(&it->second->gpuEnd, threadID);
+				wiRenderer::GetDevice()->QueryEnd(it->second->gpuEnd.Get_GPU(), threadID);
 				break;
 			default:
 				assert(0);

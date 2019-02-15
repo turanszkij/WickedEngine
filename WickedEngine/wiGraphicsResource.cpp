@@ -208,7 +208,6 @@ namespace wiGraphicsTypes
 
 	GPUQuery::GPUQuery()
 	{
-		async_frameshift = 0;
 	}
 	GPUQuery::~GPUQuery()
 	{

@@ -290,16 +290,9 @@ namespace wiGraphicsTypes
 		FORMAT_B4G4R4A4_UNORM,
 		FORMAT_FORCE_UINT = 0xffffffff,
 	};
-	//enum MAP
-	//{
-	//	MAP_READ,
-	//	MAP_WRITE,
-	//	MAP_READ_WRITE,
-	//	MAP_WRITE_DISCARD,
-	//	MAP_WRITE_NO_OVERWRITE
-	//};
 	enum GPU_QUERY_TYPE
 	{
+		GPU_QUERY_TYPE_EVENT,				// has the GPU reached this point?
 		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depthstencil test?
 		GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
 		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
@@ -335,7 +328,6 @@ namespace wiGraphicsTypes
 	};
 	enum RESOURCE_MISC_FLAG
 	{
-		//RESOURCE_MISC_GENERATE_MIPS = 0x1L,
 		RESOURCE_MISC_SHARED = 0x2L,
 		RESOURCE_MISC_TEXTURECUBE = 0x4L,
 		RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10L,
@@ -369,228 +361,131 @@ namespace wiGraphicsTypes
 		RESOURCE_STATE_VIDEO_PROCESS_WRITE = 0x80000
 	};
 
-#define	APPEND_ALIGNED_ELEMENT			( 0xffffffff )
-#define FLOAT32_MAX						( 3.402823466e+38f )
-#define DEFAULT_STENCIL_READ_MASK		( 0xff )
-#define SO_NO_RASTERIZED_STREAM			( 0xffffffff )
-
 	// Structs /////////////////////////////////////////////
 
 	struct ViewPort
 	{
-		float TopLeftX;
-		float TopLeftY;
-		float Width;
-		float Height;
-		float MinDepth;
-		float MaxDepth;
-
-		ViewPort():
-			TopLeftX(0.0f),
-			TopLeftY(0.0f),
-			Width(0.0f),
-			Height(0.0f),
-			MinDepth(0.0f),
-			MaxDepth(1.0f)
-		{}
+		float TopLeftX = 0.0f;
+		float TopLeftY = 0.0f;
+		float Width = 0.0f;
+		float Height = 0.0f;
+		float MinDepth = 0.0f;
+		float MaxDepth = 1.0f;
 	};
 	struct VertexLayoutDesc
 	{
-		char* SemanticName;
-		UINT SemanticIndex;
-		FORMAT Format;
-		UINT InputSlot;
-		UINT AlignedByteOffset;
-		INPUT_CLASSIFICATION InputSlotClass;
-		UINT InstanceDataStepRate;
+		static const UINT APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
+
+		char* SemanticName = nullptr;
+		UINT SemanticIndex = 0;
+		FORMAT Format = FORMAT_UNKNOWN;
+		UINT InputSlot = 0;
+		UINT AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
+		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
+		UINT InstanceDataStepRate = 0;
 	};
 	struct SampleDesc
 	{
-		UINT Count;
-		UINT Quality;
-
-		SampleDesc() :Count( 1 ), Quality( 0 ) {}
+		UINT Count = 1;
+		UINT Quality = 0;
 	};
 	struct TextureDesc
 	{
-		UINT Width;
-		UINT Height;
-		UINT Depth;
-		UINT ArraySize;
-		UINT MipLevels;
-		FORMAT Format;
+		UINT Width = 0;
+		UINT Height = 0;
+		UINT Depth = 0;
+		UINT ArraySize = 1;
+		UINT MipLevels = 1;
+		FORMAT Format = FORMAT_UNKNOWN;
 		SampleDesc SampleDesc;
-		USAGE Usage;
-		UINT BindFlags;
-		UINT CPUAccessFlags;
-		UINT MiscFlags;
-
-		TextureDesc() :
-			Width(0),
-			Height(0),
-			Depth(0),
-			ArraySize(1),
-			MipLevels(1),
-			Format(FORMAT_UNKNOWN),
-			Usage(USAGE_DEFAULT),
-			BindFlags(0),
-			CPUAccessFlags(0),
-			MiscFlags(0)
-		{}
+		USAGE Usage = USAGE_DEFAULT;
+		UINT BindFlags = 0;
+		UINT CPUAccessFlags = 0;
+		UINT MiscFlags = 0;
 	};
 	struct SamplerDesc
 	{
-		FILTER Filter;
-		TEXTURE_ADDRESS_MODE AddressU;
-		TEXTURE_ADDRESS_MODE AddressV;
-		TEXTURE_ADDRESS_MODE AddressW;
-		float MipLODBias;
-		UINT MaxAnisotropy;
-		COMPARISON_FUNC ComparisonFunc;
-		float BorderColor[4];
-		float MinLOD;
-		float MaxLOD;
-
-		SamplerDesc():
-			Filter(FILTER_MIN_MAG_MIP_POINT),
-			AddressU(TEXTURE_ADDRESS_CLAMP),
-			AddressV(TEXTURE_ADDRESS_CLAMP),
-			AddressW(TEXTURE_ADDRESS_CLAMP),
-			MipLODBias(0.0f),
-			MaxAnisotropy(0),
-			ComparisonFunc(COMPARISON_NEVER),
-			BorderColor{0.0f,0.0f,0.0f,0.0f},
-			MinLOD(0.0f),
-			MaxLOD(FLT_MAX)
-		{}
+		FILTER Filter = FILTER_MIN_MAG_MIP_POINT;
+		TEXTURE_ADDRESS_MODE AddressU = TEXTURE_ADDRESS_CLAMP;
+		TEXTURE_ADDRESS_MODE AddressV = TEXTURE_ADDRESS_CLAMP;
+		TEXTURE_ADDRESS_MODE AddressW = TEXTURE_ADDRESS_CLAMP;
+		float MipLODBias = 0.0f;
+		UINT MaxAnisotropy = 0;
+		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
+		float BorderColor[4] = { 0.0f,0.0f,0.0f,0.0f };
+		float MinLOD = 0.0f;
+		float MaxLOD = FLT_MAX;
 	};
 	struct RasterizerStateDesc
 	{
-		FILL_MODE FillMode;
-		CULL_MODE CullMode;
-		bool FrontCounterClockwise;
-		INT DepthBias;
-		float DepthBiasClamp;
-		float SlopeScaledDepthBias;
-		bool DepthClipEnable;
-		bool MultisampleEnable;
-		bool AntialiasedLineEnable;
-		bool ConservativeRasterizationEnable;
-		UINT ForcedSampleCount;
-
-		RasterizerStateDesc() :
-			FillMode(FILL_SOLID),
-			CullMode(CULL_NONE),
-			FrontCounterClockwise(false),
-			DepthBias(0),
-			DepthBiasClamp(0.0f),
-			SlopeScaledDepthBias(0.0f),
-			DepthClipEnable(false),
-			MultisampleEnable(false),
-			AntialiasedLineEnable(false),
-			ConservativeRasterizationEnable(false),
-			ForcedSampleCount(0)
-		{}
+		FILL_MODE FillMode = FILL_SOLID;
+		CULL_MODE CullMode = CULL_NONE;
+		bool FrontCounterClockwise = false;
+		INT DepthBias = 0;
+		float DepthBiasClamp = 0.0f;
+		float SlopeScaledDepthBias = 0.0f;
+		bool DepthClipEnable = false;
+		bool MultisampleEnable = false;
+		bool AntialiasedLineEnable = false;
+		bool ConservativeRasterizationEnable = false;
+		UINT ForcedSampleCount = 0;
 	};
 	struct DepthStencilOpDesc
 	{
-		STENCIL_OP StencilFailOp;
-		STENCIL_OP StencilDepthFailOp;
-		STENCIL_OP StencilPassOp;
-		COMPARISON_FUNC StencilFunc;
-
-		DepthStencilOpDesc():
-			StencilFailOp(STENCIL_OP_KEEP),
-			StencilDepthFailOp(STENCIL_OP_KEEP),
-			StencilPassOp(STENCIL_OP_KEEP),
-			StencilFunc(COMPARISON_NEVER)
-		{}
+		STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
+		STENCIL_OP StencilDepthFailOp = STENCIL_OP_KEEP;
+		STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
+		COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
 	};
 	struct DepthStencilStateDesc
 	{
-		bool DepthEnable;
-		DEPTH_WRITE_MASK DepthWriteMask;
-		COMPARISON_FUNC DepthFunc;
-		bool StencilEnable;
-		UINT8 StencilReadMask;
-		UINT8 StencilWriteMask;
+		bool DepthEnable = false;
+		DEPTH_WRITE_MASK DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+		COMPARISON_FUNC DepthFunc = COMPARISON_NEVER;
+		bool StencilEnable = false;
+		UINT8 StencilReadMask = 0xff;
+		UINT8 StencilWriteMask = 0xff;
 		DepthStencilOpDesc FrontFace;
 		DepthStencilOpDesc BackFace;
-
-		DepthStencilStateDesc():
-			DepthEnable(false),
-			DepthWriteMask(DEPTH_WRITE_MASK_ZERO),
-			DepthFunc(COMPARISON_NEVER),
-			StencilEnable(false),
-			StencilReadMask(0xff),
-			StencilWriteMask(0xff)
-		{}
 	};
 	struct RenderTargetBlendStateDesc
 	{
-		bool BlendEnable;
-		BLEND SrcBlend;
-		BLEND DestBlend;
-		BLEND_OP BlendOp;
-		BLEND SrcBlendAlpha;
-		BLEND DestBlendAlpha;
-		BLEND_OP BlendOpAlpha;
-		UINT8 RenderTargetWriteMask;
-
-		RenderTargetBlendStateDesc():
-			BlendEnable(false),
-			SrcBlend(BLEND_SRC_ALPHA),
-			DestBlend(BLEND_INV_SRC_ALPHA),
-			BlendOp(BLEND_OP_ADD),
-			SrcBlendAlpha(BLEND_ONE),
-			DestBlendAlpha(BLEND_ONE),
-			BlendOpAlpha(BLEND_OP_ADD),
-			RenderTargetWriteMask(COLOR_WRITE_ENABLE_ALL)
-		{}
+		bool BlendEnable = false;
+		BLEND SrcBlend = BLEND_SRC_ALPHA;
+		BLEND DestBlend = BLEND_INV_SRC_ALPHA;
+		BLEND_OP BlendOp = BLEND_OP_ADD;
+		BLEND SrcBlendAlpha = BLEND_ONE;
+		BLEND DestBlendAlpha = BLEND_ONE;
+		BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
+		UINT8 RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	};
 	struct BlendStateDesc
 	{
-		bool AlphaToCoverageEnable;
-		bool IndependentBlendEnable;
+		bool AlphaToCoverageEnable = false;
+		bool IndependentBlendEnable = false;
 		RenderTargetBlendStateDesc RenderTarget[8];
-
-		BlendStateDesc():
-			AlphaToCoverageEnable(false),
-			IndependentBlendEnable(false)
-		{}
 	};
 	struct GPUBufferDesc
 	{
-		UINT ByteWidth;
-		USAGE Usage;
-		UINT BindFlags;
-		UINT CPUAccessFlags;
-		UINT MiscFlags;
-		UINT StructureByteStride; // needed for typed and structured buffer types!
-		FORMAT Format; // only needed for typed buffer!
-
-		GPUBufferDesc():
-			ByteWidth(0),
-			Usage(USAGE_DEFAULT),
-			BindFlags(0),
-			CPUAccessFlags(0),
-			MiscFlags(0),
-			StructureByteStride(0),
-			Format(FORMAT_UNKNOWN)
-		{}
+		UINT ByteWidth = 0;
+		USAGE Usage = USAGE_DEFAULT;
+		UINT BindFlags = 0;
+		UINT CPUAccessFlags = 0;
+		UINT MiscFlags = 0;
+		UINT StructureByteStride = 0; // needed for typed and structured buffer types!
+		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
 	struct GPUQueryDesc
 	{
-		GPU_QUERY_TYPE Type;
-		UINT MiscFlags;
-		// 0 for immediate access!
-		UINT async_latency;
-
-		GPUQueryDesc():
-			Type(GPU_QUERY_TYPE_OCCLUSION_PREDICATE),
-			MiscFlags(0),
-			async_latency(0)
-		{}
+		GPU_QUERY_TYPE Type = GPU_QUERY_TYPE_EVENT;
+	};
+	struct GPUQueryResult
+	{
+		BOOL	result_passed = FALSE;
+		UINT64	result_passed_sample_count = 0;
+		UINT64	result_timestamp = 0;
+		UINT64	result_timestamp_frequency = 0;
+		BOOL	result_disjoint = FALSE;
 	};
 	struct GraphicsPSODesc
 	{
@@ -616,83 +511,37 @@ namespace wiGraphicsTypes
 	};
 	struct IndirectDrawArgsInstanced
 	{
-		UINT VertexCountPerInstance;
-		UINT InstanceCount;
-		UINT StartVertexLocation;
-		UINT StartInstanceLocation;
-
-		IndirectDrawArgsInstanced():
-			VertexCountPerInstance(0),
-			InstanceCount(0),
-			StartVertexLocation(0),
-			StartInstanceLocation(0)
-		{}
+		UINT VertexCountPerInstance = 0;
+		UINT InstanceCount = 0;
+		UINT StartVertexLocation = 0;
+		UINT StartInstanceLocation = 0;
 	};
 	struct IndirectDrawArgsIndexedInstanced
 	{
-		UINT IndexCountPerInstance;
-		UINT InstanceCount;
-		UINT StartIndexLocation;
-		INT BaseVertexLocation;
-		UINT StartInstanceLocation;
-
-		IndirectDrawArgsIndexedInstanced() :
-			IndexCountPerInstance(0),
-			InstanceCount(0),
-			StartIndexLocation(0),
-			BaseVertexLocation(0),
-			StartInstanceLocation(0)
-		{}
+		UINT IndexCountPerInstance = 0;
+		UINT InstanceCount = 0;
+		UINT StartIndexLocation = 0;
+		INT BaseVertexLocation = 0;
+		UINT StartInstanceLocation = 0;
 	};
 	struct IndirectDispatchArgs
 	{
-		UINT ThreadGroupCountX;
-		UINT ThreadGroupCountY;
-		UINT ThreadGroupCountZ;
-
-		IndirectDispatchArgs():
-			ThreadGroupCountX(0),
-			ThreadGroupCountY(0),
-			ThreadGroupCountZ(0)
-		{}
+		UINT ThreadGroupCountX = 0;
+		UINT ThreadGroupCountY = 0;
+		UINT ThreadGroupCountZ = 0;
 	};
 	struct SubresourceData
 	{
-		const void *pSysMem;
-		UINT SysMemPitch;
-		UINT SysMemSlicePitch;
-
-		SubresourceData():
-			pSysMem(nullptr),
-			SysMemPitch(0),
-			SysMemSlicePitch(0)
-		{}
-	};
-	struct MappedSubresource
-	{
-		void *pData;
-		UINT RowPitch;
-		UINT DepthPitch;
-
-		MappedSubresource():
-			pData(nullptr),
-			RowPitch(0),
-			DepthPitch(0)
-		{}
+		const void *pSysMem = nullptr;
+		UINT SysMemPitch = 0;
+		UINT SysMemSlicePitch = 0;
 	};
 	struct Rect
 	{
-		LONG left;
-		LONG top;
-		LONG right;
-		LONG bottom;
-
-		Rect():
-			left(0),
-			top(0),
-			right(0),
-			bottom(0)
-		{}
+		LONG left = 0;
+		LONG top = 0;
+		LONG right = 0;
+		LONG bottom = 0;
 	};
 
 }

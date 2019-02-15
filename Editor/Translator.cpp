@@ -14,9 +14,9 @@ GraphicsPSO* pso_wirepart = nullptr;
 wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis = nullptr;
 wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane = nullptr;
 wiGraphicsTypes::GPUBuffer* vertexBuffer_Origin = nullptr;
-int vertexCount_Axis = 0;
-int vertexCount_Plane = 0;
-int vertexCount_Origin = 0;
+UINT vertexCount_Axis = 0;
+UINT vertexCount_Plane = 0;
+UINT vertexCount_Origin = 0;
 
 void Translator::LoadShaders()
 {

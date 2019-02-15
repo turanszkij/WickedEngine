@@ -99,7 +99,7 @@ float deltaTime = 0;
 XMFLOAT2 temporalAAJitter = XMFLOAT2(0, 0);
 XMFLOAT2 temporalAAJitterPrev = XMFLOAT2(0, 0);
 float RESOLUTIONSCALE = 1.0f;
-GPUQuery occlusionQueries[256];
+GPUQueryRing<2> occlusionQueries[256];
 UINT entityArrayOffset_Lights = 0;
 UINT entityArrayCount_Lights = 0;
 UINT entityArrayOffset_Decals = 0;
@@ -119,11 +119,11 @@ uint32_t lightmapBakeBounceCount = 4;
 struct VoxelizedSceneData
 {
 	bool enabled = false;
-	int res = 128;
+	UINT res = 128;
 	float voxelsize = 1;
 	XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 extents = XMFLOAT3(0, 0, 0);
-	int numCones = 8;
+	UINT numCones = 8;
 	float rayStepSize = 0.5f;
 	bool secondaryBounceEnabled = true;
 	bool reflectionsEnabled = true;
@@ -1631,7 +1631,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 				SetAlphaRef(material.alphaRef, threadID);
 
-				device->DrawIndexedInstanced((int)subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, threadID);
+				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, threadID);
 			}
 		}
 
@@ -1674,7 +1674,7 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPH
 		const size_t alloc_size = instanceCount * instanceDataSize;
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, threadID);
 
-		int drawableInstanceCount = 0;
+		UINT drawableInstanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorID];
@@ -1731,7 +1731,7 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_OBJECT_DEBUG] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG]->code, vertexLayouts[VLTYPE_OBJECT_DEBUG]);
@@ -1739,19 +1739,19 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 3, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEATLAS",	0, FORMAT_R32G32B32A32_FLOAT, 4, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEATLAS",	0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, vertexLayouts[VLTYPE_OBJECT_ALL]);
@@ -1760,12 +1760,12 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code, vertexLayouts[VLTYPE_OBJECT_POS]);
@@ -1774,13 +1774,13 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE]->code, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
@@ -1789,12 +1789,12 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW]->code, vertexLayouts[VLTYPE_SHADOW_POS]);
@@ -1803,13 +1803,13 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
@@ -1822,8 +1822,8 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_LINE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_LINE]->code, vertexLayouts[VLTYPE_LINE]);
@@ -1833,9 +1833,9 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, FORMAT_R32G32B32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_TRAIL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_TRAIL]->code, vertexLayouts[VLTYPE_TRAIL]);
@@ -1845,12 +1845,12 @@ void LoadShaders()
 	{
 		VertexLayoutDesc layout[] =
 		{
-			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 1, APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATIPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "MATIPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_RENDERLIGHTMAP] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP]->code, vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
@@ -2914,7 +2914,7 @@ void SetUpStates()
 	samplerDesc.BorderColor[2] = 0;
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = FLOAT32_MAX;
+	samplerDesc.MaxLOD = FLT_MAX;
 	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
@@ -3003,7 +3003,7 @@ void SetUpStates()
 	samplerDesc.BorderColor[2] = 0;
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = FLOAT32_MAX;
+	samplerDesc.MaxLOD = FLT_MAX;
 	device->CreateSamplerState(&samplerDesc, customsamplers[SSTYPE_MAXIMUM_CLAMP]);
 
 
@@ -4149,8 +4149,8 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 			}
 
 			// If a query could be retrieved from the pool for the instance, the instance can be occluded, so render it
-			GPUQuery& query = occlusionQueries[queryID];
-			if (!query.IsValid())
+			GPUQuery* query = occlusionQueries[queryID].Get_GPU();
+			if (query == nullptr || !query->IsValid())
 			{
 				continue;
 			}
@@ -4173,9 +4173,9 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 				// render bounding box to later read the occlusion status
-				device->QueryBegin(&query, threadID);
+				device->QueryBegin(query, threadID);
 				device->Draw(14, 0, threadID);
-				device->QueryEnd(&query, threadID);
+				device->QueryEnd(query, threadID);
 			}
 		}
 
@@ -4213,19 +4213,23 @@ void OcclusionCulling_Read()
 			object.occlusionHistory <<= 1; // advance history by 1 frame
 			if (object.occlusionQueryID < 0)
 			{
+				// object doesn't have an occlusion query
 				object.occlusionHistory |= 1; // mark this frame as visible
 				continue;
 			}
-			GPUQuery& query = occlusionQueries[object.occlusionQueryID];
-			if (!query.IsValid())
+
+			GPUQuery* query = occlusionQueries[object.occlusionQueryID].Get_CPU();
+			if (query == nullptr || !query->IsValid())
 			{
+				// occlusion query not available for CPU read
 				object.occlusionHistory |= 1; // mark this frame as visible
 				continue;
 			}
 
-			while (!device->QueryRead(&query, GRAPHICSTHREAD_IMMEDIATE)) {}
+			GPUQueryResult query_result;
+			while (!device->QueryRead(query, &query_result)) {}
 
-			if (query.result_passed == TRUE)
+			if (query_result.result_passed == TRUE)
 			{
 				object.occlusionHistory |= 1; // mark this frame as visible
 			}
@@ -5480,7 +5484,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
 
 		static float col = 0.7f;
-		static int gridVertexCount = 0;
+		static UINT gridVertexCount = 0;
 		static GPUBuffer* grid = nullptr;
 		if (grid == nullptr)
 		{
@@ -5600,7 +5604,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
 				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, threadID);
 
-				device->DrawIndexed((int)mesh->indices.size(), 0, 0, threadID);
+				device->DrawIndexed((UINT)mesh->indices.size(), 0, 0, threadID);
 			}
 		}
 
@@ -6192,7 +6196,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 						};
 						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-						device->DrawIndexedInstanced((int)subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
+						device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
 					}
 
 				}
@@ -7664,13 +7668,13 @@ void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPH
 
 	// Render direct lighting part:
 	device->BindGraphicsPSO(PSO_renderlightmap_direct, threadID);
-	device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
 
 	if (lightmapBakeBounceCount > 0)
 	{
 		// Render indirect lighting part:
 		device->BindGraphicsPSO(PSO_renderlightmap_indirect, threadID);
-		device->DrawIndexedInstanced((int)mesh.indices.size(), 1, 0, 0, 0, threadID);
+		device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
 	}
 
 	object.lightmapIterationCount++;
@@ -8440,13 +8444,10 @@ void SetOcclusionCullingEnabled(bool value)
 
 		GPUQueryDesc desc;
 		desc.Type = GPU_QUERY_TYPE_OCCLUSION_PREDICATE;
-		desc.MiscFlags = 0;
-		desc.async_latency = 1;
 
 		for (int i = 0; i < ARRAYSIZE(occlusionQueries); ++i)
 		{
-			GetDevice()->CreateQuery(&desc, &occlusionQueries[i]);
-			occlusionQueries[i].result_passed = TRUE;
+			occlusionQueries[i].Create(GetDevice(), &desc);
 		}
 	}
 

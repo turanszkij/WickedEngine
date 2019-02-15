@@ -149,7 +149,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 
 	device->BindResource(VS, particleBuffer.get(), 0, threadID);
 
-	device->Draw((int)strandCount * 12 * max(segmentCount, 1), 0, threadID);
+	device->Draw(strandCount * 12 * max(segmentCount, 1), 0, threadID);
 
 	device->EventEnd(threadID);
 }

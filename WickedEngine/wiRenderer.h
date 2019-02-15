@@ -324,5 +324,51 @@ namespace wiRenderer
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
+
+
+	// Helper utility to manage async GPU query readback from the CPU
+	//	GPUQueryRing<latency> here latency specifies the ring size of queries and 
+	//	directly correlates with the frame latency between Issue (GPU) <-> Read back (CPU)
+	template<int latency>
+	struct GPUQueryRing
+	{
+		wiGraphicsTypes::GPUQuery queries[latency];
+		int id = 0;
+		bool active[latency] = {};
+
+		// Creates a number of queries in the async ring
+		void Create(wiGraphicsTypes::GraphicsDevice* device, const wiGraphicsTypes::GPUQueryDesc* desc)
+		{
+			for (int i = 0; i < latency; ++i)
+			{
+				device->CreateQuery(desc, &queries[i]);
+				active[i] = false;
+				id = 0;
+			}
+		}
+
+		// Returns the current query suitable for GPU execution and marks it as active
+		//	Use this with GraphicsDevice::QueryBegin() and GraphicsDevice::QueryEnd()
+		inline wiGraphicsTypes::GPUQuery* Get_GPU()
+		{
+			active[id] = true;
+			return &queries[id];
+		}
+
+		// Returns the current query suitable for CPU readback and marks it as inactive
+		//	It will return nullptr if none of the queries are suitable for readback yet
+		//	Use this with GraphicsDevice::QueryRead(). Only call once per frame per QueryRing instance!
+		inline wiGraphicsTypes::GPUQuery* Get_CPU()
+		{
+			id = (id + 1) % latency;
+			if (!active[id])
+			{
+				return nullptr;
+			}
+			active[id] = false;
+			return &queries[id];
+		}
+	};
+
 };
 
