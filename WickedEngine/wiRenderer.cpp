@@ -2876,7 +2876,7 @@ void LoadBuffers()
 	bd.CPUAccessFlags = 0;
 
 
-	bd.ByteWidth = sizeof(ShaderEntityType) * MAX_SHADER_ENTITY_COUNT;
+	bd.ByteWidth = sizeof(ShaderEntityType) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntityType);
@@ -3701,7 +3701,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
-		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[threadID].allocate(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
+		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[threadID].allocate(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
 		XMMATRIX* matrixArray = (XMMATRIX*)frameAllocators[threadID].allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
 		const XMMATRIX viewMatrix = GetCamera().GetView();
@@ -3722,7 +3722,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayOffset_Decals = entityCounter;
 		for (uint32_t decalIndex : mainCameraCulling.culledDecals)
 		{
-			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
 				assert(0); // too many entities!
 				entityCounter--;
@@ -3744,7 +3744,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
 			entityArray[entityCounter].energy = decal.emissive;
 
-			entityArray[entityCounter].additionalData_index = matrixCounter;
+			entityArray[entityCounter].userdata = matrixCounter;
 			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world)));
 			matrixCounter++;
 
@@ -3756,7 +3756,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayOffset_EnvProbes = entityCounter;
 		for (uint32_t probeIndex : mainCameraCulling.culledEnvProbes)
 		{
-			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
 				assert(0); // too many entities!
 				entityCounter--;
@@ -3781,7 +3781,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[entityCounter].range = probe.range;
 			entityArray[entityCounter].shadowBias = (float)probe.textureIndex;
 
-			entityArray[entityCounter].additionalData_index = matrixCounter;
+			entityArray[entityCounter].userdata = matrixCounter;
 			matrixArray[matrixCounter] = XMMatrixTranspose(XMLoadFloat4x4(&probe.inverseMatrix));
 			matrixCounter++;
 
@@ -3793,7 +3793,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayOffset_Lights = entityCounter;
 		for (uint32_t lightIndex : mainCameraCulling.culledLights)
 		{
-			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
 				assert(0); // too many entities!
 				entityCounter--;
@@ -3802,8 +3802,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			const LightComponent& light = scene.lights[lightIndex];
 
-			const int shadowIndex = light.shadowMap_index;
-
 			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].positionWS = light.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
@@ -3811,7 +3809,14 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
 			entityArray[entityCounter].energy = light.energy;
 			entityArray[entityCounter].shadowBias = light.shadowBias;
-			entityArray[entityCounter].additionalData_index = shadowIndex;
+			entityArray[entityCounter].userdata = ~0;
+
+			const bool shadow = light.IsCastingShadow() && light.shadowMap_index >= 0;
+			if (shadow)
+			{
+				entityArray[entityCounter].SetShadowIndices(matrixCounter, (uint)light.shadowMap_index);
+			}
+
 			switch (light.GetType())
 			{
 			case LightComponent::DIRECTIONAL:
@@ -3819,14 +3824,13 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				entityArray[entityCounter].directionWS = light.direction;
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (light.IsCastingShadow() && shadowIndex >= 0)
+				if (shadow)
 				{
 					SHCAM shcams[3];
 					CreateDirLightShadowCams(light, GetCamera(), shcams);
-					matrixArray[shadowIndex + 0] = shcams[0].getVP();
-					matrixArray[shadowIndex + 1] = shcams[1].getVP();
-					matrixArray[shadowIndex + 2] = shcams[2].getVP();
-					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 3);
+					matrixArray[matrixCounter++] = shcams[0].getVP();
+					matrixArray[matrixCounter++] = shcams[1].getVP();
+					matrixArray[matrixCounter++] = shcams[2].getVP();
 				}
 			}
 			break;
@@ -3837,12 +3841,11 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				XMStoreFloat3(&entityArray[entityCounter].directionVS, XMVector3TransformNormal(XMLoadFloat3(&entityArray[entityCounter].directionWS), viewMatrix));
 				entityArray[entityCounter].shadowKernel = 1.0f / SHADOWRES_2D;
 
-				if (light.IsCastingShadow() && shadowIndex >= 0)
+				if (shadow)
 				{
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
-					matrixArray[shadowIndex + 0] = shcam.getVP();
-					matrixCounter = max(matrixCounter, (UINT)shadowIndex + 1);
+					matrixArray[matrixCounter++] = shcam.getVP();
 				}
 			}
 			break;
@@ -3878,7 +3881,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayOffset_ForceFields = entityCounter;
 		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 		{
-			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
 				assert(0); // too many entities!
 				entityCounter--;
@@ -3904,7 +3907,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		device->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
 		// Temporary array for GPU entities can be freed now:
-		frameAllocators[threadID].free(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
+		frameAllocators[threadID].free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
 		frameAllocators[threadID].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
 		// Bind the GPU entity array for all shaders that need it here:

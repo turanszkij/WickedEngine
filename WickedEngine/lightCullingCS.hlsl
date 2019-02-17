@@ -14,12 +14,6 @@ STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
 #define entityCount xDispatchParams_value0
 
-// Global counter for current index into the entity index list.
-// "o_" prefix indicates entity lists for opaque geometry while 
-// "t_" prefix indicates entity lists for transparent geometry.
-
-// Light index lists and entity grids.
-RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, UAVSLOT_ENTITYTILES_TRANSPARENT);
 
 #ifdef DEFERRED
 RWTEXTURE2D(deferred_Diffuse, float4, UAVSLOT_TILEDDEFERRED_DIFFUSE);
@@ -27,6 +21,8 @@ RWTEXTURE2D(deferred_Specular, float4, UAVSLOT_TILEDDEFERRED_SPECULAR);
 #else
 RWSTRUCTUREDBUFFER(EntityTiles_Opaque, uint, UAVSLOT_ENTITYTILES_OPAQUE);
 #endif
+
+RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, UAVSLOT_ENTITYTILES_TRANSPARENT);
 
 // Group shared variables.
 groupshared uint uMinDepth;
@@ -45,10 +41,6 @@ void AppendEntity_Opaque(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_opaque[bucket_index], 1 << bucket_place);
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-	InterlockedAdd(entityCountDebug, 1);
-#endif // DEBUG_TILEDLIGHTCULLING
 }
 
 void AppendEntity_Transparent(uint entityIndex)
@@ -292,7 +284,7 @@ void main(ComputeShaderInput IN)
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				AABBtransform(b, MatrixArray[entity.additionalData_index]);
+				AABBtransform(b, MatrixArray[entity.userdata]);
 
 				if (IntersectAABB(a, b))
 				{
@@ -301,6 +293,10 @@ void main(ComputeShaderInput IN)
 #endif
 					{
 						AppendEntity_Opaque(i);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+						InterlockedAdd(entityCountDebug, 1);
+#endif // DEBUG_TILEDLIGHTCULLING
 					}
 				}
 			}
@@ -371,7 +367,7 @@ void main(ComputeShaderInput IN)
 			{
 				ShaderEntityType probe = EntityArray[entity_index];
 
-				const float4x4 probeProjection = MatrixArray[probe.additionalData_index];
+				const float4x4 probeProjection = MatrixArray[probe.userdata];
 				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]

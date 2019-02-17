@@ -296,7 +296,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 			{
 				const ShaderEntityType decal = EntityArray[entity_index];
 
-				const float4x4 decalProjection = MatrixArray[decal.additionalData_index];
+				const float4x4 decalProjection = MatrixArray[decal.userdata];
 				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
@@ -332,7 +332,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 			{
 				const ShaderEntityType probe = EntityArray[entity_index];
 
-				const float4x4 probeProjection = MatrixArray[probe.additionalData_index];
+				const float4x4 probeProjection = MatrixArray[probe.userdata];
 				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]

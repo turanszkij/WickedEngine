@@ -2,10 +2,10 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 #include "wiIntersect.h"
-#include "wiIntersect.h"
 #include "wiRenderTarget.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
+#include "ShaderInterop_Renderer.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
