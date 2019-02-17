@@ -67,13 +67,13 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface sur
 	float3 sh = max(surfaceToLight.NdotL, 0).xxx;
 
 	[branch]
-	if (light.additionalData_index >= 0)
+	if (light.IsCastingShadow())
 	{
 		// calculate shadow map texcoords:
 		float4 ShPos[3];
-		ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 0]);
-		ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 1]);
-		ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 2]);
+		ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
+		ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 1]);
+		ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 2]);
 		float3 ShTex[3];
 		ShTex[0] = ShPos[0].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 		ShTex[1] = ShPos[1].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
@@ -96,13 +96,13 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface sur
 			float3 shadows[2] = { float3(1,1,1), float3(1,1,1) };
 
 			// main shadow cascade sampling:
-			shadows[0] = shadowCascade(ShPos[cascades[0]], ShTex[cascades[0]].xy, light.shadowKernel, light.shadowBias, light.additionalData_index + cascades[0]);
+			shadows[0] = shadowCascade(ShPos[cascades[0]], ShTex[cascades[0]].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascades[0]);
 
 			// fallback shadow cascade sampling (far cascade has no fallback, so avoid sampling):
 			[branch]
 			if (cascades[1] >= 0)
 			{
-				shadows[1] = shadowCascade(ShPos[cascades[1]], ShTex[cascades[1]].xy, light.shadowKernel, light.shadowBias, light.additionalData_index + cascades[1]);
+				shadows[1] = shadowCascade(ShPos[cascades[1]], ShTex[cascades[1]].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascades[1]);
 			}
 
 			// blend the cascades:
@@ -148,8 +148,8 @@ inline LightingResult PointLight(in ShaderEntityType light, in Surface surface)
 		float sh = max(surfaceToLight.NdotL, 0);
 #ifndef DISABLE_SHADOWMAPS
 		[branch]
-		if (light.additionalData_index >= 0) {
-			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+		if (light.IsCastingShadow()) {
+			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 		}
 #endif
 		result.diffuse *= sh;
@@ -197,15 +197,15 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 
 			float3 sh = max(surfaceToLight.NdotL, 0).xxx;
 			[branch]
-			if (light.additionalData_index >= 0)
+			if (light.IsCastingShadow())
 			{
-				float4 ShPos = mul(float4(surface.P, 1), MatrixArray[light.additionalData_index + 0]);
+				float4 ShPos = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
 				if (!any(ShTex - saturate(ShTex)))
 				{
-					sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.additionalData_index);
+					sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
 				}
 			}
 			result.diffuse *= sh;
@@ -404,8 +404,8 @@ inline LightingResult SphereLight(in ShaderEntityType light, in Surface surface)
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+	if (light.IsCastingShadow()) {
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -455,8 +455,8 @@ inline LightingResult DiscLight(in ShaderEntityType light, in Surface surface)
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+	if (light.IsCastingShadow()) {
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -526,8 +526,8 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in Surface surfa
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+	if (light.IsCastingShadow()) {
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 
@@ -650,8 +650,8 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 #ifndef DISABLE_SHADOWMAPS
 	[branch]
-	if (light.additionalData_index >= 0) {
-		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+	if (light.IsCastingShadow()) {
+		fLight *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 	}
 #endif
 

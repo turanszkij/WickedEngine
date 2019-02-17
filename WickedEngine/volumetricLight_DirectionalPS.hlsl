@@ -7,7 +7,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 {
 	ShaderEntityType light = EntityArray[(uint)g_xColor.x];
 
-	if (light.additionalData_index < 0)
+	if (!light.IsCastingShadow())
 	{
 		// Dirlight volume has no meaning without shadows!!
 		return 0;
@@ -36,13 +36,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 	{
 		float3 attenuation = 1;
 
-		float4 ShPos = mul(float4(P, 1), MatrixArray[light.additionalData_index + 0]);
+		float4 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
 		ShPos.xyz /= ShPos.w;
 		float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 		[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
 		{
-			attenuation *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.additionalData_index + 0);
+			attenuation *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + 0);
 		}
 
 		attenuation *= GetFog(cameraDistance - marchedDistance);

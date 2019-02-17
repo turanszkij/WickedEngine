@@ -41,8 +41,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 		float attenuation = att * att;
 
 		[branch]
-		if (light.additionalData_index >= 0) {
-			attenuation *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.additionalData_index), 1 - dist / light.range * (1 - light.shadowBias)).r;
+		if (light.IsCastingShadow()) {
+			attenuation *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 		}
 
 		attenuation *= GetFog(cameraDistance - marchedDistance);

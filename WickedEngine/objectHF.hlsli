@@ -196,7 +196,7 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
 #ifndef DISABLE_ENVMAPS
-	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 	reflection = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 #endif // DISABLE_ENVMAPS
 
@@ -258,159 +258,176 @@ inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout f
 
 inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
-	uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	uint startOffset = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * MAX_SHADER_ENTITY_COUNT_PER_TILE;
-	uint arrayProperties = EntityIndexList[startOffset];
-	uint arrayLength = arrayProperties & 0x000FFFFF; // count of every element in the tile
-	uint decalCount = (arrayProperties & 0xFF000000) >> 24; // count of just the decals in the tile
-	uint envmapCount = (arrayProperties & 0x00F00000) >> 20; // count of just the envmaps in the tile
-	startOffset += 1; // first element was the itemcount
-	uint iterator = 0;
+	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
+	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
-#ifdef DISABLE_DECALS
-	// decals are disabled, set the iterator to skip decals:
-	iterator = decalCount;
-#else
+#ifndef DISABLE_DECALS
 	// decals are enabled, loop through them first:
 	float4 decalAccumulation = 0;
-	float3 P_dx = ddx_coarse(surface.P);
-	float3 P_dy = ddy_coarse(surface.P);
-
-	[loop]
-	for (; iterator < decalCount; ++iterator)
-	{
-		ShaderEntityType decal = EntityArray[EntityIndexList[startOffset + iterator]];
-
-		float4x4 decalProjection = MatrixArray[decal.additionalData_index];
-		float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
-		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-		[branch]
-		if (!any(uvw - saturate(uvw)))
-		{
-			// mipmapping needs to be performed by hand:
-			float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-			float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-			float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
-			// blend out if close to cube Z:
-			float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-			decalColor.a *= edgeBlend;
-			decalColor *= decal.GetColor();
-			// apply emissive:
-			specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
-			// perform manual blending of decals:
-			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-			decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-			decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
-			// if the accumulation reached 1, we skip the rest of the decals:
-			iterator = decalAccumulation.a < 1 ? iterator : decalCount - 1;
-		}
-	}
-
-	surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+	const float3 P_dx = ddx_coarse(surface.P);
+	const float3 P_dy = ddy_coarse(surface.P);
 #endif // DISABLE_DECALS
-
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
-
 	float4 envmapAccumulation = 0;
-	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+#endif // DISABLE_ENVMAPS
 
-#ifdef DISABLE_LOCALENVPMAPS
-	// local envmaps are disabled, set iterator to skip:
-	iterator += envmapCount;
-#else
-	// local envmaps are enabled, loop through them and apply:
-	uint envmapArrayEnd = iterator + envmapCount;
-
-	[loop]
-	for (; iterator < envmapArrayEnd; ++iterator)
+	// Loop through entity buckets in the tile (but only up to the last bucket that contains a light):
+	const uint last_bucket = min((g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount) / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+	for (uint bucket = 0; bucket <= last_bucket; ++bucket)
 	{
-		ShaderEntityType probe = EntityArray[EntityIndexList[startOffset + iterator]];
+		uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+		
+		//// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
+		// bucket_bits = WaveReadFirstLane(WaveAllBitOr(bucket_bits));
 
-		float4x4 probeProjection = MatrixArray[probe.additionalData_index];
-		float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
-		float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-		[branch]
-		if (!any(uvw - saturate(uvw)))
+		while (bucket_bits != 0)
 		{
-			float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
-			// perform manual blending of probes:
-			//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-			envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-			envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
-			// if the accumulation reached 1, we skip the rest of the probes:
-			iterator = envmapAccumulation.a < 1 ? iterator : envmapArrayEnd - 1;
+			// Retrieve global entity index from local bucket, then remove bit from local bucket:
+			const uint bucket_bit_index = firstbitlow(bucket_bits);
+			const uint entity_index = bucket * 32 + bucket_bit_index;
+			bucket_bits ^= 1 << bucket_bit_index;
+
+
+#ifndef DISABLE_DECALS
+			// Check if it is a decal, and process:
+			if (entity_index >= g_xFrame_DecalArrayOffset && 
+				entity_index < g_xFrame_DecalArrayOffset + g_xFrame_DecalArrayCount && 
+				decalAccumulation.a < 1)
+			{
+				ShaderEntityType decal = EntityArray[entity_index];
+
+				const float4x4 decalProjection = MatrixArray[decal.userdata];
+				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
+				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[branch]
+				if (!any(uvw - saturate(uvw)))
+				{
+					// mipmapping needs to be performed by hand:
+					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+					// blend out if close to cube Z:
+					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+					decalColor.a *= edgeBlend;
+					decalColor *= decal.GetColor();
+					// apply emissive:
+					specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+					// perform manual blending of decals:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
+					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+				}
+
+				continue;
+			}
+#endif // DISABLE_DECALS
+			
+
+#ifndef DISABLE_ENVMAPS
+#ifndef DISABLE_LOCALENVPMAPS
+			// Check if it is an envprobe and process:
+			if (entity_index >= g_xFrame_EnvProbeArrayOffset && 
+				entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount && 
+				envmapAccumulation.a < 1)
+			{
+				ShaderEntityType probe = EntityArray[entity_index];
+
+				const float4x4 probeProjection = MatrixArray[probe.userdata];
+				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[branch]
+				if (!any(uvw - saturate(uvw)))
+				{
+					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+					// perform manual blending of probes:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+				}
+
+				continue;
+			}
+#endif // DISABLE_LOCALENVPMAPS
+#endif // DISABLE_ENVMAPS
+			
+
+			// Check if it is a light and process:
+			if (entity_index >= g_xFrame_LightArrayOffset && 
+				entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
+			{
+				ShaderEntityType light = EntityArray[entity_index];
+
+				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+				{
+					continue; // static lights will be skipped (they are used in lightmap baking)
+				}
+
+				LightingResult result = (LightingResult)0;
+
+				switch (light.GetType())
+				{
+				case ENTITY_TYPE_DIRECTIONALLIGHT:
+				{
+					result = DirectionalLight(light, surface);
+				}
+				break;
+				case ENTITY_TYPE_POINTLIGHT:
+				{
+					result = PointLight(light, surface);
+				}
+				break;
+				case ENTITY_TYPE_SPOTLIGHT:
+				{
+					result = SpotLight(light, surface);
+				}
+				break;
+				case ENTITY_TYPE_SPHERELIGHT:
+				{
+					result = SphereLight(light, surface);
+				}
+				break;
+				case ENTITY_TYPE_DISCLIGHT:
+				{
+					result = DiscLight(light, surface);
+				}
+				break;
+				case ENTITY_TYPE_RECTANGLELIGHT:
+				{
+					result = RectangleLight(light, surface);
+				}
+				break;
+				case ENTITY_TYPE_TUBELIGHT:
+				{
+					result = TubeLight(light, surface);
+				}
+				break;
+				}
+
+				diffuse += max(0.0f, result.diffuse);
+				specular += max(0.0f, result.specular);
+
+				continue;
+			}
+
 		}
 	}
-#endif // DISABLE_LOCALENVPMAPS
 
+#ifndef DISABLE_DECALS
+	surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+#endif // DISABLE_DECALS
+
+#ifndef DISABLE_ENVMAPS
 	// Apply global envmap where there is no local envmap information:
 	if (envmapAccumulation.a < 0.99f)
 	{
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
-
 	reflection = max(0, envmapAccumulation.rgb);
-
 #endif // DISABLE_ENVMAPS
 
-
-	// And finally loop through and apply lights:
-	[loop]
-	for (; iterator < arrayLength; iterator++)
-	{
-		ShaderEntityType light = EntityArray[EntityIndexList[startOffset + iterator]];
-
-		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-		{
-			continue; // static lights will be skipped (they are used in lightmap baking)
-		}
-
-		LightingResult result = (LightingResult)0;
-
-		switch (light.GetType())
-		{
-		case ENTITY_TYPE_DIRECTIONALLIGHT:
-		{
-			result = DirectionalLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_POINTLIGHT:
-		{
-			result = PointLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_SPOTLIGHT:
-		{
-			result = SpotLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_SPHERELIGHT:
-		{
-			result = SphereLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_DISCLIGHT:
-		{
-			result = DiscLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_RECTANGLELIGHT:
-		{
-			result = RectangleLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_TUBELIGHT:
-		{
-			result = TubeLight(light, surface);
-		}
-		break;
-		}
-
-		diffuse += max(0.0f, result.diffuse);
-		specular += max(0.0f, result.specular);
-	}
 }
 
 inline void ApplyLighting(in Surface surface, in float3 diffuse, in float3 specular, in float ao, inout float4 color)

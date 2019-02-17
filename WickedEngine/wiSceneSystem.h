@@ -2,10 +2,10 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 #include "wiIntersect.h"
-#include "wiIntersect.h"
 #include "wiRenderTarget.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
+#include "ShaderInterop_Renderer.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
@@ -616,7 +616,6 @@ namespace wiSceneSystem
 		XMFLOAT3 front;
 		XMFLOAT3 right;
 		int shadowMap_index = -1;
-		int entityArray_index = -1;
 
 		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 
