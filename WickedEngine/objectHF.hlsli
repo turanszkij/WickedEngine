@@ -294,7 +294,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 				entity_index < g_xFrame_DecalArrayOffset + g_xFrame_DecalArrayCount && 
 				decalAccumulation.a < 1)
 			{
-				const ShaderEntityType decal = EntityArray[entity_index];
+				ShaderEntityType decal = EntityArray[entity_index];
 
 				const float4x4 decalProjection = MatrixArray[decal.userdata];
 				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
@@ -330,7 +330,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 				entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount && 
 				envmapAccumulation.a < 1)
 			{
-				const ShaderEntityType probe = EntityArray[entity_index];
+				ShaderEntityType probe = EntityArray[entity_index];
 
 				const float4x4 probeProjection = MatrixArray[probe.userdata];
 				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
@@ -354,7 +354,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 			if (entity_index >= g_xFrame_LightArrayOffset && 
 				entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
 			{
-				const ShaderEntityType light = EntityArray[entity_index];
+				ShaderEntityType light = EntityArray[entity_index];
 
 				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 				{
