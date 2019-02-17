@@ -194,4 +194,5 @@ CBUFFER(DispatchParamsCB, CBSLOT_RENDERER_DISPATCHPARAMS)
 	uint	xDispatchParams_value1;
 };
 
+
 #endif // _SHADERINTEROP_RENDERER_H_

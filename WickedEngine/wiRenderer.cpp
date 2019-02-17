@@ -3698,8 +3698,9 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	const FrameCulling& mainCameraCulling = frameCullings[&GetCamera()];
 
-	// Fill Light Array with lights + envprobes + decals in the frustum:
+	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
+		// Reserve temporary entity array for GPU data upload:
 		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[threadID].allocate(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
 		XMMATRIX* matrixArray = (XMMATRIX*)frameAllocators[threadID].allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
@@ -3717,6 +3718,78 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayOffset_EnvProbes = 0;
 		entityArrayCount_EnvProbes = 0;
 
+		// Write decals into entity array:
+		entityArrayOffset_Decals = entityCounter;
+		for (uint32_t decalIndex : mainCameraCulling.culledDecals)
+		{
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				assert(0); // too many decals, can't upload the rest to matrixarray!
+				matrixCounter--;
+				break;
+			}
+			const DecalComponent& decal = scene.decals[decalIndex];
+
+			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
+			entityArray[entityCounter].positionWS = decal.position;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
+			entityArray[entityCounter].range = decal.range;
+			entityArray[entityCounter].texMulAdd = decal.atlasMulAdd;
+			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
+			entityArray[entityCounter].energy = decal.emissive;
+
+			entityArray[entityCounter].additionalData_index = matrixCounter;
+			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world)));
+			matrixCounter++;
+
+			entityCounter++;
+		}
+		entityArrayCount_Decals = entityCounter - entityArrayOffset_Decals;
+
+		// Write environment probes into entity array:
+		entityArrayOffset_EnvProbes = entityCounter;
+		for (uint32_t probeIndex : mainCameraCulling.culledEnvProbes)
+		{
+			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
+			{
+				assert(0); // too many entities!
+				entityCounter--;
+				break;
+			}
+			if (matrixCounter >= MATRIXARRAY_COUNT)
+			{
+				assert(0); // too many probes, can't upload the rest to matrixarray!
+				matrixCounter--;
+				break;
+			}
+
+			const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
+			if (probe.textureIndex < 0)
+			{
+				continue;
+			}
+
+			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
+			entityArray[entityCounter].positionWS = probe.position;
+			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
+			entityArray[entityCounter].range = probe.range;
+			entityArray[entityCounter].shadowBias = (float)probe.textureIndex;
+
+			entityArray[entityCounter].additionalData_index = matrixCounter;
+			matrixArray[matrixCounter] = XMMatrixTranspose(XMLoadFloat4x4(&probe.inverseMatrix));
+			matrixCounter++;
+
+			entityCounter++;
+		}
+		entityArrayCount_EnvProbes = entityCounter - entityArrayOffset_EnvProbes;
+
+		// Write lights into entity array:
 		entityArrayOffset_Lights = entityCounter;
 		for (uint32_t lightIndex : mainCameraCulling.culledLights)
 		{
@@ -3801,75 +3874,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 		entityArrayCount_Lights = entityCounter - entityArrayOffset_Lights;
 
-		entityArrayOffset_EnvProbes = entityCounter;
-		for (uint32_t probeIndex : mainCameraCulling.culledEnvProbes)
-		{
-			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
-			{
-				assert(0); // too many entities!
-				entityCounter--;
-				break;
-			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				assert(0); // too many probes, can't upload the rest to matrixarray!
-				matrixCounter--;
-				break;
-			}
-
-			const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
-			if (probe.textureIndex < 0)
-			{
-				continue;
-			}
-
-			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
-			entityArray[entityCounter].positionWS = probe.position;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&probe.position), viewMatrix));
-			entityArray[entityCounter].range = probe.range;
-			entityArray[entityCounter].shadowBias = (float)probe.textureIndex;
-
-			entityArray[entityCounter].additionalData_index = matrixCounter;
-			matrixArray[matrixCounter] = XMMatrixTranspose(XMLoadFloat4x4(&probe.inverseMatrix));
-			matrixCounter++;
-
-			entityCounter++;
-		}
-		entityArrayCount_EnvProbes = entityCounter - entityArrayOffset_EnvProbes;
-
-		entityArrayOffset_Decals = entityCounter;
-		for (uint32_t decalIndex : mainCameraCulling.culledDecals)
-		{
-			if (entityCounter == MAX_SHADER_ENTITY_COUNT)
-			{
-				assert(0); // too many entities!
-				entityCounter--;
-				break;
-			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				assert(0); // too many decals, can't upload the rest to matrixarray!
-				matrixCounter--;
-				break;
-			}
-			const DecalComponent& decal = scene.decals[decalIndex];
-
-			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
-			entityArray[entityCounter].positionWS = decal.position;
-			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&decal.position), viewMatrix));
-			entityArray[entityCounter].range = decal.range;
-			entityArray[entityCounter].texMulAdd = decal.atlasMulAdd;
-			entityArray[entityCounter].color = wiMath::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
-			entityArray[entityCounter].energy = decal.emissive;
-
-			entityArray[entityCounter].additionalData_index = matrixCounter;
-			matrixArray[matrixCounter] = XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world)));
-			matrixCounter++;
-
-			entityCounter++;
-		}
-		entityArrayCount_Decals = entityCounter - entityArrayOffset_Decals;
-
+		// Write force fields into entity array:
 		entityArrayOffset_ForceFields = entityCounter;
 		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
 		{
@@ -3894,13 +3899,15 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
 
+		// Issue GPU entity array update:
 		device->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
 		device->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
-
+		// Temporary array for GPU entities can be freed now:
 		frameAllocators[threadID].free(sizeof(ShaderEntityType)*MAX_SHADER_ENTITY_COUNT);
 		frameAllocators[threadID].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
+		// Bind the GPU entity array for all shaders that need it here:
 		GPUResource* resources[] = {
 			resourceBuffers[RBTYPE_ENTITYARRAY],
 			resourceBuffers[RBTYPE_MATRIXARRAY],
@@ -5055,7 +5062,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE], SBSLOT_ENTITYINDEXLIST, threadID);
+		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, threadID);
 	}
 
 	if (grass)
@@ -5135,7 +5142,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT], SBSLOT_ENTITYINDEXLIST, threadID);
+		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, threadID);
 	}
 
 	if (ocean != nullptr)
@@ -6410,32 +6417,35 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 		UINT _stride = sizeof(XMFLOAT4) * 4;
 
 		GPUBufferDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = _stride * tileCount.x * tileCount.y * tileCount.z; // storing 4 planes for every tile
+		bd.ByteWidth = _stride * tileCount.x * tileCount.y; // storing 4 planes for every tile
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
 		bd.StructureByteStride = _stride;
 		device->CreateBuffer(&bd, nullptr, frustumBuffer);
+
+		device->SetName(frustumBuffer, "FrustumBuffer");
 	}
 	if (_resolutionChanged)
 	{
-		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
-		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
-		resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE] = new GPUBuffer;
-		resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT] = new GPUBuffer;
+		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
+		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
+		resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE] = new GPUBuffer;
+		resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT] = new GPUBuffer;
 
 		GPUBufferDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
-		bd.ByteWidth = sizeof(UINT) * tileCount.x * tileCount.y * tileCount.z * MAX_SHADER_ENTITY_COUNT_PER_TILE;
+		bd.StructureByteStride = sizeof(uint);
+		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		bd.CPUAccessFlags = 0;
-		bd.StructureByteStride = sizeof(UINT);
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE]);
-		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT]);
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
+		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
+
+		device->SetName(resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], "EntityTiles_Opaque");
+		device->SetName(resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
 	}
 
 	// calculate the per-tile frustums once:
@@ -6495,7 +6505,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 	{
 		device->EventBegin("Entity Culling", threadID);
 
-		device->UnbindResources(SBSLOT_ENTITYINDEXLIST, 1, threadID);
+		device->UnbindResources(SBSLOT_ENTITYTILES, 1, threadID);
 
 		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 
@@ -6525,7 +6535,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 		{
 			GPUResource* uavs[] = {
 				lightbuffer_diffuse,
-				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
+				resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
 				lightbuffer_specular,
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
@@ -6540,10 +6550,10 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 		else
 		{
 			GPUResource* uavs[] = {
-				resourceBuffers[RBTYPE_ENTITYINDEXLIST_OPAQUE],
-				resourceBuffers[RBTYPE_ENTITYINDEXLIST_TRANSPARENT],
+				resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
+				resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
 			};
-			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYINDEXLIST_OPAQUE, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYTILES_OPAQUE, ARRAYSIZE(uavs), threadID);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
