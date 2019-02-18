@@ -7912,6 +7912,7 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 
 	FrameCB cb;
 
+	cb.g_xFrame_ConstantOne = 1;
 	cb.g_xFrame_ScreenWidthHeight = float2((float)GetDevice()->GetScreenWidth(), (float)GetDevice()->GetScreenHeight());
 	cb.g_xFrame_ScreenWidthHeight_Inverse = float2(1.0f / cb.g_xFrame_ScreenWidthHeight.x, 1.0f / cb.g_xFrame_ScreenWidthHeight.y);
 	cb.g_xFrame_InternalResolution = float2((float)GetInternalResolution().x, (float)GetInternalResolution().y);

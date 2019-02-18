@@ -290,72 +290,8 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 			const uint entity_index = bucket * 32 + bucket_bit_index;
 			bucket_bits ^= 1 << bucket_bit_index;
 
-
-#ifndef DISABLE_DECALS
-			// Check if it is a decal, and process:
-			if (entity_index >= g_xFrame_DecalArrayOffset && 
-				entity_index < g_xFrame_DecalArrayOffset + g_xFrame_DecalArrayCount && 
-				decalAccumulation.a < 1)
-			{
-				ShaderEntityType decal = EntityArray[entity_index];
-
-				const float4x4 decalProjection = MatrixArray[decal.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-				[branch]
-				if (!any(uvw - saturate(uvw)))
-				{
-					// mipmapping needs to be performed by hand:
-					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
-					// blend out if close to cube Z:
-					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-					decalColor.a *= edgeBlend;
-					decalColor *= decal.GetColor();
-					// apply emissive:
-					specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
-					// perform manual blending of decals:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
-				}
-
-				continue;
-			}
-#endif // DISABLE_DECALS
-			
-
-#ifndef DISABLE_ENVMAPS
-#ifndef DISABLE_LOCALENVPMAPS
-			// Check if it is an envprobe and process:
-			if (entity_index >= g_xFrame_EnvProbeArrayOffset && 
-				entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount && 
-				envmapAccumulation.a < 1)
-			{
-				ShaderEntityType probe = EntityArray[entity_index];
-
-				const float4x4 probeProjection = MatrixArray[probe.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-				[branch]
-				if (!any(uvw - saturate(uvw)))
-				{
-					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
-					// perform manual blending of probes:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
-				}
-
-				continue;
-			}
-#endif // DISABLE_LOCALENVPMAPS
-#endif // DISABLE_ENVMAPS
-			
-
 			// Check if it is a light and process:
-			if (entity_index >= g_xFrame_LightArrayOffset && 
+			if (entity_index >= g_xFrame_LightArrayOffset &&
 				entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
 			{
 				ShaderEntityType light = EntityArray[entity_index];
@@ -411,6 +347,68 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 
 				continue;
 			}
+
+#ifndef DISABLE_DECALS
+			// Check if it is a decal, and process:
+			if (entity_index >= g_xFrame_DecalArrayOffset && 
+				entity_index < g_xFrame_DecalArrayOffset + g_xFrame_DecalArrayCount && 
+				decalAccumulation.a < 1)
+			{
+				ShaderEntityType decal = EntityArray[entity_index];
+
+				const float4x4 decalProjection = MatrixArray[decal.userdata];
+				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
+				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[branch]
+				if (is_saturated(uvw))
+				{
+					// mipmapping needs to be performed by hand:
+					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+					// blend out if close to cube Z:
+					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+					decalColor.a *= edgeBlend;
+					decalColor *= decal.GetColor();
+					// apply emissive:
+					specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+					// perform manual blending of decals:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
+					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+				}
+
+				continue;
+			}
+#endif // DISABLE_DECALS
+			
+
+#ifndef DISABLE_ENVMAPS
+#ifndef DISABLE_LOCALENVPMAPS
+			// Check if it is an envprobe and process:
+			if (entity_index >= g_xFrame_EnvProbeArrayOffset && 
+				entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount && 
+				envmapAccumulation.a < 1)
+			{
+				ShaderEntityType probe = EntityArray[entity_index];
+
+				const float4x4 probeProjection = MatrixArray[probe.userdata];
+				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[branch]
+				if (is_saturated(uvw))
+				{
+					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+					// perform manual blending of probes:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+				}
+
+				continue;
+			}
+#endif // DISABLE_LOCALENVPMAPS
+#endif // DISABLE_ENVMAPS
 
 		}
 	}

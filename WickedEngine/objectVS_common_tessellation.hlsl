@@ -17,8 +17,8 @@ HullInputType main(Input_Object_ALL input)
 	HullInputType Out;
 
 	
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
-	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instancePrev);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
+	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instPrev);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 		
 
@@ -32,8 +32,8 @@ HullInputType main(Input_Object_ALL input)
 	Out.tex = float4(surface.uv, surface.atlas);
 	Out.nor = float4(surface.normal, 1);
 
-	Out.instanceColor = input.instance.color_dither.rgb;
-	Out.dither = input.instance.color_dither.a;
+	Out.instanceColor = input.inst.color_dither.rgb;
+	Out.dither = input.inst.color_dither.a;
 
 	return Out;
 }

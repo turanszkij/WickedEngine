@@ -4,11 +4,11 @@ PixelInputType_Simple main(Input_Object_POS_TEX input)
 {
 	PixelInputType_Simple Out;
 
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.instanceColor = input.instance.color_dither.rgb;
-	Out.dither = input.instance.color_dither.a;
+	Out.instanceColor = input.inst.color_dither.rgb;
+	Out.dither = input.inst.color_dither.a;
 
 	surface.position = mul(surface.position, WORLD);
 

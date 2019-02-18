@@ -6,13 +6,12 @@ PixelInputType main(Input_Object_ALL input)
 {
 	PixelInputType Out;
 
-
-	float4x4 WORLD = MakeWorldMatrixFromInstance(input.instance);
-	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instancePrev);
+	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
+	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instPrev);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.instanceColor = input.instance.color_dither.rgb;
-	Out.dither = input.instance.color_dither.a;
+	Out.instanceColor = input.inst.color_dither.rgb;
+	Out.dither = input.inst.color_dither.a;
 
 	surface.position = mul(surface.position, WORLD);
 	surface.prevPos = mul(surface.prevPos, WORLDPREV);

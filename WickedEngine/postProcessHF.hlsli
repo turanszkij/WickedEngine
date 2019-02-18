@@ -13,7 +13,7 @@ float2 GetVelocity(in int2 pixel)
 	float bestDepth = 1;
 	int2 bestPixel = int2(0, 0);
 
-	[unroll]
+	[loop]
 	for (int i = -1; i <= 1; ++i)
 	{
 		[unroll]

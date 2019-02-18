@@ -71,6 +71,11 @@ static const int gaussianOffsets[9] = {
 
 #define sqr(a)		((a)*(a))
 
+inline bool is_saturated(float a) { return a == saturate(a); }
+inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.y); }
+inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
+inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
+
 #ifdef DISABLE_ALPHATEST
 #define ALPHATEST(x)
 #else

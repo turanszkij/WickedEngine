@@ -9,7 +9,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 	[branch]
-	if (!any(uvw - saturate(uvw)))
+	if (is_saturated(uvw))
 	{
 		float4 baseColor = DEGAMMA(g_xMat_baseColor * float4(instanceColor, 1) * xBaseColorMap.Sample(sampler_linear_wrap, tex));
 		float4 color = baseColor;

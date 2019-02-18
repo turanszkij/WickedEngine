@@ -99,6 +99,8 @@ static const uint SHADER_ENTITY_TILE_BUCKET_COUNT = SHADER_ENTITY_COUNT / 32;
 static const uint MATRIXARRAY_COUNT = 128;
 
 static const uint TILED_CULLING_BLOCKSIZE = 16;
+static const uint TILED_CULLING_THREADSIZE = 8;
+static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
 static const int impostorCaptureAngles = 12;
 
@@ -117,7 +119,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float3		g_xFrame_SunDirection; float pad0_WorldCB;
 
-	float3		g_xFrame_Horizon; float pad1_WorldCB;
+	float3		g_xFrame_Horizon;
+	uint		g_xFrame_ConstantOne;						// Just a constant 1 value as uint (can be used to force disable loop unrolling)
 
 	float3		g_xFrame_Zenith;
 	float		g_xFrame_CloudScale;

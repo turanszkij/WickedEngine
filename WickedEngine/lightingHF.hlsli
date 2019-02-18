@@ -19,8 +19,10 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 #ifndef DISABLE_SOFT_SHADOWS
 	float samples = 0.0f;
 	const float range = 1.5f;
+	[loop]
 	for (float y = -range; y <= range; y += 1.0f)
 	{
+		[loop]
 		for (float x = -range; x <= range; x += 1.0f)
 		{
 			sum += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex + float2(x, y) * shadowKernel, slice), realDistance).r;
@@ -81,10 +83,10 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface sur
 
 		// determine the main shadow cascade:
 		int cascade = -1;
-		[unroll]
+		[loop]
 		for (uint i = 0; i < 3; ++i)
 		{
-			cascade = any(ShTex[i] - saturate(ShTex[i])) ? cascade : i;
+			cascade = is_saturated(ShTex[i]) ? i : cascade;
 		}
 
 		// if we are within any cascade, sample shadow maps:
@@ -203,7 +205,7 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
-				if (!any(ShTex - saturate(ShTex)))
+				if (is_saturated(ShTex))
 				{
 					sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
 				}

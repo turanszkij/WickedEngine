@@ -48,7 +48,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));
 
 	// if information can not be found on the screen, revert to aliased image:
-	blendfactor = any(prevTC - saturate(prevTC)) ? 1.0f : blendfactor;
+	blendfactor = is_saturated(prevTC) ? blendfactor : 1.0f;
 
 #ifdef HDR_CORRECTION
 	history.rgb = tonemap(history.rgb);

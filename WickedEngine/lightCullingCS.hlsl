@@ -90,39 +90,59 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	return uLightMask;
 }
 
-[numthreads(TILED_CULLING_BLOCKSIZE, TILED_CULLING_BLOCKSIZE, 1)]
+[numthreads(TILED_CULLING_THREADSIZE, TILED_CULLING_THREADSIZE, 1)]
 void main(ComputeShaderInput IN)
 {
-	// First few threads in the group zero out LDS arrays as needed:
-	if (IN.groupIndex < SHADER_ENTITY_TILE_BUCKET_COUNT)
-	{
-		tile_opaque[IN.groupIndex] = 0;
-		tile_transparent[IN.groupIndex] = 0;
+	// This controls the granularity unrolling if the blocksize and threadsize is different:
+	uint granularity = 0;
 
-		// First thread zeroes out other LDS data:
-		if (IN.groupIndex == 0)
-		{
-			uMinDepth = 0xffffffff;
-			uMaxDepth = 0;
-			uDepthMask = 0;
+	// Reused loop counter:
+	uint i = 0;
+
+	// Compute addresses and load frustum:
+	const uint flatTileIndex = flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy);
+	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint bucketIndex = IN.groupIndex;
+	Frustum GroupFrustum = in_Frustums[flatTileIndex];
+
+	// Each thread will zero out one bucket in the LDS:
+	for (i = bucketIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		tile_opaque[i] = 0;
+		tile_transparent[i] = 0;
+	}
+
+	// First thread zeroes out other LDS data:
+	if (IN.groupIndex == 0)
+	{
+		uMinDepth = 0xffffffff;
+		uMaxDepth = 0;
+		uDepthMask = 0;
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-			entityCountDebug = 0;
+		entityCountDebug = 0;
 #endif //  DEBUG_TILEDLIGHTCULLING
-		}
 	}
 
 	// Calculate min & max depth in threadgroup / tile.
-	uint2 pixel = IN.dispatchThreadID.xy;
-	pixel = min(pixel, GetInternalResolution() - 1); // avoid loading from outside the texture, it messes up the min-max depth!
-	float depth = texture_depth[pixel];
+	float depth[TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY];
+	float depthMinUnrolled = 10000000;
+	float depthMaxUnrolled = -10000000;
 
-	uint uDepth = asuint(depth);
+	[unroll]
+	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	{
+		uint2 pixel = IN.dispatchThreadID.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+		pixel = min(pixel, GetInternalResolution() - 1); // avoid loading from outside the texture, it messes up the min-max depth!
+		depth[granularity] = texture_depth[pixel];
+		depthMinUnrolled = min(depthMinUnrolled, depth[granularity]);
+		depthMaxUnrolled = max(depthMaxUnrolled, depth[granularity]);
+	}
 
 	GroupMemoryBarrierWithGroupSync();
 
-	InterlockedMin(uMinDepth, uDepth);
-	InterlockedMax(uMaxDepth, uDepth);
+	InterlockedMin(uMinDepth, asuint(depthMinUnrolled));
+	InterlockedMax(uMaxDepth, asuint(depthMaxUnrolled));
 
 	GroupMemoryBarrierWithGroupSync();
 
@@ -180,21 +200,24 @@ void main(ComputeShaderInput IN)
 	// We divide the minmax depth bounds to 32 equal slices
 	// then we mark the occupied depth slices with atomic or from each thread
 	// we do all this in linear (view) space
-	float realDepthVS = ScreenToView(float4(0, 0, depth, 1)).z;
 	const float __depthRangeRecip = 31.0f / (maxDepthVS - minDepthVS);
-	const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
-	InterlockedOr(uDepthMask, 1 << __depthmaskcellindex);
+	uint __depthmaskUnrolled = 0;
+
+	[unroll]
+	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	{
+		float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1)).z;
+		const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
+		__depthmaskUnrolled |= 1 << __depthmaskcellindex;
+	}
+	InterlockedOr(uDepthMask, __depthmaskUnrolled);
 #endif
 
 	GroupMemoryBarrierWithGroupSync();
 
-	// It is better to load the frustum into register than LDS:
-	//	- AMD GCN will load this into SGPR because it is common to the group, VGPR will reduce, occupancy increases
-	Frustum GroupFrustum = in_Frustums[flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy)];
-
 	// Cull entities
 	// Each thread in a group will cull 1 entity until all entities have been culled.
-	for (uint i = IN.groupIndex; i < entityCount; i += TILED_CULLING_BLOCKSIZE * TILED_CULLING_BLOCKSIZE)
+	for (i = IN.groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntityType entity = EntityArray[i];
 
@@ -210,12 +233,10 @@ void main(ComputeShaderInput IN)
 			Sphere sphere = { entity.positionVS.xyz, entity.range };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				// Add entity to entity list for transparent geometry.
 				AppendEntity_Transparent(i);
 
-				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than just frustum culling
+				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 				{
-					// Add entity to entity list for opaque geometry.
 #ifdef ADVANCED_CULLING
 					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
@@ -228,29 +249,14 @@ void main(ComputeShaderInput IN)
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			//// This is a cone culling for the spotlights:
-			//float coneRadius = tan(/*radians*/(entity.coneAngle)) * entity.range;
-			//Cone cone = { entity.positionVS.xyz, entity.range, -entity.directionVS.xyz, coneRadius };
-			//if (ConeInsideFrustum(cone, GroupFrustum, nearClipVS, maxDepthVS))
-			//{
-			//	// Add entity to entity list for transparent geometry.
-			//	AppendEntity_Transparent(i);
-			//	if (!ConeInsidePlane(cone, minPlane))
-			//	{
-			//		// Add entity to entity list for opaque geometry.
-			//		AppendEntity_Opaque(i);
-			//	}
-			//}
-
-			// Instead of cone culling, I construct a tight fitting sphere around the spotlight cone:
+			// Construct a tight fitting sphere around the spotlight cone:
 			const float r = entity.range * 0.5f / (entity.coneAngleCos * entity.coneAngleCos);
 			Sphere sphere = { entity.positionVS.xyz - entity.directionVS * r, r };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
-				// Add entity to entity list for transparent geometry.
 				AppendEntity_Transparent(i);
 
-				if (SphereIntersectsAABB(sphere, GroupAABB))
+				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 				{
 #ifdef ADVANCED_CULLING
 					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
@@ -305,185 +311,194 @@ void main(ComputeShaderInput IN)
 		}
 	}
 
-	// Wait till all threads in group have caught up.
 	GroupMemoryBarrierWithGroupSync();
 
-	// Update global memory with visible entity buffer. First few threads will write the bit array buckets:
-	if (IN.groupIndex < SHADER_ENTITY_TILE_BUCKET_COUNT)
+	// Each thread will export one bucket from LDS to global memory:
+	for (i = bucketIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		const uint flatTileIndex = flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
-		const uint bucketIndex = IN.groupIndex;
-
 #ifndef DEFERRED
-		EntityTiles_Opaque[flatTileIndex + bucketIndex] = tile_opaque[bucketIndex];
+		EntityTiles_Opaque[tileBucketsAddress + i] = tile_opaque[i];
 #endif
-		EntityTiles_Transparent[flatTileIndex + bucketIndex] = tile_transparent[bucketIndex];
+		EntityTiles_Transparent[tileBucketsAddress + i] = tile_transparent[i];
 	}
 
 #ifdef DEFERRED
-	// Light the pixels:
-	
-	float3 diffuse = 0, specular = 0;
-	float3 reflection = 0;
-	float4 g0 = texture_gbuffer0[pixel];
-	float4 baseColor = float4(g0.rgb, 1);
-	float ao = g0.a;
-	float4 g1 = texture_gbuffer1[pixel];
-	float4 g2 = texture_gbuffer2[pixel];
-	float3 N = decode(g1.xy);
-	float roughness = g2.x;
-	float reflectance = g2.y;
-	float metalness = g2.z;
-	float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth);
-	float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
-	Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
+	// Do not unroll this loop because compiler will choke on it (force loop by introducing g_xFrame_ConstantOne from constant buffer because fxc doesn't respect [loop]):
+	[loop]
+	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY * g_xFrame_ConstantOne; ++granularity)
+	{
+		// Light the pixels:
+		uint2 pixel = IN.dispatchThreadID.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+		if (pixel.x >= (uint)GetInternalResolution().x || pixel.y >= (uint)GetInternalResolution().y)
+			continue;
+
+		float3 diffuse = 0, specular = 0;
+		float3 reflection = 0;
+		float4 g0 = texture_gbuffer0[pixel];
+		float4 baseColor = float4(g0.rgb, 1);
+		float ao = g0.a;
+		float4 g1 = texture_gbuffer1[pixel];
+		float4 g2 = texture_gbuffer2[pixel];
+		float3 N = decode(g1.xy);
+		float roughness = g2.x;
+		float reflectance = g2.y;
+		float metalness = g2.z;
+		float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
+		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
+		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
 
 #ifndef DISABLE_ENVMAPS
-	// Apply environment maps:
-	float4 envmapAccumulation = 0;
-	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+		// Apply environment maps:
+		float4 envmapAccumulation = 0;
+		const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 #endif // DISABLE_ENVMAPS
 
-	// Loop through entity buckets in the tile (but only up to the last bucket that contains a light):
-	const uint last_bucket = min((g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount) / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
-	for (uint bucket = 0; bucket <= last_bucket; ++bucket)
-	{
-		uint bucket_bits = tile_opaque[bucket];
-
-		while (bucket_bits != 0)
+		// Loop through entity buckets in the tile (but only up to the last bucket that contains a light):
+		const uint last_bucket = min((g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount) / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+		for (uint bucket = 0; bucket <= last_bucket; ++bucket)
 		{
-			// Retrieve global entity index from local bucket, then remove bit from local bucket:
-			const uint bucket_bit_index = firstbitlow(bucket_bits);
-			const uint entity_index = bucket * 32 + bucket_bit_index;
-			bucket_bits ^= 1 << bucket_bit_index;
+			uint bucket_bits = tile_opaque[bucket];
 
-			// Decals are not processed here, because tiled deferred is using regular deferred decals instead.
+			while (bucket_bits != 0)
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1 << bucket_bit_index;
+
+				// Check if it is a light and process:
+				if (entity_index >= g_xFrame_LightArrayOffset &&
+					entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
+				{
+					ShaderEntityType light = EntityArray[entity_index];
+
+					LightingResult result = (LightingResult)0;
+
+					switch (light.GetType())
+					{
+					case ENTITY_TYPE_DIRECTIONALLIGHT:
+					{
+						result = DirectionalLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_POINTLIGHT:
+					{
+						result = PointLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_SPOTLIGHT:
+					{
+						result = SpotLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_SPHERELIGHT:
+					{
+						result = SphereLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_DISCLIGHT:
+					{
+						result = DiscLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_RECTANGLELIGHT:
+					{
+						result = RectangleLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_TUBELIGHT:
+					{
+						result = TubeLight(light, surface);
+					}
+					break;
+					}
+
+					diffuse += max(0.0f, result.diffuse);
+					specular += max(0.0f, result.specular);
+
+					continue;
+				}
+
+				// Decals are not processed here, because tiled deferred is using regular deferred decals instead.
 
 #ifndef DISABLE_ENVMAPS
 #ifndef DISABLE_LOCALENVPMAPS
 			// Check if it is an envprobe and process:
-			if (entity_index >= g_xFrame_EnvProbeArrayOffset && 
-				entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount &&
-				envmapAccumulation.a < 1)
-			{
-				ShaderEntityType probe = EntityArray[entity_index];
-
-				const float4x4 probeProjection = MatrixArray[probe.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-				[branch]
-				if (!any(uvw - saturate(uvw)))
+				if (entity_index >= g_xFrame_EnvProbeArrayOffset &&
+					entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount &&
+					envmapAccumulation.a < 1)
 				{
-					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
-					// perform manual blending of probes:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
-				}
+					ShaderEntityType probe = EntityArray[entity_index];
 
-				continue;
-			}
+					const float4x4 probeProjection = MatrixArray[probe.userdata];
+					const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+					[branch]
+					if (is_saturated(uvw))
+					{
+						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+						// perform manual blending of probes:
+						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+						envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+						envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+					}
+
+					continue;
+				}
 #endif // DISABLE_LOCALENVPMAPS
 #endif // DISABLE_ENVMAPS
 
-			// Check if it is a light and process:
-			if (entity_index >= g_xFrame_LightArrayOffset &&
-				entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
-			{
-				ShaderEntityType light = EntityArray[entity_index];
-
-				LightingResult result = (LightingResult)0;
-
-				switch (light.GetType())
-				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					result = DirectionalLight(light, surface);
-				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
-				{
-					result = PointLight(light, surface);
-				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					result = SpotLight(light, surface);
-				}
-				break;
-				case ENTITY_TYPE_SPHERELIGHT:
-				{
-					result = SphereLight(light, surface);
-				}
-				break;
-				case ENTITY_TYPE_DISCLIGHT:
-				{
-					result = DiscLight(light, surface);
-				}
-				break;
-				case ENTITY_TYPE_RECTANGLELIGHT:
-				{
-					result = RectangleLight(light, surface);
-				}
-				break;
-				case ENTITY_TYPE_TUBELIGHT:
-				{
-					result = TubeLight(light, surface);
-				}
-				break;
-				}
-
-				diffuse += max(0.0f, result.diffuse);
-				specular += max(0.0f, result.specular);
-
-				continue;
 			}
-
 		}
-	}
 
 #ifndef DISABLE_ENVMAPS
-	// Apply global envmap where there is no local envmap information:
-	if (envmapAccumulation.a < 0.99f)
-	{
-		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
-	}
-	reflection = max(0, envmapAccumulation.rgb);
+		// Apply global envmap where there is no local envmap information:
+		if (envmapAccumulation.a < 0.99f)
+		{
+			envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+		}
+		reflection = max(0, envmapAccumulation.rgb);
 #endif // DISABLE_ENVMAPS
 
-	VoxelGI(surface, diffuse, reflection, ao);
+		VoxelGI(surface, diffuse, reflection, ao);
 
-	float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
-	float2 velocity = g1.zw;
-	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
-	reflection = lerp(reflection, ssr.rgb, ssr.a);
+		float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
+		float2 velocity = g1.zw;
+		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
+		float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+		reflection = lerp(reflection, ssr.rgb, ssr.a);
 
-	specular += reflection * surface.F;
+		specular += reflection * surface.F;
 
-	float3 ambient = GetAmbient(N) * ao;
-	diffuse += ambient;
+		float3 ambient = GetAmbient(N) * ao;
+		diffuse += ambient;
 
-	deferred_Diffuse[pixel] += float4(diffuse, 1);
-	deferred_Specular[pixel] += float4(specular, 1);
-
+		deferred_Diffuse[pixel] += float4(diffuse, 1);
+		deferred_Specular[pixel] += float4(specular, 1);
+	}
 #endif // DEFERRED
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-	const float3 mapTex[] = {
-		float3(0,0,0),
-		float3(0,0,1),
-		float3(0,1,1),
-		float3(0,1,0),
-		float3(1,1,0),
-		float3(1,0,0),
-	};
-	const uint mapTexLen = 5;
-	const uint maxHeat = 50;
-	float l = saturate((float)entityCountDebug / maxHeat) * mapTexLen;
-	float3 a = mapTex[floor(l)];
-	float3 b = mapTex[ceil(l)];
-	float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
-	DebugTexture[pixel] = heatmap;
+	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	{
+		uint2 pixel = IN.dispatchThreadID.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+
+		const float3 mapTex[] = {
+			float3(0,0,0),
+			float3(0,0,1),
+			float3(0,1,1),
+			float3(0,1,0),
+			float3(1,1,0),
+			float3(1,0,0),
+		};
+		const uint mapTexLen = 5;
+		const uint maxHeat = 50;
+		float l = saturate((float)entityCountDebug / maxHeat) * mapTexLen;
+		float3 a = mapTex[floor(l)];
+		float3 b = mapTex[ceil(l)];
+		float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
+		DebugTexture[pixel] = heatmap;
+	}
 #endif // DEBUG_TILEDLIGHTCULLING
+
 }
