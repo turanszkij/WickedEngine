@@ -41,6 +41,10 @@ void AppendEntity_Opaque(uint entityIndex)
 	const uint bucket_index = entityIndex / 32;
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_opaque[bucket_index], 1 << bucket_place);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+	InterlockedAdd(entityCountDebug, 1);
+#endif // DEBUG_TILEDLIGHTCULLING
 }
 
 void AppendEntity_Transparent(uint entityIndex)
@@ -293,10 +297,6 @@ void main(ComputeShaderInput IN)
 #endif
 					{
 						AppendEntity_Opaque(i);
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-						InterlockedAdd(entityCountDebug, 1);
-#endif // DEBUG_TILEDLIGHTCULLING
 					}
 				}
 			}
