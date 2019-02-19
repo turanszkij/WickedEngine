@@ -93,7 +93,7 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 [numthreads(TILED_CULLING_THREADSIZE, TILED_CULLING_THREADSIZE, 1)]
 void main(ComputeShaderInput IN)
 {
-	// This controls the granularity unrolling if the blocksize and threadsize is different:
+	// This controls the unrolling granularity if the blocksize and threadsize are different:
 	uint granularity = 0;
 
 	// Reused loop counter:
@@ -215,8 +215,7 @@ void main(ComputeShaderInput IN)
 
 	GroupMemoryBarrierWithGroupSync();
 
-	// Cull entities
-	// Each thread in a group will cull 1 entity until all entities have been culled.
+	// Each thread will cull one entity until all entities have been culled:
 	for (i = IN.groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntityType entity = EntityArray[i];
@@ -351,114 +350,155 @@ void main(ComputeShaderInput IN)
 		// Apply environment maps:
 		float4 envmapAccumulation = 0;
 		const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-#endif // DISABLE_ENVMAPS
 
-		// Loop through entity buckets in the tile (but only up to the last bucket that contains a light):
-		const uint last_bucket = min((g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount) / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
-		for (uint bucket = 0; bucket <= last_bucket; ++bucket)
-		{
-			uint bucket_bits = tile_opaque[bucket];
-
-			while (bucket_bits != 0)
-			{
-				// Retrieve global entity index from local bucket, then remove bit from local bucket:
-				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
-				bucket_bits ^= 1 << bucket_bit_index;
-
-				// Check if it is a light and process:
-				if (entity_index >= g_xFrame_LightArrayOffset &&
-					entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
-				{
-					ShaderEntityType light = EntityArray[entity_index];
-
-					LightingResult result = (LightingResult)0;
-
-					switch (light.GetType())
-					{
-					case ENTITY_TYPE_DIRECTIONALLIGHT:
-					{
-						result = DirectionalLight(light, surface);
-					}
-					break;
-					case ENTITY_TYPE_POINTLIGHT:
-					{
-						result = PointLight(light, surface);
-					}
-					break;
-					case ENTITY_TYPE_SPOTLIGHT:
-					{
-						result = SpotLight(light, surface);
-					}
-					break;
-					case ENTITY_TYPE_SPHERELIGHT:
-					{
-						result = SphereLight(light, surface);
-					}
-					break;
-					case ENTITY_TYPE_DISCLIGHT:
-					{
-						result = DiscLight(light, surface);
-					}
-					break;
-					case ENTITY_TYPE_RECTANGLELIGHT:
-					{
-						result = RectangleLight(light, surface);
-					}
-					break;
-					case ENTITY_TYPE_TUBELIGHT:
-					{
-						result = TubeLight(light, surface);
-					}
-					break;
-					}
-
-					diffuse += max(0.0f, result.diffuse);
-					specular += max(0.0f, result.specular);
-
-					continue;
-				}
-
-				// Decals are not processed here, because tiled deferred is using regular deferred decals instead.
-
-#ifndef DISABLE_ENVMAPS
 #ifndef DISABLE_LOCALENVPMAPS
-			// Check if it is an envprobe and process:
-				if (entity_index >= g_xFrame_EnvProbeArrayOffset &&
-					entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount &&
-					envmapAccumulation.a < 1)
-				{
-					ShaderEntityType probe = EntityArray[entity_index];
+		[branch]
+		if (g_xFrame_EnvProbeArrayCount > 0)
+		{
+			// Loop through envprobe buckets in the tile:
+			const uint first_item = g_xFrame_EnvProbeArrayOffset;
+			const uint last_item = first_item + g_xFrame_EnvProbeArrayCount - 1;
+			const uint first_bucket = first_item / 32;
+			const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+			[loop]
+			for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+			{
+				uint bucket_bits = tile_opaque[bucket];
 
-					const float4x4 probeProjection = MatrixArray[probe.userdata];
-					const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
-					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[loop]
+				while (bucket_bits != 0)
+				{
+					// Retrieve global entity index from local bucket, then remove bit from local bucket:
+					const uint bucket_bit_index = firstbitlow(bucket_bits);
+					const uint entity_index = bucket * 32 + bucket_bit_index;
+					bucket_bits ^= 1 << bucket_bit_index;
+
 					[branch]
-					if (is_saturated(uvw))
+					if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 					{
-						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
-						// perform manual blending of probes:
-						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-						envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+						ShaderEntityType probe = EntityArray[entity_index];
+
+						const float4x4 probeProjection = MatrixArray[probe.userdata];
+						const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+						const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+						[branch]
+						if (is_saturated(uvw))
+						{
+							const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+							// perform manual blending of probes:
+							//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+							envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+							envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+							[branch]
+							if (envmapAccumulation.a >= 1.0)
+							{
+								// force exit:
+								bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+								break;
+							}
+						}
+					}
+					else if (entity_index > last_item)
+					{
+						// force exit:
+						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+						break;
 					}
 
-					continue;
 				}
-#endif // DISABLE_LOCALENVPMAPS
-#endif // DISABLE_ENVMAPS
-
 			}
 		}
+#endif // DISABLE_LOCALENVPMAPS
 
-#ifndef DISABLE_ENVMAPS
 		// Apply global envmap where there is no local envmap information:
+		[branch]
 		if (envmapAccumulation.a < 0.99f)
 		{
 			envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 		}
 		reflection = max(0, envmapAccumulation.rgb);
 #endif // DISABLE_ENVMAPS
+
+		[branch]
+		if (g_xFrame_LightArrayCount > 0)
+		{
+			// Loop through light buckets in the tile:
+			const uint first_item = g_xFrame_LightArrayOffset;
+			const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+			const uint first_bucket = first_item / 32;
+			const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+			[loop]
+			for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+			{
+				uint bucket_bits = tile_opaque[bucket];
+
+				[loop]
+				while (bucket_bits != 0)
+				{
+					// Retrieve global entity index from local bucket, then remove bit from local bucket:
+					const uint bucket_bit_index = firstbitlow(bucket_bits);
+					const uint entity_index = bucket * 32 + bucket_bit_index;
+					bucket_bits ^= 1 << bucket_bit_index;
+
+					[branch]
+					if (entity_index >= first_item && entity_index <= last_item)
+					{
+						ShaderEntityType light = EntityArray[entity_index];
+
+						LightingResult result = (LightingResult)0;
+
+						switch (light.GetType())
+						{
+						case ENTITY_TYPE_DIRECTIONALLIGHT:
+						{
+							result = DirectionalLight(light, surface);
+						}
+						break;
+						case ENTITY_TYPE_POINTLIGHT:
+						{
+							result = PointLight(light, surface);
+						}
+						break;
+						case ENTITY_TYPE_SPOTLIGHT:
+						{
+							result = SpotLight(light, surface);
+						}
+						break;
+						case ENTITY_TYPE_SPHERELIGHT:
+						{
+							result = SphereLight(light, surface);
+						}
+						break;
+						case ENTITY_TYPE_DISCLIGHT:
+						{
+							result = DiscLight(light, surface);
+						}
+						break;
+						case ENTITY_TYPE_RECTANGLELIGHT:
+						{
+							result = RectangleLight(light, surface);
+						}
+						break;
+						case ENTITY_TYPE_TUBELIGHT:
+						{
+							result = TubeLight(light, surface);
+						}
+						break;
+						}
+
+						diffuse += max(0.0f, result.diffuse);
+						specular += max(0.0f, result.specular);
+					}
+					else if (entity_index > last_item)
+					{
+						// force exit:
+						bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+						break;
+					}
+
+				}
+			}
+		}
 
 		VoxelGI(surface, diffuse, reflection, ao);
 

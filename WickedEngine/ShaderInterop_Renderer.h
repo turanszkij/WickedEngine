@@ -255,6 +255,13 @@ CBUFFER(APICB, CBSLOT_API)
 
 // ------- On demand Constant buffers: ----------
 
+CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
+{
+	uint2 xForwardLightMask;	// supports indexind 64 lights
+	uint xForwardDecalMask;		// supports indexing 32 decals
+	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
+};
+
 CBUFFER(DecalCB, CBSLOT_RENDERER_DECAL)
 {
 	float4x4 xDecalVP;

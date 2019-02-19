@@ -21,6 +21,7 @@
 // On demand buffers:
 // These are bound on demand and alive until another is bound at the same slot
 #define CBSLOT_RENDERER_MATERIAL				7
+#define CBSLOT_RENDERER_FORWARD_LIGHTMASK		8
 #define CBSLOT_RENDERER_CUBEMAPRENDER			8
 #define CBSLOT_RENDERER_VOLUMELIGHT				8
 #define CBSLOT_RENDERER_LENSFLARE				8

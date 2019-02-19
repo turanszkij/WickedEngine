@@ -1,7 +1,8 @@
 #include "imageHF.hlsli"
 
 
-static const uint NUM_SAMPLES = 35;
+static const uint NUM_SAMPLES = 32;
+static const uint UNROLL_GRANULARITY = 8;
 
 float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 {
@@ -12,14 +13,18 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	deltaTexCoord *= xPPParams0[0] / NUM_SAMPLES;
 	float illuminationDecay = 1.0f;
 	
-	[unroll]
-	for (uint i = 0; i < NUM_SAMPLES; i++) 
+	[loop] // loop big part (balance register pressure)
+	for (uint i = 0; i < NUM_SAMPLES / UNROLL_GRANULARITY; i++)
 	{
-		PSIn.tex.xy -= deltaTexCoord;
-		float3 sam = xTexture.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).rgb;
-		sam *= illuminationDecay*xPPParams0[1];
-		color.rgb += sam;
-		illuminationDecay *= xPPParams0[2];
+		[unroll] // unroll small parts (balance register pressure)
+		for (uint j = 0; j < UNROLL_GRANULARITY; ++j)
+		{
+			PSIn.tex.xy -= deltaTexCoord;
+			float3 sam = xTexture.SampleLevel(sampler_linear_clamp, PSIn.tex.xy, 0).rgb;
+			sam *= illuminationDecay * xPPParams0[1];
+			color.rgb += sam;
+			illuminationDecay *= xPPParams0[2];
+		}
 	}
 
 	color*= xPPParams0[3];

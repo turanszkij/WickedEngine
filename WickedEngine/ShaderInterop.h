@@ -86,10 +86,12 @@ typedef XMINT4 int4;
 #define SAMPLERSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot, VULKAN_DESCRIPTOR_SET_ID)]] SamplerState name;
 #define SAMPLERCOMPARISONSTATE(name, slot) [[vk::binding(VULKAN_DESCRIPTOR_SET_OFFSET_SAMPLER + slot, VULKAN_DESCRIPTOR_SET_ID)]] SamplerComparisonState name;
 
+// Don't have access to wave-intrinsics in Vulkan yet:
+#define WaveReadLaneFirst(a) (a)
+#define WaveActiveBitOr(a) (a)
 
 
 #else // invoking DirectX shader compiler
-
 
 #define CBUFFER(name, slot) cbuffer name : register(b ## slot)
 
@@ -125,6 +127,12 @@ typedef XMINT4 int4;
 
 #define SAMPLERSTATE(name, slot) SamplerState name : register(s ## slot);
 #define SAMPLERCOMPARISONSTATE(name, slot) SamplerComparisonState name : register(s ## slot);
+
+#ifndef SHADER_MODEL_6
+// Don't have access to wave-intrinsics in pre-SM6:
+#define WaveReadLaneFirst(a) (a)
+#define WaveActiveBitOr(a) (a)
+#endif // SHADER_MODEL_6
 
 #endif // invoking vulkan/directx
 

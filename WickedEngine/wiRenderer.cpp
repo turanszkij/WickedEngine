@@ -196,6 +196,7 @@ struct RenderBatch
 // This is just a utility that points to a linear array of render batches:
 struct RenderQueue
 {
+	const CameraComponent* camera = nullptr;
 	RenderBatch* batchArray = nullptr;
 	uint32_t batchCount = 0;
 
@@ -1317,6 +1318,67 @@ void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent
 }
 
 
+ForwardEntityMaskCB ForwardEntityCullingCPU(const RenderQueue& renderQueue, const AABB& batch_aabb, RENDERPASS renderPass)
+{
+	// Performs CPU light culling for a renderable batch:
+	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
+
+	const Scene& scene = GetScene();
+
+	ForwardEntityMaskCB cb;
+	cb.xForwardLightMask.x = 0;
+	cb.xForwardLightMask.y = 0;
+	cb.xForwardDecalMask = 0;
+	cb.xForwardEnvProbeMask = 0;
+
+	const CameraComponent* camera = renderQueue.camera == nullptr ? &GetCamera() : renderQueue.camera;
+	const FrameCulling& culling = frameCullings.at(camera);
+
+	uint32_t buckets[2] = { 0,0 };
+	for (size_t i = 0; i < min(64, culling.culledLights.size()); ++i) // only support indexing 64 lights at max for now
+	{
+		const uint32_t lightIndex = culling.culledLights[i];
+		const AABB& light_aabb = scene.aabb_lights[lightIndex];
+		if (light_aabb.intersects(batch_aabb))
+		{
+			const uint8_t bucket_index = uint8_t(i / 32);
+			const uint8_t bucket_place = uint8_t(i % 32);
+			buckets[bucket_index] |= 1 << bucket_place;
+		}
+	}
+	cb.xForwardLightMask.x = buckets[0];
+	cb.xForwardLightMask.y = buckets[1];
+
+	if (renderPass == RENDERPASS_FORWARD || renderPass == RENDERPASS_ENVMAPCAPTURE)
+	{
+		for (size_t i = 0; i < min(32, culling.culledDecals.size()); ++i)
+		{
+			const uint32_t decalIndex = culling.culledDecals[culling.culledDecals.size() - 1 - i]; // note: reverse order, for correct blending!
+			const AABB& decal_aabb = scene.aabb_decals[decalIndex];
+			if (decal_aabb.intersects(batch_aabb))
+			{
+				const uint8_t bucket_place = uint8_t(i % 32);
+				cb.xForwardDecalMask |= 1 << bucket_place;
+			}
+		}
+	}
+
+	if (renderPass == RENDERPASS_FORWARD)
+	{
+		for (size_t i = 0; i < min(32, culling.culledEnvProbes.size()); ++i)
+		{
+			const uint32_t probeIndex = culling.culledEnvProbes[culling.culledEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
+			const AABB& probe_aabb = scene.aabb_probes[probeIndex];
+			if (probe_aabb.intersects(batch_aabb))
+			{
+				const uint8_t bucket_place = uint8_t(i % 32);
+				cb.xForwardEnvProbeMask |= 1 << bucket_place;
+			}
+		}
+	}
+
+	return cb;
+}
 
 void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false)
 {
@@ -1336,6 +1398,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			InstanceAtlas instanceAtlas;
 		};
 
+		// Do we need to bind every vertex buffer or just a reduced amount for this pass?
 		const bool advancedVBRequest =
 			!IsWireRender() && (
 				renderPass == RENDERPASS_FORWARD ||
@@ -1344,11 +1407,18 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				renderPass == RENDERPASS_ENVMAPCAPTURE
 				);
 
+		// Do we need to bind all textures or just a reduced amount for this pass?
 		const bool easyTextureBind =
 			renderPass == RENDERPASS_TEXTURE ||
 			renderPass == RENDERPASS_SHADOW ||
 			renderPass == RENDERPASS_SHADOWCUBE ||
 			renderPass == RENDERPASS_DEPTHONLY ||
+			renderPass == RENDERPASS_VOXELIZE;
+
+		// Do we need to compute a light mask for this pass on the CPU?
+		const bool forwardLightmaskRequest = 
+			renderPass == RENDERPASS_FORWARD ||
+			renderPass == RENDERPASS_ENVMAPCAPTURE ||
 			renderPass == RENDERPASS_VOXELIZE;
 
 
@@ -1366,6 +1436,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			int instanceCount;
 			uint32_t dataOffset;
 			int forceAlphatestForDithering;
+			AABB aabb;
 		};
 		InstancedBatch* instancedBatchArray = nullptr;
 		int instancedBatchCount = 0;
@@ -1387,12 +1458,14 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				instancedBatch->instanceCount = 0;
 				instancedBatch->dataOffset = instances.offset + batchID * instanceDataSize;
 				instancedBatch->forceAlphatestForDithering = 0;
+				instancedBatch->aabb = AABB();
 				if (instancedBatchArray == nullptr)
 				{
 					instancedBatchArray = instancedBatch;
 				}
 			}
 
+			InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
 			const ObjectComponent& instance = scene.objects[instanceIndex];
 
 			float dither = instance.GetTransparency(); 
@@ -1407,7 +1480,13 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 			if (dither > 0)
 			{
-				instancedBatchArray[instancedBatchCount - 1].forceAlphatestForDithering = 1;
+				current_batch.forceAlphatestForDithering = 1;
+			}
+
+			if (forwardLightmaskRequest)
+			{
+				const AABB& instanceAABB = scene.aabb_objects[instanceIndex];
+				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
 			}
 
 			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? scene.transforms[instance.transform_index].world : IDENTITYMATRIX;
@@ -1426,7 +1505,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				((volatile Instance*)instances.data)[batchID].Create(worldMatrix, instance.color, dither);
 			}
 
-			instancedBatchArray[instancedBatchCount - 1].instanceCount++; // next instance in current InstancedBatch
+			current_batch.instanceCount++; // next instance in current InstancedBatch
 		}
 
 
@@ -1449,8 +1528,14 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
 			}
 
-			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+			if (forwardLightmaskRequest)
+			{
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(renderQueue, instancedBatch.aabb, renderPass);
+				device->UpdateBuffer(constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
+				device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+			}
 
+			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
 
 			enum class BOUNDVERTEXBUFFERTYPE
 			{
@@ -2859,6 +2944,10 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(CopyTextureCB);
 	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
 	device->SetName(constantBuffers[CBTYPE_COPYTEXTURE], "CopyTextureCB");
+
+	bd.ByteWidth = sizeof(ForwardEntityMaskCB);
+	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FORWARDENTITYMASK]);
+	device->SetName(constantBuffers[CBTYPE_FORWARDENTITYMASK], "ForwardEntityMaskCB");
 
 
 
@@ -5046,12 +5135,16 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		wiProfiler::EndRange(); // Shadow Rendering
 		device->EventEnd(threadID);
 	}
+}
+void BindShadowmaps(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
 
-	device->BindResource(PS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
-	device->BindResource(PS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	device->BindResource(stage, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
+	device->BindResource(stage, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
 	if (GetTransparentShadowsEnabled())
 	{
-		device->BindResource(PS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+		device->BindResource(stage, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 	}
 }
 
@@ -5062,6 +5155,8 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	const FrameCulling& culling = frameCullings[&camera];
 
 	device->EventBegin("DrawScene", threadID);
+
+	BindShadowmaps(PS, threadID);
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
@@ -5093,6 +5188,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	RenderImpostors(camera, renderPass, threadID);
 
 	RenderQueue renderQueue;
+	renderQueue.camera = &camera;
 	for (uint32_t instanceIndex : culling.culledObjects)
 	{
 		if (layerMask != ~0)
@@ -5143,6 +5239,8 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 	device->EventBegin("DrawScene_Transparent", threadID);
 
+	BindShadowmaps(PS, threadID);
+
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
 		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, threadID);
@@ -5172,6 +5270,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 	}
 
 	RenderQueue renderQueue;
+	renderQueue.camera = &camera;
 	for (uint32_t instanceIndex : culling.culledObjects)
 	{
 		if (layerMask != ~0)
@@ -5967,6 +6066,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 		if (!renderQueue.empty())
 		{
+			BindShadowmaps(PS, threadID);
+
 			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
 
 			frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -6317,6 +6418,8 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
+		BindShadowmaps(PS, threadID);
+
 		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
 		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
 
@@ -6543,9 +6646,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, Texture2D* lightbuffer_di
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
-			device->BindResource(CS, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
-			device->BindResource(CS, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
-			device->BindResource(CS, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+			BindShadowmaps(CS, threadID);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);

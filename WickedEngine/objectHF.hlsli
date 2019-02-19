@@ -185,8 +185,9 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 		float2 size;
 		float mipLevels;
 		xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
+		const float sampled_mip = (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0);
 		float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
-		float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0));
+		float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, sampled_mip);
 		surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
 		diffuse = lerp(1, diffuse, color.a);
 		color.a = 1;
@@ -195,106 +196,162 @@ inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bump
 
 inline void ForwardLighting(inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
 {
-#ifndef DISABLE_ENVMAPS
-	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-	reflection = max(0, EnvironmentReflection_Global(surface, envMapMIP));
-#endif // DISABLE_ENVMAPS
-
-	[loop]
-	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
-	{
-		ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
-
-		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-		{
-			continue; // static lights will be skipped (they are used in lightmap baking)
-		}
-
-		LightingResult result = (LightingResult)0;
-
-		switch (light.GetType())
-		{
-		case ENTITY_TYPE_DIRECTIONALLIGHT:
-		{
-			result = DirectionalLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_POINTLIGHT:
-		{
-			result = PointLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_SPOTLIGHT:
-		{
-			result = SpotLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_SPHERELIGHT:
-		{
-			result = SphereLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_DISCLIGHT:
-		{
-			result = DiscLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_RECTANGLELIGHT:
-		{
-			result = RectangleLight(light, surface);
-		}
-		break;
-		case ENTITY_TYPE_TUBELIGHT:
-		{
-			result = TubeLight(light, surface);
-		}
-		break;
-		}
-
-		diffuse += max(0.0f, result.diffuse);
-		specular += max(0.0f, result.specular);
-	}
-}
-
-inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
-{
-	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
-
 #ifndef DISABLE_DECALS
-	// decals are enabled, loop through them first:
-	float4 decalAccumulation = 0;
-	const float3 P_dx = ddx_coarse(surface.P);
-	const float3 P_dy = ddy_coarse(surface.P);
+	[branch]
+	if (xForwardDecalMask != 0)
+	{
+		// decals are enabled, loop through them first:
+		float4 decalAccumulation = 0;
+		const float3 P_dx = ddx_coarse(surface.P);
+		const float3 P_dy = ddy_coarse(surface.P);
+
+		uint bucket_bits = xForwardDecalMask;
+
+		[loop]
+		while (bucket_bits != 0)
+		{
+			// Retrieve global entity index from local bucket, then remove bit from local bucket:
+			const uint bucket_bit_index = firstbitlow(bucket_bits);
+			const uint entity_index = bucket_bit_index;
+			bucket_bits ^= 1 << bucket_bit_index;
+
+			[branch]
+			if (decalAccumulation.a < 1)
+			{
+				ShaderEntityType decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
+
+				const float4x4 decalProjection = MatrixArray[decal.userdata];
+				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
+				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[branch]
+				if (is_saturated(uvw))
+				{
+					// mipmapping needs to be performed by hand:
+					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+					// blend out if close to cube Z:
+					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+					decalColor.a *= edgeBlend;
+					decalColor *= decal.GetColor();
+					// apply emissive:
+					specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+					// perform manual blending of decals:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
+					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+					[branch]
+					if (decalAccumulation.a >= 1.0)
+					{
+						// force exit:
+						break;
+					}
+				}
+			}
+			else
+			{
+				// force exit:
+				break;
+			}
+
+		}
+
+		surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+	}
 #endif // DISABLE_DECALS
+
+
+//#ifndef DISABLE_ENVMAPS
+//	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+//	reflection = max(0, EnvironmentReflection_Global(surface, envMapMIP));
+//#endif
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	float4 envmapAccumulation = 0;
 	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-#endif // DISABLE_ENVMAPS
 
-	// Loop through entity buckets in the tile (but only up to the last bucket that contains a light):
-	const uint last_bucket = min((g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount) / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
-	for (uint bucket = 0; bucket <= last_bucket; ++bucket)
+#ifndef ENVMAPRENDERING
+#ifndef DISABLE_LOCALENVPMAPS
+	[branch]
+	if (xForwardEnvProbeMask != 0)
 	{
-		uint bucket_bits = EntityTiles[flatTileIndex + bucket];
-		
-		//// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
-		// bucket_bits = WaveReadFirstLane(WaveAllBitOr(bucket_bits));
+		uint bucket_bits = xForwardEnvProbeMask;
 
+		[loop]
 		while (bucket_bits != 0)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
-			const uint entity_index = bucket * 32 + bucket_bit_index;
+			const uint entity_index = bucket_bit_index;
 			bucket_bits ^= 1 << bucket_bit_index;
 
-			// Check if it is a light and process:
-			if (entity_index >= g_xFrame_LightArrayOffset &&
-				entity_index < g_xFrame_LightArrayOffset + g_xFrame_LightArrayCount)
+			[branch]
+			if (envmapAccumulation.a < 1)
 			{
-				ShaderEntityType light = EntityArray[entity_index];
+				ShaderEntityType probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
+
+				const float4x4 probeProjection = MatrixArray[probe.userdata];
+				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				[branch]
+				if (is_saturated(uvw))
+				{
+					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+					// perform manual blending of probes:
+					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+					[branch]
+					if (envmapAccumulation.a >= 1.0)
+					{
+						// force exit:
+						break;
+					}
+				}
+			}
+			else
+			{
+				// force exit:
+				break;
+			}
+
+		}
+	}
+#endif // DISABLE_LOCALENVPMAPS
+#endif //ENVMAPRENDERING
+
+	// Apply global envmap where there is no local envmap information:
+	[branch]
+	if (envmapAccumulation.a < 0.99f)
+	{
+		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
+	}
+	reflection = max(0, envmapAccumulation.rgb);
+#endif // DISABLE_ENVMAPS
+
+	[branch]
+	if (any(xForwardLightMask))
+	{
+		// Loop through light buckets for the draw call:
+		const uint first_item = 0;
+		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+		const uint first_bucket = first_item / 32;
+		const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
+		[loop]
+		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+		{
+			uint bucket_bits = xForwardLightMask[bucket];
+
+			[loop]
+			while (bucket_bits != 0)
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1 << bucket_bit_index;
+
+				ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
 
 				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 				{
@@ -344,87 +401,263 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 d
 
 				diffuse += max(0.0f, result.diffuse);
 				specular += max(0.0f, result.specular);
-
-				continue;
 			}
-
-#ifndef DISABLE_DECALS
-			// Check if it is a decal, and process:
-			if (entity_index >= g_xFrame_DecalArrayOffset && 
-				entity_index < g_xFrame_DecalArrayOffset + g_xFrame_DecalArrayCount && 
-				decalAccumulation.a < 1)
-			{
-				ShaderEntityType decal = EntityArray[entity_index];
-
-				const float4x4 decalProjection = MatrixArray[decal.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-				[branch]
-				if (is_saturated(uvw))
-				{
-					// mipmapping needs to be performed by hand:
-					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
-					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
-					// blend out if close to cube Z:
-					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
-					decalColor.a *= edgeBlend;
-					decalColor *= decal.GetColor();
-					// apply emissive:
-					specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
-					// perform manual blending of decals:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
-				}
-
-				continue;
-			}
-#endif // DISABLE_DECALS
-			
-
-#ifndef DISABLE_ENVMAPS
-#ifndef DISABLE_LOCALENVPMAPS
-			// Check if it is an envprobe and process:
-			if (entity_index >= g_xFrame_EnvProbeArrayOffset && 
-				entity_index < g_xFrame_EnvProbeArrayOffset + g_xFrame_EnvProbeArrayCount && 
-				envmapAccumulation.a < 1)
-			{
-				ShaderEntityType probe = EntityArray[entity_index];
-
-				const float4x4 probeProjection = MatrixArray[probe.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
-				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
-				[branch]
-				if (is_saturated(uvw))
-				{
-					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
-					// perform manual blending of probes:
-					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
-				}
-
-				continue;
-			}
-#endif // DISABLE_LOCALENVPMAPS
-#endif // DISABLE_ENVMAPS
-
 		}
 	}
 
+}
+
+inline void TiledLighting(in float2 pixel, inout Surface surface, inout float3 diffuse, inout float3 specular, inout float3 reflection)
+{
+	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
+	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+
+
 #ifndef DISABLE_DECALS
-	surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+	[branch]
+	if (g_xFrame_DecalArrayCount > 0)
+	{
+		// decals are enabled, loop through them first:
+		float4 decalAccumulation = 0;
+		const float3 P_dx = ddx_coarse(surface.P);
+		const float3 P_dy = ddy_coarse(surface.P);
+
+		// Loop through decal buckets in the tile:
+		const uint first_item = g_xFrame_DecalArrayOffset;
+		const uint last_item = first_item + g_xFrame_DecalArrayCount - 1;
+		const uint first_bucket = first_item / 32;
+		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+		[loop]
+		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+		{
+			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+
+			// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
+			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+
+			[loop]
+			while (bucket_bits != 0)
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1 << bucket_bit_index;
+
+				[branch]
+				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
+				{
+					ShaderEntityType decal = EntityArray[entity_index];
+
+					const float4x4 decalProjection = MatrixArray[decal.userdata];
+					const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
+					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+					[branch]
+					if (is_saturated(uvw))
+					{
+						// mipmapping needs to be performed by hand:
+						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * decal.texMulAdd.xy;
+						float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy*decal.texMulAdd.xy + decal.texMulAdd.zw, decalDX, decalDY);
+						// blend out if close to cube Z:
+						float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
+						decalColor.a *= edgeBlend;
+						decalColor *= decal.GetColor();
+						// apply emissive:
+						specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+						// perform manual blending of decals:
+						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+						decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
+						decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+						[branch]
+						if (decalAccumulation.a >= 1.0)
+						{
+							// force exit:
+							bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+							break;
+						}
+					}
+				}
+				else if (entity_index > last_item)
+				{
+					// force exit:
+					bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+					break;
+				}
+
+			}
+		}
+
+		surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
+	}
 #endif // DISABLE_DECALS
 
+
 #ifndef DISABLE_ENVMAPS
+	// Apply environment maps:
+	float4 envmapAccumulation = 0;
+	const float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
+
+#ifndef DISABLE_LOCALENVPMAPS
+	[branch]
+	if (g_xFrame_EnvProbeArrayCount > 0)
+	{
+		// Loop through envmap buckets in the tile:
+		const uint first_item = g_xFrame_EnvProbeArrayOffset;
+		const uint last_item = first_item + g_xFrame_EnvProbeArrayCount - 1;
+		const uint first_bucket = first_item / 32;
+		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+		[loop]
+		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+		{
+			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+
+			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
+			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+
+			[loop]
+			while (bucket_bits != 0)
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1 << bucket_bit_index;
+
+				[branch]
+				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
+				{
+					ShaderEntityType probe = EntityArray[entity_index];
+
+					const float4x4 probeProjection = MatrixArray[probe.userdata];
+					const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
+					[branch]
+					if (is_saturated(uvw))
+					{
+						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos, envMapMIP);
+						// perform manual blending of probes:
+						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
+						envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
+						envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+						[branch]
+						if (envmapAccumulation.a >= 1.0)
+						{
+							// force exit:
+							bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+							break;
+						}
+					}
+				}
+				else if (entity_index > last_item)
+				{
+					// force exit:
+					bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+					break;
+				}
+
+			}
+		}
+	}
+#endif // DISABLE_LOCALENVPMAPS
+	
 	// Apply global envmap where there is no local envmap information:
+	[branch]
 	if (envmapAccumulation.a < 0.99f)
 	{
 		envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 	}
 	reflection = max(0, envmapAccumulation.rgb);
 #endif // DISABLE_ENVMAPS
+
+
+	[branch]
+	if (g_xFrame_LightArrayCount > 0)
+	{
+		// Loop through light buckets in the tile:
+		const uint first_item = g_xFrame_LightArrayOffset;
+		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+		const uint first_bucket = first_item / 32;
+		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
+		[loop]
+		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+		{
+			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+
+			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
+			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+
+			[loop]
+			while (bucket_bits != 0)
+			{
+				// Retrieve global entity index from local bucket, then remove bit from local bucket:
+				const uint bucket_bit_index = firstbitlow(bucket_bits);
+				const uint entity_index = bucket * 32 + bucket_bit_index;
+				bucket_bits ^= 1 << bucket_bit_index;
+
+				// Check if it is a light and process:
+				[branch]
+				if (entity_index >= first_item && entity_index <= last_item)
+				{
+					ShaderEntityType light = EntityArray[entity_index];
+
+					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+					{
+						continue; // static lights will be skipped (they are used in lightmap baking)
+					}
+
+					LightingResult result = (LightingResult)0;
+
+					switch (light.GetType())
+					{
+					case ENTITY_TYPE_DIRECTIONALLIGHT:
+					{
+						result = DirectionalLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_POINTLIGHT:
+					{
+						result = PointLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_SPOTLIGHT:
+					{
+						result = SpotLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_SPHERELIGHT:
+					{
+						result = SphereLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_DISCLIGHT:
+					{
+						result = DiscLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_RECTANGLELIGHT:
+					{
+						result = RectangleLight(light, surface);
+					}
+					break;
+					case ENTITY_TYPE_TUBELIGHT:
+					{
+						result = TubeLight(light, surface);
+					}
+					break;
+					}
+
+					diffuse += max(0.0f, result.diffuse);
+					specular += max(0.0f, result.specular);
+				}
+				else if (entity_index > last_item)
+				{
+					// force exit:
+					bucket = SHADER_ENTITY_TILE_BUCKET_COUNT;
+					break;
+				}
+
+			}
+		}
+	}
 
 }
 
@@ -511,8 +744,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	surface.V /= dist;
 	surface.N = normalize(input.nor);
 
-	float3 T, B;
-	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, UV, T, B);
+	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, UV);
 #endif // SIMPLE_INPUT
 
 #ifdef POM
@@ -533,15 +765,18 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float ao = 1;
 	float ssao = 1;
 #ifndef ENVMAPRENDERING
-	float lineardepth = input.pos2D.w;
+	const float lineardepth = input.pos2D.w;
 	input.pos2D.xy /= input.pos2D.w;
 	input.pos2DPrev.xy /= input.pos2DPrev.w;
 	input.ReflectionMapSamplingPos.xy /= input.ReflectionMapSamplingPos.w;
 
-	float2 refUV = input.ReflectionMapSamplingPos.xy * float2(0.5f, -0.5f) + 0.5f;
-	float2 ScreenCoord = input.pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
-	float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
-	float2 ReprojectedScreenCoord = ScreenCoord + velocity;
+	const float2 refUV = input.ReflectionMapSamplingPos.xy * float2(0.5f, -0.5f) + 0.5f;
+	const float2 ScreenCoord = input.pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
+	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
+
+	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord, 0) * g_xFrame_MainCamera_ZFarP;
+	const float depth_difference = sampled_lineardepth - lineardepth;
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
 
@@ -585,9 +820,8 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	//REFRACTION 
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + bumpColor.rg;
-	float refDepth = texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord) * g_xFrame_MainCamera_ZFarP;
 	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
-	float mod = saturate(0.05*(refDepth - lineardepth));
+	float mod = saturate(0.05f * depth_difference);
 	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
 
 	//FRESNEL TERM
@@ -660,7 +894,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #ifdef WATER
 	// SOFT EDGE
-	float fade = saturate(0.3 * abs(refDepth - lineardepth));
+	float fade = saturate(0.3 * depth_difference);
 	color.a *= fade;
 #endif // WATER
 

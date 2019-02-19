@@ -7,8 +7,7 @@ float4 main(PixelInputType input) : SV_Target0
 	float3 N = normalize(input.nor);
 	float3 P = input.pos3D;
 
-	float3 T, B;
-	float3x3 TBN = compute_tangent_frame(N, P, UV, T, B);
+	float3x3 TBN = compute_tangent_frame(N, P, UV);
 
 	float roughness = g_xMat_roughness;
 
