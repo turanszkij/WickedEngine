@@ -1337,10 +1337,6 @@ void EditorComponent::Update(float dt)
 	emitterWnd->UpdateData();
 	hairWnd->UpdateData();
 
-	__super::Update(dt);
-
-	renderPath->Update(dt);
-
 	// Follow camera proxy:
 	if (cameraWnd->followCheckBox->IsEnabled() && cameraWnd->followCheckBox->GetCheck())
 	{
@@ -1354,6 +1350,10 @@ void EditorComponent::Update(float dt)
 
 	camera.TransformCamera(cameraWnd->camera_transform);
 	camera.UpdateCamera();
+
+	__super::Update(dt);
+
+	renderPath->Update(dt);
 }
 void EditorComponent::Render()
 {
