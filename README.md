@@ -45,7 +45,7 @@ To test the engine, this solution contains several projects which you can build 
 - There are multiple sample LUA scripts in the "scripts" folder. You can load any of them inside the Editor, but please check how to use them first by reading the first few lines of the scripts.
 - Please open an Issue here on GitHub if you encounter any difficulties.
 
-![Emitter](https://turanszkij.files.wordpress.com/2019/02/emitterskinned.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif)
+![Emitter](https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif)
 
 The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
 You can specify command line arguments for each application to switch between render devices or other settings. Currently the list of options:
