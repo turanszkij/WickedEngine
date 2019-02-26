@@ -125,12 +125,6 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		};
 		device->BindRenderTargets(ARRAYSIZE(rts), rts, rtGBuffer.depth->GetTexture(), threadID);
 		device->ClearDepthStencil(rtGBuffer.depth->GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
-		float clear[4] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, threadID);
-		device->ClearRenderTarget(rts[1], clear, threadID);
-		device->ClearRenderTarget(rts[2], clear, threadID);
-		device->ClearRenderTarget(rts[3], clear, threadID);
-		device->ClearRenderTarget(rts[4], clear, threadID);
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;
 		vp.Height = (float)rts[0]->GetDesc().Height;
@@ -143,7 +137,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 
 	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
 
-	rtLinearDepth.Activate(threadID); {
+	rtLinearDepth.Set(threadID); {
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
@@ -198,7 +192,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		device->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
-		rtSSAO[0].Activate(threadID); {
+		rtSSAO[0].Set(threadID); {
 			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_LINEAR;
@@ -206,12 +200,12 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 			wiImage::Draw(nullptr, fx, threadID);
 			fx.process.clear();
 		}
-		rtSSAO[1].Activate(threadID); {
+		rtSSAO[1].Set(threadID); {
 			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtSSAO[0].GetTexture(), fx, threadID);
 		}
-		rtSSAO[2].Activate(threadID); {
+		rtSSAO[2].Set(threadID); {
 			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtSSAO[1].GetTexture(), fx, threadID);
@@ -229,8 +223,8 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		fx.stencilComp = STENCILMODE_LESS;
 		fx.quality = QUALITY_LINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		rtSSS[1].Activate(threadID, 0, 0, 0, 0);
-		rtSSS[0].Activate(threadID, 0, 0, 0, 0);
+		rtSSS[1].SetAndClear(threadID, 0, 0, 0, 0);
+		rtSSS[0].SetAndClear(threadID, 0, 0, 0, 0);
 		static int sssPassCount = 6;
 		for (int i = 0; i < sssPassCount; ++i)
 		{
@@ -258,7 +252,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		}
 		fx.process.clear();
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-		rtSSS[0].Activate(threadID, rtGBuffer.depth); {
+		rtSSS[0].SetAndClear(threadID, rtGBuffer.depth); {
 			fx.setMaskMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
@@ -278,7 +272,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 
-	rtDeferred.Activate(threadID, rtGBuffer.depth); {
+	rtDeferred.Set(threadID, rtGBuffer.depth); {
 		wiImage::DrawDeferred((getSSSEnabled() ? rtSSS[0].GetTexture(0) : lightbuffer_diffuse.get()), lightbuffer_specular.get()
 			, getSSAOEnabled() ? rtSSAO.back().GetTexture() : wiTextureHelper::getWhite()
 			, threadID, STENCILREF_DEFAULT);
@@ -288,7 +282,7 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 	if (getSSREnabled()) {
 		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
 		device->EventBegin("SSR", threadID);
-		rtSSR.Activate(threadID); {
+		rtSSR.Set(threadID); {
 			fx.process.clear();
 			fx.disableFullScreen();
 			fx.process.setSSR();

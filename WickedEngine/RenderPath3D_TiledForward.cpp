@@ -25,7 +25,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
-	rtMain.Activate(threadID, 0, 0, 0, 0, true); // depth prepass
+	rtMain.SetAndClear(threadID, true); // depth prepass
 	{
 		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true, getLayerMask());
 	}
@@ -37,7 +37,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 
 	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
-	rtLinearDepth.Activate(threadID); {
+	rtLinearDepth.Set(threadID); {
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
@@ -72,7 +72,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
-		rtSSAO[0].Activate(threadID); {
+		rtSSAO[0].Set(threadID); {
 			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_LINEAR;
@@ -80,12 +80,12 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 			wiImage::Draw(nullptr, fx, threadID);
 			fx.process.clear();
 		}
-		rtSSAO[1].Activate(threadID); {
+		rtSSAO[1].Set(threadID); {
 			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtSSAO[0].GetTexture(), fx, threadID);
 		}
-		rtSSAO[2].Activate(threadID); {
+		rtSSAO[2].Set(threadID); {
 			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			wiImage::Draw(rtSSAO[1].GetTexture(), fx, threadID);
@@ -99,7 +99,7 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 	if (getSSREnabled()) {
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
 		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
-		rtSSR.Activate(threadID); {
+		rtSSR.Set(threadID); {
 			fx.process.clear();
 			fx.disableFullScreen();
 			fx.process.setSSR();

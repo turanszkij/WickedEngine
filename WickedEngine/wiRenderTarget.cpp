@@ -170,42 +170,48 @@ void wiRenderTarget::Add(FORMAT format)
 
 }
 
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
+void wiRenderTarget::SetAndClear(GRAPHICSTHREAD threadID, bool disableColor, int viewID)
 {
-	Activate(threadID,0,0,0,0,disableColor, viewID);
+	SetAndClear(threadID,0,0,0,0,disableColor, viewID);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor, int viewID)
+void wiRenderTarget::SetAndClear(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor, int viewID)
 {
 	Set(threadID, disableColor, viewID);
-	float ClearColor[4] = { r, g, b, a };
-	if (viewID >= 0)
+	if (!disableColor)
 	{
-		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(viewID), ClearColor, threadID);
-	}
-	else
-	{
-		for (int i = 0; i<numViews; ++i)
-			wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+		float ClearColor[4] = { r, g, b, a };
+		if (viewID >= 0)
+		{
+			wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(viewID), ClearColor, threadID);
+		}
+		else
+		{
+			for (int i = 0; i < numViews; ++i)
+				wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+		}
 	}
 	if(depth) depth->Clear(threadID);
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a, bool disableColor, int viewID)
+void wiRenderTarget::SetAndClear(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, float r, float g, float b, float a, bool disableColor, int viewID)
 {
 	Set(threadID,getDepth, disableColor, viewID);
-	float ClearColor[4] = { r, g, b, a };
-	if (viewID >= 0)
+	if (!disableColor)
 	{
-		wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(viewID), ClearColor, threadID);
-	}
-	else
-	{
-		for (int i = 0; i<numViews; ++i)
-			wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+		float ClearColor[4] = { r, g, b, a };
+		if (viewID >= 0)
+		{
+			wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(viewID), ClearColor, threadID);
+		}
+		else
+		{
+			for (int i = 0; i < numViews; ++i)
+				wiRenderer::GetDevice()->ClearRenderTarget(GetTexture(i), ClearColor, threadID);
+		}
 	}
 }
-void wiRenderTarget::Activate(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor, int viewID)
+void wiRenderTarget::SetAndClear(GRAPHICSTHREAD threadID, wiDepthTarget* getDepth, bool disableColor, int viewID)
 {
-	Activate(threadID,getDepth,0,0,0,0, disableColor, viewID);
+	SetAndClear(threadID,getDepth,0,0,0,0, disableColor, viewID);
 }
 void wiRenderTarget::Deactivate(GRAPHICSTHREAD threadID)
 {

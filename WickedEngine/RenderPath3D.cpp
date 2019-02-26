@@ -268,7 +268,7 @@ void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID)
 	{
 		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), threadID);
 
-		rtReflection.Activate(threadID); {
+		rtReflection.SetAndClear(threadID); {
 			// reverse clipping if underwater
 			XMFLOAT4 water = wiRenderer::GetWaterPlane();
 			float d = XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&water), wiRenderer::GetCamera().GetEye()));
@@ -357,11 +357,11 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 	{
 		wiRenderer::GetDevice()->EventBegin("Light Shafts", threadID);
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
-		rtSun[0].Activate(threadID, mainRT.depth); {
+		rtSun[0].SetAndClear(threadID, mainRT.depth); {
 			wiRenderer::DrawSun(threadID);
 		}
 
-		rtSun[1].Activate(threadID); {
+		rtSun[1].SetAndClear(threadID); {
 			wiImageParams fxs = fx;
 			fxs.blendFlag = BLENDMODE_OPAQUE;
 			XMVECTOR sunPos = XMVector3Project(sunDirection * 100000, 0, 0, 
@@ -379,17 +379,18 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 
 	if (getVolumeLightsEnabled())
 	{
-		rtVolumetricLights.Activate(threadID, 0, 0, 0, 0);
+		rtVolumetricLights.SetAndClear(threadID, 0, 0, 0, 0);
 		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), threadID);
 	}
 
 	if (getEmittedParticlesEnabled())
 	{
-		rtParticle.Activate(threadID, 0, 0, 0, 0);
+		rtParticle.SetAndClear(threadID, 0, 0, 0, 0);
 		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), false, threadID);
 	}
 
-	rtWaterRipple.Activate(threadID, 0, 0, 0, 0); {
+	// todo: refactor water ripples and avoid clear if there is none!
+	rtWaterRipple.SetAndClear(threadID, 0, 0, 0, 0); {
 		wiRenderer::DrawWaterRipples(threadID);
 	}
 
@@ -447,7 +448,7 @@ void RenderPath3D::RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& 
 	if (getEmittedParticlesEnabled())
 	{
 		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-		rtParticle.Activate(threadID, 0, 0, 0, 0);
+		rtParticle.SetAndClear(threadID, 0, 0, 0, 0);
 		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), true, threadID);
 	}
 

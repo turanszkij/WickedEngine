@@ -3354,7 +3354,6 @@ void SetUpStates()
 	}
 
 	BlendStateDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;

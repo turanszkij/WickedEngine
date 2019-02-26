@@ -114,7 +114,7 @@ void RenderPath2D::FixedUpdate()
 }
 void RenderPath2D::Render()
 {
-	rtFinal.Activate(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0.0f);
+	rtFinal.SetAndClear(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0.0f);
 
 	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
 	for (auto& x : layers)

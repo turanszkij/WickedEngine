@@ -25,10 +25,10 @@ public:
 	void Initialize(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, bool depthOnly = false);
 	void InitializeCube(UINT size, bool hasDepth, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, bool depthOnly = false);
 	void Add(wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM);
-	void Activate(GRAPHICSTHREAD threadID, bool disableColor = false, int viewID = -1);
-	void Activate(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor = false, int viewID = -1);
-	void Activate(GRAPHICSTHREAD threadID, wiDepthTarget*, float r, float g, float b, float a, bool disableColor = false, int viewID = -1);
-	void Activate(GRAPHICSTHREAD threadID, wiDepthTarget*, bool disableColor = false, int viewID = -1);
+	void SetAndClear(GRAPHICSTHREAD threadID, bool disableColor = false, int viewID = -1);
+	void SetAndClear(GRAPHICSTHREAD threadID, float r, float g, float b, float a, bool disableColor = false, int viewID = -1);
+	void SetAndClear(GRAPHICSTHREAD threadID, wiDepthTarget*, float r, float g, float b, float a, bool disableColor = false, int viewID = -1);
+	void SetAndClear(GRAPHICSTHREAD threadID, wiDepthTarget*, bool disableColor = false, int viewID = -1);
 	void Deactivate(GRAPHICSTHREAD threadID);
 	void Set(GRAPHICSTHREAD threadID, bool disableColor = false, int viewID = -1);
 	void Set(GRAPHICSTHREAD threadID, wiDepthTarget*, bool disableColor = false, int viewID = -1);
