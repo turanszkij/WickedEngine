@@ -82,13 +82,13 @@ inline Ray CreateRay(float3 origin, float3 direction)
 
 inline Ray CreateCameraRay(float2 uv)
 {
-	// Invert the perspective projection of the view-space position
-	float3 direction = mul(float4(uv, 0.0f, 1.0f), g_xFrame_MainCamera_InvP).xyz;
-	// Transform the direction from camera to world space and normalize
-	direction = mul(float4(direction, 0.0f), g_xFrame_MainCamera_InvV).xyz;
-	direction = normalize(direction);
+	float4 unprojected = mul(float4(uv, 0.0f, 1.0f), g_xFrame_MainCamera_InvVP);
+	unprojected.xyz /= unprojected.w;
 
-	return CreateRay(g_xFrame_MainCamera_CamPos, direction);
+	const float3 origin = g_xFrame_MainCamera_CamPos;
+	const float3 direction = normalize(unprojected.xyz - origin);
+
+	return CreateRay(origin, direction);
 }
 
 struct RayHit
@@ -235,23 +235,6 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHMeshTri
 }
 
 
-
-//inline float rayBoxIntersect(float3 rpos, float3 rdir, float3 vmin, float3 vmax)
-//{
-//	float t[10];
-//	t[1] = (vmin.x - rpos.x) / rdir.x;
-//	t[2] = (vmax.x - rpos.x) / rdir.x;
-//	t[3] = (vmin.y - rpos.y) / rdir.y;
-//	t[4] = (vmax.y - rpos.y) / rdir.y;
-//	t[5] = (vmin.z - rpos.z) / rdir.z;
-//	t[6] = (vmax.z - rpos.z) / rdir.z;
-//	t[7] = fmax(fmax(fmin(t[1], t[2]), fmin(t[3], t[4])), fmin(t[5], t[6]));
-//	t[8] = fmin(fmin(fmax(t[1], t[2]), fmax(t[3], t[4])), fmax(t[5], t[6]));
-//	t[9] = (t[8] < 0 || t[7] > t[8]) ? NOHIT : t[7];
-//	return t[9];
-//}
-
-
 inline bool IntersectBox(in Ray ray, in BVHAABB box)
 {
 	if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
@@ -259,17 +242,17 @@ inline bool IntersectBox(in Ray ray, in BVHAABB box)
 		ray.origin.z >= box.min.z && ray.origin.z <= box.max.z)
 		return true;
 
-	float t[9];
-	t[1] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;
-	t[2] = (box.max.x - ray.origin.x) * ray.direction_inverse.x;
-	t[3] = (box.min.y - ray.origin.y) * ray.direction_inverse.y;
-	t[4] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
-	t[5] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
-	t[6] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
-	t[7] = max(max(min(t[1], t[2]), min(t[3], t[4])), min(t[5], t[6]));
-	t[8] = min(min(max(t[1], t[2]), max(t[3], t[4])), max(t[5], t[6]));
+	float t[6];
+	t[0] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;
+	t[1] = (box.max.x - ray.origin.x) * ray.direction_inverse.x;
+	t[2] = (box.min.y - ray.origin.y) * ray.direction_inverse.y;
+	t[3] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
+	t[4] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
+	t[5] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
+	const float tmin  = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
+	const float tmax  = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
 
-	return (t[8] < 0 || t[7] > t[8]) ? false : true;
+	return (tmax < 0 || tmin > tmax) ? false : true;
 }
 
 inline float3x3 GetTangentSpace(float3 normal)

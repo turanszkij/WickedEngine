@@ -101,6 +101,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 	if (wiRenderer::GetCamera().IsDirty())
 	{
+		wiRenderer::GetCamera().SetDirty(false);
 		sam = -1;
 	}
 	else
