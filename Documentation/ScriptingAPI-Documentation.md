@@ -3,6 +3,7 @@ This is a collection and explanation of scripting features in Wicked Engine.
 The documentation completion is still pending....
 
 ## Contents
+---
 1. Introduction and usage
 2. Common Tools
 3. Engine manipulation
@@ -37,6 +38,7 @@ The documentation completion is still pending....
 	12. ResourceManager
 		
 ## Introduction and usage
+---
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
 syntax and features of the widely used Lua language, accompanied by its fast interpreter.
 Apart from the common features, certain engine features are also available to use.
@@ -49,7 +51,17 @@ In the startup file, you can specify any startup logic, for example loading cont
 The setting up and usage of the BackLog is the responsibility of the target application, but the recommended way to set it up
 is included in all of the demo projects. It is mapped to te HOME button by default.
 
+- Tip: You can inspect any object's functionality by calling 
+getprops(YourObject) on them (where YourObject is the object which is to be inspected). The result will be displayed on the BackLog.
+
+- Tags used in this documentation:
+	- [constructor]				: The method is a constructor for the same type of object.
+	- [void-constructor]		: The method is a constructor for the same type of object, but the object it creates is empty, so cannot be used.
+	- [outer]					: The method or value is in the global scope, so not a method of any objects.
+
+
 ## Common Tools
+---
 This section describes the common tools for scripting which are not necessarily engine features.
 - signal(string name)
 - waitSignal(string name)
@@ -85,17 +97,7 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
-- GetTransforms() : string result
-- GetTransform(String name) : Transform? result
-- GetArmatures() : string result
-- GetArmature(String name) : Armature? result
-- GetObjects() : string result
-- GetObject(String name) : Object? result
-- GetEmitters() : string result
-- GetEmitter(string name) : Emitter? result1,result2,...
-- GetMeshes() : string result
-- GetLights() : string result
-- GetMaterials() : string result
+- GetScene() : Scene result
 - GetGameSpeed() : float result
 - SetResolutionScale(float scale)
 - SetGamma(float gamma)
@@ -104,10 +106,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetScreenHeight() : float result
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
-- GetCameras() : string result
-- GetCamera(opt String name) : Camera result		-- If string is provided, it will search a camera by name, otherwise, returns the main camera
+- GetCamera() : Camera result		-- returns the main camera
 - LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
-- LoadWorldInfo(string fileName)		-- Loads world information from file
 - DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
 - SetEnvironmentMap(Texture cubemap)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
@@ -128,16 +128,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - PutEnvProbe(Vector pos)
 - ClearWorld()
 - ReloadShaders(opt string path)
-
-## Utility Tools
-The scripting API provides certain engine features to be used in development.
-- Tip: You can inspect any object's functionality by calling 
-getprops(YourObject) on them (where YourObject is the object which is to be inspected). The result will be displayed on the BackLog.
-
-- Tags:
-	- [constructor]				: The method is a constructor for the same type of object.
-	- [void-constructor]		: The method is a constructor for the same type of object, but the object it creates is empty, so cannot be used.
-	- [outer]					: The method or value is in the global scope, so not a method of any objects.
 
 ### Font
 Gives you the ability to render text with a custom font.
@@ -296,12 +286,64 @@ A four by four matrix, efficient calculations with SIMD support.
 - Transpose(Matrix m) : Matrix result
 - Inverse(Matrix m) : Matrix result, float determinant
 
-### Scene
-Manipulate the 3D scene with these components. TODO: rewrite this section
+### Scene System (using entity-component system)
+Manipulate the 3D scene with these components.
+
+#### Entity
+An entity is just an int value and works as a handle to retrieve associated components
+
+#### Scene
+- [outer]GetScene()  -- returns the current scene
+- Update()  -- updates the scene and every entity and component inside the scene
+- Clear()  -- deletes every entity and component inside the scene
+- Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
+- Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
+- Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
+- Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
+- Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned TransformComponent is associated with the entity and can be manipulated
+- Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
+- Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
+- Component_GetTransform(Entity entity) : TransformComponent? result  -- query the transform component of the entity (if exists)
+- Component_GetCamera(Entity entity) : CameraComponent? result  -- query the camera component of the entity (if exists)
+- Component_GetAnimation(Entity entity) : AnimationComponent? result  -- query the animation component of the entity (if exists)
+- Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
+- Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
+- Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
+
+#### NameComponent
+Holds a string that can more easily identify an entity to humans than an entity ID. 
+- SetName(string value)  -- set the name
+- GetName() : string result  -- query the name string
+
+#### LayerComponent
+An integer mask that can be used to group entities together for certain operations such as: picking, rendering, etc.
+- SetLayerMask(int value)  -- set layer mask
+- GetLayerMask() : int result  -- query layer mask
+
+#### TransformComponent
+Describes an orientation in 3D space.
+- Scale(Vector vectorXYZ)  -- Applies scaling
+- Rotate(Vector vectorRollPitchYaw)  -- Applies rotation as roll,pitch,yaw
+- Translate(Vector vectorXYZ)  -- Applies translation (position offset)
+- Lerp(TransformComponent a,b, float t)  -- Interpolates linearly between two transform components 
+- CatmullRom(TransformComponent a,b,c,d, float t)  -- Interpolates between four transform components on a spline
+- MatrixTransform(Matrix matrix)  -- Applies a transformation matrix
+- GetMatrix() : Matrix result  -- Retrieve a 4x4 transformation matrix representing the transform component's current orientation
+- ClearTransform()  -- Reset to the world origin, as in position becomes Vector(0,0,0), rotation quaternion becomes Vector(0,0,0,1), scaling becomes Vector(1,1,1)
+- UpdateTransform()  -- Updates the underlying transformation matrix 
+- GetPosition() : Vector resultXYZ  -- query the position in world space
+- GetRotation() : Vector resultQuaternion  -- query the rotation as a quaternion in world space
+- GetScale() : Vector resultXYZ  -- query the scaling in world space
+
+#### CameraComponent
+- UpdateCamera()  -- update the camera matrices
+- TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 
 
+## High Level Interface
+---
 ### MainComponent
-The main component which holds information and manages the running of the current program.
+This is the main entry point and manages the lifetime of the application. Even though it is called a component, it is not part of the entity-component system
 - [outer]main : MainComponent
 - [void-constructor]MainComponent()
 - GetContent() : Resource? result
@@ -314,7 +356,7 @@ The main component which holds information and manages the running of the curren
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath
-A RenderPath describes a scene wich can render itself.
+A RenderPath is a high level system that represents a part of the whole application. It is responsible to handle high level rendering and logic flow. A render path can be for example a loading screen, a menu screen, or primary game screen, etc.
 - [constructor]RenderPath()
 - GetContent() : Resource result
 - Initialize()
@@ -348,7 +390,7 @@ It can hold Sprites and Fonts and can sort them by layers, update and render the
 - SetFontOrder(Font font, int order)
 
 #### RenderPath3D
-A 3D scene can either be rendered by a Forward or Deferred render path. 
+A 3D scene can either be rendered by a Forward or Deferred render path, or path tracing. 
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - [void-constructor]RenderPath3D()
 - SetSSAOEnabled(bool value)
