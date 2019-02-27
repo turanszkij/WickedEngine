@@ -3,7 +3,6 @@ This is a collection and explanation of scripting features in Wicked Engine.
 The documentation completion is still pending....
 
 ## Contents
----
 1. Introduction and usage
 2. Common Tools
 3. Engine manipulation
@@ -38,7 +37,6 @@ The documentation completion is still pending....
 	12. ResourceManager
 		
 ## Introduction and usage
----
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
 syntax and features of the widely used Lua language, accompanied by its fast interpreter.
 Apart from the common features, certain engine features are also available to use.
@@ -61,7 +59,6 @@ getprops(YourObject) on them (where YourObject is the object which is to be insp
 
 
 ## Common Tools
----
 This section describes the common tools for scripting which are not necessarily engine features.
 - signal(string name)
 - waitSignal(string name)
@@ -341,7 +338,6 @@ Describes an orientation in 3D space.
 
 
 ## High Level Interface
----
 ### MainComponent
 This is the main entry point and manages the lifetime of the application. Even though it is called a component, it is not part of the entity-component system
 - [outer]main : MainComponent
