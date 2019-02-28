@@ -115,6 +115,7 @@ bool occlusionCulling = false;
 bool temporalAA = false;
 bool temporalAADEBUG = false;
 uint32_t lightmapBakeBounceCount = 4;
+bool raytraceDebugVisualizer = false;
 
 struct VoxelizedSceneData
 {
@@ -1136,6 +1137,7 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_VOXEL,
 	DEBUGRENDERING_FORCEFIELD_POINT,
 	DEBUGRENDERING_FORCEFIELD_PLANE,
+	DEBUGRENDERING_RAYTRACE_BVH,
 	DEBUGRENDERING_COUNT
 };
 GraphicsPSO* PSO_debug[DEBUGRENDERING_COUNT] = {};
@@ -1967,6 +1969,7 @@ void LoadShaders()
 	vertexShaders[VSTYPE_VOXEL] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPointVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_RAYTRACE_SCREEN] = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_screenVS.cso", wiResourceManager::VERTEXSHADER));
 
 
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
@@ -2052,6 +2055,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_indirect.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_direct.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_debugbvhPS.cso", wiResourceManager::PIXELSHADER));
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -2743,6 +2747,10 @@ void LoadShaders()
 	{
 		GraphicsPSODesc desc;
 
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
 		switch (debug)
 		{
 		case DEBUGRENDERING_ENVPROBE:
@@ -2814,11 +2822,16 @@ void LoadShaders()
 			desc.bs = blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = TRIANGLESTRIP;
 			break;
+		case DEBUGRENDERING_RAYTRACE_BVH:
+			desc.vs = vertexShaders[VSTYPE_RAYTRACE_SCREEN];
+			desc.ps = pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH];
+			desc.dss = depthStencils[DSSTYPE_XRAY];
+			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.pt = TRIANGLELIST;
+			desc.DSFormat = FORMAT_UNKNOWN;
+			break;
 		}
-
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
-		desc.DSFormat = DSFormat_full;
 
 		RECREATE(PSO_debug[debug]);
 		HRESULT hr = device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
@@ -5785,6 +5798,11 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 
+	if (GetRaytraceDebugBVHVisualizerEnabled())
+	{
+		DrawTracedSceneBVH(threadID);
+	}
+
 	device->EventEnd(threadID);
 }
 
@@ -7501,6 +7519,16 @@ void DrawTracedScene(const CameraComponent& camera, Texture2D* result, GRAPHICST
 
 	device->EventEnd(threadID); // DrawTracedScene
 }
+void DrawTracedSceneBVH(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("DebugRaytraceBVH", threadID);
+	device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], threadID);
+	sceneBVH.Bind(PS, threadID);
+	device->Draw(3, 0, threadID);
+	device->EventEnd(threadID);
+}
 
 void GenerateClouds(Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
 {
@@ -8617,6 +8645,14 @@ void SetLightmapBakeBounceCount(uint32_t bounces)
 uint32_t GetLightmapBakeBounceCount()
 {
 	return lightmapBakeBounceCount;
+}
+void SetRaytraceDebugBVHVisualizerEnabled(bool value)
+{
+	raytraceDebugVisualizer = value;
+}
+bool GetRaytraceDebugBVHVisualizerEnabled()
+{
+	return raytraceDebugVisualizer;
 }
 
 }

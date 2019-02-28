@@ -135,28 +135,35 @@ void RenderPath3D_PathTracing::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 
 void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 {
-	wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
+	if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
+	{
+		rtAccumulation.SetAndClear(threadID, 0, 0, 0, 1);
+		wiRenderer::DrawTracedSceneBVH(threadID);
+	}
+	else
+	{
+		wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult.get(), threadID);
-
-
-
-
-	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
-	fx.enableHDR();
-
-
-	// Accumulate with moving averaged blending:
-	fx.opacity = 1.0f / (sam + 1.0f);
-	fx.blendFlag = BLENDMODE_ALPHA;
-
-	rtAccumulation.Set(threadID);
-	wiImage::Draw(traceResult.get(), fx, threadID);
+		wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult.get(), threadID);
 
 
-	wiProfiler::EndRange(threadID); // Traced Scene
+
+
+		wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+		fx.enableHDR();
+
+
+		// Accumulate with moving averaged blending:
+		fx.opacity = 1.0f / (sam + 1.0f);
+		fx.blendFlag = BLENDMODE_ALPHA;
+
+		rtAccumulation.Set(threadID);
+		wiImage::Draw(traceResult.get(), fx, threadID);
+
+		wiProfiler::EndRange(threadID); // Traced Scene
+	}
 }
 
 void RenderPath3D_PathTracing::Compose()

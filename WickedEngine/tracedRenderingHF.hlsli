@@ -48,11 +48,11 @@ inline TracedRenderingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
 {
 	TracedRenderingStoredRay storedray;
 
-	storedray.pixelID = pixelID;
 	storedray.origin = ray.origin;
+	storedray.pixelID = pixelID;
 	storedray.direction_energy = f32tof16(ray.direction) | (f32tof16(ray.energy) << 16);
 	storedray.primitiveID = ray.primitiveID;
-	storedray.bary = ray.bary;
+	storedray.bary = f32tof16(ray.bary.x) | (f32tof16(ray.bary.y) << 16);
 
 	return storedray;
 }
@@ -64,7 +64,8 @@ inline void LoadRay(in TracedRenderingStoredRay storedray, out Ray ray, out uint
 	ray.direction = asfloat(f16tof32(storedray.direction_energy));
 	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
 	ray.primitiveID = storedray.primitiveID;
-	ray.bary = storedray.bary;
+	ray.bary.x = f16tof32(storedray.bary);
+	ray.bary.y = f16tof32(storedray.bary >> 16);
 	ray.Update();
 }
 
@@ -80,9 +81,9 @@ inline Ray CreateRay(float3 origin, float3 direction)
 	return ray;
 }
 
-inline Ray CreateCameraRay(float2 uv)
+inline Ray CreateCameraRay(float2 clipspace)
 {
-	float4 unprojected = mul(float4(uv, 0.0f, 1.0f), g_xFrame_MainCamera_InvVP);
+	float4 unprojected = mul(float4(clipspace, 0.0f, 1.0f), g_xFrame_MainCamera_InvVP);
 	unprojected.xyz /= unprojected.w;
 
 	const float3 origin = g_xFrame_MainCamera_CamPos;

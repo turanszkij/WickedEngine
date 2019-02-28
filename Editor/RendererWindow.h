@@ -46,6 +46,7 @@ public:
 	wiCheckBox* boneLinesCheckBox;
 	wiCheckBox* debugEmittersCheckBox;
 	wiCheckBox* debugForceFieldsCheckBox;
+	wiCheckBox* debugRaytraceBVHCheckBox;
 	wiCheckBox* wireFrameCheckBox;
 	wiCheckBox* advancedLightCullingCheckBox;
 	wiCheckBox* debugLightCullingCheckBox;

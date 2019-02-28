@@ -207,6 +207,74 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	return shadow;
 }
 
+// Returns number of BVH nodes that were hit:
+//	returns 0xFFFFFFFF when there was a stack overflow
+//	returns (0xFFFFFFFF - 1) when the exit condition was reached
+inline uint TraceBVH(Ray ray)
+{
+	uint hit_counter = 0;
+
+	// Emulated stack for tree traversal:
+	uint stack[RAYTRACE_STACKSIZE];
+	uint stackpos = 0;
+
+	const uint clusterCount = clusterCounterBuffer.Load(0);
+	const uint leafNodeOffset = clusterCount - 1;
+
+	// push root node
+	stack[stackpos] = 0;
+	stackpos++;
+
+	uint exit_condition = 0;
+	do {
+#ifdef RAYTRACE_EXIT
+		if (exit_condition > RAYTRACE_EXIT)
+			return (0xFFFFFFFF - 1);
+		exit_condition++;
+#endif // RAYTRACE_EXIT
+
+		// pop untraversed node
+		stackpos--;
+		const uint nodeIndex = stack[stackpos];
+
+		BVHNode node = bvhNodeBuffer[nodeIndex];
+		BVHAABB box = bvhAABBBuffer[nodeIndex];
+
+		if (IntersectBox(ray, box))
+		{
+			hit_counter++;
+
+			if (nodeIndex >= clusterCount - 1)
+			{
+				// Leaf node
+			}
+			else
+			{
+				// Internal node
+				if (stackpos < RAYTRACE_STACKSIZE - 1)
+				{
+					// push left child
+					stack[stackpos] = node.LeftChildIndex;
+					stackpos++;
+					// push right child
+					stack[stackpos] = node.RightChildIndex;
+					stackpos++;
+				}
+				else
+				{
+					// stack overflow, terminate
+					return 0xFFFFFFFF;
+				}
+			}
+
+		}
+
+	} while (stackpos > 0);
+
+
+	return hit_counter;
+}
+
 // This will modify ray to continue the trace
 //	Also fill the final params of rayHit, such as normal, uv, materialIndex
 //	seed should be > 0

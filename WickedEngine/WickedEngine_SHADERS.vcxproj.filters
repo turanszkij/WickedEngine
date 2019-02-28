@@ -861,6 +861,12 @@
     <FxCompile Include="screenPS_bicubic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="raytrace_debugbvhPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_screenVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

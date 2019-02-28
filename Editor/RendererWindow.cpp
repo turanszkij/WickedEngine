@@ -453,6 +453,15 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	debugForceFieldsCheckBox->SetCheck(wiRenderer::GetToDrawDebugForceFields());
 	rendererWindow->AddWidget(debugForceFieldsCheckBox);
 
+	debugRaytraceBVHCheckBox = new wiCheckBox("Raytrace BVH visualizer: ");
+	debugRaytraceBVHCheckBox->SetTooltip("Visualize scene BVH if raytracing is enabled");
+	debugRaytraceBVHCheckBox->SetPos(XMFLOAT2(x, y += step));
+	debugRaytraceBVHCheckBox->OnClick([](wiEventArgs args) {
+		wiRenderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
+	});
+	debugRaytraceBVHCheckBox->SetCheck(wiRenderer::GetRaytraceDebugBVHVisualizerEnabled());
+	rendererWindow->AddWidget(debugRaytraceBVHCheckBox);
+
 	envProbesCheckBox = new wiCheckBox("Env probe visualizer: ");
 	envProbesCheckBox->SetTooltip("Toggle visualization of environment probes as reflective spheres");
 	envProbesCheckBox->SetPos(XMFLOAT2(x, y += step));

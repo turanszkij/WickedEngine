@@ -136,6 +136,8 @@ namespace wiRenderer
 	void BuildSceneBVH(GRAPHICSTHREAD threadID);
 	// Render the scene with ray tracing only
 	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+	// Render the scene BVH with ray tracing
+	void DrawTracedSceneBVH(GRAPHICSTHREAD threadID);
 
 	// Render occluders against a depth buffer
 	void OcclusionCulling_Render(GRAPHICSTHREAD threadID);
@@ -267,6 +269,8 @@ namespace wiRenderer
 	void InvalidateBVH(); // invalidates scene bvh so if something wants to use it, it will recompute and validate it
 	void SetLightmapBakeBounceCount(uint32_t bounces);
 	uint32_t GetLightmapBakeBounceCount();
+	void SetRaytraceDebugBVHVisualizerEnabled(bool value);
+	bool GetRaytraceDebugBVHVisualizerEnabled();
 
 	wiGraphicsTypes::Texture2D* GetGlobalLightmap();
 

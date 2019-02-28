@@ -18,11 +18,11 @@ CBUFFER(TracedRenderingCB, CBSLOT_RENDERER_TRACED)
 
 struct TracedRenderingStoredRay
 {
-	uint pixelID;
 	float3 origin;
+	uint pixelID;
 	uint3 direction_energy;
 	uint primitiveID;
-	float2 bary;
+	uint bary;
 };
 
 struct TracedRenderingMaterial
