@@ -13,7 +13,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 	{
 		float4 baseColor = DEGAMMA(g_xMat_baseColor * float4(instanceColor, 1) * xBaseColorMap.Sample(sampler_linear_wrap, tex));
 		float4 color = baseColor;
-		float emissive = g_xMat_emissive;
+		float3 emissive = g_xMat_emissive * DEGAMMA(xEmissiveMap.Sample(sampler_linear_wrap, tex).rgb);
 
 		// fake normals are good enough because it's only coarse diffuse light, no need to normalize:
 		//	(just uncomment if there are any noticable artifacts)

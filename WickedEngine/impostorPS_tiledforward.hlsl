@@ -10,22 +10,20 @@ GBUFFEROutputType_Thin main(VSOut input)
 	float3 uv_sur = uv_nor + impostorCaptureAngles;
 
 	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col);
-	float4 normal_roughness = impostorTex.Sample(sampler_linear_clamp, uv_nor);
+	float4 normal = impostorTex.Sample(sampler_linear_clamp, uv_nor);
 	float4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 
-	float3 N = normal_roughness.rgb;
-	float roughness = normal_roughness.a;
+	float3 N = normal.rgb;
 
-	float reflectance = surfaceparams.r;
-	float metalness = surfaceparams.g;
-	float emissive = surfaceparams.b;
+	float ao = surfaceparams.r;
+	float roughness = surfaceparams.g;
+	float metalness = surfaceparams.b;
+	float reflectance = surfaceparams.a;
 
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
-	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, roughness, reflectance, metalness);
-	float ao = 1;
-	float sss = 0;
+	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, ao, roughness, metalness, reflectance);
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;
 	float3 diffuse = 0;
@@ -35,7 +33,7 @@ GBUFFEROutputType_Thin main(VSOut input)
 
 	TiledLighting(pixel, surface, diffuse, specular, reflection);
 
-	ApplyLighting(surface, diffuse, specular, ao, color);
+	ApplyLighting(surface, diffuse, specular, color);
 
 	ApplyFog(dist, color);
 

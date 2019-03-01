@@ -53,16 +53,15 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		UV = frac(UV); // emulate wrap
 		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
 		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
-		float4 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.normalMapAtlasMulAdd.xy + mat.normalMapAtlasMulAdd.zw, 0);
+		float3 emissiveMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV * mat.emissiveMapAtlasMulAdd.xy + mat.emissiveMapAtlasMulAdd.zw, 0).rgb;
 
 		float4 baseColor = DEGAMMA(mat.baseColor * baseColorMap);
-		float reflectance = mat.reflectance * surfaceMap.r;
-		float metalness = mat.metalness * surfaceMap.g;
-		float emissive = mat.emissive * surfaceMap.b;
-		float roughness = mat.roughness * normalMap.a;
-		float sss = mat.subsurfaceScattering;
+		float roughness = mat.roughness * surfaceMap.g;
+		float metalness = mat.metalness * surfaceMap.b;
+		float reflectance = mat.reflectance * surfaceMap.a;
+		float3 emissive = mat.emissive * DEGAMMA(mat.baseColor.rgb * emissiveMap);
 
-		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness, emissive, sss);
+		Surface surface = CreateSurface(P, N, V, baseColor, 1, roughness, metalness, reflectance, emissive);
 
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)

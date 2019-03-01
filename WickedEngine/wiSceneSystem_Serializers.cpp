@@ -104,6 +104,11 @@ namespace wiSceneSystem
 			archive >> normalMapName;
 			archive >> displacementMapName;
 
+			if (archive.GetVersion() >= 24)
+			{
+				archive >> emissiveMapName;
+			}
+
 			SetDirty();
 
 			if (!baseColorMapName.empty())
@@ -121,6 +126,10 @@ namespace wiSceneSystem
 			if (!displacementMapName.empty())
 			{
 				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
+			}
+			if (!emissiveMapName.empty())
+			{
+				emissiveMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
 			}
 
 		}
@@ -170,12 +179,23 @@ namespace wiSceneSystem
 				{
 					displacementMapName = displacementMapName.substr(found + dir.length());
 				}
+
+				found = emissiveMapName.rfind(dir);
+				if (found != std::string::npos)
+				{
+					emissiveMapName = emissiveMapName.substr(found + dir.length());
+				}
 			}
 
 			archive << baseColorMapName;
 			archive << surfaceMapName;
 			archive << normalMapName;
 			archive << displacementMapName;
+
+			if (archive.GetVersion() >= 24)
+			{
+				archive << emissiveMapName;
+			}
 		}
 	}
 	void MeshComponent::Serialize(wiArchive& archive, uint32_t seed)

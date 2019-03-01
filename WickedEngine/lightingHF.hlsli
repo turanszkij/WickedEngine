@@ -695,7 +695,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 // VOXEL RADIANCE
 
-inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specular, inout float ao)
+inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specular)
 {
 	[branch]if (g_xFrame_VoxelRadianceDataRes != 0)
 	{
@@ -708,7 +708,7 @@ inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specu
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, surface.P, surface.N);
 		diffuse += lerp(0, radiance.rgb, blend);
-		ao *= 1 - lerp(0, radiance.a, blend);
+		surface.ao *= 1 - lerp(0, radiance.a, blend);
 
 		[branch]
 		if (g_xFrame_VoxelRadianceReflectionsEnabled)

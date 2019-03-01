@@ -40,7 +40,7 @@ struct TracedRenderingMaterial
 
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;
-	float4		normalMapAtlasMulAdd;
+	float4		emissiveMapAtlasMulAdd;
 };
 
 

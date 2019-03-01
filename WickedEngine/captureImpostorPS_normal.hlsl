@@ -9,11 +9,9 @@ float4 main(PixelInputType input) : SV_Target0
 
 	float3x3 TBN = compute_tangent_frame(N, P, UV);
 
-	float roughness = g_xMat_roughness;
-
 	float3 bumpColor;
-	NormalMapping(UV, P, N, TBN, bumpColor, roughness);
+	NormalMapping(UV, P, N, TBN, bumpColor);
 
-	return float4(mul(N, transpose(TBN)), roughness);
+	return float4(mul(N, transpose(TBN)), 1);
 }
 

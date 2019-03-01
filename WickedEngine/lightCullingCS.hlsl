@@ -344,7 +344,7 @@ void main(ComputeShaderInput IN)
 		float metalness = g2.z;
 		float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
-		Surface surface = CreateSurface(P, N, V, baseColor, roughness, reflectance, metalness);
+		Surface surface = CreateSurface(P, N, V, baseColor, ao, roughness, metalness, reflectance);
 
 #ifndef DISABLE_ENVMAPS
 		// Apply environment maps:
@@ -500,7 +500,7 @@ void main(ComputeShaderInput IN)
 			}
 		}
 
-		VoxelGI(surface, diffuse, reflection, ao);
+		VoxelGI(surface, diffuse, reflection);
 
 		float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
 		float2 velocity = g1.zw;

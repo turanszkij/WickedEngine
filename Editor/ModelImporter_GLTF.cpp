@@ -94,7 +94,7 @@ namespace tinygltf
 void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 {
 	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
-	if(wiResourceManager::GetGlobal().get(wiHashString(image->uri)) == nullptr)
+	if (wiResourceManager::GetGlobal().get(wiHashString(image->uri)) == nullptr)
 	{
 		int width = image->width;
 		int height = image->height;
@@ -132,13 +132,13 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 			{
 				wiRenderer::AddDeferredMIPGen(tex);
 
-				//if (image->uri.empty())
+				if (image->uri.empty())
 				{
-					// Always export the images with random generated names, because they were interleaved to engine layout after importing from gltf:
+					// If the texture was embedded, export it as a file:
 					stringstream ss;
 					do {
 						ss.str("");
-						ss << "gltfConv_" << type_name << "_" << wiRandom::getRandom(INT_MAX) << ".png";
+						ss << "gltfimport_" << type_name << "_" << wiRandom::getRandom(INT_MAX) << ".png";
 					} while (wiHelper::FileExists(ss.str())); // this is to avoid overwriting an existing exported image
 					image->uri = ss.str();
 					bool success = wiHelper::saveTextureToFile(image->image, desc, ss.str());
@@ -328,6 +328,7 @@ void ImportModel_GLTF(const std::string& fileName)
 		auto& metallicFactor = x.values.find("metallicFactor");
 		auto& emissiveFactor = x.additionalValues.find("emissiveFactor");
 		auto& alphaCutoff = x.additionalValues.find("alphaCutoff");
+		auto& alphaMode = x.additionalValues.find("alphaMode");
 
 		if (baseColorTexture != x.values.end())
 		{
@@ -345,149 +346,26 @@ void ImportModel_GLTF(const std::string& fileName)
 			material.baseColorMapName = state.gltfModel.images[0].uri;
 		}
 
-		tinygltf::Image* img_nor = nullptr;
-		tinygltf::Image* img_met_rough = nullptr;
-		tinygltf::Image* img_emissive = nullptr;
-
 		if (normalTexture != x.additionalValues.end())
 		{
 			auto& tex = state.gltfModel.textures[normalTexture->second.TextureIndex()];
-			img_nor = &state.gltfModel.images[tex.source];
+			auto& img = state.gltfModel.images[tex.source];
+			RegisterTexture2D(&img, "normal");
+			material.normalMapName = img.uri;
 		}
 		if (metallicRoughnessTexture != x.values.end())
 		{
 			auto& tex = state.gltfModel.textures[metallicRoughnessTexture->second.TextureIndex()];
-			img_met_rough = &state.gltfModel.images[tex.source];
+			auto& img = state.gltfModel.images[tex.source];
+			RegisterTexture2D(&img, "roughness_metallic");
+			material.surfaceMapName = img.uri;
 		}
 		if (emissiveTexture != x.additionalValues.end())
 		{
 			auto& tex = state.gltfModel.textures[emissiveTexture->second.TextureIndex()];
-			img_emissive = &state.gltfModel.images[tex.source];
-		}
-
-		// Now we will begin interleaving texture data to match engine layout:
-
-		if (img_nor != nullptr)
-		{
-			uint32_t* data32_roughness = nullptr;
-			if (img_met_rough != nullptr && img_met_rough->width == img_nor->width && img_met_rough->height == img_nor->height)
-			{
-				data32_roughness = (uint32_t*)img_met_rough->image.data();
-			}
-			else if (img_met_rough != nullptr)
-			{
-				wiBackLog::post("[gltf] Warning: there is a normalmap and roughness texture, but not the same size! Roughness will not be baked in!");
-			}
-
-			// Convert normal map:
-			uint32_t* data32 = (uint32_t*)img_nor->image.data();
-			for (int i = 0; i < img_nor->width * img_nor->height; ++i)
-			{
-				uint32_t pixel = data32[i];
-				float r = ((pixel >> 0)  & 255) / 255.0f;
-				float g = ((pixel >> 8)  & 255) / 255.0f;
-				float b = ((pixel >> 16) & 255) / 255.0f;
-				float a = ((pixel >> 24) & 255) / 255.0f;
-
-				// swap normal y direction:
-				g = 1 - g;
-
-				// reset roughness:
-				a = 1;
-
-				if (data32_roughness != nullptr)
-				{
-					// add roughness from texture (G):
-					a = ((data32_roughness[i] >> 8) & 255) / 255.0f;
-					a = max(1.0f / 255.0f, a); // disallow 0 roughness (but is it really a good idea to do it here???)
-				}
-
-				uint32_t rgba8 = 0;
-				rgba8 |= (uint32_t)(r * 255.0f) << 0;
-				rgba8 |= (uint32_t)(g * 255.0f) << 8;
-				rgba8 |= (uint32_t)(b * 255.0f) << 16;
-				rgba8 |= (uint32_t)(a * 255.0f) << 24;
-
-				data32[i] = rgba8;
-			}
-
-			RegisterTexture2D(img_nor, "normal_roughness");
-			material.normalMapName = img_nor->uri;
-		}
-
-		if (img_met_rough != nullptr)
-		{
-			uint32_t* data32_emissive = nullptr;
-			if (img_emissive != nullptr && img_emissive->width == img_met_rough->width && img_emissive->height == img_met_rough->height)
-			{
-				data32_emissive = (uint32_t*)img_emissive->image.data();
-			}
-
-			uint32_t* data32 = (uint32_t*)img_met_rough->image.data();
-			for (int i = 0; i < img_met_rough->width * img_met_rough->height; ++i)
-			{
-				uint32_t pixel = data32[i];
-				float r = ((pixel >> 0) & 255) / 255.0f;
-				float g = ((pixel >> 8) & 255) / 255.0f;
-				float b = ((pixel >> 16) & 255) / 255.0f;
-				float a = ((pixel >> 24) & 255) / 255.0f;
-
-				float reflectance = 1;
-				float metalness = b;
-				float emissive = 0;
-				float sss = 1;
-
-				if (data32_emissive != nullptr)
-				{
-					// add emissive from texture (R):
-					//	(Currently only supporting single channel emissive)
-					emissive = ((data32_emissive[i] >> 0) & 255) / 255.0f;
-				}
-
-				uint32_t rgba8 = 0;
-				rgba8 |= (uint32_t)(reflectance * 255.0f) << 0;
-				rgba8 |= (uint32_t)(metalness * 255.0f) << 8;
-				rgba8 |= (uint32_t)(emissive * 255.0f) << 16;
-				rgba8 |= (uint32_t)(sss * 255.0f) << 24;
-
-				data32[i] = rgba8;
-			}
-
-			RegisterTexture2D(img_met_rough, "reflectance_metalness_emissive_sss");
-			material.surfaceMapName = img_met_rough->uri;
-		}
-		else if (img_emissive != nullptr)
-		{
-			// No metalness texture, just emissive...
-			uint32_t* data32 = (uint32_t*)img_emissive->image.data();
-
-			if (data32 != nullptr)
-			{
-				for (int i = 0; i < img_emissive->width * img_emissive->height; ++i)
-				{
-					uint32_t pixel = data32[i];
-					float r = ((pixel >> 0) & 255) / 255.0f;
-					float g = ((pixel >> 8) & 255) / 255.0f;
-					float b = ((pixel >> 16) & 255) / 255.0f;
-					float a = ((pixel >> 24) & 255) / 255.0f;
-
-					float reflectance = 1;
-					float metalness = 1;
-					float emissive = r;
-					float sss = 1;
-
-					uint32_t rgba8 = 0;
-					rgba8 |= (uint32_t)(reflectance * 255.0f) << 0;
-					rgba8 |= (uint32_t)(metalness * 255.0f) << 8;
-					rgba8 |= (uint32_t)(emissive * 255.0f) << 16;
-					rgba8 |= (uint32_t)(sss * 255.0f) << 24;
-
-					data32[i] = rgba8;
-				}
-
-				RegisterTexture2D(img_emissive, "reflectance_metalness_emissive_sss");
-				material.surfaceMapName = img_emissive->uri;
-			}
+			auto& img = state.gltfModel.images[tex.source];
+			RegisterTexture2D(&img, "emissive");
+			material.emissiveMapName = img.uri;
 		}
 
 		// Retrieve textures by name:
@@ -497,6 +375,8 @@ void ImportModel_GLTF(const std::string& fileName)
 			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
 		if (!material.surfaceMapName.empty())
 			material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
+		if (!material.emissiveMapName.empty())
+			material.emissiveMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.emissiveMapName);
 
 		if (baseColorFactor != x.values.end())
 		{
@@ -519,6 +399,13 @@ void ImportModel_GLTF(const std::string& fileName)
 		if (alphaCutoff != x.additionalValues.end())
 		{
 			material.alphaRef = 1 - static_cast<float>(alphaCutoff->second.Factor());
+		}
+		if (alphaMode != x.additionalValues.end())
+		{
+			if (alphaMode->second.string_value.compare("BLEND") == 0)
+			{
+				material.blendMode = BLENDMODE_ALPHA;
+			}
 		}
 
 	}

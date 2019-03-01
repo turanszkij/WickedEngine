@@ -131,12 +131,14 @@ namespace wiSceneSystem
 		std::string surfaceMapName;
 		std::string normalMapName;
 		std::string displacementMapName;
+		std::string emissiveMapName;
 
 		// Non-serialized attributes:
 		wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
 		wiGraphicsTypes::Texture2D* surfaceMap = nullptr;
 		wiGraphicsTypes::Texture2D* normalMap = nullptr;
 		wiGraphicsTypes::Texture2D* displacementMap = nullptr;
+		wiGraphicsTypes::Texture2D* emissiveMap = nullptr;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 
 		inline void SetUserStencilRef(uint8_t value)
@@ -153,6 +155,7 @@ namespace wiSceneSystem
 		wiGraphicsTypes::Texture2D* GetNormalMap() const;
 		wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
 		wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
+		wiGraphicsTypes::Texture2D* GetEmissiveMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 

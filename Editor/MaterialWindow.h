@@ -49,10 +49,12 @@ public:
 	wiLabel*	texture_normal_Label;
 	wiLabel*	texture_surface_Label;
 	wiLabel*	texture_displacement_Label;
+	wiLabel*	texture_emissive_Label;
 
 	wiButton*	texture_baseColor_Button;
 	wiButton*	texture_normal_Button;
 	wiButton*	texture_surface_Button;
 	wiButton*	texture_displacement_Button;
+	wiButton*	texture_emissive_Button;
 };
 

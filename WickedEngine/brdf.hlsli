@@ -79,13 +79,14 @@ struct Surface
 	float3 N;				// world space normal
 	float3 V;				// world space view vector
 	float4 baseColor;		// base color [0 -> 1] (rgba)
-	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
-	float metalness;		// metalness [0:dielectric -> 1:metal]
+	float ao;				// ambient occlusion [0 -> 1]
 	float roughness;		// roughness: [0:smooth -> 1:rough] (linear)
-	float roughness_brdf;	// roughness remapped from linear to BRDF
-	float emissive;			// light emission [0 -> 1]
+	float metalness;		// metalness [0:dielectric -> 1:metal]
+	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
+	float3 emissive;		// light emission [0 -> 1]
 	float sss;				// subsurface scattering [0 -> 1]
 
+	float roughness_brdf;	// roughness remapped from linear to BRDF
 	float NdotV;			// cos(angle between normal and view vector)
 	float3 f0;				// fresnel value (rgb)
 	float3 albedo;			// diffuse light absorbtion value (rgb)
@@ -94,6 +95,8 @@ struct Surface
 
 	inline void Update()
 	{
+		roughness_brdf = roughness * roughness;
+
 		NdotV = abs(dot(N, V)) + 1e-5f;
 
 		albedo = ComputeAlbedo(baseColor, reflectance, metalness);
@@ -104,7 +107,17 @@ struct Surface
 		F = F_Schlick(f0, f90, NdotV);
 	}
 };
-inline Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 baseColor, in float roughness, in float reflectance, in float metalness, in float emissive = 0, in float sss = 0)
+inline Surface CreateSurface(
+	in float3 P, 
+	in float3 N, 
+	in float3 V, 
+	in float4 baseColor, 
+	in float ao,
+	in float roughness,
+	in float metalness,
+	in float reflectance, 
+	in float3 emissive = 0, 
+	in float sss = 0)
 {
 	Surface surface;
 
@@ -112,10 +125,10 @@ inline Surface CreateSurface(in float3 P, in float3 N, in float3 V, in float4 ba
 	surface.N = N;
 	surface.V = V;
 	surface.baseColor = baseColor;
+	surface.ao = ao;
 	surface.roughness = roughness;
-	surface.roughness_brdf = surface.roughness * surface.roughness;
-	surface.reflectance = reflectance;
 	surface.metalness = metalness;
+	surface.reflectance = reflectance;
 	surface.emissive = emissive;
 	surface.sss = sss;
 

@@ -14,20 +14,19 @@ GBUFFEROutputType main(VSOut input)
 	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col);
 	ALPHATEST(color.a);
 
-	float4 normal_roughness = impostorTex.Sample(sampler_linear_clamp, uv_nor);
+	float4 normal = impostorTex.Sample(sampler_linear_clamp, uv_nor);
 	float4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 
-	float3 N = normal_roughness.rgb;
-	float roughness = normal_roughness.a;
+	float3 N = normal.rgb;
 
-	float reflectance = surfaceparams.r;
-	float metalness = surfaceparams.g;
-	float emissive = surfaceparams.b;
+	float ao = surfaceparams.r;
+	float roughness = surfaceparams.g;
+	float metalness = surfaceparams.b;
+	float reflectance = surfaceparams.a;
 
-	Surface surface = CreateSurface(0, input.nor, 0, color, roughness, reflectance, metalness);
-	surface.emissive = emissive;
+	Surface surface = CreateSurface(0, input.nor, 0, color, ao, roughness, metalness, reflectance);
 
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
-	return CreateGbuffer(color, surface, velocity, 0, 0, 1);
+	return CreateGbuffer(color, surface, velocity, 0, 0);
 }

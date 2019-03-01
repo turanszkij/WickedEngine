@@ -18,9 +18,7 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
-	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 1, 0, 0);
-	float ao = 1;
-	float sss = 0;
+	Surface surface = CreateSurface(input.pos3D, input.nor, V, color, 1, 1, 0, 0);
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;
 	float3 diffuse = 0;
@@ -30,7 +28,7 @@ GBUFFEROutputType_Thin main(VertexToPixel input)
 
 	ForwardLighting(surface, diffuse, specular, reflection);
 
-	ApplyLighting(surface, diffuse, specular, ao, color);
+	ApplyLighting(surface, diffuse, specular, color);
 
 	ApplyFog(dist, color);
 

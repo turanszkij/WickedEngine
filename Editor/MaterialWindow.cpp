@@ -373,7 +373,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_normal_Button = new wiButton("NormalMap");
 	texture_normal_Button->SetText("");
-	texture_normal_Button->SetTooltip("Load the normalmap texture. RGB: Normal, A: Roughness");
+	texture_normal_Button->SetTooltip("Load the normalmap texture. RGB: Normal");
 	texture_normal_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_normal_Button->SetSize(XMFLOAT2(260, 20));
 	texture_normal_Button->OnClick([&](wiEventArgs args) {
@@ -426,7 +426,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	texture_surface_Button = new wiButton("SurfaceMap");
 	texture_surface_Button->SetText("");
-	texture_surface_Button->SetTooltip("Load the surface property texture: R: Reflectance, G: Metalness, B: Emissive, A: SSS");
+	texture_surface_Button->SetTooltip("Load the surface property texture: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance");
 	texture_surface_Button->SetPos(XMFLOAT2(x + 122, y));
 	texture_surface_Button->SetSize(XMFLOAT2(260, 20));
 	texture_surface_Button->OnClick([&](wiEventArgs args) {
@@ -522,6 +522,59 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		}
 	});
 	materialWindow->AddWidget(texture_displacement_Button);
+
+
+
+	texture_emissive_Label = new wiLabel("EmissiveMap: ");
+	texture_emissive_Label->SetPos(XMFLOAT2(x, y += step));
+	texture_emissive_Label->SetSize(XMFLOAT2(120, 20));
+	materialWindow->AddWidget(texture_emissive_Label);
+
+	texture_emissive_Button = new wiButton("EmissiveMap");
+	texture_emissive_Button->SetText("");
+	texture_emissive_Button->SetTooltip("Load the emissive map texture.");
+	texture_emissive_Button->SetPos(XMFLOAT2(x + 122, y));
+	texture_emissive_Button->SetSize(XMFLOAT2(260, 20));
+	texture_emissive_Button->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		if (material->emissiveMap != nullptr)
+		{
+			material->emissiveMap = nullptr;
+			material->emissiveMapName = "";
+			texture_emissive_Button->SetText("");
+		}
+		else
+		{
+			char szFile[260];
+
+			OPENFILENAMEA ofn;
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.hwndOwner = nullptr;
+			ofn.lpstrFile = szFile;
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// use the contents of szFile to initialize itself.
+			ofn.lpstrFile[0] = '\0';
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.Flags = 0;
+			if (GetSaveFileNameA(&ofn) == TRUE) {
+				string fileName = ofn.lpstrFile;
+				material->emissiveMap = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+				material->emissiveMapName = fileName;
+				fileName = wiHelper::GetFileNameFromPath(fileName);
+				texture_emissive_Button->SetText(fileName);
+			}
+		}
+	});
+	materialWindow->AddWidget(texture_emissive_Button);
 
 
 	materialWindow->Translate(XMFLOAT3(screenW - 760, 50, 0));

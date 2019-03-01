@@ -11,7 +11,7 @@ LightOutputType main(VertexToPixel PSIn)
 	float envMapMIP = roughness * g_xFrame_EnvProbeMipCount;
 	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 
-	VoxelGI(surface, diffuse, specular, ao);
+	VoxelGI(surface, diffuse, specular);
 	float3 ambient = GetAmbient(N) * ao;
 	diffuse += ambient;
 
