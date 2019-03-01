@@ -29,43 +29,64 @@ static GraphicsPSO PSO[RENDERPASS_COUNT][2];
 static GraphicsPSO PSO_wire;
 static ComputePSO CPSO_simulate;
 
-void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID)
+void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt)
 {
-	if (strandCount == 0)
+	world = transform.world;
+
+	XMFLOAT3 _min = mesh.aabb.getMin();
+	XMFLOAT3 _max = mesh.aabb.getMax();
+
+	_max.x += length;
+	_max.y += length;
+	_max.z += length;
+
+	_min.x -= length;
+	_min.y -= length;
+	_min.z -= length;
+
+	aabb = AABB(_min, _max);
+	aabb = aabb.get(world);
+
+	if (dt > 0)
 	{
-		return;
+		_flags &= ~REGENERATE_FRAME;
+		if (cb == nullptr || (strandCount * segmentCount) != particleBuffer->GetDesc().ByteWidth / sizeof(Patch))
+		{
+			_flags |= REGENERATE_FRAME;
+
+			cb.reset(new GPUBuffer);
+			particleBuffer.reset(new GPUBuffer);
+			simulationBuffer.reset(new GPUBuffer);
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_DEFAULT;
+			bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			bd.CPUAccessFlags = 0;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+
+			bd.StructureByteStride = sizeof(Patch);
+			bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer.get());
+
+			bd.StructureByteStride = sizeof(PatchSimulationData);
+			bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, simulationBuffer.get());
+
+			bd.Usage = USAGE_DYNAMIC;
+			bd.ByteWidth = sizeof(HairParticleCB);
+			bd.BindFlags = BIND_CONSTANT_BUFFER;
+			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+			bd.MiscFlags = 0;
+			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
+		}
 	}
 
-	bool regenerate = false;
-
-	if(cb == nullptr || (strandCount * segmentCount) != particleBuffer->GetDesc().ByteWidth / sizeof(Patch))
+}
+void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID) const
+{
+	if (strandCount == 0 || particleBuffer == nullptr)
 	{
-		regenerate = true;
-
-		cb.reset(new GPUBuffer);
-		particleBuffer.reset(new GPUBuffer);
-		simulationBuffer.reset(new GPUBuffer);
-
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-
-		bd.StructureByteStride = sizeof(Patch);
-		bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, particleBuffer.get());
-
-		bd.StructureByteStride = sizeof(PatchSimulationData);
-		bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, simulationBuffer.get());
-
-		bd.Usage = USAGE_DYNAMIC;
-		bd.ByteWidth = sizeof(HairParticleCB);
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		bd.MiscFlags = 0;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
+		return;
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -76,7 +97,7 @@ void wiHairParticle::UpdateRenderData(const MeshComponent& mesh, const MaterialC
 	HairParticleCB hcb;
 	hcb.xWorld = world;
 	hcb.xColor = material.baseColor;
-	hcb.xHairRegenerate = regenerate ? 1 : 0;
+	hcb.xHairRegenerate = (_flags & REGENERATE_FRAME) ? 1 : 0;
 	hcb.xLength = length;
 	hcb.xStiffness = stiffness;
 	hcb.xHairRandomness = randomness;

@@ -264,6 +264,8 @@ struct FrameCulling
 };
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
 
+vector<uint32_t> pendingMaterialUpdates;
+
 GFX_STRUCT Instance
 {
 	XMFLOAT4A mat0;
@@ -3510,7 +3512,35 @@ void UpdatePerFrameData(float dt)
 
 	scene.Update(dt * GetGameSpeed());
 
-	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked:
+	// See which materials will need to update their GPU render data:
+	wiJobSystem::Execute([&] {
+		pendingMaterialUpdates.clear();
+		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			MaterialComponent& material = scene.materials[i];
+
+			if (material.IsDirty())
+			{
+				material.SetDirty(false);
+				pendingMaterialUpdates.push_back(uint32_t(i));
+
+				if (material.constantBuffer == nullptr)
+				{
+					GPUBufferDesc desc;
+					desc.Usage = USAGE_DEFAULT;
+					desc.BindFlags = BIND_CONSTANT_BUFFER;
+					desc.ByteWidth = sizeof(MaterialCB);
+
+					material.constantBuffer.reset(new GPUBuffer);
+					HRESULT hr = device->CreateBuffer(&desc, nullptr, material.constantBuffer.get());
+					assert(SUCCEEDED(hr));
+				}
+			}
+		}
+	});
+
+	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
+	//	and also create skinning bone buffers:
 	wiJobSystem::Execute([&] {
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
@@ -3518,6 +3548,23 @@ void UpdatePerFrameData(float dt)
 
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
+				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
+
+				if (armature.boneBuffer == nullptr)
+				{
+					GPUBufferDesc bd;
+					bd.Usage = USAGE_DYNAMIC;
+					bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+					bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (UINT)armature.boneCollection.size();
+					bd.BindFlags = BIND_SHADER_RESOURCE;
+					bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
+
+					armature.boneBuffer.reset(new GPUBuffer);
+					HRESULT hr = device->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
+					assert(SUCCEEDED(hr));
+				}
 				if (mesh.vertexBuffer_PRE == nullptr)
 				{
 					mesh.vertexBuffer_PRE.reset(new GPUBuffer);
@@ -3738,7 +3785,7 @@ void UpdatePerFrameData(float dt)
 void UpdateRenderData(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene(); // this is not const, so that means that later render passes will depend on this
+	const Scene& scene = GetScene();
 
 	// Process deferred MIP generation:
 	deferredMIPGenLock.lock();
@@ -3751,45 +3798,22 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	// Update material constant buffers:
 	MaterialCB materialGPUData;
-	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+	for (auto& materialIndex : pendingMaterialUpdates)
 	{
-		MaterialComponent& material = scene.materials[i];
+		const MaterialComponent& material = scene.materials[materialIndex];
 
-		if (material.IsDirty())
-		{
-			material.SetDirty(false);
+		materialGPUData.g_xMat_baseColor = material.baseColor;
+		materialGPUData.g_xMat_texMulAdd = material.texMulAdd;
+		materialGPUData.g_xMat_roughness = material.roughness;
+		materialGPUData.g_xMat_reflectance = material.reflectance;
+		materialGPUData.g_xMat_metalness = material.metalness;
+		materialGPUData.g_xMat_emissive = material.emissive;
+		materialGPUData.g_xMat_refractionIndex = material.refractionIndex;
+		materialGPUData.g_xMat_subsurfaceScattering = material.subsurfaceScattering;
+		materialGPUData.g_xMat_normalMapStrength = (material.normalMap == nullptr ? 0 : material.normalMapStrength);
+		materialGPUData.g_xMat_parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
-			materialGPUData.g_xMat_baseColor = material.baseColor;
-			materialGPUData.g_xMat_texMulAdd = material.texMulAdd;
-			materialGPUData.g_xMat_roughness = material.roughness;
-			materialGPUData.g_xMat_reflectance = material.reflectance;
-			materialGPUData.g_xMat_metalness = material.metalness;
-			materialGPUData.g_xMat_emissive = material.emissive;
-			materialGPUData.g_xMat_refractionIndex = material.refractionIndex;
-			materialGPUData.g_xMat_subsurfaceScattering = material.subsurfaceScattering;
-			materialGPUData.g_xMat_normalMapStrength = (material.normalMap == nullptr ? 0 : material.normalMapStrength);
-			materialGPUData.g_xMat_parallaxOcclusionMapping = material.parallaxOcclusionMapping;
-
-			if (material.constantBuffer == nullptr)
-			{
-				GPUBufferDesc desc;
-				desc.Usage = USAGE_DEFAULT;
-				desc.BindFlags = BIND_CONSTANT_BUFFER;
-				desc.ByteWidth = sizeof(MaterialCB);
-
-				SubresourceData InitData;
-				InitData.pSysMem = &materialGPUData;
-
-				material.constantBuffer.reset(new GPUBuffer);
-				device->CreateBuffer(&desc, &InitData, material.constantBuffer.get());
-			}
-			else
-			{
-				device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, threadID);
-			}
-
-		}
-
+		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, threadID);
 	}
 
 
@@ -4038,23 +4062,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			if (mesh.IsSkinned() && scene.armatures.Contains(mesh.armatureID))
 			{
-				ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
-
-				if (armature.boneBuffer == nullptr)
-				{
-					GPUBufferDesc bd;
-					bd.Usage = USAGE_DYNAMIC;
-					bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-					bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (UINT)armature.boneCollection.size();
-					bd.BindFlags = BIND_SHADER_RESOURCE;
-					bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-					bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
-
-					armature.boneBuffer.reset(new GPUBuffer);
-					HRESULT hr = device->CreateBuffer(&bd, nullptr, armature.boneBuffer.get());
-					assert(SUCCEEDED(hr));
-				}
+				const ArmatureComponent& armature = *scene.armatures.GetComponent(mesh.armatureID);
 
 				if (!streamOutSetUp)
 				{
@@ -4149,19 +4157,19 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	// GPU Particle systems simulation/sorting/culling:
 	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 	{
-		wiEmittedParticle& emitter = scene.emitters[i];
+		const wiEmittedParticle& emitter = scene.emitters[i];
 		Entity entity = scene.emitters.GetEntity(i);
 		const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 		const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
-		emitter.UpdateRenderData(transform, material, mesh, threadID);
+		emitter.UpdateGPU(transform, material, mesh, threadID);
 	}
 
-	// Hair particle systems simulation:
+	// Hair particle systems GPU simulation:
 	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 	{
-		wiHairParticle& hair = scene.hairs[i];
+		const wiHairParticle& hair = scene.hairs[i];
 
 		if (hair.meshID != INVALID_ENTITY && GetCamera().frustum.CheckBox(hair.aabb))
 		{
@@ -4172,7 +4180,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				Entity entity = scene.hairs.GetEntity(i);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-				hair.UpdateRenderData(*mesh, material, threadID);
+				hair.UpdateGPU(*mesh, material, threadID);
 			}
 		}
 	}
@@ -4237,6 +4245,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 		device->BindGraphicsPSO(PSO_occlusionquery, threadID);
 
+		// TODO: This is not const, so not thread safe!
 		Scene& scene = GetScene();
 
 		int queryID = 0;
@@ -5809,6 +5818,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 void DrawSky(GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
+	const Scene& scene = GetScene();
 
 	device->EventBegin("DrawSky", threadID);
 	
@@ -5819,7 +5829,7 @@ void DrawSky(GRAPHICSTHREAD threadID)
 	else
 	{
 		device->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
-		if (GetScene().weather.cloudiness > 0)
+		if (scene.weather.cloudiness > 0)
 		{
 			device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 		}
@@ -6313,7 +6323,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 						{
 							continue;
 						}
-						MaterialComponent& material = *GetScene().materials.GetComponent(subset.materialID);
+						const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 						device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 
@@ -7690,7 +7700,7 @@ unordered_map<Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
 void RenderObjectLightMap(ObjectComponent& object, bool updateBVHAndScene, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
-	Scene& scene = GetScene();
+	const Scene& scene = GetScene();
 	HRESULT hr;
 
 	device->EventBegin("RenderObjectLightMap", threadID);

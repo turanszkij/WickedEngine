@@ -213,9 +213,9 @@ void RenderPath3D::FixedUpdate()
 
 void RenderPath3D::Update(float dt)
 {
-	wiRenderer::UpdatePerFrameData(dt);
-
 	RenderPath2D::Update(dt);
+
+	wiRenderer::UpdatePerFrameData(dt);
 }
 
 void RenderPath3D::Compose()

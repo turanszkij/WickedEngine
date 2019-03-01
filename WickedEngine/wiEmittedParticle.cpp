@@ -225,12 +225,27 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 	return retVal;
 }
 
-void wiEmittedParticle::Update(float dt)
+void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 {
 	if (IsPaused())
 		return;
 
+	emit = max(0, emit - floorf(emit));
+
+	CreateSelfBuffers();
+
+	center = transform.GetPosition();
+
 	emit += (float)count*dt;
+
+	// Swap CURRENT alivelist with NEW alivelist
+	aliveList[0].swap(aliveList[1]);
+
+
+	if (IsDebug())
+	{
+		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, GRAPHICSTHREAD_IMMEDIATE);
+	}
 }
 void wiEmittedParticle::Burst(float num)
 {
@@ -246,18 +261,17 @@ void wiEmittedParticle::Restart()
 }
 
 //#define DEBUG_SORTING // slow but great for debug!!
-void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID)
+void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID) const
 {
-	center = transform.GetPosition();
-
-	CreateSelfBuffers();
+	if (particleBuffer == nullptr)
+	{
+		return;
+	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-
 	if (!IsPaused())
 	{
-
 		device->EventBegin("UpdateEmittedParticles", threadID);
 
 		EmittedParticleCB cb;
@@ -568,16 +582,6 @@ void wiEmittedParticle::UpdateRenderData(const TransformComponent& transform, co
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 		device->UnbindResources(0, ARRAYSIZE(res), threadID);
 		device->EventEnd(threadID);
-
-
-		// Swap CURRENT alivelist with NEW alivelist
-		aliveList[0].swap(aliveList[1]);
-		emit -= (UINT)emit;
-	}
-
-	if (IsDebug())
-	{
-		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, threadID);
 	}
 }
 
@@ -601,7 +605,7 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 
 	GPUResource* res[] = {
 		particleBuffer.get(),
-		aliveList[0].get()
+		aliveList[1].get() // NEW aliveList
 	};
 	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
 	device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);

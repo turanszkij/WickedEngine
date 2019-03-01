@@ -18,12 +18,14 @@ private:
 	std::unique_ptr<wiGraphicsTypes::GPUBuffer> simulationBuffer;
 public:
 
-	void UpdateRenderData(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID);
+	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
+	void UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID) const;
 	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, GRAPHICSTHREAD threadID) const;
 
 	enum FLAGS
 	{
 		EMPTY = 0,
+		REGENERATE_FRAME = 1 << 0,
 	};
 	uint32_t _flags = EMPTY;
 

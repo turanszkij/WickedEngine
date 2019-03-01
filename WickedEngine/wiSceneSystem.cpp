@@ -1915,7 +1915,9 @@ namespace wiSceneSystem
 		wiJobSystem::Dispatch((uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
-			emitter.Update(dt);
+			Entity entity = emitters.GetEntity(args.jobIndex);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			emitter.UpdateCPU(transform, dt);
 		});
 
 		wiJobSystem::Dispatch((uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
@@ -1923,7 +1925,6 @@ namespace wiSceneSystem
 			wiHairParticle& hair = hairs[args.jobIndex];
 			Entity entity = hairs.GetEntity(args.jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
-			hair.world = transform.world;
 
 			if (hair.meshID != INVALID_ENTITY)
 			{
@@ -1931,19 +1932,7 @@ namespace wiSceneSystem
 
 				if (mesh != nullptr)
 				{
-					XMFLOAT3 min = mesh->aabb.getMin();
-					XMFLOAT3 max = mesh->aabb.getMax();
-
-					max.x += hair.length;
-					max.y += hair.length;
-					max.z += hair.length;
-
-					min.x -= hair.length;
-					min.y -= hair.length;
-					min.z -= hair.length;
-
-					hair.aabb = AABB(min, max);
-					hair.aabb = hair.aabb.get(hair.world);
+					hair.UpdateCPU(transform, *mesh, dt);
 				}
 			}
 

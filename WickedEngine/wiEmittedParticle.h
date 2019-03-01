@@ -48,12 +48,12 @@ private:
 	uint32_t MAX_PARTICLES = 1000;
 
 public:
-	void Update(float dt);
+	void UpdateCPU(const TransformComponent& transform, float dt);
 	void Burst(float num);
 	void Restart();
 
 	// Must have a transform and material component, but mesh is optional
-	void UpdateRenderData(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID);
+	void UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID) const;
 	void Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID) const;
 
 	ParticleCounters GetDebugData() { return debugData; }
