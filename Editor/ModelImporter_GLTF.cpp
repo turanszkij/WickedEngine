@@ -12,6 +12,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 using namespace std;
 using namespace wiGraphicsTypes;
@@ -90,10 +91,10 @@ namespace tinygltf
 	}
 }
 
-
-void RegisterTexture2D(tinygltf::Image *image)
+void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 {
-	// We will load the texture2d by hand here and register to the resource manager
+	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
+	if(wiResourceManager::GetGlobal().get(wiHashString(image->uri)) == nullptr)
 	{
 		int width = image->width;
 		int height = image->height;
@@ -113,7 +114,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 			desc.Usage = USAGE_DEFAULT;
 
 			UINT mipwidth = width;
-			SubresourceData* InitData = new SubresourceData[desc.MipLevels];
+			vector<SubresourceData> InitData(desc.MipLevels);
 			for (UINT mip = 0; mip < desc.MipLevels; ++mip)
 			{
 				InitData[mip].pSysMem = image->image.data();
@@ -124,7 +125,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 			Texture2D* tex = new Texture2D;
 			tex->RequestIndependentShaderResourcesForMIPs(true);
 			tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, tex);
+			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), tex);
 			assert(SUCCEEDED(hr));
 
 			if (tex != nullptr)
@@ -133,11 +134,11 @@ void RegisterTexture2D(tinygltf::Image *image)
 
 				//if (image->uri.empty())
 				{
-					// Always export the images, because they were interleaved to engine layout after importing from gltf:
+					// Always export the images with random generated names, because they were interleaved to engine layout after importing from gltf:
 					stringstream ss;
 					do {
 						ss.str("");
-						ss << "gltfLoader_image_" << wiRandom::getRandom(INT_MAX) << ".png";
+						ss << "gltfConv_" << type_name << "_" << wiRandom::getRandom(INT_MAX) << ".png";
 					} while (wiHelper::FileExists(ss.str())); // this is to avoid overwriting an existing exported image
 					image->uri = ss.str();
 					bool success = wiHelper::saveTextureToFile(image->image, desc, ss.str());
@@ -150,6 +151,7 @@ void RegisterTexture2D(tinygltf::Image *image)
 		}
 	}
 }
+
 
 
 struct LoaderState
@@ -331,7 +333,7 @@ void ImportModel_GLTF(const std::string& fileName)
 		{
 			auto& tex = state.gltfModel.textures[baseColorTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
-			RegisterTexture2D(&img);
+			RegisterTexture2D(&img, "basecolor");
 			material.baseColorMapName = img.uri;
 		}
 		else if(!state.gltfModel.images.empty())
@@ -339,7 +341,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			// For some reason, we don't have diffuse texture, but have other textures
 			//	I have a problem, because one model viewer displays textures on a model which has no basecolor set in its material...
 			//	This is probably not how it should be (todo)
-			RegisterTexture2D(&state.gltfModel.images[0]);
+			RegisterTexture2D(&state.gltfModel.images[0], "basecolor");
 			material.baseColorMapName = state.gltfModel.images[0].uri;
 		}
 
@@ -409,7 +411,7 @@ void ImportModel_GLTF(const std::string& fileName)
 				data32[i] = rgba8;
 			}
 
-			RegisterTexture2D(img_nor);
+			RegisterTexture2D(img_nor, "normal_roughness");
 			material.normalMapName = img_nor->uri;
 		}
 
@@ -451,7 +453,7 @@ void ImportModel_GLTF(const std::string& fileName)
 				data32[i] = rgba8;
 			}
 
-			RegisterTexture2D(img_met_rough);
+			RegisterTexture2D(img_met_rough, "reflectance_metalness_emissive_sss");
 			material.surfaceMapName = img_met_rough->uri;
 		}
 		else if (img_emissive != nullptr)
@@ -483,7 +485,7 @@ void ImportModel_GLTF(const std::string& fileName)
 					data32[i] = rgba8;
 				}
 
-				RegisterTexture2D(img_emissive);
+				RegisterTexture2D(img_emissive, "reflectance_metalness_emissive_sss");
 				material.surfaceMapName = img_emissive->uri;
 			}
 		}
