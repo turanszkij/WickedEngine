@@ -12,7 +12,7 @@
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
 [s3]: https://img.shields.io/badge/License-MIT-yellow.svg
 [s4]: https://img.shields.io/badge/download%20build-editor-blue.svg
-[s5]: https://img.shields.io/badge/download%20build-samples-blue.svg
+[s5]: https://img.shields.io/badge/download%20build-tests-blue.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
@@ -236,6 +236,9 @@ The old Blender exporter script is now not supported! (from version 0.21.0)
 
 Sponza scene with voxel GI enabled:
 ![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
+
+Damaged Helmet GLTF sample model:
+![Sponza](https://turanszkij.files.wordpress.com/2019/03/damagedhelmet.png)
 
 City scene with a light map, model from <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie</a>:
 ![City](https://turanszkij.files.wordpress.com/2019/01/city1.png)

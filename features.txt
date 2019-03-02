@@ -7,33 +7,32 @@ Vulkan renderer
 Image rendering,animation : 2D,3D space
 Font rendering (True Type)
 TCP Networking
-Blender-exporter: 3D meshes,objects,armatures,animation,materials,lights,hitspheres,wind,world info,dynamic cameras,ribbon trails,particle systems
+[removed since 0.21] Blender-exporter: 3D meshes,objects,armatures,animation,materials,lights,hitspheres,wind,world info,dynamic cameras,ribbon trails,particle systems
 3D vertex mesh rendering
 Keyframe-based skeletal animation for 3D meshes (skinning on CPU or GPU), objects and lights
 Skeletal animation blending (transition blending, additive blending)
-Multiple material support
+Physically based materials
 Animated texturing
 Normal mapping
 Displacement mapping
 Parallax occlusion mapping
 Real time planar reflections
-Static reflections (cube-mapping)
-Refractions
+Cube map reflections (static and real time)
+Refractions (simple refractions, glossy refractions)
 Interactive Water
 Gaussian Blur
 Bloom
 Edge outline
 Motion Blur
 Lens Flare
-God rays
+Light shafts
 Depth of field
-Wind effect
 Multithreaded rendering on DX11-level hardware (Deferred device contexts)
-Tessellation: silhouette smoothing + displacement mapping
-Fully GPU-based particle emitters
-Soft offscreen particles
-Hair particle systems (grass)
-Hardware geometry instancing
+Tessellation (silhouette smoothing, displacement mapping)
+GPU-based particles (emit from point, mesh, animated mesh)
+Soft particles
+Hair particle systems (grass/vegetation)
+Instanced rendering
 MSAA (Forward rendering only), FXAA, Supersampling
 Deferred shading
 Directional lights + cascaded shadow maps
@@ -41,19 +40,17 @@ Spotlights + shadow maps
 Point lights + shadow cubemaps
 Diffuse, specular lighting for all lights
 Soft shadows
-Rigid body physics simulation (HAVOK) [PRIVATE]
+[removed] Rigid body physics simulation (HAVOK) [PRIVATE]
 Rigid body physics simulation (BULLET)
 Soft body physics simulation (BULLET)
 Sound (Xaudio2)
-Frustum culling
-QuadTree culling
-Octree culling
 Input: Windows Keyboard,Windows Mouse,DirectInput(Joypad,Keyboard,Mouse),XINPUT(Joypad)
 Backlog: log,input,scripting
 Gamma correction
 Resource Manager
 Screen Space Ambient Occlusion
-Skin shader (Subsurface scattering approximation)
+Screen Space Reflections
+Skin shader (Subsurface scattering)
 Stencil layering
 Deferred decals
 Color Grading
@@ -84,3 +81,4 @@ GPU Path Tracing
 Entity-Component System
 Lightmaps
 Lightmap baking with GPU Path Trace
+Job system
