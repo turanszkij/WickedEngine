@@ -19,7 +19,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(760, 720));
+	materialWindow->SetSize(XMFLOAT2(760, 840));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
@@ -67,6 +67,16 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			material->SetCastShadow(args.bValue);
 	});
 	materialWindow->AddWidget(shadowCasterCheckBox);
+
+	flipNormalMapCheckBox = new wiCheckBox("Flip Normal Map: ");
+	flipNormalMapCheckBox->SetTooltip("The normal map green channel will be inverted. Useful for imported models coming from OpenGL space (such as GLTF).");
+	flipNormalMapCheckBox->SetPos(XMFLOAT2(570, y += step));
+	flipNormalMapCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetFlipNormalMap(args.bValue);
+	});
+	materialWindow->AddWidget(flipNormalMapCheckBox);
 
 	normalMapSlider = new wiSlider(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider->SetTooltip("How much the normal map should distort the face normals (bumpiness).");
@@ -152,7 +162,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	emissiveSlider->OnSlide([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
-			material->SetEmissive(args.fValue);
+			material->SetEmissiveStrength(args.fValue);
 	});
 	materialWindow->AddWidget(emissiveSlider);
 
@@ -246,20 +256,36 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(texMulSliderY);
 
 
-	colorPicker = new wiColorPicker(GUI, "Material Color");
-	colorPicker->SetPos(XMFLOAT2(10, 400));
-	colorPicker->RemoveWidgets();
-	colorPicker->SetVisible(true);
-	colorPicker->SetEnabled(true);
-	colorPicker->OnColorChanged([&](wiEventArgs args) {
+	baseColorPicker = new wiColorPicker(GUI, "Base Color");
+	baseColorPicker->SetPos(XMFLOAT2(10, 280));
+	baseColorPicker->RemoveWidgets();
+	baseColorPicker->SetVisible(true);
+	baseColorPicker->SetEnabled(true);
+	baseColorPicker->OnColorChanged([&](wiEventArgs args) {
 		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			XMFLOAT3 col = args.color.toFloat3();
-			material->SetBaseColor(XMFLOAT4(powf(col.x, 1.f / 2.2f), powf(col.y, 1.f / 2.2f), powf(col.z, 1.f / 2.2f), material->GetOpacity()));
+			material->SetBaseColor(XMFLOAT4(col.x, col.y, col.z, material->GetOpacity()));
 		}
 	});
-	materialWindow->AddWidget(colorPicker);
+	materialWindow->AddWidget(baseColorPicker);
+
+
+	emissiveColorPicker = new wiColorPicker(GUI, "Emissive Color");
+	emissiveColorPicker->SetPos(XMFLOAT2(10, 550));
+	emissiveColorPicker->RemoveWidgets();
+	emissiveColorPicker->SetVisible(true);
+	emissiveColorPicker->SetEnabled(true);
+	emissiveColorPicker->OnColorChanged([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			XMFLOAT3 col = args.color.toFloat3();
+			material->SetEmissiveColor(XMFLOAT4(col.x, col.y, col.z, material->GetEmissiveStrength()));
+		}
+	});
+	materialWindow->AddWidget(emissiveColorPicker);
 
 
 	blendModeComboBox = new wiComboBox("Blend mode: ");
@@ -577,7 +603,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(texture_emissive_Button);
 
 
-	materialWindow->Translate(XMFLOAT3(screenW - 760, 50, 0));
+	materialWindow->Translate(XMFLOAT3(screenW - 760, 120, 0));
 	materialWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -614,13 +640,14 @@ void MaterialWindow::SetEntity(Entity entity)
 		waterCheckBox->SetCheck(material->IsWater());
 		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
 		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());
+		flipNormalMapCheckBox->SetCheck(material->IsFlipNormalMap());
 		normalMapSlider->SetValue(material->normalMapStrength);
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);
 		metalnessSlider->SetValue(material->metalness);
 		alphaSlider->SetValue(material->GetOpacity());
 		refractionIndexSlider->SetValue(material->refractionIndex);
-		emissiveSlider->SetValue(material->emissive);
+		emissiveSlider->SetValue(material->emissiveColor.w);
 		sssSlider->SetValue(material->subsurfaceScattering);
 		pomSlider->SetValue(material->parallaxOcclusionMapping);
 		texAnimFrameRateSlider->SetValue(material->texAnimFrameRate);
@@ -630,23 +657,27 @@ void MaterialWindow::SetEntity(Entity entity)
 		texMulSliderY->SetValue(material->texMulAdd.y);
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
-		colorPicker->SetEnabled(true);
+		baseColorPicker->SetEnabled(true);
+		emissiveColorPicker->SetEnabled(true);
 		blendModeComboBox->SetSelected((int)material->blendMode);
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));
 		texture_surface_Button->SetText(wiHelper::GetFileNameFromPath(material->surfaceMapName));
 		texture_displacement_Button->SetText(wiHelper::GetFileNameFromPath(material->displacementMapName));
+		texture_emissive_Button->SetText(wiHelper::GetFileNameFromPath(material->emissiveMapName));
 	}
 	else
 	{
 		materialNameField->SetValue("No material selected");
 		materialWindow->SetEnabled(false);
-		colorPicker->SetEnabled(false);
+		baseColorPicker->SetEnabled(false);
+		emissiveColorPicker->SetEnabled(false);
 
 		texture_baseColor_Button->SetText("");
 		texture_normal_Button->SetText("");
 		texture_surface_Button->SetText("");
 		texture_displacement_Button->SetText("");
+		texture_emissive_Button->SetText("");
 	}
 }

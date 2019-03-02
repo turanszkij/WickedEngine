@@ -85,11 +85,18 @@ namespace wiSceneSystem
 			archive >> userStencilRef;
 			archive >> (uint8_t&)blendMode;
 			archive >> baseColor;
+			if (archive.GetVersion() >= 25)
+			{
+				archive >> emissiveColor;
+			}
 			archive >> texMulAdd;
 			archive >> roughness;
 			archive >> reflectance;
 			archive >> metalness;
-			archive >> emissive;
+			if (archive.GetVersion() < 25)
+			{
+				archive >> emissiveColor.w;
+			}
 			archive >> refractionIndex;
 			archive >> subsurfaceScattering;
 			archive >> normalMapStrength;
@@ -140,11 +147,18 @@ namespace wiSceneSystem
 			archive << userStencilRef;
 			archive << (uint8_t)blendMode;
 			archive << baseColor;
+			if (archive.GetVersion() >= 25)
+			{
+				archive << emissiveColor;
+			}
 			archive << texMulAdd;
 			archive << roughness;
 			archive << reflectance;
 			archive << metalness;
-			archive << emissive;
+			if (archive.GetVersion() < 25)
+			{
+				archive << emissiveColor.w;
+			}
 			archive << refractionIndex;
 			archive << subsurfaceScattering;
 			archive << normalMapStrength;

@@ -28,19 +28,14 @@ struct LightOutputType
 	float2 ScreenCoord = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f, -0.5f) + 0.5f;		\
 	float depth = texture_depth[PSIn.pos.xy];											\
 	float4 g0 = texture_gbuffer0[PSIn.pos.xy];											\
-	float4 baseColor = float4(g0.rgb, 1);												\
-	float ao = g0.a;																	\
 	float4 g1 = texture_gbuffer1[PSIn.pos.xy];											\
 	float4 g2 = texture_gbuffer2[PSIn.pos.xy];											\
 	float3 N = decode(g1.xy);															\
 	float2 velocity = g1.zw;															\
-	float roughness = g2.x;																\
-	float reflectance = g2.y;															\
-	float metalness = g2.z;																\
 	float2 ReprojectedScreenCoord = ScreenCoord + velocity;								\
 	float3 P = getPosition(ScreenCoord, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);											\
-	Surface surface = CreateSurface(P, N, V, baseColor, ao, roughness, metalness, reflectance);
+	Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
 
 
 #define DEFERREDLIGHT_DIRECTIONAL														\

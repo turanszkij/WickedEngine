@@ -47,7 +47,10 @@ void ImportModel_OBJ(const std::string& fileName)
 			material.baseColor = XMFLOAT4(obj_material.diffuse[0], obj_material.diffuse[1], obj_material.diffuse[2], 1);
 			material.baseColorMapName = obj_material.diffuse_texname;
 			material.displacementMapName = obj_material.displacement_texname;
-			material.emissive = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
+			material.emissiveColor.x = obj_material.emission[0];
+			material.emissiveColor.y = obj_material.emission[1];
+			material.emissiveColor.z = obj_material.emission[2];
+			material.emissiveColor.w = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
 			material.refractionIndex = obj_material.ior;
 			material.metalness = obj_material.metallic;
 			material.normalMapName = obj_material.normal_texname;

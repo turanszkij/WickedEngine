@@ -103,6 +103,7 @@ namespace wiSceneSystem
 			CAST_SHADOW = 1 << 1,
 			PLANAR_REFLECTION = 1 << 2,
 			WATER = 1 << 3,
+			FLIP_NORMALMAP = 1 << 4,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
 
@@ -111,11 +112,11 @@ namespace wiSceneSystem
 		BLENDMODE blendMode = BLENDMODE_OPAQUE;
 
 		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
+		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
-		float emissive = 0.0f;
 		float refractionIndex = 0.0f;
 		float subsurfaceScattering = 0.0f;
 		float normalMapStrength = 1.0f;
@@ -158,6 +159,7 @@ namespace wiSceneSystem
 		wiGraphicsTypes::Texture2D* GetEmissiveMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
+		inline float GetEmissiveStrength() const { return emissiveColor.w; }
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -171,18 +173,21 @@ namespace wiSceneSystem
 		inline bool HasPlanarReflection() const { return (_flags & PLANAR_REFLECTION) || IsWater(); }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
+		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
+		inline void SetEmissiveColor(const XMFLOAT4& value) { SetDirty(); emissiveColor = value; }
 		inline void SetRoughness(float value) { SetDirty(); roughness = value; }
 		inline void SetReflectance(float value) { SetDirty(); reflectance = value; }
 		inline void SetMetalness(float value) { SetDirty(); metalness = value; }
-		inline void SetEmissive(float value) { SetDirty(); emissive = value; }
+		inline void SetEmissiveStrength(float value) { SetDirty(); emissiveColor.w = value; }
 		inline void SetRefractionIndex(float value) { SetDirty(); refractionIndex = value; }
 		inline void SetSubsurfaceScattering(float value) { SetDirty(); subsurfaceScattering = value; }
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
-		inline void SetAlphaRef(float value) { alphaRef = value; }
+		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
+		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; }  }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -887,7 +892,7 @@ namespace wiSceneSystem
 			float choppy_scale = 1.3f;
 
 
-			XMFLOAT3 waterColor = XMFLOAT3(powf(0.07f, 1.0f / 2.2f), powf(0.15f, 1.0f / 2.2f), powf(0.2f, 1.0f / 2.2f));
+			XMFLOAT3 waterColor = XMFLOAT3(0.07f, 0.15f, 0.2f);
 			float waterHeight = 0.0f;
 			uint32_t surfaceDetail = 4;
 			float surfaceDisplacementTolerance = 2;

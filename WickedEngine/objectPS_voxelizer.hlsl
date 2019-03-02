@@ -11,9 +11,22 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 	[branch]
 	if (is_saturated(uvw))
 	{
-		float4 baseColor = DEGAMMA(g_xMat_baseColor * float4(instanceColor, 1) * xBaseColorMap.Sample(sampler_linear_wrap, tex));
+		float4 baseColor = xBaseColorMap.Sample(sampler_linear_wrap, tex);
+		baseColor.rgb = DEGAMMA(baseColor.rgb);
+		baseColor *= g_xMat_baseColor * float4(instanceColor, 1);
 		float4 color = baseColor;
-		float3 emissive = g_xMat_emissive * DEGAMMA(xEmissiveMap.Sample(sampler_linear_wrap, tex).rgb);
+		float4 emissiveColor;
+		[branch]
+		if (g_xMat_emissiveColor.a > 0)
+		{
+			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, tex);
+			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
+			emissiveColor *= g_xMat_emissiveColor;
+		}
+		else
+		{
+			emissiveColor = 0;
+		}
 
 		// fake normals are good enough because it's only coarse diffuse light, no need to normalize:
 		//	(just uncomment if there are any noticable artifacts)
@@ -152,7 +165,7 @@ void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, fl
 
 		color.rgb *= diffuse;
 		
-		color.rgb += baseColor.rgb * emissive;
+		color.rgb += emissiveColor.rgb * emissiveColor.a;
 
 		uint color_encoded = EncodeColor(color);
 		uint normal_encoded = EncodeNormal(N);

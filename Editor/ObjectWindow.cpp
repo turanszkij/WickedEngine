@@ -303,7 +303,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		if (object != nullptr)
 		{
 			XMFLOAT3 col = args.color.toFloat3();
-			object->color = XMFLOAT4(powf(col.x, 1.f / 2.2f), powf(col.y, 1.f / 2.2f), powf(col.z, 1.f / 2.2f), object->color.w);
+			object->color = XMFLOAT4(col.x, col.y, col.z, object->color.w);
 		}
 	});
 	objectWindow->AddWidget(colorPicker);

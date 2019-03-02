@@ -334,17 +334,12 @@ void main(ComputeShaderInput IN)
 		float3 diffuse = 0, specular = 0;
 		float3 reflection = 0;
 		float4 g0 = texture_gbuffer0[pixel];
-		float4 baseColor = float4(g0.rgb, 1);
-		float ao = g0.a;
 		float4 g1 = texture_gbuffer1[pixel];
 		float4 g2 = texture_gbuffer2[pixel];
 		float3 N = decode(g1.xy);
-		float roughness = g2.x;
-		float reflectance = g2.y;
-		float metalness = g2.z;
 		float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
-		Surface surface = CreateSurface(P, N, V, baseColor, ao, roughness, metalness, reflectance);
+		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
 
 #ifndef DISABLE_ENVMAPS
 		// Apply environment maps:
@@ -510,7 +505,7 @@ void main(ComputeShaderInput IN)
 
 		specular += reflection * surface.F;
 
-		float3 ambient = GetAmbient(N) * ao;
+		float3 ambient = GetAmbient(N) * surface.ao;
 		diffuse += ambient;
 
 		deferred_Diffuse[pixel] += float4(diffuse, 1);

@@ -28,14 +28,17 @@ struct TracedRenderingStoredRay
 struct TracedRenderingMaterial
 {
 	float4		baseColor;
+	float4		emissiveColor;
 	float4		texMulAdd;
+
 	float		roughness;
 	float		reflectance;
 	float		metalness;
-	float		emissive;
 	float		refractionIndex;
+
 	float		subsurfaceScattering;
 	float		normalMapStrength;
+	float		normalMapFlip;
 	float		parallaxOcclusionMapping;
 
 	float4		baseColorAtlasMulAdd;

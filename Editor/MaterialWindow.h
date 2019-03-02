@@ -26,6 +26,7 @@ public:
 	wiCheckBox* waterCheckBox;
 	wiCheckBox* planarReflCheckBox;
 	wiCheckBox* shadowCasterCheckBox;
+	wiCheckBox* flipNormalMapCheckBox;
 	wiSlider*	normalMapSlider;
 	wiSlider*	roughnessSlider;
 	wiSlider*	reflectanceSlider;
@@ -40,7 +41,8 @@ public:
 	wiSlider*	texAnimDirectionSliderV;
 	wiSlider*	texMulSliderX;
 	wiSlider*	texMulSliderY;
-	wiColorPicker* colorPicker;
+	wiColorPicker* baseColorPicker;
+	wiColorPicker* emissiveColorPicker;
 	wiSlider*	alphaRefSlider;
 	wiComboBox* blendModeComboBox;
 	wiComboBox* shaderTypeComboBox;

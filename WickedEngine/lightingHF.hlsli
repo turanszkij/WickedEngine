@@ -695,7 +695,7 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 // VOXEL RADIANCE
 
-inline void VoxelGI(in Surface surface, inout float3 diffuse, inout float3 specular)
+inline void VoxelGI(inout Surface surface, inout float3 diffuse, inout float3 specular)
 {
 	[branch]if (g_xFrame_VoxelRadianceDataRes != 0)
 	{

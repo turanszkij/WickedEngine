@@ -157,8 +157,7 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 		if (wiRenderer::GetScene().weathers.GetCount() > 0)
 		{
 			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
-			XMFLOAT3 col = args.color.toFloat3();
-			weather.oceanParameters.waterColor = XMFLOAT3(powf(col.x, 1.f / 2.2f), powf(col.y, 1.f / 2.2f), powf(col.z, 1.f / 2.2f));
+			weather.oceanParameters.waterColor = args.color.toFloat3();
 		}
 	});
 	oceanWindow->AddWidget(colorPicker);

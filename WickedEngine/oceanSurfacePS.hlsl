@@ -15,7 +15,6 @@ float4 main(PSIn input) : SV_TARGET
 
 	float4 color = float4(xOceanWaterColor, 1);
 	float opacity = 1; // keep edge diffuse shading
-	color.rgb = DEGAMMA(color.rgb);
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;

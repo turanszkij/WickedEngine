@@ -9,11 +9,11 @@
 GBUFFEROutputType_Thin main(VertexToPixel input)
 {
 	float4 color = texture_0.Sample(sampler_linear_wrap, input.tex);
+	color.rgb = DEGAMMA(color.rgb);
 	color.rgb *= input.color;
 	color.a *= 1.0 - input.fade;
-	clip(color.a - 1.0f / 256.0f); // cancel heaviest overdraw for the alpha composition effect
+	clip(color.a - 1.0f / 255.0f); // cancel heaviest overdraw for the alpha composition effect
 	float opacity = 1;
-	color.rgb = DEGAMMA(color.rgb);
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;

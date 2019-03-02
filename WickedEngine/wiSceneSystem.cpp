@@ -1817,7 +1817,7 @@ namespace wiSceneSystem
 
 			const MaterialComponent& material = *materials.GetComponent(entity);
 			decal.color = material.baseColor;
-			decal.emissive = material.emissive;
+			decal.emissive = material.emissiveColor.w;
 			decal.texture = material.GetBaseColorMap();
 			decal.normal = material.GetNormalMap();
 		});

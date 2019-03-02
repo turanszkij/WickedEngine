@@ -8,11 +8,11 @@ LightOutputType main(VertexToPixel PSIn)
 	DEFERREDLIGHT_MAKEPARAMS
 
 	diffuse = 0;
-	float envMapMIP = roughness * g_xFrame_EnvProbeMipCount;
+	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
 	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 
 	VoxelGI(surface, diffuse, specular);
-	float3 ambient = GetAmbient(N) * ao;
+	float3 ambient = GetAmbient(N) * surface.ao;
 	diffuse += ambient;
 
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);

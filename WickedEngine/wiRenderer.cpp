@@ -1413,8 +1413,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			renderPass == RENDERPASS_TEXTURE ||
 			renderPass == RENDERPASS_SHADOW ||
 			renderPass == RENDERPASS_SHADOWCUBE ||
-			renderPass == RENDERPASS_DEPTHONLY ||
-			renderPass == RENDERPASS_VOXELIZE;
+			renderPass == RENDERPASS_DEPTHONLY;
 
 		// Do we need to compute a light mask for this pass on the CPU?
 		const bool forwardLightmaskRequest = 
@@ -3803,14 +3802,15 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		const MaterialComponent& material = scene.materials[materialIndex];
 
 		materialGPUData.g_xMat_baseColor = material.baseColor;
+		materialGPUData.g_xMat_emissiveColor = material.emissiveColor;
 		materialGPUData.g_xMat_texMulAdd = material.texMulAdd;
 		materialGPUData.g_xMat_roughness = material.roughness;
 		materialGPUData.g_xMat_reflectance = material.reflectance;
 		materialGPUData.g_xMat_metalness = material.metalness;
-		materialGPUData.g_xMat_emissive = material.emissive;
 		materialGPUData.g_xMat_refractionIndex = material.refractionIndex;
 		materialGPUData.g_xMat_subsurfaceScattering = material.subsurfaceScattering;
 		materialGPUData.g_xMat_normalMapStrength = (material.normalMap == nullptr ? 0 : material.normalMapStrength);
+		materialGPUData.g_xMat_normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
 		materialGPUData.g_xMat_parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
 		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, threadID);
@@ -7176,14 +7176,15 @@ void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
 
 				// Copy base params:
 				global_material.baseColor = material.baseColor;
+				global_material.emissiveColor = material.emissiveColor;
 				global_material.texMulAdd = material.texMulAdd;
 				global_material.roughness = material.roughness;
 				global_material.reflectance = material.reflectance;
 				global_material.metalness = material.metalness;
-				global_material.emissive = material.emissive;
 				global_material.refractionIndex = material.refractionIndex;
 				global_material.subsurfaceScattering = material.subsurfaceScattering;
 				global_material.normalMapStrength = material.normalMapStrength;
+				global_material.normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
 				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 
 				// Add extended properties:

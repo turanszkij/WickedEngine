@@ -27,7 +27,7 @@ float4 main(VertexToPixelPostProcess input) : SV_TARGET
     // Fetch color and linear depth for current pixel:
     float4 colorM = xTexture.Sample(Sampler, input.tex);
 	float depthM = texture_lineardepth[input.pos.xy];
-	float sss = texture_gbuffer2[input.pos.xy].a;
+	float sss = texture_gbuffer0[input.pos.xy].a;
 	sss *= 0.01f;
 
     // Accumulate center sample, multiplying it with its gaussian weight:

@@ -83,7 +83,7 @@ struct Surface
 	float roughness;		// roughness: [0:smooth -> 1:rough] (linear)
 	float metalness;		// metalness [0:dielectric -> 1:metal]
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
-	float3 emissive;		// light emission [0 -> 1]
+	float4 emissiveColor;	// light emission [0 -> 1]
 	float sss;				// subsurface scattering [0 -> 1]
 
 	float roughness_brdf;	// roughness remapped from linear to BRDF
@@ -116,7 +116,7 @@ inline Surface CreateSurface(
 	in float roughness,
 	in float metalness,
 	in float reflectance, 
-	in float3 emissive = 0, 
+	in float4 emissiveColor = 0, 
 	in float sss = 0)
 {
 	Surface surface;
@@ -129,7 +129,7 @@ inline Surface CreateSurface(
 	surface.roughness = roughness;
 	surface.metalness = metalness;
 	surface.reflectance = reflectance;
-	surface.emissive = emissive;
+	surface.emissiveColor = emissiveColor;
 	surface.sss = sss;
 
 	surface.Update();

@@ -315,7 +315,6 @@ void ImportModel_GLTF(const std::string& fileName)
 		material.roughness = 1.0f;
 		material.metalness = 1.0f;
 		material.reflectance = 0.02f;
-		material.emissive = 0;
 
 		auto& baseColorTexture = x.values.find("baseColorTexture");
 		auto& metallicRoughnessTexture = x.values.find("metallicRoughnessTexture");
@@ -352,6 +351,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img, "normal");
 			material.normalMapName = img.uri;
+			material.SetFlipNormalMap(true);
 		}
 		if (metallicRoughnessTexture != x.values.end())
 		{
@@ -383,6 +383,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			material.baseColor.x = static_cast<float>(baseColorFactor->second.ColorFactor()[0]);
 			material.baseColor.y = static_cast<float>(baseColorFactor->second.ColorFactor()[1]);
 			material.baseColor.z = static_cast<float>(baseColorFactor->second.ColorFactor()[2]);
+			material.baseColor.w = static_cast<float>(baseColorFactor->second.ColorFactor()[3]);
 		}
 		if (roughnessFactor != x.values.end())
 		{
@@ -394,7 +395,10 @@ void ImportModel_GLTF(const std::string& fileName)
 		}
 		if (emissiveFactor != x.additionalValues.end())
 		{
-			material.emissive = static_cast<float>(emissiveFactor->second.ColorFactor()[0]);
+			material.emissiveColor.x = static_cast<float>(emissiveFactor->second.ColorFactor()[0]);
+			material.emissiveColor.y = static_cast<float>(emissiveFactor->second.ColorFactor()[1]);
+			material.emissiveColor.z = static_cast<float>(emissiveFactor->second.ColorFactor()[2]);
+			material.emissiveColor.w = static_cast<float>(emissiveFactor->second.ColorFactor()[3]);
 		}
 		if (alphaCutoff != x.additionalValues.end())
 		{
@@ -449,31 +453,45 @@ void ImportModel_GLTF(const std::string& fileName)
 
 			const unsigned char* data = buffer.data.data() + accessor.byteOffset + bufferView.byteOffset;
 
+			int index_remap[3];
+			if (transform_to_LH)
+			{
+				index_remap[0] = 0;
+				index_remap[1] = 1;
+				index_remap[2] = 2;
+			}
+			else
+			{
+				index_remap[0] = 0;
+				index_remap[1] = 2;
+				index_remap[2] = 1;
+			}
+
 			if (stride == 1)
 			{
 				for (size_t i = 0; i < indexCount; i += 3)
 				{
-					mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + 0];
-					mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + 1];
-					mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + 2];
+					mesh.indices[indexOffset + i + 0] = vertexOffset + data[i + index_remap[0]];
+					mesh.indices[indexOffset + i + 1] = vertexOffset + data[i + index_remap[1]];
+					mesh.indices[indexOffset + i + 2] = vertexOffset + data[i + index_remap[2]];
 				}
 			}
 			else if (stride == 2)
 			{
 				for (size_t i = 0; i < indexCount; i += 3)
 				{
-					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + 0];
-					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + 1];
-					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + 2];
+					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint16_t*)data)[i + index_remap[0]];
+					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint16_t*)data)[i + index_remap[1]];
+					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint16_t*)data)[i + index_remap[2]];
 				}
 			}
 			else if (stride == 4)
 			{
 				for (size_t i = 0; i < indexCount; i += 3)
 				{
-					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + 0];
-					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + 1];
-					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + 2];
+					mesh.indices[indexOffset + i + 0] = vertexOffset + ((uint32_t*)data)[i + index_remap[0]];
+					mesh.indices[indexOffset + i + 1] = vertexOffset + ((uint32_t*)data)[i + index_remap[1]];
+					mesh.indices[indexOffset + i + 2] = vertexOffset + ((uint32_t*)data)[i + index_remap[2]];
 				}
 			}
 			else

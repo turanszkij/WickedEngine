@@ -17,8 +17,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
 
-	float4 color = g_xMat_baseColor * float4(input.instanceColor, 1) * xBaseColorMap.Sample(sampler_objectshader, UV);
+	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
 	color.rgb = DEGAMMA(color.rgb);
+	color *= g_xMat_baseColor * float4(input.instanceColor, 1);
 	ALPHATEST(color.a);
 	float opacity = color.a;
 
