@@ -19,10 +19,11 @@ namespace wiSceneSystem
 {
 	struct NameComponent
 	{
-		char name[128];
+		std::string name;
 
-		inline void operator=(const std::string& str) { strcpy_s(name, str.c_str()); }
-		inline bool operator==(const std::string& str) const { return strcmp(name, str.c_str()) == 0; }
+		inline void operator=(const std::string& str) { name = str; }
+		inline void operator=(std::string&& str) { name = std::move(str); }
+		inline bool operator==(const std::string& str) const { return name.compare(str) == 0; }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -135,11 +136,11 @@ namespace wiSceneSystem
 		std::string emissiveMapName;
 
 		// Non-serialized attributes:
-		wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
-		wiGraphicsTypes::Texture2D* surfaceMap = nullptr;
-		wiGraphicsTypes::Texture2D* normalMap = nullptr;
-		wiGraphicsTypes::Texture2D* displacementMap = nullptr;
-		wiGraphicsTypes::Texture2D* emissiveMap = nullptr;
+		const wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
+		const wiGraphicsTypes::Texture2D* surfaceMap = nullptr;
+		const wiGraphicsTypes::Texture2D* normalMap = nullptr;
+		const wiGraphicsTypes::Texture2D* displacementMap = nullptr;
+		const wiGraphicsTypes::Texture2D* emissiveMap = nullptr;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 
 		inline void SetUserStencilRef(uint8_t value)
@@ -152,11 +153,11 @@ namespace wiSceneSystem
 			return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 		}
 
-		wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
-		wiGraphicsTypes::Texture2D* GetNormalMap() const;
-		wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
-		wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
-		wiGraphicsTypes::Texture2D* GetEmissiveMap() const;
+		const wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
+		const wiGraphicsTypes::Texture2D* GetNormalMap() const;
+		const wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
+		const wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
+		const wiGraphicsTypes::Texture2D* GetEmissiveMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -625,7 +626,7 @@ namespace wiSceneSystem
 		XMFLOAT3 right;
 		int shadowMap_index = -1;
 
-		std::vector<wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
+		std::vector<const wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -772,8 +773,8 @@ namespace wiSceneSystem
 		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
-		wiGraphicsTypes::Texture2D* texture = nullptr;
-		wiGraphicsTypes::Texture2D* normal = nullptr;
+		const wiGraphicsTypes::Texture2D* texture = nullptr;
+		const wiGraphicsTypes::Texture2D* normal = nullptr;
 
 		inline float GetOpacity() const { return color.w; }
 
@@ -892,7 +893,7 @@ namespace wiSceneSystem
 			float choppy_scale = 1.3f;
 
 
-			XMFLOAT3 waterColor = XMFLOAT3(0.07f, 0.15f, 0.2f);
+			XMFLOAT3 waterColor = XMFLOAT3(0.0f, 3.0f / 255.0f, 31.0f / 255.0f);
 			float waterHeight = 0.0f;
 			uint32_t surfaceDetail = 4;
 			float surfaceDisplacementTolerance = 2;

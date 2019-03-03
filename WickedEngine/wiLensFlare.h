@@ -5,7 +5,7 @@
 
 namespace wiLensFlare
 {
-	void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<wiGraphicsTypes::Texture2D*>& rims);
+	void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<const wiGraphicsTypes::Texture2D*>& rims);
 
 	void LoadShaders();
 	void Initialize();

@@ -224,7 +224,7 @@ namespace wiSceneSystem
 		XMStoreFloat3(&scale_local, S);
 	}
 
-	Texture2D* MaterialComponent::GetBaseColorMap() const
+	const Texture2D* MaterialComponent::GetBaseColorMap() const
 	{
 		if (baseColorMap != nullptr)
 		{
@@ -232,7 +232,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	Texture2D* MaterialComponent::GetNormalMap() const
+	const Texture2D* MaterialComponent::GetNormalMap() const
 	{
 		return normalMap;
 		//if (normalMap != nullptr)
@@ -241,7 +241,7 @@ namespace wiSceneSystem
 		//}
 		//return wiTextureHelper::getNormalMapDefault();
 	}
-	Texture2D* MaterialComponent::GetSurfaceMap() const
+	const Texture2D* MaterialComponent::GetSurfaceMap() const
 	{
 		if (surfaceMap != nullptr)
 		{
@@ -249,7 +249,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	Texture2D* MaterialComponent::GetDisplacementMap() const
+	const Texture2D* MaterialComponent::GetDisplacementMap() const
 	{
 		if (displacementMap != nullptr)
 		{
@@ -257,7 +257,7 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
-	Texture2D* MaterialComponent::GetEmissiveMap() const
+	const Texture2D* MaterialComponent::GetEmissiveMap() const
 	{
 		if (emissiveMap != nullptr)
 		{
@@ -1817,7 +1817,7 @@ namespace wiSceneSystem
 
 			const MaterialComponent& material = *materials.GetComponent(entity);
 			decal.color = material.baseColor;
-			decal.emissive = material.emissiveColor.w;
+			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.GetBaseColorMap();
 			decal.normal = material.GetNormalMap();
 		});

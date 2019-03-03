@@ -19,7 +19,7 @@ namespace wiLensFlare
 	static BlendState blendState;
 	static GraphicsPSO	PSO;
 
-	void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<Texture2D*>& rims) {
+	void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<const Texture2D*>& rims) {
 
 		if (!rims.empty())
 		{
@@ -37,7 +37,7 @@ namespace wiLensFlare
 
 
 			int i = 0;
-			for (Texture2D* x : rims)
+			for (const Texture2D* x : rims)
 			{
 				if (x != nullptr)
 				{

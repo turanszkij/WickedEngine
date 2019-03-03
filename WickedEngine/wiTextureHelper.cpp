@@ -119,42 +119,42 @@ namespace wiTextureHelper
 		wiBackLog::post("wiTextureHelper Initialized");
 	}
 
-	Texture2D* getRandom64x64()
+	const Texture2D* getRandom64x64()
 	{
 		return &helperTextures[HELPERTEXTURE_RANDOM64X64];
 	}
 
-	Texture2D* getColorGradeDefault()
+	const Texture2D* getColorGradeDefault()
 	{
 		return &helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT];
 	}
 
-	Texture2D* getNormalMapDefault()
+	const Texture2D* getNormalMapDefault()
 	{
 		return getColor(wiColor(127, 127, 255, 255));
 	}
 
-	Texture2D* getBlackCubeMap()
+	const Texture2D* getBlackCubeMap()
 	{
 		return &helperTextures[HELPERTEXTURE_BLACKCUBEMAP];
 	}
 
-	Texture2D* getWhite()
+	const Texture2D* getWhite()
 	{
 		return getColor(wiColor(255, 255, 255, 255));
 	}
 
-	Texture2D* getBlack()
+	const Texture2D* getBlack()
 	{
 		return getColor(wiColor(0, 0, 0, 255));
 	}
 
-	Texture2D* getTransparent()
+	const Texture2D* getTransparent()
 	{
 		return getColor(wiColor(0, 0, 0, 0));
 	}
 
-	Texture2D* getColor(const wiColor& color)
+	const Texture2D* getColor(const wiColor& color)
 	{
 		colorlock.lock();
 		auto it = colorTextures.find(color.rgba);

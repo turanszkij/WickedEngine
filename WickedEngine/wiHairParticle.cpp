@@ -159,7 +159,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	{
 		device->BindGraphicsPSO(&PSO[renderPass][transparent], threadID);
 
-		GPUResource* res[] = {
+		const GPUResource* res[] = {
 			material.GetBaseColorMap()
 		};
 		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);

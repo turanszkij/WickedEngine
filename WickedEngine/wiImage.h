@@ -7,10 +7,14 @@ struct wiImageParams;
 
 namespace wiImage
 {
-	void Draw(wiGraphicsTypes::Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID);
+	void Draw(const wiGraphicsTypes::Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID);
 
-	void DrawDeferred(wiGraphicsTypes::Texture2D* lightmap_diffuse, wiGraphicsTypes::Texture2D* lightmap_specular,
-		wiGraphicsTypes::Texture2D* ao, GRAPHICSTHREAD threadID, int stencilref = 0);
+	void DrawDeferred(
+		const wiGraphicsTypes::Texture2D* lightmap_diffuse, 
+		const wiGraphicsTypes::Texture2D* lightmap_specular,
+		const wiGraphicsTypes::Texture2D* ao, 
+		GRAPHICSTHREAD threadID, 
+		int stencilref = 0);
 
 	void BindPersistentState(GRAPHICSTHREAD threadID);
 
@@ -81,15 +85,15 @@ struct wiImageParams
 	SAMPLEMODE sampleFlag;
 	QUALITY quality;
 
-	wiGraphicsTypes::Texture2D* maskMap;
-	wiGraphicsTypes::Texture2D* distortionMap;
-	wiGraphicsTypes::Texture2D* refractionSource;
+	const wiGraphicsTypes::Texture2D* maskMap;
+	const wiGraphicsTypes::Texture2D* distortionMap;
+	const wiGraphicsTypes::Texture2D* refractionSource;
 	// Generic texture
-	void setMaskMap(wiGraphicsTypes::Texture2D* view) { maskMap = view; }
+	void setMaskMap(const wiGraphicsTypes::Texture2D* view) { maskMap = view; }
 	// The normalmap texture which should distort the refraction source
-	void setDistortionMap(wiGraphicsTypes::Texture2D* view) { distortionMap = view; }
+	void setDistortionMap(const wiGraphicsTypes::Texture2D* view) { distortionMap = view; }
 	// The texture which should be distorted
-	void setRefractionSource(wiGraphicsTypes::Texture2D* view) { refractionSource = view; }
+	void setRefractionSource(const wiGraphicsTypes::Texture2D* view) { refractionSource = view; }
 
 	struct PostProcess 
 	{

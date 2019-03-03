@@ -58,7 +58,7 @@ namespace wiImage
 	std::atomic_bool initialized = false;
 
 
-	void Draw(Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID)
+	void Draw(const Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID)
 	{
 		if (!initialized.load())
 		{
@@ -325,7 +325,10 @@ namespace wiImage
 		device->EventEnd(threadID);
 	}
 
-	void DrawDeferred(Texture2D* lightmap_diffuse, Texture2D* lightmap_specular, Texture2D* ao,
+	void DrawDeferred(
+		const Texture2D* lightmap_diffuse, 
+		const Texture2D* lightmap_specular, 
+		const Texture2D* ao,
 		GRAPHICSTHREAD threadID, int stencilRef)
 	{
 		if (!initialized.load())

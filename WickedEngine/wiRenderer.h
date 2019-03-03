@@ -93,9 +93,16 @@ namespace wiRenderer
 	// Resets the global shader alpha reference value to float g_xAlphaRef = 0.75f
 	inline void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
 	// Binds the gbuffer textures that will be used in deferred rendering, or thin gbuffer in case of forward rendering
-	void BindGBufferTextures(wiGraphicsTypes::Texture2D* slot0, wiGraphicsTypes::Texture2D* slot1, wiGraphicsTypes::Texture2D* slot2, GRAPHICSTHREAD threadID);
+	void BindGBufferTextures(
+		const wiGraphicsTypes::Texture2D* slot0, 
+		const wiGraphicsTypes::Texture2D* slot1, 
+		const wiGraphicsTypes::Texture2D* slot2, 
+		GRAPHICSTHREAD threadID);
 	// Binds the hardware depth buffer and a linear depth buffer to be read by shaders
-	void BindDepthTextures(wiGraphicsTypes::Texture2D* depth, wiGraphicsTypes::Texture2D* linearDepth, GRAPHICSTHREAD threadID);
+	void BindDepthTextures(
+		const wiGraphicsTypes::Texture2D* depth, 
+		const wiGraphicsTypes::Texture2D* linearDepth, 
+		GRAPHICSTHREAD threadID);
 
 	// Draw skydome centered to camera. Its color will be either dynamically computed, or the global environment map will be used if you called SetEnvironmentMap()
 	void DrawSky(GRAPHICSTHREAD threadID);
@@ -125,17 +132,23 @@ namespace wiRenderer
 	void RefreshEnvProbes(GRAPHICSTHREAD threadID);
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(GRAPHICSTHREAD threadID);
+	// Call once per frame to repack out of date decals in the atlas
+	void RefreshDecalAtlas(GRAPHICSTHREAD threadID);
+	// Call once per frame to repack out of date lightmaps in the atlas
+	void RefreshLightmapAtlas(GRAPHICSTHREAD threadID);
 	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(GRAPHICSTHREAD threadID);
 	// Compute light grid tiles for tiled rendering paths
 	//	If you specify lightbuffers (diffuse, specular), then a tiled deferred lighting will be computed as well. Otherwise, only the light grid gets computed
-	void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, wiGraphicsTypes::Texture2D* lightbuffer_diffuse = nullptr, wiGraphicsTypes::Texture2D* lightbuffer_specular = nullptr);
+	void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, 
+		const wiGraphicsTypes::Texture2D* lightbuffer_diffuse = nullptr, 
+		const wiGraphicsTypes::Texture2D* lightbuffer_specular = nullptr);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
-	void ResolveMSAADepthBuffer(wiGraphicsTypes::Texture2D* dst, wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
+	void ResolveMSAADepthBuffer(const wiGraphicsTypes::Texture2D* dst, const wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(GRAPHICSTHREAD threadID);
 	// Render the scene with ray tracing only
-	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, const wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
 	// Render the scene BVH with ray tracing
 	void DrawTracedSceneBVH(GRAPHICSTHREAD threadID);
 
@@ -155,9 +168,9 @@ namespace wiRenderer
 		MIPGENFILTER_GAUSSIAN,
 		MIPGENFILTER_BICUBIC,
 	};
-	void GenerateMipChain(wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
-	void GenerateMipChain(wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
-	void GenerateMipChain(wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
 
 	enum BORDEREXPANDSTYLE
 	{
@@ -167,18 +180,25 @@ namespace wiRenderer
 	};
 	// Performs copy operation even between different texture formats
 	//	Can also expand border region according to desired sampler func
-	void CopyTexture2D(wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, wiGraphicsTypes::Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID,
+	void CopyTexture2D(
+		const wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, 
+		const wiGraphicsTypes::Texture2D* src, UINT SrcMIP, 
+		GRAPHICSTHREAD threadID,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
 	// dst: Texture2D with unordered access, the output will be written to this
 	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing
 	// randomness: random seed
-	void GenerateClouds(wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
+	void GenerateClouds(const wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
 
+	// Assign texture slots to out of date environemnt probes
+	void ManageEnvProbes();
+	// Invalidate out of date impostors
+	void ManageImpostors();
 	// New decals will be packed into a texture atlas
-	void ManageDecalAtlas(GRAPHICSTHREAD threadID);
+	void ManageDecalAtlas();
 	// New lightmapped objects will be packed into global lightmap atlas
-	void ManageLightmapAtlas(GRAPHICSTHREAD threadID);
+	void ManageLightmapAtlas();
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	void ManageWaterRipples();
@@ -259,8 +279,8 @@ namespace wiRenderer
 	bool GetAdvancedRefractionsEnabled();
 	bool IsRequestedReflectionRendering();
 	void SetEnvironmentMap(wiGraphicsTypes::Texture2D* tex);
-	wiGraphicsTypes::Texture2D* GetEnvironmentMap();
-	wiGraphicsTypes::Texture2D* GetLuminance(wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
+	const wiGraphicsTypes::Texture2D* GetEnvironmentMap();
+	const wiGraphicsTypes::Texture2D* GetLuminance(const wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
@@ -272,7 +292,7 @@ namespace wiRenderer
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);
 	bool GetRaytraceDebugBVHVisualizerEnabled();
 
-	wiGraphicsTypes::Texture2D* GetGlobalLightmap();
+	const wiGraphicsTypes::Texture2D* GetGlobalLightmap();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY);
@@ -319,7 +339,7 @@ namespace wiRenderer
 	void AddRenderablePoint(const RenderablePoint& point);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
-	void AddDeferredMIPGen(wiGraphicsTypes::Texture2D* tex);
+	void AddDeferredMIPGen(const wiGraphicsTypes::Texture2D* tex);
 
 	// Helper function to open a wiscene file and add the contents to the current scene
 	//	transformMatrix	:	everything will be transformed by this matrix (optional)

@@ -13,14 +13,11 @@ namespace wiSceneSystem
 	{
 		if (archive.IsReadMode())
 		{
-			std::string tmp;
-			archive >> tmp;
-			*this = tmp;
+			archive >> name;
 		}
 		else
 		{
-			std::string tmp = name;
-			archive << tmp;
+			archive << name;
 		}
 	}
 	void LayerComponent::Serialize(wiArchive& archive, uint32_t seed)
