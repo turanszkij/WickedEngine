@@ -143,6 +143,8 @@ namespace wiSceneSystem
 		const wiGraphicsTypes::Texture2D* emissiveMap = nullptr;
 		std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
 
+		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
+
 		inline void SetUserStencilRef(uint8_t value)
 		{
 			assert(value < 128);
@@ -161,6 +163,7 @@ namespace wiSceneSystem
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
+		inline int GetCustomShaderID() const { return customShaderID; }
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -169,12 +172,13 @@ namespace wiSceneSystem
 		inline void SetPlanarReflections(bool value) { if (value) { _flags |= PLANAR_REFLECTION; } else { _flags &= ~PLANAR_REFLECTION; } }
 		inline void SetWater(bool value) { if (value) { _flags |= WATER; } else { _flags &= ~WATER; } }
 
-		inline bool IsTransparent() const { return GetOpacity() < 1.0f || blendMode != BLENDMODE_OPAQUE; }
+		inline bool IsTransparent() const { return GetOpacity() < 1.0f || blendMode != BLENDMODE_OPAQUE || IsCustomShader(); }
 		inline bool IsWater() const { return _flags & WATER; }
 		inline bool HasPlanarReflection() const { return (_flags & PLANAR_REFLECTION) || IsWater(); }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
+		inline bool IsCustomShader() const { return customShaderID >= 0; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetEmissiveColor(const XMFLOAT4& value) { SetDirty(); emissiveColor = value; }
@@ -189,6 +193,8 @@ namespace wiSceneSystem
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
 		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; }  }
+		inline void SetCustomShaderID(int id) { customShaderID = id; }
+		inline void DisableCustomShader() { customShaderID = -1; }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};

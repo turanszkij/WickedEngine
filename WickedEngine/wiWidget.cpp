@@ -1022,7 +1022,12 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 	}
 	if (state == ACTIVE && combostate == COMBOSTATE_SELECTING)
 	{
+		hovered = -1;
 		gui->DeactivateWidget(this);
+	}
+	if (state == IDLE && combostate == COMBOSTATE_SELECTING)
+	{
+		combostate = COMBOSTATE_INACTIVE;
 	}
 
 	hitBox.pos.x = translation.x;
@@ -1107,8 +1112,8 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 				if (hovered >= 0)
 				{
 					SetSelected(hovered);
-					gui->DeactivateWidget(this);
-					combostate = COMBOSTATE_INACTIVE;
+					//gui->DeactivateWidget(this);
+					//combostate = COMBOSTATE_INACTIVE;
 				}
 			}
 		}

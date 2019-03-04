@@ -348,7 +348,21 @@ namespace wiRenderer
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
+	struct CustomShader
+	{
+		std::string name;
 
+		struct Pass
+		{
+			uint32_t renderTypeFlags = RENDERTYPE_TRANSPARENT;
+			wiGraphicsTypes::GraphicsPSO* pso = nullptr;
+		};
+		Pass passes[RENDERPASS_COUNT] = {};
+	};
+	// Registers a custom shader that can be set to materials. 
+	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()
+	int RegisterCustomShader(const CustomShader& customShader);
+	const std::vector<CustomShader>& GetCustomShaders();
 
 	// Helper utility to manage async GPU query readback from the CPU
 	//	GPUQueryRing<latency> here latency specifies the ring size of queries and 

@@ -8,7 +8,6 @@ struct VSOut
 	nointerpolation float dither	: DITHER;
 	float3 pos3D					: WORLDPOSITION;
 	uint instanceColor				: INSTANCECOLOR;
-	float3 nor						: NORMAL;
 	float4 pos2D					: SCREENPOSITION;
 	float4 pos2DPrev				: SCREENPOSITIONPREV;
 };

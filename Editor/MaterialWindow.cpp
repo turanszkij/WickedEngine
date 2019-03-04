@@ -307,31 +307,25 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(blendModeComboBox);
 
 
-	//shaderTypeComboBox = new wiComboBox("Custom Shader: ");
-	//shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
-	//shaderTypeComboBox->SetSize(XMFLOAT2(100, 25));
-	//shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
-	//	MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
-	//	if (material != nullptr)
-	//	{
-	//		if (args.iValue == 0)
-	//		{
-	//			material->customShader = nullptr;
-	//		}
-	//		else if (args.iValue > 0)
-	//		{
-	//			material->customShader = Material::customShaderPresets[args.iValue - 1];
-	//		}
-	//	}
-	//});
-	//shaderTypeComboBox->AddItem("None");
-	//for (auto& x : Material::customShaderPresets)
-	//{
-	//	shaderTypeComboBox->AddItem(x->name);
-	//}
-	//shaderTypeComboBox->SetEnabled(false);
-	//shaderTypeComboBox->SetTooltip("Set the custom shader of the material.");
-	//materialWindow->AddWidget(shaderTypeComboBox);
+	shaderTypeComboBox = new wiComboBox("Custom Shader: ");
+	shaderTypeComboBox->SetTooltip("Select a custom shader for his material. See wiRenderer:RegisterCustomShader() for more info.");
+	shaderTypeComboBox->SetPos(XMFLOAT2(x, y += step));
+	shaderTypeComboBox->SetSize(XMFLOAT2(100, 25));
+	shaderTypeComboBox->OnSelect([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+		{
+			material->SetCustomShaderID(args.iValue - 1);
+		}
+	});
+	shaderTypeComboBox->AddItem("None");
+	for (auto& x : wiRenderer::GetCustomShaders())
+	{
+		shaderTypeComboBox->AddItem(x.name);
+	}
+	shaderTypeComboBox->SetEnabled(false);
+	shaderTypeComboBox->SetTooltip("Set the custom shader of the material.");
+	materialWindow->AddWidget(shaderTypeComboBox);
 
 
 	// Textures:
@@ -660,6 +654,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		baseColorPicker->SetEnabled(true);
 		emissiveColorPicker->SetEnabled(true);
 		blendModeComboBox->SetSelected((int)material->blendMode);
+		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));
 		texture_normal_Button->SetText(wiHelper::GetFileNameFromPath(material->normalMapName));

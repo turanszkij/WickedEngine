@@ -867,6 +867,9 @@
     <FxCompile Include="raytrace_screenVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="impostorPS_wire.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

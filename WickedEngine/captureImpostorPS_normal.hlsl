@@ -12,6 +12,6 @@ float4 main(PixelInputType input) : SV_Target0
 	float3 bumpColor;
 	NormalMapping(UV, P, N, TBN, bumpColor);
 
-	return float4(mul(N, transpose(TBN)), 1);
+	return float4(N * 0.5f + 0.5f, 1);
 }
 

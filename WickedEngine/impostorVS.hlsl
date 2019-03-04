@@ -46,7 +46,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	{
 		angle = 2 - angle;
 	}
-	angle /= 2.0f;
+	angle *= 0.5f;
 	tex.z += floor(saturate(angle) * impostorCaptureAngles);
 
 	VSOut Out;
@@ -55,7 +55,6 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	Out.tex = tex;
 	Out.dither = instance.color_dither.a;
 	Out.instanceColor = 0xFFFFFFFF; // todo
-	Out.nor = face;
 	Out.pos2D = Out.pos;
 	Out.pos2DPrev = mul(float4(Out.pos3D, 1), g_xFrame_MainCamera_PrevVP);
 

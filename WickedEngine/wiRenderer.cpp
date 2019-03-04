@@ -667,6 +667,31 @@ GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessella
 	return PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
 }
 
+GraphicsPSO* PSO_object_hologram = nullptr;
+std::vector<CustomShader> customShaders;
+int RegisterCustomShader(const CustomShader& customShader)
+{
+	int result = (int)customShaders.size();
+	customShaders.push_back(customShader);
+	return result;
+}
+const std::vector<CustomShader>& GetCustomShaders()
+{
+	return customShaders;
+}
+GraphicsPSO* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
+{
+	if (customShaderID >= 0 && customShaderID < customShaders.size())
+	{
+		const CustomShader& customShader = customShaders[customShaderID];
+		const CustomShader::Pass& customPass = customShader.passes[renderPass];
+		if (customPass.renderTypeFlags & renderTypeFlags)
+		{
+			return customPass.pso;
+		}
+	}
+	return nullptr;
+}
 
 VLTYPES GetVLTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
@@ -1104,6 +1129,7 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool 
 GraphicsPSO* PSO_decal = nullptr;
 GraphicsPSO* PSO_occlusionquery = nullptr;
 GraphicsPSO* PSO_impostor[RENDERPASS_COUNT] = {};
+GraphicsPSO* PSO_impostor_wire = nullptr;
 GraphicsPSO* PSO_captureimpostor_albedo = nullptr;
 GraphicsPSO* PSO_captureimpostor_normal = nullptr;
 GraphicsPSO* PSO_captureimpostor_surface = nullptr;
@@ -1117,7 +1143,7 @@ GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
 		case RENDERPASS_DEFERRED:
 		case RENDERPASS_FORWARD:
 		case RENDERPASS_TILEDFORWARD:
-			return PSO_object_wire;
+			return PSO_impostor_wire;
 		}
 		return nullptr;
 	}
@@ -1571,7 +1597,16 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				GraphicsPSO* pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
+				GraphicsPSO* pso = nullptr;
+				if (material.IsCustomShader())
+				{
+					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
+				}
+				else
+				{
+					pso = GetObjectPSO(renderPass, mesh.IsDoubleSided(), tessellatorRequested, material, forceAlphaTestForDithering);
+				}
+
 				if (pso == nullptr)
 				{
 					continue;
@@ -2036,6 +2071,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_OBJECT_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_IMPOSTOR_ALPHATESTONLY] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_alphatestonly.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_IMPOSTOR_SIMPLE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_simple.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_IMPOSTOR_WIRE] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "impostorPS_wire.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_ENVIRONMENTALLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "environmentalLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DIRLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "dirLightPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_POINTLIGHT] = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "pointLightPS.cso", wiResourceManager::PIXELSHADER));
@@ -2320,40 +2356,37 @@ void LoadShaders()
 		}
 	}
 
-	//// Custom objectshader presets:
-	//for (auto& x : Material::customShaderPresets)
-	//{
-	//	SAFE_DELETE(x);
-	//}
-	//Material::customShaderPresets.clear();
+	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
+	customShaders.clear();
 
-	//// Hologram:
-	//{
-	//	VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
-	//	VLTYPES realVL = GetVLTYPE(RENDERPASS_FORWARD, false, false, true);
+	// Hologram sample shader will be registered as custom shader:
+	{
+		VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
+		VLTYPES realVL = GetVLTYPE(RENDERPASS_FORWARD, false, false, true);
 
-	//	GraphicsPSODesc desc;
-	//	desc.vs = vertexShaders[realVS];
-	//	desc.il = vertexLayouts[realVL];
-	//	desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[realVS];
+		desc.il = vertexLayouts[realVL];
+		desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
-	//	desc.bs = blendStates[BSTYPE_ADDITIVE];
-	//	desc.rs = rasterizers[DSSTYPE_DEFAULT];
-	//	desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-	//	desc.pt = TRIANGLELIST;
+		desc.bs = blendStates[BSTYPE_ADDITIVE];
+		desc.rs = rasterizers[DSSTYPE_DEFAULT];
+		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.pt = TRIANGLELIST;
 
-	//	desc.numRTs = 1;
-	//	desc.RTFormats[0] = RTFormat_hdr;
-	//	desc.DSFormat = DSFormat_full;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
 
-	//	Material::CustomShader* customShader = new Material::CustomShader;
-	//	customShader->name = "Hologram";
-	//	customShader->passes[RENDERPASS_FORWARD].pso = new GraphicsPSO;
-	//	device->CreateGraphicsPSO(&desc, customShader->passes[RENDERPASS_FORWARD].pso);
-	//	customShader->passes[RENDERPASS_TILEDFORWARD].pso = new GraphicsPSO;
-	//	device->CreateGraphicsPSO(&desc, customShader->passes[RENDERPASS_TILEDFORWARD].pso);
-	//	Material::customShaderPresets.push_back(customShader);
-	//}
+		RECREATE(PSO_object_hologram);
+		device->CreateGraphicsPSO(&desc, PSO_object_hologram);
+
+		CustomShader customShader;
+		customShader.name = "Hologram";
+		customShader.passes[RENDERPASS_FORWARD].pso = PSO_object_hologram;
+		customShader.passes[RENDERPASS_TILEDFORWARD].pso = PSO_object_hologram;
+		RegisterCustomShader(customShader);
+	}
 
 
 	{
@@ -2442,7 +2475,7 @@ void LoadShaders()
 		}
 
 		GraphicsPSODesc desc;
-		desc.rs = rasterizers[RSTYPE_FRONT];
+		desc.rs = rasterizers[RSTYPE_DOUBLESIDED]; // well, we don't need double sided impostors, but might be helpful if something breaks
 		desc.bs = blendStates[BSTYPE_OPAQUE];
 		desc.dss = depthStencils[renderPass == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
 		desc.il = nullptr;
@@ -2486,6 +2519,22 @@ void LoadShaders()
 
 		RECREATE(PSO_impostor[renderPass]);
 		device->CreateGraphicsPSO(&desc, PSO_impostor[renderPass]);
+	}
+	{
+		GraphicsPSODesc desc;
+		desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
+		desc.ps = pixelShaders[PSTYPE_IMPOSTOR_WIRE];
+		desc.rs = rasterizers[RSTYPE_WIRE];
+		desc.bs = blendStates[BSTYPE_OPAQUE];
+		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.il = nullptr;
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
+		RECREATE(PSO_impostor_wire);
+		device->CreateGraphicsPSO(&desc, PSO_impostor_wire);
 	}
 	{
 		GraphicsPSODesc desc;
@@ -6285,29 +6334,21 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			device->SetName(&depthStencil, "ImpostorDepthTarget");
 		}
 
-		bool state_set = false; 
-		GraphicsDevice::GPUAllocation mem;
 		struct InstBuf
 		{
 			Instance instance;
 			InstancePrev instancePrev;
 			InstanceAtlas instanceAtlas;
 		};
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstBuf), threadID);
+		volatile InstBuf* buff = (volatile InstBuf*)mem.data;
+		buff->instance.Create(IDENTITYMATRIX);
+		buff->instancePrev.Create(IDENTITYMATRIX);
+		buff->instanceAtlas.Create(XMFLOAT4(1, 1, 0, 0));
 
 		for (uint32_t impostorIndex : impostorsToRefresh)
 		{
 			const ImpostorComponent& impostor = scene.impostors[impostorIndex];
-
-			if (!state_set)
-			{
-				mem = device->AllocateGPU(sizeof(InstBuf), threadID);
-				volatile InstBuf* buff = (volatile InstBuf*)mem.data;
-				buff->instance.Create(IDENTITYMATRIX);
-				buff->instancePrev.Create(IDENTITYMATRIX);
-				buff->instanceAtlas.Create(XMFLOAT4(1, 1, 0, 0));
-
-				state_set = true;
-			}
 
 			Entity entity = scene.impostors.GetEntity(impostorIndex);
 			const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
@@ -6318,16 +6359,19 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			GPUBuffer* vbs[] = {
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mesh.vertexBuffer_TEX.get(),
+				mesh.vertexBuffer_ATL.get(),
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mem.buffer
 			};
 			UINT strides[] = {
 				sizeof(MeshComponent::Vertex_POS),
 				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
 				sizeof(MeshComponent::Vertex_POS),
 				sizeof(InstBuf)
 			};
 			UINT offsets[] = {
+				0,
 				0,
 				0,
 				0,

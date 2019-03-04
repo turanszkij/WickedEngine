@@ -1701,18 +1701,25 @@ namespace wiSceneSystem
 
 							if (material != nullptr)
 							{
-								if (material->IsTransparent())
+								if (material->IsCustomShader())
 								{
-									object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
+									object.rendertypeMask |= RENDERTYPE_ALL;
 								}
 								else
 								{
-									object.rendertypeMask |= RENDERTYPE_OPAQUE;
-								}
+									if (material->IsTransparent())
+									{
+										object.rendertypeMask |= RENDERTYPE_TRANSPARENT;
+									}
+									else
+									{
+										object.rendertypeMask |= RENDERTYPE_OPAQUE;
+									}
 
-								if (material->IsWater())
-								{
-									object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+									if (material->IsWater())
+									{
+										object.rendertypeMask |= RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER;
+									}
 								}
 
 								if (material->HasPlanarReflection())
