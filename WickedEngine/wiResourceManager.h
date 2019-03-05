@@ -23,20 +23,16 @@ public:
 		HULLSHADER,
 		DOMAINSHADER,
 		COMPUTESHADER,
+		EMPTY,
 	};
 
 	struct Resource
 	{
-		void* data;
-		Data_Type type;
-		long refCount;
-
-		Resource(void* newData, Data_Type newType) :data(newData), type(newType)
-		{
-			refCount = 1;
-		};
+		const void* data = nullptr;
+		Data_Type type = EMPTY;
+		long refCount = 0;
 	};
-	std::unordered_map<wiHashString, Resource*> resources;
+	std::unordered_map<wiHashString, Resource> resources;
 
 
 public:
@@ -44,9 +40,9 @@ public:
 	static wiResourceManager& GetGlobal();
 	static wiResourceManager& GetShaderManager();
 
-	const Resource* get(const wiHashString& name, bool IncRefCount = false);
+	Resource get(const wiHashString& name, bool IncRefCount = false);
 	//specify datatype for shaders
-	void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC);
+	const void* add(const wiHashString& name, Data_Type newType = Data_Type::DYNAMIC);
 	bool del(const wiHashString& name, bool forceDelete = false);
 	bool Register(const wiHashString& name, void* resource, Data_Type newType);
 	bool Clear();

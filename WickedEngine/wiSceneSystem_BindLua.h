@@ -35,6 +35,7 @@ namespace wiSceneSystem_BindLua
 		int Component_GetTransform(lua_State* L);
 		int Component_GetCamera(lua_State* L);
 		int Component_GetAnimation(lua_State* L);
+		int Component_GetMaterial(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -140,6 +141,24 @@ namespace wiSceneSystem_BindLua
 		int Play(lua_State* L);
 		int Pause(lua_State* L);
 		int Stop(lua_State* L);
+	};
+
+	class MaterialComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiSceneSystem::MaterialComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<MaterialComponent_BindLua>::FunctionType methods[];
+		static Luna<MaterialComponent_BindLua>::PropertyType properties[];
+
+		MaterialComponent_BindLua(wiSceneSystem::MaterialComponent* component) :component(component) {}
+		MaterialComponent_BindLua(lua_State *L);
+		~MaterialComponent_BindLua();
+
+		int SetBaseColor(lua_State* L);
+		int SetEmissiveColor(lua_State* L);
 	};
 
 }

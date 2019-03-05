@@ -24,6 +24,7 @@
 #include "wiFont_BindLua.h"
 #include "wiBackLog_BindLua.h"
 #include "wiNetwork_BindLua.h"
+#include "wiIntersect_BindLua.h"
 
 #include <sstream>
 
@@ -78,6 +79,7 @@ wiLua* wiLua::GetGlobal()
 		wiBackLog_BindLua::Bind();
 		wiClient_BindLua::Bind();
 		wiServer_BindLua::Bind();
+		wiIntersect_BindLua::Bind();
 
 	}
 	return globalLua;

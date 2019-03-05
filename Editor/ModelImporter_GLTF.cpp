@@ -94,7 +94,7 @@ namespace tinygltf
 void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 {
 	// We will load the texture2d by hand here and register to the resource manager (if it was not already registered)
-	if (wiResourceManager::GetGlobal().get(wiHashString(image->uri)) == nullptr)
+	if (wiResourceManager::GetGlobal().get(wiHashString(image->uri)).data == nullptr)
 	{
 		int width = image->width;
 		int height = image->height;

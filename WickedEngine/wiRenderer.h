@@ -32,19 +32,19 @@ namespace wiRenderer
 	static const wiGraphicsTypes::FORMAT DSFormat_small = wiGraphicsTypes::FORMAT_D16_UNORM;
 	static const wiGraphicsTypes::FORMAT DSFormat_small_alias = wiGraphicsTypes::FORMAT_R16_TYPELESS;
 
-	wiGraphicsTypes::Sampler* GetSampler(int slot);
-	wiGraphicsTypes::VertexShader* GetVertexShader(VSTYPES id);
-	wiGraphicsTypes::HullShader* GetHullShader(VSTYPES id);
-	wiGraphicsTypes::DomainShader* GetDomainShader(VSTYPES id);
-	wiGraphicsTypes::GeometryShader* GetGeometryShader(VSTYPES id);
-	wiGraphicsTypes::PixelShader* GetPixelShader(PSTYPES id);
-	wiGraphicsTypes::ComputeShader* GetComputeShader(PSTYPES id);
-	wiGraphicsTypes::VertexLayout* GetVertexLayout(VLTYPES id);
-	wiGraphicsTypes::RasterizerState* GetRasterizerState(RSTYPES id);
-	wiGraphicsTypes::DepthStencilState* GetDepthStencilState(DSSTYPES id);
-	wiGraphicsTypes::BlendState* GetBlendState(BSTYPES id);
-	wiGraphicsTypes::GPUBuffer* GetConstantBuffer(CBTYPES id);
-	wiGraphicsTypes::Texture* GetTexture(TEXTYPES id);
+	const wiGraphicsTypes::Sampler* GetSampler(int slot);
+	const wiGraphicsTypes::VertexShader* GetVertexShader(VSTYPES id);
+	const wiGraphicsTypes::HullShader* GetHullShader(VSTYPES id);
+	const wiGraphicsTypes::DomainShader* GetDomainShader(VSTYPES id);
+	const wiGraphicsTypes::GeometryShader* GetGeometryShader(VSTYPES id);
+	const wiGraphicsTypes::PixelShader* GetPixelShader(PSTYPES id);
+	const wiGraphicsTypes::ComputeShader* GetComputeShader(PSTYPES id);
+	const wiGraphicsTypes::VertexLayout* GetVertexLayout(VLTYPES id);
+	const wiGraphicsTypes::RasterizerState* GetRasterizerState(RSTYPES id);
+	const wiGraphicsTypes::DepthStencilState* GetDepthStencilState(DSSTYPES id);
+	const wiGraphicsTypes::BlendState* GetBlendState(BSTYPES id);
+	const wiGraphicsTypes::GPUBuffer* GetConstantBuffer(CBTYPES id);
+	const wiGraphicsTypes::Texture* GetTexture(TEXTYPES id);
 
 	void ModifySampler(const wiGraphicsTypes::SamplerDesc& desc, int slot);
 

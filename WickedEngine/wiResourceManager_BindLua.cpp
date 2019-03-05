@@ -44,18 +44,18 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 	if (argc > 0)
 	{
 		string name = wiLua::SGetString(L, 1);
-		const wiResourceManager::Resource* data = resources->get(name);
-		if (data != nullptr)
+		wiResourceManager::Resource data = resources->get(name);
+		if (data.data != nullptr)
 		{
-			switch (data->type)
+			switch (data.type)
 			{
 			case wiResourceManager::Data_Type::IMAGE_2D:
-				Luna<Texture_BindLua>::push(L, new Texture_BindLua((Texture2D*)data->data));
+				Luna<Texture_BindLua>::push(L, new Texture_BindLua((Texture2D*)data.data));
 				return 1;
 				break;
 			case wiResourceManager::Data_Type::MUSIC:
 			case wiResourceManager::Data_Type::SOUND:
-				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiSound*)data->data));
+				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiSound*)data.data));
 				return 1;
 				break;
 			default:
@@ -95,7 +95,7 @@ int wiResourceManager_BindLua::Add(lua_State *L)
 			else if (!typeStr.compare("MUSIC"))
 				type = wiResourceManager::Data_Type::MUSIC;
 		}
-		void* data = resources->add(name, type);
+		const void* data = resources->add(name, type);
 		wiLua::SSetString(L, (data != nullptr ? "ok" : "not found"));
 		return 1;
 	}

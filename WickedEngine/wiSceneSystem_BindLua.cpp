@@ -37,6 +37,7 @@ void Bind()
 		Luna<TransformComponent_BindLua>::Register(L);
 		Luna<CameraComponent_BindLua>::Register(L);
 		Luna<AnimationComponent_BindLua>::Register(L);
+		Luna<MaterialComponent_BindLua>::Register(L);
 	}
 }
 
@@ -57,6 +58,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetTransform),
 	lunamethod(Scene_BindLua, Component_GetCamera),
 	lunamethod(Scene_BindLua, Component_GetAnimation),
+	lunamethod(Scene_BindLua, Component_GetMaterial),
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
 	lunamethod(Scene_BindLua, Component_DetachChildren),
@@ -257,6 +259,23 @@ int Scene_BindLua::Component_GetAnimation(lua_State* L)
 
 		AnimationComponent* component = scene->animations.GetComponent(entity);
 		Luna<AnimationComponent_BindLua>::push(L, new AnimationComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_GetMaterial(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		MaterialComponent* component = scene->materials.GetComponent(entity);
+		Luna<MaterialComponent_BindLua>::push(L, new MaterialComponent_BindLua(component));
 		return 1;
 	}
 	else
@@ -767,6 +786,88 @@ int AnimationComponent_BindLua::Pause(lua_State* L)
 int AnimationComponent_BindLua::Stop(lua_State* L)
 {
 	component->Stop();
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+const char MaterialComponent_BindLua::className[] = "MaterialComponent";
+
+Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods[] = {
+	lunamethod(MaterialComponent_BindLua, SetBaseColor),
+	lunamethod(MaterialComponent_BindLua, SetEmissiveColor),
+	{ NULL, NULL }
+};
+Luna<MaterialComponent_BindLua>::PropertyType MaterialComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+MaterialComponent_BindLua::MaterialComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new MaterialComponent;
+}
+MaterialComponent_BindLua::~MaterialComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* _color = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (_color)
+		{
+			XMFLOAT4 color;
+			XMStoreFloat4(&color, _color->vector);
+			component->SetBaseColor(color);
+		}
+		else
+		{
+			wiLua::SError(L, "SetBaseColor(Vector color) first argument must be of Vector type!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetBaseColor(Vector color) not enough arguments!");
+	}
+
+	return 0;
+}
+int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* _color = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (_color)
+		{
+			XMFLOAT4 color;
+			XMStoreFloat4(&color, _color->vector);
+			component->SetEmissiveColor(color);
+		}
+		else
+		{
+			wiLua::SError(L, "SetEmissiveColor(Vector color) first argument must be of Vector type!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetEmissiveColor(Vector color) not enough arguments!");
+	}
+
 	return 0;
 }
 

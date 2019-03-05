@@ -489,25 +489,25 @@ namespace wiGraphicsTypes
 	};
 	struct GraphicsPSODesc
 	{
-		VertexShader*			vs = nullptr;
-		PixelShader*			ps = nullptr;
-		HullShader*				hs = nullptr;
-		DomainShader*			ds = nullptr;
-		GeometryShader*			gs = nullptr;
-		BlendState*				bs = nullptr;
-		RasterizerState*		rs = nullptr;
-		DepthStencilState*		dss = nullptr;
-		VertexLayout*			il = nullptr;
-		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
-		UINT					numRTs = 0;
-		FORMAT					RTFormats[8] = {};
-		FORMAT					DSFormat = FORMAT_UNKNOWN;
-		SampleDesc				sampleDesc; 
-		UINT					sampleMask = 0xFFFFFFFF;
+		const VertexShader*			vs = nullptr;
+		const PixelShader*			ps = nullptr;
+		const HullShader*			hs = nullptr;
+		const DomainShader*			ds = nullptr;
+		const GeometryShader*		gs = nullptr;
+		const BlendState*			bs = nullptr;
+		const RasterizerState*		rs = nullptr;
+		const DepthStencilState*	dss = nullptr;
+		const VertexLayout*			il = nullptr;
+		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
+		UINT						numRTs = 0;
+		FORMAT						RTFormats[8] = {};
+		FORMAT						DSFormat = FORMAT_UNKNOWN;
+		SampleDesc					sampleDesc; 
+		UINT						sampleMask = 0xFFFFFFFF;
 	};
 	struct ComputePSODesc
 	{
-		ComputeShader*			cs = nullptr;
+		const ComputeShader*	cs = nullptr;
 	};
 	struct IndirectDrawArgsInstanced
 	{

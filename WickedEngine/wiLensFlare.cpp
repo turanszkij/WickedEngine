@@ -9,11 +9,11 @@ using namespace wiGraphicsTypes;
 
 namespace wiLensFlare
 {
-	static GPUBuffer *constantBuffer = nullptr;
-	static PixelShader *pixelShader = nullptr;
-	static GeometryShader *geometryShader = nullptr;
-	static VertexShader *vertexShader = nullptr;
-	static Sampler *samplercmp = nullptr;
+	static std::unique_ptr<GPUBuffer> constantBuffer;
+	static const PixelShader *pixelShader = nullptr;
+	static const GeometryShader *geometryShader = nullptr;
+	static const VertexShader *vertexShader = nullptr;
+	static Sampler samplercmp;
 	static RasterizerState rasterizerState;
 	static DepthStencilState depthStencilState;
 	static BlendState blendState;
@@ -32,8 +32,8 @@ namespace wiLensFlare
 			XMStoreFloat4(&cb.xSunPos, lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1));
 			cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
-			device->UpdateBuffer(constantBuffer, &cb, threadID);
-			device->BindConstantBuffer(GS, constantBuffer, CB_GETBINDSLOT(LensFlareCB), threadID);
+			device->UpdateBuffer(constantBuffer.get(), &cb, threadID);
+			device->BindConstantBuffer(GS, constantBuffer.get(), CB_GETBINDSLOT(LensFlareCB), threadID);
 
 
 			int i = 0;
@@ -47,7 +47,7 @@ namespace wiLensFlare
 				}
 			}
 
-			device->BindSampler(GS, samplercmp, SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(GS, &samplercmp, SSLOT_ONDEMAND0, threadID);
 
 
 			device->Draw(i, 0, threadID);
@@ -61,11 +61,11 @@ namespace wiLensFlare
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
+		vertexShader = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
 
-		pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
+		pixelShader = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
-		geometryShader = static_cast<GeometryShader*>(wiResourceManager::GetShaderManager().add(path + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
+		geometryShader = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(path + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -90,8 +90,8 @@ namespace wiLensFlare
 		bd.ByteWidth = sizeof(LensFlareCB);
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		constantBuffer = new GPUBuffer;
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer);
+		constantBuffer.reset(new GPUBuffer);
+		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer.get());
 
 
 		RasterizerStateDesc rs;
@@ -157,8 +157,7 @@ namespace wiLensFlare
 			samplerDesc.MipLODBias = 0.0f;
 			samplerDesc.MaxAnisotropy = 0;
 			samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
-			samplercmp = new Sampler;
-			wiRenderer::GetDevice()->CreateSamplerState(&samplerDesc, samplercmp);
+			wiRenderer::GetDevice()->CreateSamplerState(&samplerDesc, &samplercmp);
 		}
 
 
@@ -167,12 +166,8 @@ namespace wiLensFlare
 
 		wiBackLog::post("wiLensFlare Initialized");
 	}
-	void CleanUp() {
-		SAFE_DELETE(constantBuffer);
-		SAFE_DELETE(pixelShader);
-		SAFE_DELETE(geometryShader);
-		SAFE_DELETE(vertexShader);
-		SAFE_DELETE(samplercmp);
+	void CleanUp() 
+	{
 	}
 
 }

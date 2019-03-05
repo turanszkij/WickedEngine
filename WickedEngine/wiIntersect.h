@@ -33,6 +33,7 @@ struct AABB
 	INTERSECTION_TYPE intersects(const AABB& b) const;
 	bool intersects(const XMFLOAT3& p) const;
 	bool intersects(const RAY& ray) const;
+	bool intersects(const SPHERE& sphere) const;
 	AABB operator* (float a);
 	static AABB Merge(const AABB& a, const AABB& b);
 

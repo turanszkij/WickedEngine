@@ -336,6 +336,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h" />
@@ -670,6 +671,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInputManager_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp" />

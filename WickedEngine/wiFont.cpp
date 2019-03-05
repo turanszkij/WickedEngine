@@ -37,9 +37,9 @@ namespace wiFont_Internal
 	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
-	VertexLayout		*vertexLayout = nullptr;
-	VertexShader		*vertexShader = nullptr;
-	PixelShader			*pixelShader = nullptr;
+	std::unique_ptr<VertexLayout>	vertexLayout;
+	const VertexShader	*vertexShader = nullptr;
+	const PixelShader	*pixelShader = nullptr;
 	GraphicsPSO			*PSO = nullptr;
 
 	atomic_bool initialized = false;
@@ -293,8 +293,6 @@ void wiFont::Initialize()
 void wiFont::CleanUp()
 {
 	fontStyles.clear();
-	SAFE_DELETE(vertexShader);
-	SAFE_DELETE(pixelShader);
 }
 
 void wiFont::LoadShaders()
@@ -306,19 +304,19 @@ void wiFont::LoadShaders()
 		{ "POSITION", 0, FORMAT_R16G16_SINT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		{ "TEXCOORD", 0, FORMAT_R16G16_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 	};
-	vertexShader = static_cast<VertexShader*>(wiResourceManager::GetShaderManager().add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShader = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
 	
-	vertexLayout = new VertexLayout;
-	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, vertexLayout);
+	vertexLayout.reset(new VertexLayout);
+	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, vertexLayout.get());
 
 
-	pixelShader = static_cast<PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShader = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
 	GraphicsPSODesc desc;
 	desc.vs = vertexShader;
 	desc.ps = pixelShader;
-	desc.il = vertexLayout;
+	desc.il = vertexLayout.get();
 	desc.bs = &blendState;
 	desc.rs = &rasterizerState;
 	desc.dss = &depthStencilState;

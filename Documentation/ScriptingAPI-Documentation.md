@@ -60,22 +60,22 @@ getprops(YourObject) on them (where YourObject is the object which is to be insp
 
 ## Common Tools
 This section describes the common tools for scripting which are not necessarily engine features.
-- signal(string name)
-- waitSignal(string name)
-- runProcess(function func)
-- killProcesses()
-- waitSeconds(float seconds)
-- getprops(table object)
-- len(table object)
-- backlog_post_list(table list)
-- fixedupdate()
-- update()
-- render() 
-- getDeltaTime()
-- math.lerp(float a,b,t)
-- math.clamp(float x,min,max)
-- math.saturate(float x)
-- math.round(float x)
+- signal(string name)  -- send a signal globally. This can wake up processes if there are any waiting on the same signal name
+- waitSignal(string name)  -- wait until a specified signal arrives
+- runProcess(function func)  -- start a new process
+- killProcesses()  -- stop and remove all processes
+- waitSeconds(float seconds)  -- wait until some time has passed (to be used from inside a process)
+- getprops(table object)  -- get reflection data from object
+- len(table object)  -- get the length of a table
+- backlog_post_list(table list)  -- post table contents to the backlog
+- fixedupdate()  -- wait for a fixed update step to be called (to be used from inside a process)
+- update()  -- wait for variable update step to be called (to be used from inside a process)
+- render()  -- wait for a render step to be called (to be used from inside a process)
+- getDeltaTime()  -- returns the delta time in seconds (time passed sice previous update())
+- math.lerp(float a,b,t)  -- linear interpolation
+- math.clamp(float x,min,max)  -- clamp x between min and max
+- math.saturate(float x)  -- clamp x between 0 and 1
+- math.round(float x)  -- round x to nearest integer
 
 ## Engine manipulation
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
@@ -84,11 +84,11 @@ The scripting API provides functions for the developer to manipulate engine beha
 The scripting console of the engine. Input text with the keyboard, run the input with the RETURN key. The script errors
 are also displayed here.
 The scripting API provides some functions which manipulate the BackLog. These functions are in he global scope:
-- backlog_clear()
-- backlog_post(string params,,,)
-- backlog_fontsize(int size)
-- backlog_isactive() : boolean result
-- backlog_fontrowspacing(int spacing)
+- backlog_clear()  -- remove all entries from the backlog
+- backlog_post(string params,,,)  -- post a string to the backlog
+- backlog_fontsize(int size)  -- modify the fint size of the backlog
+- backlog_isactive() : boolean result  -- returns true if the backlog is active, false otherwise
+- backlog_fontrowspacing(int spacing)  -- set a row spacing to the backlog
 
 ### Renderer
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
@@ -117,9 +117,10 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugForceFieldsEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
-- SetPhysicsParams(opt bool rigidBodyPhysicsEnabled, opt bool softBodyPhysicsEnabled, opt int softBodyIterationCount)
-- Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : Object? object, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against
+- Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against
 - DrawLine(Vector origin,end, opt Vector color)
+- DrawPoint(Vector origin, opt float size, opt Vector color)
+- DrawBox(Matrix boxMatrix, opt Vector color)
 - PutWaterRipple(String imagename, Vector position)
 - PutDecal(Decal decal)
 - PutEnvProbe(Vector pos)
@@ -336,6 +337,14 @@ Describes an orientation in 3D space.
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 
+#### AnimationComponent
+- Play()
+- Stop()
+- Pause()
+
+#### MaterialComponent
+- SetBaseColor()
+- SetEmissiveColor()
 
 ## High Level Interface
 ### MainComponent
@@ -440,6 +449,36 @@ It inherits functions from RenderPath2D.
 - AddLoadingTask(string taskScript)
 - OnFinished(string taskScript)
 
+### Intersects
+
+#### Ray
+A ray is defined by an origin Vector and a normalized direction Vector. It can be used to intersect with other primitives or the scene
+- [constructor]Ray(Vector origin,direction)
+- Intersects(AABB aabb) : bool result
+- Intersects(Sphere sphere) : bool result
+- GetOrigin() : Vector result
+- GetDirection() : Vector result
+
+#### AABB
+Axis Aligned Bounding Box. Can be intersected with other primitives.
+- [constructor]AABB(Vector min,max)
+- Intersects(AABB aabb) : int result  -- result can be 0 (outside, no intersection), 1 (intersection), 2 (completely inside)
+- Intersects(Sphere sphere) : bool result
+- Intersects(Ray ray) : bool result
+- GetMin() : Vector result
+- GetMax() : Vector result
+- GetCenter() : Vector result
+- GetHalfExtents() : Vector result
+
+#### Sphere
+Sphere defined by center Vector and radius. Can be intersected with other primitives.
+- [constructor]Sphere(Vector center, float radius)
+- Intersects(AABB aabb) : bool result
+- Intersects(Sphere sphere) : bool result
+- Intersects(Ray ray) : bool result
+- GetCenter() : Vector result
+- GetRadius() : float result
+
 ### Network
 Here are the network communication features.
 - TODO
@@ -459,9 +498,9 @@ These provide functions to check the state of the input devices.
 Query input devices
 - [outer]input : InputManager
 - [void-constructor]InputManager()
-- Down(int code, opt int type = KEYBOARD)
-- Press(int code, opt int type = KEYBOARD)
-- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = KEYBOARD)
+- Down(int code, opt int type = KEYBOARD) : bool result  -- Check whether a button is currently being held down
+- Press(int code, opt int type = KEYBOARD) : bool result  -- Check whether a button has just been pushed that wasn't before
+- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = KEYBOARD) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
 - GetPointer() : Vector result
 - SetPointer(Vector pos)
 - HidePointer(bool visible)

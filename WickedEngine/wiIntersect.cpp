@@ -124,6 +124,10 @@ bool AABB::intersects(const RAY& ray) const {
 
 	return tmax >= tmin;
 }
+bool AABB::intersects(const SPHERE& sphere) const 
+{
+	return sphere.intersects(*this);
+}
 AABB AABB::operator* (float a)
 {
 	XMFLOAT3 min = getMin();
