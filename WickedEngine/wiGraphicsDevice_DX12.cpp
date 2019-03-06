@@ -2068,6 +2068,8 @@ namespace wiGraphicsTypes
 
 	HRESULT GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 	{
+		DestroyBuffer(pBuffer);
+		DestroyResource(pBuffer);
 		pBuffer->type = GPUResource::BUFFER;
 		pBuffer->Register(this);
 
@@ -2225,6 +2227,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
 	{
+		DestroyTexture1D(pTexture1D);
+		DestroyResource(pTexture1D);
 		pTexture1D->type = GPUResource::TEXTURE_1D;
 		pTexture1D->Register(this);
 
@@ -2237,6 +2241,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
 	{
+		DestroyTexture2D(pTexture2D);
+		DestroyResource(pTexture2D);
 		pTexture2D->type = GPUResource::TEXTURE_2D;
 		pTexture2D->Register(this);
 
@@ -2865,6 +2871,8 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
 	{
+		DestroyTexture3D(pTexture3D);
+		DestroyResource(pTexture3D);
 		pTexture3D->type = GPUResource::TEXTURE_3D;
 		pTexture3D->Register(this);
 
@@ -2877,6 +2885,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 	{
+		DestroyInputLayout(pInputLayout);
 		pInputLayout->Register(this);
 
 		pInputLayout->desc.reserve((size_t)NumElements);
@@ -2889,6 +2898,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 	{
+		DestroyVertexShader(pVertexShader);
 		pVertexShader->Register(this);
 
 		pVertexShader->code.data = new BYTE[BytecodeLength];
@@ -2899,6 +2909,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 	{
+		DestroyPixelShader(pPixelShader);
 		pPixelShader->Register(this);
 
 		pPixelShader->code.data = new BYTE[BytecodeLength];
@@ -2909,6 +2920,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 	{
+		DestroyGeometryShader(pGeometryShader);
 		pGeometryShader->Register(this);
 
 		pGeometryShader->code.data = new BYTE[BytecodeLength];
@@ -2919,6 +2931,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 	{
+		DestroyHullShader(pHullShader);
 		pHullShader->Register(this);
 
 		pHullShader->code.data = new BYTE[BytecodeLength];
@@ -2929,6 +2942,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 	{
+		DestroyDomainShader(pDomainShader);
 		pDomainShader->Register(this);
 
 		pDomainShader->code.data = new BYTE[BytecodeLength];
@@ -2939,6 +2953,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 	{
+		DestroyComputeShader(pComputeShader);
 		pComputeShader->Register(this);
 
 		pComputeShader->code.data = new BYTE[BytecodeLength];
@@ -2949,6 +2964,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
+		DestroyBlendState(pBlendState);
 		pBlendState->Register(this);
 
 		pBlendState->desc = *pBlendStateDesc;
@@ -2956,6 +2972,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 	{
+		DestroyDepthStencilState(pDepthStencilState);
 		pDepthStencilState->Register(this);
 
 		pDepthStencilState->desc = *pDepthStencilStateDesc;
@@ -2963,6 +2980,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 	{
+		DestroyRasterizerState(pRasterizerState);
 		pRasterizerState->Register(this);
 
 		pRasterizerState->desc = *pRasterizerStateDesc;
@@ -2970,6 +2988,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 	{
+		DestroySamplerState(pSamplerState);
 		pSamplerState->Register(this);
 
 		D3D12_SAMPLER_DESC desc;
@@ -2996,7 +3015,9 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 	{
-		pQuery->Register(this);
+		// TODO!
+		//DestroyQuery(pQuery);
+		//pQuery->Register(this);
 
 		HRESULT hr = E_FAIL;
 
@@ -3006,6 +3027,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 	{
+		DestroyGraphicsPSO(pso);
 		pso->Register(this);
 
 		pso->desc = *pDesc;
@@ -3148,6 +3170,7 @@ namespace wiGraphicsTypes
 	}
 	HRESULT GraphicsDevice_DX12::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 	{
+		DestroyComputePSO(pso);
 		pso->Register(this);
 
 		pso->desc = *pDesc;

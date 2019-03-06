@@ -28,6 +28,7 @@ public:
 
 	wiWindow*	emitterWindow;
 
+	wiTextInputField*	emitterNameField;
 	wiButton* addButton;
 	wiButton* restartButton;
 	wiComboBox*	meshComboBox;

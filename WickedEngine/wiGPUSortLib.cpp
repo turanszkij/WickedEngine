@@ -7,8 +7,8 @@ using namespace wiGraphicsTypes;
 
 namespace wiGPUSortLib
 {
-	static std::unique_ptr<GPUBuffer> indirectBuffer;
-	static std::unique_ptr<GPUBuffer> sortCB;
+	static GPUBuffer indirectBuffer;
+	static GPUBuffer sortCB;
 	static const ComputeShader* kickoffSortCS = nullptr;
 	static const ComputeShader* sortCS = nullptr;
 	static const ComputeShader* sortInnerCS = nullptr;
@@ -27,8 +27,7 @@ namespace wiGPUSortLib
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.MiscFlags = 0;
 		bd.ByteWidth = sizeof(SortConstants);
-		sortCB.reset(new GPUBuffer);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, sortCB.get());
+		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sortCB);
 
 
 		bd.Usage = USAGE_DEFAULT;
@@ -36,8 +35,7 @@ namespace wiGPUSortLib
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
-		indirectBuffer.reset(new GPUBuffer);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffer.get());
+		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
 	}
 
@@ -73,7 +71,13 @@ namespace wiGPUSortLib
 	}
 
 
-	void Sort(UINT maxCount, GPUBuffer* comparisonBuffer_read, GPUBuffer* counterBuffer_read, UINT counterReadOffset, GPUBuffer* indexBuffer_write, GRAPHICSTHREAD threadID)
+	void Sort(
+		UINT maxCount, 
+		const GPUBuffer& comparisonBuffer_read, 
+		const GPUBuffer& counterBuffer_read, 
+		UINT counterReadOffset, 
+		const GPUBuffer& indexBuffer_write,
+		GRAPHICSTHREAD threadID)
 	{
 		static bool init = false;
 		if (!init)
@@ -90,8 +94,8 @@ namespace wiGPUSortLib
 
 		SortConstants sc;
 		sc.counterReadOffset = counterReadOffset;
-		device->UpdateBuffer(sortCB.get(), &sc, threadID);
-		device->BindConstantBuffer(CS, sortCB.get(), CB_GETBINDSLOT(SortConstants), threadID);
+		device->UpdateBuffer(&sortCB, &sc, threadID);
+		device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), threadID);
 
 		device->UnbindUAVs(0, 8, threadID);
 
@@ -99,13 +103,13 @@ namespace wiGPUSortLib
 		{
 			device->BindComputePSO(&CPSO_kickoffSort, threadID);
 
-			GPUResource* res[] = {
-				counterBuffer_read,
+			const GPUResource* res[] = {
+				&counterBuffer_read,
 			};
 			device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
 
-			GPUResource* uavs[] = {
-				indirectBuffer.get(),
+			const GPUResource* uavs[] = {
+				&indirectBuffer,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -116,14 +120,14 @@ namespace wiGPUSortLib
 		}
 
 
-		GPUResource* uavs[] = {
-			indexBuffer_write,
+		const GPUResource* uavs[] = {
+			&indexBuffer_write,
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
-		GPUResource* resources[] = {
-			counterBuffer_read,
-			comparisonBuffer_read,
+		const GPUResource* resources[] = {
+			&counterBuffer_read,
+			&comparisonBuffer_read,
 		};
 		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), threadID);
 
@@ -146,7 +150,7 @@ namespace wiGPUSortLib
 
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputePSO(&CPSO_sort, threadID);
-			device->DispatchIndirect(indirectBuffer.get(), 0, threadID);
+			device->DispatchIndirect(&indirectBuffer, 0, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		}
 
@@ -189,8 +193,8 @@ namespace wiGPUSortLib
 				}
 				sc.counterReadOffset = counterReadOffset;
 
-				device->UpdateBuffer(sortCB.get(), &sc, threadID);
-				device->BindConstantBuffer(CS, sortCB.get(), CB_GETBINDSLOT(SortConstants), threadID);
+				device->UpdateBuffer(&sortCB, &sc, threadID);
+				device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), threadID);
 
 				device->Dispatch(numThreadGroups, 1, 1, threadID);
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);

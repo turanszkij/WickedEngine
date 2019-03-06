@@ -38,6 +38,7 @@ void Bind()
 		Luna<CameraComponent_BindLua>::Register(L);
 		Luna<AnimationComponent_BindLua>::Register(L);
 		Luna<MaterialComponent_BindLua>::Register(L);
+		Luna<EmitterComponent_BindLua>::Register(L);
 	}
 }
 
@@ -59,6 +60,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetCamera),
 	lunamethod(Scene_BindLua, Component_GetAnimation),
 	lunamethod(Scene_BindLua, Component_GetMaterial),
+	lunamethod(Scene_BindLua, Component_GetEmitter),
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
 	lunamethod(Scene_BindLua, Component_DetachChildren),
@@ -276,6 +278,23 @@ int Scene_BindLua::Component_GetMaterial(lua_State* L)
 
 		MaterialComponent* component = scene->materials.GetComponent(entity);
 		Luna<MaterialComponent_BindLua>::push(L, new MaterialComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_GetEmitter(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		wiEmittedParticle* component = scene->emitters.GetComponent(entity);
+		Luna<EmitterComponent_BindLua>::push(L, new EmitterComponent_BindLua(component));
 		return 1;
 	}
 	else
@@ -866,6 +885,203 @@ int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "SetEmissiveColor(Vector color) not enough arguments!");
+	}
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+const char EmitterComponent_BindLua::className[] = "EmitterComponent";
+
+Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[] = {
+	lunamethod(EmitterComponent_BindLua, Burst),
+	lunamethod(EmitterComponent_BindLua, SetEmitCount),
+	lunamethod(EmitterComponent_BindLua, SetSize),
+	lunamethod(EmitterComponent_BindLua, SetLife),
+	lunamethod(EmitterComponent_BindLua, SetNormalFactor),
+	lunamethod(EmitterComponent_BindLua, SetRandomness),
+	lunamethod(EmitterComponent_BindLua, SetLifeRandomness),
+	lunamethod(EmitterComponent_BindLua, SetScaleX),
+	lunamethod(EmitterComponent_BindLua, SetScaleY),
+	lunamethod(EmitterComponent_BindLua, SetRotation),
+	lunamethod(EmitterComponent_BindLua, SetmotionBlurAmount),
+	{ NULL, NULL }
+};
+Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+EmitterComponent_BindLua::EmitterComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new wiEmittedParticle;
+}
+EmitterComponent_BindLua::~EmitterComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int EmitterComponent_BindLua::Burst(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->Burst(wiLua::SGetInt(L, 1));
+	}
+	else
+	{
+		wiLua::SError(L, "Burst(int value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetEmitCount(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->count = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetEmitCount(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetSize(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->size = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetSize(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetLife(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->life = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetLife(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetNormalFactor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->normal_factor = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetNormalFactor(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetRandomness(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->random_factor = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetRandomness(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetLifeRandomness(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->random_life = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetLifeRandomness(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetScaleX(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->scaleX = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetScaleX(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetScaleY(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->scaleY = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetScaleY(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetRotation(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->rotation = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetRotation(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int EmitterComponent_BindLua::SetmotionBlurAmount(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->motionBlurAmount = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetmotionBlurAmount(float value) not enough arguments!");
 	}
 
 	return 0;

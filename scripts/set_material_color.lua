@@ -1,4 +1,5 @@
 -- This script will load a teapot model and animate its base color between red and green
+killProcesses()  -- stops all running lua coroutine processes
 
 backlog_post("---> START SCRIPT: set_material_color.lua")
 

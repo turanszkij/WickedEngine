@@ -1,4 +1,5 @@
 -- This script will load a teapot model and demonstrate picking it with a ray
+killProcesses()  -- stops all running lua coroutine processes
 
 backlog_post("---> START SCRIPT: pick.lua")
 
@@ -9,7 +10,7 @@ model_entity = LoadModel("../models/teapot.wiscene")
 runProcess(function()
 	local t = 0
 	while true do
-		t = t + 0.05
+		t = t + 0.02
 		
 		-- Create a Ray by specifying origin and direction (and also animate the ray origin along sine wave):
 		local ray = Ray(Vector(math.sin(t) * 4,1,-10), Vector(0,0,1)) 

@@ -49,21 +49,22 @@ namespace wiRenderer
 
 GraphicsDevice* graphicsDevice = nullptr;
 
-Sampler					*samplers[SSLOT_COUNT] = {};
-const VertexShader		*vertexShaders[VSTYPE_LAST] = {};
-const PixelShader		*pixelShaders[PSTYPE_LAST] = {};
-const GeometryShader	*geometryShaders[GSTYPE_LAST] = {};
-const HullShader		*hullShaders[HSTYPE_LAST] = {};
-const DomainShader		*domainShaders[DSTYPE_LAST] = {};
-const ComputeShader		*computeShaders[CSTYPE_LAST] = {};
-VertexLayout			*vertexLayouts[VLTYPE_LAST] = {};
-RasterizerState			*rasterizers[RSTYPE_LAST] = {};
-DepthStencilState		*depthStencils[DSSTYPE_LAST] = {};
-BlendState				*blendStates[BSTYPE_LAST] = {};
-GPUBuffer				*constantBuffers[CBTYPE_LAST] = {};
-GPUBuffer				*resourceBuffers[RBTYPE_LAST] = {};
-Texture					*textures[TEXTYPE_LAST] = {};
-Sampler					*customsamplers[SSTYPE_LAST] = {};
+const VertexShader*		vertexShaders[VSTYPE_LAST] = {};
+const PixelShader*		pixelShaders[PSTYPE_LAST] = {};
+const GeometryShader*	geometryShaders[GSTYPE_LAST] = {};
+const HullShader*		hullShaders[HSTYPE_LAST] = {};
+const DomainShader*		domainShaders[DSTYPE_LAST] = {};
+const ComputeShader*	computeShaders[CSTYPE_LAST] = {};
+Texture*				textures[TEXTYPE_LAST] = {};
+
+VertexLayout			vertexLayouts[VLTYPE_LAST];
+RasterizerState			rasterizers[RSTYPE_LAST];
+DepthStencilState		depthStencils[DSSTYPE_LAST];
+BlendState				blendStates[BSTYPE_LAST];
+GPUBuffer				constantBuffers[CBTYPE_LAST];
+GPUBuffer				resourceBuffers[RBTYPE_LAST];
+Sampler					samplers[SSLOT_COUNT];
+Sampler					customsamplers[SSTYPE_LAST];
 
 string SHADERPATH = "shaders/";
 
@@ -368,7 +369,7 @@ GFX_STRUCT InstanceAtlas
 
 const Sampler* GetSampler(int slot)
 {
-	return samplers[slot];
+	return &samplers[slot];
 }
 const VertexShader* GetVertexShader(VSTYPES id)
 {
@@ -396,23 +397,23 @@ const ComputeShader* GetComputeShader(VSTYPES id)
 }
 const VertexLayout* GetVertexLayout(VLTYPES id)
 {
-	return vertexLayouts[id];
+	return &vertexLayouts[id];
 }
 const RasterizerState* GetRasterizerState(RSTYPES id)
 {
-	return rasterizers[id];
+	return &rasterizers[id];
 }
 const DepthStencilState* GetDepthStencilState(DSSTYPES id)
 {
-	return depthStencils[id];
+	return &depthStencils[id];
 }
 const BlendState* GetBlendState(BSTYPES id)
 {
-	return blendStates[id];
+	return &blendStates[id];
 }
 const GPUBuffer* GetConstantBuffer(CBTYPES id)
 {
-	return constantBuffers[id];
+	return &constantBuffers[id];
 }
 const Texture* GetTexture(TEXTYPES id)
 {
@@ -421,9 +422,7 @@ const Texture* GetTexture(TEXTYPES id)
 
 void ModifySampler(const SamplerDesc& desc, int slot)
 {
-	SAFE_DELETE(samplers[slot]);
-	samplers[slot] = new wiGraphicsTypes::Sampler;
-	GetDevice()->CreateSamplerState(&desc, samplers[slot]);
+	GetDevice()->CreateSamplerState(&desc, &samplers[slot]);
 }
 
 std::string& GetShaderPath()
@@ -502,41 +501,9 @@ void CleanUp()
 	wiEmittedParticle::CleanUp();
 	wiCube::CleanUp();
 
-	for (int i = 0; i < VLTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(vertexLayouts[i]);
-	}
-	for (int i = 0; i < RSTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(rasterizers[i]);
-	}
-	for (int i = 0; i < DSSTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(depthStencils[i]);
-	}
-	for (int i = 0; i < BSTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(blendStates[i]);
-	}
-	for (int i = 0; i < CBTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(constantBuffers[i]);
-	}
-	for (int i = 0; i < RBTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(resourceBuffers[i]);
-	}
 	for (int i = 0; i < TEXTYPE_LAST; ++i)
 	{
 		SAFE_DELETE(textures[i]);
-	}
-	for (int i = 0; i < SSLOT_COUNT_PERSISTENT; ++i)
-	{
-		SAFE_DELETE(samplers[i]);
-	}
-	for (int i = 0; i < SSTYPE_LAST; ++i)
-	{
-		SAFE_DELETE(customsamplers[i]);
 	}
 
 	SAFE_DELETE(graphicsDevice);
@@ -610,10 +577,10 @@ enum OBJECTRENDERING_POM
 	OBJECTRENDERING_POM_ENABLED,
 	OBJECTRENDERING_POM_COUNT
 };
-GraphicsPSO* PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT] = {};
-GraphicsPSO* PSO_object_water[RENDERPASS_COUNT] = {};
-GraphicsPSO* PSO_object_wire = nullptr;
-GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
+GraphicsPSO PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
+GraphicsPSO PSO_object_water[RENDERPASS_COUNT];
+GraphicsPSO PSO_object_wire;
+inline const GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
 {
 	if (IsWireRender())
 	{
@@ -623,14 +590,14 @@ GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessella
 		case RENDERPASS_DEFERRED:
 		case RENDERPASS_FORWARD:
 		case RENDERPASS_TILEDFORWARD:
-			return PSO_object_wire;
+			return &PSO_object_wire;
 		}
 		return nullptr;
 	}
 
 	if (material.IsWater())
 	{
-		return PSO_object_water[renderPass];
+		return &PSO_object_water[renderPass];
 	}
 
 	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
@@ -640,10 +607,12 @@ GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessella
 	const bool pom = material.parallaxOcclusionMapping > 0;
 	const BLENDMODE blendMode = material.blendMode;
 
-	return PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+	const GraphicsPSO& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+	assert(pso.IsValid());
+	return &pso;
 }
 
-GraphicsPSO* PSO_object_hologram = nullptr;
+GraphicsPSO PSO_object_hologram;
 std::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
@@ -655,7 +624,7 @@ const std::vector<CustomShader>& GetCustomShaders()
 {
 	return customShaders;
 }
-GraphicsPSO* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
+inline const GraphicsPSO* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
 {
 	if (customShaderID >= 0 && customShaderID < customShaders.size())
 	{
@@ -1102,14 +1071,14 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool 
 	return realPS;
 }
 
-GraphicsPSO* PSO_decal = nullptr;
-GraphicsPSO* PSO_occlusionquery = nullptr;
-GraphicsPSO* PSO_impostor[RENDERPASS_COUNT] = {};
-GraphicsPSO* PSO_impostor_wire = nullptr;
-GraphicsPSO* PSO_captureimpostor_albedo = nullptr;
-GraphicsPSO* PSO_captureimpostor_normal = nullptr;
-GraphicsPSO* PSO_captureimpostor_surface = nullptr;
-GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
+GraphicsPSO PSO_decal;
+GraphicsPSO PSO_occlusionquery;
+GraphicsPSO PSO_impostor[RENDERPASS_COUNT];
+GraphicsPSO PSO_impostor_wire;
+GraphicsPSO PSO_captureimpostor_albedo;
+GraphicsPSO PSO_captureimpostor_normal;
+GraphicsPSO PSO_captureimpostor_surface;
+inline const GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
 {
 	if (IsWireRender())
 	{
@@ -1119,21 +1088,21 @@ GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
 		case RENDERPASS_DEFERRED:
 		case RENDERPASS_FORWARD:
 		case RENDERPASS_TILEDFORWARD:
-			return PSO_impostor_wire;
+			return &PSO_impostor_wire;
 		}
 		return nullptr;
 	}
 
-	return PSO_impostor[renderPass];
+	return &PSO_impostor[renderPass];
 }
 
-GraphicsPSO* PSO_deferredlight[LightComponent::LIGHTTYPE_COUNT] = {};
-GraphicsPSO* PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT] = {};
-GraphicsPSO* PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT] = {};
-GraphicsPSO* PSO_enviromentallight = nullptr;
+GraphicsPSO PSO_deferredlight[LightComponent::LIGHTTYPE_COUNT];
+GraphicsPSO PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
+GraphicsPSO PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
+GraphicsPSO PSO_enviromentallight;
 
-GraphicsPSO* PSO_renderlightmap_indirect = nullptr;
-GraphicsPSO* PSO_renderlightmap_direct = nullptr;
+GraphicsPSO PSO_renderlightmap_indirect;
+GraphicsPSO PSO_renderlightmap_direct;
 
 enum SKYRENDERING
 {
@@ -1144,7 +1113,7 @@ enum SKYRENDERING
 	SKYRENDERING_ENVMAPCAPTURE_DYNAMIC,
 	SKYRENDERING_COUNT
 };
-GraphicsPSO* PSO_sky[SKYRENDERING_COUNT] = {};
+GraphicsPSO PSO_sky[SKYRENDERING_COUNT];
 
 enum DEBUGRENDERING
 {
@@ -1159,7 +1128,7 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_RAYTRACE_BVH,
 	DEBUGRENDERING_COUNT
 };
-GraphicsPSO* PSO_debug[DEBUGRENDERING_COUNT] = {};
+GraphicsPSO PSO_debug[DEBUGRENDERING_COUNT];
 
 enum TILEDLIGHTING_TYPE
 {
@@ -1179,8 +1148,8 @@ enum TILEDLIGHTING_DEBUG
 	TILEDLIGHTING_DEBUG_ENABLED,
 	TILEDLIGHTING_DEBUG_COUNT
 };
-ComputePSO* CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
-ComputePSO* CPSO[CSTYPE_LAST] = {};
+ComputePSO CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT];
+ComputePSO CPSO[CSTYPE_LAST];
 
 
 
@@ -1541,8 +1510,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			{
 				TessellationCB tessCB;
 				tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-				device->UpdateBuffer(constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
-				device->BindConstantBuffer(HS, constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
+				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
 			}
 
 			if (forwardLightmaskRequest)
@@ -1550,8 +1519,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				const CameraComponent* camera = renderQueue.camera == nullptr ? &GetCamera() : renderQueue.camera;
 				const FrameCulling& culling = frameCullings.at(camera);
 				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, instancedBatch.aabb, renderPass);
-				device->UpdateBuffer(constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
-				device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
+				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
 			}
 
 			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
@@ -1573,7 +1542,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				GraphicsPSO* pso = nullptr;
+				const GraphicsPSO* pso = nullptr;
 				if (material.IsCustomShader())
 				{
 					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
@@ -1760,7 +1729,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID)
 {
 	const Scene& scene = GetScene();
-	GraphicsPSO* impostorRequest = GetImpostorPSO(renderPass);
+	const GraphicsPSO* impostorRequest = GetImpostorPSO(renderPass);
 
 	if (scene.impostors.GetCount() > 0 && impostorRequest != nullptr)
 	{
@@ -1821,7 +1790,7 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPH
 
 		MiscCB cb;
 		cb.g_xColor.x = (float)instances.offset;
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND0, threadID);
 		device->BindResource(PS, textures[TEXTYPE_2D_IMPOSTORARRAY], TEXSLOT_ONDEMAND0, threadID);
@@ -1837,18 +1806,13 @@ void LoadShaders()
 {
 	GraphicsDevice* device = GetDevice();
 
-	for (int i = 0; i < VLTYPE_LAST; ++i)
-	{
-		vertexLayouts[i] = new VertexLayout;
-	}
-
 	{
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_OBJECT_DEBUG] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_debug.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG]->code, vertexLayouts[VLTYPE_OBJECT_DEBUG]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_DEBUG]->code, &vertexLayouts[VLTYPE_OBJECT_DEBUG]);
 	}
 	{
 		VertexLayoutDesc layout[] =
@@ -1868,7 +1832,7 @@ void LoadShaders()
 			{ "INSTANCEATLAS",	0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, vertexLayouts[VLTYPE_OBJECT_ALL]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, &vertexLayouts[VLTYPE_OBJECT_ALL]);
 
 	}
 	{
@@ -1882,7 +1846,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code, vertexLayouts[VLTYPE_OBJECT_POS]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code, &vertexLayouts[VLTYPE_OBJECT_POS]);
 
 	}
 	{
@@ -1897,7 +1861,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE]->code, vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE]->code, &vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
 
 	}
 	{
@@ -1911,7 +1875,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW]->code, vertexLayouts[VLTYPE_SHADOW_POS]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW]->code, &vertexLayouts[VLTYPE_SHADOW_POS]);
 
 	}
 	{
@@ -1926,7 +1890,7 @@ void LoadShaders()
 			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code, vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code, &vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
 
 
 		vertexShaders[VSTYPE_SHADOW_TRANSPARENT] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS_transparent.cso", wiResourceManager::VERTEXSHADER));
@@ -1940,7 +1904,7 @@ void LoadShaders()
 			{ "TEXCOORD", 0, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_LINE] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "linesVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_LINE]->code, vertexLayouts[VLTYPE_LINE]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_LINE]->code, &vertexLayouts[VLTYPE_LINE]);
 
 	}
 
@@ -1952,7 +1916,7 @@ void LoadShaders()
 			{ "TEXCOORD", 1, FORMAT_R32G32B32A32_FLOAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 		};
 		vertexShaders[VSTYPE_TRAIL] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "trailVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_TRAIL]->code, vertexLayouts[VLTYPE_TRAIL]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_TRAIL]->code, &vertexLayouts[VLTYPE_TRAIL]);
 
 	}
 
@@ -1967,7 +1931,7 @@ void LoadShaders()
 			{ "MATIPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_RENDERLIGHTMAP] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapVS.cso", wiResourceManager::VERTEXSHADER));
-		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP]->code, vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
+		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP]->code, &vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
 
 	}
 
@@ -2169,7 +2133,7 @@ void LoadShaders()
 
 										GraphicsPSODesc desc;
 										desc.vs = vertexShaders[realVS];
-										desc.il = vertexLayouts[realVL];
+										desc.il = &vertexLayouts[realVL];
 										desc.hs = hullShaders[realHS];
 										desc.ds = domainShaders[realDS];
 										desc.gs = geometryShaders[realGS];
@@ -2178,16 +2142,16 @@ void LoadShaders()
 										switch (blendMode)
 										{
 										case BLENDMODE_OPAQUE:
-											desc.bs = blendStates[BSTYPE_OPAQUE];
+											desc.bs = &blendStates[BSTYPE_OPAQUE];
 											break;
 										case BLENDMODE_ALPHA:
-											desc.bs = blendStates[BSTYPE_TRANSPARENT];
+											desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 											break;
 										case BLENDMODE_ADDITIVE:
-											desc.bs = blendStates[BSTYPE_ADDITIVE];
+											desc.bs = &blendStates[BSTYPE_ADDITIVE];
 											break;
 										case BLENDMODE_PREMULTIPLIED:
-											desc.bs = blendStates[BSTYPE_PREMULTIPLIED];
+											desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
 											break;
 										default:
 											assert(0);
@@ -2199,7 +2163,7 @@ void LoadShaders()
 										case RENDERPASS_DEPTHONLY:
 										case RENDERPASS_SHADOW:
 										case RENDERPASS_SHADOWCUBE:
-											desc.bs = blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+											desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
 											break;
 										default:
 											break;
@@ -2209,19 +2173,19 @@ void LoadShaders()
 										{
 										case RENDERPASS_SHADOW:
 										case RENDERPASS_SHADOWCUBE:
-											desc.dss = depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+											desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
 											break;
 										case RENDERPASS_TILEDFORWARD:
-											desc.dss = depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+											desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
 											break;
 										case RENDERPASS_ENVMAPCAPTURE:
-											desc.dss = depthStencils[DSSTYPE_ENVMAP];
+											desc.dss = &depthStencils[DSSTYPE_ENVMAP];
 											break;
 										case RENDERPASS_VOXELIZE:
-											desc.dss = depthStencils[DSSTYPE_XRAY];
+											desc.dss = &depthStencils[DSSTYPE_XRAY];
 											break;
 										default:
-											desc.dss = depthStencils[DSSTYPE_DEFAULT];
+											desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 											break;
 										}
 
@@ -2229,13 +2193,13 @@ void LoadShaders()
 										{
 										case RENDERPASS_SHADOW:
 										case RENDERPASS_SHADOWCUBE:
-											desc.rs = rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+											desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
 											break;
 										case RENDERPASS_VOXELIZE:
-											desc.rs = rasterizers[RSTYPE_VOXELIZE];
+											desc.rs = &rasterizers[RSTYPE_VOXELIZE];
 											break;
 										default:
-											desc.rs = rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+											desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
 											break;
 										}
 
@@ -2320,8 +2284,7 @@ void LoadShaders()
 											desc.pt = TRIANGLELIST;
 										}
 
-										RECREATE(PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
-										device->CreateGraphicsPSO(&desc, PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										device->CreateGraphicsPSO(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
 									}
 								}
 							}
@@ -2342,25 +2305,24 @@ void LoadShaders()
 
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[realVS];
-		desc.il = vertexLayouts[realVL];
+		desc.il = &vertexLayouts[realVL];
 		desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
 
-		desc.bs = blendStates[BSTYPE_ADDITIVE];
-		desc.rs = rasterizers[DSSTYPE_DEFAULT];
-		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.bs = &blendStates[BSTYPE_ADDITIVE];
+		desc.rs = &rasterizers[DSSTYPE_DEFAULT];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.pt = TRIANGLELIST;
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_object_hologram);
-		device->CreateGraphicsPSO(&desc, PSO_object_hologram);
+		device->CreateGraphicsPSO(&desc, &PSO_object_hologram);
 
 		CustomShader customShader;
 		customShader.name = "Hologram";
-		customShader.passes[RENDERPASS_FORWARD].pso = PSO_object_hologram;
-		customShader.passes[RENDERPASS_TILEDFORWARD].pso = PSO_object_hologram;
+		customShader.passes[RENDERPASS_FORWARD].pso = &PSO_object_hologram;
+		customShader.passes[RENDERPASS_TILEDFORWARD].pso = &PSO_object_hologram;
 		RegisterCustomShader(customShader);
 	}
 
@@ -2368,75 +2330,70 @@ void LoadShaders()
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_WATER];
-		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = depthStencils[DSSTYPE_DEFAULT];
-		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+		desc.il = &vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
-		RECREATE(PSO_object_water[RENDERPASS_FORWARD]);
-		device->CreateGraphicsPSO(&desc, PSO_object_water[RENDERPASS_FORWARD]);
+		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
-		RECREATE(PSO_object_water[RENDERPASS_TILEDFORWARD]);
-		device->CreateGraphicsPSO(&desc, PSO_object_water[RENDERPASS_TILEDFORWARD]);
+		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_TILEDFORWARD]);
 
-		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-		desc.rs = rasterizers[RSTYPE_SHADOW];
-		desc.bs = blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+		desc.rs = &rasterizers[RSTYPE_SHADOW];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENTSHADOWMAP];
 		desc.vs = vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
 		desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
-		RECREATE(PSO_object_water[RENDERPASS_SHADOW]);
-		device->CreateGraphicsPSO(&desc, PSO_object_water[RENDERPASS_SHADOW]);
+
+		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
 	}
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
 		desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
-		desc.rs = rasterizers[RSTYPE_WIRE];
-		desc.bs = blendStates[BSTYPE_OPAQUE];
-		desc.dss = depthStencils[DSSTYPE_DEFAULT];
-		desc.il = vertexLayouts[VLTYPE_OBJECT_POS_TEX];
+		desc.rs = &rasterizers[RSTYPE_WIRE];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+		desc.il = &vertexLayouts[VLTYPE_OBJECT_POS_TEX];
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_object_wire);
-		device->CreateGraphicsPSO(&desc, PSO_object_wire);
+		device->CreateGraphicsPSO(&desc, &PSO_object_wire);
 	}
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_DECAL];
 		desc.ps = pixelShaders[PSTYPE_DECAL];
-		desc.rs = rasterizers[RSTYPE_FRONT];
-		desc.bs = blendStates[BSTYPE_DECAL];
-		desc.dss = depthStencils[DSSTYPE_DECAL];
+		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.bs = &blendStates[BSTYPE_DECAL];
+		desc.dss = &depthStencils[DSSTYPE_DECAL];
 		desc.pt = TRIANGLESTRIP;
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_gbuffer_0;
 		//desc.RTFormats[1] = RTFormat_gbuffer_1;
 
-		RECREATE(PSO_decal);
-		device->CreateGraphicsPSO(&desc, PSO_decal);
+		device->CreateGraphicsPSO(&desc, &PSO_decal);
 	}
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_CUBE];
-		desc.rs = rasterizers[RSTYPE_OCCLUDEE];
-		desc.bs = blendStates[BSTYPE_COLORWRITEDISABLE];
-		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.rs = &rasterizers[RSTYPE_OCCLUDEE];
+		desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.pt = TRIANGLESTRIP;
 
 		desc.DSFormat = DSFormat_small;
 
-		RECREATE(PSO_occlusionquery);
-		device->CreateGraphicsPSO(&desc, PSO_occlusionquery);
+		device->CreateGraphicsPSO(&desc, &PSO_occlusionquery);
 	}
 	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
@@ -2451,9 +2408,9 @@ void LoadShaders()
 		}
 
 		GraphicsPSODesc desc;
-		desc.rs = rasterizers[RSTYPE_DOUBLESIDED]; // well, we don't need double sided impostors, but might be helpful if something breaks
-		desc.bs = blendStates[BSTYPE_OPAQUE];
-		desc.dss = depthStencils[renderPass == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED]; // well, we don't need double sided impostors, but might be helpful if something breaks
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[renderPass == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
 		desc.il = nullptr;
 
 		switch (renderPass)
@@ -2493,48 +2450,43 @@ void LoadShaders()
 		}
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_impostor[renderPass]);
-		device->CreateGraphicsPSO(&desc, PSO_impostor[renderPass]);
+		device->CreateGraphicsPSO(&desc, &PSO_impostor[renderPass]);
 	}
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 		desc.ps = pixelShaders[PSTYPE_IMPOSTOR_WIRE];
-		desc.rs = rasterizers[RSTYPE_WIRE];
-		desc.bs = blendStates[BSTYPE_OPAQUE];
-		desc.dss = depthStencils[DSSTYPE_DEFAULT];
+		desc.rs = &rasterizers[RSTYPE_WIRE];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = nullptr;
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_impostor_wire);
-		device->CreateGraphicsPSO(&desc, PSO_impostor_wire);
+		device->CreateGraphicsPSO(&desc, &PSO_impostor_wire);
 	}
 	{
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
-		desc.rs = rasterizers[RSTYPE_FRONT];
-		desc.bs = blendStates[BSTYPE_OPAQUE];
-		desc.dss = depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
-		desc.il = vertexLayouts[VLTYPE_OBJECT_ALL];
+		desc.rs = &rasterizers[RSTYPE_FRONT];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
+		desc.il = &vertexLayouts[VLTYPE_OBJECT_ALL];
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_impostor;
 		desc.DSFormat = DSFormat_small;
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
-		RECREATE(PSO_captureimpostor_albedo);
-		device->CreateGraphicsPSO(&desc, PSO_captureimpostor_albedo);
+		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_albedo);
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL];
-		RECREATE(PSO_captureimpostor_normal);
-		device->CreateGraphicsPSO(&desc, PSO_captureimpostor_normal);
+		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_normal);
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
-		RECREATE(PSO_captureimpostor_surface);
-		device->CreateGraphicsPSO(&desc, PSO_captureimpostor_surface);
+		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_surface);
 	}
 
 	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
@@ -2544,45 +2496,45 @@ void LoadShaders()
 		// deferred lights:
 
 		desc.pt = TRIANGLELIST;
-		desc.rs = rasterizers[RSTYPE_BACK];
-		desc.bs = blendStates[BSTYPE_DEFERREDLIGHT];
+		desc.rs = &rasterizers[RSTYPE_BACK];
+		desc.bs = &blendStates[BSTYPE_DEFERREDLIGHT];
 
 		switch (type)
 		{
 		case LightComponent::DIRECTIONAL:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_DIRLIGHT];
-			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::POINT:
 			desc.vs = vertexShaders[VSTYPE_POINTLIGHT];
 			desc.ps = pixelShaders[PSTYPE_POINTLIGHT];
-			desc.dss = depthStencils[DSSTYPE_LIGHT];
+			desc.dss = &depthStencils[DSSTYPE_LIGHT];
 			break;
 		case LightComponent::SPOT:
 			desc.vs = vertexShaders[VSTYPE_SPOTLIGHT];
 			desc.ps = pixelShaders[PSTYPE_SPOTLIGHT];
-			desc.dss = depthStencils[DSSTYPE_LIGHT];
+			desc.dss = &depthStencils[DSSTYPE_LIGHT];
 			break;
 		case LightComponent::SPHERE:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_SPHERELIGHT];
-			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::DISC:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_DISCLIGHT];
-			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::RECTANGLE:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_RECTANGLELIGHT];
-			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::TUBE:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_TUBELIGHT];
-			desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		}
 
@@ -2591,8 +2543,7 @@ void LoadShaders()
 		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_deferredlight[type]);
-		device->CreateGraphicsPSO(&desc, PSO_deferredlight[type]);
+		device->CreateGraphicsPSO(&desc, &PSO_deferredlight[type]);
 
 
 
@@ -2600,40 +2551,40 @@ void LoadShaders()
 		if (type != LightComponent::DIRECTIONAL)
 		{
 
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.ps = pixelShaders[PSTYPE_LIGHTVISUALIZER];
 
 			switch (type)
 			{
 			case LightComponent::POINT:
-				desc.bs = blendStates[BSTYPE_ADDITIVE];
+				desc.bs = &blendStates[BSTYPE_ADDITIVE];
 				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
 				break;
 			case LightComponent::SPOT:
-				desc.bs = blendStates[BSTYPE_ADDITIVE];
+				desc.bs = &blendStates[BSTYPE_ADDITIVE];
 				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
-				desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
+				desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 				break;
 			case LightComponent::SPHERE:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.bs = &blendStates[BSTYPE_OPAQUE];
 				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_SPHERELIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
 				break;
 			case LightComponent::DISC:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.bs = &blendStates[BSTYPE_OPAQUE];
 				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_DISCLIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
 				break;
 			case LightComponent::RECTANGLE:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.bs = &blendStates[BSTYPE_OPAQUE];
 				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_RECTANGLELIGHT];
-				desc.rs = rasterizers[RSTYPE_BACK];
+				desc.rs = &rasterizers[RSTYPE_BACK];
 				break;
 			case LightComponent::TUBE:
-				desc.bs = blendStates[BSTYPE_OPAQUE];
+				desc.bs = &blendStates[BSTYPE_OPAQUE];
 				desc.vs = vertexShaders[VSTYPE_LIGHTVISUALIZER_TUBELIGHT];
-				desc.rs = rasterizers[RSTYPE_FRONT];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
 				break;
 			}
 
@@ -2641,17 +2592,16 @@ void LoadShaders()
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = DSFormat_full;
 
-			RECREATE(PSO_lightvisualizer[type]);
-			device->CreateGraphicsPSO(&desc, PSO_lightvisualizer[type]);
+			device->CreateGraphicsPSO(&desc, &PSO_lightvisualizer[type]);
 		}
 
 
 		// volumetric lights:
 		if (type <= LightComponent::SPOT)
 		{
-			desc.dss = depthStencils[DSSTYPE_XRAY];
-			desc.bs = blendStates[BSTYPE_ADDITIVE];
-			desc.rs = rasterizers[RSTYPE_BACK];
+			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.bs = &blendStates[BSTYPE_ADDITIVE];
+			desc.rs = &rasterizers[RSTYPE_BACK];
 
 			switch (type)
 			{
@@ -2673,8 +2623,7 @@ void LoadShaders()
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = FORMAT_UNKNOWN;
 
-			RECREATE(PSO_volumetriclight[type]);
-			device->CreateGraphicsPSO(&desc, PSO_volumetriclight[type]);
+			device->CreateGraphicsPSO(&desc, &PSO_volumetriclight[type]);
 		}
 
 
@@ -2683,60 +2632,57 @@ void LoadShaders()
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 		desc.ps = pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
-		desc.rs = rasterizers[RSTYPE_BACK];
-		desc.bs = blendStates[BSTYPE_ENVIRONMENTALLIGHT];
-		desc.dss = depthStencils[DSSTYPE_DIRLIGHT];
+		desc.rs = &rasterizers[RSTYPE_BACK];
+		desc.bs = &blendStates[BSTYPE_ENVIRONMENTALLIGHT];
+		desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 
 		desc.numRTs = 2;
 		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
 		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
 		desc.DSFormat = DSFormat_full;
 
-		RECREATE(PSO_enviromentallight);
-		device->CreateGraphicsPSO(&desc, PSO_enviromentallight);
+		device->CreateGraphicsPSO(&desc, &PSO_enviromentallight);
 	}
 	{
 		GraphicsPSODesc desc;
-		desc.il = vertexLayouts[VLTYPE_RENDERLIGHTMAP];
+		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT];
-		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = depthStencils[DSSTYPE_XRAY];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = &depthStencils[DSSTYPE_XRAY];
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
-		RECREATE(PSO_renderlightmap_indirect);
-		device->CreateGraphicsPSO(&desc, PSO_renderlightmap_indirect);
+		device->CreateGraphicsPSO(&desc, &PSO_renderlightmap_indirect);
 	}
 	{
 		GraphicsPSODesc desc;
-		desc.il = vertexLayouts[VLTYPE_RENDERLIGHTMAP];
+		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT];
-		desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = depthStencils[DSSTYPE_XRAY];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.dss = &depthStencils[DSSTYPE_XRAY];
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
-		RECREATE(PSO_renderlightmap_direct);
-		device->CreateGraphicsPSO(&desc, PSO_renderlightmap_direct);
+		device->CreateGraphicsPSO(&desc, &PSO_renderlightmap_direct);
 	}
 	for (int type = 0; type < SKYRENDERING_COUNT; ++type)
 	{
 		GraphicsPSODesc desc;
-		desc.rs = rasterizers[RSTYPE_SKY];
-		desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
+		desc.rs = &rasterizers[RSTYPE_SKY];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 
 		switch (type)
 		{
 		case SKYRENDERING_STATIC:
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SKY_STATIC];
 			desc.numRTs = 2;
@@ -2745,7 +2691,7 @@ void LoadShaders()
 			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_DYNAMIC:
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SKY_DYNAMIC];
 			desc.numRTs = 2;
@@ -2754,7 +2700,7 @@ void LoadShaders()
 			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_SUN:
-			desc.bs = blendStates[BSTYPE_ADDITIVE];
+			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.vs = vertexShaders[VSTYPE_SKY];
 			desc.ps = pixelShaders[PSTYPE_SUN];
 			desc.numRTs = 1;
@@ -2762,7 +2708,7 @@ void LoadShaders()
 			desc.DSFormat = DSFormat_full;
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_STATIC:
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_STATIC];
 			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
@@ -2771,7 +2717,7 @@ void LoadShaders()
 			desc.DSFormat = DSFormat_small;
 			break;
 		case SKYRENDERING_ENVMAPCAPTURE_DYNAMIC:
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.vs = vertexShaders[VSTYPE_ENVMAP_SKY];
 			desc.ps = pixelShaders[PSTYPE_ENVMAP_SKY_DYNAMIC];
 			desc.gs = geometryShaders[GSTYPE_ENVMAP_SKY];
@@ -2781,8 +2727,7 @@ void LoadShaders()
 			break;
 		}
 
-		RECREATE(PSO_sky[type]);
-		device->CreateGraphicsPSO(&desc, PSO_sky[type]);
+		device->CreateGraphicsPSO(&desc, &PSO_sky[type]);
 	}
 	for (int debug = 0; debug < DEBUGRENDERING_COUNT; ++debug)
 	{
@@ -2797,85 +2742,84 @@ void LoadShaders()
 		case DEBUGRENDERING_ENVPROBE:
 			desc.vs = vertexShaders[VSTYPE_SPHERE];
 			desc.ps = pixelShaders[PSTYPE_CUBEMAP];
-			desc.dss = depthStencils[DSSTYPE_DEFAULT];
-			desc.rs = rasterizers[RSTYPE_FRONT];
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = &rasterizers[RSTYPE_FRONT];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_GRID:
 			desc.vs = vertexShaders[VSTYPE_LINE];
 			desc.ps = pixelShaders[PSTYPE_LINE];
-			desc.il = vertexLayouts[VLTYPE_LINE];
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.il = &vertexLayouts[VLTYPE_LINE];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = LINELIST;
 			break;
 		case DEBUGRENDERING_CUBE:
 			desc.vs = vertexShaders[VSTYPE_LINE];
 			desc.ps = pixelShaders[PSTYPE_LINE];
-			desc.il = vertexLayouts[VLTYPE_LINE];
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.il = &vertexLayouts[VLTYPE_LINE];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = LINELIST;
 			break;
 		case DEBUGRENDERING_LINES:
 			desc.vs = vertexShaders[VSTYPE_LINE];
 			desc.ps = pixelShaders[PSTYPE_LINE];
-			desc.il = vertexLayouts[VLTYPE_LINE];
-			desc.dss = depthStencils[DSSTYPE_XRAY];
-			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.il = &vertexLayouts[VLTYPE_LINE];
+			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = LINELIST;
 			break;
 		case DEBUGRENDERING_EMITTER:
 			desc.vs = vertexShaders[VSTYPE_OBJECT_DEBUG];
 			desc.ps = pixelShaders[PSTYPE_OBJECT_DEBUG];
-			desc.il = vertexLayouts[VLTYPE_OBJECT_DEBUG];
-			desc.dss = depthStencils[DSSTYPE_DEPTHREAD];
-			desc.rs = rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.il = &vertexLayouts[VLTYPE_OBJECT_DEBUG];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_VOXEL:
 			desc.vs = vertexShaders[VSTYPE_VOXEL];
 			desc.ps = pixelShaders[PSTYPE_VOXEL];
 			desc.gs = geometryShaders[GSTYPE_VOXEL];
-			desc.dss = depthStencils[DSSTYPE_DEFAULT];
-			desc.rs = rasterizers[RSTYPE_BACK];
-			desc.bs = blendStates[BSTYPE_OPAQUE];
+			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = &rasterizers[RSTYPE_BACK];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.pt = POINTLIST;
 			break;
 		case DEBUGRENDERING_FORCEFIELD_POINT:
 			desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT];
 			desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
-			desc.dss = depthStencils[DSSTYPE_XRAY];
-			desc.rs = rasterizers[RSTYPE_BACK];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.rs = &rasterizers[RSTYPE_BACK];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_FORCEFIELD_PLANE:
 			desc.vs = vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE];
 			desc.ps = pixelShaders[PSTYPE_FORCEFIELDVISUALIZER];
-			desc.dss = depthStencils[DSSTYPE_XRAY];
-			desc.rs = rasterizers[RSTYPE_FRONT];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.rs = &rasterizers[RSTYPE_FRONT];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = TRIANGLESTRIP;
 			break;
 		case DEBUGRENDERING_RAYTRACE_BVH:
 			desc.vs = vertexShaders[VSTYPE_RAYTRACE_SCREEN];
 			desc.ps = pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH];
-			desc.dss = depthStencils[DSSTYPE_XRAY];
-			desc.rs = rasterizers[RSTYPE_DOUBLESIDED];
-			desc.bs = blendStates[BSTYPE_TRANSPARENT];
+			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = TRIANGLELIST;
 			desc.DSFormat = FORMAT_UNKNOWN;
 			break;
 		}
 
-		RECREATE(PSO_debug[debug]);
-		HRESULT hr = device->CreateGraphicsPSO(&desc, PSO_debug[debug]);
+		HRESULT hr = device->CreateGraphicsPSO(&desc, &PSO_debug[debug]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -2903,8 +2847,8 @@ void LoadShaders()
 
 				ComputePSODesc desc;
 				desc.cs = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
-				RECREATE(CPSO_tiledlighting[i][j][k]);
-				device->CreateComputePSO(&desc, CPSO_tiledlighting[i][j][k]);
+				
+				device->CreateComputePSO(&desc, &CPSO_tiledlighting[i][j][k]);
 			}
 		}
 	}
@@ -2913,8 +2857,7 @@ void LoadShaders()
 	{
 		ComputePSODesc desc;
 		desc.cs = computeShaders[i];
-		RECREATE(CPSO[i]);
-		device->CreateComputePSO(&desc, CPSO[i]);
+		device->CreateComputePSO(&desc, &CPSO[i]);
 	}
 
 
@@ -2922,11 +2865,6 @@ void LoadShaders()
 void LoadBuffers()
 {
 	GraphicsDevice* device = GetDevice();
-
-	for (int i = 0; i < CBTYPE_LAST; ++i)
-	{
-		constantBuffers[i] = new GPUBuffer;
-	}
 
 	GPUBufferDesc bd;
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
@@ -2937,82 +2875,77 @@ void LoadBuffers()
 	bd.CPUAccessFlags = 0;
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(FrameCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FRAME]);
-	device->SetName(constantBuffers[CBTYPE_FRAME], "FrameCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FRAME]);
+	device->SetName(&constantBuffers[CBTYPE_FRAME], "FrameCB");
 
 	// The other constant buffers will be updated frequently (more than once per frame) so they should reside in DYNAMIC GPU memory!
 	bd.Usage = USAGE_DYNAMIC;
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	bd.ByteWidth = sizeof(CameraCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CAMERA]);
-	device->SetName(constantBuffers[CBTYPE_CAMERA], "CameraCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CAMERA]);
+	device->SetName(&constantBuffers[CBTYPE_CAMERA], "CameraCB");
 
 	bd.ByteWidth = sizeof(MiscCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MISC]);
-	device->SetName(constantBuffers[CBTYPE_MISC], "MiscCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_MISC]);
+	device->SetName(&constantBuffers[CBTYPE_MISC], "MiscCB");
 
 	bd.ByteWidth = sizeof(APICB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_API]);
-	device->SetName(constantBuffers[CBTYPE_API], "APICB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_API]);
+	device->SetName(&constantBuffers[CBTYPE_API], "APICB");
 
 
 	// On demand buffers...
 
 	bd.ByteWidth = sizeof(VolumeLightCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_VOLUMELIGHT]);
-	device->SetName(constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_VOLUMELIGHT]);
+	device->SetName(&constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
 
 	bd.ByteWidth = sizeof(DecalCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DECAL]);
-	device->SetName(constantBuffers[CBTYPE_DECAL], "DecalCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_DECAL]);
+	device->SetName(&constantBuffers[CBTYPE_DECAL], "DecalCB");
 
 	bd.ByteWidth = sizeof(CubemapRenderCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CUBEMAPRENDER]);
-	device->SetName(constantBuffers[CBTYPE_CUBEMAPRENDER], "CubemapRenderCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CUBEMAPRENDER]);
+	device->SetName(&constantBuffers[CBTYPE_CUBEMAPRENDER], "CubemapRenderCB");
 
 	bd.ByteWidth = sizeof(TessellationCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_TESSELLATION]);
-	device->SetName(constantBuffers[CBTYPE_TESSELLATION], "TessellationCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_TESSELLATION]);
+	device->SetName(&constantBuffers[CBTYPE_TESSELLATION], "TessellationCB");
 
 	bd.ByteWidth = sizeof(DispatchParamsCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_DISPATCHPARAMS]);
-	device->SetName(constantBuffers[CBTYPE_DISPATCHPARAMS], "DispatchParamsCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_DISPATCHPARAMS]);
+	device->SetName(&constantBuffers[CBTYPE_DISPATCHPARAMS], "DispatchParamsCB");
 
 	bd.ByteWidth = sizeof(CloudGeneratorCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_CLOUDGENERATOR]);
-	device->SetName(constantBuffers[CBTYPE_CLOUDGENERATOR], "CloudGeneratorCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CLOUDGENERATOR]);
+	device->SetName(&constantBuffers[CBTYPE_CLOUDGENERATOR], "CloudGeneratorCB");
 
 	bd.ByteWidth = sizeof(TracedRenderingCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_RAYTRACE]);
-	device->SetName(constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
+	device->SetName(&constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
 
 	bd.ByteWidth = sizeof(GenerateMIPChainCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_MIPGEN]);
-	device->SetName(constantBuffers[CBTYPE_MIPGEN], "MipGeneratorCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_MIPGEN]);
+	device->SetName(&constantBuffers[CBTYPE_MIPGEN], "MipGeneratorCB");
 
 	bd.ByteWidth = sizeof(FilterEnvmapCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FILTERENVMAP]);
-	device->SetName(constantBuffers[CBTYPE_FILTERENVMAP], "FilterEnvmapCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FILTERENVMAP]);
+	device->SetName(&constantBuffers[CBTYPE_FILTERENVMAP], "FilterEnvmapCB");
 
 	bd.ByteWidth = sizeof(CopyTextureCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_COPYTEXTURE]);
-	device->SetName(constantBuffers[CBTYPE_COPYTEXTURE], "CopyTextureCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_COPYTEXTURE]);
+	device->SetName(&constantBuffers[CBTYPE_COPYTEXTURE], "CopyTextureCB");
 
 	bd.ByteWidth = sizeof(ForwardEntityMaskCB);
-	device->CreateBuffer(&bd, nullptr, constantBuffers[CBTYPE_FORWARDENTITYMASK]);
-	device->SetName(constantBuffers[CBTYPE_FORWARDENTITYMASK], "ForwardEntityMaskCB");
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FORWARDENTITYMASK]);
+	device->SetName(&constantBuffers[CBTYPE_FORWARDENTITYMASK], "ForwardEntityMaskCB");
 
 
 
 
 
 	// Resource Buffers:
-
-	for (int i = 0; i < RBTYPE_LAST; ++i)
-	{
-		resourceBuffers[i] = new GPUBuffer;
-	}
 
 	// These will be used intensively by multiple shaders, so better to place them in GPU-only (USAGE_DEFAULT) memory:
 	bd.Usage = USAGE_DEFAULT;
@@ -3023,26 +2956,19 @@ void LoadBuffers()
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntityType);
-	device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->SetName(resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
+	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
+	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
 	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(XMMATRIX);
-	device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_MATRIXARRAY]);
-	device->SetName(resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
-
-	SAFE_DELETE(resourceBuffers[RBTYPE_VOXELSCENE]); // lazy init on request
+	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
+	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
 }
 void SetUpStates()
 {
 	GraphicsDevice* device = GetDevice();
-
-	for (int i = 0; i < SSLOT_COUNT; ++i)
-	{
-		samplers[i] = new Sampler;
-	}
 
 	SamplerDesc samplerDesc;
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
@@ -3058,68 +2984,67 @@ void SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_MIRROR]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_LINEAR_WRAP]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_MIRROR]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_WRAP]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
 
 
 	samplerDesc.Filter = FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_POINT_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_WRAP]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_MIRROR;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_ANISO_MIRROR]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
 
 	samplerDesc.Filter = FILTER_ANISOTROPIC;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.AddressW = TEXTURE_ADDRESS_WRAP;
 	samplerDesc.MaxAnisotropy = 16;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_OBJECTSHADER]);
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
 
-	ZeroMemory(&samplerDesc, sizeof(SamplerDesc));
 	samplerDesc.Filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
@@ -3127,12 +3052,7 @@ void SetUpStates()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
 	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
-	device->CreateSamplerState(&samplerDesc, samplers[SSLOT_CMP_DEPTH]);
-
-	for (int i = 0; i < SSTYPE_LAST; ++i)
-	{
-		customsamplers[i] = new Sampler;
-	}
+	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
 
 	samplerDesc.Filter = FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR;
 	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
@@ -3147,13 +3067,9 @@ void SetUpStates()
 	samplerDesc.BorderColor[3] = 0;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSamplerState(&samplerDesc, customsamplers[SSTYPE_MAXIMUM_CLAMP]);
+	device->CreateSamplerState(&samplerDesc, &customsamplers[SSTYPE_MAXIMUM_CLAMP]);
 
 
-	for (int i = 0; i < RSTYPE_LAST; ++i)
-	{
-		rasterizers[i] = new RasterizerState;
-	}
 
 	RasterizerStateDesc rs;
 	rs.FillMode = FILL_SOLID;
@@ -3166,7 +3082,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_FRONT]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_FRONT]);
 
 
 	rs.FillMode = FILL_SOLID;
@@ -3179,7 +3095,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SHADOW]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -3191,7 +3107,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SHADOW_DOUBLESIDED]);
 
 	rs.FillMode = FILL_WIREFRAME;
 	rs.CullMode = CULL_BACK;
@@ -3203,9 +3119,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE]);
 	rs.AntialiasedLineEnable = true;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_SMOOTH]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE_SMOOTH]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -3217,7 +3133,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_DOUBLESIDED]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_DOUBLESIDED]);
 
 	rs.FillMode = FILL_WIREFRAME;
 	rs.CullMode = CULL_NONE;
@@ -3229,9 +3145,9 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE_DOUBLESIDED]);
 	rs.AntialiasedLineEnable = true;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -3243,7 +3159,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_BACK]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_BACK]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -3255,7 +3171,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_OCCLUDEE]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_OCCLUDEE]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_FRONT;
@@ -3267,7 +3183,7 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_SKY]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_SKY]);
 
 	rs.FillMode = FILL_SOLID;
 	rs.CullMode = CULL_NONE;
@@ -3279,12 +3195,10 @@ void SetUpStates()
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false; // do it in the shader for now...
-	device->CreateRasterizerState(&rs, rasterizers[RSTYPE_VOXELIZE]);
+	device->CreateRasterizerState(&rs, &rasterizers[RSTYPE_VOXELIZE]);
 
-	for (int i = 0; i < DSSTYPE_LAST; ++i)
-	{
-		depthStencils[i] = new DepthStencilState;
-	}
+
+
 
 	DepthStencilStateDesc dsd;
 	dsd.DepthEnable = true;
@@ -3302,19 +3216,19 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_REPLACE;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEFAULT]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFAULT]);
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_SHADOW]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_SHADOW]);
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_CAPTUREIMPOSTOR]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_CAPTUREIMPOSTOR]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3331,7 +3245,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DIRLIGHT]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DIRLIGHT]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3348,7 +3262,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_LIGHT]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_LIGHT]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3365,7 +3279,7 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DECAL]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DECAL]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
@@ -3382,36 +3296,34 @@ void SetUpStates()
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_STENCILREAD_MATCH]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD_MATCH]);
 
 
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREAD]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREAD]);
 
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = false;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_XRAY]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_XRAY]);
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_EQUAL;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_DEPTHREADEQUAL]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEPTHREADEQUAL]);
 
 
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
-	device->CreateDepthStencilState(&dsd, depthStencils[DSSTYPE_ENVMAP]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_ENVMAP]);
 
 
-	for (int i = 0; i < BSTYPE_LAST; ++i)
-	{
-		blendStates[i] = new BlendState;
-	}
+
+
 
 	BlendStateDesc bd;
 	bd.RenderTarget[0].BlendEnable = false;
@@ -3424,7 +3336,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_OPAQUE]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_OPAQUE]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -3436,7 +3348,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENT]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_TRANSPARENT]);
 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -3448,7 +3360,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false;
 	bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_PREMULTIPLIED]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_PREMULTIPLIED]);
 
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -3461,14 +3373,14 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_ADDITIVE]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_ADDITIVE]);
 
 
 	bd.RenderTarget[0].BlendEnable = false;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_COLORWRITEDISABLE]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_COLORWRITEDISABLE]);
 
 
 	bd.RenderTarget[0].BlendEnable = true;
@@ -3481,7 +3393,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_DEFERREDLIGHT]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_DEFERREDLIGHT]);
 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
@@ -3493,7 +3405,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_SRC_COLOR;
 	bd.RenderTarget[0].DestBlend = BLEND_INV_DEST_COLOR;
@@ -3505,7 +3417,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_INVERSE]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_INVERSE]);
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
@@ -3520,7 +3432,7 @@ void SetUpStates()
 	bd.RenderTarget[1].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = true;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_DECAL]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_DECAL]);
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
@@ -3533,7 +3445,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_MULTIPLY]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_MULTIPLY]);
 
 
 	bd.RenderTarget[0].SrcBlend = BLEND_DEST_COLOR;
@@ -3546,7 +3458,7 @@ void SetUpStates()
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	bd.AlphaToCoverageEnable = false;
 	bd.IndependentBlendEnable = false;
-	device->CreateBlendState(&bd, blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
+	device->CreateBlendState(&bd, &blendStates[BSTYPE_TRANSPARENTSHADOWMAP]);
 }
 
 
@@ -4077,8 +3989,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
 
 		// Issue GPU entity array update:
-		device->UpdateBuffer(resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
-		device->UpdateBuffer(resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
+		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
+		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
 
 		// Temporary array for GPU entities can be freed now:
 		frameAllocators[threadID].free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
@@ -4086,8 +3998,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		// Bind the GPU entity array for all shaders that need it here:
 		GPUResource* resources[] = {
-			resourceBuffers[RBTYPE_ENTITYARRAY],
-			resourceBuffers[RBTYPE_MATRIXARRAY],
+			&resourceBuffers[RBTYPE_ENTITYARRAY],
+			&resourceBuffers[RBTYPE_MATRIXARRAY],
 		};
 		device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 		device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
@@ -4124,7 +4036,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 						0,0,0,0,0,0,0,0
 					};
 					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-					device->BindComputePSO(CPSO[CSTYPE_SKINNING_LDS], threadID);
+					device->BindComputePSO(&CPSO[CSTYPE_SKINNING_LDS], threadID);
 				}
 
 				CSTYPES targetCS = CSTYPE_SKINNING_LDS;
@@ -4138,7 +4050,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (targetCS != lastCS)
 				{
 					lastCS = targetCS;
-					device->BindComputePSO(CPSO[targetCS], threadID);
+					device->BindComputePSO(&CPSO[targetCS], threadID);
 				}
 
 				// Upload bones for skinning to shader
@@ -4293,7 +4205,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("Occlusion Culling Render", threadID);
 
-		device->BindGraphicsPSO(PSO_occlusionquery, threadID);
+		device->BindGraphicsPSO(&PSO_occlusionquery, threadID);
 
 		// TODO: This is not const, so not thread safe!
 		Scene& scene = GetScene();
@@ -4338,7 +4250,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 				// previous frame view*projection because these are drawn against the previous depth buffer:
 				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*GetPrevCamera().GetViewProjection())); // todo: obb
-				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &cb, threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, threadID);
 
 				// render bounding box to later read the occlusion status
 				device->QueryBegin(query, threadID);
@@ -4506,13 +4418,13 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
-		device->BindGraphicsPSO(PSO_enviromentallight, threadID);
+		device->BindGraphicsPSO(&PSO_enviromentallight, threadID);
 		device->Draw(3, 0, threadID); // full screen triangle
 	}
 
 	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 	{
-		device->BindGraphicsPSO(PSO_deferredlight[type], threadID);
+		device->BindGraphicsPSO(&PSO_deferredlight[type], threadID);
 
 		for (size_t i = 0; i < culling.culledLights.size(); ++i)
 		{
@@ -4531,7 +4443,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				{
 					MiscCB miscCb;
 					miscCb.g_xColor.x =  float(entityArrayOffset_Lights + i);
-					device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					device->Draw(3, 0, threadID); // full screen triangle
 				}
@@ -4542,7 +4454,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 					float sca = light.range + 1;
 					XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
-					device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					device->Draw(240, 0, threadID); // icosphere
 				}
@@ -4558,7 +4470,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 						camera.GetViewProjection()
 					));
-					device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 					device->Draw(192, 0, threadID); // cone
 				}
@@ -4583,15 +4495,15 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 
 		device->EventBegin("Light Visualizer Render", threadID);
 
-		device->BindConstantBuffer(PS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-		device->BindConstantBuffer(VS, constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
 
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			device->BindGraphicsPSO(PSO_lightvisualizer[type], threadID);
+			device->BindGraphicsPSO(&PSO_lightvisualizer[type], threadID);
 
 			for (uint32_t lightIndex : culling.culledLights)
 			{
@@ -4613,7 +4525,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						));
 
-						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
 						device->Draw(108, 0, threadID); // circle
 					}
@@ -4627,7 +4539,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						));
 
-						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
 						device->Draw(192, 0, threadID); // cone
 					}
@@ -4640,7 +4552,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
 						device->Draw(2880, 0, threadID); // uv-sphere
 					}
@@ -4653,7 +4565,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
 						device->Draw(108, 0, threadID); // circle
 					}
@@ -4666,7 +4578,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
 						device->Draw(6, 0, threadID); // quad
 					}
@@ -4679,7 +4591,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
 
 						device->Draw(384, 0, threadID); // cylinder
 					}
@@ -4705,14 +4617,14 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			GraphicsPSO* pso = PSO_volumetriclight[type];
+			const GraphicsPSO& pso = PSO_volumetriclight[type];
 
-			if (pso == nullptr)
+			if (!pso.IsValid())
 			{
 				continue;
 			}
 
-			device->BindGraphicsPSO(pso, threadID);
+			device->BindGraphicsPSO(&pso, threadID);
 
 			for (size_t i = 0; i < culling.culledLights.size(); ++i)
 			{
@@ -4731,7 +4643,7 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
-						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						device->Draw(3, 0, threadID); // full screen triangle
 					}
@@ -4742,7 +4654,7 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 						float sca = light.range + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
-						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						device->Draw(240, 0, threadID); // icosphere
 					}
@@ -4758,7 +4670,7 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							camera.GetViewProjection()
 						));
-						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						device->Draw(192, 0, threadID); // cone
 					}
@@ -4955,7 +4867,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 				vp.MaxDepth = 1.0f;
 				device->BindViewports(1, &vp, threadID);
 
-				device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
 				break;
 			}
 			break;
@@ -5025,7 +4937,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						{
 							CameraCB cb;
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
-							device->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
 							device->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
 
@@ -5099,7 +5011,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					{
 						CameraCB cb;
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
-						device->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
 						device->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
@@ -5167,7 +5079,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 						MiscCB miscCb;
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
-						device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &miscCb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 
 						const float zNearP = 0.1f;
 						const float zFarP = max(1.0f, light.range);
@@ -5186,7 +5098,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							cameras[shcam].Update(XMLoadFloat3(&light.position));
 							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].getVP());
 						}
-						device->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
 
 						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
 
@@ -5231,7 +5143,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, threadID);
+		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, threadID);
 	}
 
 	if (grass)
@@ -5254,8 +5166,8 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 				if (renderPass == RENDERPASS_FORWARD)
 				{
 					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
-					device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
 				}
 
 				hair.Draw(camera, material, renderPass, false, threadID);
@@ -5321,7 +5233,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		device->BindResource(PS, resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, threadID);
+		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, threadID);
 	}
 
 	if (ocean != nullptr)
@@ -5345,8 +5257,8 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 				if (renderPass == RENDERPASS_FORWARD)
 				{
 					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
-					device->BindConstantBuffer(PS, constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
 				}
 
 				hair.Draw(camera, material, renderPass, true, threadID);
@@ -5403,12 +5315,12 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("DebugBoneLines", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_LINES], threadID);
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
@@ -5468,12 +5380,12 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("DebugLines", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_LINES], threadID);
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		struct LineSegment
 		{
@@ -5515,12 +5427,12 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("DebugPoints", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_LINES], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_LINES], threadID);
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetProjection())); // only projection, we will expand in view space on CPU below to be camera facing!
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		// Will generate 2 line segments for each point forming a cross section:
 		struct LineSegment
@@ -5578,7 +5490,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("DebugBoxes", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5596,7 +5508,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera.GetViewProjection()));
 			sb.g_xColor = x.second;
 
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			device->DrawIndexed(24, 0, 0, threadID);
 		}
@@ -5611,7 +5523,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		device->EventBegin("Debug EnvProbes", threadID);
 		// Envmap spheres:
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
 
 		MiscCB sb;
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -5619,7 +5531,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			const EnvironmentProbeComponent& probe = scene.probes[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position))));
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			if (probe.textureIndex < 0)
 			{
@@ -5636,7 +5548,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		// Local proxy boxes:
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5662,7 +5574,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
 			sb.g_xColor = float4(0, 1, 1, 1);
 
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			device->DrawIndexed(24, 0, 0, threadID);
 		}
@@ -5675,7 +5587,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("GridHelper", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_GRID], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_GRID], threadID);
 
 		static float col = 0.7f;
 		static UINT gridVertexCount = 0;
@@ -5723,7 +5635,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		GPUBuffer* vbs[] = {
 			grid,
@@ -5741,14 +5653,14 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("Debug Voxels", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_VOXEL], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_VOXEL], threadID);
 
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection()));
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
 
@@ -5769,12 +5681,12 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
 			sb.g_xColor = float4(0, 1, 0, 1);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			if (mesh == nullptr)
 			{
 				// No mesh, just draw a box:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
 				GPUBuffer* vbs[] = {
 					wiCube::GetVertexBuffer(),
 				};
@@ -5788,7 +5700,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			else
 			{
 				// Draw mesh wireframe:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_EMITTER], threadID);
+				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_EMITTER], threadID);
 				GPUBuffer* vbs[] = {
 					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
 				};
@@ -5817,16 +5729,16 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			switch (force.type)
 			{
 			case ENTITY_TYPE_FORCEFIELD_POINT:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
+				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
 				device->Draw(2880, 0, threadID); // uv-sphere
 				break;
 			case ENTITY_TYPE_FORCEFIELD_PLANE:
-				device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
+				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
 				device->Draw(14, 0, threadID); // box
 				break;
 			}
@@ -5842,7 +5754,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		device->EventBegin("DebugCameras", threadID);
 
-		device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5863,7 +5775,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(cam.GetInvView()*camera.GetViewProjection()));
 
-			device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &sb, threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
 
 			device->DrawIndexed(24, 0, 0, threadID);
 		}
@@ -5888,11 +5800,11 @@ void DrawSky(GRAPHICSTHREAD threadID)
 	
 	if (enviroMap != nullptr)
 	{
-		device->BindGraphicsPSO(PSO_sky[SKYRENDERING_STATIC], threadID);
+		device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_STATIC], threadID);
 	}
 	else
 	{
-		device->BindGraphicsPSO(PSO_sky[SKYRENDERING_DYNAMIC], threadID);
+		device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_DYNAMIC], threadID);
 		if (scene.weather.cloudiness > 0)
 		{
 			device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
@@ -5913,7 +5825,7 @@ void DrawSun(GRAPHICSTHREAD threadID)
 
 	device->EventBegin("DrawSun", threadID);
 
-	device->BindGraphicsPSO(PSO_sky[SKYRENDERING_SUN], threadID);
+	device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_SUN], threadID);
 
 	if (enviroMap != nullptr)
 	{
@@ -5941,11 +5853,11 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		const Scene& scene = GetScene();
 
-		device->BindConstantBuffer(PS, constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
 
 		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
 
-		device->BindGraphicsPSO(PSO_decal, threadID);
+		device->BindGraphicsPSO(&PSO_decal, threadID);
 
 		for (size_t decalIndex : culling.culledDecals) 
 		{
@@ -5962,7 +5874,7 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 				MiscCB dcbvs;
 				XMStoreFloat4x4(&dcbvs.g_xTransform, XMMatrixTranspose(decalWorld*camera.GetViewProjection()));
-				device->UpdateBuffer(constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
 
 				DecalCB dcbps;
 				XMStoreFloat4x4(&dcbps.xDecalVP, XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld))); // todo: cache the inverse!
@@ -5974,7 +5886,7 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				XMStoreFloat3(&dcbps.eye, camera.GetEye());
 				dcbps.opacity = decal.GetOpacity();
 				dcbps.front = decal.front;
-				device->UpdateBuffer(constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
 
 				device->Draw(14, 0, threadID);
 
@@ -6136,13 +6048,13 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].getVP());
 		}
 
-		device->UpdateBuffer(constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-		device->BindConstantBuffer(GS, constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
 
 
 		CameraCB camcb;
 		camcb.g_xCamera_CamPos = center; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		device->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
 
 		const LayerComponent& layer = *scene.layers.GetComponent(entity);
 		const uint32_t layerMask = layer.GetLayerMask();
@@ -6184,12 +6096,12 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		{
 			if (enviroMap != nullptr)
 			{
-				device->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
+				device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
 				device->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
 			}
 			else
 			{
-				device->BindGraphicsPSO(PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
+				device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
 				device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
 			}
 
@@ -6208,7 +6120,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			TextureDesc desc = texture->GetDesc();
 			int arrayIndex = probe.textureIndex;
 
-			device->BindComputePSO(CPSO[CSTYPE_FILTERENVMAP], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_FILTERENVMAP], threadID);
 
 			desc.Width = 1;
 			desc.Height = 1;
@@ -6223,8 +6135,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				cb.filterArrayIndex = arrayIndex;
 				cb.filterRoughness = (float)i / (float)desc.MipLevels;
 				cb.filterRayCount = 128;
-				device->UpdateBuffer(constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
-				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
+				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
 
 				device->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6362,13 +6274,13 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				switch (prop)
 				{
 				case 0:
-					device->BindGraphicsPSO(PSO_captureimpostor_albedo, threadID);
+					device->BindGraphicsPSO(&PSO_captureimpostor_albedo, threadID);
 					break;
 				case 1:
-					device->BindGraphicsPSO(PSO_captureimpostor_normal, threadID);
+					device->BindGraphicsPSO(&PSO_captureimpostor_normal, threadID);
 					break;
 				case 2:
-					device->BindGraphicsPSO(PSO_captureimpostor_surface, threadID);
+					device->BindGraphicsPSO(&PSO_captureimpostor_surface, threadID);
 					break;
 				}
 
@@ -6479,7 +6391,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 	}
-	if (resourceBuffers[RBTYPE_VOXELSCENE] == nullptr)
+	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
 	{
 		GPUBufferDesc desc;
 		desc.StructureByteStride = sizeof(UINT) * 2;
@@ -6489,8 +6401,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 
-		resourceBuffers[RBTYPE_VOXELSCENE] = new GPUBuffer;
-		HRESULT hr = device->CreateBuffer(&desc, nullptr, resourceBuffers[RBTYPE_VOXELSCENE]);
+		HRESULT hr = device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);
 		assert(SUCCEEDED(hr));
 	}
 
@@ -6530,7 +6441,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		VP.MaxDepth = 1.0f;
 		device->BindViewports(1, &VP, threadID);
 
-		GPUResource* UAVs[] = { resourceBuffers[RBTYPE_VOXELSCENE] };
+		GPUResource* UAVs[] = { &resourceBuffers[RBTYPE_VOXELSCENE] };
 		device->BindUAVs(PS, UAVs, 0, 1, threadID);
 
 		BindShadowmaps(PS, threadID);
@@ -6541,16 +6452,16 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", threadID);
 		device->BindRenderTargets(0, nullptr, nullptr, threadID);
-		device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+		device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
 		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
 
 		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
 		{
-			device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
 		}
 		else
 		{
-			device->BindComputePSO(CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
 		}
 		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
 		device->EventEnd(threadID);
@@ -6563,15 +6474,15 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
 			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
 			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-			device->BindResource(CS, resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
-			device->BindComputePSO(CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
+			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
 			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, threadID);
 			device->EventEnd(threadID);
 
 			device->EventBegin("Voxel Scene Clear Normals", threadID);
 			device->UnbindResources(1, 1, threadID);
-			device->BindUAV(CS, resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-			device->BindComputePSO(CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
+			device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
 			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
 			device->EventEnd(threadID);
 
@@ -6650,11 +6561,6 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 	}
 	if (_resolutionChanged)
 	{
-		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
-		SAFE_DELETE(resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
-		resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE] = new GPUBuffer;
-		resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT] = new GPUBuffer;
-
 		GPUBufferDesc bd;
 		bd.StructureByteStride = sizeof(uint);
 		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
@@ -6662,11 +6568,11 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		bd.CPUAccessFlags = 0;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
-		device->CreateBuffer(&bd, nullptr, resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
+		device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE]);
+		device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT]);
 
-		device->SetName(resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], "EntityTiles_Opaque");
-		device->SetName(resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
+		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], "EntityTiles_Opaque");
+		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
 	}
 
 	// calculate the per-tile frustums once:
@@ -6684,7 +6590,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		GPUResource* uavs[] = { frustumBuffer };
 
 		device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
-		device->BindComputePSO(CPSO[CSTYPE_TILEFRUSTUMS], threadID);
+		device->BindComputePSO(&CPSO[CSTYPE_TILEFRUSTUMS], threadID);
 
 		DispatchParamsCB dispatchParams;
 		dispatchParams.xDispatchParams_numThreads.x = tileCount.x;
@@ -6693,8 +6599,8 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		dispatchParams.xDispatchParams_numThreadGroups.x = (UINT)ceilf(dispatchParams.xDispatchParams_numThreads.x / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.xDispatchParams_numThreadGroups.y = (UINT)ceilf(dispatchParams.xDispatchParams_numThreads.y / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.xDispatchParams_numThreadGroups.z = 1;
-		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
 		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
 		device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, threadID);
@@ -6730,7 +6636,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 
 		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
 
-		device->BindComputePSO(CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
+		device->BindComputePSO(&CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
 
 		if (GetDebugLightCulling())
 		{
@@ -6749,14 +6655,14 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		dispatchParams.xDispatchParams_numThreads.y = dispatchParams.xDispatchParams_numThreadGroups.y * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.xDispatchParams_numThreads.z = 1;
 		dispatchParams.xDispatchParams_value0 = (UINT)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
-		device->UpdateBuffer(constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
 
 		if (deferred)
 		{
 			const GPUResource* uavs[] = {
 				lightbuffer_diffuse,
-				resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
+				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
 				lightbuffer_specular,
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
@@ -6769,8 +6675,8 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		else
 		{
 			GPUResource* uavs[] = {
-				resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
-				resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
+				&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
+				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYTILES_OPAQUE, ARRAYSIZE(uavs), threadID);
 
@@ -6797,7 +6703,7 @@ void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, GRAPHICS
 
 	TextureDesc desc = src->GetDesc();
 
-	device->BindComputePSO(CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
+	device->BindComputePSO(&CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
 	device->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
 
 
@@ -6838,18 +6744,18 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			{
 			case MIPGENFILTER_POINT:
 				device->EventBegin("GenerateMipChain CubeArray - PointFilter", threadID);
-				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR:
 				device->EventBegin("GenerateMipChain CubeArray - LinearFilter", threadID);
-				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR_MAXIMUM:
 				device->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", threadID);
-				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			default:
 				assert(0);
@@ -6867,8 +6773,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 				cb.outputResolution.x = desc.Width;
 				cb.outputResolution.y = desc.Height;
 				cb.arrayIndex = arrayIndex;
-				device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 				device->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6886,18 +6792,18 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			{
 			case MIPGENFILTER_POINT:
 				device->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
-				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR:
 				device->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
-				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			case MIPGENFILTER_LINEAR_MAXIMUM:
 				device->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
-				device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
+				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 				break;
 			default:
 				assert(0); // not implemented
@@ -6915,8 +6821,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 				cb.outputResolution.x = desc.Width;
 				cb.outputResolution.y = desc.Height;
 				cb.arrayIndex = 0;
-				device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-				device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 				device->Dispatch(
 					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6936,26 +6842,26 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 		{
 		case MIPGENFILTER_POINT:
 			device->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
-			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
+			device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
 		case MIPGENFILTER_LINEAR:
 			device->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
-			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
+			device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
 		case MIPGENFILTER_LINEAR_MAXIMUM:
 			device->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
-			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
+			device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 			break;
 		case MIPGENFILTER_GAUSSIAN:
 			device->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
-			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
+			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
 			break;
 		case MIPGENFILTER_BICUBIC:
 			device->EventBegin("GenerateMipChain 2D - BicubicFilter", threadID);
-			device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], threadID);
+			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], threadID);
 			break;
 		default:
 			assert(0);
@@ -6973,8 +6879,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			cb.outputResolution.x = desc.Width;
 			cb.outputResolution.y = desc.Height;
 			cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-			device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-			device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 			device->Dispatch(
 				max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -7010,22 +6916,22 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 	{
 	case MIPGENFILTER_POINT:
 		device->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
-		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		device->BindSampler(CS, samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
+		device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case MIPGENFILTER_LINEAR:
 		device->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
-		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		device->BindSampler(CS, samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
+		device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case MIPGENFILTER_LINEAR_MAXIMUM:
 		device->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
-		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		device->BindSampler(CS, customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
+		device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
 		break;
 	case MIPGENFILTER_GAUSSIAN:
 		device->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
-		device->BindComputePSO(CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
+		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
 		break;
 	default:
 		assert(0); // not implemented
@@ -7045,8 +6951,8 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 		cb.outputResolution.y = desc.Height;
 		cb.outputResolution.z = desc.Depth;
 		cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-		device->UpdateBuffer(constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 		device->Dispatch(
 			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
@@ -7078,12 +6984,12 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 		if (hdr)
 		{
 			device->EventBegin("CopyTexture2D_FLOAT4", threadID);
-			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4], threadID);
 		}
 		else
 		{
 			device->EventBegin("CopyTexture2D_UNORM4", threadID);
-			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
 		}
 	}
 	else
@@ -7091,12 +6997,12 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 		if (hdr)
 		{
 			device->EventBegin("CopyTexture2D_BORDEREXPAND_FLOAT4", threadID);
-			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], threadID);
 		}
 		else
 		{
 			device->EventBegin("CopyTexture2D_BORDEREXPAND_UNORM4", threadID);
-			device->BindComputePSO(CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
 		}
 	}
 
@@ -7107,9 +7013,9 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 	cb.xCopySrcSize.y = desc_src.Height >> SrcMIP;
 	cb.xCopySrcMIP = SrcMIP;
 	cb.xCopyBorderExpandStyle = (uint)borderExpand;
-	device->UpdateBuffer(constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
 
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
 
 	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
 
@@ -7447,13 +7353,13 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceRandomSeed = renderTime;
 
-	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 
 	device->EventBegin("Clear", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
+		device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
 
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 		const GPUResource* uavs[] = {
 			result,
@@ -7469,9 +7375,9 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 	device->EventBegin("Launch Rays", threadID);
 	{
-		device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LAUNCH], threadID);
+		device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LAUNCH], threadID);
 
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 		GPUResource* uavs[] = {
 			rayBuffer[0],
@@ -7513,15 +7419,15 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		const int __writeBufferID = (bounce + 1) % 2;
 
 		cb.xTraceRandomSeed = renderTime + (float)bounce;
-		device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-		device->BindConstantBuffer(CS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 
 		// 1.) Kick off raytracing jobs for this bounce
 		device->EventBegin("Kick Raytrace Jobs", threadID);
 		{
 			// Prepare indirect dispatch based on counter buffer value:
-			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
 
 			GPUResource* res[] = {
 				counterBuffer[__readBufferID],
@@ -7551,7 +7457,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 			device->EventBegin("Light Sampling Rays", threadID);
 			{
 				// Indirect dispatch on active rays:
-				device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
+				device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
 
 				const GPUResource* res[] = {
 					counterBuffer[__readBufferID],
@@ -7585,7 +7491,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		device->EventBegin("Primary Rays Bounce", threadID);
 		{
 			// Indirect dispatch on active rays:
-			device->BindComputePSO(CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
 
 			const GPUResource* res[] = {
 				counterBuffer[__readBufferID],
@@ -7625,7 +7531,7 @@ void DrawTracedSceneBVH(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("DebugRaytraceBVH", threadID);
-	device->BindGraphicsPSO(PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], threadID);
+	device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], threadID);
 	sceneBVH.Bind(PS, threadID);
 	device->Draw(3, 0, threadID);
 	device->EventEnd(threadID);
@@ -7655,10 +7561,10 @@ void GenerateClouds(const Texture2D* dst, UINT refinementCount, float randomness
 	{
 		cb.xRefinementCount = refinementCount;
 	}
-	device->UpdateBuffer(constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, threadID);
-	device->BindConstantBuffer(CS, constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, threadID);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), threadID);
 
-	device->BindComputePSO(CPSO[CSTYPE_CLOUDGENERATOR], threadID);
+	device->BindComputePSO(&CPSO[CSTYPE_CLOUDGENERATOR], threadID);
 	device->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, threadID);
 
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
@@ -8014,18 +7920,18 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	cb.xTraceRandomSeed = renderTime; // random seed
 	cb.xTraceUserData = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData2.x = lightmapBakeBounceCount;
-	device->UpdateBuffer(constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-	device->BindConstantBuffer(VS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-	device->BindConstantBuffer(PS, constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 	// Render direct lighting part:
-	device->BindGraphicsPSO(PSO_renderlightmap_direct, threadID);
+	device->BindGraphicsPSO(&PSO_renderlightmap_direct, threadID);
 	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
 
 	if (lightmapBakeBounceCount > 0)
 	{
 		// Render indirect lighting part:
-		device->BindGraphicsPSO(PSO_renderlightmap_indirect, threadID);
+		device->BindGraphicsPSO(&PSO_renderlightmap_indirect, threadID);
 		device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
 	}
 
@@ -8133,13 +8039,13 @@ void BindPersistentState(GRAPHICSTHREAD threadID)
 
 		for (int i = 0; i < SSLOT_COUNT; ++i)
 		{
-			device->BindSampler(stage, samplers[i], i, threadID);
+			device->BindSampler(stage, &samplers[i], i, threadID);
 		}
 
-		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(stage, constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
+		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
+		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	}
 
 }
@@ -8279,7 +8185,7 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_WorldBoundsExtents_Inverse.y = 1.0f / cb.g_xFrame_WorldBoundsExtents.y;
 	cb.g_xFrame_WorldBoundsExtents_Inverse.z = 1.0f / cb.g_xFrame_WorldBoundsExtents.z;
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_FRAME], &cb, threadID);
+	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, threadID);
 }
 void UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 {
@@ -8290,21 +8196,21 @@ void UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	XMStoreFloat4x4(&cb.g_xCamera_Proj, XMMatrixTranspose(camera.GetProjection()));
 	cb.g_xCamera_CamPos = camera.Eye;
 
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 }
 
 APICB apiCB[GRAPHICSTHREAD_COUNT];
 void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID)
 {
 	apiCB[threadID].g_xClipPlane = clipPlane;
-	GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
+	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 }
 void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
 {
 	if (alphaRef != apiCB[threadID].g_xAlphaRef)
 	{
 		apiCB[threadID].g_xAlphaRef = alphaRef;
-		GetDevice()->UpdateBuffer(constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
+		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
 	}
 }
 void BindGBufferTextures(const Texture2D* slot0, const Texture2D* slot1, const Texture2D* slot2, GRAPHICSTHREAD threadID)
@@ -8380,7 +8286,7 @@ const Texture2D* GetLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threa
 	{
 		// Pass 1 : Create luminance map from scene tex
 		TextureDesc luminance_map_desc = luminance_map->GetDesc();
-		device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
+		device->BindComputePSO(&CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
 		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
 		device->BindUAV(CS, luminance_map.get(), 0, threadID);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
@@ -8390,7 +8296,7 @@ const Texture2D* GetLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threa
 		for (size_t i = 0; i < luminance_avg.size(); ++i)
 		{
 			luminance_avg_desc = luminance_avg[i]->GetDesc();
-			device->BindComputePSO(CPSO[CSTYPE_LUMINANCE_PASS2], threadID);
+			device->BindComputePSO(&CPSO[CSTYPE_LUMINANCE_PASS2], threadID);
 			device->BindUAV(CS, luminance_avg[i], 0, threadID);
 			if (i > 0)
 			{

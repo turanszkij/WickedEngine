@@ -10,17 +10,17 @@
 class wiGPUBVH
 {
 private:
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> bvhNodeBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> bvhAABBBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> bvhFlagBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> triangleBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterCounterBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterIndexBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterMortonBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterSortedMortonBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterOffsetBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterAABBBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> clusterConeBuffer;
+	wiGraphicsTypes::GPUBuffer bvhNodeBuffer;
+	wiGraphicsTypes::GPUBuffer bvhAABBBuffer;
+	wiGraphicsTypes::GPUBuffer bvhFlagBuffer;
+	wiGraphicsTypes::GPUBuffer triangleBuffer;
+	wiGraphicsTypes::GPUBuffer clusterCounterBuffer;
+	wiGraphicsTypes::GPUBuffer clusterIndexBuffer;
+	wiGraphicsTypes::GPUBuffer clusterMortonBuffer;
+	wiGraphicsTypes::GPUBuffer clusterSortedMortonBuffer;
+	wiGraphicsTypes::GPUBuffer clusterOffsetBuffer;
+	wiGraphicsTypes::GPUBuffer clusterAABBBuffer;
+	wiGraphicsTypes::GPUBuffer clusterConeBuffer;
 	uint32_t maxTriangleCount = 0;
 	uint32_t maxClusterCount = 0;
 

@@ -25,6 +25,18 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	float step = 35;
 
 
+	emitterNameField = new wiTextInputField("EmitterName");
+	emitterNameField->SetPos(XMFLOAT2(x, y += step));
+	emitterNameField->SetSize(XMFLOAT2(300, 20));
+	emitterNameField->OnInputAccepted([&](wiEventArgs args) {
+		NameComponent* name = wiRenderer::GetScene().names.GetComponent(entity);
+		if (name != nullptr)
+		{
+			*name = args.sValue;
+		}
+	});
+	emitterWindow->AddWidget(emitterNameField);
+
 	addButton = new wiButton("Add Emitter");
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(150, 30));
@@ -160,14 +172,14 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 
 	infoLabel = new wiLabel("EmitterInfo");
-	infoLabel->SetSize(XMFLOAT2(380, 140));
+	infoLabel->SetSize(XMFLOAT2(380, 120));
 	infoLabel->SetPos(XMFLOAT2(x, y += step));
 	emitterWindow->AddWidget(infoLabel);
 
 
 	maxParticlesSlider = new wiSlider(100.0f, 1000000.0f, 10000, 100000, "Max particle count: ");
 	maxParticlesSlider->SetSize(XMFLOAT2(360, 30));
-	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step + 140));
+	maxParticlesSlider->SetPos(XMFLOAT2(x, y += step + 120));
 	maxParticlesSlider->OnSlide([&](wiEventArgs args) {
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
@@ -515,7 +527,6 @@ void EmitterWindow::UpdateData()
 
 	stringstream ss("");
 	ss.precision(2);
-	ss << "Emitter name: " << name->name << " (" << entity << ")" << endl;
 	ss << "Emitter Mesh: " << (meshName != nullptr ? meshName->name : "NO EMITTER MESH") << " (" << emitter->meshID << ")" << endl;
 	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << endl;
 	ss << endl;
@@ -534,4 +545,8 @@ void EmitterWindow::UpdateData()
 	}
 
 	infoLabel->SetText(ss.str());
+
+	ss.str("");
+	ss << name->name << " (" << entity << ")";
+	emitterNameField->SetText(ss.str());
 }

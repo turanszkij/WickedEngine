@@ -280,7 +280,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
-	fft_512x512_c2c(&m_fft_plan, &m_pBuffer_Float_Dxyz, &m_pBuffer_Float_Dxyz, &m_pBuffer_Float2_Ht, threadID);
+	fft_512x512_c2c(m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht, threadID);
 
 
 
@@ -464,22 +464,9 @@ void wiOcean::Initialize()
 
 	LoadShaders();
 	CSFFT_512x512_Data_t::LoadShaders();
-	fft512x512_create_plan(&m_fft_plan, 3);
+	fft512x512_create_plan(m_fft_plan, 3);
 
 	wiBackLog::post("wiOcean Initialized");
-}
-
-void wiOcean::CleanUp()
-{
-	fft512x512_destroy_plan(&m_fft_plan);
-
-	SAFE_DELETE(m_pUpdateSpectrumCS);
-	SAFE_DELETE(m_pUpdateDisplacementMapCS);
-	SAFE_DELETE(m_pUpdateGradientFoldingCS);
-
-	SAFE_DELETE(g_pOceanSurfVS);
-	SAFE_DELETE(g_pOceanSurfPS);
-	SAFE_DELETE(g_pWireframePS);
 }
 
 Texture2D* wiOcean::getDisplacementMap()

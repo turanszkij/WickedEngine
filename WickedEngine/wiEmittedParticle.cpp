@@ -238,6 +238,9 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 
 	emit += (float)count*dt;
 
+	emit += burst;
+	burst = 0;
+
 	// Swap CURRENT alivelist with NEW alivelist
 	aliveList[0].swap(aliveList[1]);
 
@@ -247,12 +250,12 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, GRAPHICSTHREAD_IMMEDIATE);
 	}
 }
-void wiEmittedParticle::Burst(float num)
+void wiEmittedParticle::Burst(int num)
 {
 	if (IsPaused())
 		return;
 
-	emit += num;
+	burst += num;
 }
 void wiEmittedParticle::Restart()
 {
@@ -376,7 +379,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			device->EventEnd(threadID);
 
 			// 2.) Sort particle index list based on partition grid cell index:
-			wiGPUSortLib::Sort(MAX_PARTICLES, sphPartitionCellIndices.get(), counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveList[0].get(), threadID);
+			wiGPUSortLib::Sort(MAX_PARTICLES, *sphPartitionCellIndices.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT, *aliveList[0].get(), threadID);
 
 			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
 			device->EventBegin("PartitionOffsetsReset", threadID);
@@ -503,7 +506,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 #endif // DEBUG_SORTING
 
 
-		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer.get(), counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1].get(), threadID);
+		wiGPUSortLib::Sort(MAX_PARTICLES, *distanceBuffer.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, *aliveList[1].get(), threadID);
 
 
 #ifdef DEBUG_SORTING

@@ -16,14 +16,14 @@ namespace wiGraphicsTypes
 	struct GraphicsDeviceChild
 	{
 		GraphicsDevice* device = nullptr;
-		void Register(GraphicsDevice* dev) { device = dev; }
+		inline void Register(GraphicsDevice* dev) { device = dev; }
+		inline bool IsValid() const { return device != nullptr; }
 	};
 
 	struct ShaderByteCode
 	{
-		BYTE* data;
-		size_t size;
-		ShaderByteCode() :data(nullptr), size(0) {}
+		BYTE* data = nullptr;
+		size_t size = 0;
 		~ShaderByteCode() { SAFE_DELETE_ARRAY(data); }
 	};
 
@@ -89,7 +89,6 @@ namespace wiGraphicsTypes
 		Sampler();
 		~Sampler();
 
-		bool IsValid() { return resource != WI_NULL_HANDLE; }
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
 
@@ -112,8 +111,8 @@ namespace wiGraphicsTypes
 		wiCPUHandle UAV = WI_NULL_HANDLE;			// main resource UAV
 		std::vector<wiCPUHandle> additionalUAVs;	// can be used for sub-resources if requested
 
-		wiCPUHandle resource;
-		wiCPUHandle resourceMemory;
+		wiCPUHandle resource = WI_NULL_HANDLE;
+		wiCPUHandle resourceMemory = WI_NULL_HANDLE;
 
 		GPUResource();
 		virtual ~GPUResource();
@@ -127,7 +126,6 @@ namespace wiGraphicsTypes
 		GPUBuffer();
 		virtual ~GPUBuffer();
 
-		bool IsValid() { return resource != WI_NULL_HANDLE; }
 		const GPUBufferDesc& GetDesc() const { return desc; }
 	};
 
@@ -228,20 +226,19 @@ namespace wiGraphicsTypes
 
 	struct GPUQuery : public GraphicsDeviceChild
 	{
-		wiCPUHandle	resource;
+		wiCPUHandle	resource = WI_NULL_HANDLE;
 		GPUQueryDesc desc;
 
 		GPUQuery();
 		virtual ~GPUQuery();
 
-		bool IsValid() { return resource != WI_NULL_HANDLE; }
 		const GPUQueryDesc& GetDesc() const { return desc; }
 	};
 
 
 	struct GraphicsPSO : public GraphicsDeviceChild
 	{
-		wiCPUHandle	pipeline;
+		wiCPUHandle	pipeline = WI_NULL_HANDLE;
 		GraphicsPSODesc desc;
 
 		const GraphicsPSODesc& GetDesc() const { return desc; }
@@ -251,7 +248,7 @@ namespace wiGraphicsTypes
 	};
 	struct ComputePSO : public GraphicsDeviceChild
 	{
-		wiCPUHandle	pipeline;
+		wiCPUHandle	pipeline = WI_NULL_HANDLE;
 		ComputePSODesc desc;
 
 		const ComputePSODesc& GetDesc() const { return desc; }

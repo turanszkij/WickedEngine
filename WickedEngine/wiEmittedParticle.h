@@ -43,13 +43,14 @@ private:
 	void CreateSelfBuffers();
 
 	float emit = 0.0f;
+	int burst = 0;
 
 	bool buffersUpToDate = false;
 	uint32_t MAX_PARTICLES = 1000;
 
 public:
 	void UpdateCPU(const TransformComponent& transform, float dt);
-	void Burst(float num);
+	void Burst(int num);
 	void Restart();
 
 	// Must have a transform and material component, but mesh is optional

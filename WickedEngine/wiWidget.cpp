@@ -18,7 +18,7 @@ using namespace wiGraphicsTypes;
 using namespace wiSceneSystem;
 
 
-static wiGraphicsTypes::GraphicsPSO* PSO_colorpicker = nullptr;
+static wiGraphicsTypes::GraphicsPSO PSO_colorpicker;
 
 
 wiWidget::wiWidget() : TransformComponent()
@@ -260,8 +260,7 @@ void wiWidget::LoadShaders()
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 	desc.pt = TRIANGLESTRIP;
-	RECREATE(PSO_colorpicker);
-	HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO_colorpicker);
+	HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO_colorpicker);
 	assert(SUCCEEDED(hr));
 }
 
@@ -1792,7 +1791,7 @@ void wiColorPicker::Render(wiGUI* gui)
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, threadID);
-	wiRenderer::GetDevice()->BindGraphicsPSO(PSO_colorpicker, threadID);
+	wiRenderer::GetDevice()->BindGraphicsPSO(&PSO_colorpicker, threadID);
 
 	MiscCB cb;
 

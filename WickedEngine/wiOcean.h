@@ -21,7 +21,6 @@ public:
 	wiGraphicsTypes::Texture2D* getGradientMap();
 
 	static void Initialize();
-	static void CleanUp();
 	static void LoadShaders();
 
 protected:

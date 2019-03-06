@@ -1,4 +1,5 @@
 -- This script will load a teapot model with lights and rotate the whole model
+killProcesses()  -- stops all running lua coroutine processes
 
 backlog_post("---> START SCRIPT: rotate_model.lua")
 

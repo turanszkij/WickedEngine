@@ -23,4 +23,7 @@ namespace wiSceneSystem
 	struct AnimationComponent;
 	struct WeatherComponent;
 	struct Scene;
+
+	class wiEmittedParticle; // todo: rename
+	class wiHairParticle; // todo: rename
 }

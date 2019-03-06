@@ -37,10 +37,10 @@ namespace wiFont_Internal
 	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
-	std::unique_ptr<VertexLayout>	vertexLayout;
+	VertexLayout		vertexLayout;
 	const VertexShader	*vertexShader = nullptr;
 	const PixelShader	*pixelShader = nullptr;
-	GraphicsPSO			*PSO = nullptr;
+	GraphicsPSO			PSO;
 
 	atomic_bool initialized = false;
 
@@ -306,8 +306,7 @@ void wiFont::LoadShaders()
 	};
 	vertexShader = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(path + "fontVS.cso", wiResourceManager::VERTEXSHADER));
 	
-	vertexLayout.reset(new VertexLayout);
-	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, vertexLayout.get());
+	wiRenderer::GetDevice()->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShader->code, &vertexLayout);
 
 
 	pixelShader = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
@@ -316,14 +315,13 @@ void wiFont::LoadShaders()
 	GraphicsPSODesc desc;
 	desc.vs = vertexShader;
 	desc.ps = pixelShader;
-	desc.il = vertexLayout.get();
+	desc.il = &vertexLayout;
 	desc.bs = &blendState;
 	desc.rs = &rasterizerState;
 	desc.dss = &depthStencilState;
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
-	RECREATE(PSO);
-	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, PSO);
+	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO);
 }
 
 void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
@@ -502,7 +500,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 
 	device->EventBegin("Font", threadID);
 
-	device->BindGraphicsPSO(PSO, threadID);
+	device->BindGraphicsPSO(&PSO, threadID);
 	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
 
 	GPUBuffer* vbs[] = {

@@ -36,6 +36,7 @@ namespace wiSceneSystem_BindLua
 		int Component_GetCamera(lua_State* L);
 		int Component_GetAnimation(lua_State* L);
 		int Component_GetMaterial(lua_State* L);
+		int Component_GetEmitter(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -159,6 +160,33 @@ namespace wiSceneSystem_BindLua
 
 		int SetBaseColor(lua_State* L);
 		int SetEmissiveColor(lua_State* L);
+	};
+
+	class EmitterComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiSceneSystem::wiEmittedParticle* component = nullptr;
+
+		static const char className[];
+		static Luna<EmitterComponent_BindLua>::FunctionType methods[];
+		static Luna<EmitterComponent_BindLua>::PropertyType properties[];
+
+		EmitterComponent_BindLua(wiSceneSystem::wiEmittedParticle* component) :component(component) {}
+		EmitterComponent_BindLua(lua_State *L);
+		~EmitterComponent_BindLua();
+
+		int Burst(lua_State* L);
+		int SetEmitCount(lua_State* L);
+		int SetSize(lua_State* L);
+		int SetLife(lua_State* L);
+		int SetNormalFactor(lua_State* L);
+		int SetRandomness(lua_State* L);
+		int SetLifeRandomness(lua_State* L);
+		int SetScaleX(lua_State* L);
+		int SetScaleY(lua_State* L);
+		int SetRotation(lua_State* L);
+		int SetmotionBlurAmount(lua_State* L);
 	};
 
 }

@@ -12,11 +12,17 @@ namespace wiGPUSortLib
 	//	counterBuffer_read		-	Buffer containing count of values to sort (Read Only)
 	//	counterReadOffset		-	Byte offset into the counter buffer to read the count value (Read Only)
 	//	indexBuffer_write		-	The index list which to sort. Contains index values which can index the sortBase_read buffer. This will be modified (Read + Write)
-	void Sort(UINT maxCount, wiGraphicsTypes::GPUBuffer* comparisonBuffer_read, wiGraphicsTypes::GPUBuffer* counterBuffer_read, UINT counterReadOffset, wiGraphicsTypes::GPUBuffer* indexBuffer_write, GRAPHICSTHREAD threadID);
+	void Sort(
+		UINT maxCount, 
+		const wiGraphicsTypes::GPUBuffer& comparisonBuffer_read, 
+		const wiGraphicsTypes::GPUBuffer& counterBuffer_read, 
+		UINT counterReadOffset, 
+		const wiGraphicsTypes::GPUBuffer& indexBuffer_write,
+		GRAPHICSTHREAD threadID
+	);
 
 	void Initialize();
 	void LoadShaders();
-	void CleanUp();
 };
 
 #endif // _WI_GPU_SORTLIB_H_

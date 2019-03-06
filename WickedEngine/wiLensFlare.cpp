@@ -9,7 +9,7 @@ using namespace wiGraphicsTypes;
 
 namespace wiLensFlare
 {
-	static std::unique_ptr<GPUBuffer> constantBuffer;
+	static GPUBuffer constantBuffer;
 	static const PixelShader *pixelShader = nullptr;
 	static const GeometryShader *geometryShader = nullptr;
 	static const VertexShader *vertexShader = nullptr;
@@ -32,8 +32,8 @@ namespace wiLensFlare
 			XMStoreFloat4(&cb.xSunPos, lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1));
 			cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
-			device->UpdateBuffer(constantBuffer.get(), &cb, threadID);
-			device->BindConstantBuffer(GS, constantBuffer.get(), CB_GETBINDSLOT(LensFlareCB), threadID);
+			device->UpdateBuffer(&constantBuffer, &cb, threadID);
+			device->BindConstantBuffer(GS, &constantBuffer, CB_GETBINDSLOT(LensFlareCB), threadID);
 
 
 			int i = 0;
@@ -90,8 +90,7 @@ namespace wiLensFlare
 		bd.ByteWidth = sizeof(LensFlareCB);
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		constantBuffer.reset(new GPUBuffer);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer.get());
+		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 
 
 		RasterizerStateDesc rs;

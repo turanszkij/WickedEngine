@@ -1591,6 +1591,8 @@ Texture2D GraphicsDevice_DX11::GetBackBuffer()
 
 HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer)
 {
+	DestroyBuffer(pBuffer);
+	DestroyResource(pBuffer);
 	pBuffer->type = GPUResource::BUFFER;
 	pBuffer->Register(this);
 
@@ -1699,6 +1701,8 @@ HRESULT GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const Subr
 }
 HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture1D *pTexture1D)
 {
+	DestroyTexture1D(pTexture1D);
+	DestroyResource(pTexture1D);
 	pTexture1D->type = GPUResource::TEXTURE_1D;
 	pTexture1D->Register(this);
 
@@ -1749,6 +1753,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const Sub
 }
 HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
 {
+	DestroyTexture2D(pTexture2D);
+	DestroyResource(pTexture2D);
 	pTexture2D->type = GPUResource::TEXTURE_2D;
 	pTexture2D->Register(this);
 
@@ -1863,6 +1869,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 }
 HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture3D *pTexture3D)
 {
+	DestroyTexture3D(pTexture3D);
+	DestroyResource(pTexture3D);
 	pTexture3D->type = GPUResource::TEXTURE_3D;
 	pTexture3D->Register(this);
 
@@ -2545,6 +2553,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
 }
 HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputElementDescs, UINT NumElements, const ShaderByteCode* shaderCode, VertexLayout *pInputLayout)
 {
+	DestroyInputLayout(pInputLayout);
 	pInputLayout->Register(this);
 
 	pInputLayout->desc.reserve((size_t)NumElements);
@@ -2573,6 +2582,7 @@ HRESULT GraphicsDevice_DX11::CreateInputLayout(const VertexLayoutDesc *pInputEle
 }
 HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZE_T BytecodeLength, VertexShader *pVertexShader)
 {
+	DestroyVertexShader(pVertexShader);
 	pVertexShader->Register(this);
 
 	pVertexShader->code.data = new BYTE[BytecodeLength];
@@ -2582,6 +2592,7 @@ HRESULT GraphicsDevice_DX11::CreateVertexShader(const void *pShaderBytecode, SIZ
 }
 HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE_T BytecodeLength, PixelShader *pPixelShader)
 {
+	DestroyPixelShader(pPixelShader);
 	pPixelShader->Register(this);
 
 	pPixelShader->code.data = new BYTE[BytecodeLength];
@@ -2591,6 +2602,7 @@ HRESULT GraphicsDevice_DX11::CreatePixelShader(const void *pShaderBytecode, SIZE
 }
 HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, SIZE_T BytecodeLength, GeometryShader *pGeometryShader)
 {
+	DestroyGeometryShader(pGeometryShader);
 	pGeometryShader->Register(this);
 
 	pGeometryShader->code.data = new BYTE[BytecodeLength];
@@ -2600,6 +2612,7 @@ HRESULT GraphicsDevice_DX11::CreateGeometryShader(const void *pShaderBytecode, S
 }
 HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_T BytecodeLength, HullShader *pHullShader)
 {
+	DestroyHullShader(pHullShader);
 	pHullShader->Register(this);
 
 	pHullShader->code.data = new BYTE[BytecodeLength];
@@ -2609,6 +2622,7 @@ HRESULT GraphicsDevice_DX11::CreateHullShader(const void *pShaderBytecode, SIZE_
 }
 HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZE_T BytecodeLength, DomainShader *pDomainShader)
 {
+	DestroyDomainShader(pDomainShader);
 	pDomainShader->Register(this);
 
 	pDomainShader->code.data = new BYTE[BytecodeLength];
@@ -2618,6 +2632,7 @@ HRESULT GraphicsDevice_DX11::CreateDomainShader(const void *pShaderBytecode, SIZ
 }
 HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SIZE_T BytecodeLength, ComputeShader *pComputeShader)
 {
+	DestroyComputeShader(pComputeShader);
 	pComputeShader->Register(this);
 
 	pComputeShader->code.data = new BYTE[BytecodeLength];
@@ -2627,6 +2642,7 @@ HRESULT GraphicsDevice_DX11::CreateComputeShader(const void *pShaderBytecode, SI
 }
 HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 {
+	DestroyBlendState(pBlendState);
 	pBlendState->Register(this);
 
 	D3D11_BLEND_DESC desc;
@@ -2649,6 +2665,7 @@ HRESULT GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc *pBlendStateD
 }
 HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc *pDepthStencilStateDesc, DepthStencilState *pDepthStencilState)
 {
+	DestroyDepthStencilState(pDepthStencilState);
 	pDepthStencilState->Register(this);
 
 	D3D11_DEPTH_STENCIL_DESC desc;
@@ -2672,6 +2689,7 @@ HRESULT GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc
 }
 HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState)
 {
+	DestroyRasterizerState(pRasterizerState);
 	pRasterizerState->Register(this);
 
 	pRasterizerState->desc = *pRasterizerStateDesc;
@@ -2749,6 +2767,7 @@ HRESULT GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc *pR
 }
 HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState)
 {
+	DestroySamplerState(pSamplerState);
 	pSamplerState->Register(this);
 
 	D3D11_SAMPLER_DESC desc;
@@ -2771,6 +2790,7 @@ HRESULT GraphicsDevice_DX11::CreateSamplerState(const SamplerDesc *pSamplerDesc,
 }
 HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery)
 {
+	DestroyQuery(pQuery);
 	pQuery->Register(this);
 
 	HRESULT hr = E_FAIL;
@@ -2808,6 +2828,7 @@ HRESULT GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQ
 }
 HRESULT GraphicsDevice_DX11::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
 {
+	DestroyGraphicsPSO(pso);
 	pso->Register(this);
 
 	pso->desc = *pDesc;
@@ -2816,6 +2837,7 @@ HRESULT GraphicsDevice_DX11::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, Gra
 }
 HRESULT GraphicsDevice_DX11::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
 {
+	DestroyComputePSO(pso);
 	pso->Register(this);
 
 	pso->desc = *pDesc;

@@ -124,6 +124,8 @@ void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
 			lightbuffer_specular.get(),
 		};
 		device->BindRenderTargets(ARRAYSIZE(rts), rts, rtGBuffer.depth->GetTexture(), threadID);
+		float clear[] = { 0,0,0,0 };
+		device->ClearRenderTarget(rtGBuffer.GetTexture(1), clear, threadID);
 		device->ClearDepthStencil(rtGBuffer.depth->GetTexture(), CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;

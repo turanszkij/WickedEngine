@@ -14,9 +14,10 @@ static const ComputeShader* pRadix008A_CS2 = nullptr;
 static ComputePSO PSO1;
 static ComputePSO PSO2;
 
-void radix008A(CSFFT512x512_Plan* fft_plan,
-	GPUResource* pUAV_Dst,
-	GPUResource* pSRV_Src,
+void radix008A(
+	const CSFFT512x512_Plan& fft_plan,
+	const GPUResource& pUAV_Dst,
+	const GPUResource& pSRV_Src,
 	UINT thread_count,
 	UINT istride, 
 	GRAPHICSTHREAD threadID)
@@ -27,10 +28,10 @@ void radix008A(CSFFT512x512_Plan* fft_plan,
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	// Buffers
-	GPUResource* cs_srvs[1] = { pSRV_Src };
+	const GPUResource* cs_srvs[1] = { &pSRV_Src };
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 
-	GPUResource* cs_uavs[1] = { pUAV_Dst };
+	const GPUResource* cs_uavs[1] = { &pUAV_Dst };
 	device->BindUAVs(CS, cs_uavs, 0, ARRAYSIZE(cs_uavs), threadID);
 
 	// Shader
@@ -53,50 +54,49 @@ void radix008A(CSFFT512x512_Plan* fft_plan,
 	device->UnbindUAVs(0, 1, threadID);
 }
 
-void fft_512x512_c2c(CSFFT512x512_Plan* fft_plan,
-	GPUResource* pUAV_Dst,
-	GPUResource* pSRV_Dst,
-	GPUResource* pSRV_Src, 
+void fft_512x512_c2c(
+	const CSFFT512x512_Plan& fft_plan,
+	const GPUResource& pUAV_Dst,
+	const GPUResource& pSRV_Dst,
+	const GPUResource& pSRV_Src, 
 	GRAPHICSTHREAD threadID)
 {
-	const UINT thread_count = fft_plan->slices * (512 * 512) / 8;
-	GPUResource* pUAV_Tmp = fft_plan->pUAV_Tmp;
-	GPUResource* pSRV_Tmp = fft_plan->pSRV_Tmp;
+	const UINT thread_count = fft_plan.slices * (512 * 512) / 8;
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	GPUBuffer* cs_cbs;
+	const GPUBuffer* cs_cbs;
 
 	UINT istride = 512 * 512 / 8;
-	cs_cbs = fft_plan->pRadix008A_CB[0];
-	device->BindConstantBuffer(CS, &cs_cbs[0], CB_GETBINDSLOT(FFTGeneratorCB), threadID);
-	radix008A(fft_plan, pUAV_Tmp, pSRV_Src, thread_count, istride, threadID);
+	cs_cbs = &fft_plan.pRadix008A_CB[0];
+	device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), threadID);
+	radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Src, thread_count, istride, threadID);
 
 	istride /= 8;
-	cs_cbs = fft_plan->pRadix008A_CB[1];
-	device->BindConstantBuffer(CS, &cs_cbs[0], CB_GETBINDSLOT(FFTGeneratorCB), threadID);
-	radix008A(fft_plan, pUAV_Dst, pSRV_Tmp, thread_count, istride, threadID);
+	cs_cbs = &fft_plan.pRadix008A_CB[1];
+	device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), threadID);
+	radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, threadID);
 
 	istride /= 8;
-	cs_cbs = fft_plan->pRadix008A_CB[2];
-	device->BindConstantBuffer(CS, &cs_cbs[0], CB_GETBINDSLOT(FFTGeneratorCB), threadID);
-	radix008A(fft_plan, pUAV_Tmp, pSRV_Dst, thread_count, istride, threadID);
+	cs_cbs = &fft_plan.pRadix008A_CB[2];
+	device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), threadID);
+	radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Dst, thread_count, istride, threadID);
 
 	istride /= 8;
-	cs_cbs = fft_plan->pRadix008A_CB[3];
-	device->BindConstantBuffer(CS, &cs_cbs[0], CB_GETBINDSLOT(FFTGeneratorCB), threadID);
-	radix008A(fft_plan, pUAV_Dst, pSRV_Tmp, thread_count, istride, threadID);
+	cs_cbs = &fft_plan.pRadix008A_CB[3];
+	device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), threadID);
+	radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, threadID);
 
 	istride /= 8;
-	cs_cbs = fft_plan->pRadix008A_CB[4];
-	device->BindConstantBuffer(CS, &cs_cbs[0], CB_GETBINDSLOT(FFTGeneratorCB), threadID);
-	radix008A(fft_plan, pUAV_Tmp, pSRV_Dst, thread_count, istride, threadID);
+	cs_cbs = &fft_plan.pRadix008A_CB[4];
+	device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), threadID);
+	radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Dst, thread_count, istride, threadID);
 
 	istride /= 8;
-	cs_cbs = fft_plan->pRadix008A_CB[5];
-	device->BindConstantBuffer(CS, &cs_cbs[0], CB_GETBINDSLOT(FFTGeneratorCB), threadID);
-	radix008A(fft_plan, pUAV_Dst, pSRV_Tmp, thread_count, istride, threadID);
+	cs_cbs = &fft_plan.pRadix008A_CB[5];
+	device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), threadID);
+	radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, threadID);
 }
 
-void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UINT slices)
+void create_cbuffers_512x512(CSFFT512x512_Plan& plan, GraphicsDevice* device, UINT slices)
 {
 	// Create 6 cbuffers for 512x512 transform.
 
@@ -112,20 +112,6 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	cb_data.SysMemPitch = 0;
 	cb_data.SysMemSlicePitch = 0;
 
-	//struct CB_Structure
-	//{
-	//	UINT thread_count;
-	//	UINT ostride;
-	//	UINT istride;
-	//	UINT pstride;
-	//	float phase_base;
-	//};
-
-	for (int i = 0; i < ARRAYSIZE(plan->pRadix008A_CB); ++i)
-	{
-		plan->pRadix008A_CB[i] = new GPUBuffer;
-	}
-
 	// Buffer 0
 	const UINT thread_count = slices * (512 * 512) / 8;
 	UINT ostride = 512 * 512 / 8;
@@ -135,8 +121,7 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	FFTGeneratorCB cb_data_buf0 = { thread_count, ostride, istride, 512, (float)phase_base };
 	cb_data.pSysMem = &cb_data_buf0;
 
-	device->CreateBuffer(&cb_desc, &cb_data, plan->pRadix008A_CB[0]);
-	assert(plan->pRadix008A_CB[0]);
+	device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[0]);
 
 	// Buffer 1
 	istride /= 8;
@@ -145,8 +130,7 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	FFTGeneratorCB cb_data_buf1 = { thread_count, ostride, istride, 512, (float)phase_base };
 	cb_data.pSysMem = &cb_data_buf1;
 
-	device->CreateBuffer(&cb_desc, &cb_data, plan->pRadix008A_CB[1]);
-	assert(plan->pRadix008A_CB[1]);
+	device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[1]);
 
 	// Buffer 2
 	istride /= 8;
@@ -155,8 +139,7 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	FFTGeneratorCB cb_data_buf2 = { thread_count, ostride, istride, 512, (float)phase_base };
 	cb_data.pSysMem = &cb_data_buf2;
 
-	device->CreateBuffer(&cb_desc, &cb_data, plan->pRadix008A_CB[2]);
-	assert(plan->pRadix008A_CB[2]);
+	device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[2]);
 
 	// Buffer 3
 	istride /= 8;
@@ -166,8 +149,7 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	FFTGeneratorCB cb_data_buf3 = { thread_count, ostride, istride, 1, (float)phase_base };
 	cb_data.pSysMem = &cb_data_buf3;
 
-	device->CreateBuffer(&cb_desc, &cb_data, plan->pRadix008A_CB[3]);
-	assert(plan->pRadix008A_CB[3]);
+	device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[3]);
 
 	// Buffer 4
 	istride /= 8;
@@ -176,8 +158,7 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	FFTGeneratorCB cb_data_buf4 = { thread_count, ostride, istride, 1, (float)phase_base };
 	cb_data.pSysMem = &cb_data_buf4;
 
-	device->CreateBuffer(&cb_desc, &cb_data, plan->pRadix008A_CB[4]);
-	assert(plan->pRadix008A_CB[4]);
+	device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[4]);
 
 	// Buffer 5
 	istride /= 8;
@@ -186,16 +167,14 @@ void create_cbuffers_512x512(CSFFT512x512_Plan* plan, GraphicsDevice* device, UI
 	FFTGeneratorCB cb_data_buf5 = { thread_count, ostride, istride, 1, (float)phase_base };
 	cb_data.pSysMem = &cb_data_buf5;
 
-	device->CreateBuffer(&cb_desc, &cb_data, plan->pRadix008A_CB[5]);
-	assert(plan->pRadix008A_CB[5]);
+	device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[5]);
 }
 
-void fft512x512_create_plan(CSFFT512x512_Plan* plan, UINT slices)
+void fft512x512_create_plan(CSFFT512x512_Plan& plan, UINT slices)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	plan->slices = slices;
-
+	plan.slices = slices;
 
 	// Constants
 	// Create 6 cbuffers for 512x512 transform
@@ -210,19 +189,7 @@ void fft512x512_create_plan(CSFFT512x512_Plan* plan, UINT slices)
 	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	buf_desc.StructureByteStride = sizeof(float) * 2;
 
-	plan->pBuffer_Tmp = new GPUBuffer;
-	device->CreateBuffer(&buf_desc, nullptr, plan->pBuffer_Tmp);
-
-	plan->pSRV_Tmp = (GPUResource*)plan->pBuffer_Tmp;
-	plan->pUAV_Tmp = (GPUResource*)plan->pBuffer_Tmp;
-}
-
-void fft512x512_destroy_plan(CSFFT512x512_Plan* plan)
-{
-	SAFE_DELETE(plan->pBuffer_Tmp);
-
-	for (int i = 0; i < 6; i++)
-		SAFE_DELETE(plan->pRadix008A_CB[i]);
+	device->CreateBuffer(&buf_desc, nullptr, &plan.pBuffer_Tmp);
 }
 
 

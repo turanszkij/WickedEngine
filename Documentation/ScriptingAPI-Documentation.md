@@ -346,6 +346,19 @@ Describes an orientation in 3D space.
 - SetBaseColor()
 - SetEmissiveColor()
 
+#### EmitterComponent
+- Burst(int value)  -- spawns a specific amount of particles immediately
+- SetEmitCount(float value)  -- set the emitted particle count per second
+- SetSize(float value)  -- set particle starting size
+- SetLife(float value)  -- set particle lifetime
+- SetNormalFactor(float value)  -- set normal factor that modulates emit velocities
+- SetRandomness(float value)  -- set general randomness factor
+- SetLifeRandomness(float value)  -- set lifetime randomness factor
+- SetScaleX(float value)  -- set scaling along lifetime in X axis
+- SetScaleY(float value)  -- set scaling along lifetime in Y axis
+- SetRotation(float value)  -- set rotation speed
+- SetMotionBlurAmount(float value)  -- set the motion elongation factor
+
 ## High Level Interface
 ### MainComponent
 This is the main entry point and manages the lifetime of the application. Even though it is called a component, it is not part of the entity-component system
