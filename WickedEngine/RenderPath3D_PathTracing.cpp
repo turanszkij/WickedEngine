@@ -178,7 +178,7 @@ void RenderPath3D_PathTracing::Compose()
 	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
 	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	
-	wiImage::Draw(rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 
 
 	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);

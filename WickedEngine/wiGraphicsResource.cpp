@@ -3,9 +3,6 @@
 
 namespace wiGraphicsTypes
 {
-	VertexShader::VertexShader()
-	{
-	}
 	VertexShader::~VertexShader()
 	{
 		if (device != nullptr) 
@@ -14,9 +11,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	PixelShader::PixelShader()
-	{
-	}
 	PixelShader::~PixelShader()
 	{
 		if (device != nullptr)
@@ -25,9 +19,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	GeometryShader::GeometryShader()
-	{
-	}
 	GeometryShader::~GeometryShader()
 	{
 		if (device != nullptr)
@@ -36,9 +27,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	DomainShader::DomainShader()
-	{
-	}
 	DomainShader::~DomainShader()
 	{
 		if (device != nullptr)
@@ -47,9 +35,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	HullShader::HullShader()
-	{
-	}
 	HullShader::~HullShader()
 	{
 		if (device != nullptr)
@@ -58,9 +43,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	ComputeShader::ComputeShader()
-	{
-	}
 	ComputeShader::~ComputeShader()
 	{
 		if (device != nullptr)
@@ -69,9 +51,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	Sampler::Sampler()
-	{
-	}
 	Sampler::~Sampler()
 	{
 		if (device != nullptr)
@@ -80,9 +59,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	GPUResource::GPUResource()
-	{
-	}
 	GPUResource::~GPUResource()
 	{
 		if (device != nullptr)
@@ -91,9 +67,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	GPUBuffer::GPUBuffer() : GPUResource()
-	{
-	}
 	GPUBuffer::~GPUBuffer()
 	{
 		if (device != nullptr)
@@ -102,9 +75,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	VertexLayout::VertexLayout()
-	{
-	}
 	VertexLayout::~VertexLayout()
 	{
 		if (device != nullptr)
@@ -113,9 +83,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	BlendState::BlendState()
-	{
-	}
 	BlendState::~BlendState()
 	{
 		if (device != nullptr)
@@ -124,9 +91,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	DepthStencilState::DepthStencilState()
-	{
-	}
 	DepthStencilState::~DepthStencilState()
 	{
 		if (device != nullptr)
@@ -135,9 +99,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	RasterizerState::RasterizerState()
-	{
-	}
 	RasterizerState::~RasterizerState()
 	{
 		if (device != nullptr)
@@ -146,12 +107,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	Texture::Texture() : GPUResource()
-	{
-	}
-	Texture::~Texture()
-	{
-	}
 	void Texture::RequestIndependentRenderTargetArraySlices(bool value)
 	{
 		independentRTVArraySlices = value;
@@ -173,9 +128,6 @@ namespace wiGraphicsTypes
 		independentUAVMIPs = value;
 	}
 
-	Texture1D::Texture1D() :Texture()
-	{
-	}
 	Texture1D::~Texture1D()
 	{
 		if (device != nullptr)
@@ -184,9 +136,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	Texture2D::Texture2D() :Texture()
-	{
-	}
 	Texture2D::~Texture2D()
 	{
 		if (device != nullptr)
@@ -195,9 +144,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	Texture3D::Texture3D() :Texture()
-	{
-	}
 	Texture3D::~Texture3D()
 	{
 		if (device != nullptr)
@@ -206,9 +152,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	GPUQuery::GPUQuery()
-	{
-	}
 	GPUQuery::~GPUQuery()
 	{
 		if (device != nullptr)
@@ -218,9 +161,6 @@ namespace wiGraphicsTypes
 	}
 
 
-	GraphicsPSO::GraphicsPSO()
-	{
-	}
 	GraphicsPSO::~GraphicsPSO()
 	{
 		if (device != nullptr)
@@ -229,9 +169,6 @@ namespace wiGraphicsTypes
 		}
 	}
 
-	ComputePSO::ComputePSO()
-	{
-	}
 	ComputePSO::~ComputePSO()
 	{
 		if (device != nullptr)

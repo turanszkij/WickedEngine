@@ -2851,11 +2851,13 @@ void GraphicsDevice_DX11::DestroyResource(GPUResource* pResource)
 	if (pResource->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11Resource*)pResource->resource)->Release();
+		pResource->resource = WI_NULL_HANDLE;
 	}
 
 	if (pResource->SRV != WI_NULL_HANDLE)
 	{
 		((ID3D11ShaderResourceView*)pResource->SRV)->Release();
+		pResource->SRV = WI_NULL_HANDLE;
 	}
 	for (auto& x : pResource->additionalSRVs)
 	{
@@ -2864,10 +2866,12 @@ void GraphicsDevice_DX11::DestroyResource(GPUResource* pResource)
 			((ID3D11ShaderResourceView*)x)->Release();
 		}
 	}
+	pResource->additionalSRVs.clear();
 
 	if (pResource->UAV != WI_NULL_HANDLE)
 	{
 		((ID3D11UnorderedAccessView*)pResource->UAV)->Release();
+		pResource->UAV = WI_NULL_HANDLE;
 	}
 	for (auto& x : pResource->additionalUAVs)
 	{
@@ -2876,6 +2880,7 @@ void GraphicsDevice_DX11::DestroyResource(GPUResource* pResource)
 			((ID3D11UnorderedAccessView*)x)->Release();
 		}
 	}
+	pResource->additionalUAVs.clear();
 }
 void GraphicsDevice_DX11::DestroyBuffer(GPUBuffer *pBuffer)
 {
@@ -2885,6 +2890,7 @@ void GraphicsDevice_DX11::DestroyTexture1D(Texture1D *pTexture1D)
 	if (pTexture1D->RTV != WI_NULL_HANDLE)
 	{
 		((ID3D11RenderTargetView*)pTexture1D->RTV)->Release();
+		pTexture1D->RTV = WI_NULL_HANDLE;
 	}
 	for (auto& x : pTexture1D->additionalRTVs)
 	{
@@ -2893,12 +2899,14 @@ void GraphicsDevice_DX11::DestroyTexture1D(Texture1D *pTexture1D)
 			((ID3D11RenderTargetView*)x)->Release();
 		}
 	}
+	pTexture1D->additionalRTVs.clear();
 }
 void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
 {
 	if (pTexture2D->RTV != WI_NULL_HANDLE)
 	{
 		((ID3D11RenderTargetView*)pTexture2D->RTV)->Release();
+		pTexture2D->RTV = WI_NULL_HANDLE;
 	}
 	for (auto& x : pTexture2D->additionalRTVs)
 	{
@@ -2907,10 +2915,12 @@ void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
 			((ID3D11RenderTargetView*)x)->Release();
 		}
 	}
+	pTexture2D->additionalRTVs.clear();
 
 	if (pTexture2D->DSV != WI_NULL_HANDLE)
 	{
 		((ID3D11DepthStencilView*)pTexture2D->DSV)->Release();
+		pTexture2D->DSV = WI_NULL_HANDLE;
 	}
 	for (auto& x : pTexture2D->additionalDSVs)
 	{
@@ -2919,6 +2929,7 @@ void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
 			((ID3D11DepthStencilView*)x)->Release();
 		}
 	}
+	pTexture2D->additionalDSVs.clear();
 }
 void GraphicsDevice_DX11::DestroyTexture3D(Texture3D *pTexture3D)
 {
@@ -2933,12 +2944,14 @@ void GraphicsDevice_DX11::DestroyTexture3D(Texture3D *pTexture3D)
 			((ID3D11RenderTargetView*)x)->Release();
 		}
 	}
+	pTexture3D->additionalRTVs.clear();
 }
 void GraphicsDevice_DX11::DestroyInputLayout(VertexLayout *pInputLayout)
 {
 	if (pInputLayout->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11InputLayout*)pInputLayout->resource)->Release();
+		pInputLayout->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyVertexShader(VertexShader *pVertexShader)
@@ -2946,6 +2959,7 @@ void GraphicsDevice_DX11::DestroyVertexShader(VertexShader *pVertexShader)
 	if (pVertexShader->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11VertexShader*)pVertexShader->resource)->Release();
+		pVertexShader->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyPixelShader(PixelShader *pPixelShader)
@@ -2953,6 +2967,7 @@ void GraphicsDevice_DX11::DestroyPixelShader(PixelShader *pPixelShader)
 	if (pPixelShader->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11PixelShader*)pPixelShader->resource)->Release();
+		pPixelShader->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyGeometryShader(GeometryShader *pGeometryShader)
@@ -2960,6 +2975,7 @@ void GraphicsDevice_DX11::DestroyGeometryShader(GeometryShader *pGeometryShader)
 	if (pGeometryShader->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11GeometryShader*)pGeometryShader->resource)->Release();
+		pGeometryShader->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyHullShader(HullShader *pHullShader)
@@ -2967,6 +2983,7 @@ void GraphicsDevice_DX11::DestroyHullShader(HullShader *pHullShader)
 	if (pHullShader->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11HullShader*)pHullShader->resource)->Release();
+		pHullShader->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyDomainShader(DomainShader *pDomainShader)
@@ -2974,6 +2991,7 @@ void GraphicsDevice_DX11::DestroyDomainShader(DomainShader *pDomainShader)
 	if (pDomainShader->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11DomainShader*)pDomainShader->resource)->Release();
+		pDomainShader->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyComputeShader(ComputeShader *pComputeShader)
@@ -2981,6 +2999,7 @@ void GraphicsDevice_DX11::DestroyComputeShader(ComputeShader *pComputeShader)
 	if (pComputeShader->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11ComputeShader*)pComputeShader->resource)->Release();
+		pComputeShader->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyBlendState(BlendState *pBlendState)
@@ -2988,6 +3007,7 @@ void GraphicsDevice_DX11::DestroyBlendState(BlendState *pBlendState)
 	if (pBlendState->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11BlendState*)pBlendState->resource)->Release();
+		pBlendState->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyDepthStencilState(DepthStencilState *pDepthStencilState)
@@ -2995,6 +3015,7 @@ void GraphicsDevice_DX11::DestroyDepthStencilState(DepthStencilState *pDepthSten
 	if (pDepthStencilState->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11DepthStencilState*)pDepthStencilState->resource)->Release();
+		pDepthStencilState->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyRasterizerState(RasterizerState *pRasterizerState)
@@ -3002,6 +3023,7 @@ void GraphicsDevice_DX11::DestroyRasterizerState(RasterizerState *pRasterizerSta
 	if (pRasterizerState->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11RasterizerState*)pRasterizerState->resource)->Release();
+		pRasterizerState->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroySamplerState(Sampler *pSamplerState)
@@ -3009,6 +3031,7 @@ void GraphicsDevice_DX11::DestroySamplerState(Sampler *pSamplerState)
 	if (pSamplerState->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11SamplerState*)pSamplerState->resource)->Release();
+		pSamplerState->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyQuery(GPUQuery *pQuery)
@@ -3016,6 +3039,7 @@ void GraphicsDevice_DX11::DestroyQuery(GPUQuery *pQuery)
 	if (pQuery->resource != WI_NULL_HANDLE)
 	{
 		((ID3D11Query*)pQuery->resource)->Release();
+		pQuery->resource = WI_NULL_HANDLE;
 	}
 }
 void GraphicsDevice_DX11::DestroyGraphicsPSO(GraphicsPSO* pso)
@@ -3202,8 +3226,7 @@ void GraphicsDevice_DX11::BindViewports(UINT NumViewports, const ViewPort *pView
 void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
 {
 	// RTVs:
-	ID3D11RenderTargetView* renderTargetViews[8];
-	ZeroMemory(renderTargetViews, sizeof(renderTargetViews));
+	ID3D11RenderTargetView* renderTargetViews[8] = {};
 	for (UINT i = 0; i < min(NumViews, 8); ++i)
 	{
 		if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs.empty())

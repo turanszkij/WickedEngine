@@ -52,7 +52,7 @@ public:
 	void Render() override;
 	void Compose() override;
 
-	wiGraphicsTypes::Texture2D* GetRenderResult() { return rtFinal.GetTexture(); }
+	const wiGraphicsTypes::Texture2D& GetRenderResult() { return rtFinal.GetTexture(); }
 
 	void addSprite(wiSprite* sprite, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeSprite(wiSprite* sprite);

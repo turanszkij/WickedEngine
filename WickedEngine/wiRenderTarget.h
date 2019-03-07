@@ -3,24 +3,23 @@
 #include "wiGraphicsDevice.h"
 
 #include <vector>
+#include <memory>
 
 class wiDepthTarget;
 
 class wiRenderTarget
 {
 private:
-	int numViews;
-	std::vector<wiGraphicsTypes::Texture2D*>		renderTargets;
-	std::vector<wiGraphicsTypes::Texture2D*>		renderTargets_resolvedMSAA;
-	std::vector<int>								resolvedMSAAUptodate;
+	struct RenderTargetSlot
+	{
+		wiGraphicsTypes::Texture2D target_primary;
+		wiGraphicsTypes::Texture2D target_resolved;
+		bool dirty = true;
+	};
+	std::vector<RenderTargetSlot> slots;
 public:
-	wiGraphicsTypes::ViewPort	viewPort;
-	wiDepthTarget*				depth;
-
-	wiRenderTarget();
-	wiRenderTarget(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, bool depthOnly = false);
-	~wiRenderTarget();
-	void CleanUp();
+	wiGraphicsTypes::ViewPort viewPort;
+	std::unique_ptr<wiDepthTarget> depth;
 
 	void Initialize(UINT width, UINT height, bool hasDepth = false, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, UINT MSAAC = 1, bool depthOnly = false);
 	void InitializeCube(UINT size, bool hasDepth, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM, UINT mipMapLevelCount = 1, bool depthOnly = false);
@@ -33,10 +32,10 @@ public:
 	void Set(GRAPHICSTHREAD threadID, bool disableColor = false, int viewID = -1);
 	void Set(GRAPHICSTHREAD threadID, wiDepthTarget*, bool disableColor = false, int viewID = -1);
 
-	wiGraphicsTypes::Texture2D* GetTexture(int viewID = 0) const { return renderTargets[viewID]; }
-	wiGraphicsTypes::Texture2D* GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int viewID = 0);
-	wiGraphicsTypes::TextureDesc GetDesc(int viewID = 0) const { assert(viewID < numViews); return GetTexture(viewID)->GetDesc(); }
+	const wiGraphicsTypes::Texture2D& GetTexture(int viewID = 0) const { return slots[viewID].target_primary; }
+	const wiGraphicsTypes::Texture2D& GetTextureResolvedMSAA(GRAPHICSTHREAD threadID, int viewID = 0);
+	wiGraphicsTypes::TextureDesc GetDesc(int viewID = 0) const { return GetTexture(viewID).GetDesc(); }
 	UINT GetMipCount();
-	bool IsInitialized() const { return (numViews > 0 || depth != nullptr); }
+	bool IsInitialized() const { return (!slots.empty() || depth != nullptr); }
 };
 

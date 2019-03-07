@@ -143,7 +143,7 @@ void RenderPath2D::Compose()
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 
-	wiImage::Draw(rtFinal.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtFinal.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderPath::Compose();
 }

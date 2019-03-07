@@ -4018,94 +4018,123 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
 	{
 		vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory, nullptr);
+		pResource->resourceMemory = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_Vulkan::DestroyBuffer(GPUBuffer *pBuffer)
 	{
 		vkDestroyBuffer(device, (VkBuffer)pBuffer->resource, nullptr);
+		pBuffer->resource = WI_NULL_HANDLE;
 
 		vkDestroyBufferView(device, (VkBufferView)pBuffer->SRV, nullptr);
+		pBuffer->SRV = WI_NULL_HANDLE;
 		for (auto& x : pBuffer->additionalSRVs)
 		{
 			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
 		}
+		pBuffer->additionalSRVs.clear();
 
 		vkDestroyBufferView(device, (VkBufferView)pBuffer->UAV, nullptr);
+		pBuffer->UAV = WI_NULL_HANDLE;
 		for (auto& x : pBuffer->additionalUAVs)
 		{
 			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
 		}
+		pBuffer->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
 	{
 		vkDestroyImage(device, (VkImage)pTexture1D->resource, nullptr);
+		pTexture1D->resource = WI_NULL_HANDLE;
 
 		vkDestroyImageView(device, (VkImageView)pTexture1D->RTV, nullptr);
+		pTexture1D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalRTVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture1D->additionalRTVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture1D->SRV, nullptr);
+		pTexture1D->SRV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalSRVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture1D->additionalSRVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture1D->UAV, nullptr);
+		pTexture1D->UAV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalUAVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture1D->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
 	{
 		vkDestroyImage(device, (VkImage)pTexture2D->resource, nullptr);
+		pTexture2D->resource = WI_NULL_HANDLE;
 
 		vkDestroyImageView(device, (VkImageView)pTexture2D->RTV, nullptr);
+		pTexture2D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalRTVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture2D->additionalRTVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture2D->DSV, nullptr);
+		pTexture2D->DSV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalDSVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture2D->additionalDSVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture2D->SRV, nullptr);
+		pTexture2D->SRV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalSRVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture2D->additionalSRVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture2D->UAV, nullptr);
+		pTexture2D->UAV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalUAVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture2D->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
 	{
 		vkDestroyImage(device, (VkImage)pTexture3D->resource, nullptr);
+		pTexture3D->resource = WI_NULL_HANDLE;
 
 		vkDestroyImageView(device, (VkImageView)pTexture3D->RTV, nullptr);
+		pTexture3D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalRTVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture3D->additionalRTVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture3D->SRV, nullptr);
+		pTexture3D->SRV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalSRVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture3D->additionalSRVs.clear();
 
 		vkDestroyImageView(device, (VkImageView)pTexture3D->UAV, nullptr);
+		pTexture3D->UAV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalUAVs)
 		{
 			vkDestroyImageView(device, (VkImageView)x, nullptr);
 		}
+		pTexture3D->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyInputLayout(VertexLayout *pInputLayout)
 	{
@@ -4158,10 +4187,12 @@ namespace wiGraphicsTypes
 	void GraphicsDevice_Vulkan::DestroyGraphicsPSO(GraphicsPSO* pso)
 	{
 		vkDestroyPipeline(device, (VkPipeline)pso->pipeline, nullptr);
+		pso->pipeline = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_Vulkan::DestroyComputePSO(ComputePSO* pso)
 	{
 		vkDestroyPipeline(device, (VkPipeline)pso->pipeline, nullptr);
+		pso->pipeline = WI_NULL_HANDLE;
 	}
 
 

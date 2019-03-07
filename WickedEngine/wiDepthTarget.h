@@ -7,21 +7,18 @@
 class wiDepthTarget
 {
 private:
-	std::unique_ptr<wiGraphicsTypes::Texture2D>		texture;
-	std::unique_ptr<wiGraphicsTypes::Texture2D>		texture_resolvedMSAA;
-	bool resolvedMSAAUptodate;
+	wiGraphicsTypes::Texture2D target_primary;
+	wiGraphicsTypes::Texture2D target_resolved;
+	bool dirty = true;
 public:
-
-	wiDepthTarget();
-	~wiDepthTarget();
 	
 	void Initialize(int width, int height, UINT MSAAC);
 	void InitializeCube(int size, bool independentFaces = false);
 	void Clear(GRAPHICSTHREAD threadID);
 	void CopyFrom(const wiDepthTarget&, GRAPHICSTHREAD threadID);
 
-	wiGraphicsTypes::Texture2D* GetTexture() const { return texture.get(); }
-	wiGraphicsTypes::Texture2D* GetTextureResolvedMSAA(GRAPHICSTHREAD threadID);
-	wiGraphicsTypes::TextureDesc GetDesc() const { return GetTexture()->GetDesc(); }
+	const wiGraphicsTypes::Texture2D& GetTexture() const { return target_primary; }
+	const wiGraphicsTypes::Texture2D& GetTextureResolvedMSAA(GRAPHICSTHREAD threadID);
+	const wiGraphicsTypes::TextureDesc& GetDesc() const { return GetTexture().GetDesc(); }
 };
 

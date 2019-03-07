@@ -3197,53 +3197,67 @@ namespace wiGraphicsTypes
 		if (pResource->resource != WI_NULL_HANDLE)
 		{
 			((ID3D12Resource*)pResource->resource)->Release();
+			pResource->resource = WI_NULL_HANDLE;
 		}
 
 		ResourceAllocator->free(pResource->SRV);
+		pResource->SRV = WI_NULL_HANDLE;
 		for (auto& x : pResource->additionalSRVs)
 		{
 			ResourceAllocator->free(x);
 		}
+		pResource->additionalSRVs.clear();
 
 		ResourceAllocator->free(pResource->UAV);
+		pResource->UAV = WI_NULL_HANDLE;
 		for (auto& x : pResource->additionalUAVs)
 		{
 			ResourceAllocator->free(x);
 		}
+		pResource->additionalUAVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyBuffer(GPUBuffer *pBuffer)
 	{
 		ResourceAllocator->free(pBuffer->CBV);
+		pBuffer->CBV = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_DX12::DestroyTexture1D(Texture1D *pTexture1D)
 	{
 		RTAllocator->free(pTexture1D->RTV);
+		pTexture1D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalRTVs)
 		{
 			RTAllocator->free(x);
 		}
+		pTexture1D->additionalRTVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyTexture2D(Texture2D *pTexture2D)
 	{
 		RTAllocator->free(pTexture2D->RTV);
+		pTexture2D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalRTVs)
 		{
 			RTAllocator->free(x);
 		}
+		pTexture2D->additionalRTVs.clear();
 
 		DSAllocator->free(pTexture2D->DSV);
+		pTexture2D->DSV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalDSVs)
 		{
 			DSAllocator->free(x);
 		}
+		pTexture2D->additionalDSVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyTexture3D(Texture3D *pTexture3D)
 	{
 		RTAllocator->free(pTexture3D->RTV);
+		pTexture3D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalRTVs)
 		{
 			RTAllocator->free(x);
 		}
+		pTexture3D->additionalRTVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyInputLayout(VertexLayout *pInputLayout)
 	{
@@ -3298,6 +3312,7 @@ namespace wiGraphicsTypes
 		if (pso->pipeline != WI_NULL_HANDLE)
 		{
 			((ID3D12PipelineState*)pso->pipeline)->Release();
+			pso->pipeline = WI_NULL_HANDLE;
 		}
 	}
 	void GraphicsDevice_DX12::DestroyComputePSO(ComputePSO* pso)
@@ -3305,6 +3320,7 @@ namespace wiGraphicsTypes
 		if (pso->pipeline != WI_NULL_HANDLE)
 		{
 			((ID3D12PipelineState*)pso->pipeline)->Release();
+			pso->pipeline = WI_NULL_HANDLE;
 		}
 	}
 

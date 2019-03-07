@@ -79,7 +79,7 @@ protected:
 	virtual void RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID);
 	virtual void RenderColorGradedComposition();
 public:
-	virtual wiDepthTarget* GetDepthBuffer() = 0;
+	virtual const wiDepthTarget* GetDepthBuffer() = 0;
 
 	inline float getExposure() { return exposure; }
 	inline float getLightShaftQuality(){ return lightShaftQuality; }

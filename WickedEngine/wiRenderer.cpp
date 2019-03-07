@@ -32,6 +32,7 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 
+#include <memory>
 #include <algorithm>
 #include <unordered_set>
 #include <deque>
@@ -47,7 +48,7 @@ using namespace wiAllocators;
 namespace wiRenderer
 {
 
-GraphicsDevice* graphicsDevice = nullptr;
+GraphicsDevice*			graphicsDevice = nullptr;
 
 const VertexShader*		vertexShaders[VSTYPE_LAST] = {};
 const PixelShader*		pixelShaders[PSTYPE_LAST] = {};
@@ -134,11 +135,11 @@ struct VoxelizedSceneData
 	UINT mips = 7;
 } voxelSceneData;
 
-wiOcean* ocean = nullptr;
+std::unique_ptr<wiOcean> ocean;
 
-std::unique_ptr<Texture2D> shadowMapArray_2D;
-std::unique_ptr<Texture2D> shadowMapArray_Cube;
-std::unique_ptr<Texture2D> shadowMapArray_Transparent;
+Texture2D shadowMapArray_2D;
+Texture2D shadowMapArray_Cube;
+Texture2D shadowMapArray_Transparent;
 
 deque<wiSprite*> waterRipples;
 
@@ -165,7 +166,7 @@ unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
 
-void SetDevice(wiGraphicsTypes::GraphicsDevice* newDevice)
+void SetDevice(GraphicsDevice* newDevice)
 {
 	graphicsDevice = newDevice;
 }
@@ -4748,11 +4749,8 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 	if (SHADOWCOUNT_2D > 0 && SHADOWRES_2D > 0)
 	{
-		shadowMapArray_2D.reset(new Texture2D);
-		shadowMapArray_2D->RequestIndependentRenderTargetArraySlices(true);
-
-		shadowMapArray_Transparent.reset(new Texture2D);
-		shadowMapArray_Transparent->RequestIndependentRenderTargetArraySlices(true);
+		shadowMapArray_2D.RequestIndependentRenderTargetArraySlices(true);
+		shadowMapArray_Transparent.RequestIndependentRenderTargetArraySlices(true);
 
 		TextureDesc desc;
 		desc.Width = SHADOWRES_2D;
@@ -4767,11 +4765,11 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = DSFormat_small_alias;
-		GetDevice()->CreateTexture2D(&desc, nullptr, shadowMapArray_2D.get());
+		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = RTFormat_ldr;
-		GetDevice()->CreateTexture2D(&desc, nullptr, shadowMapArray_Transparent.get());
+		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
 	}
 
 }
@@ -4788,9 +4786,8 @@ void SetShadowPropsCube(int resolution, int count)
 
 	if (SHADOWCOUNT_CUBE > 0 && SHADOWRES_CUBE > 0)
 	{
-		shadowMapArray_Cube.reset(new Texture2D);
-		shadowMapArray_Cube->RequestIndependentRenderTargetArraySlices(true);
-		shadowMapArray_Cube->RequestIndependentRenderTargetCubemapFaces(false);
+		shadowMapArray_Cube.RequestIndependentRenderTargetArraySlices(true);
+		shadowMapArray_Cube.RequestIndependentRenderTargetCubemapFaces(false);
 
 		TextureDesc desc;
 		desc.Width = SHADOWRES_CUBE;
@@ -4804,7 +4801,7 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		GetDevice()->CreateTexture2D(&desc, nullptr, shadowMapArray_Cube.get());
+		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
 	}
 
 }
@@ -4939,22 +4936,22 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
 							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-							device->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
+							device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
 
 							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-							device->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
+							device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
 
 							// render opaque shadowmap:
-							device->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
+							device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
 								// render transparent shadowmap:
-								Texture2D* rts[] = {
-									shadowMapArray_Transparent.get()
+								const Texture2D* rts[] = {
+									&shadowMapArray_Transparent
 								};
-								device->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index + cascade);
+								device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
 								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 							}
 							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -5013,22 +5010,22 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
 
-						device->ClearDepthStencil(shadowMapArray_2D.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 						// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-						device->ClearRenderTarget(shadowMapArray_Transparent.get(), transparentShadowClearColor, threadID, light.shadowMap_index);
+						device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index);
 
 						// render opaque shadowmap:
-						device->BindRenderTargets(0, nullptr, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
+						device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, threadID, light.shadowMap_index);
 						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, threadID);
 
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
 							// render transparent shadowmap:
-							Texture2D* rts[] = {
-								shadowMapArray_Transparent.get()
+							const Texture2D* rts[] = {
+								&shadowMapArray_Transparent
 							};
-							device->BindRenderTargets(ARRAYSIZE(rts), rts, shadowMapArray_2D.get(), threadID, light.shadowMap_index);
+							device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, threadID, light.shadowMap_index);
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
 						}
 						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -5074,8 +5071,8 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					}
 					if (!renderQueue.empty())
 					{
-						device->BindRenderTargets(0, nullptr, shadowMapArray_Cube.get(), threadID, light.shadowMap_index);
-						device->ClearDepthStencil(shadowMapArray_Cube.get(), CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						device->BindRenderTargets(0, nullptr, &shadowMapArray_Cube, threadID, light.shadowMap_index);
+						device->ClearDepthStencil(&shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
 
 						MiscCB miscCb;
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
@@ -5123,11 +5120,11 @@ void BindShadowmaps(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindResource(stage, shadowMapArray_2D.get(), TEXSLOT_SHADOWARRAY_2D, threadID);
-	device->BindResource(stage, shadowMapArray_Cube.get(), TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	device->BindResource(stage, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
+	device->BindResource(stage, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
 	if (GetTransparentShadowsEnabled())
 	{
-		device->BindResource(stage, shadowMapArray_Transparent.get(), TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+		device->BindResource(stage, &shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 	}
 }
 
@@ -8643,12 +8640,12 @@ void SetGameSpeed(float value) { GameSpeed = max(0, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetOceanEnabled(bool enabled)
 {
-	SAFE_DELETE(ocean);
+	ocean.reset(nullptr);
 
 	if (enabled)
 	{
 		const Scene& scene = GetScene();
-		ocean = new wiOcean(scene.weather);
+		ocean.reset(new wiOcean(scene.weather));
 	}
 }
 bool GetOceanEnabled() { return ocean != nullptr; }

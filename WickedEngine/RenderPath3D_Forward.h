@@ -16,7 +16,7 @@ public:
 	RenderPath3D_Forward();
 	virtual ~RenderPath3D_Forward();
 
-	wiDepthTarget* GetDepthBuffer() override;
+	const wiDepthTarget* GetDepthBuffer() override;
 
 	void Initialize() override;
 	void Load() override;
