@@ -186,7 +186,7 @@ namespace wiSceneSystem_BindLua
 		int SetScaleX(lua_State* L);
 		int SetScaleY(lua_State* L);
 		int SetRotation(lua_State* L);
-		int SetmotionBlurAmount(lua_State* L);
+		int SetMotionBlurAmount(lua_State* L);
 	};
 
 }

@@ -912,7 +912,7 @@ Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[]
 	lunamethod(EmitterComponent_BindLua, SetScaleX),
 	lunamethod(EmitterComponent_BindLua, SetScaleY),
 	lunamethod(EmitterComponent_BindLua, SetRotation),
-	lunamethod(EmitterComponent_BindLua, SetmotionBlurAmount),
+	lunamethod(EmitterComponent_BindLua, SetMotionBlurAmount),
 	{ NULL, NULL }
 };
 Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::properties[] = {
@@ -1072,7 +1072,7 @@ int EmitterComponent_BindLua::SetRotation(lua_State* L)
 
 	return 0;
 }
-int EmitterComponent_BindLua::SetmotionBlurAmount(lua_State* L)
+int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
@@ -1081,7 +1081,7 @@ int EmitterComponent_BindLua::SetmotionBlurAmount(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "SetmotionBlurAmount(float value) not enough arguments!");
+		wiLua::SError(L, "SetMotionBlurAmount(float value) not enough arguments!");
 	}
 
 	return 0;
