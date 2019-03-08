@@ -520,10 +520,11 @@ void RenderPath3D::RenderSecondaryScene(const Texture2D& mainRT, const Texture2D
 			device->EventEnd(threadID);
 		}
 
-		if (getLightShaftsEnabled()) {
+		if (getLightShaftsEnabled()) 
+		{
 			device->EventBegin("Contribute LightShafts", threadID);
 			fx.blendFlag = BLENDMODE_ADDITIVE;
-			wiImage::Draw(&rtSun[2], fx, threadID);
+			wiImage::Draw(&rtSun[1], fx, threadID);
 			device->EventEnd(threadID);
 		}
 

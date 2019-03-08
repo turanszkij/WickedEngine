@@ -5613,13 +5613,11 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			gridVertexCount = ARRAYSIZE(verts) / 2;
 
 			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = 0;
 			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
 			grid = new GPUBuffer;
 			device->CreateBuffer(&bd, &InitData, grid);
@@ -6359,7 +6357,6 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
 		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = voxelSceneData.res;
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
@@ -7613,7 +7610,6 @@ void ManageDecalAtlas()
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
 			TextureDesc desc;
-			ZeroMemory(&desc, sizeof(desc));
 			desc.Width = (UINT)bins[0].size.w;
 			desc.Height = (UINT)bins[0].size.h;
 			desc.MipLevels = 0;
