@@ -128,104 +128,12 @@ void RenderPath3D_Forward::RenderScene(GRAPHICSTHREAD threadID)
 		wiRenderer::BindGBufferTextures(&rtMain[0], &rtMain[1], nullptr, threadID);
 	}
 
-	// Linear depth:
-	{
-		const Texture2D* rts[] = { &rtLinearDepth };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
-
-		fx.blendFlag = BLENDMODE_OPAQUE;
-		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		fx.quality = QUALITY_NEAREST;
-		fx.process.setLinDepth();
-		wiImage::Draw(&depthCopy, fx, threadID);
-		fx.process.clear();
-
-		device->BindRenderTargets(0, nullptr, nullptr, threadID);
-	}
+	RenderLinearDepth(threadID);
 
 	wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
 
+	RenderSSAO(threadID);
 
-	if (getSSAOEnabled()) 
-	{
-		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
-		device->EventBegin("SSAO", threadID);
-		fx.stencilRef = STENCILREF_DEFAULT;
-		fx.stencilComp = STENCILMODE_LESS;
-		{
-			const Texture2D* rts[] = { &rtSSAO[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
-
-			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
-			fx.setMaskMap(wiTextureHelper::getRandom64x64());
-			fx.quality = QUALITY_LINEAR;
-			fx.sampleFlag = SAMPLEMODE_MIRROR;
-			wiImage::Draw(nullptr, fx, threadID);
-			fx.process.clear();
-		}
-		{
-			const Texture2D* rts[] = { &rtSSAO[1] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
-
-			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(&rtSSAO[0], fx, threadID);
-		}
-		{
-			const Texture2D* rts[] = { &rtSSAO[2] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
-
-			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(&rtSSAO[1], fx, threadID);
-			fx.process.clear();
-		}
-		fx.stencilRef = 0;
-		fx.stencilComp = STENCILMODE_DISABLED;
-		device->EventEnd(threadID);
-	}
-
-	if (getSSREnabled()) 
-	{
-		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
-		device->EventBegin("SSR", threadID);
-		{
-			const Texture2D* rts[] = { &rtSSR };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
-
-			fx.process.clear();
-			fx.disableFullScreen();
-			fx.process.setSSR();
-			fx.setMaskMap(nullptr);
-			wiImage::Draw(&rtMain[0], fx, threadID);
-			fx.process.clear();
-		}
-		device->EventEnd(threadID);
-	}
+	RenderSSR(rtMain_resolved[0], threadID);
 }
 

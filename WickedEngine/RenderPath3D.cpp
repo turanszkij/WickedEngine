@@ -165,8 +165,16 @@ void RenderPath3D::ResizeBuffers()
 		desc.SampleDesc.Count = getMSAASampleCount();
 		device->CreateTexture2D(&desc, nullptr, &depthBuffer);
 
-		desc.Format = wiRenderer::DSFormat_full_alias;
-		desc.BindFlags = BIND_SHADER_RESOURCE /*| BIND_UNORDERED_ACCESS*/;
+		if (getMSAASampleCount() > 1)
+		{
+			desc.Format = FORMAT_R32_FLOAT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		}
+		else
+		{
+			desc.Format = wiRenderer::DSFormat_full_alias;
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+		}
 		desc.SampleDesc.Count = 1;
 		device->CreateTexture2D(&desc, nullptr, &depthCopy);
 	}
@@ -888,4 +896,114 @@ void RenderPath3D::RenderColorGradedComposition()
 		wiImage::Draw(&rtFinal[1], fx, GRAPHICSTHREAD_IMMEDIATE);
 	}
 	device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+}
+
+void RenderPath3D::RenderLinearDepth(GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+
+	const Texture2D* rts[] = { &rtLinearDepth };
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+	ViewPort vp;
+	vp.Width = (float)rts[0]->GetDesc().Width;
+	vp.Height = (float)rts[0]->GetDesc().Height;
+	device->BindViewports(1, &vp, threadID);
+
+	fx.blendFlag = BLENDMODE_OPAQUE;
+	fx.sampleFlag = SAMPLEMODE_CLAMP;
+	fx.quality = QUALITY_NEAREST;
+	fx.process.setLinDepth();
+	wiImage::Draw(&depthCopy, fx, threadID);
+	fx.process.clear();
+
+	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+}
+void RenderPath3D::RenderSSAO(GRAPHICSTHREAD threadID)
+{
+	if (getSSAOEnabled())
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+
+		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
+		device->EventBegin("SSAO", threadID);
+		fx.stencilRef = STENCILREF_DEFAULT;
+		fx.stencilComp = STENCILMODE_LESS;
+		{
+			const Texture2D* rts[] = { &rtSSAO[0] };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
+			fx.setMaskMap(wiTextureHelper::getRandom64x64());
+			fx.quality = QUALITY_LINEAR;
+			fx.sampleFlag = SAMPLEMODE_MIRROR;
+			wiImage::Draw(nullptr, fx, threadID);
+			fx.process.clear();
+		}
+		{
+			const Texture2D* rts[] = { &rtSSAO[1] };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			wiImage::Draw(&rtSSAO[0], fx, threadID);
+		}
+		{
+			const Texture2D* rts[] = { &rtSSAO[2] };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
+			fx.blendFlag = BLENDMODE_OPAQUE;
+			wiImage::Draw(&rtSSAO[1], fx, threadID);
+			fx.process.clear();
+		}
+		fx.stencilRef = 0;
+		fx.stencilComp = STENCILMODE_DISABLED;
+		device->EventEnd(threadID);
+	}
+}
+void RenderPath3D::RenderSSR(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID)
+{
+	if (getSSREnabled())
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+
+		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
+		device->EventBegin("SSR", threadID);
+		{
+			const Texture2D* rts[] = { &rtSSR };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			fx.process.clear();
+			fx.disableFullScreen();
+			fx.process.setSSR();
+			fx.setMaskMap(nullptr);
+			wiImage::Draw(&srcSceneRT, fx, threadID);
+			fx.process.clear();
+		}
+		device->EventEnd(threadID);
+	}
 }

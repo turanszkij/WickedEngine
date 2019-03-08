@@ -14,6 +14,8 @@ protected:
 
 	void ResizeBuffers() override;
 
+	virtual void RenderSSS(GRAPHICSTHREAD threadID);
+
 	void RenderScene(GRAPHICSTHREAD threadID) override;
 	const wiGraphics::Texture2D& GetFinalRT();
 

@@ -73,6 +73,10 @@ protected:
 
 	void ResizeBuffers() override;
 
+	virtual void RenderLinearDepth(GRAPHICSTHREAD threadID);
+	virtual void RenderSSAO(GRAPHICSTHREAD threadID);
+	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID);
+
 	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID);
 	virtual void RenderReflections(GRAPHICSTHREAD threadID);
 	virtual void RenderShadows(GRAPHICSTHREAD threadID);
