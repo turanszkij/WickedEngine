@@ -19,7 +19,7 @@
 #include <vector>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000

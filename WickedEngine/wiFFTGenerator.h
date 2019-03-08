@@ -19,9 +19,9 @@ typedef struct CSFFT_512x512_Data_t
 	UINT slices;
 
 	// For 512x512 config, we need 6 constant buffers
-	wiGraphicsTypes::GPUBuffer pRadix008A_CB[6];
+	wiGraphics::GPUBuffer pRadix008A_CB[6];
 
-	wiGraphicsTypes::GPUBuffer pBuffer_Tmp;
+	wiGraphics::GPUBuffer pBuffer_Tmp;
 
 	static void LoadShaders();
 } CSFFT512x512_Plan;
@@ -42,9 +42,9 @@ void fft512x512_create_plan(CSFFT512x512_Plan& plan, UINT slices);
 
 void fft_512x512_c2c(
 	const CSFFT512x512_Plan& fft_plan,
-	const wiGraphicsTypes::GPUResource& pUAV_Dst,
-	const wiGraphicsTypes::GPUResource& pSRV_Dst,
-	const wiGraphicsTypes::GPUResource& pSRV_Src, 
+	const wiGraphics::GPUResource& pUAV_Dst,
+	const wiGraphics::GPUResource& pSRV_Dst,
+	const wiGraphics::GPUResource& pSRV_Src, 
 	GRAPHICSTHREAD threadID);
 
 

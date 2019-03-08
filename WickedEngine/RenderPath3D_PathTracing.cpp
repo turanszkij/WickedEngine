@@ -8,65 +8,34 @@
 #include "wiProfiler.h"
 #include "wiSceneSystem.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 
-RenderPath3D_PathTracing::RenderPath3D_PathTracing()
-{
-	RenderPath3D::setProperties();
-}
-RenderPath3D_PathTracing::~RenderPath3D_PathTracing()
-{
-}
 
-
-std::unique_ptr<wiGraphicsTypes::Texture2D> RenderPath3D_PathTracing::traceResult;
-wiRenderTarget RenderPath3D_PathTracing::rtAccumulation;
 void RenderPath3D_PathTracing::ResizeBuffers()
 {
 	RenderPath3D::ResizeBuffers();
 
-	FORMAT defaultTextureFormat = wiRenderer::GetDevice()->GetBackBufferFormat();
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	// Protect against multiple buffer resizes when there is no change!
-	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
-	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
-	if (lastBufferResWidth == wiRenderer::GetInternalResolution().x &&
-		lastBufferResHeight == wiRenderer::GetInternalResolution().y &&
-		lastBufferMSAA == getMSAASampleCount() &&
-		lastBufferFormat == defaultTextureFormat)
+	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
+
 	{
-		return;
+		TextureDesc desc;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.Format = FORMAT_R32G32B32A32_FLOAT;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		device->CreateTexture2D(&desc, nullptr, &traceResult);
 	}
-	else
 	{
-		lastBufferResWidth = wiRenderer::GetInternalResolution().x;
-		lastBufferResHeight = wiRenderer::GetInternalResolution().y;
-		lastBufferMSAA = getMSAASampleCount();
-		lastBufferFormat = defaultTextureFormat;
+		TextureDesc desc;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.Format = FORMAT_R32G32B32A32_FLOAT; // needs full float for correct accumulation over long time period!
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		device->CreateTexture2D(&desc, nullptr, &rtAccumulation);
 	}
-
-	
-	TextureDesc desc;
-	desc.Width = lastBufferResWidth;
-	desc.Height = lastBufferResHeight;
-	desc.Format = FORMAT_R32G32B32A32_FLOAT;
-	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	desc.Usage = USAGE_DEFAULT;
-	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
-	desc.ArraySize = 1;
-	desc.MipLevels = 1;
-	desc.Depth = 1;
-	traceResult.reset(new Texture2D);
-	wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, traceResult.get());
-
-
-	rtAccumulation.Initialize(
-		wiRenderer::GetInternalResolution().x, wiRenderer::GetInternalResolution().y
-		, false, FORMAT_R32G32B32A32_FLOAT); // needs full float for correct accumulation over long time period!
-
-
 
 	// also reset accumulation buffer state:
 	sam = -1;
@@ -74,8 +43,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 void RenderPath3D_PathTracing::Initialize()
 {
-	ResizeBuffers();
-
 	RenderPath3D::Initialize();
 }
 void RenderPath3D_PathTracing::Load()
@@ -135,9 +102,20 @@ void RenderPath3D_PathTracing::RenderFrameSetUp(GRAPHICSTHREAD threadID)
 
 void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		rtAccumulation.SetAndClear(threadID, 0, 0, 0, 1);
+		const Texture2D* rts[] = { &rtAccumulation };
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+		float clear[] = { 0,0,0,1 };
+		device->ClearRenderTarget(rts[0], clear, threadID);
+
+		ViewPort vp;
+		vp.Width = (float)rts[0]->GetDesc().Width;
+		vp.Height = (float)rts[0]->GetDesc().Height;
+		device->BindViewports(1, &vp, threadID);
+
 		wiRenderer::DrawTracedSceneBVH(threadID);
 	}
 	else
@@ -146,12 +124,12 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-		wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), traceResult.get(), threadID);
+		wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), &traceResult, threadID);
 
 
 
 
-		wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+		wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
 		fx.enableHDR();
 
 
@@ -159,8 +137,16 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 		fx.opacity = 1.0f / (sam + 1.0f);
 		fx.blendFlag = BLENDMODE_ALPHA;
 
-		rtAccumulation.Set(threadID);
-		wiImage::Draw(traceResult.get(), fx, threadID);
+
+		const Texture2D* rts[] = { &rtAccumulation };
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+		ViewPort vp;
+		vp.Width = (float)rts[0]->GetDesc().Width;
+		vp.Height = (float)rts[0]->GetDesc().Height;
+		device->BindViewports(1, &vp, threadID);
+
+		wiImage::Draw(&traceResult, fx, threadID);
 
 		wiProfiler::EndRange(threadID); // Traced Scene
 	}
@@ -168,20 +154,22 @@ void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
 
 void RenderPath3D_PathTracing::Compose()
 {
-	wiRenderer::GetDevice()->EventBegin("RenderPath3D_PathTracing::Compose", GRAPHICSTHREAD_IMMEDIATE);
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("RenderPath3D_PathTracing::Compose", GRAPHICSTHREAD_IMMEDIATE);
 
 
-	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_LINEAR;
 	fx.process.setToneMap(getExposure());
 	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
 	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	
-	wiImage::Draw(&rtAccumulation.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtAccumulation, fx, GRAPHICSTHREAD_IMMEDIATE);
 
 
-	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderPath2D::Compose();
 }

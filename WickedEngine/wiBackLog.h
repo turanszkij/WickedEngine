@@ -25,7 +25,7 @@ namespace wiBackLog
 
 	bool isActive();
 
-	void setBackground(wiGraphicsTypes::Texture2D* texture);
+	void setBackground(wiGraphics::Texture2D* texture);
 	void setFontSize(int value);
 	void setFontRowspacing(int value);
 };

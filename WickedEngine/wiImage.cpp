@@ -11,7 +11,7 @@
 #include <atomic>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiImage
 {

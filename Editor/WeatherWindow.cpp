@@ -8,7 +8,7 @@
 using namespace std;
 using namespace wiECS;
 using namespace wiSceneSystem;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 {

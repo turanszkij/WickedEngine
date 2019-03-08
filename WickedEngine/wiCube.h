@@ -30,8 +30,8 @@ public:
 
 	Description desc;
 	
-	static wiGraphicsTypes::GPUBuffer* GetVertexBuffer();
-	static wiGraphicsTypes::GPUBuffer* GetIndexBuffer();
+	static wiGraphics::GPUBuffer* GetVertexBuffer();
+	static wiGraphics::GPUBuffer* GetIndexBuffer();
 
 	static void Initialize();
 	static void CleanUp();

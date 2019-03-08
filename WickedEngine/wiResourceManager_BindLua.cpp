@@ -7,7 +7,7 @@
 #include <sstream>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 const char wiResourceManager_BindLua::className[] = "Resource";
 

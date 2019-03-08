@@ -4,7 +4,7 @@
 #include "wiRenderer.h"
 #include "wiRandom.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 
 wiSprite::wiSprite(wiResourceManager* contentHolder) :ContentHolder(contentHolder)
@@ -32,11 +32,13 @@ void wiSprite::Init()
 	{
 		ContentHolder = &wiResourceManager::GetGlobal();
 	}
-	texture = "";
-	mask = "";
-	normal = "";
-	name = "";
-	texturePointer = maskPointer = normalPointer = nullptr;
+	texture.clear();
+	mask.clear();
+	normal.clear();
+	name.clear();
+	texturePointer = nullptr;
+	maskPointer = nullptr;
+	normalPointer = nullptr;
 }
 void wiSprite::CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal)
 {
@@ -62,6 +64,9 @@ void wiSprite::CleanUp()
 	ContentHolder->del(texture);
 	ContentHolder->del(normal);
 	ContentHolder->del(mask);
+	texturePointer = nullptr;
+	maskPointer = nullptr;
+	normalPointer = nullptr;
 }
 
 void wiSprite::Draw(Texture2D* refracRes, GRAPHICSTHREAD threadID)

@@ -33,7 +33,7 @@ class Editor;
 class EditorComponent : public RenderPath2D
 {
 private:
-	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
+	wiGraphics::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
 public:
 	std::unique_ptr<MaterialWindow>			materialWnd;
 	std::unique_ptr<PostprocessWindow>		postprocessWnd;

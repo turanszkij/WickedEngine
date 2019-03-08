@@ -5,74 +5,130 @@
 #include "wiProfiler.h"
 #include "wiTextureHelper.h"
 
-using namespace wiGraphicsTypes;
-
-RenderPath3D_TiledForward::RenderPath3D_TiledForward() 
-{
-	RenderPath3D_Forward::setProperties();
-}
-RenderPath3D_TiledForward::~RenderPath3D_TiledForward() 
-{
-}
+using namespace wiGraphics;
 
 void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	const GPUResource* dsv[] = { &rtMain.depth->GetTexture() };
-	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+	const GPUResource* dsv[] = { &depthBuffer };
+	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-	wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
-	rtMain.SetAndClear(threadID, true); // depth prepass
+	// depth prepass
 	{
+		wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
+
+		device->BindRenderTargets(0, nullptr, &depthBuffer, threadID);
+		device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
+
+		ViewPort vp;
+		vp.Width = (float)depthBuffer.GetDesc().Width;
+		vp.Height = (float)depthBuffer.GetDesc().Height;
+		device->BindViewports(1, &vp, threadID);
+
 		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true, getLayerMask());
+
+		wiProfiler::EndRange(threadID);
 	}
-	wiProfiler::EndRange(threadID);
 
-	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
+	if (getMSAASampleCount() > 1)
+	{
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
+		wiRenderer::ResolveMSAADepthBuffer(&depthCopy, &depthBuffer, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+	}
+	else
+	{
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
+		device->CopyTexture2D(&depthCopy, &depthBuffer, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+	}
 
-	dtDepthCopy.CopyFrom(*rtMain.depth, threadID);
+	// Linear depth:
+	{
+		const Texture2D* rts[] = { &rtLinearDepth };
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
 
-	wiRenderer::GetDevice()->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+		ViewPort vp;
+		vp.Width = (float)rts[0]->GetDesc().Width;
+		vp.Height = (float)rts[0]->GetDesc().Height;
+		device->BindViewports(1, &vp, threadID);
 
-	rtLinearDepth.Set(threadID); {
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		fx.quality = QUALITY_NEAREST;
 		fx.process.setLinDepth();
-		wiImage::Draw(&dtDepthCopy.GetTextureResolvedMSAA(threadID), fx, threadID);
+		wiImage::Draw(&depthCopy, fx, threadID);
 		fx.process.clear();
-	}
-	rtLinearDepth.Deactivate(threadID);
 
-	wiRenderer::BindDepthTextures(&dtDepthCopy.GetTextureResolvedMSAA(threadID), &rtLinearDepth.GetTexture(), threadID);
+		device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	}
+
+	wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
 
 	wiRenderer::ComputeTiledLightCulling(threadID);
 
-	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
 
-	wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
-	rtMain.Set(threadID);
+	// Opaque scene:
 	{
-		wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? &rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-		wiRenderer::GetDevice()->BindResource(PS, getSSAOEnabled() ? &rtSSAO.back().GetTexture() : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
-		wiRenderer::GetDevice()->BindResource(PS, getSSREnabled() ? &rtSSR.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+		wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+
+		const Texture2D* rts[] = {
+			&rtMain[0],
+			&rtMain[1],
+		};
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+		float clear[] = { 0,0,0,0 };
+		device->ClearRenderTarget(rts[1], clear, threadID);
+
+		ViewPort vp;
+		vp.Width = (float)rts[0]->GetDesc().Width;
+		vp.Height = (float)rts[0]->GetDesc().Height;
+		device->BindViewports(1, &vp, threadID);
+
+		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+		device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+		device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_TILEDFORWARD, true, true);
 		wiRenderer::DrawSky(threadID);
+
+		device->BindRenderTargets(0, nullptr, nullptr, threadID);
+
+		wiProfiler::EndRange(threadID); // Opaque Scene
 	}
-	rtMain.Deactivate(threadID);
-	wiRenderer::BindGBufferTextures(&rtMain.GetTextureResolvedMSAA(threadID, 0), &rtMain.GetTextureResolvedMSAA(threadID, 1), nullptr, threadID);
+
+	if (getMSAASampleCount() > 1)
+	{
+		device->MSAAResolve(&rtMain_resolved[0], &rtMain[0], threadID);
+		device->MSAAResolve(&rtMain_resolved[1], &rtMain[1], threadID);
+		wiRenderer::BindGBufferTextures(&rtMain_resolved[0], &rtMain_resolved[1], nullptr, threadID);
+	}
+	else
+	{
+		wiRenderer::BindGBufferTextures(&rtMain[0], &rtMain[1], nullptr, threadID);
+	}
 
 
-
-	if (getSSAOEnabled()) {
-		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
-		wiRenderer::GetDevice()->EventBegin("SSAO", threadID);
+	if (getSSAOEnabled())
+	{
+		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
+		device->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
-		rtSSAO[0].Set(threadID); {
+		{
+			const Texture2D* rts[] = { &rtSSAO[0] };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
 			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_LINEAR;
@@ -80,45 +136,71 @@ void RenderPath3D_TiledForward::RenderScene(GRAPHICSTHREAD threadID)
 			wiImage::Draw(nullptr, fx, threadID);
 			fx.process.clear();
 		}
-		rtSSAO[1].Set(threadID); {
+		{
+			const Texture2D* rts[] = { &rtSSAO[1] };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
 			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(&rtSSAO[0].GetTexture(), fx, threadID);
+			wiImage::Draw(&rtSSAO[0], fx, threadID);
 		}
-		rtSSAO[2].Set(threadID); {
+		{
+			const Texture2D* rts[] = { &rtSSAO[2] };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
 			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(&rtSSAO[1].GetTexture(), fx, threadID);
+			wiImage::Draw(&rtSSAO[1], fx, threadID);
 			fx.process.clear();
 		}
 		fx.stencilRef = 0;
 		fx.stencilComp = STENCILMODE_DISABLED;
-		wiRenderer::GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
-	if (getSSREnabled()) {
-		wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
-		wiRenderer::GetDevice()->EventBegin("SSR", threadID);
-		rtSSR.Set(threadID); {
+	if (getSSREnabled())
+	{
+		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
+		device->EventBegin("SSR", threadID);
+		{
+			const Texture2D* rts[] = { &rtSSR };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
 			fx.process.clear();
 			fx.disableFullScreen();
 			fx.process.setSSR();
 			fx.setMaskMap(nullptr);
-			wiImage::Draw(&rtMain.GetTexture(), fx, threadID);
+			wiImage::Draw(&rtMain[0], fx, threadID);
 			fx.process.clear();
 		}
-		wiRenderer::GetDevice()->EventEnd(threadID);
+		device->EventEnd(threadID);
 	}
 
-	wiProfiler::EndRange(threadID); // Opaque Scene
 }
-void RenderPath3D_TiledForward::RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID)
+void RenderPath3D_TiledForward::RenderTransparentScene(const Texture2D& refractionRT, GRAPHICSTHREAD threadID)
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-	wiRenderer::GetDevice()->BindResource(PS, getReflectionsEnabled() ? &rtReflection.GetTexture() : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-	wiRenderer::GetDevice()->BindResource(PS, &refractionRT.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
-	wiRenderer::GetDevice()->BindResource(PS, &rtWaterRipple.GetTexture(), TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
+	device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+	device->BindResource(PS, &refractionRT, TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
+	device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
 	wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), RENDERPASS_TILEDFORWARD, threadID, getHairParticlesEnabled(), true);
 
 	wiProfiler::EndRange(threadID); // Transparent Scene

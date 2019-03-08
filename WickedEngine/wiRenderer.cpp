@@ -5,8 +5,6 @@
 #include "wiSprite.h"
 #include "wiSceneSystem.h"
 #include "wiIntersect.h"
-#include "wiRenderTarget.h"
-#include "wiDepthTarget.h"
 #include "wiHelper.h"
 #include "wiMath.h"
 #include "wiLensFlare.h"
@@ -32,7 +30,6 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 
-#include <memory>
 #include <algorithm>
 #include <unordered_set>
 #include <deque>
@@ -40,7 +37,7 @@
 #include <DirectXCollision.h>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 using namespace wiECS;
 using namespace wiAllocators;
@@ -8634,18 +8631,20 @@ float GetSpecularAAParam() { return SPECULARAA; }
 void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
 bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
-void SetEnvironmentMap(wiGraphicsTypes::Texture2D* tex) { enviroMap = tex; }
+void SetEnvironmentMap(wiGraphics::Texture2D* tex) { enviroMap = tex; }
 const Texture2D* GetEnvironmentMap() { return enviroMap; }
 void SetGameSpeed(float value) { GameSpeed = max(0, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetOceanEnabled(bool enabled)
 {
-	ocean.reset(nullptr);
-
 	if (enabled)
 	{
 		const Scene& scene = GetScene();
 		ocean.reset(new wiOcean(scene.weather));
+	}
+	else
+	{
+		ocean.reset();
 	}
 }
 bool GetOceanEnabled() { return ocean != nullptr; }

@@ -8,7 +8,7 @@
 #include "Utility/tinyddsloader.h"
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 static const std::unordered_map<std::string, wiResourceManager::Data_Type> types = {
 	make_pair("JPG", wiResourceManager::IMAGE_2D),

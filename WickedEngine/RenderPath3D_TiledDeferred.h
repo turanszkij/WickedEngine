@@ -6,9 +6,6 @@ class RenderPath3D_TiledDeferred :
 {
 private:
 	void RenderScene(GRAPHICSTHREAD threadID) override;
-	void RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID) override;
-public:
-	RenderPath3D_TiledDeferred();
-	virtual ~RenderPath3D_TiledDeferred();
+	void RenderTransparentScene(const wiGraphics::Texture2D& refractionRT, GRAPHICSTHREAD threadID) override;
 };
 

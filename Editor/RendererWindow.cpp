@@ -172,7 +172,7 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	});
 	tessellationCheckBox->SetCheck(false);
 	rendererWindow->AddWidget(tessellationCheckBox);
-	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
+	tessellationCheckBox->SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
 
 	advancedRefractionsCheckBox = new wiCheckBox("Advanced Refractions: ");
 	advancedRefractionsCheckBox->SetTooltip("Enable advanced refraction rendering: rough transparent materials will be more matte.");
@@ -358,21 +358,21 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	textureQualityComboBox->AddItem("Trilinear");
 	textureQualityComboBox->AddItem("Anisotropic");
 	textureQualityComboBox->OnSelect([&](wiEventArgs args) {
-		wiGraphicsTypes::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
+		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
 
 		switch (args.iValue)
 		{
 		case 0:
-			desc.Filter = wiGraphicsTypes::FILTER_MIN_MAG_MIP_POINT;
+			desc.Filter = wiGraphics::FILTER_MIN_MAG_MIP_POINT;
 			break;
 		case 1:
-			desc.Filter = wiGraphicsTypes::FILTER_MIN_MAG_LINEAR_MIP_POINT;
+			desc.Filter = wiGraphics::FILTER_MIN_MAG_LINEAR_MIP_POINT;
 			break;
 		case 2:
-			desc.Filter = wiGraphicsTypes::FILTER_MIN_MAG_MIP_LINEAR;
+			desc.Filter = wiGraphics::FILTER_MIN_MAG_MIP_LINEAR;
 			break;
 		case 3:
-			desc.Filter = wiGraphicsTypes::FILTER_ANISOTROPIC;
+			desc.Filter = wiGraphics::FILTER_ANISOTROPIC;
 			break;
 		default:
 			break;
@@ -391,7 +391,7 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	mipLodBiasSlider->SetSize(XMFLOAT2(100, 30));
 	mipLodBiasSlider->SetPos(XMFLOAT2(x, y += 30));
 	mipLodBiasSlider->OnSlide([&](wiEventArgs args) {
-		wiGraphicsTypes::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
+		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
 		desc.MipLODBias = args.fValue;
 		wiRenderer::ModifySampler(desc, SSLOT_OBJECTSHADER);
 	});

@@ -5,7 +5,7 @@
 #include "ShaderInterop_Renderer.h"
 #include "wiBackLog.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiLensFlare
 {

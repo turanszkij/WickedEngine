@@ -3,7 +3,7 @@
 #include "wiResourceManager.h"
 #include "ShaderInterop_GPUSortLib.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiGPUSortLib
 {

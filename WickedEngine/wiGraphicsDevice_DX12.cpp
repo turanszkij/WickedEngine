@@ -19,7 +19,7 @@
 
 using namespace std;
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 	// Engine -> Native converters
 

@@ -11,7 +11,7 @@
 #include <set>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 using namespace wiECS;
 

@@ -13,9 +13,9 @@ namespace wiSceneSystem
 class wiHairParticle
 {
 private:
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> cb;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> simulationBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> cb;
+	std::unique_ptr<wiGraphics::GPUBuffer> particleBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> simulationBuffer;
 public:
 
 	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);

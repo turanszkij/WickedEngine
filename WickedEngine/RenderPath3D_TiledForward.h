@@ -6,9 +6,6 @@ class RenderPath3D_TiledForward :
 {
 private:
 	void RenderScene(GRAPHICSTHREAD threadID) override;
-	void RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID) override;
-public:
-	RenderPath3D_TiledForward();
-	virtual ~RenderPath3D_TiledForward();
+	void RenderTransparentScene(const wiGraphics::Texture2D& refractionRT, GRAPHICSTHREAD threadID) override;
 };
 

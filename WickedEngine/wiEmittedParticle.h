@@ -26,20 +26,20 @@ public:
 
 private:
 	ParticleCounters debugData = {};
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> debugDataReadbackBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> debugDataReadbackIndexBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> debugDataReadbackDistanceBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> debugDataReadbackBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> debugDataReadbackIndexBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> debugDataReadbackDistanceBuffer;
 
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> particleBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> aliveList[2];
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> deadList;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> distanceBuffer; // for sorting
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> sphPartitionCellIndices; // for SPH
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> sphPartitionCellOffsets; // for SPH
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> densityBuffer; // for SPH
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> counterBuffer;
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> indirectBuffers; // kickoffUpdate, simulation, draw
-	std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> particleBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> aliveList[2];
+	std::unique_ptr<wiGraphics::GPUBuffer> deadList;
+	std::unique_ptr<wiGraphics::GPUBuffer> distanceBuffer; // for sorting
+	std::unique_ptr<wiGraphics::GPUBuffer> sphPartitionCellIndices; // for SPH
+	std::unique_ptr<wiGraphics::GPUBuffer> sphPartitionCellOffsets; // for SPH
+	std::unique_ptr<wiGraphics::GPUBuffer> densityBuffer; // for SPH
+	std::unique_ptr<wiGraphics::GPUBuffer> counterBuffer;
+	std::unique_ptr<wiGraphics::GPUBuffer> indirectBuffers; // kickoffUpdate, simulation, draw
+	std::unique_ptr<wiGraphics::GPUBuffer> constantBuffer;
 	void CreateSelfBuffers();
 
 	float emit = 0.0f;

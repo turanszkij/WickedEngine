@@ -8,78 +8,81 @@ class RenderPath3D :
 {
 private:
 	float exposure = 1.0f;
-	float lightShaftQuality;
-	float bloomThreshold;
-	float particleDownSample;
-	float reflectionQuality;
-	float ssaoQuality;
-	float ssaoBlur;
-	float dofFocus;
-	float dofStrength;
-	float sharpenFilterAmount;
-	float outlineThreshold;
-	float outlineThickness;
-	XMFLOAT3 outlineColor;
-	float ssaoRange;
-	UINT ssaoSampleCount;
+	float lightShaftQuality = 0.4f;
+	float bloomThreshold = 1.0f;
+	float particleDownSample = 1.0f;
+	float reflectionQuality = 0.5f;
+	float ssaoQuality = 0.5f;
+	float ssaoBlur = 2.3f;
+	float dofFocus = 10.0f;
+	float dofStrength = 2.2f;
+	float sharpenFilterAmount = 0.28f;
+	float outlineThreshold = 0.2f;
+	float outlineThickness = 1.0f;
+	XMFLOAT3 outlineColor = XMFLOAT3(0, 0, 0);
+	float ssaoRange = 1.0f;
+	UINT ssaoSampleCount = 16;
 
-	bool fxaaEnabled;
-	bool ssaoEnabled;
-	bool ssrEnabled;
-	bool reflectionsEnabled;
-	bool shadowsEnabled;
-	bool bloomEnabled;
-	bool colorGradingEnabled;
-	bool emittedParticlesEnabled;
-	bool hairParticlesEnabled;
-	bool hairParticlesReflectionEnabled;
-	bool volumeLightsEnabled;
-	bool lightShaftsEnabled;
-	bool lensFlareEnabled;
-	bool motionBlurEnabled;
-	bool sssEnabled;
-	bool depthOfFieldEnabled;
-	bool stereogramEnabled;
-	bool eyeAdaptionEnabled;
-	bool tessellationEnabled;
-	bool sharpenFilterEnabled;
-	bool outlineEnabled;
+	bool fxaaEnabled = false;
+	bool ssaoEnabled = false;
+	bool ssrEnabled = false;
+	bool reflectionsEnabled = true;
+	bool shadowsEnabled = true;
+	bool bloomEnabled = true;
+	bool colorGradingEnabled = false;
+	bool emittedParticlesEnabled = true;
+	bool hairParticlesEnabled = true;
+	bool hairParticlesReflectionEnabled = false;
+	bool volumeLightsEnabled = true;
+	bool lightShaftsEnabled = false;
+	bool lensFlareEnabled = false;
+	bool motionBlurEnabled = false;
+	bool sssEnabled = true;
+	bool depthOfFieldEnabled = false;
+	bool stereogramEnabled = false;
+	bool eyeAdaptionEnabled = false;
+	bool tessellationEnabled = false;
+	bool sharpenFilterEnabled = false;
+	bool outlineEnabled = false;
 
-	wiGraphicsTypes::Texture2D* colorGradingTex = nullptr;
+	const wiGraphics::Texture2D* colorGradingTex = nullptr;
 
-	UINT msaaSampleCount;
+	UINT msaaSampleCount = 1;
 
 protected:
-	static wiRenderTarget
-		rtReflection
-		, rtSSR
-		, rtMotionBlur
-		, rtSceneCopy
-		, rtWaterRipple
-		, rtLinearDepth
-		, rtParticle
-		, rtVolumetricLights
-		, rtFinal[2]
-		, rtDof[3]
-		, rtTemporalAA[2]
-		, rtBloom
-		;
-	static std::vector<wiRenderTarget> rtSun, rtSSAO;
-	static wiDepthTarget dtDepthCopy;
-	static std::unique_ptr<wiGraphicsTypes::Texture2D> smallDepth;
+	wiGraphics::Texture2D rtReflection;
+	wiGraphics::Texture2D rtSSR;
+	wiGraphics::Texture2D rtMotionBlur;
+	wiGraphics::Texture2D rtSceneCopy;
+	wiGraphics::Texture2D rtWaterRipple;
+	wiGraphics::Texture2D rtLinearDepth;
+	wiGraphics::Texture2D rtParticle;
+	wiGraphics::Texture2D rtVolumetricLights;
+	wiGraphics::Texture2D rtFinal[2];
+	wiGraphics::Texture2D rtDof[3];
+	wiGraphics::Texture2D rtTemporalAA[2];
+	wiGraphics::Texture2D rtBloom;
+	wiGraphics::Texture2D rtSSAO[3];
+	wiGraphics::Texture2D rtSun[2];
+	wiGraphics::Texture2D rtSun_resolved;
 
-	virtual void ResizeBuffers() override;
+	wiGraphics::Texture2D depthBuffer;
+	wiGraphics::Texture2D depthCopy;
+	wiGraphics::Texture2D smallDepth;
+	wiGraphics::Texture2D depthBuffer_reflection;
+
+	void ResizeBuffers() override;
 
 	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID);
 	virtual void RenderReflections(GRAPHICSTHREAD threadID);
 	virtual void RenderShadows(GRAPHICSTHREAD threadID);
 	virtual void RenderScene(GRAPHICSTHREAD threadID) = 0;
-	virtual void RenderSecondaryScene(wiRenderTarget& mainRT, wiRenderTarget& shadedSceneRT, GRAPHICSTHREAD threadID);
-	virtual void RenderTransparentScene(wiRenderTarget& refractionRT, GRAPHICSTHREAD threadID);
-	virtual void RenderComposition(wiRenderTarget& shadedSceneRT, wiRenderTarget& mainRT, GRAPHICSTHREAD threadID);
+	virtual void RenderSecondaryScene(const wiGraphics::Texture2D& mainRT, const wiGraphics::Texture2D& shadedSceneRT, GRAPHICSTHREAD threadID);
+	virtual void RenderTransparentScene(const wiGraphics::Texture2D& refractionRT, GRAPHICSTHREAD threadID);
+	virtual void RenderComposition(const wiGraphics::Texture2D& shadedSceneRT, const wiGraphics::Texture2D& mainRT0, const wiGraphics::Texture2D& mainRT1, GRAPHICSTHREAD threadID);
 	virtual void RenderColorGradedComposition();
 public:
-	virtual const wiDepthTarget* GetDepthBuffer() = 0;
+	virtual const wiGraphics::Texture2D* GetDepthBuffer() { return &depthBuffer; }
 
 	inline float getExposure() { return exposure; }
 	inline float getLightShaftQuality(){ return lightShaftQuality; }
@@ -115,11 +118,11 @@ public:
 	inline bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
 	inline bool getStereogramEnabled() { return stereogramEnabled; }
 	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
-	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
+	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	inline bool getSharpenFilterEnabled() { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
 	inline bool getOutlineEnabled() { return outlineEnabled; }
 
-	inline wiGraphicsTypes::Texture2D* getColorGradingTexture() { return colorGradingTex; }
+	inline const wiGraphics::Texture2D* getColorGradingTexture() { return colorGradingTex; }
 
 	inline UINT getMSAASampleCount() { return msaaSampleCount; }
 
@@ -161,14 +164,9 @@ public:
 	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
 	inline void setOutlineEnabled(bool value) { outlineEnabled = value; }
 
-	inline void setColorGradingTexture(wiGraphicsTypes::Texture2D* tex) { colorGradingTex = tex; }
+	inline void setColorGradingTexture(const wiGraphics::Texture2D* tex) { colorGradingTex = tex; }
 
-	inline void setMSAASampleCount(UINT value) { msaaSampleCount = value; ResizeBuffers(); }
-
-	void setProperties();
-
-	RenderPath3D();
-	virtual ~RenderPath3D();
+	inline void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 
 	void Initialize() override;
 	void Load() override;

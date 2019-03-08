@@ -13,10 +13,10 @@ class LoadingScreen :
 private:
 	struct LoaderTask
 	{
-		std::function< void() > functionBody;
+		std::function<void()> functionBody;
 		std::atomic_bool active;
 
-		LoaderTask(std::function< void() > functionBody) :functionBody(functionBody)
+		LoaderTask(std::function<void()> functionBody) :functionBody(functionBody)
 		{
 			active.store(false);
 		}
@@ -26,7 +26,7 @@ private:
 			active.store(l.active.load());
 		}
 	};
-	std::vector< LoaderTask > loaders;
+	std::vector<LoaderTask> loaders;
 	void doLoadingTasks();
 
 	void waitForFinish();
@@ -48,12 +48,12 @@ public:
 	int getPercentageComplete();
 	//See if the loading is currently running
 	bool isActive();
-	
+
 	//Start Executing the tasks and mark the loading as active
 	virtual void Start() override;
 	//Clear all tasks
 	virtual void Stop() override;
-	
+
 	virtual void Unload() override;
 };
 

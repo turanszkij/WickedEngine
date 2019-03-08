@@ -5,15 +5,15 @@
 #include "wiMath.h"
 #include "ShaderInterop_Renderer.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiSceneSystem;
 
 GraphicsPSO* pso_solidpart = nullptr;
 GraphicsPSO* pso_wirepart = nullptr;
-wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis = nullptr;
-wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane = nullptr;
-wiGraphicsTypes::GPUBuffer* vertexBuffer_Origin = nullptr;
+wiGraphics::GPUBuffer* vertexBuffer_Axis = nullptr;
+wiGraphics::GPUBuffer* vertexBuffer_Plane = nullptr;
+wiGraphics::GPUBuffer* vertexBuffer_Origin = nullptr;
 UINT vertexCount_Axis = 0;
 UINT vertexCount_Plane = 0;
 UINT vertexCount_Origin = 0;

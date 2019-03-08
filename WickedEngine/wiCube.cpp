@@ -1,7 +1,7 @@
 #include "wiCube.h"
 #include "wiRenderer.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 static GPUBuffer vertexBuffer;
 static GPUBuffer indexBuffer;

@@ -1,7 +1,7 @@
 #include "wiGraphicsResource.h"
 #include "wiGraphicsDevice.h"
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 	VertexShader::~VertexShader()
 	{

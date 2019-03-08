@@ -9,8 +9,8 @@ private:
 	int sam = -1;
 
 protected:
-	static std::unique_ptr<wiGraphicsTypes::Texture2D> traceResult;
-	static wiRenderTarget rtAccumulation;
+	wiGraphics::Texture2D traceResult;
+	wiGraphics::Texture2D rtAccumulation;
 
 	void ResizeBuffers() override;
 
@@ -18,10 +18,8 @@ protected:
 	void RenderScene(GRAPHICSTHREAD threadID) override;
 
 public:
-	RenderPath3D_PathTracing();
-	virtual ~RenderPath3D_PathTracing();
 
-	wiDepthTarget* GetDepthBuffer() override { return nullptr; };
+	const wiGraphics::Texture2D* GetDepthBuffer() override { return nullptr; };
 
 	void Initialize() override;
 	void Load() override;

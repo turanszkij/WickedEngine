@@ -14,11 +14,11 @@
 #include <sstream>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 
 
-static wiGraphicsTypes::GraphicsPSO PSO_colorpicker;
+static wiGraphics::GraphicsPSO PSO_colorpicker;
 
 
 wiWidget::wiWidget() : TransformComponent()
@@ -236,7 +236,7 @@ wiColor wiWidget::GetColor()
 	}
 	return retVal;
 }
-void wiWidget::SetScissorRect(const wiGraphicsTypes::Rect& rect)
+void wiWidget::SetScissorRect(const wiGraphics::Rect& rect)
 {
 	scissorRect = rect;
 	if (scissorRect.bottom>0)
@@ -1679,10 +1679,10 @@ void wiColorPicker::Render(wiGUI* gui)
 		XMFLOAT4 pos;
 		XMFLOAT4 col;
 	};
-	static wiGraphicsTypes::GPUBuffer vb_saturation;
-	static wiGraphicsTypes::GPUBuffer vb_hue;
-	static wiGraphicsTypes::GPUBuffer vb_picker;
-	static wiGraphicsTypes::GPUBuffer vb_preview;
+	static wiGraphics::GPUBuffer vb_saturation;
+	static wiGraphics::GPUBuffer vb_hue;
+	static wiGraphics::GPUBuffer vb_picker;
+	static wiGraphics::GPUBuffer vb_preview;
 
 	static std::vector<Vertex> vertices_saturation(0);
 

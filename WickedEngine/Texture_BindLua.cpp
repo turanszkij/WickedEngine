@@ -1,6 +1,6 @@
 #include "Texture_BindLua.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 const char Texture_BindLua::className[] = "Texture";
 

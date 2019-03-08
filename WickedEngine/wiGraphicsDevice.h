@@ -6,7 +6,7 @@
 #include "wiGraphicsDescriptors.h"
 #include "wiGraphicsResource.h"
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 
 	class GraphicsDevice

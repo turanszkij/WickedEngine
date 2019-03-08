@@ -56,7 +56,7 @@ protected:
 	void Activate();
 	void Deactivate();
 	wiColor colors[WIDGETSTATE_COUNT];
-	wiGraphicsTypes::Rect scissorRect;
+	wiGraphics::Rect scissorRect;
 
 	wiColor textColor;
 	wiColor textShadowColor;
@@ -80,7 +80,7 @@ public:
 	// last param default: set color for all states
 	void SetColor(const wiColor& color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor();
-	void SetScissorRect(const wiGraphicsTypes::Rect& rect);
+	void SetScissorRect(const wiGraphics::Rect& rect);
 	void SetTextColor(const wiColor& value) { textColor = value; }
 	void SetTextShadowColor(const wiColor& value) { textShadowColor = value; }
 

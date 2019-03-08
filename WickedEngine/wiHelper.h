@@ -37,9 +37,9 @@ namespace wiHelper
 
 	void screenshot(const std::string& name = "");
 
-	bool saveTextureToFile(wiGraphicsTypes::Texture2D& texture, const std::string& fileName);
+	bool saveTextureToFile(wiGraphics::Texture2D& texture, const std::string& fileName);
 
-	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphicsTypes::TextureDesc& desc, const std::string& fileName);
+	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileName);
 
 	std::string getCurrentDateTimeAsString();
 

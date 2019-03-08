@@ -6,7 +6,7 @@
 #include "wiBackLog.h"
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 
 namespace wiOcean_Internal

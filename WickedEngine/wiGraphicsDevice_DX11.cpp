@@ -11,7 +11,7 @@
 
 using namespace std;
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 // Engine -> Native converters
 
@@ -3319,22 +3319,22 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* res
 
 		switch (stage)
 		{
-		case wiGraphicsTypes::VS:
+		case wiGraphics::VS:
 			deviceContexts[threadID]->VSSetShaderResources(slot, 1, &SRV);
 			break;
-		case wiGraphicsTypes::HS:
+		case wiGraphics::HS:
 			deviceContexts[threadID]->HSSetShaderResources(slot, 1, &SRV);
 			break;
-		case wiGraphicsTypes::DS:
+		case wiGraphics::DS:
 			deviceContexts[threadID]->DSSetShaderResources(slot, 1, &SRV);
 			break;
-		case wiGraphicsTypes::GS:
+		case wiGraphics::GS:
 			deviceContexts[threadID]->GSSetShaderResources(slot, 1, &SRV);
 			break;
-		case wiGraphicsTypes::PS:
+		case wiGraphics::PS:
 			deviceContexts[threadID]->PSSetShaderResources(slot, 1, &SRV);
 			break;
-		case wiGraphicsTypes::CS:
+		case wiGraphics::CS:
 			deviceContexts[threadID]->CSSetShaderResources(slot, 1, &SRV);
 			break;
 		default:
@@ -3354,22 +3354,22 @@ void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *co
 
 	switch (stage)
 	{
-	case wiGraphicsTypes::VS:
+	case wiGraphics::VS:
 		deviceContexts[threadID]->VSSetShaderResources(slot, count, srvs);
 		break;
-	case wiGraphicsTypes::HS:
+	case wiGraphics::HS:
 		deviceContexts[threadID]->HSSetShaderResources(slot, count, srvs);
 		break;
-	case wiGraphicsTypes::DS:
+	case wiGraphics::DS:
 		deviceContexts[threadID]->DSSetShaderResources(slot, count, srvs);
 		break;
-	case wiGraphicsTypes::GS:
+	case wiGraphics::GS:
 		deviceContexts[threadID]->GSSetShaderResources(slot, count, srvs);
 		break;
-	case wiGraphicsTypes::PS:
+	case wiGraphics::PS:
 		deviceContexts[threadID]->PSSetShaderResources(slot, count, srvs);
 		break;
-	case wiGraphicsTypes::CS:
+	case wiGraphics::CS:
 		deviceContexts[threadID]->CSSetShaderResources(slot, count, srvs);
 		break;
 	default:
@@ -3453,22 +3453,22 @@ void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler,
 
 	switch (stage)
 	{
-	case wiGraphicsTypes::VS:
+	case wiGraphics::VS:
 		deviceContexts[threadID]->VSSetSamplers(slot, 1, &SAM);
 		break;
-	case wiGraphicsTypes::HS:
+	case wiGraphics::HS:
 		deviceContexts[threadID]->HSSetSamplers(slot, 1, &SAM);
 		break;
-	case wiGraphicsTypes::DS:
+	case wiGraphics::DS:
 		deviceContexts[threadID]->DSSetSamplers(slot, 1, &SAM);
 		break;
-	case wiGraphicsTypes::GS:
+	case wiGraphics::GS:
 		deviceContexts[threadID]->GSSetSamplers(slot, 1, &SAM);
 		break;
-	case wiGraphicsTypes::PS:
+	case wiGraphics::PS:
 		deviceContexts[threadID]->PSSetSamplers(slot, 1, &SAM);
 		break;
-	case wiGraphicsTypes::CS:
+	case wiGraphics::CS:
 		deviceContexts[threadID]->CSSetSamplers(slot, 1, &SAM);
 		break;
 	default:
@@ -3481,22 +3481,22 @@ void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer*
 	ID3D11Buffer* res = buffer ? (ID3D11Buffer*)buffer->resource : nullptr;
 	switch (stage)
 	{
-	case wiGraphicsTypes::VS:
+	case wiGraphics::VS:
 		deviceContexts[threadID]->VSSetConstantBuffers(slot, 1, &res);
 		break;
-	case wiGraphicsTypes::HS:
+	case wiGraphics::HS:
 		deviceContexts[threadID]->HSSetConstantBuffers(slot, 1, &res);
 		break;
-	case wiGraphicsTypes::DS:
+	case wiGraphics::DS:
 		deviceContexts[threadID]->DSSetConstantBuffers(slot, 1, &res);
 		break;
-	case wiGraphicsTypes::GS:
+	case wiGraphics::GS:
 		deviceContexts[threadID]->GSSetConstantBuffers(slot, 1, &res);
 		break;
-	case wiGraphicsTypes::PS:
+	case wiGraphics::PS:
 		deviceContexts[threadID]->PSSetConstantBuffers(slot, 1, &res);
 		break;
-	case wiGraphicsTypes::CS:
+	case wiGraphics::CS:
 		deviceContexts[threadID]->CSSetConstantBuffers(slot, 1, &res);
 		break;
 	default:

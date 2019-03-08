@@ -97,7 +97,7 @@ void wiGUI::Render()
 
 void wiGUI::ResetScissor()
 {
-	wiGraphicsTypes::Rect scissor[1];
+	wiGraphics::Rect scissor[1];
 	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());
 	scissor[0].left = (LONG)(0);
 	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());

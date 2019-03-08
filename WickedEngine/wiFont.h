@@ -40,7 +40,7 @@ public:
 
 	static void LoadShaders();
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
-	static wiGraphicsTypes::Texture2D* GetAtlas();
+	static wiGraphics::Texture2D* GetAtlas();
 
 	// Returns the font path that can be modified
 	static std::string& GetFontPath();

@@ -26,7 +26,7 @@
 #include <sstream>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiRectPacker;
 using namespace wiSceneSystem;
 using namespace wiECS;
@@ -1744,6 +1744,8 @@ void EditorComponent::Compose()
 	{
 		translator.Draw(camera, GRAPHICSTHREAD_IMMEDIATE);
 	}
+
+	__super::Compose();
 }
 void EditorComponent::Unload()
 {

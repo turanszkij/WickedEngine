@@ -7,13 +7,6 @@
 
 using namespace wiSceneSystem;
 
-Tests::Tests()
-{
-}
-Tests::~Tests()
-{
-}
-
 void Tests::Initialize()
 {
 	// Call this before Maincomponent::Initialize if you want to load shaders from an other directory!
@@ -199,9 +192,6 @@ TestsRenderer::TestsRenderer()
 	testSelector->SetSelected(0);
 	GetGUI().AddWidget(testSelector);
 
-}
-TestsRenderer::~TestsRenderer()
-{
 }
 
 void TestsRenderer::RunJobSystemTest()
