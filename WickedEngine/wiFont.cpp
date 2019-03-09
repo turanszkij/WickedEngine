@@ -444,7 +444,7 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 	// Bind the whole font atlas once for the whole frame:
 	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, threadID);
 }
-Texture2D* wiFont::GetAtlas()
+const Texture2D* wiFont::GetAtlas()
 {
 	return &texture;
 }
@@ -467,7 +467,7 @@ int wiFont::AddFontStyle(const string& fontName)
 }
 
 
-void wiFont::Draw(GRAPHICSTHREAD threadID)
+void wiFont::Draw(GRAPHICSTHREAD threadID) const
 {
 	if (!initialized.load() || text.length() <= 0)
 	{
@@ -545,7 +545,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 }
 
 
-int wiFont::textWidth()
+int wiFont::textWidth() const
 {
 	if (style >= fontStyles.size())
 	{
@@ -586,7 +586,7 @@ int wiFont::textWidth()
 
 	return maxWidth;
 }
-int wiFont::textHeight()
+int wiFont::textHeight() const
 {
 	if (style >= fontStyles.size())
 	{
@@ -622,11 +622,11 @@ void wiFont::SetText(const wstring& text)
 {
 	this->text = text;
 }
-wstring wiFont::GetText()
+wstring wiFont::GetText() const
 {
 	return text;
 }
-string wiFont::GetTextA()
+string wiFont::GetTextA() const
 {
 	return string(text.begin(),text.end());
 }

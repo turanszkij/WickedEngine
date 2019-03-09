@@ -25,7 +25,7 @@ public:
 	~wiGUI();
 
 	void Update(float dt);
-	void Render();
+	void Render() const;
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
@@ -33,7 +33,7 @@ public:
 
 	void ActivateWidget(wiWidget* widget);
 	void DeactivateWidget(wiWidget* widget);
-	wiWidget* GetActiveWidget();
+	const wiWidget* GetActiveWidget() const;
 	// true if another widget is currently active
 	bool IsWidgetDisabled(wiWidget* widget);
 
@@ -43,9 +43,9 @@ public:
 	void SetVisible(bool value) { visible = value; }
 	bool IsVisible() { return visible; }
 
-	GRAPHICSTHREAD GetGraphicsThread() { return threadID; }
+	GRAPHICSTHREAD GetGraphicsThread() const { return threadID; }
 
-	void ResetScissor();
+	void ResetScissor() const;
 
 
 	const XMFLOAT2& GetPointerPos() const

@@ -61,7 +61,7 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	}
 }
 
-void RenderPath3D_Deferred::Render()
+void RenderPath3D_Deferred::Render() const
 {
 	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
 	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
@@ -127,7 +127,7 @@ void RenderPath3D_Deferred::Render()
 
 		// Deferred lights:
 		{
-			Texture2D* rts[] = {
+			const Texture2D* rts[] = {
 				&lightbuffer_diffuse,
 				&lightbuffer_specular,
 			};

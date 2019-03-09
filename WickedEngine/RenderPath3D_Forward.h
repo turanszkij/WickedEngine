@@ -13,6 +13,6 @@ protected:
 	void ResizeBuffers() override;
 
 public:
-	void Render() override;
+	void Render() const override;
 };
 

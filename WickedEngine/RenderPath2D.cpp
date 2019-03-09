@@ -98,7 +98,7 @@ void RenderPath2D::FixedUpdate()
 
 	RenderPath::FixedUpdate();
 }
-void RenderPath2D::Render()
+void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -136,7 +136,7 @@ void RenderPath2D::Render()
 
 	RenderPath::Render();
 }
-void RenderPath2D::Compose()
+void RenderPath2D::Compose() const
 {
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.enableFullScreen();

@@ -431,7 +431,7 @@ void Translator::Update()
 
 	prevPointer = pointer;
 }
-void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) const
 {
 	Scene& scene = wiRenderer::GetScene();
 

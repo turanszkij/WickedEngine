@@ -25,11 +25,8 @@ private:
 	uint32_t maxClusterCount = 0;
 
 public:
-	wiGPUBVH();
-	~wiGPUBVH();
-
 	void Build(const wiSceneSystem::Scene& scene, GRAPHICSTHREAD threadID);
-	void Bind(wiGraphics::SHADERSTAGE stage, GRAPHICSTHREAD threadID);
+	void Bind(wiGraphics::SHADERSTAGE stage, GRAPHICSTHREAD threadID) const;
 
 	static void LoadShaders();
 

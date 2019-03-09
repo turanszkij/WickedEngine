@@ -42,7 +42,7 @@ void RenderPath3D_Forward::ResizeBuffers()
 	}
 }
 
-void RenderPath3D_Forward::Render()
+void RenderPath3D_Forward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };

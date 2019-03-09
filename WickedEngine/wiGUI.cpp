@@ -64,7 +64,7 @@ void wiGUI::Update(float dt)
 	}
 }
 
-void wiGUI::Render()
+void wiGUI::Render() const
 {
 	if (!visible)
 	{
@@ -95,7 +95,7 @@ void wiGUI::Render()
 	wiRenderer::GetDevice()->EventEnd(GetGraphicsThread());
 }
 
-void wiGUI::ResetScissor()
+void wiGUI::ResetScissor() const
 {
 	wiGraphics::Rect scissor[1];
 	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());
@@ -142,7 +142,7 @@ void wiGUI::DeactivateWidget(wiWidget* widget)
 		activeWidget = nullptr;
 	}
 }
-wiWidget* wiGUI::GetActiveWidget()
+const wiWidget* wiGUI::GetActiveWidget() const
 {
 	return activeWidget;
 }

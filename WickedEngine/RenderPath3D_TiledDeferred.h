@@ -5,6 +5,6 @@ class RenderPath3D_TiledDeferred :
 	public RenderPath3D_Deferred
 {
 public:
-	void Render() override;
+	void Render() const override;
 };
 

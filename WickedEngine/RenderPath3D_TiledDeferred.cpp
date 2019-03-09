@@ -9,7 +9,7 @@
 
 using namespace wiGraphics;
 
-void RenderPath3D_TiledDeferred::Render()
+void RenderPath3D_TiledDeferred::Render() const
 {
 	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
 	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);

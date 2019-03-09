@@ -83,13 +83,13 @@ void EditorLoadingScreen::Load()
 
 	__super::Load();
 }
-void EditorLoadingScreen::Compose()
+void EditorLoadingScreen::Update(float dt)
 {
 	font.params.posX = (int)(wiRenderer::GetDevice()->GetScreenWidth()*0.5f);
 	font.params.posY = (int)(wiRenderer::GetDevice()->GetScreenHeight()*0.5f);
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 
-	__super::Compose();
+	__super::Update(dt);
 }
 void EditorLoadingScreen::Unload()
 {
@@ -1355,7 +1355,7 @@ void EditorComponent::Update(float dt)
 
 	renderPath->Update(dt);
 }
-void EditorComponent::Render()
+void EditorComponent::Render() const
 {
 	Scene& scene = wiRenderer::GetScene();
 
@@ -1471,7 +1471,7 @@ void EditorComponent::Render()
 	__super::Render();
 
 }
-void EditorComponent::Compose()
+void EditorComponent::Compose() const
 {
 	renderPath->Compose();
 

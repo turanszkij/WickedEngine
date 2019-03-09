@@ -64,29 +64,29 @@ public:
 	wiWidget();
 	virtual ~wiWidget();
 
-	wiHashString GetName();
+	const wiHashString& GetName() const;
 	void SetName(const std::string& value);
-	std::string GetText();
+	const std::string& GetText() const;
 	void SetText(const std::string& value);
 	void SetTooltip(const std::string& value);
 	void SetScriptTip(const std::string& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
-	WIDGETSTATE GetState();
+	WIDGETSTATE GetState() const;
 	virtual void SetEnabled(bool val);
-	bool IsEnabled();
+	bool IsEnabled() const;
 	virtual void SetVisible(bool val);
-	bool IsVisible();
+	bool IsVisible() const;
 	// last param default: set color for all states
 	void SetColor(const wiColor& color, WIDGETSTATE state = WIDGETSTATE_COUNT);
-	wiColor GetColor();
+	wiColor GetColor() const;
 	void SetScissorRect(const wiGraphics::Rect& rect);
 	void SetTextColor(const wiColor& value) { textColor = value; }
 	void SetTextShadowColor(const wiColor& value) { textShadowColor = value; }
 
 	virtual void Update(wiGUI* gui, float dt);
-	virtual void Render(wiGUI* gui) = 0;
-	void RenderTooltip(wiGUI* gui);
+	virtual void Render(const wiGUI* gui) const = 0;
+	void RenderTooltip(const wiGUI* gui) const;
 
 	XMFLOAT3 translation;
 	XMFLOAT3 scale;
@@ -116,7 +116,7 @@ public:
 	virtual ~wiButton();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 	void OnDragStart(std::function<void(wiEventArgs args)> func);
@@ -133,7 +133,7 @@ public:
 	virtual ~wiLabel();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 };
 
 // Text input box
@@ -158,7 +158,7 @@ public:
 	static void DeleteFromInput();
 
 	virtual void Update(wiGUI* gui, float dt) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
 	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
 };
@@ -186,7 +186,7 @@ public:
 	void SetRange(float start, float end);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
 	void OnSlide(std::function<void(wiEventArgs args)> func);
 };
@@ -202,10 +202,10 @@ public:
 	virtual ~wiCheckBox();
 
 	void SetCheck(bool value);
-	bool GetCheck();
+	bool GetCheck() const;
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 };
@@ -249,7 +249,7 @@ public:
 	std::string GetItemText(int index);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
@@ -275,12 +275,12 @@ public:
 	void RemoveWidgets(bool alsoDelete = false);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
 	virtual void SetVisible(bool value) override;
 	virtual void SetEnabled(bool value) override;
 	void SetMinimized(bool value);
-	bool IsMinimized();
+	bool IsMinimized() const;
 };
 
 // HSV-Color Picker
@@ -300,9 +300,9 @@ public:
 	virtual ~wiColorPicker();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(wiGUI* gui) override;
+	virtual void Render(const wiGUI* gui) const override;
 
-	XMFLOAT4 GetPickColor();
+	const XMFLOAT4& GetPickColor() const;
 	void SetPickColor(const XMFLOAT4& value);
 
 	void OnColorChanged(std::function<void(wiEventArgs args)> func);

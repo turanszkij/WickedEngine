@@ -196,26 +196,6 @@ void RenderPath3D::ResizeBuffers()
 	}
 }
 
-void RenderPath3D::Initialize()
-{
-	RenderPath2D::Initialize();
-}
-
-void RenderPath3D::Load()
-{
-	RenderPath2D::Load();
-}
-
-void RenderPath3D::Start()
-{
-	RenderPath2D::Start();
-}
-
-void RenderPath3D::FixedUpdate()
-{
-	RenderPath2D::FixedUpdate();
-}
-
 void RenderPath3D::Update(float dt)
 {
 	RenderPath2D::Update(dt);
@@ -223,7 +203,7 @@ void RenderPath3D::Update(float dt)
 	wiRenderer::UpdatePerFrameData(dt);
 }
 
-void RenderPath3D::Compose()
+void RenderPath3D::Compose() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 

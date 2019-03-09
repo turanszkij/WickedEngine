@@ -40,7 +40,7 @@ public:
 
 	static void LoadShaders();
 	static void BindPersistentState(GRAPHICSTHREAD threadID);
-	static wiGraphics::Texture2D* GetAtlas();
+	static const wiGraphics::Texture2D* GetAtlas();
 
 	// Returns the font path that can be modified
 	static std::string& GetFontPath();
@@ -55,14 +55,14 @@ public:
 	wiFont(const std::string& text = "", wiFontParams params = wiFontParams(), int style = 0);
 	wiFont(const std::wstring& text, wiFontParams params = wiFontParams(), int style = 0);
 	
-	void Draw(GRAPHICSTHREAD threadID);
+	void Draw(GRAPHICSTHREAD threadID) const;
 
-	int textWidth();
-	int textHeight();
+	int textWidth() const;
+	int textHeight() const;
 
 	void SetText(const std::string& text);
 	void SetText(const std::wstring& text);
-	std::wstring GetText();
-	std::string GetTextA();
+	std::wstring GetText() const;
+	std::string GetTextA() const;
 
 };

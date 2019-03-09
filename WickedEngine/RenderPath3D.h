@@ -183,11 +183,8 @@ public:
 
 	virtual void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 
-	void Initialize() override;
-	void Load() override;
-	void Start() override;
-	void FixedUpdate() override;
 	void Update(float dt) override;
-	void Compose() override;
+	void Render() const override = 0;
+	void Compose() const override;
 };
 

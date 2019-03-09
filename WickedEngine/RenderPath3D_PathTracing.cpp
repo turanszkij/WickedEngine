@@ -68,7 +68,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 	RenderPath3D::Update(dt);
 }
 
-void RenderPath3D_PathTracing::Render()
+void RenderPath3D_PathTracing::Render() const
 {
 	// Setup:
 	{
@@ -137,7 +137,7 @@ void RenderPath3D_PathTracing::Render()
 	RenderPath2D::Render();
 }
 
-void RenderPath3D_PathTracing::Compose()
+void RenderPath3D_PathTracing::Compose() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 

@@ -14,11 +14,11 @@ public:
 	wiOcean(const wiSceneSystem::WeatherComponent& weather);
 	~wiOcean();
 
-	void UpdateDisplacementMap(const wiSceneSystem::WeatherComponent& weather, float time, GRAPHICSTHREAD threadID);
-	void Render(const wiSceneSystem::CameraComponent& camera, const wiSceneSystem::WeatherComponent& weather, float time, GRAPHICSTHREAD threadID);
+	void UpdateDisplacementMap(const wiSceneSystem::WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const;
+	void Render(const wiSceneSystem::CameraComponent& camera, const wiSceneSystem::WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const;
 
-	wiGraphics::Texture2D* getDisplacementMap();
-	wiGraphics::Texture2D* getGradientMap();
+	const wiGraphics::Texture2D* getDisplacementMap() const;
+	const wiGraphics::Texture2D* getGradientMap() const;
 
 	static void Initialize();
 	static void LoadShaders();

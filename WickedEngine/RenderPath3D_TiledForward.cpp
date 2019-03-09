@@ -7,7 +7,7 @@
 
 using namespace wiGraphics;
 
-void RenderPath3D_TiledForward::Render()
+void RenderPath3D_TiledForward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };

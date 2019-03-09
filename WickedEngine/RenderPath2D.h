@@ -48,8 +48,8 @@ public:
 	void Start() override;
 	void Update(float dt) override;
 	void FixedUpdate() override;
-	void Render() override;
-	void Compose() override;
+	void Render() const override;
+	void Compose() const override;
 
 	const wiGraphics::Texture2D& GetRenderResult() { return rtFinal; }
 
@@ -73,6 +73,7 @@ public:
 	void SortLayers();
 	void CleanLayers();
 
+	const wiGUI& GetGUI() const { return GUI; }
 	wiGUI& GetGUI() { return GUI; }
 };
 

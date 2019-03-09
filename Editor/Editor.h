@@ -25,7 +25,7 @@ private:
 	wiFont font;
 public:
 	void Load() override;
-	void Compose() override;
+	void Update(float dt) override;
 	void Unload() override;
 };
 
@@ -71,8 +71,8 @@ public:
 	void Start() override;
 	void FixedUpdate() override;
 	void Update(float dt) override;
-	void Render() override;
-	void Compose() override;
+	void Render() const override;
+	void Compose() const override;
 	void Unload() override;
 
 

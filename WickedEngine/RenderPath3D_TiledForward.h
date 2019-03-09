@@ -5,6 +5,6 @@ class RenderPath3D_TiledForward :
 	public RenderPath3D_Forward
 {
 private:
-	void Render() override;
+	void Render() const override;
 };
 

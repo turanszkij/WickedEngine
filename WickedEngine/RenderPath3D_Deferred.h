@@ -21,6 +21,6 @@ protected:
 public:
 	void setMSAASampleCount(UINT value) override { /*disable MSAA for deferred*/ }
 
-	void Render() override;
+	void Render() const override;
 };
 
