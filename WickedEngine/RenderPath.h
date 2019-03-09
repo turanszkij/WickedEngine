@@ -41,7 +41,7 @@ public:
 	// This will be rendered to the backbuffer
 	virtual void Compose() {}
 
-	inline uint32_t getLayerMask() { return layerMask; }
+	inline uint32_t getLayerMask() const { return layerMask; }
 	inline void setlayerMask(uint32_t value) { layerMask = value; }
 };
 

@@ -61,153 +61,145 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	}
 }
 
-void RenderPath3D_Deferred::Initialize()
-{
-	RenderPath3D::Initialize();
-}
-void RenderPath3D_Deferred::Load()
-{
-	RenderPath3D::Load();
-}
-void RenderPath3D_Deferred::Start()
-{
-	RenderPath3D::Start();
-}
 void RenderPath3D_Deferred::Render()
 {
 	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
 	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
 	RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
-	RenderScene(GRAPHICSTHREAD_IMMEDIATE);
-	RenderSecondaryScene(rtGBuffer[0], GetFinalRT(), GRAPHICSTHREAD_IMMEDIATE);
-	RenderComposition(GetFinalRT(), rtGBuffer[0], rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+
+	// Main scene:
+	{
+		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+
+		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
+
+		const GPUResource* dsv[] = { &depthBuffer };
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+
+		{
+			wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+
+			const Texture2D* rts[] = {
+				&rtGBuffer[0],
+				&rtGBuffer[1],
+				&rtGBuffer[2],
+				&lightbuffer_diffuse,
+				&lightbuffer_specular,
+			};
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			float clear[] = { 0,0,0,0 };
+			device->ClearRenderTarget(rts[1], clear, threadID);
+			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
+
+			wiProfiler::EndRange(threadID); // Opaque Scene
+		}
+
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
+		device->CopyTexture2D(&depthCopy, &depthBuffer, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+
+		RenderLinearDepth(threadID);
+
+		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+
+		wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
+
+		if (getStereogramEnabled())
+		{
+			// We don't need the following for stereograms...
+			return;
+		}
+
+		RenderDecals(threadID);
+
+		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], threadID);
+
+		// Deferred lights:
+		{
+			Texture2D* rts[] = {
+				&lightbuffer_diffuse,
+				&lightbuffer_specular,
+			};
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
+			wiRenderer::DrawLights(wiRenderer::GetCamera(), threadID);
+		}
+
+		RenderSSAO(threadID);
+
+		RenderSSS(threadID);
+
+		RenderDeferredComposition(threadID);
+
+		RenderSSR(rtDeferred, threadID);
+	}
+
+	DownsampleDepthBuffer(GRAPHICSTHREAD_IMMEDIATE);
+
+	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_IMMEDIATE);
+
+	if (!getStereogramEnabled())
+	{
+		RenderOutline(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderLightShafts(GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderVolumetrics(GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderWaterRipples(GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderRefractionSource(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderTransparents(rtDeferred, RENDERPASS_FORWARD, GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
+
+		TemporalAAResolve(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderBloom(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderMotionBlur(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+
+		ToneMapping(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+		const Texture2D* rt0 = &rtFinal[0];
+		const Texture2D* rt1 = &rtFinal[1];
+
+		SharpenFilter(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
+
+		if (getSharpenFilterEnabled())
+		{
+			SwapPtr(rt0, rt1);
+		}
+
+		RenderDepthOfField(*rt0, GRAPHICSTHREAD_IMMEDIATE);
+
+		RenderFXAA(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
+	}
 
 	RenderPath2D::Render();
 }
 
-
-void RenderPath3D_Deferred::RenderScene(GRAPHICSTHREAD threadID)
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
-
-	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-
-	const GPUResource* dsv[] = { &depthBuffer };
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
-
-	{
-		wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
-
-		const Texture2D* rts[] = {
-			&rtGBuffer[0],
-			&rtGBuffer[1],
-			&rtGBuffer[2],
-			&lightbuffer_diffuse,
-			&lightbuffer_specular,
-		};
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
-		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[1], clear, threadID);
-		device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
-
-		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-		device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
-		wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
-
-		wiProfiler::EndRange(threadID); // Opaque Scene
-	}
-
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
-	device->CopyTexture2D(&depthCopy, &depthBuffer, threadID);
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
-
-	RenderLinearDepth(threadID);
-
-	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
-
-	wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
-
-	if (getStereogramEnabled())
-	{
-		// We don't need the following for stereograms...
-		return;
-	}
-
-
-	// Draw decals:
-	{
-		const Texture2D* rts[] = { &rtGBuffer[0] };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
-
-		wiRenderer::DrawDecals(wiRenderer::GetCamera(), threadID);
-
-		device->BindRenderTargets(0, nullptr, nullptr, threadID);
-	}
-
-	wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], threadID);
-
-	// Deferred lights:
-	{
-		Texture2D* rts[] = {
-			&lightbuffer_diffuse,
-			&lightbuffer_specular,
-		};
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
-
-		device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
-		device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
-		wiRenderer::DrawLights(wiRenderer::GetCamera(), threadID);
-	}
-
-	RenderSSAO(threadID);
-
-	RenderSSS(threadID);
-
-	// Deferred composition:
-	{
-		const Texture2D* rts[] = { &rtDeferred };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
-
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
-
-		wiImage::DrawDeferred((getSSSEnabled() ? &rtSSS[0] : &lightbuffer_diffuse),
-			&lightbuffer_specular
-			, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite()
-			, threadID, STENCILREF_DEFAULT);
-		wiRenderer::DrawSky(threadID);
-	}
-
-	RenderSSR(rtDeferred, threadID);
-
-}
-
-const Texture2D& RenderPath3D_Deferred::GetFinalRT()
-{
-	//if (getSSREnabled())
-	//	return rtSSR;
-	//else
-		return rtDeferred;
-}
-
-void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID)
+void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
 {
 	if (getSSSEnabled())
 	{
@@ -250,7 +242,7 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID)
 			fx.process.setSSSS(dir);
 			if (i == 0)
 			{
-				wiImage::Draw(static_cast<Texture2D*>(&lightbuffer_diffuse), fx, threadID);
+				wiImage::Draw(&lightbuffer_diffuse, fx, threadID);
 			}
 			else
 			{
@@ -283,4 +275,37 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 }
+void RenderPath3D_Deferred::RenderDecals(GRAPHICSTHREAD threadID) const
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	const Texture2D* rts[] = { &rtGBuffer[0] };
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+	ViewPort vp;
+	vp.Width = (float)rts[0]->GetDesc().Width;
+	vp.Height = (float)rts[0]->GetDesc().Height;
+	device->BindViewports(1, &vp, threadID);
+
+	wiRenderer::DrawDecals(wiRenderer::GetCamera(), threadID);
+
+	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+}
+void RenderPath3D_Deferred::RenderDeferredComposition(GRAPHICSTHREAD threadID) const
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	const Texture2D* rts[] = { &rtDeferred };
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+
+	ViewPort vp;
+	vp.Width = (float)rts[0]->GetDesc().Width;
+	vp.Height = (float)rts[0]->GetDesc().Height;
+	device->BindViewports(1, &vp, threadID);
+
+	wiImage::DrawDeferred((getSSSEnabled() ? &rtSSS[0] : &lightbuffer_diffuse),
+		&lightbuffer_specular
+		, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite()
+		, threadID, STENCILREF_DEFAULT);
+	wiRenderer::DrawSky(threadID);
+}

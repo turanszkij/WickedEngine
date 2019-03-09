@@ -14,7 +14,7 @@ using namespace wiSceneSystem;
 
 void RenderPath3D_PathTracing::ResizeBuffers()
 {
-	RenderPath3D::ResizeBuffers();
+	RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -40,27 +40,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	// also reset accumulation buffer state:
 	sam = -1;
 }
-
-void RenderPath3D_PathTracing::Initialize()
-{
-	RenderPath3D::Initialize();
-}
-void RenderPath3D_PathTracing::Load()
-{
-	RenderPath3D::Load();
-}
-void RenderPath3D_PathTracing::Start()
-{
-	RenderPath3D::Start();
-}
-void RenderPath3D_PathTracing::Render()
-{
-	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
-	RenderScene(GRAPHICSTHREAD_IMMEDIATE);
-
-	RenderPath2D::Render();
-}
-
 
 void RenderPath3D_PathTracing::Update(float dt)
 {
@@ -89,67 +68,73 @@ void RenderPath3D_PathTracing::Update(float dt)
 	RenderPath3D::Update(dt);
 }
 
-
-void RenderPath3D_PathTracing::RenderFrameSetUp(GRAPHICSTHREAD threadID)
+void RenderPath3D_PathTracing::Render()
 {
-	wiRenderer::UpdateRenderData(threadID);
-
-	if (sam == 0)
+	// Setup:
 	{
-		wiRenderer::BuildSceneBVH(threadID);
+		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+		wiRenderer::UpdateRenderData(threadID);
+
+		if (sam == 0)
+		{
+			wiRenderer::BuildSceneBVH(threadID);
+		}
 	}
-}
 
-void RenderPath3D_PathTracing::RenderScene(GRAPHICSTHREAD threadID)
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
+	// Main scene:
 	{
-		const Texture2D* rts[] = { &rtAccumulation };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-		float clear[] = { 0,0,0,1 };
-		device->ClearRenderTarget(rts[0], clear, threadID);
+		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
+		{
+			const Texture2D* rts[] = { &rtAccumulation };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			float clear[] = { 0,0,0,1 };
+			device->ClearRenderTarget(rts[0], clear, threadID);
 
-		wiRenderer::DrawTracedSceneBVH(threadID);
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			wiRenderer::DrawTracedSceneBVH(threadID);
+		}
+		else
+		{
+			wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
+
+			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+
+			wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), &traceResult, threadID);
+
+
+
+
+			wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
+			fx.enableHDR();
+
+
+			// Accumulate with moving averaged blending:
+			fx.opacity = 1.0f / (sam + 1.0f);
+			fx.blendFlag = BLENDMODE_ALPHA;
+
+
+			const Texture2D* rts[] = { &rtAccumulation };
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+
+			ViewPort vp;
+			vp.Width = (float)rts[0]->GetDesc().Width;
+			vp.Height = (float)rts[0]->GetDesc().Height;
+			device->BindViewports(1, &vp, threadID);
+
+			wiImage::Draw(&traceResult, fx, threadID);
+
+			wiProfiler::EndRange(threadID); // Traced Scene
+		}
 	}
-	else
-	{
-		wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
-
-		wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), &traceResult, threadID);
-
-
-
-
-		wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
-		fx.enableHDR();
-
-
-		// Accumulate with moving averaged blending:
-		fx.opacity = 1.0f / (sam + 1.0f);
-		fx.blendFlag = BLENDMODE_ALPHA;
-
-
-		const Texture2D* rts[] = { &rtAccumulation };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
-
-		ViewPort vp;
-		vp.Width = (float)rts[0]->GetDesc().Width;
-		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
-
-		wiImage::Draw(&traceResult, fx, threadID);
-
-		wiProfiler::EndRange(threadID); // Traced Scene
-	}
+	RenderPath2D::Render();
 }
 
 void RenderPath3D_PathTracing::Compose()
@@ -173,5 +158,3 @@ void RenderPath3D_PathTracing::Compose()
 
 	RenderPath2D::Compose();
 }
-
-

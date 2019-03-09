@@ -14,16 +14,9 @@ protected:
 
 	void ResizeBuffers() override;
 
-	void RenderFrameSetUp(GRAPHICSTHREAD threadID) override;
-	void RenderScene(GRAPHICSTHREAD threadID) override;
-
 public:
-
 	const wiGraphics::Texture2D* GetDepthBuffer() override { return nullptr; };
 
-	void Initialize() override;
-	void Load() override;
-	void Start() override;
 	void Update(float dt) override;
 	void Render() override;
 	void Compose() override;

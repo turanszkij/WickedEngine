@@ -12,12 +12,7 @@ protected:
 
 	void ResizeBuffers() override;
 
-	void RenderScene(GRAPHICSTHREAD threadID) override;
 public:
-
-	void Initialize() override;
-	void Load() override;
-	void Start() override;
 	void Render() override;
 };
 

@@ -73,62 +73,73 @@ protected:
 
 	void ResizeBuffers() override;
 
-	virtual void RenderLinearDepth(GRAPHICSTHREAD threadID);
-	virtual void RenderSSAO(GRAPHICSTHREAD threadID);
-	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID);
+	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID) const;
+	virtual void RenderReflections(GRAPHICSTHREAD threadID) const;
+	virtual void RenderShadows(GRAPHICSTHREAD threadID) const;
 
-	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID);
-	virtual void RenderReflections(GRAPHICSTHREAD threadID);
-	virtual void RenderShadows(GRAPHICSTHREAD threadID);
-	virtual void RenderScene(GRAPHICSTHREAD threadID) = 0;
-	virtual void RenderSecondaryScene(const wiGraphics::Texture2D& mainRT, const wiGraphics::Texture2D& shadedSceneRT, GRAPHICSTHREAD threadID);
-	virtual void RenderTransparentScene(const wiGraphics::Texture2D& refractionRT, GRAPHICSTHREAD threadID);
-	virtual void RenderComposition(const wiGraphics::Texture2D& shadedSceneRT, const wiGraphics::Texture2D& mainRT0, const wiGraphics::Texture2D& mainRT1, GRAPHICSTHREAD threadID);
-	virtual void RenderColorGradedComposition();
+	virtual void RenderLinearDepth(GRAPHICSTHREAD threadID) const;
+	virtual void RenderSSAO(GRAPHICSTHREAD threadID) const;
+	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void DownsampleDepthBuffer(GRAPHICSTHREAD threadID) const;
+	virtual void RenderOutline(const wiGraphics::Texture2D& dstSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void RenderLightShafts(GRAPHICSTHREAD threadID) const;
+	virtual void RenderVolumetrics(GRAPHICSTHREAD threadID) const;
+	virtual void RenderParticles(bool isDistrortionPass, GRAPHICSTHREAD threadID) const;
+	virtual void RenderWaterRipples(GRAPHICSTHREAD threadID) const;
+	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void RenderTransparents(const wiGraphics::Texture2D& dstSceneRT, RENDERPASS renderPass, GRAPHICSTHREAD threadID) const;
+	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
+	virtual void RenderBloom(const wiGraphics::Texture2D& srcdstSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void RenderMotionBlur(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
+	virtual void ToneMapping(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void SharpenFilter(const wiGraphics::Texture2D& dstSceneRT, const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void RenderDepthOfField(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
+	virtual void RenderFXAA(const wiGraphics::Texture2D& dstSceneRT, const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
+
 public:
 	virtual const wiGraphics::Texture2D* GetDepthBuffer() { return &depthBuffer; }
 
-	inline float getExposure() { return exposure; }
-	inline float getLightShaftQuality(){ return lightShaftQuality; }
-	inline float getBloomThreshold(){ return bloomThreshold; }
-	inline float getParticleDownSample(){ return particleDownSample; }
-	inline float getReflectionQuality(){ return reflectionQuality; }
-	inline float getSSAOQuality(){ return ssaoQuality; }
-	inline float getSSAOBlur(){ return ssaoBlur; }
-	inline float getDepthOfFieldFocus(){ return dofFocus; }
-	inline float getDepthOfFieldStrength(){ return dofStrength; }
-	inline float getSharpenFilterAmount() { return sharpenFilterAmount; }
-	inline float getOutlineThreshold() { return outlineThreshold; }
-	inline float getOutlineThickness() { return outlineThickness; }
-	inline XMFLOAT3 getOutlineColor() { return outlineColor; }
-	inline float getSSAORange() { return ssaoRange; }
-	inline UINT getSSAOSampleCount() { return ssaoSampleCount; }
+	inline float getExposure() const { return exposure; }
+	inline float getLightShaftQuality() const { return lightShaftQuality; }
+	inline float getBloomThreshold() const { return bloomThreshold; }
+	inline float getParticleDownSample() const { return particleDownSample; }
+	inline float getReflectionQuality() const { return reflectionQuality; }
+	inline float getSSAOQuality() const { return ssaoQuality; }
+	inline float getSSAOBlur() const { return ssaoBlur; }
+	inline float getDepthOfFieldFocus() const { return dofFocus; }
+	inline float getDepthOfFieldStrength() const { return dofStrength; }
+	inline float getSharpenFilterAmount() const { return sharpenFilterAmount; }
+	inline float getOutlineThreshold() const { return outlineThreshold; }
+	inline float getOutlineThickness() const { return outlineThickness; }
+	inline XMFLOAT3 getOutlineColor() const { return outlineColor; }
+	inline float getSSAORange() const { return ssaoRange; }
+	inline UINT getSSAOSampleCount() const { return ssaoSampleCount; }
 
-	inline bool getSSAOEnabled(){ return ssaoEnabled; }
-	inline bool getSSREnabled(){ return ssrEnabled; }
-	inline bool getShadowsEnabled(){ return shadowsEnabled; }
-	inline bool getReflectionsEnabled(){ return reflectionsEnabled; }
-	inline bool getFXAAEnabled(){ return fxaaEnabled; }
-	inline bool getBloomEnabled(){ return bloomEnabled; }
-	inline bool getColorGradingEnabled(){ return colorGradingEnabled; }
-	inline bool getEmittedParticlesEnabled(){ return emittedParticlesEnabled; }
-	inline bool getHairParticlesEnabled() { return hairParticlesEnabled; }
-	inline bool getHairParticlesReflectionEnabled() { return hairParticlesReflectionEnabled; }
-	inline bool getVolumeLightsEnabled(){ return volumeLightsEnabled; }
-	inline bool getLightShaftsEnabled(){ return lightShaftsEnabled; }
-	inline bool getLensFlareEnabled(){ return lensFlareEnabled; }
-	inline bool getMotionBlurEnabled(){ return motionBlurEnabled; }
-	inline bool getSSSEnabled(){ return sssEnabled; }
-	inline bool getDepthOfFieldEnabled(){ return depthOfFieldEnabled; }
-	inline bool getStereogramEnabled() { return stereogramEnabled; }
-	inline bool getEyeAdaptionEnabled() { return eyeAdaptionEnabled; }
-	inline bool getTessellationEnabled() { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
-	inline bool getSharpenFilterEnabled() { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
-	inline bool getOutlineEnabled() { return outlineEnabled; }
+	inline bool getSSAOEnabled() const { return ssaoEnabled; }
+	inline bool getSSREnabled() const { return ssrEnabled; }
+	inline bool getShadowsEnabled() const { return shadowsEnabled; }
+	inline bool getReflectionsEnabled() const { return reflectionsEnabled; }
+	inline bool getFXAAEnabled() const { return fxaaEnabled; }
+	inline bool getBloomEnabled() const { return bloomEnabled; }
+	inline bool getColorGradingEnabled() const { return colorGradingEnabled; }
+	inline bool getEmittedParticlesEnabled() const { return emittedParticlesEnabled; }
+	inline bool getHairParticlesEnabled() const { return hairParticlesEnabled; }
+	inline bool getHairParticlesReflectionEnabled() const { return hairParticlesReflectionEnabled; }
+	inline bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
+	inline bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
+	inline bool getLensFlareEnabled() const { return lensFlareEnabled; }
+	inline bool getMotionBlurEnabled() const { return motionBlurEnabled; }
+	inline bool getSSSEnabled() const { return sssEnabled; }
+	inline bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
+	inline bool getStereogramEnabled() const { return stereogramEnabled; }
+	inline bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
+	inline bool getTessellationEnabled() const { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
+	inline bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
+	inline bool getOutlineEnabled() const { return outlineEnabled; }
 
-	inline const wiGraphics::Texture2D* getColorGradingTexture() { return colorGradingTex; }
+	inline const wiGraphics::Texture2D* getColorGradingTexture() const { return colorGradingTex; }
 
-	inline UINT getMSAASampleCount() { return msaaSampleCount; }
+	inline UINT getMSAASampleCount() const { return msaaSampleCount; }
 
 	inline void setExposure(float value) { exposure = value; }
 	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
@@ -170,7 +181,7 @@ public:
 
 	inline void setColorGradingTexture(const wiGraphics::Texture2D* tex) { colorGradingTex = tex; }
 
-	inline void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
+	virtual void setMSAASampleCount(UINT value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
 
 	void Initialize() override;
 	void Load() override;

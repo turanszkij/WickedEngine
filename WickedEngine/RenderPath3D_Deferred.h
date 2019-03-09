@@ -14,16 +14,13 @@ protected:
 
 	void ResizeBuffers() override;
 
-	virtual void RenderSSS(GRAPHICSTHREAD threadID);
-
-	void RenderScene(GRAPHICSTHREAD threadID) override;
-	const wiGraphics::Texture2D& GetFinalRT();
+	virtual void RenderSSS(GRAPHICSTHREAD threadID) const;
+	virtual void RenderDecals(GRAPHICSTHREAD threadID) const;
+	virtual void RenderDeferredComposition(GRAPHICSTHREAD threadID) const;
 
 public:
+	void setMSAASampleCount(UINT value) override { /*disable MSAA for deferred*/ }
 
-	void Initialize() override;
-	void Load() override;
-	void Start() override;
 	void Render() override;
 };
 

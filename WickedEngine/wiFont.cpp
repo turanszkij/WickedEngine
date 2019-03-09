@@ -44,7 +44,7 @@ namespace wiFont_Internal
 
 	atomic_bool initialized = false;
 
-	std::unique_ptr<Texture2D> texture;
+	Texture2D texture;
 
 	struct Glyph
 	{
@@ -436,18 +436,17 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
-			texture.reset(new Texture2D);
-			HRESULT hr = wiTextureHelper::CreateTexture(*texture.get(), bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
+			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 			assert(SUCCEEDED(hr));
 		}
 	}
 
 	// Bind the whole font atlas once for the whole frame:
-	device->BindResource(PS, texture.get(), TEXSLOT_FONTATLAS, threadID);
+	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, threadID);
 }
 Texture2D* wiFont::GetAtlas()
 {
-	return texture.get();
+	return &texture;
 }
 std::string& wiFont::GetFontPath()
 {
