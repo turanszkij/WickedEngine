@@ -154,10 +154,10 @@ wiGPUBVH sceneBVH;
 
 static const int atlasClampBorder = 1;
 
-static std::unique_ptr<Texture2D> decalAtlas;
+static Texture2D decalAtlas;
 static unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedDecals;
 
-std::unique_ptr<Texture2D> globalLightmap;
+Texture2D globalLightmap;
 unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
@@ -7622,11 +7622,10 @@ void ManageDecalAtlas()
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			decalAtlas.reset(new Texture2D);
-			decalAtlas->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+			decalAtlas.RequestIndependentUnorderedAccessResourcesForMIPs(true);
 
-			device->CreateTexture2D(&desc, nullptr, decalAtlas.get());
-
+			device->CreateTexture2D(&desc, nullptr, &decalAtlas);
+			device->SetName(&decalAtlas, "decalAtlas");
 		}
 		else
 		{
@@ -7641,7 +7640,7 @@ void ManageDecalAtlas()
 
 		if (decal.texture != nullptr)
 		{
-			const TextureDesc& desc = decalAtlas->GetDesc();
+			const TextureDesc& desc = decalAtlas.GetDesc();
 
 			rect_xywh rect = packedDecals[decal.texture];
 
@@ -7670,21 +7669,21 @@ void RefreshDecalAtlas(GRAPHICSTHREAD threadID)
 
 	if (repackAtlas_Decal)
 	{
-		for (UINT mip = 0; mip < decalAtlas->GetDesc().MipLevels; ++mip)
+		for (UINT mip = 0; mip < decalAtlas.GetDesc().MipLevels; ++mip)
 		{
 			for (auto& it : packedDecals)
 			{
 				if (mip < it.first->GetDesc().MipLevels)
 				{
-					CopyTexture2D(decalAtlas.get(), mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
+					CopyTexture2D(&decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
 				}
 			}
 		}
 	}
 
-	if (decalAtlas != nullptr)
+	if (decalAtlas.IsValid())
 	{
-		device->BindResource(PS, decalAtlas.get(), TEXSLOT_DECALATLAS, threadID);
+		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
 	}
 }
 
@@ -7809,9 +7808,8 @@ void ManageLightmapAtlas()
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			globalLightmap.reset(new Texture2D);
-			device->CreateTexture2D(&desc, nullptr, globalLightmap.get());
-			device->SetName(globalLightmap.get(), "globalLightmap");
+			device->CreateTexture2D(&desc, nullptr, &globalLightmap);
+			device->SetName(&globalLightmap, "globalLightmap");
 		}
 		else
 		{
@@ -7828,7 +7826,7 @@ void ManageLightmapAtlas()
 
 			if (object.lightmap != nullptr && packedLightmaps.count(object.lightmap.get()) > 0)
 			{
-				const TextureDesc& desc = globalLightmap->GetDesc();
+				const TextureDesc& desc = globalLightmap.GetDesc();
 
 				rect_xywh rect = packedLightmaps.at(object.lightmap.get());
 
@@ -7986,7 +7984,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 					if (object.lightmap != nullptr)
 					{
 						const auto& rec = packedLightmaps.at(object.lightmap.get());
-						CopyTexture2D(globalLightmap.get(), 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
+						CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
 					}
 				}
 			}
@@ -7997,7 +7995,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 				{
 					const ObjectComponent& object = scene.objects[objectIndex];
 					const auto& rec = packedLightmaps.at(object.lightmap.get());
-					CopyTexture2D(globalLightmap.get(), 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
+					CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
 				}
 			}
 			device->EventEnd(threadID);
@@ -8012,11 +8010,11 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 
 const Texture2D* GetGlobalLightmap()
 {
-	if (globalLightmap == nullptr)
+	if (globalLightmap.IsValid())
 	{
 		return wiTextureHelper::getTransparent();
 	}
-	return globalLightmap.get();
+	return &globalLightmap;
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)
