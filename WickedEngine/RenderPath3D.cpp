@@ -109,7 +109,6 @@ void RenderPath3D::ResizeBuffers()
 		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y*getSSAOQuality());
 		device->CreateTexture2D(&desc, nullptr, &rtSSAO[0]);
 		device->CreateTexture2D(&desc, nullptr, &rtSSAO[1]);
-		device->CreateTexture2D(&desc, nullptr, &rtSSAO[2]);
 	}
 	{
 		TextureDesc desc;
@@ -160,8 +159,8 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 
-		desc.Format = wiRenderer::DSFormat_full;
-		desc.BindFlags = BIND_DEPTH_STENCIL;
+		desc.Format = wiRenderer::DSFormat_full_alias;
+		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.SampleDesc.Count = getMSAASampleCount();
 		device->CreateTexture2D(&desc, nullptr, &depthBuffer);
 
@@ -409,7 +408,7 @@ void RenderPath3D::RenderSSAO(GRAPHICSTHREAD threadID) const
 			wiImage::Draw(&rtSSAO[0], fx, threadID);
 		}
 		{
-			const Texture2D* rts[] = { &rtSSAO[2] };
+			const Texture2D* rts[] = { &rtSSAO[0] };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
 
 			ViewPort vp;
@@ -676,7 +675,7 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
 		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
-		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, false, true, getLayerMask());
+		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, getHairParticlesEnabled(), true, getLayerMask());
 
 		wiProfiler::EndRange(threadID); // Transparent Scene
 	}
@@ -730,7 +729,7 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 		wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
 		fx.enableHDR();
 		fx.blendFlag = BLENDMODE_OPAQUE;
-		int current = device->GetFrameCount() % 2 == 0 ? 0 : 1;
+		int current = device->GetFrameCount() % 2;
 		int history = 1 - current;
 		{
 			const Texture2D* rts[] = { &rtTemporalAA[current] };

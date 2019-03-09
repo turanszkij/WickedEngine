@@ -99,7 +99,7 @@ void RenderPath3D_Deferred::Render() const
 			device->BindViewports(1, &vp, threadID);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true, getLayerMask());
 
 			wiProfiler::EndRange(threadID); // Opaque Scene
@@ -137,7 +137,7 @@ void RenderPath3D_Deferred::Render() const
 			vp.Height = (float)rts[0]->GetDesc().Height;
 			device->BindViewports(1, &vp, threadID);
 
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERABLECOMPONENT_SSAO, threadID);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_SSR, threadID);
 			wiRenderer::DrawLights(wiRenderer::GetCamera(), threadID);
 		}
@@ -305,7 +305,7 @@ void RenderPath3D_Deferred::RenderDeferredComposition(GRAPHICSTHREAD threadID) c
 
 	wiImage::DrawDeferred((getSSSEnabled() ? &rtSSS[0] : &lightbuffer_diffuse),
 		&lightbuffer_specular
-		, getSSAOEnabled() ? &rtSSAO[2] : wiTextureHelper::getWhite()
+		, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite()
 		, threadID, STENCILREF_DEFAULT);
 	wiRenderer::DrawSky(threadID);
 }

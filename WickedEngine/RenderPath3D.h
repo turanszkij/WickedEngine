@@ -62,7 +62,7 @@ protected:
 	wiGraphics::Texture2D rtDof[3];
 	wiGraphics::Texture2D rtTemporalAA[2];
 	wiGraphics::Texture2D rtBloom;
-	wiGraphics::Texture2D rtSSAO[3];
+	wiGraphics::Texture2D rtSSAO[2];
 	wiGraphics::Texture2D rtSun[2];
 	wiGraphics::Texture2D rtSun_resolved;
 
