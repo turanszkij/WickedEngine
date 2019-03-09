@@ -14,10 +14,10 @@ namespace wiGPUSortLib
 	//	indexBuffer_write		-	The index list which to sort. Contains index values which can index the sortBase_read buffer. This will be modified (Read + Write)
 	void Sort(
 		UINT maxCount, 
-		const wiGraphicsTypes::GPUBuffer& comparisonBuffer_read, 
-		const wiGraphicsTypes::GPUBuffer& counterBuffer_read, 
+		const wiGraphics::GPUBuffer& comparisonBuffer_read, 
+		const wiGraphics::GPUBuffer& counterBuffer_read, 
 		UINT counterReadOffset, 
-		const wiGraphicsTypes::GPUBuffer& indexBuffer_write,
+		const wiGraphics::GPUBuffer& indexBuffer_write,
 		GRAPHICSTHREAD threadID
 	);
 

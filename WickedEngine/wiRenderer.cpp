@@ -5,8 +5,6 @@
 #include "wiSprite.h"
 #include "wiSceneSystem.h"
 #include "wiIntersect.h"
-#include "wiRenderTarget.h"
-#include "wiDepthTarget.h"
 #include "wiHelper.h"
 #include "wiMath.h"
 #include "wiLensFlare.h"
@@ -32,7 +30,6 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 
-#include <memory>
 #include <algorithm>
 #include <unordered_set>
 #include <deque>
@@ -40,7 +37,7 @@
 #include <DirectXCollision.h>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 using namespace wiECS;
 using namespace wiAllocators;
@@ -157,10 +154,10 @@ wiGPUBVH sceneBVH;
 
 static const int atlasClampBorder = 1;
 
-static std::unique_ptr<Texture2D> decalAtlas;
+static Texture2D decalAtlas;
 static unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedDecals;
 
-std::unique_ptr<Texture2D> globalLightmap;
+Texture2D globalLightmap;
 unordered_map<const Texture2D*, wiRectPacker::rect_xywh> packedLightmaps;
 
 
@@ -5616,13 +5613,11 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			gridVertexCount = ARRAYSIZE(verts) / 2;
 
 			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_IMMUTABLE;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = 0;
 			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
 			grid = new GPUBuffer;
 			device->CreateBuffer(&bd, &InitData, grid);
@@ -6362,7 +6357,6 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
 		TextureDesc desc;
-		ZeroMemory(&desc, sizeof(desc));
 		desc.Width = voxelSceneData.res;
 		desc.Height = voxelSceneData.res;
 		desc.Depth = voxelSceneData.res;
@@ -7616,7 +7610,6 @@ void ManageDecalAtlas()
 			assert(bins.size() == 1 && "The regions won't fit into the texture!");
 
 			TextureDesc desc;
-			ZeroMemory(&desc, sizeof(desc));
 			desc.Width = (UINT)bins[0].size.w;
 			desc.Height = (UINT)bins[0].size.h;
 			desc.MipLevels = 0;
@@ -7629,11 +7622,10 @@ void ManageDecalAtlas()
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			decalAtlas.reset(new Texture2D);
-			decalAtlas->RequestIndependentUnorderedAccessResourcesForMIPs(true);
+			decalAtlas.RequestIndependentUnorderedAccessResourcesForMIPs(true);
 
-			device->CreateTexture2D(&desc, nullptr, decalAtlas.get());
-
+			device->CreateTexture2D(&desc, nullptr, &decalAtlas);
+			device->SetName(&decalAtlas, "decalAtlas");
 		}
 		else
 		{
@@ -7648,7 +7640,7 @@ void ManageDecalAtlas()
 
 		if (decal.texture != nullptr)
 		{
-			const TextureDesc& desc = decalAtlas->GetDesc();
+			const TextureDesc& desc = decalAtlas.GetDesc();
 
 			rect_xywh rect = packedDecals[decal.texture];
 
@@ -7677,21 +7669,21 @@ void RefreshDecalAtlas(GRAPHICSTHREAD threadID)
 
 	if (repackAtlas_Decal)
 	{
-		for (UINT mip = 0; mip < decalAtlas->GetDesc().MipLevels; ++mip)
+		for (UINT mip = 0; mip < decalAtlas.GetDesc().MipLevels; ++mip)
 		{
 			for (auto& it : packedDecals)
 			{
 				if (mip < it.first->GetDesc().MipLevels)
 				{
-					CopyTexture2D(decalAtlas.get(), mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
+					CopyTexture2D(&decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
 				}
 			}
 		}
 	}
 
-	if (decalAtlas != nullptr)
+	if (decalAtlas.IsValid())
 	{
-		device->BindResource(PS, decalAtlas.get(), TEXSLOT_DECALATLAS, threadID);
+		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
 	}
 }
 
@@ -7816,9 +7808,8 @@ void ManageLightmapAtlas()
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			globalLightmap.reset(new Texture2D);
-			device->CreateTexture2D(&desc, nullptr, globalLightmap.get());
-			device->SetName(globalLightmap.get(), "globalLightmap");
+			device->CreateTexture2D(&desc, nullptr, &globalLightmap);
+			device->SetName(&globalLightmap, "globalLightmap");
 		}
 		else
 		{
@@ -7835,7 +7826,7 @@ void ManageLightmapAtlas()
 
 			if (object.lightmap != nullptr && packedLightmaps.count(object.lightmap.get()) > 0)
 			{
-				const TextureDesc& desc = globalLightmap->GetDesc();
+				const TextureDesc& desc = globalLightmap.GetDesc();
 
 				rect_xywh rect = packedLightmaps.at(object.lightmap.get());
 
@@ -7993,7 +7984,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 					if (object.lightmap != nullptr)
 					{
 						const auto& rec = packedLightmaps.at(object.lightmap.get());
-						CopyTexture2D(globalLightmap.get(), 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
+						CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
 					}
 				}
 			}
@@ -8004,7 +7995,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 				{
 					const ObjectComponent& object = scene.objects[objectIndex];
 					const auto& rec = packedLightmaps.at(object.lightmap.get());
-					CopyTexture2D(globalLightmap.get(), 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
+					CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
 				}
 			}
 			device->EventEnd(threadID);
@@ -8019,11 +8010,11 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 
 const Texture2D* GetGlobalLightmap()
 {
-	if (globalLightmap == nullptr)
+	if (globalLightmap.IsValid())
 	{
 		return wiTextureHelper::getTransparent();
 	}
-	return globalLightmap.get();
+	return &globalLightmap;
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)
@@ -8634,18 +8625,20 @@ float GetSpecularAAParam() { return SPECULARAA; }
 void SetAdvancedRefractionsEnabled(bool value) { advancedRefractions = value; }
 bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
-void SetEnvironmentMap(wiGraphicsTypes::Texture2D* tex) { enviroMap = tex; }
+void SetEnvironmentMap(wiGraphics::Texture2D* tex) { enviroMap = tex; }
 const Texture2D* GetEnvironmentMap() { return enviroMap; }
 void SetGameSpeed(float value) { GameSpeed = max(0, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetOceanEnabled(bool enabled)
 {
-	ocean.reset(nullptr);
-
 	if (enabled)
 	{
 		const Scene& scene = GetScene();
 		ocean.reset(new wiOcean(scene.weather));
+	}
+	else
+	{
+		ocean.reset();
 	}
 }
 bool GetOceanEnabled() { return ocean != nullptr; }

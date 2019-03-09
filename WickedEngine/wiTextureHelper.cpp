@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiTextureHelper
 {
@@ -20,8 +20,8 @@ namespace wiTextureHelper
 		HELPERTEXTURE_BLACKCUBEMAP,
 		HELPERTEXTURE_COUNT
 	};
-	wiGraphicsTypes::Texture2D helperTextures[HELPERTEXTURE_COUNT] = {};
-	std::unordered_map<unsigned long, wiGraphicsTypes::Texture2D*> colorTextures;
+	wiGraphics::Texture2D helperTextures[HELPERTEXTURE_COUNT] = {};
+	std::unordered_map<unsigned long, wiGraphics::Texture2D*> colorTextures;
 	wiSpinLock colorlock;
 
 	void Initialize()
@@ -192,7 +192,7 @@ namespace wiTextureHelper
 	}
 
 
-	HRESULT CreateTexture(wiGraphicsTypes::Texture2D& texture, const uint8_t* data, UINT width, UINT height, FORMAT format)
+	HRESULT CreateTexture(wiGraphics::Texture2D& texture, const uint8_t* data, UINT width, UINT height, FORMAT format)
 	{
 		if (data == nullptr)
 		{

@@ -2,7 +2,6 @@
 #include "CommonInclude.h"
 #include "wiEnums.h"
 #include "wiIntersect.h"
-#include "wiRenderTarget.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "ShaderInterop_Renderer.h"
@@ -136,12 +135,12 @@ namespace wiSceneSystem
 		std::string emissiveMapName;
 
 		// Non-serialized attributes:
-		const wiGraphicsTypes::Texture2D* baseColorMap = nullptr;
-		const wiGraphicsTypes::Texture2D* surfaceMap = nullptr;
-		const wiGraphicsTypes::Texture2D* normalMap = nullptr;
-		const wiGraphicsTypes::Texture2D* displacementMap = nullptr;
-		const wiGraphicsTypes::Texture2D* emissiveMap = nullptr;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer> constantBuffer;
+		const wiGraphics::Texture2D* baseColorMap = nullptr;
+		const wiGraphics::Texture2D* surfaceMap = nullptr;
+		const wiGraphics::Texture2D* normalMap = nullptr;
+		const wiGraphics::Texture2D* displacementMap = nullptr;
+		const wiGraphics::Texture2D* emissiveMap = nullptr;
+		std::unique_ptr<wiGraphics::GPUBuffer> constantBuffer;
 
 		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
 
@@ -155,11 +154,11 @@ namespace wiSceneSystem
 			return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 		}
 
-		const wiGraphicsTypes::Texture2D* GetBaseColorMap() const;
-		const wiGraphicsTypes::Texture2D* GetNormalMap() const;
-		const wiGraphicsTypes::Texture2D* GetSurfaceMap() const;
-		const wiGraphicsTypes::Texture2D* GetDisplacementMap() const;
-		const wiGraphicsTypes::Texture2D* GetEmissiveMap() const;
+		const wiGraphics::Texture2D* GetBaseColorMap() const;
+		const wiGraphics::Texture2D* GetNormalMap() const;
+		const wiGraphics::Texture2D* GetSurfaceMap() const;
+		const wiGraphics::Texture2D* GetDisplacementMap() const;
+		const wiGraphics::Texture2D* GetEmissiveMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -232,14 +231,14 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 		AABB aabb;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	indexBuffer;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_POS;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_TEX;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_BON;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_COL;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_ATL;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	vertexBuffer_PRE;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer>	streamoutBuffer_POS;
+		std::unique_ptr<wiGraphics::GPUBuffer>	indexBuffer;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_POS;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_TEX;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_BON;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_COL;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_ATL;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_PRE;
+		std::unique_ptr<wiGraphics::GPUBuffer>	streamoutBuffer_POS;
 
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
@@ -251,7 +250,7 @@ namespace wiSceneSystem
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wiGraphicsTypes::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphicsTypes::INDEXFORMAT_32BIT : wiGraphicsTypes::INDEXFORMAT_16BIT; }
+		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
 
 		void CreateRenderData();
@@ -318,7 +317,7 @@ namespace wiSceneSystem
 				return (normal_subsetIndex >> 24) & 0x000000FF;
 			}
 
-			static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R32G32B32A32_FLOAT;
+			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R32G32B32A32_FLOAT;
 		};
 		struct Vertex_TEX
 		{
@@ -329,7 +328,7 @@ namespace wiSceneSystem
 				tex = XMHALF2(texcoords.x, texcoords.y);
 			}
 
-			static const wiGraphicsTypes::FORMAT FORMAT = wiGraphicsTypes::FORMAT::FORMAT_R16G16_FLOAT;
+			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R16G16_FLOAT;
 		};
 		struct Vertex_BON
 		{
@@ -425,7 +424,7 @@ namespace wiSceneSystem
 		// Non-serialized attributes:
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-		std::unique_ptr<wiGraphicsTypes::Texture2D> lightmap;
+		std::unique_ptr<wiGraphics::Texture2D> lightmap;
 		uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
@@ -469,7 +468,7 @@ namespace wiSceneSystem
 
 		void ClearLightmap();
 		void SaveLightmap();
-		wiGraphicsTypes::FORMAT GetLightmapFormat();
+		wiGraphics::FORMAT GetLightmapFormat();
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -583,7 +582,7 @@ namespace wiSceneSystem
 			ALIGN_16
 		};
 		std::vector<ShaderBoneType> boneData;
-		std::unique_ptr<wiGraphicsTypes::GPUBuffer> boneBuffer;
+		std::unique_ptr<wiGraphics::GPUBuffer> boneBuffer;
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -632,7 +631,7 @@ namespace wiSceneSystem
 		XMFLOAT3 right;
 		int shadowMap_index = -1;
 
-		std::vector<const wiGraphicsTypes::Texture2D*> lensFlareRimTextures;
+		std::vector<const wiGraphics::Texture2D*> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -779,8 +778,8 @@ namespace wiSceneSystem
 		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
-		const wiGraphicsTypes::Texture2D* texture = nullptr;
-		const wiGraphicsTypes::Texture2D* normal = nullptr;
+		const wiGraphics::Texture2D* texture = nullptr;
+		const wiGraphics::Texture2D* normal = nullptr;
 
 		inline float GetOpacity() const { return color.w; }
 

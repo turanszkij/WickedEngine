@@ -7,20 +7,12 @@ class RenderPath3D_Forward :
 {
 protected:
 
-	static wiRenderTarget rtMain;
+	wiGraphics::Texture2D rtMain[2];
+	wiGraphics::Texture2D rtMain_resolved[2];
 
 	void ResizeBuffers() override;
 
-	void RenderScene(GRAPHICSTHREAD threadID) override;
 public:
-	RenderPath3D_Forward();
-	virtual ~RenderPath3D_Forward();
-
-	const wiDepthTarget* GetDepthBuffer() override;
-
-	void Initialize() override;
-	void Load() override;
-	void Start() override;
-	void Render() override;
+	void Render() const override;
 };
 

@@ -14,7 +14,7 @@
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #pragma comment(lib,"vulkan-1.lib")
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 
 

@@ -6,7 +6,7 @@
 #include "wiBackLog.h"
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 
 namespace wiOcean_Internal
@@ -238,7 +238,7 @@ void wiOcean::initHeightMap(const WeatherComponent& weather, XMFLOAT2* out_h0, f
 	}
 }
 
-void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID)
+void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const
 {
 	auto& params = weather.oceanParameters;
 
@@ -251,13 +251,13 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	device->BindComputePSO(&CPSO_updateSpectrum, threadID);
 
 	// Buffers
-	GPUResource* cs0_srvs[2] = { 
+	const GPUResource* cs0_srvs[2] = { 
 		&m_pBuffer_Float2_H0, 
 		&m_pBuffer_Float_Omega
 	};
 	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), threadID);
 
-	GPUResource* cs0_uavs[1] = { &m_pBuffer_Float2_Ht };
+	const GPUResource* cs0_uavs[1] = { &m_pBuffer_Float2_Ht };
 	device->BindUAVs(CS, cs0_uavs, 0, ARRAYSIZE(cs0_uavs), threadID);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
@@ -290,9 +290,9 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 
 	// Update displacement map:
 	device->BindComputePSO(&CPSO_updateDisplacementMap, threadID);
-	GPUResource* cs_uavs[] = { &m_pDisplacementMap };
+	const GPUResource* cs_uavs[] = { &m_pDisplacementMap };
 	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
-	GPUResource* cs_srvs[1] = { &m_pBuffer_Float_Dxyz };
+	const GPUResource* cs_srvs[1] = { &m_pBuffer_Float_Dxyz };
 	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
 	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
@@ -317,7 +317,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 }
 
 
-void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID)
+void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const
 {
 	auto& params = weather.oceanParameters;
 
@@ -469,12 +469,12 @@ void wiOcean::Initialize()
 	wiBackLog::post("wiOcean Initialized");
 }
 
-Texture2D* wiOcean::getDisplacementMap()
+const Texture2D* wiOcean::getDisplacementMap() const
 {
 	return &m_pDisplacementMap;
 }
 
-Texture2D* wiOcean::getGradientMap()
+const Texture2D* wiOcean::getGradientMap() const
 {
 	return &m_pGradientMap;
 }

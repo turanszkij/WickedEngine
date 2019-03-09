@@ -11,7 +11,7 @@
 #include <atomic>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiImage
 {
@@ -624,7 +624,6 @@ namespace wiImage
 
 
 		BlendStateDesc bd;
-		ZeroMemory(&bd, sizeof(bd));
 		bd.RenderTarget[0].BlendEnable = true;
 		bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -636,7 +635,6 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ALPHA]);
 
-		ZeroMemory(&bd, sizeof(bd));
 		bd.RenderTarget[0].BlendEnable = true;
 		bd.RenderTarget[0].SrcBlend = BLEND_ONE;
 		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
@@ -648,13 +646,11 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_PREMULTIPLIED]);
 
-		ZeroMemory(&bd, sizeof(bd));
 		bd.RenderTarget[0].BlendEnable = false;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_OPAQUE]);
 
-		ZeroMemory(&bd, sizeof(bd));
 		bd.RenderTarget[0].BlendEnable = true;
 		bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 		bd.RenderTarget[0].DestBlend = BLEND_ONE;
@@ -666,7 +662,6 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		device->CreateBlendState(&bd, &blendStates[BLENDMODE_ADDITIVE]);
 
-		ZeroMemory(&bd, sizeof(bd));
 		bd.RenderTarget[0].BlendEnable = false;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_DISABLE;
 		bd.IndependentBlendEnable = false;

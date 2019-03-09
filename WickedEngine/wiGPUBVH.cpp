@@ -11,7 +11,7 @@
 #include <set>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 using namespace wiECS;
 
@@ -29,14 +29,6 @@ static const ComputeShader* computeShaders[CSTYPE_BVH_COUNT] = {};
 static ComputePSO CPSO[CSTYPE_BVH_COUNT];
 
 static GPUBuffer constantBuffer;
-
-wiGPUBVH::wiGPUBVH()
-{
-
-}
-wiGPUBVH::~wiGPUBVH()
-{
-}
 
 //#define BVH_VALIDATE // slow but great for debug!
 void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
@@ -475,11 +467,11 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 	wiProfiler::EndRange(threadID); // BVH rebuild
 }
-void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
+void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	GPUResource* res[] = {
+	const GPUResource* res[] = {
 		&triangleBuffer,
 		&clusterCounterBuffer,
 		&clusterIndexBuffer,

@@ -5,15 +5,15 @@
 #include "wiMath.h"
 #include "ShaderInterop_Renderer.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiSceneSystem;
 
 GraphicsPSO* pso_solidpart = nullptr;
 GraphicsPSO* pso_wirepart = nullptr;
-wiGraphicsTypes::GPUBuffer* vertexBuffer_Axis = nullptr;
-wiGraphicsTypes::GPUBuffer* vertexBuffer_Plane = nullptr;
-wiGraphicsTypes::GPUBuffer* vertexBuffer_Origin = nullptr;
+std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Axis;
+std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Plane;
+std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Origin;
 UINT vertexCount_Axis = 0;
 UINT vertexCount_Plane = 0;
 UINT vertexCount_Origin = 0;
@@ -92,16 +92,16 @@ Translator::Translator()
 			vertexCount_Axis = ARRAYSIZE(verts) / 2;
 
 			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = 0;
+
 			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
-			vertexBuffer_Axis = new GPUBuffer;
-			device->CreateBuffer(&bd, &InitData, vertexBuffer_Axis);
+
+			vertexBuffer_Axis.reset(new GPUBuffer);
+			device->CreateBuffer(&bd, &InitData, vertexBuffer_Axis.get());
 		}
 	}
 
@@ -120,16 +120,15 @@ Translator::Translator()
 			vertexCount_Plane = ARRAYSIZE(verts) / 2;
 
 			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = 0;
+
 			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
-			vertexBuffer_Plane = new GPUBuffer;
-			device->CreateBuffer(&bd, &InitData, vertexBuffer_Plane);
+			vertexBuffer_Plane.reset(new GPUBuffer);
+			device->CreateBuffer(&bd, &InitData, vertexBuffer_Plane.get());
 		}
 	}
 
@@ -178,16 +177,15 @@ Translator::Translator()
 			vertexCount_Origin = ARRAYSIZE(verts) / 2;
 
 			GPUBufferDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = 0;
+
 			SubresourceData InitData;
-			ZeroMemory(&InitData, sizeof(InitData));
 			InitData.pSysMem = verts;
-			vertexBuffer_Origin = new GPUBuffer;
-			device->CreateBuffer(&bd, &InitData, vertexBuffer_Origin);
+			vertexBuffer_Origin.reset(new GPUBuffer);
+			device->CreateBuffer(&bd, &InitData, vertexBuffer_Origin.get());
 		}
 	}
 }
@@ -433,7 +431,7 @@ void Translator::Update()
 
 	prevPointer = pointer;
 }
-void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) const
 {
 	Scene& scene = wiRenderer::GetScene();
 
@@ -460,8 +458,8 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	// Planes:
 	{
 		device->BindGraphicsPSO(pso_solidpart, threadID);
-		GPUBuffer* vbs[] = {
-			vertexBuffer_Plane,
+		const GPUBuffer* vbs[] = {
+			vertexBuffer_Plane.get(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -490,8 +488,8 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	// Lines:
 	{
 		device->BindGraphicsPSO(pso_wirepart, threadID);
-		GPUBuffer* vbs[] = {
-			vertexBuffer_Axis,
+		const GPUBuffer* vbs[] = {
+			vertexBuffer_Axis.get(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -520,8 +518,8 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	// Origin:
 	{
 		device->BindGraphicsPSO(pso_solidpart, threadID);
-		GPUBuffer* vbs[] = {
-			vertexBuffer_Origin,
+		const GPUBuffer* vbs[] = {
+			vertexBuffer_Origin.get(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),

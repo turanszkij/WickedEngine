@@ -13,7 +13,7 @@
 #include "wiBackLog.h"
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiSceneSystem
 {
@@ -161,9 +161,9 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_DRAWINDIRECT_ARGS;
 	bd.ByteWidth = 
-		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
-		sizeof(wiGraphicsTypes::IndirectDispatchArgs) + 
-		sizeof(wiGraphicsTypes::IndirectDrawArgsInstanced);
+		sizeof(wiGraphics::IndirectDispatchArgs) + 
+		sizeof(wiGraphics::IndirectDispatchArgs) + 
+		sizeof(wiGraphics::IndirectDrawArgsInstanced);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers.get());
 
 	// Constant buffer:

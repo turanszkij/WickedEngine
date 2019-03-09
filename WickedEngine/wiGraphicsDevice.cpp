@@ -1,24 +1,24 @@
 #include "wiGraphicsDevice.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 {
 	switch (capability)
 	{
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
 		return TESSELLATION;
 		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
 		return MULTITHREADED_RENDERING;
 		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
 		return CONSERVATIVE_RASTERIZATION;
 		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
 		return RASTERIZER_ORDERED_VIEWS;
 		break;
-	case wiGraphicsTypes::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT:
+	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT:
 		return UNORDEREDACCESSTEXTURE_LOAD_EXT;
 		break;
 	default:

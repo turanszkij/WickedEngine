@@ -10,43 +10,43 @@ struct RAY;
 namespace wiRenderer
 {
 	// Common render target formats:
-	static const wiGraphicsTypes::FORMAT RTFormat_ldr = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_hdr = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_0 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_1 = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_gbuffer_2 = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_deferred_lightbuffer = wiGraphicsTypes::FORMAT_R11G11B10_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_lineardepth = wiGraphicsTypes::FORMAT_R16_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_ssao = wiGraphicsTypes::FORMAT_R8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_waterripple = wiGraphicsTypes::FORMAT_R8G8B8A8_SNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_normalmaps = wiGraphicsTypes::FORMAT_R8G8B8A8_SNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_depthresolve = wiGraphicsTypes::FORMAT_R32_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_voxelradiance = wiGraphicsTypes::FORMAT_R16G16B16A16_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_envprobe = wiGraphicsTypes::FORMAT_R11G11B10_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_impostor = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM;
-	static const wiGraphicsTypes::FORMAT RTFormat_lightmap_object = wiGraphicsTypes::FORMAT_R32G32B32A32_FLOAT;
-	static const wiGraphicsTypes::FORMAT RTFormat_lightmap_global = wiGraphicsTypes::FORMAT_R11G11B10_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_ldr = wiGraphics::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphics::FORMAT RTFormat_hdr = wiGraphics::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_gbuffer_0 = wiGraphics::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphics::FORMAT RTFormat_gbuffer_1 = wiGraphics::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_gbuffer_2 = wiGraphics::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphics::FORMAT RTFormat_deferred_lightbuffer = wiGraphics::FORMAT_R11G11B10_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_lineardepth = wiGraphics::FORMAT_R16_UNORM;
+	static const wiGraphics::FORMAT RTFormat_ssao = wiGraphics::FORMAT_R8_UNORM;
+	static const wiGraphics::FORMAT RTFormat_waterripple = wiGraphics::FORMAT_R8G8B8A8_SNORM;
+	static const wiGraphics::FORMAT RTFormat_normalmaps = wiGraphics::FORMAT_R8G8B8A8_SNORM;
+	static const wiGraphics::FORMAT RTFormat_depthresolve = wiGraphics::FORMAT_R32_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_voxelradiance = wiGraphics::FORMAT_R16G16B16A16_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_envprobe = wiGraphics::FORMAT_R11G11B10_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_impostor = wiGraphics::FORMAT_R8G8B8A8_UNORM;
+	static const wiGraphics::FORMAT RTFormat_lightmap_object = wiGraphics::FORMAT_R32G32B32A32_FLOAT;
+	static const wiGraphics::FORMAT RTFormat_lightmap_global = wiGraphics::FORMAT_R11G11B10_FLOAT;
 
-	static const wiGraphicsTypes::FORMAT DSFormat_full = wiGraphicsTypes::FORMAT_D32_FLOAT_S8X24_UINT;
-	static const wiGraphicsTypes::FORMAT DSFormat_full_alias = wiGraphicsTypes::FORMAT_R32G8X24_TYPELESS;
-	static const wiGraphicsTypes::FORMAT DSFormat_small = wiGraphicsTypes::FORMAT_D16_UNORM;
-	static const wiGraphicsTypes::FORMAT DSFormat_small_alias = wiGraphicsTypes::FORMAT_R16_TYPELESS;
+	static const wiGraphics::FORMAT DSFormat_full = wiGraphics::FORMAT_D32_FLOAT_S8X24_UINT;
+	static const wiGraphics::FORMAT DSFormat_full_alias = wiGraphics::FORMAT_R32G8X24_TYPELESS;
+	static const wiGraphics::FORMAT DSFormat_small = wiGraphics::FORMAT_D16_UNORM;
+	static const wiGraphics::FORMAT DSFormat_small_alias = wiGraphics::FORMAT_R16_TYPELESS;
 
-	const wiGraphicsTypes::Sampler* GetSampler(int slot);
-	const wiGraphicsTypes::VertexShader* GetVertexShader(VSTYPES id);
-	const wiGraphicsTypes::HullShader* GetHullShader(VSTYPES id);
-	const wiGraphicsTypes::DomainShader* GetDomainShader(VSTYPES id);
-	const wiGraphicsTypes::GeometryShader* GetGeometryShader(VSTYPES id);
-	const wiGraphicsTypes::PixelShader* GetPixelShader(PSTYPES id);
-	const wiGraphicsTypes::ComputeShader* GetComputeShader(PSTYPES id);
-	const wiGraphicsTypes::VertexLayout* GetVertexLayout(VLTYPES id);
-	const wiGraphicsTypes::RasterizerState* GetRasterizerState(RSTYPES id);
-	const wiGraphicsTypes::DepthStencilState* GetDepthStencilState(DSSTYPES id);
-	const wiGraphicsTypes::BlendState* GetBlendState(BSTYPES id);
-	const wiGraphicsTypes::GPUBuffer* GetConstantBuffer(CBTYPES id);
-	const wiGraphicsTypes::Texture* GetTexture(TEXTYPES id);
+	const wiGraphics::Sampler* GetSampler(int slot);
+	const wiGraphics::VertexShader* GetVertexShader(VSTYPES id);
+	const wiGraphics::HullShader* GetHullShader(VSTYPES id);
+	const wiGraphics::DomainShader* GetDomainShader(VSTYPES id);
+	const wiGraphics::GeometryShader* GetGeometryShader(VSTYPES id);
+	const wiGraphics::PixelShader* GetPixelShader(PSTYPES id);
+	const wiGraphics::ComputeShader* GetComputeShader(PSTYPES id);
+	const wiGraphics::VertexLayout* GetVertexLayout(VLTYPES id);
+	const wiGraphics::RasterizerState* GetRasterizerState(RSTYPES id);
+	const wiGraphics::DepthStencilState* GetDepthStencilState(DSSTYPES id);
+	const wiGraphics::BlendState* GetBlendState(BSTYPES id);
+	const wiGraphics::GPUBuffer* GetConstantBuffer(CBTYPES id);
+	const wiGraphics::Texture* GetTexture(TEXTYPES id);
 
-	void ModifySampler(const wiGraphicsTypes::SamplerDesc& desc, int slot);
+	void ModifySampler(const wiGraphics::SamplerDesc& desc, int slot);
 
 
 	void Initialize();
@@ -57,9 +57,9 @@ namespace wiRenderer
 	void ClearWorld();
 
 	// Set the main graphics device globally:
-	void SetDevice(wiGraphicsTypes::GraphicsDevice* newDevice);
+	void SetDevice(wiGraphics::GraphicsDevice* newDevice);
 	// Retrieve the main graphics device:
-	wiGraphicsTypes::GraphicsDevice* GetDevice();
+	wiGraphics::GraphicsDevice* GetDevice();
 
 	// Returns the shader path that you can also modify
 	std::string& GetShaderPath();
@@ -94,14 +94,14 @@ namespace wiRenderer
 	inline void ResetAlphaRef(GRAPHICSTHREAD threadID) { SetAlphaRef(0.75f, threadID); }
 	// Binds the gbuffer textures that will be used in deferred rendering, or thin gbuffer in case of forward rendering
 	void BindGBufferTextures(
-		const wiGraphicsTypes::Texture2D* slot0, 
-		const wiGraphicsTypes::Texture2D* slot1, 
-		const wiGraphicsTypes::Texture2D* slot2, 
+		const wiGraphics::Texture2D* slot0, 
+		const wiGraphics::Texture2D* slot1, 
+		const wiGraphics::Texture2D* slot2, 
 		GRAPHICSTHREAD threadID);
 	// Binds the hardware depth buffer and a linear depth buffer to be read by shaders
 	void BindDepthTextures(
-		const wiGraphicsTypes::Texture2D* depth, 
-		const wiGraphicsTypes::Texture2D* linearDepth, 
+		const wiGraphics::Texture2D* depth, 
+		const wiGraphics::Texture2D* linearDepth, 
 		GRAPHICSTHREAD threadID);
 
 	// Draw skydome centered to camera. Its color will be either dynamically computed, or the global environment map will be used if you called SetEnvironmentMap()
@@ -141,14 +141,14 @@ namespace wiRenderer
 	// Compute light grid tiles for tiled rendering paths
 	//	If you specify lightbuffers (diffuse, specular), then a tiled deferred lighting will be computed as well. Otherwise, only the light grid gets computed
 	void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, 
-		const wiGraphicsTypes::Texture2D* lightbuffer_diffuse = nullptr, 
-		const wiGraphicsTypes::Texture2D* lightbuffer_specular = nullptr);
+		const wiGraphics::Texture2D* lightbuffer_diffuse = nullptr, 
+		const wiGraphics::Texture2D* lightbuffer_specular = nullptr);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
-	void ResolveMSAADepthBuffer(const wiGraphicsTypes::Texture2D* dst, const wiGraphicsTypes::Texture2D* src, GRAPHICSTHREAD threadID);
+	void ResolveMSAADepthBuffer(const wiGraphics::Texture2D* dst, const wiGraphics::Texture2D* src, GRAPHICSTHREAD threadID);
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(GRAPHICSTHREAD threadID);
 	// Render the scene with ray tracing only
-	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, const wiGraphicsTypes::Texture2D* result, GRAPHICSTHREAD threadID);
+	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, const wiGraphics::Texture2D* result, GRAPHICSTHREAD threadID);
 	// Render the scene BVH with ray tracing
 	void DrawTracedSceneBVH(GRAPHICSTHREAD threadID);
 
@@ -168,9 +168,9 @@ namespace wiRenderer
 		MIPGENFILTER_GAUSSIAN,
 		MIPGENFILTER_BICUBIC,
 	};
-	void GenerateMipChain(const wiGraphicsTypes::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
-	void GenerateMipChain(const wiGraphicsTypes::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
-	void GenerateMipChain(const wiGraphicsTypes::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex = -1);
 
 	enum BORDEREXPANDSTYLE
 	{
@@ -181,15 +181,15 @@ namespace wiRenderer
 	// Performs copy operation even between different texture formats
 	//	Can also expand border region according to desired sampler func
 	void CopyTexture2D(
-		const wiGraphicsTypes::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, 
-		const wiGraphicsTypes::Texture2D* src, UINT SrcMIP, 
+		const wiGraphics::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, 
+		const wiGraphics::Texture2D* src, UINT SrcMIP, 
 		GRAPHICSTHREAD threadID,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
 	// dst: Texture2D with unordered access, the output will be written to this
 	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing
 	// randomness: random seed
-	void GenerateClouds(const wiGraphicsTypes::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
+	void GenerateClouds(const wiGraphics::Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID);
 
 	// Assign texture slots to out of date environemnt probes
 	void ManageEnvProbes();
@@ -278,9 +278,9 @@ namespace wiRenderer
 	void SetAdvancedRefractionsEnabled(bool value);
 	bool GetAdvancedRefractionsEnabled();
 	bool IsRequestedReflectionRendering();
-	void SetEnvironmentMap(wiGraphicsTypes::Texture2D* tex);
-	const wiGraphicsTypes::Texture2D* GetEnvironmentMap();
-	const wiGraphicsTypes::Texture2D* GetLuminance(const wiGraphicsTypes::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
+	void SetEnvironmentMap(wiGraphics::Texture2D* tex);
+	const wiGraphics::Texture2D* GetEnvironmentMap();
+	const wiGraphics::Texture2D* GetLuminance(const wiGraphics::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
@@ -292,7 +292,7 @@ namespace wiRenderer
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);
 	bool GetRaytraceDebugBVHVisualizerEnabled();
 
-	const wiGraphicsTypes::Texture2D* GetGlobalLightmap();
+	const wiGraphics::Texture2D* GetGlobalLightmap();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY);
@@ -339,7 +339,7 @@ namespace wiRenderer
 	void AddRenderablePoint(const RenderablePoint& point);
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
-	void AddDeferredMIPGen(const wiGraphicsTypes::Texture2D* tex);
+	void AddDeferredMIPGen(const wiGraphics::Texture2D* tex);
 
 	// Helper function to open a wiscene file and add the contents to the current scene
 	//	transformMatrix	:	everything will be transformed by this matrix (optional)
@@ -355,7 +355,7 @@ namespace wiRenderer
 		struct Pass
 		{
 			uint32_t renderTypeFlags = RENDERTYPE_TRANSPARENT;
-			wiGraphicsTypes::GraphicsPSO* pso = nullptr;
+			wiGraphics::GraphicsPSO* pso = nullptr;
 		};
 		Pass passes[RENDERPASS_COUNT] = {};
 	};
@@ -370,12 +370,12 @@ namespace wiRenderer
 	template<int latency>
 	struct GPUQueryRing
 	{
-		wiGraphicsTypes::GPUQuery queries[latency];
+		wiGraphics::GPUQuery queries[latency];
 		int id = 0;
 		bool active[latency] = {};
 
 		// Creates a number of queries in the async ring
-		void Create(wiGraphicsTypes::GraphicsDevice* device, const wiGraphicsTypes::GPUQueryDesc* desc)
+		void Create(wiGraphics::GraphicsDevice* device, const wiGraphics::GPUQueryDesc* desc)
 		{
 			for (int i = 0; i < latency; ++i)
 			{
@@ -387,7 +387,7 @@ namespace wiRenderer
 
 		// Returns the current query suitable for GPU execution and marks it as active
 		//	Use this with GraphicsDevice::QueryBegin() and GraphicsDevice::QueryEnd()
-		inline wiGraphicsTypes::GPUQuery* Get_GPU()
+		inline wiGraphics::GPUQuery* Get_GPU()
 		{
 			active[id] = true;
 			return &queries[id];
@@ -396,7 +396,7 @@ namespace wiRenderer
 		// Returns the current query suitable for CPU readback and marks it as inactive
 		//	It will return nullptr if none of the queries are suitable for readback yet
 		//	Use this with GraphicsDevice::QueryRead(). Only call once per frame per QueryRing instance!
-		inline wiGraphicsTypes::GPUQuery* Get_CPU()
+		inline wiGraphics::GPUQuery* Get_CPU()
 		{
 			id = (id + 1) % latency;
 			if (!active[id])

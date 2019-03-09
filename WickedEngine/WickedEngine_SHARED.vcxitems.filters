@@ -864,16 +864,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFont.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h">
@@ -1733,16 +1727,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFont.cpp">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiMath.cpp">

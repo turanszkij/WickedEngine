@@ -1,7 +1,7 @@
 #include "wiCube.h"
 #include "wiRenderer.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 static GPUBuffer vertexBuffer;
 static GPUBuffer indexBuffer;
@@ -52,13 +52,11 @@ void wiCube::Initialize()
 	};
 
 	GPUBufferDesc bd;
-	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(verts);
 	bd.BindFlags = BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 	SubresourceData InitData;
-	ZeroMemory(&InitData, sizeof(InitData));
 	InitData.pSysMem = verts;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &vertexBuffer);
 
@@ -67,12 +65,10 @@ void wiCube::Initialize()
 		5,6,4,7,2,6,3,7,2,3,6,7
 	};
 
-	ZeroMemory(&bd, sizeof(bd));
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(indices);
 	bd.BindFlags = BIND_INDEX_BUFFER;
 	bd.CPUAccessFlags = 0;
-	ZeroMemory(&InitData, sizeof(InitData));
 	InitData.pSysMem = indices;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &InitData, &indexBuffer);
 

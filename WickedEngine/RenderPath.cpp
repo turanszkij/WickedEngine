@@ -3,20 +3,23 @@
 
 void RenderPath::Update(float dt)
 {
-	if (wiRenderer::ResolutionChanged())
+	if (wiRenderer::ResolutionChanged() || !initial_resizebuffer)
 	{
 		ResizeBuffers();
+		initial_resizebuffer = true;
 	}
 }
 
-void RenderPath::Start() {
+void RenderPath::Start() 
+{
 	if (onStart != nullptr)
 	{
 		onStart();
 	}
 };
 
-void RenderPath::Stop() {
+void RenderPath::Stop() 
+{
 	if (onStop != nullptr)
 	{
 		onStop();

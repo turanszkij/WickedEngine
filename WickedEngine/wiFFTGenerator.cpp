@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 static const ComputeShader* pRadix008A_CS = nullptr;
 static const ComputeShader* pRadix008A_CS2 = nullptr;

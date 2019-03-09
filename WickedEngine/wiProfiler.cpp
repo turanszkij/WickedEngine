@@ -10,7 +10,7 @@
 #include <stack>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiProfiler
 {

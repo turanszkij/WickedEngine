@@ -19,7 +19,7 @@
 #include <vector>
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiRectPacker;
 
 #define MAX_TEXT 10000
@@ -44,7 +44,7 @@ namespace wiFont_Internal
 
 	atomic_bool initialized = false;
 
-	std::unique_ptr<Texture2D> texture;
+	Texture2D texture;
 
 	struct Glyph
 	{
@@ -436,18 +436,17 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
-			texture.reset(new Texture2D);
-			HRESULT hr = wiTextureHelper::CreateTexture(*texture.get(), bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
+			HRESULT hr = wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
 			assert(SUCCEEDED(hr));
 		}
 	}
 
 	// Bind the whole font atlas once for the whole frame:
-	device->BindResource(PS, texture.get(), TEXSLOT_FONTATLAS, threadID);
+	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, threadID);
 }
-Texture2D* wiFont::GetAtlas()
+const Texture2D* wiFont::GetAtlas()
 {
-	return texture.get();
+	return &texture;
 }
 std::string& wiFont::GetFontPath()
 {
@@ -468,7 +467,7 @@ int wiFont::AddFontStyle(const string& fontName)
 }
 
 
-void wiFont::Draw(GRAPHICSTHREAD threadID)
+void wiFont::Draw(GRAPHICSTHREAD threadID) const
 {
 	if (!initialized.load() || text.length() <= 0)
 	{
@@ -546,7 +545,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID)
 }
 
 
-int wiFont::textWidth()
+int wiFont::textWidth() const
 {
 	if (style >= fontStyles.size())
 	{
@@ -587,7 +586,7 @@ int wiFont::textWidth()
 
 	return maxWidth;
 }
-int wiFont::textHeight()
+int wiFont::textHeight() const
 {
 	if (style >= fontStyles.size())
 	{
@@ -623,11 +622,11 @@ void wiFont::SetText(const wstring& text)
 {
 	this->text = text;
 }
-wstring wiFont::GetText()
+wstring wiFont::GetText() const
 {
 	return text;
 }
-string wiFont::GetTextA()
+string wiFont::GetTextA() const
 {
 	return string(text.begin(),text.end());
 }

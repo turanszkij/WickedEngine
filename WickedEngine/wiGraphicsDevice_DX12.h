@@ -9,7 +9,7 @@
 #include <dxgi1_4.h>
 #include <d3d12.h>
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 
 	class GraphicsDevice_DX12 : public GraphicsDevice

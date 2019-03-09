@@ -12,7 +12,7 @@
 #include <unordered_map>
 
 using namespace wiECS;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiSceneSystem
 {

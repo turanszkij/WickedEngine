@@ -5,7 +5,7 @@
 #include "ShaderInterop_Renderer.h"
 #include "wiBackLog.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiLensFlare
 {
@@ -136,7 +136,6 @@ namespace wiLensFlare
 
 		{
 			BlendStateDesc bd;
-			ZeroMemory(&bd, sizeof(bd));
 			bd.RenderTarget[0].BlendEnable = true;
 			bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
 			bd.RenderTarget[0].DestBlend = BLEND_ONE;

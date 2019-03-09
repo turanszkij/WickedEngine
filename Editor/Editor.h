@@ -25,7 +25,7 @@ private:
 	wiFont font;
 public:
 	void Load() override;
-	void Compose() override;
+	void Update(float dt) override;
 	void Unload() override;
 };
 
@@ -33,7 +33,7 @@ class Editor;
 class EditorComponent : public RenderPath2D
 {
 private:
-	wiGraphicsTypes::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
+	wiGraphics::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
 public:
 	std::unique_ptr<MaterialWindow>			materialWnd;
 	std::unique_ptr<PostprocessWindow>		postprocessWnd;
@@ -71,8 +71,8 @@ public:
 	void Start() override;
 	void FixedUpdate() override;
 	void Update(float dt) override;
-	void Render() override;
-	void Compose() override;
+	void Render() const override;
+	void Compose() const override;
 	void Unload() override;
 
 

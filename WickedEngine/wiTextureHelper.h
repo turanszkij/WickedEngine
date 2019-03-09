@@ -7,16 +7,16 @@ namespace wiTextureHelper
 {
 	void Initialize();
 
-	const wiGraphicsTypes::Texture2D* getRandom64x64();
-	const wiGraphicsTypes::Texture2D* getColorGradeDefault();
-	const wiGraphicsTypes::Texture2D* getNormalMapDefault();
-	const wiGraphicsTypes::Texture2D* getBlackCubeMap();
+	const wiGraphics::Texture2D* getRandom64x64();
+	const wiGraphics::Texture2D* getColorGradeDefault();
+	const wiGraphics::Texture2D* getNormalMapDefault();
+	const wiGraphics::Texture2D* getBlackCubeMap();
 
-	const wiGraphicsTypes::Texture2D* getWhite();
-	const wiGraphicsTypes::Texture2D* getBlack();
-	const wiGraphicsTypes::Texture2D* getTransparent();
-	const wiGraphicsTypes::Texture2D* getColor(const wiColor& color);
+	const wiGraphics::Texture2D* getWhite();
+	const wiGraphics::Texture2D* getBlack();
+	const wiGraphics::Texture2D* getTransparent();
+	const wiGraphics::Texture2D* getColor(const wiColor& color);
 
-	HRESULT CreateTexture(wiGraphicsTypes::Texture2D& texture, const uint8_t* data, UINT width, UINT height, wiGraphicsTypes::FORMAT format = wiGraphicsTypes::FORMAT_R8G8B8A8_UNORM);
+	HRESULT CreateTexture(wiGraphics::Texture2D& texture, const uint8_t* data, UINT width, UINT height, wiGraphics::FORMAT format = wiGraphics::FORMAT_R8G8B8A8_UNORM);
 };
 

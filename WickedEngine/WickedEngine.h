@@ -22,8 +22,6 @@
 
 // Engine-level systems
 #include "wiVersion.h"
-#include "wiRenderTarget.h"
-#include "wiDepthTarget.h"
 #include "wiBackLog.h"
 #include "wiIntersect.h"
 #include "wiImage.h"

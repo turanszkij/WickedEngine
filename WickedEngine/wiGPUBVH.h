@@ -10,26 +10,23 @@
 class wiGPUBVH
 {
 private:
-	wiGraphicsTypes::GPUBuffer bvhNodeBuffer;
-	wiGraphicsTypes::GPUBuffer bvhAABBBuffer;
-	wiGraphicsTypes::GPUBuffer bvhFlagBuffer;
-	wiGraphicsTypes::GPUBuffer triangleBuffer;
-	wiGraphicsTypes::GPUBuffer clusterCounterBuffer;
-	wiGraphicsTypes::GPUBuffer clusterIndexBuffer;
-	wiGraphicsTypes::GPUBuffer clusterMortonBuffer;
-	wiGraphicsTypes::GPUBuffer clusterSortedMortonBuffer;
-	wiGraphicsTypes::GPUBuffer clusterOffsetBuffer;
-	wiGraphicsTypes::GPUBuffer clusterAABBBuffer;
-	wiGraphicsTypes::GPUBuffer clusterConeBuffer;
+	wiGraphics::GPUBuffer bvhNodeBuffer;
+	wiGraphics::GPUBuffer bvhAABBBuffer;
+	wiGraphics::GPUBuffer bvhFlagBuffer;
+	wiGraphics::GPUBuffer triangleBuffer;
+	wiGraphics::GPUBuffer clusterCounterBuffer;
+	wiGraphics::GPUBuffer clusterIndexBuffer;
+	wiGraphics::GPUBuffer clusterMortonBuffer;
+	wiGraphics::GPUBuffer clusterSortedMortonBuffer;
+	wiGraphics::GPUBuffer clusterOffsetBuffer;
+	wiGraphics::GPUBuffer clusterAABBBuffer;
+	wiGraphics::GPUBuffer clusterConeBuffer;
 	uint32_t maxTriangleCount = 0;
 	uint32_t maxClusterCount = 0;
 
 public:
-	wiGPUBVH();
-	~wiGPUBVH();
-
 	void Build(const wiSceneSystem::Scene& scene, GRAPHICSTHREAD threadID);
-	void Bind(wiGraphicsTypes::SHADERSTAGE stage, GRAPHICSTHREAD threadID);
+	void Bind(wiGraphics::SHADERSTAGE stage, GRAPHICSTHREAD threadID) const;
 
 	static void LoadShaders();
 

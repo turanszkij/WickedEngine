@@ -8,7 +8,7 @@
 #include <d3d11_3.h>
 #include <DXGI1_3.h>
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 
 	class GraphicsDevice_DX11 : public GraphicsDevice

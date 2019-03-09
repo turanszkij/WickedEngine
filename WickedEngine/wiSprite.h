@@ -8,8 +8,10 @@ class wiSprite
 {
 private:
 	std::string texture, mask, normal;
-	wiGraphicsTypes::Texture2D* texturePointer,*normalPointer,*maskPointer;
-	wiResourceManager* ContentHolder;
+	const wiGraphics::Texture2D* texturePointer = nullptr;
+	const wiGraphics::Texture2D* normalPointer = nullptr;
+	const wiGraphics::Texture2D* maskPointer = nullptr;
+	wiResourceManager* ContentHolder = nullptr;
 public:
 	wiSprite(wiResourceManager* contentHolder = nullptr);
 	wiSprite(const std::string& newTexture, const std::string& newMask, const std::string& newNormal, wiResourceManager* contentHolder = nullptr);
@@ -21,9 +23,9 @@ public:
 
 	virtual void FixedUpdate(float speed);
 	virtual void Update(float dt);
-	void Draw(wiGraphicsTypes::Texture2D* refracRes, GRAPHICSTHREAD threadID);
-	void Draw(GRAPHICSTHREAD threadID);
-	void DrawNormal(GRAPHICSTHREAD threadID);
+	void Draw(const wiGraphics::Texture2D* refracRes, GRAPHICSTHREAD threadID) const;
+	void Draw(GRAPHICSTHREAD threadID) const;
+	void DrawNormal(GRAPHICSTHREAD threadID) const;
 
 	std::string name;
 
@@ -65,7 +67,7 @@ public:
 	};
 	Anim anim;
 	
-	wiGraphicsTypes::Texture2D* getTexture(){return texturePointer;}
-	void setTexture(wiGraphicsTypes::Texture2D* value){texturePointer=value;}
+	const wiGraphics::Texture2D* getTexture() { return texturePointer; }
+	void setTexture(const wiGraphics::Texture2D* value) { texturePointer = value; }
 };
 

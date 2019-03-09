@@ -12,7 +12,7 @@
 
 using namespace std;
 using namespace wiECS;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 using namespace wiSceneSystem_BindLua;
 using namespace wiIntersect_BindLua;

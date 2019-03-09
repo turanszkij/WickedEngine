@@ -117,23 +117,23 @@ namespace wiSceneSystem
 
 			if (!baseColorMapName.empty())
 			{
-				baseColorMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + baseColorMapName);
+				baseColorMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + baseColorMapName);
 			}
 			if (!surfaceMapName.empty())
 			{
-				surfaceMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + surfaceMapName);
+				surfaceMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + surfaceMapName);
 			}
 			if (!normalMapName.empty())
 			{
-				normalMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + normalMapName);
+				normalMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + normalMapName);
 			}
 			if (!displacementMapName.empty())
 			{
-				displacementMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
+				displacementMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + displacementMapName);
 			}
 			if (!emissiveMapName.empty())
 			{
-				emissiveMap = (wiGraphicsTypes::Texture2D*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
+				emissiveMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
 			}
 
 		}

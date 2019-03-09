@@ -317,7 +317,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiColor.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiDepthTarget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiDirectInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEmittedParticle.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEnums.h" />
@@ -354,7 +353,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRectPacker.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderTarget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSceneSystem.h" />
@@ -654,7 +652,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBackLog_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiClient.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiDepthTarget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiDirectInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiEmittedParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFadeManager.cpp" />
@@ -687,7 +684,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRectPacker.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderer_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderTarget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSceneSystem.cpp" />

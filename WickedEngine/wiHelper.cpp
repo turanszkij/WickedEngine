@@ -88,9 +88,9 @@ namespace wiHelper
 		assert(result);
 	}
 
-	bool saveTextureToFile(wiGraphicsTypes::Texture2D& texture, const string& fileName)
+	bool saveTextureToFile(wiGraphics::Texture2D& texture, const string& fileName)
 	{
-		using namespace wiGraphicsTypes;
+		using namespace wiGraphics;
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -118,9 +118,9 @@ namespace wiHelper
 		return saveTextureToFile(data, desc, fileName);
 	}
 
-	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphicsTypes::TextureDesc& desc, const std::string& fileName)
+	bool saveTextureToFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileName)
 	{
-		using namespace wiGraphicsTypes;
+		using namespace wiGraphics;
 
 		UINT data_count = desc.Width * desc.Height;
 

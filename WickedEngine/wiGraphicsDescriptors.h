@@ -3,7 +3,7 @@
 
 #include "CommonInclude.h"
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 	struct VertexShader;
 	struct PixelShader;

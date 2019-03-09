@@ -13,7 +13,7 @@
 #include "wiBackLog.h"
 
 using namespace std;
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
 namespace wiSceneSystem
 {

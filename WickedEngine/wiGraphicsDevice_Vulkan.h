@@ -21,7 +21,7 @@
 #include <vector>
 #include <unordered_map>
 
-namespace wiGraphicsTypes
+namespace wiGraphics
 {
 	struct FrameResources;
 	struct DescriptorTableFrameAllocator;

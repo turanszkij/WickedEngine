@@ -33,7 +33,7 @@ class RenderPath2D :
 	public RenderPath
 {
 private:
-	static wiRenderTarget rtFinal;
+	wiGraphics::Texture2D rtFinal;
 	wiGUI GUI;
 	float spriteSpeed = 1.0f;
 
@@ -41,7 +41,6 @@ protected:
 	void ResizeBuffers() override;
 public:
 	RenderPath2D();
-	virtual ~RenderPath2D();
 
 	void Initialize() override;
 	void Load() override;
@@ -49,10 +48,10 @@ public:
 	void Start() override;
 	void Update(float dt) override;
 	void FixedUpdate() override;
-	void Render() override;
-	void Compose() override;
+	void Render() const override;
+	void Compose() const override;
 
-	const wiGraphicsTypes::Texture2D& GetRenderResult() { return rtFinal.GetTexture(); }
+	const wiGraphics::Texture2D& GetRenderResult() { return rtFinal; }
 
 	void addSprite(wiSprite* sprite, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeSprite(wiSprite* sprite);
@@ -74,6 +73,7 @@ public:
 	void SortLayers();
 	void CleanLayers();
 
+	const wiGUI& GetGUI() const { return GUI; }
 	wiGUI& GetGUI() { return GUI; }
 };
 

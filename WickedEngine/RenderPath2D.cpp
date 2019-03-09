@@ -4,50 +4,36 @@
 #include "wiFont.h"
 #include "wiRenderer.h"
 
-using namespace wiGraphicsTypes;
+using namespace wiGraphics;
 
-RenderPath2D::RenderPath2D() : RenderPath()
+RenderPath2D::RenderPath2D()
 {
 	addLayer(DEFAULT_RENDERLAYER);
-	GUI = wiGUI(GRAPHICSTHREAD_IMMEDIATE);
 }
 
-
-RenderPath2D::~RenderPath2D()
-{
-	Unload();
-}
-
-wiRenderTarget RenderPath2D::rtFinal;
 void RenderPath2D::ResizeBuffers()
 {
+	RenderPath::ResizeBuffers();
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	wiRenderer::GetDevice()->WaitForGPU();
 
-	FORMAT defaultTextureFormat = wiRenderer::GetDevice()->GetBackBufferFormat();
+	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
 
-	// Protect against multiple buffer resizes when there is no change!
-	static UINT lastBufferResWidth = 0, lastBufferResHeight = 0, lastBufferMSAA = 0;
-	static FORMAT lastBufferFormat = FORMAT_UNKNOWN;
-	if (lastBufferResWidth == (UINT)wiRenderer::GetDevice()->GetScreenWidth() &&
-		lastBufferResHeight == (UINT)wiRenderer::GetDevice()->GetScreenHeight() &&
-		lastBufferFormat == defaultTextureFormat)
 	{
-		return;
-	}
-	else
-	{
-		lastBufferResWidth = (UINT)wiRenderer::GetDevice()->GetScreenWidth();
-		lastBufferResHeight = (UINT)wiRenderer::GetDevice()->GetScreenHeight();
-		lastBufferFormat = defaultTextureFormat;
+		TextureDesc desc;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.Format = defaultTextureFormat;
+		desc.Width = device->GetScreenWidth();
+		desc.Height = device->GetScreenHeight();
+		device->CreateTexture2D(&desc, nullptr, &rtFinal);
 	}
 
-	rtFinal.Initialize(wiRenderer::GetDevice()->GetScreenWidth(), wiRenderer::GetDevice()->GetScreenHeight(), false, defaultTextureFormat);
 }
 
 void RenderPath2D::Initialize()
 {
-	ResizeBuffers();
-
 	RenderPath::Initialize();
 }
 
@@ -112,9 +98,22 @@ void RenderPath2D::FixedUpdate()
 
 	RenderPath::FixedUpdate();
 }
-void RenderPath2D::Render()
+void RenderPath2D::Render() const
 {
-	rtFinal.SetAndClear(GRAPHICSTHREAD_IMMEDIATE, 0.0f, 0.0f, 0.0f, 0.0f);
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	const Texture2D* rts[] = { &rtFinal };
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, GRAPHICSTHREAD_IMMEDIATE);
+
+	float clear[] = { 0,0,0,0 };
+	device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
+
+	ViewPort vp;
+	vp.Width = (float)rtFinal.GetDesc().Width;
+	vp.Height = (float)rtFinal.GetDesc().Height;
+	device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
+
+
 
 	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
 	for (auto& x : layers)
@@ -137,13 +136,13 @@ void RenderPath2D::Render()
 
 	RenderPath::Render();
 }
-void RenderPath2D::Compose()
+void RenderPath2D::Compose() const
 {
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 
-	wiImage::Draw(&rtFinal.GetTexture(), fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtFinal, fx, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderPath::Compose();
 }
