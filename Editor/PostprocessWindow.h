@@ -35,7 +35,6 @@ public:
 	wiCheckBox* bloomCheckBox;
 	wiSlider*	bloomStrengthSlider;
 	wiCheckBox* fxaaCheckBox;
-	wiCheckBox* stereogramCheckBox;
 	wiCheckBox* colorGradingCheckBox;
 	wiButton*	colorGradingButton;
 	wiCheckBox* sharpenFilterCheckBox;

@@ -432,7 +432,6 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetDepthOfFieldStrength(float value)
 - SetTessellationEnabled(bool value)
 - SetMSAASampleCount(int count)
-- SetStereogramEnabled(bool value)
 - SetSharpenFilterEnabled(bool value)
 - SetSharpenFilterAmount(float value)
 - SetExposure(float value)

@@ -39,7 +39,6 @@ private:
 	bool motionBlurEnabled = false;
 	bool sssEnabled = true;
 	bool depthOfFieldEnabled = false;
-	bool stereogramEnabled = false;
 	bool eyeAdaptionEnabled = false;
 	bool tessellationEnabled = false;
 	bool sharpenFilterEnabled = false;
@@ -131,7 +130,6 @@ public:
 	inline bool getMotionBlurEnabled() const { return motionBlurEnabled; }
 	inline bool getSSSEnabled() const { return sssEnabled; }
 	inline bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
-	inline bool getStereogramEnabled() const { return stereogramEnabled; }
 	inline bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
 	inline bool getTessellationEnabled() const { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	inline bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
@@ -173,7 +171,6 @@ public:
 	inline void setMotionBlurEnabled(bool value){ motionBlurEnabled = value; }
 	inline void setSSSEnabled(bool value){ sssEnabled = value; }
 	inline void setDepthOfFieldEnabled(bool value){ depthOfFieldEnabled = value; }
-	inline void setStereogramEnabled(bool value) { stereogramEnabled = value; }
 	inline void setEyeAdaptionEnabled(bool value) { eyeAdaptionEnabled = value; }
 	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
 	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }

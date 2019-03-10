@@ -118,6 +118,9 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	case EditorComponent::RENDERPATH_PATHTRACING:
 		renderPath = new RenderPath3D_PathTracing;
 		break;
+	case EditorComponent::RENDERPATH_STEREOGRAM:
+		renderPath = new RenderPath3D_Stereogram;
+		break;
 	default:
 		assert(0);
 		break;
@@ -649,6 +652,7 @@ void EditorComponent::Load()
 	renderPathComboBox->AddItem("Tiled Forward");
 	renderPathComboBox->AddItem("Tiled Deferred");
 	renderPathComboBox->AddItem("Path Tracing");
+	renderPathComboBox->AddItem("Stereogram");
 	renderPathComboBox->OnSelect([&](wiEventArgs args) {
 		switch (args.iValue)
 		{
@@ -666,6 +670,9 @@ void EditorComponent::Load()
 			break;
 		case 4:
 			ChangeRenderPath(RENDERPATH_PATHTRACING);
+			break;
+		case 5:
+			ChangeRenderPath(RENDERPATH_STEREOGRAM);
 			break;
 		default:
 			break;

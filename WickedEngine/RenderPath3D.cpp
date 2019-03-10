@@ -210,17 +210,6 @@ void RenderPath3D::Compose() const
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 	fx.quality = QUALITY_LINEAR;
 
-	if (getStereogramEnabled())
-	{
-		device->EventBegin("Stereogram", GRAPHICSTHREAD_IMMEDIATE);
-		fx.disableFullScreen();
-		fx.process.clear();
-		fx.process.setStereogram();
-		wiImage::Draw(wiTextureHelper::getRandom64x64(), fx, GRAPHICSTHREAD_IMMEDIATE);
-		device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
-		return;
-	}
-
 	if (getColorGradingEnabled())
 	{
 		device->EventBegin("Color Graded Composition", GRAPHICSTHREAD_IMMEDIATE);
@@ -278,16 +267,6 @@ void RenderPath3D::RenderFrameSetUp(GRAPHICSTHREAD threadID) const
 }
 void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
 {
-	if (getStereogramEnabled())
-	{
-		// We don't need the following for stereograms...
-		return;
-	}
-
-	if (!getReflectionsEnabled() || getReflectionQuality() < 0.01f)
-	{
-		return;
-	}
 	wiProfiler::BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 	if (wiRenderer::IsRequestedReflectionRendering())
@@ -331,12 +310,6 @@ void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
 }
 void RenderPath3D::RenderShadows(GRAPHICSTHREAD threadID) const
 {
-	if (getStereogramEnabled())
-	{
-		// We don't need the following for stereograms...
-		return;
-	}
-
 	if (getShadowsEnabled())
 	{
 		wiRenderer::DrawForShadowMap(wiRenderer::GetCamera(), threadID, getLayerMask());

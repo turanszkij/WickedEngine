@@ -233,6 +233,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Deferred_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_Stereogram.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Font.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_HairParticle.h" />
@@ -517,6 +518,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Forward_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_Stereogram.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledDeferred_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_TiledForward.cpp" />

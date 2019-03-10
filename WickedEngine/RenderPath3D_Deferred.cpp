@@ -74,8 +74,6 @@ void RenderPath3D_Deferred::Render() const
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-
 		const GPUResource* dsv[] = { &depthBuffer };
 		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
 
@@ -115,12 +113,6 @@ void RenderPath3D_Deferred::Render() const
 
 		wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
 
-		if (getStereogramEnabled())
-		{
-			// We don't need the following for stereograms...
-			return;
-		}
-
 		RenderDecals(threadID);
 
 		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], threadID);
@@ -155,46 +147,43 @@ void RenderPath3D_Deferred::Render() const
 
 	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_IMMEDIATE);
 
-	if (!getStereogramEnabled())
+	RenderOutline(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderLightShafts(GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderVolumetrics(GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderWaterRipples(GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderRefractionSource(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderTransparents(rtDeferred, RENDERPASS_FORWARD, GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
+
+	TemporalAAResolve(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderBloom(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderMotionBlur(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+
+	ToneMapping(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+
+	const Texture2D* rt0 = &rtFinal[0];
+	const Texture2D* rt1 = &rtFinal[1];
+
+	SharpenFilter(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
+
+	if (getSharpenFilterEnabled())
 	{
-		RenderOutline(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderLightShafts(GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderVolumetrics(GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderWaterRipples(GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderRefractionSource(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderTransparents(rtDeferred, RENDERPASS_FORWARD, GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
-
-		TemporalAAResolve(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderBloom(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderMotionBlur(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
-
-		ToneMapping(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
-
-		const Texture2D* rt0 = &rtFinal[0];
-		const Texture2D* rt1 = &rtFinal[1];
-
-		SharpenFilter(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
-
-		if (getSharpenFilterEnabled())
-		{
-			SwapPtr(rt0, rt1);
-		}
-
-		RenderDepthOfField(*rt0, GRAPHICSTHREAD_IMMEDIATE);
-
-		RenderFXAA(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
+		SwapPtr(rt0, rt1);
 	}
+
+	RenderDepthOfField(*rt0, GRAPHICSTHREAD_IMMEDIATE);
+
+	RenderFXAA(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderPath2D::Render();
 }

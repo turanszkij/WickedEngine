@@ -52,7 +52,6 @@ Luna<RenderPath3D_BindLua>::FunctionType RenderPath3D_BindLua::methods[] = {
 	lunamethod(RenderPath3D_BindLua, SetMotionBlurEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSSSEnabled),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
-	lunamethod(RenderPath3D_BindLua, SetStereogramEnabled),
 	lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(RenderPath3D_BindLua, SetTessellationEnabled),
 	lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
@@ -309,21 +308,6 @@ int RenderPath3D_BindLua::SetDepthOfFieldEnabled(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetDepthOfFieldEnabled(bool value) not enough arguments!");
-	return 0;
-}
-int RenderPath3D_BindLua::SetStereogramEnabled(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetStereogramEnabled(bool value) component is null!");
-		return 0;
-	}
-	if (wiLua::SGetArgCount(L) > 0)
-	{
-		((RenderPath3D*)component)->setStereogramEnabled(wiLua::SGetBool(L, 1));
-	}
-	else
-		wiLua::SError(L, "SetStereogramEnabled(bool value) not enough arguments!");
 	return 0;
 }
 int RenderPath3D_BindLua::SetEyeAdaptionEnabled(lua_State* L)

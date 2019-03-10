@@ -50,7 +50,6 @@ Luna<RenderPath3D_Deferred_BindLua>::FunctionType RenderPath3D_Deferred_BindLua:
 	lunamethod(RenderPath3D_BindLua, SetMotionBlurEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSSSEnabled),
 	lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
-	lunamethod(RenderPath3D_BindLua, SetStereogramEnabled),
 	lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
 	lunamethod(RenderPath3D_BindLua, SetTessellationEnabled),
 	lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),

@@ -32,7 +32,6 @@ public:
 	int SetMotionBlurEnabled(lua_State* L);
 	int SetSSSEnabled(lua_State* L);
 	int SetDepthOfFieldEnabled(lua_State* L);
-	int SetStereogramEnabled(lua_State* L);
 	int SetEyeAdaptionEnabled(lua_State* L);
 	int SetTessellationEnabled(lua_State* L);
 	int SetMSAASampleCount(lua_State* L);

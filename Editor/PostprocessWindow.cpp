@@ -245,16 +245,6 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(colorGradingButton);
 
-	stereogramCheckBox = new wiCheckBox("Stereogram: ");
-	stereogramCheckBox->SetTooltip("Compute a stereogram from the depth buffer. It produces a 3D silhouette image when viewed cross eyed.");
-	stereogramCheckBox->SetScriptTip("RenderPath3D::SetStereogramEnabled(bool value)");
-	stereogramCheckBox->SetPos(XMFLOAT2(x, y += 35));
-	stereogramCheckBox->SetCheck(component->getStereogramEnabled());
-	stereogramCheckBox->OnClick([&](wiEventArgs args) {
-		component->setStereogramEnabled(args.bValue);
-	});
-	ppWindow->AddWidget(stereogramCheckBox);
-
 	sharpenFilterCheckBox = new wiCheckBox("Sharpen Filter: ");
 	sharpenFilterCheckBox->SetTooltip("Toggle sharpening post process of the final image.");
 	sharpenFilterCheckBox->SetScriptTip("RenderPath3D::SetSharpenFilterEnabled(bool value)");
