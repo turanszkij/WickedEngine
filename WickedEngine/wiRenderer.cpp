@@ -3462,10 +3462,14 @@ void SetUpStates()
 
 void UpdatePerFrameData(float dt)
 {
+	renderTime_Prev = renderTime;
+	deltaTime = dt * GetGameSpeed();
+	renderTime += dt;
+
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();
 
-	scene.Update(dt * GetGameSpeed());
+	scene.Update(deltaTime);
 
 	// See which materials will need to update their GPU render data:
 	wiJobSystem::Execute([&] {
@@ -3728,17 +3732,13 @@ void UpdatePerFrameData(float dt)
 
 	for (auto& x : waterRipples)
 	{
-		x->Update(dt * 60 * GetGameSpeed());
+		x->Update(dt * 60);
 	}
 
 	ManageDecalAtlas();
 	ManageLightmapAtlas();
 	ManageImpostors();
 	ManageEnvProbes();
-
-	renderTime_Prev = renderTime;
-	renderTime += dt * GetGameSpeed();
-	deltaTime = dt;
 
 	wiJobSystem::Wait();
 }
