@@ -8229,7 +8229,7 @@ void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, GRA
 }
 
 
-const Texture2D* GetLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threadID)
+const Texture2D* ComputeLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threadID)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -8272,6 +8272,8 @@ const Texture2D* GetLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threa
 	}
 	if (luminance_map != nullptr)
 	{
+		device->EventBegin("Compute Luminance", threadID);
+
 		// Pass 1 : Create luminance map from scene tex
 		TextureDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputePSO(&CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
@@ -8299,6 +8301,8 @@ const Texture2D* GetLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threa
 
 
 		device->UnbindUAVs(0, 1, threadID);
+
+		device->EventEnd(threadID);
 
 		return luminance_avg.back();
 	}

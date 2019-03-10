@@ -104,14 +104,14 @@ void RenderPath3D_Deferred::Render() const
 		}
 
 		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
-		device->CopyTexture2D(&depthCopy, &depthBuffer, threadID);
+		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, threadID);
 		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 		RenderLinearDepth(threadID);
 
 		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
 
-		wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
 
 		RenderDecals(threadID);
 
@@ -155,8 +155,6 @@ void RenderPath3D_Deferred::Render() const
 
 	RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
 
-	RenderWaterRipples(GRAPHICSTHREAD_IMMEDIATE);
-
 	RenderRefractionSource(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderTransparents(rtDeferred, RENDERPASS_FORWARD, GRAPHICSTHREAD_IMMEDIATE);
@@ -167,23 +165,7 @@ void RenderPath3D_Deferred::Render() const
 
 	RenderBloom(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
 
-	RenderMotionBlur(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
-
-	ToneMapping(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
-
-	const Texture2D* rt0 = &rtFinal[0];
-	const Texture2D* rt1 = &rtFinal[1];
-
-	SharpenFilter(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
-
-	if (getSharpenFilterEnabled())
-	{
-		SwapPtr(rt0, rt1);
-	}
-
-	RenderDepthOfField(*rt0, GRAPHICSTHREAD_IMMEDIATE);
-
-	RenderFXAA(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
+	RenderPostprocessChain(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderPath2D::Render();
 }

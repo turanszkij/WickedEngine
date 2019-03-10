@@ -29,11 +29,11 @@ void RenderPath3D_Stereogram::Render() const
 	wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), GRAPHICSTHREAD_IMMEDIATE, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true, getLayerMask());
 
 	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, GRAPHICSTHREAD_IMMEDIATE);
-	device->CopyTexture2D(&depthCopy, &depthBuffer, GRAPHICSTHREAD_IMMEDIATE);
+	device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderLinearDepth(GRAPHICSTHREAD_IMMEDIATE);
 
-	wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, GRAPHICSTHREAD_IMMEDIATE);
 }
 
 void RenderPath3D_Stereogram::Compose() const

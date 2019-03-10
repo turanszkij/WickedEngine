@@ -151,6 +151,8 @@ namespace wiRenderer
 	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, const wiGraphics::Texture2D* result, GRAPHICSTHREAD threadID);
 	// Render the scene BVH with ray tracing
 	void DrawTracedSceneBVH(GRAPHICSTHREAD threadID);
+	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
+	const wiGraphics::Texture2D* ComputeLuminance(const wiGraphics::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 
 	// Render occluders against a depth buffer
 	void OcclusionCulling_Render(GRAPHICSTHREAD threadID);
@@ -280,7 +282,6 @@ namespace wiRenderer
 	bool IsRequestedReflectionRendering();
 	void SetEnvironmentMap(wiGraphics::Texture2D* tex);
 	const wiGraphics::Texture2D* GetEnvironmentMap();
-	const wiGraphics::Texture2D* GetLuminance(const wiGraphics::Texture2D* sourceImage, GRAPHICSTHREAD threadID);
 	const XMFLOAT4& GetWaterPlane();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();

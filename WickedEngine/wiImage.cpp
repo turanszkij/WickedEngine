@@ -243,7 +243,8 @@ namespace wiImage
 
 			switch (params.process.type)
 			{
-			case wiImageParams::PostProcess::BLUR:
+			case wiImageParams::PostProcess::BLUR_LDR:
+			case wiImageParams::PostProcess::BLUR_HDR:
 				prcb.xPPParams0.x = params.process.params.blur.x / params.siz.x;
 				prcb.xPPParams0.y = params.process.params.blur.y / params.siz.y;
 				prcb.xPPParams0.z = params.mipLevel;
@@ -267,7 +268,7 @@ namespace wiImage
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 				break;
 			case wiImageParams::PostProcess::DEPTHOFFIELD:
-				prcb.xPPParams0.z = params.process.params.dofStrength;
+				prcb.xPPParams0.z = params.process.params.dofFocus;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
 				break;
 			case wiImageParams::PostProcess::MOTIONBLUR:
@@ -375,7 +376,8 @@ namespace wiImage
 		imagePS[IMAGE_SHADER_MASKED][IMAGE_SAMPLING_BICUBIC] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "imagePS_masked_bicubic.cso", wiResourceManager::PIXELSHADER));
 		imagePS[IMAGE_SHADER_FULLSCREEN][IMAGE_SAMPLING_BICUBIC] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "screenPS_bicubic.cso", wiResourceManager::PIXELSHADER));
 
-		postprocessPS[wiImageParams::PostProcess::BLUR] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "blurPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[wiImageParams::PostProcess::BLUR_LDR] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "blurPS.cso", wiResourceManager::PIXELSHADER));
+		postprocessPS[wiImageParams::PostProcess::BLUR_HDR] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "blurPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::LIGHTSHAFT] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "lightShaftPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::OUTLINE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "outlinePS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::DEPTHOFFIELD] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "depthofFieldPS.cso", wiResourceManager::PIXELSHADER));
@@ -487,9 +489,13 @@ namespace wiImage
 				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 				desc.bs = &blendStates[BLENDMODE_ALPHA];
 			}
-			else if (i == wiImageParams::PostProcess::BLOOMSEPARATE || i == wiImageParams::PostProcess::BLUR)
+			else if (i == wiImageParams::PostProcess::BLOOMSEPARATE)
 			{
-				// todo: bloom and DoF blur should really be HDR lol...
+				desc.numRTs = 1;
+				desc.RTFormats[0] = device->GetBackBufferFormat();
+			}
+			else if (i == wiImageParams::PostProcess::BLUR_LDR)
+			{
 				desc.numRTs = 1;
 				desc.RTFormats[0] = device->GetBackBufferFormat();
 			}

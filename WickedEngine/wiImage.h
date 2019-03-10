@@ -100,7 +100,8 @@ struct wiImageParams
 		enum POSTPROCESS
 		{
 			DISABLED,
-			BLUR,
+			BLUR_LDR,
+			BLUR_HDR,
 			LIGHTSHAFT,
 			OUTLINE,
 			DEPTHOFFIELD,
@@ -143,7 +144,7 @@ struct wiImageParams
 				float range;
 				UINT sampleCount;
 			} ssao;
-			float dofStrength;
+			float dofFocus;
 			float sharpen;
 			float exposure;
 			float bloomThreshold;
@@ -151,9 +152,9 @@ struct wiImageParams
 
 		bool isActive() const { return type != DISABLED; }
 		void clear() { type = DISABLED; }
-		void setBlur(const XMFLOAT2& direction) { type = BLUR; params.blur.x = direction.x; params.blur.y = direction.y; }
+		void setBlur(const XMFLOAT2& direction, bool hdr = false) { type = (hdr ? BLUR_HDR : BLUR_LDR); params.blur.x = direction.x; params.blur.y = direction.y; }
 		void setBloom(float threshold) { type = BLOOMSEPARATE; params.bloomThreshold = threshold; }
-		void setDOF(float value) { if (value > 0) { type = DEPTHOFFIELD; params.dofStrength = value; } }
+		void setDOF(float focus) { if (focus > 0) { type = DEPTHOFFIELD; params.dofFocus = focus; } }
 		void setMotionBlur() { type = MOTIONBLUR; }
 		void setOutline(float threshold = 0.1f, float thickness = 1.0f, const XMFLOAT3& color = XMFLOAT3(0, 0, 0)) 
 		{ 

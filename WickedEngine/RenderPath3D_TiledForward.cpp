@@ -52,19 +52,19 @@ void RenderPath3D_TiledForward::Render() const
 		if (getMSAASampleCount() > 1)
 		{
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
-			wiRenderer::ResolveMSAADepthBuffer(&depthCopy, &depthBuffer, threadID);
+			wiRenderer::ResolveMSAADepthBuffer(&depthBuffer_Copy, &depthBuffer, threadID);
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 		}
 		else
 		{
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
-			device->CopyTexture2D(&depthCopy, &depthBuffer, threadID);
+			device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, threadID);
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 		}
 
 		RenderLinearDepth(threadID);
 
-		wiRenderer::BindDepthTextures(&depthCopy, &rtLinearDepth, threadID);
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
 
 		wiRenderer::ComputeTiledLightCulling(threadID);
 
@@ -122,8 +122,6 @@ void RenderPath3D_TiledForward::Render() const
 
 	RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
 
-	RenderWaterRipples(GRAPHICSTHREAD_IMMEDIATE);
-
 	RenderRefractionSource(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderTransparents(rtMain[0], RENDERPASS_TILEDFORWARD, GRAPHICSTHREAD_IMMEDIATE);
@@ -133,29 +131,11 @@ void RenderPath3D_TiledForward::Render() const
 		device->MSAAResolve(scene_read[0], &rtMain[0], GRAPHICSTHREAD_IMMEDIATE);
 	}
 
-	RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
-
 	TemporalAAResolve(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderBloom(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
 
-	RenderMotionBlur(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
-
-	ToneMapping(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
-
-	const Texture2D* rt0 = &rtFinal[0];
-	const Texture2D* rt1 = &rtFinal[1];
-
-	SharpenFilter(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
-
-	if (getSharpenFilterEnabled())
-	{
-		SwapPtr(rt0, rt1);
-	}
-
-	RenderDepthOfField(*rt0, GRAPHICSTHREAD_IMMEDIATE);
-
-	RenderFXAA(*rt1, *rt0, GRAPHICSTHREAD_IMMEDIATE);
+	RenderPostprocessChain(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
 
 	RenderPath2D::Render();
 }

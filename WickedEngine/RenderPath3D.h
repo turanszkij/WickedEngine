@@ -49,26 +49,38 @@ private:
 	UINT msaaSampleCount = 1;
 
 protected:
-	wiGraphics::Texture2D rtReflection;
-	wiGraphics::Texture2D rtSSR;
-	wiGraphics::Texture2D rtMotionBlur;
-	wiGraphics::Texture2D rtSceneCopy;
-	wiGraphics::Texture2D rtWaterRipple;
-	wiGraphics::Texture2D rtLinearDepth;
-	wiGraphics::Texture2D rtParticle;
-	wiGraphics::Texture2D rtVolumetricLights;
-	wiGraphics::Texture2D rtFinal[2];
-	wiGraphics::Texture2D rtDof[3];
-	wiGraphics::Texture2D rtTemporalAA[2];
-	wiGraphics::Texture2D rtBloom;
-	wiGraphics::Texture2D rtSSAO[2];
-	wiGraphics::Texture2D rtSun[2];
-	wiGraphics::Texture2D rtSun_resolved;
+	wiGraphics::Texture2D rtReflection; // conains the scene rendered for planar reflections
+	wiGraphics::Texture2D rtSSR; // screen-space reflection results
+	wiGraphics::Texture2D rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
+	wiGraphics::Texture2D rtWaterRipple; // water ripple sprite normal maps are rendered into this
+	wiGraphics::Texture2D rtParticle; // contains off-screen particles
+	wiGraphics::Texture2D rtVolumetricLights; // contains the volumetric light results
+	wiGraphics::Texture2D rtDof[2]; // depth of field blurred out-of focus part
+	wiGraphics::Texture2D rtTemporalAA[2]; // temporal AA history buffer
+	wiGraphics::Texture2D rtBloom; // contains the bright parts of the image + mipchain
+	wiGraphics::Texture2D rtSSAO[2]; // ping-pong when rendering and blurring SSAO
+	wiGraphics::Texture2D rtSun[2]; // 0: sun render target used for lightshafts (can be MSAA), 1: radial blurred lightshafts
+	wiGraphics::Texture2D rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 
-	wiGraphics::Texture2D depthBuffer;
-	wiGraphics::Texture2D depthCopy;
-	wiGraphics::Texture2D smallDepth;
-	wiGraphics::Texture2D depthBuffer_reflection;
+	wiGraphics::Texture2D rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
+	wiGraphics::Texture2D rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
+
+	wiGraphics::Texture2D depthBuffer; // used for depth-testing, can be MSAA
+	wiGraphics::Texture2D depthBuffer_Copy; // used for shader resource, single sample
+	wiGraphics::Texture2D rtLinearDepth; // linear depth result
+	wiGraphics::Texture2D smallDepth; // downsampled depth buffer
+	wiGraphics::Texture2D depthBuffer_reflection; // depth-test for reflection rendering
+
+	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
+	const wiGraphics::Texture2D* GetLastPostprocessRT() const
+	{
+		int ldr_postprocess_count = 0;
+		ldr_postprocess_count += sharpenFilterEnabled ? 1 : 0;
+		ldr_postprocess_count += colorGradingEnabled ? 1 : 0;
+		ldr_postprocess_count += fxaaEnabled ? 1 : 0;
+		int rt_index = ldr_postprocess_count % 2;
+		return &rtPostprocess_LDR[rt_index];
+	}
 
 	void ResizeBuffers() override;
 
@@ -84,17 +96,12 @@ protected:
 	virtual void RenderLightShafts(GRAPHICSTHREAD threadID) const;
 	virtual void RenderVolumetrics(GRAPHICSTHREAD threadID) const;
 	virtual void RenderParticles(bool isDistrortionPass, GRAPHICSTHREAD threadID) const;
-	virtual void RenderWaterRipples(GRAPHICSTHREAD threadID) const;
 	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
 	virtual void RenderTransparents(const wiGraphics::Texture2D& dstSceneRT, RENDERPASS renderPass, GRAPHICSTHREAD threadID) const;
 	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
 	virtual void RenderBloom(const wiGraphics::Texture2D& srcdstSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void RenderMotionBlur(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
-	virtual void ToneMapping(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void SharpenFilter(const wiGraphics::Texture2D& dstSceneRT, const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void RenderDepthOfField(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void RenderFXAA(const wiGraphics::Texture2D& dstSceneRT, const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
-
+	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
+	
 public:
 	virtual const wiGraphics::Texture2D* GetDepthBuffer() { return &depthBuffer; }
 
