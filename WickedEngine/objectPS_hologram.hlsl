@@ -7,7 +7,7 @@ float4 main(PixelInputType input) : SV_TARGET
 	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
 	color.rgb = DEGAMMA(color.rgb);
 	color.rgb = max(color.r, max(color.g, color.b));
-	color *= g_xMat_baseColor * float4(input.instanceColor, 1);
+	color *= input.color;
 
 	float time = g_xFrame_Time;
 

@@ -27,6 +27,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &traceResult);
+		device->SetName(&traceResult, "traceResult");
 	}
 	{
 		TextureDesc desc;
@@ -35,6 +36,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &rtAccumulation);
+		device->SetName(&rtAccumulation, "rtAccumulation");
 	}
 
 	// also reset accumulation buffer state:

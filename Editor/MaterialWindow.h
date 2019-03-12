@@ -27,6 +27,7 @@ public:
 	wiCheckBox* planarReflCheckBox;
 	wiCheckBox* shadowCasterCheckBox;
 	wiCheckBox* flipNormalMapCheckBox;
+	wiCheckBox* useVertexColorsCheckBox;
 	wiSlider*	normalMapSlider;
 	wiSlider*	roughnessSlider;
 	wiSlider*	reflectanceSlider;

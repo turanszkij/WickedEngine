@@ -8,15 +8,15 @@
 #endif // RAYTRACE_STACKSIZE
 
 STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND1);
-RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND5);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
-STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND7);
+TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND2);
+RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND5);
+STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND6);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND7);
+STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND8);
 
-TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND8);
 
 inline RayHit TraceScene(Ray ray)
 {
@@ -291,6 +291,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 
 		hit.N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
 		hit.UV = tri.t0 * w + tri.t1 * u + tri.t2 * v;
+		hit.color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
 		hit.materialIndex = tri.materialIndex;
 
 		TracedRenderingMaterial mat = materialBuffer[hit.materialIndex];
@@ -301,7 +302,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 
 		float4 baseColor = baseColorMap;
 		baseColor.rgb = DEGAMMA(baseColor.rgb);
-		baseColor *= mat.baseColor;
+		baseColor *= hit.color;
 		float roughness = mat.roughness * surfaceMap.g;
 		float metalness = mat.metalness * surfaceMap.b;
 		float reflectance = mat.reflectance * surfaceMap.a;

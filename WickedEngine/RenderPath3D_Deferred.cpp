@@ -26,12 +26,15 @@ void RenderPath3D_Deferred::ResizeBuffers()
 
 		desc.Format = wiRenderer::RTFormat_gbuffer_0;
 		device->CreateTexture2D(&desc, nullptr, &rtGBuffer[0]);
+		device->SetName(&rtGBuffer[0], "rtGBuffer[0]");
 
 		desc.Format = wiRenderer::RTFormat_gbuffer_1;
 		device->CreateTexture2D(&desc, nullptr, &rtGBuffer[1]);
+		device->SetName(&rtGBuffer[1], "rtGBuffer[1]");
 
 		desc.Format = wiRenderer::RTFormat_gbuffer_2;
 		device->CreateTexture2D(&desc, nullptr, &rtGBuffer[2]);
+		device->SetName(&rtGBuffer[2], "rtGBuffer[2]");
 	}
 	{
 		TextureDesc desc;
@@ -40,6 +43,7 @@ void RenderPath3D_Deferred::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &rtDeferred);
+		device->SetName(&rtDeferred, "rtDeferred");
 	}
 	{
 		TextureDesc desc;
@@ -48,7 +52,9 @@ void RenderPath3D_Deferred::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &lightbuffer_diffuse);
+		device->SetName(&lightbuffer_diffuse, "lightbuffer_diffuse");
 		device->CreateTexture2D(&desc, nullptr, &lightbuffer_specular);
+		device->SetName(&lightbuffer_specular, "lightbuffer_specular");
 	}
 	{
 		TextureDesc desc;
@@ -57,7 +63,9 @@ void RenderPath3D_Deferred::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &rtSSS[0]);
+		device->SetName(&rtSSS[0], "rtSSS[0]");
 		device->CreateTexture2D(&desc, nullptr, &rtSSS[1]);
+		device->SetName(&rtSSS[1], "rtSSS[1]");
 	}
 }
 

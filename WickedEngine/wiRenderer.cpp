@@ -282,13 +282,13 @@ GFX_STRUCT Instance
 	XMFLOAT4A mat0;
 	XMFLOAT4A mat1;
 	XMFLOAT4A mat2;
-	XMFLOAT4A color_dither; //rgb:color, a:dither
+	XMFLOAT4A color;
 
 	Instance(){}
-	Instance(const XMFLOAT4X4& matIn, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1), float dither = 0){
-		Create(matIn, color, dither);
+	Instance(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0){
+		Create(matIn, colorIn, dither);
 	}
-	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1), float dither = 0) volatile
+	inline void Create(const XMFLOAT4X4& matIn, const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1), float dither = 0) volatile
 	{
 		mat0.x = matIn._11;
 		mat0.y = matIn._21;
@@ -305,10 +305,12 @@ GFX_STRUCT Instance
 		mat2.z = matIn._33;
 		mat2.w = matIn._43;
 
-		color_dither.x = color.x;
-		color_dither.y = color.y;
-		color_dither.z = color.z;
-		color_dither.w = dither;
+		color.x = colorIn.x;
+		color.y = colorIn.y;
+		color.z = colorIn.z;
+		color.w = colorIn.w;
+
+		color.w *= 1 - dither;
 	}
 
 	ALIGN_16
@@ -1664,6 +1666,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
 							mesh.vertexBuffer_ATL.get(),
+							mesh.vertexBuffer_COL.get(),
 							mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
 							instances.buffer
 						};
@@ -1671,10 +1674,12 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							sizeof(MeshComponent::Vertex_POS),
 							sizeof(MeshComponent::Vertex_TEX),
 							sizeof(MeshComponent::Vertex_TEX),
+							sizeof(MeshComponent::Vertex_COL),
 							sizeof(MeshComponent::Vertex_POS),
 							instanceDataSize
 						};
 						UINT offsets[] = {
+							0,
 							0,
 							0,
 							0,
@@ -1694,6 +1699,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				device->BindStencilRef(material.GetStencilRef(), threadID);
 				device->BindGraphicsPSO(pso, threadID);
 
+				device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 
 				const GPUResource* res[] = {
@@ -1818,16 +1824,17 @@ void LoadShaders()
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, 3, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		1, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",		2, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "INSTANCEATLAS",	0, FORMAT_R32G32B32A32_FLOAT, 4, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		0, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		1, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",		2, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEATLAS",			0, FORMAT_R32G32B32A32_FLOAT, 5, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_COMMON] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_common.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_COMMON]->code, &vertexLayouts[VLTYPE_OBJECT_ALL]);
@@ -1838,10 +1845,10 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_positionstream.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_POSITIONSTREAM]->code, &vertexLayouts[VLTYPE_OBJECT_POS]);
@@ -1853,10 +1860,10 @@ void LoadShaders()
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_OBJECT_SIMPLE] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectVS_simple.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_OBJECT_SIMPLE]->code, &vertexLayouts[VLTYPE_OBJECT_POS_TEX]);
@@ -1867,10 +1874,10 @@ void LoadShaders()
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW]->code, &vertexLayouts[VLTYPE_SHADOW_POS]);
@@ -1882,10 +1889,10 @@ void LoadShaders()
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD",				0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATI",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATI",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "COLOR_DITHER",	0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIX",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCECOLOR",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_SHADOW_ALPHATEST] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "shadowVS_alphatest.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_SHADOW_ALPHATEST]->code, &vertexLayouts[VLTYPE_SHADOW_POS_TEX]);
@@ -1922,11 +1929,11 @@ void LoadShaders()
 		VertexLayoutDesc layout[] =
 		{
 			{ "POSITION_NORMAL_SUBSETINDEX",	0, MeshComponent::Vertex_POS::FORMAT, 0, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+			{ "ATLAS",						0, MeshComponent::Vertex_TEX::FORMAT, 1, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
 
-			{ "MATIPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
-			{ "MATIPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			0, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			1, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INSTANCEMATRIXPREV",			2, FORMAT_R32G32B32A32_FLOAT, 2, VertexLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA, 1 },
 		};
 		vertexShaders[VSTYPE_RENDERLIGHTMAP] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapVS.cso", wiResourceManager::VERTEXSHADER));
 		device->CreateInputLayout(layout, ARRAYSIZE(layout), &vertexShaders[VSTYPE_RENDERLIGHTMAP]->code, &vertexLayouts[VLTYPE_RENDERLIGHTMAP]);
@@ -3773,6 +3780,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		materialGPUData.g_xMat_normalMapStrength = (material.normalMap == nullptr ? 0 : material.normalMapStrength);
 		materialGPUData.g_xMat_normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
 		materialGPUData.g_xMat_parallaxOcclusionMapping = material.parallaxOcclusionMapping;
+		materialGPUData.g_xMat_useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
 
 		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, threadID);
 	}
@@ -5305,6 +5313,75 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	device->EventBegin("DrawDebugWorld", threadID);
 
+	if (debugPartitionTree)
+	{
+		// Actually, there is no SPTree any more, so this will just render all aabbs...
+		device->EventBegin("DebugPartitionTree", threadID);
+
+		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
+
+		GPUBuffer* vbs[] = {
+			wiCube::GetVertexBuffer(),
+		};
+		const UINT strides[] = {
+			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
+		};
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+
+		MiscCB sb;
+
+		for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+		{
+			const AABB& aabb = scene.aabb_objects[i];
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
+			sb.g_xColor = XMFLOAT4(1, 0, 0, 1);
+
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+
+		for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
+		{
+			const AABB& aabb = scene.aabb_lights[i];
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
+			sb.g_xColor = XMFLOAT4(1, 1, 0, 1);
+
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+
+		for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
+		{
+			const AABB& aabb = scene.aabb_decals[i];
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
+			sb.g_xColor = XMFLOAT4(1, 0, 1, 1);
+
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+
+		for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
+		{
+			const AABB& aabb = scene.aabb_probes[i];
+
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
+			sb.g_xColor = XMFLOAT4(0, 1, 1, 1);
+
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
+
+			device->DrawIndexed(24, 0, 0, threadID);
+		}
+
+		device->EventEnd(threadID);
+	}
+
 	if (debugBoneLines)
 	{
 		device->EventBegin("DebugBoneLines", threadID);
@@ -5347,6 +5424,8 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				LineSegment segment;
 				XMStoreFloat4(&segment.a, a);
 				XMStoreFloat4(&segment.b, b);
+				segment.colorA = XMFLOAT4(1, 1, 1, 1);
+				segment.colorB = XMFLOAT4(1, 0, 1, 1);
 
 				memcpy((void*)((size_t)mem.data + j * sizeof(LineSegment)), &segment, sizeof(LineSegment));
 				j++;
@@ -6240,6 +6319,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mesh.vertexBuffer_TEX.get(),
 				mesh.vertexBuffer_ATL.get(),
+				mesh.vertexBuffer_COL.get(),
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mem.buffer
 			};
@@ -6247,10 +6327,12 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				sizeof(MeshComponent::Vertex_POS),
 				sizeof(MeshComponent::Vertex_TEX),
 				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_COL),
 				sizeof(MeshComponent::Vertex_POS),
 				sizeof(InstBuf)
 			};
 			UINT offsets[] = {
+				0,
 				0,
 				0,
 				0,
@@ -6317,6 +6399,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 						}
 						const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
+						device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 						device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 
 						const GPUResource* res[] = {
@@ -7028,226 +7111,6 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 }
 
 
-// These will hold all materials in the scene, ready to be accessed randomly in shaders:
-std::unique_ptr<GPUBuffer> globalMaterialBuffer;
-std::unique_ptr<Texture2D> globalMaterialAtlas;
-void UpdateGlobalMaterialResources(GRAPHICSTHREAD threadID)
-{
-	GraphicsDevice* device = GetDevice();
-	const Scene& scene = GetScene();
-
-	using namespace wiRectPacker;
-	static unordered_set<const Texture2D*> sceneTextures;
-	if (sceneTextures.empty())
-	{
-		sceneTextures.insert(wiTextureHelper::getWhite());
-		sceneTextures.insert(wiTextureHelper::getNormalMapDefault());
-	}
-
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
-
-		if (object.meshID != INVALID_ENTITY)
-		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-				sceneTextures.insert(material.GetBaseColorMap());
-				sceneTextures.insert(material.GetSurfaceMap());
-				sceneTextures.insert(material.GetEmissiveMap());
-			}
-		}
-
-	}
-
-	bool repackAtlas = false;
-	static unordered_map<const Texture2D*, rect_xywh> storedTextures;
-	const int atlasWrapBorder = 1;
-	for (const Texture2D* tex : sceneTextures)
-	{
-		if (tex == nullptr)
-		{
-			continue;
-		}
-
-		if (storedTextures.find(tex) == storedTextures.end())
-		{
-			// we need to pack this texture into the atlas
-			rect_xywh newRect = rect_xywh(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
-			storedTextures[tex] = newRect;
-
-			repackAtlas = true;
-		}
-
-	}
-
-	if (repackAtlas)
-	{
-		rect_xywh** out_rects = new rect_xywh*[storedTextures.size()];
-		int i = 0;
-		for (auto& it : storedTextures)
-		{
-			out_rects[i] = &it.second;
-			i++;
-		}
-
-		std::vector<bin> bins;
-		if (pack(out_rects, (int)storedTextures.size(), 16384, bins))
-		{
-			assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-			TextureDesc desc;
-			desc.Width = (UINT)bins[0].size.w;
-			desc.Height = (UINT)bins[0].size.h;
-			desc.MipLevels = 1;
-			desc.ArraySize = 1;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.SampleDesc.Count = 1;
-			desc.SampleDesc.Quality = 0;
-			desc.Usage = USAGE_DEFAULT;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-
-			globalMaterialAtlas.reset(new Texture2D);
-			device->CreateTexture2D(&desc, nullptr, globalMaterialAtlas.get());
-
-			for (auto& it : storedTextures)
-			{
-				CopyTexture2D(globalMaterialAtlas.get(), 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, BORDEREXPAND_WRAP);
-			}
-		}
-		else
-		{
-			wiBackLog::post("Tracing atlas packing failed!");
-		}
-
-		SAFE_DELETE_ARRAY(out_rects);
-	}
-
-	static std::vector<TracedRenderingMaterial> materialArray;
-	materialArray.clear();
-
-	// Pre-gather scene properties:
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
-
-		if (object.meshID != INVALID_ENTITY)
-		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-				TracedRenderingMaterial global_material;
-
-				// Copy base params:
-				global_material.baseColor = material.baseColor;
-				global_material.emissiveColor = material.emissiveColor;
-				global_material.texMulAdd = material.texMulAdd;
-				global_material.roughness = material.roughness;
-				global_material.reflectance = material.reflectance;
-				global_material.metalness = material.metalness;
-				global_material.refractionIndex = material.refractionIndex;
-				global_material.subsurfaceScattering = material.subsurfaceScattering;
-				global_material.normalMapStrength = material.normalMapStrength;
-				global_material.normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
-				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
-
-				// Add extended properties:
-				const TextureDesc& desc = globalMaterialAtlas->GetDesc();
-				rect_xywh rect;
-
-
-				if (material.GetBaseColorMap() != nullptr)
-				{
-					rect = storedTextures[material.GetBaseColorMap()];
-				}
-				else
-				{
-					rect = storedTextures[wiTextureHelper::getWhite()];
-				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-
-				if (material.GetSurfaceMap() != nullptr)
-				{
-					rect = storedTextures[material.GetSurfaceMap()];
-				}
-				else
-				{
-					rect = storedTextures[wiTextureHelper::getWhite()];
-				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-
-
-				if (material.GetEmissiveMap() != nullptr)
-				{
-					rect = storedTextures[material.GetEmissiveMap()];
-				}
-				else
-				{
-
-					rect = storedTextures[wiTextureHelper::getWhite()];
-				}
-				// eliminate border expansion:
-				rect.x += atlasWrapBorder;
-				rect.y += atlasWrapBorder;
-				rect.w -= atlasWrapBorder * 2;
-				rect.h -= atlasWrapBorder * 2;
-				global_material.emissiveMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-
-				materialArray.push_back(global_material);
-			}
-		}
-	}
-
-	if (materialArray.empty())
-	{
-		return;
-	}
-
-	if (globalMaterialBuffer == nullptr || globalMaterialBuffer->GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())
-	{
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
-		desc.ByteWidth = desc.StructureByteStride * (UINT)materialArray.size();
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-
-		globalMaterialBuffer.reset(new GPUBuffer);
-		hr = device->CreateBuffer(&desc, nullptr, globalMaterialBuffer.get());
-		assert(SUCCEEDED(hr));
-	}
-	device->UpdateBuffer(globalMaterialBuffer.get(), materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
-
-}
 void BuildSceneBVH(GRAPHICSTHREAD threadID)
 {
 	const Scene& scene = GetScene();
@@ -7333,8 +7196,6 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		assert(SUCCEEDED(hr));
 	}
 
-	UpdateGlobalMaterialResources(threadID);
-
 	// Begin raytrace
 
 	wiProfiler::BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
@@ -7389,20 +7250,6 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 	// Set up tracing resources:
 	sceneBVH.Bind(CS, threadID);
-
-	GPUResource* res[] = {
-		globalMaterialBuffer.get(),
-	};
-	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-	if (globalMaterialAtlas != nullptr)
-	{
-		device->BindResource(CS, globalMaterialAtlas.get(), TEXSLOT_ONDEMAND8, threadID);
-	}
-	else
-	{
-		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND8, threadID);
-	}
 
 	for (int bounce = 0; bounce < 8; ++bounce)
 	{
@@ -7943,21 +7790,6 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 				scene_bvh_invalid = false;
 				BuildSceneBVH(threadID);
 			}
-			UpdateGlobalMaterialResources(threadID);
-
-			GPUResource* res[] = {
-				globalMaterialBuffer.get(),
-			};
-			device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-			if (globalMaterialAtlas != nullptr)
-			{
-				device->BindResource(PS, globalMaterialAtlas.get(), TEXSLOT_ONDEMAND8, threadID);
-			}
-			else
-			{
-				device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND8, threadID);
-			}
 			sceneBVH.Bind(PS, threadID);
 		}
 
@@ -8012,9 +7844,9 @@ const Texture2D* GetGlobalLightmap()
 {
 	if (globalLightmap.IsValid())
 	{
-		return wiTextureHelper::getTransparent();
+		return &globalLightmap;
 	}
-	return &globalLightmap;
+	return wiTextureHelper::getTransparent();
 }
 
 void BindPersistentState(GRAPHICSTHREAD threadID)

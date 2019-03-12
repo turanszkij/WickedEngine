@@ -293,8 +293,6 @@ namespace wiImage
 				break;
 			case wiImageParams::PostProcess::COLORGRADE:
 				break;
-			case wiImageParams::PostProcess::STEREOGRAM:
-				break;
 			case wiImageParams::PostProcess::TONEMAP:
 				prcb.xPPParams0.x = params.process.params.exposure;
 				device->UpdateBuffer(&processCb, &prcb, threadID);
@@ -389,7 +387,6 @@ namespace wiImage
 		postprocessPS[wiImageParams::PostProcess::LINEARDEPTH] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "linDepthPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::COLORGRADE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "colorGradePS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::SSR] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "ssr.cso", wiResourceManager::PIXELSHADER));
-		postprocessPS[wiImageParams::PostProcess::STEREOGRAM] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "stereogramPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::TONEMAP] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "toneMapPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::REPROJECTDEPTHBUFFER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "reprojectDepthBufferPS.cso", wiResourceManager::PIXELSHADER));
 		postprocessPS[wiImageParams::PostProcess::DOWNSAMPLEDEPTHBUFFER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));

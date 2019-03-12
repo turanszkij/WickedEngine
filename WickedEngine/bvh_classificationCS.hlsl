@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_BVH.h"
+#include "tracedRenderingHF.hlsli"
 
 // This shader builds scene triangle data and performs BVH classification:
 //	- This shader is run per object.
@@ -9,9 +10,11 @@
 //	- Because we are calling this shader per object, clusters will not span across different objects
 //	- Clusters will be sorted later based on morton code
 
-TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
-RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
-TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
+TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
+RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
+TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
+TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, 0);
 RWRAWBUFFER(clusterCounterBuffer, 1);
@@ -130,6 +133,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		prim.t1 = meshVertexBuffer_TEX[i1];
 		prim.t2 = meshVertexBuffer_TEX[i2];
 		prim.materialIndex = xTraceBVHMaterialOffset + materialIndex;
+
+		TracedRenderingMaterial mat = materialBuffer[prim.materialIndex];
+
+		float4 color = xTraceBVHInstanceColor * mat.baseColor;
+		prim.c0 = color;
+		prim.c1 = color;
+		prim.c2 = color;
+
+		[branch]
+		if (mat.g_xMat_useVertexColors)
+		{
+			prim.c0 *= meshVertexBuffer_COL[i0];
+			prim.c1 *= meshVertexBuffer_COL[i1];
+			prim.c2 *= meshVertexBuffer_COL[i2];
+		}
 
 		triangleBuffer[globalTriangleID] = prim;
 

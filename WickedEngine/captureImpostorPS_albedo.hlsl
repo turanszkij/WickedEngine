@@ -6,7 +6,7 @@ float4 main(PixelInputType input) : SV_Target0
 
 	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
 	color.rgb = DEGAMMA(color.rgb);
-	color *= g_xMat_baseColor;
+	color *= input.color;
 	ALPHATEST(color.a);
 	color.a = 1;
 

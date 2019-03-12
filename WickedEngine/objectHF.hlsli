@@ -50,24 +50,22 @@ struct PixelInputType_Simple
 {
 	float4 pos								: SV_POSITION;
 	float  clip								: SV_ClipDistance0;
+	float4 color							: COLOR;
 	float2 tex								: TEXCOORD0;
-	nointerpolation float  dither			: DITHER;
-	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 };
 struct PixelInputType
 {
 	float4 pos								: SV_POSITION;
 	float  clip								: SV_ClipDistance0;
+	float4 color							: COLOR;
 	float2 tex								: TEXCOORD0;
-	nointerpolation float  dither			: DITHER;
-	nointerpolation float3 instanceColor	: INSTANCECOLOR;
+	float2 atl								: ATLAS;
 	float3 nor								: NORMAL;
 	float4 pos2D							: SCREENPOSITION;
 	float3 pos3D							: WORLDPOSITION;
 	float4 pos2DPrev						: SCREENPOSITIONPREV;
-	float4 ReflectionMapSamplingPos			: TEXCOORD1;
+	float4 ReflectionMapSamplingPos			: PLANARREFLECTIONPOSITION;
 	float2 nor2D							: NORMAL2D;
-	float2 atl								: ATLAS;
 };
 
 struct GBUFFEROutputType
@@ -727,11 +725,14 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 {
 	float2 pixel = input.pos.xy;
 
-#if !(defined(TILEDFORWARD) && !defined(TRANSPARENT)) && !defined(ENVMAPRENDERING)
+#ifndef DISABLE_ALPHATEST
+#ifndef TRANSPARENT
+#ifndef ENVMAPRENDERING
 	// apply dithering:
-	clip(dither(pixel + GetTemporalAASampleRotation()) - input.dither);
-#endif
-
+	clip(dither(pixel + GetTemporalAASampleRotation()) - (1 - input.color.a));
+#endif // DISABLE_ALPHATEST
+#endif // TRANSPARENT
+#endif // ENVMAPRENDERING
 
 
 	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
@@ -754,7 +755,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
 	color.rgb = DEGAMMA(color.rgb);
-	color *= g_xMat_baseColor * float4(input.instanceColor, 1);
+	color *= input.color;
 	ALPHATEST(color.a);
 
 #ifndef SIMPLE_INPUT

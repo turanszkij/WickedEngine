@@ -238,6 +238,9 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 	float		g_xMat_normalMapStrength;
 	float		g_xMat_normalMapFlip;
 	float		g_xMat_parallaxOcclusionMapping;
+
+	uint		g_xMat_useVertexColors;
+	uint3		g_xMat_padding;
 };
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)

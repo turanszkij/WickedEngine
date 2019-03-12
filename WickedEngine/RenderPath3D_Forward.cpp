@@ -25,9 +25,11 @@ void RenderPath3D_Forward::ResizeBuffers()
 
 		desc.Format = wiRenderer::RTFormat_hdr;
 		device->CreateTexture2D(&desc, nullptr, &rtMain[0]);
+		device->SetName(&rtMain[0], "rtMain[0]");
 
 		desc.Format = wiRenderer::RTFormat_gbuffer_1;
 		device->CreateTexture2D(&desc, nullptr, &rtMain[1]);
+		device->SetName(&rtMain[1], "rtMain[1]");
 
 		if (getMSAASampleCount() > 1)
 		{
@@ -35,9 +37,11 @@ void RenderPath3D_Forward::ResizeBuffers()
 
 			desc.Format = wiRenderer::RTFormat_hdr;
 			device->CreateTexture2D(&desc, nullptr, &rtMain_resolved[0]);
+			device->SetName(&rtMain_resolved[0], "rtMain_resolved[0]");
 
 			desc.Format = wiRenderer::RTFormat_gbuffer_1;
 			device->CreateTexture2D(&desc, nullptr, &rtMain_resolved[1]);
+			device->SetName(&rtMain_resolved[1], "rtMain_resolved[1]");
 		}
 	}
 }

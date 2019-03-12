@@ -1,18 +1,19 @@
 #ifndef _MESH_INPUT_LAYOUT_HF_
 #define _MESH_INPUT_LAYOUT_HF_
+#include "ShaderInterop_Renderer.h"
 
 struct Input_Instance
 {
-	float4 wi0 : MATI0;
-	float4 wi1 : MATI1;
-	float4 wi2 : MATI2;
-	float4 color_dither : COLOR_DITHER;
+	float4 mat0 : INSTANCEMATRIX0;
+	float4 mat1 : INSTANCEMATRIX1;
+	float4 mat2 : INSTANCEMATRIX2;
+	float4 color : INSTANCECOLOR;
 };
 struct Input_InstancePrev
 {
-	float4 wiPrev0 : MATIPREV0;
-	float4 wiPrev1 : MATIPREV1;
-	float4 wiPrev2 : MATIPREV2;
+	float4 matPrev0 : INSTANCEMATRIXPREV0;
+	float4 matPrev1 : INSTANCEMATRIXPREV1;
+	float4 matPrev2 : INSTANCEMATRIXPREV2;
 };
 struct Input_InstanceAtlas
 {
@@ -35,6 +36,7 @@ struct Input_Object_ALL
 	float4 pos : POSITION_NORMAL_SUBSETINDEX;
 	float2 tex : TEXCOORD;
 	float2 atl : ATLAS;
+	float4 col : COLOR;
 	float4 pre : PREVPOS;
 	Input_Instance inst;
 	Input_InstancePrev instPrev;
@@ -44,29 +46,30 @@ struct Input_Object_ALL
 inline float4x4 MakeWorldMatrixFromInstance(in Input_Instance input)
 {
 	return float4x4(
-		  float4(input.wi0.x, input.wi1.x, input.wi2.x, 0)
-		, float4(input.wi0.y, input.wi1.y, input.wi2.y, 0)
-		, float4(input.wi0.z, input.wi1.z, input.wi2.z, 0)
-		, float4(input.wi0.w, input.wi1.w, input.wi2.w, 1)
+		  float4(input.mat0.x, input.mat1.x, input.mat2.x, 0)
+		, float4(input.mat0.y, input.mat1.y, input.mat2.y, 0)
+		, float4(input.mat0.z, input.mat1.z, input.mat2.z, 0)
+		, float4(input.mat0.w, input.mat1.w, input.mat2.w, 1)
 		);
 }
 inline float4x4 MakeWorldMatrixFromInstance(in Input_InstancePrev input)
 {
 	return float4x4(
-		  float4(input.wiPrev0.x, input.wiPrev1.x, input.wiPrev2.x, 0)
-		, float4(input.wiPrev0.y, input.wiPrev1.y, input.wiPrev2.y, 0)
-		, float4(input.wiPrev0.z, input.wiPrev1.z, input.wiPrev2.z, 0)
-		, float4(input.wiPrev0.w, input.wiPrev1.w, input.wiPrev2.w, 1)
+		  float4(input.matPrev0.x, input.matPrev1.x, input.matPrev2.x, 0)
+		, float4(input.matPrev0.y, input.matPrev1.y, input.matPrev2.y, 0)
+		, float4(input.matPrev0.z, input.matPrev1.z, input.matPrev2.z, 0)
+		, float4(input.matPrev0.w, input.matPrev1.w, input.matPrev2.w, 1)
 		);
 }
 
 struct VertexSurface
 {
 	float4 position;
-	float3 normal;
-	uint materialIndex;
 	float2 uv;
 	float2 atlas;
+	float4 color;
+	float3 normal;
+	uint materialIndex;
 	float4 prevPos;
 };
 inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
@@ -74,6 +77,8 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
 	VertexSurface surface;
 
 	surface.position = float4(input.pos.xyz, 1);
+
+	surface.color = g_xMat_baseColor * input.inst.color;
 
 	uint normal_wind_matID = asuint(input.pos.w);
 	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
@@ -88,6 +93,8 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 	VertexSurface surface;
 
 	surface.position = float4(input.pos.xyz, 1);
+
+	surface.color = g_xMat_baseColor * input.inst.color;
 
 	uint normal_wind_matID = asuint(input.pos.w);
 	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
@@ -104,6 +111,13 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 	VertexSurface surface;
 
 	surface.position = float4(input.pos.xyz, 1);
+
+	surface.color = g_xMat_baseColor * input.inst.color;
+
+	if (g_xMat_useVertexColors)
+	{
+		surface.color *= input.col;
+	}
 
 	uint normal_wind_matID = asuint(input.pos.w);
 	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;

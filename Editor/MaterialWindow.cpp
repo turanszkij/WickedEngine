@@ -78,6 +78,16 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	});
 	materialWindow->AddWidget(flipNormalMapCheckBox);
 
+	useVertexColorsCheckBox = new wiCheckBox("Use vertex colors: ");
+	useVertexColorsCheckBox->SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
+	useVertexColorsCheckBox->SetPos(XMFLOAT2(570, y += step));
+	useVertexColorsCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiRenderer::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetUseVertexColors(args.bValue);
+	});
+	materialWindow->AddWidget(useVertexColorsCheckBox);
+
 	normalMapSlider = new wiSlider(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider->SetTooltip("How much the normal map should distort the face normals (bumpiness).");
 	normalMapSlider->SetSize(XMFLOAT2(100, 30));
@@ -635,6 +645,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		planarReflCheckBox->SetCheck(material->HasPlanarReflection());
 		shadowCasterCheckBox->SetCheck(material->IsCastingShadow());
 		flipNormalMapCheckBox->SetCheck(material->IsFlipNormalMap());
+		useVertexColorsCheckBox->SetCheck(material->IsUsingVertexColors());
 		normalMapSlider->SetValue(material->normalMapStrength);
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);

@@ -13,6 +13,7 @@ static const uint ARGUMENTBUFFER_OFFSET_CLUSTERPROCESSOR = ARGUMENTBUFFER_OFFSET
 CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 {
 	float4x4 xTraceBVHWorld;
+	float4 xTraceBVHInstanceColor;
 	uint xTraceBVHMaterialOffset;
 	uint xTraceBVHMeshTriangleOffset;
 	uint xTraceBVHMeshTriangleCount;
@@ -21,9 +22,10 @@ CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 
 struct BVHMeshTriangle
 {
-	float3 v0, v1, v2;
-	float3 n0, n1, n2;
-	float2 t0, t1, t2;
+	float3 v0, v1, v2;	// positions
+	float3 n0, n1, n2;	// normals
+	float2 t0, t1, t2;	// texcoords
+	float4 c0, c1, c2;	// vertex colors
 	uint materialIndex;
 };
 struct BVHAABB

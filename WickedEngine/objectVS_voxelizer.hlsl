@@ -3,12 +3,12 @@
 struct VSOut
 {
 	float4 pos : SV_POSITION;
-	float3 nor : NORMAL;
+	float4 color : COLOR;
 	float2 tex : TEXCOORD;
-	float3 instanceColor : COLOR;
+	float3 nor : NORMAL;
 };
 
-VSOut main(Input_Object_POS_TEX input, uint instanceID : SV_INSTANCEID)
+VSOut main(Input_Object_POS_TEX input)
 {
 	VSOut Out;
 
@@ -16,9 +16,9 @@ VSOut main(Input_Object_POS_TEX input, uint instanceID : SV_INSTANCEID)
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
 	Out.pos = mul(surface.position, WORLD);
-	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
+	Out.color = surface.color;
 	Out.tex = surface.uv;
-	Out.instanceColor = input.inst.color_dither.rgb;
+	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
 
 	return Out;
 }

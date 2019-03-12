@@ -225,9 +225,6 @@
     <FxCompile Include="ssss.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="stereogramPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="sunPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>

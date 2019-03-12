@@ -3,18 +3,18 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
-	float3 nor : NORMAL;
+	float4 color : COLOR;
 	float2 tex : TEXCOORD;
-	float3 instanceColor : COLOR;
+	float3 nor : NORMAL;
 };
 
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
-	float3 N : NORMAL;
+	float4 color : COLOR;
 	float2 tex : TEXCOORD;
+	float3 N : NORMAL;
 	float3 P : POSITION3D;
-	nointerpolation float3 instanceColor : COLOR;
 };
 
 [maxvertexcount(3)]
@@ -65,10 +65,10 @@ void main(
 		output[j].pos.zw = 1;
 
 		// Append the rest of the parameters as is:
-		output[j].N = input[j].nor;
+		output[j].color = input[j].color;
 		output[j].tex = input[j].tex;
+		output[j].N = input[j].nor;
 		output[j].P = input[j].pos.xyz;
-		output[j].instanceColor = input[j].instanceColor;
 
 		outputStream.Append(output[j]);
 	}

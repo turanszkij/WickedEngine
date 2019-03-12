@@ -28,6 +28,7 @@ void RenderPath2D::ResizeBuffers()
 		desc.Width = device->GetScreenWidth();
 		desc.Height = device->GetScreenHeight();
 		device->CreateTexture2D(&desc, nullptr, &rtFinal);
+		device->SetName(&rtFinal, "rtFinal");
 	}
 
 }

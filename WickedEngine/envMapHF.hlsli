@@ -6,22 +6,20 @@
 struct VSOut_EnvmapRendering
 {
 	float4 pos : SV_Position;
-	float3 nor : NORMAL;
+	float4 color : COLOR;
 	float2 tex : TEXCOORD0;
 	float2 atl : ATLAS;
-	nointerpolation float3 instanceColor	: INSTANCECOLOR;
-	float  ao : AMBIENT_OCCLUSION;
+	float3 nor : NORMAL;
 };
 
 struct PSIn_EnvmapRendering
 {
 	float4 pos : SV_Position;
-	float3 pos3D : WORLDPOSITION;
-	float3 nor : NORMAL;
+	float4 color : COLOR;
 	float2 tex : TEXCOORD0;
 	float2 atl : ATLAS;
-	float  ao : AMBIENT_OCCLUSION;
-	nointerpolation float3 instanceColor	: INSTANCECOLOR;
+	float3 nor : NORMAL;
+	float3 pos3D : WORLDPOSITION;
 	uint RTIndex	: SV_RenderTargetArrayIndex;
 };
 

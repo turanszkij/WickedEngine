@@ -442,7 +442,7 @@ namespace wiSceneSystem
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
-			bd.StructureByteStride = sizeof(uint32_t);
+			bd.StructureByteStride = sizeof(Vertex_COL);
 			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertex_colors.size());
 			bd.Format = FORMAT_R8G8B8A8_UNORM;
 

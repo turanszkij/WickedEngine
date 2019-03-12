@@ -4,22 +4,19 @@
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
+	float4 color			: COLOR;
 	float2 tex				: TEXCOORD0;
-	nointerpolation float  dither : DITHER;
-	nointerpolation float3 instanceColor	: INSTANCECOLOR;
 };
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
 	float2 pixel = input.pos.xy;
 
-	clip(dither(pixel) - input.dither);
-
 	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
 
 	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
 	color.rgb = DEGAMMA(color.rgb);
-	color *= g_xMat_baseColor * float4(input.instanceColor, 1);
+	color *= input.color;
 	ALPHATEST(color.a);
 	float opacity = color.a;
 

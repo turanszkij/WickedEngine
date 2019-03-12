@@ -5,10 +5,8 @@
 #include "wiProfiler.h"
 #include "wiResourceManager.h"
 #include "wiGPUSortLib.h"
-
-#include <string>
-#include <vector>
-#include <set>
+#include "wiTextureHelper.h"
+#include "wiBackLog.h"
 
 using namespace std;
 using namespace wiGraphics;
@@ -29,6 +27,220 @@ static const ComputeShader* computeShaders[CSTYPE_BVH_COUNT] = {};
 static ComputePSO CPSO[CSTYPE_BVH_COUNT];
 
 static GPUBuffer constantBuffer;
+
+
+void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	using namespace wiRectPacker;
+
+	if (sceneTextures.empty())
+	{
+		sceneTextures.insert(wiTextureHelper::getWhite());
+		sceneTextures.insert(wiTextureHelper::getNormalMapDefault());
+	}
+
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+				sceneTextures.insert(material.GetBaseColorMap());
+				sceneTextures.insert(material.GetSurfaceMap());
+				sceneTextures.insert(material.GetEmissiveMap());
+			}
+		}
+
+	}
+
+	bool repackAtlas = false;
+	const int atlasWrapBorder = 1;
+	for (const Texture2D* tex : sceneTextures)
+	{
+		if (tex == nullptr)
+		{
+			continue;
+		}
+
+		if (storedTextures.find(tex) == storedTextures.end())
+		{
+			// we need to pack this texture into the atlas
+			rect_xywh newRect = rect_xywh(0, 0, tex->GetDesc().Width + atlasWrapBorder * 2, tex->GetDesc().Height + atlasWrapBorder * 2);
+			storedTextures[tex] = newRect;
+
+			repackAtlas = true;
+		}
+
+	}
+
+	if (repackAtlas)
+	{
+		vector<rect_xywh*> out_rects(storedTextures.size());
+		int i = 0;
+		for (auto& it : storedTextures)
+		{
+			out_rects[i] = &it.second;
+			i++;
+		}
+
+		std::vector<bin> bins;
+		if (pack(out_rects.data(), (int)storedTextures.size(), 16384, bins))
+		{
+			assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+			TextureDesc desc;
+			desc.Width = (UINT)bins[0].size.w;
+			desc.Height = (UINT)bins[0].size.h;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.SampleDesc.Count = 1;
+			desc.SampleDesc.Quality = 0;
+			desc.Usage = USAGE_DEFAULT;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.MiscFlags = 0;
+
+			device->CreateTexture2D(&desc, nullptr, &globalMaterialAtlas);
+			device->SetName(&globalMaterialAtlas, "globalMaterialAtlas");
+
+			for (auto& it : storedTextures)
+			{
+				wiRenderer::CopyTexture2D(&globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, wiRenderer::BORDEREXPAND_WRAP);
+			}
+		}
+		else
+		{
+			wiBackLog::post("Tracing atlas packing failed!");
+		}
+	}
+
+	materialArray.clear();
+
+	// Pre-gather scene properties:
+	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+	{
+		const ObjectComponent& object = scene.objects[i];
+
+		if (object.meshID != INVALID_ENTITY)
+		{
+			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
+
+				TracedRenderingMaterial global_material;
+
+				// Copy base params:
+				global_material.baseColor = material.baseColor;
+				global_material.emissiveColor = material.emissiveColor;
+				global_material.texMulAdd = material.texMulAdd;
+				global_material.roughness = material.roughness;
+				global_material.reflectance = material.reflectance;
+				global_material.metalness = material.metalness;
+				global_material.refractionIndex = material.refractionIndex;
+				global_material.subsurfaceScattering = material.subsurfaceScattering;
+				global_material.normalMapStrength = material.normalMapStrength;
+				global_material.normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
+				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
+				global_material.g_xMat_useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
+
+				// Add extended properties:
+				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
+				rect_xywh rect;
+
+
+				if (material.GetBaseColorMap() != nullptr)
+				{
+					rect = storedTextures[material.GetBaseColorMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				global_material.baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (material.GetSurfaceMap() != nullptr)
+				{
+					rect = storedTextures[material.GetSurfaceMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				global_material.surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (material.GetEmissiveMap() != nullptr)
+				{
+					rect = storedTextures[material.GetEmissiveMap()];
+				}
+				else
+				{
+
+					rect = storedTextures[wiTextureHelper::getWhite()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				global_material.emissiveMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+				materialArray.push_back(global_material);
+			}
+		}
+	}
+
+	if (materialArray.empty())
+	{
+		return;
+	}
+
+	if (globalMaterialBuffer.GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())
+	{
+		GPUBufferDesc desc;
+		HRESULT hr;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
+		desc.ByteWidth = desc.StructureByteStride * (UINT)materialArray.size();
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+
+		hr = device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
+		assert(SUCCEEDED(hr));
+	}
+	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
+
+}
 
 //#define BVH_VALIDATE // slow but great for debug!
 void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
@@ -205,6 +417,8 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 	wiProfiler::BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
 
+	UpdateGlobalMaterialResources(scene, threadID);
+
 	device->EventBegin("BVH - Reset", threadID);
 	{
 		device->BindComputePSO(&CPSO[CSTYPE_BVH_RESET], threadID);
@@ -247,6 +461,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 				BVHCB cb;
 				cb.xTraceBVHWorld = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
+				cb.xTraceBVHInstanceColor = object.color;
 				cb.xTraceBVHMaterialOffset = materialCount;
 				cb.xTraceBVHMeshTriangleOffset = triangleCount;
 				cb.xTraceBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
@@ -259,9 +474,11 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), threadID);
 
 				GPUResource* res[] = {
+					&globalMaterialBuffer,
 					mesh.indexBuffer.get(),
 					mesh.vertexBuffer_POS.get(),
 					mesh.vertexBuffer_TEX.get(),
+					mesh.vertexBuffer_COL.get(),
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
@@ -472,6 +689,8 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	const GPUResource* res[] = {
+		&globalMaterialBuffer,
+		(globalMaterialAtlas.IsValid() ? &globalMaterialAtlas : wiTextureHelper::getWhite()),
 		&triangleBuffer,
 		&clusterCounterBuffer,
 		&clusterIndexBuffer,
@@ -480,7 +699,7 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 		&bvhNodeBuffer,
 		&bvhAABBBuffer,
 	};
-	device->BindResources(stage, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 }
 
 

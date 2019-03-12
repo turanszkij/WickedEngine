@@ -112,7 +112,6 @@ struct wiImageParams
 			SSSS,
 			SSR,
 			COLORGRADE,
-			STEREOGRAM,
 			TONEMAP,
 			REPROJECTDEPTHBUFFER,
 			DOWNSAMPLEDEPTHBUFFER,
@@ -171,7 +170,6 @@ struct wiImageParams
 		void setColorGrade() { type = COLORGRADE; }
 		void setSSSS(const XMFLOAT2& value) { type = SSSS; params.ssss.x = value.x; params.ssss.y = value.y; }
 		void setSSR() { type = SSR; }
-		void setStereogram() { type = STEREOGRAM; }
 		void setToneMap(float exposure) { type = TONEMAP; params.exposure = exposure; }
 		void setDepthBufferReprojection() { type = REPROJECTDEPTHBUFFER; }
 		void setDepthBufferDownsampling() { type = DOWNSAMPLEDEPTHBUFFER; }

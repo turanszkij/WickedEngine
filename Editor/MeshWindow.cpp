@@ -255,6 +255,14 @@ void MeshWindow::SetEntity(Entity entity)
 		ss << "Vertex count: " << mesh->vertex_positions.size() << endl;
 		ss << "Index count: " << mesh->indices.size() << endl;
 		ss << "Subset count: " << mesh->subsets.size() << endl;
+		ss << endl << "Vertex buffers: ";
+		if (mesh->vertexBuffer_POS != nullptr) ss << "position; ";
+		if (mesh->vertexBuffer_TEX != nullptr) ss << "texcoord; ";
+		if (mesh->vertexBuffer_ATL != nullptr) ss << "atlas; ";
+		if (mesh->vertexBuffer_COL != nullptr) ss << "color; ";
+		if (mesh->vertexBuffer_PRE != nullptr) ss << "prevPos; ";
+		if (mesh->vertexBuffer_BON != nullptr) ss << "bone; ";
+		if (mesh->streamoutBuffer_POS != nullptr) ss << "streamout; ";
 		meshInfoLabel->SetText(ss.str());
 
 		doubleSidedCheckBox->SetCheck(mesh->IsDoubleSided());

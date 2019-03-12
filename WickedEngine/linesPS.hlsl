@@ -1,4 +1,5 @@
-struct VertexToPixel{
+struct VertexToPixel
+{
 	float4 pos	: SV_POSITION;
 	centroid float4 col	: COLOR;
 };

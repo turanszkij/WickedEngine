@@ -17,7 +17,6 @@
 #include "RenderPath3D_TiledForward.h"
 #include "RenderPath3D_TiledDeferred.h"
 #include "RenderPath3D_PathTracing.h"
-#include "RenderPath3D_Stereogram.h"
 #include "LoadingScreen.h"
 #include "MainComponent.h"
 

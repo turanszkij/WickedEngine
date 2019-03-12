@@ -3,23 +3,35 @@
 
 RWSTRUCTUREDBUFFER(output, VoxelType, 0);
 
-void main(float4 pos : SV_POSITION, float3 N : NORMAL, float2 tex : TEXCOORD, float3 P : POSITION3D, nointerpolation float3 instanceColor : COLOR)
+struct PSInput
 {
+	float4 pos : SV_POSITION;
+	float4 color : COLOR;
+	float2 tex : TEXCOORD;
+	float3 N : NORMAL;
+	float3 P : POSITION3D;
+};
+
+void main(PSInput input)
+{
+	float3 N = input.N;
+	float3 P = input.P;
+
 	float3 diff = (P - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataRes_Inverse * g_xFrame_VoxelRadianceDataSize_Inverse;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 	[branch]
 	if (is_saturated(uvw))
 	{
-		float4 baseColor = xBaseColorMap.Sample(sampler_linear_wrap, tex);
+		float4 baseColor = xBaseColorMap.Sample(sampler_linear_wrap, input.tex);
 		baseColor.rgb = DEGAMMA(baseColor.rgb);
-		baseColor *= g_xMat_baseColor * float4(instanceColor, 1);
+		baseColor *= input.color;
 		float4 color = baseColor;
 		float4 emissiveColor;
 		[branch]
 		if (g_xMat_emissiveColor.a > 0)
 		{
-			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, tex);
+			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, input.tex);
 			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
 			emissiveColor *= g_xMat_emissiveColor;
 		}

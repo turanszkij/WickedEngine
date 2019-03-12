@@ -44,6 +44,9 @@ struct TracedRenderingMaterial
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;
 	float4		emissiveMapAtlasMulAdd;
+
+	uint		g_xMat_useVertexColors;
+	uint3		g_xMat_padding;
 };
 
 

@@ -103,6 +103,7 @@ struct RayHit
 	float3 N;
 	float2 UV;
 	uint materialIndex;
+	float4 color;
 };
 
 inline RayHit CreateRayHit()
@@ -116,6 +117,7 @@ inline RayHit CreateRayHit()
 	hit.N = 0;
 	hit.UV = 0;
 	hit.materialIndex = 0;
+	hit.color = 0;
 
 	return hit;
 }

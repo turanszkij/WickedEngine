@@ -3345,8 +3345,8 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* res
 }
 void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID)
 {
-	assert(count <= 8);
-	ID3D11ShaderResourceView* srvs[8];
+	assert(count <= 16);
+	ID3D11ShaderResourceView* srvs[16];
 	for (UINT i = 0; i < count; ++i)
 	{
 		srvs[i] = resources[i] != nullptr ? (ID3D11ShaderResourceView*)resources[i]->SRV : nullptr;

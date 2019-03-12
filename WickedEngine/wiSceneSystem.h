@@ -104,6 +104,7 @@ namespace wiSceneSystem
 			PLANAR_REFLECTION = 1 << 2,
 			WATER = 1 << 3,
 			FLIP_NORMALMAP = 1 << 4,
+			USE_VERTEXCOLORS = 1 << 5,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
 
@@ -177,6 +178,7 @@ namespace wiSceneSystem
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
+		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
@@ -191,7 +193,8 @@ namespace wiSceneSystem
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
-		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; }  }
+		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; } }
+		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; }  }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
 
@@ -372,6 +375,11 @@ namespace wiSceneSystem
 
 				return wei_FULL;
 			}
+		};
+		struct Vertex_COL
+		{
+			uint32_t color = 0;
+			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
 		};
 
 	};
