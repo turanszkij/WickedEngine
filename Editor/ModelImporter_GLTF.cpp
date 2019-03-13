@@ -158,36 +158,33 @@ struct LoaderState
 {
 	tinygltf::Model gltfModel;
 	Scene scene;
-	unordered_map<const tinygltf::Node*, Entity> entityMap;
-	vector<Entity> materialArray;
-	vector<Entity> meshArray;
-	vector<Entity> armatureArray;
+	unordered_map<int, Entity> entityMap;  // node -> entity
 };
 
 // Recursively loads nodes and resolves hierarchy:
-void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
+void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 {
-	if (node == nullptr)
+	if (nodeIndex < 0)
 	{
 		return;
 	}
-
+	auto& node = state.gltfModel.nodes[nodeIndex];
 	Entity entity = INVALID_ENTITY;
 
-	if(node->mesh >= 0)
+	if(node.mesh >= 0)
 	{
-		entity = state.scene.Entity_CreateObject(node->name);
+		entity = state.scene.Entity_CreateObject(node.name);
 		ObjectComponent& object = *state.scene.objects.GetComponent(entity);
 
-		if (node->mesh < (int)state.meshArray.size())
+		if (node.mesh < (int)state.scene.meshes.GetCount())
 		{
-			object.meshID = state.meshArray[node->mesh];
+			object.meshID = state.scene.meshes.GetEntity(node.mesh);
 
-			if (node->skin >= 0)
+			if (node.skin >= 0)
 			{
 				MeshComponent& mesh = *state.scene.meshes.GetComponent(object.meshID);
 				assert(!mesh.vertex_boneindices.empty());
-				mesh.armatureID = state.armatureArray[node->skin];
+				mesh.armatureID = state.scene.armatures.GetEntity(node.skin);
 			}
 		}
 		else
@@ -195,59 +192,59 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 			assert(0);
 		}
 	}
-	else if (node->camera >= 0)
+	else if (node.camera >= 0)
 	{
-		if (node->name.empty())
+		if (node.name.empty())
 		{
 			static int camID = 0;
 			stringstream ss("");
 			ss << "cam" << camID++;
-			node->name = ss.str();
+			node.name = ss.str();
 		}
 
-		entity = state.scene.Entity_CreateCamera(node->name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+		entity = state.scene.Entity_CreateCamera(node.name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 	}
 
 	if (entity == INVALID_ENTITY)
 	{
 		entity = CreateEntity();
 		state.scene.transforms.Create(entity);
-		state.scene.names.Create(entity) = node->name;
+		state.scene.names.Create(entity) = node.name;
 	}
 
-	state.entityMap[node] = entity;
+	state.entityMap[nodeIndex] = entity;
 
 	TransformComponent& transform = *state.scene.transforms.GetComponent(entity);
-	if (!node->scale.empty())
+	if (!node.scale.empty())
 	{
-		transform.scale_local = XMFLOAT3((float)node->scale[0], (float)node->scale[1], (float)node->scale[2]);
+		transform.scale_local = XMFLOAT3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
 	}
-	if (!node->rotation.empty())
+	if (!node.rotation.empty())
 	{
-		transform.rotation_local = XMFLOAT4((float)node->rotation[0], (float)node->rotation[1], (float)node->rotation[2], (float)node->rotation[3]);
+		transform.rotation_local = XMFLOAT4((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2], (float)node.rotation[3]);
 	}
-	if (!node->translation.empty())
+	if (!node.translation.empty())
 	{
-		transform.translation_local = XMFLOAT3((float)node->translation[0], (float)node->translation[1], (float)node->translation[2]);
+		transform.translation_local = XMFLOAT3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
 	}
-	if (!node->matrix.empty())
+	if (!node.matrix.empty())
 	{
-		transform.world._11 = (float)node->matrix[0];
-		transform.world._12 = (float)node->matrix[1];
-		transform.world._13 = (float)node->matrix[2];
-		transform.world._14 = (float)node->matrix[3];
-		transform.world._21 = (float)node->matrix[4];
-		transform.world._22 = (float)node->matrix[5];
-		transform.world._23 = (float)node->matrix[6];
-		transform.world._24 = (float)node->matrix[7];
-		transform.world._31 = (float)node->matrix[8];
-		transform.world._32 = (float)node->matrix[9];
-		transform.world._33 = (float)node->matrix[10];
-		transform.world._34 = (float)node->matrix[11];
-		transform.world._41 = (float)node->matrix[12];
-		transform.world._42 = (float)node->matrix[13];
-		transform.world._43 = (float)node->matrix[14];
-		transform.world._44 = (float)node->matrix[15];
+		transform.world._11 = (float)node.matrix[0];
+		transform.world._12 = (float)node.matrix[1];
+		transform.world._13 = (float)node.matrix[2];
+		transform.world._14 = (float)node.matrix[3];
+		transform.world._21 = (float)node.matrix[4];
+		transform.world._22 = (float)node.matrix[5];
+		transform.world._23 = (float)node.matrix[6];
+		transform.world._24 = (float)node.matrix[7];
+		transform.world._31 = (float)node.matrix[8];
+		transform.world._32 = (float)node.matrix[9];
+		transform.world._33 = (float)node.matrix[10];
+		transform.world._34 = (float)node.matrix[11];
+		transform.world._41 = (float)node.matrix[12];
+		transform.world._42 = (float)node.matrix[13];
+		transform.world._43 = (float)node.matrix[14];
+		transform.world._44 = (float)node.matrix[15];
 		transform.ApplyTransform(); // this creates S, R, T vectors from world matrix
 	}
 
@@ -261,11 +258,11 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 		state.scene.Component_Attach(entity, parent);
 	}
 
-	if (!node->children.empty())
+	if (!node.children.empty())
 	{
-		for (int child : node->children)
+		for (int child : node.children)
 		{
-			LoadNode(&state.gltfModel.nodes[child], entity, state);
+			LoadNode(child, entity, state);
 		}
 	}
 }
@@ -307,8 +304,6 @@ void ImportModel_GLTF(const std::string& fileName)
 	for (auto& x : state.gltfModel.materials)
 	{
 		Entity materialEntity = state.scene.Entity_CreateMaterial(x.name);
-
-		state.materialArray.push_back(materialEntity);
 
 		MaterialComponent& material = *state.scene.materials.GetComponent(materialEntity);
 
@@ -415,19 +410,15 @@ void ImportModel_GLTF(const std::string& fileName)
 
 	}
 
-	if (state.materialArray.empty())
+	if (state.scene.materials.GetCount() == 0)
 	{
-		Entity materialEntity = state.scene.Entity_CreateMaterial("GLTFImport_defaultMaterial");
-		state.materialArray.push_back(materialEntity);
+		state.scene.Entity_CreateMaterial("gltfimport_defaultMaterial");
 	}
 
 	// Create meshes:
 	for (auto& x : state.gltfModel.meshes)
 	{
 		Entity meshEntity = state.scene.Entity_CreateMesh(x.name);
-
-		state.meshArray.push_back(meshEntity);
-
 		MeshComponent& mesh = *state.scene.meshes.GetComponent(meshEntity);
 
 		for (auto& prim : x.primitives)
@@ -448,7 +439,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
 			mesh.subsets.back().indexCount = (uint32_t)indexCount;
 
-			mesh.subsets.back().materialID = state.materialArray[max(0, prim.material)];
+			mesh.subsets.back().materialID = state.scene.materials.GetEntity(max(0, prim.material));
 
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
@@ -633,15 +624,7 @@ void ImportModel_GLTF(const std::string& fileName)
 		Entity armatureEntity = CreateEntity();
 		state.scene.names.Create(armatureEntity) = skin.name;
 		state.scene.layers.Create(armatureEntity);
-		TransformComponent& transform = state.scene.transforms.Create(armatureEntity);
 		ArmatureComponent& armature = state.scene.armatures.Create(armatureEntity);
-
-		state.armatureArray.push_back(armatureEntity);
-
-		if (transform_to_LH)
-		{
-			XMStoreFloat4x4(&armature.remapMatrix, XMMatrixScaling(1, 1, -1));
-		}
 
 		if (skin.inverseBindMatrices >= 0)
 		{
@@ -661,14 +644,14 @@ void ImportModel_GLTF(const std::string& fileName)
 	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[max(0, state.gltfModel.defaultScene)];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
-		LoadNode(&state.gltfModel.nodes[gltfScene.nodes[i]], rootEntity, state);
+		LoadNode(gltfScene.nodes[i], rootEntity, state);
 	}
 
 	// Create armature-bone mappings:
 	int armatureIndex = 0;
 	for (auto& skin : state.gltfModel.skins)
 	{
-		Entity entity = state.armatureArray[armatureIndex++];
+		Entity entity = state.scene.armatures.GetEntity(armatureIndex++);
 		ArmatureComponent& armature = *state.scene.armatures.GetComponent(entity);
 
 		const size_t jointCount = skin.joints.size();
@@ -679,11 +662,16 @@ void ImportModel_GLTF(const std::string& fileName)
 		for (size_t i = 0; i < jointCount; ++i)
 		{
 			int jointIndex = skin.joints[i];
-			const tinygltf::Node& joint_node = state.gltfModel.nodes[jointIndex];
-
-			Entity boneEntity = state.entityMap[&joint_node];
+			Entity boneEntity = state.entityMap[jointIndex];
 
 			armature.boneCollection[i] = boneEntity;
+		}
+
+		// Save the root bone ID:
+		//	It is important because if the root bone is transformed, we still need to remain in armature-local space for instanced skinning
+		if (skin.skeleton >= 0)
+		{
+			armature.rootBoneID = state.entityMap.at(skin.skeleton);
 		}
 	}
 
@@ -781,7 +769,7 @@ void ImportModel_GLTF(const std::string& fileName)
 		{
 			auto& channel = anim.channels[i];
 
-			animationcomponent.channels[i].target = state.entityMap[&state.gltfModel.nodes[channel.target_node]];
+			animationcomponent.channels[i].target = state.entityMap[channel.target_node];
 			assert(channel.sampler >= 0);
 			animationcomponent.channels[i].samplerIndex = (uint32_t)channel.sampler;
 

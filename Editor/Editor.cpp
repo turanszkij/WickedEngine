@@ -982,15 +982,17 @@ void EditorComponent::Update(float dt)
 			{
 				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 				{
-					Entity entity = scene.armatures.GetEntity(i);
-					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+					const ArmatureComponent& armature = scene.armatures[i];
+					if (armature.rootBoneID == INVALID_ENTITY)
+						continue;
+					const TransformComponent& transform = *scene.transforms.GetComponent(armature.rootBoneID);
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiRenderer::RayIntersectWorldResult();
-						hovered.entity = entity;
+						hovered.entity = armature.rootBoneID;
 						hovered.distance = dis;
 					}
 				}
@@ -1641,8 +1643,10 @@ void EditorComponent::Compose() const
 	{
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
-			Entity entity = scene.armatures.GetEntity(i);
-			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+			const ArmatureComponent& armature = scene.armatures[i];
+			if (armature.rootBoneID == INVALID_ENTITY)
+				continue;
+			const TransformComponent& transform = *scene.transforms.GetComponent(armature.rootBoneID);
 
 			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
@@ -1653,13 +1657,13 @@ void EditorComponent::Compose() const
 			fx.pivot = XMFLOAT2(0.5f, 0.5f);
 			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
 
-			if (hovered.entity == entity)
+			if (hovered.entity == armature.rootBoneID)
 			{
 				fx.col = XMFLOAT4(1, 1, 1, 1);
 			}
 			for (auto& picked : selected)
 			{
-				if (picked.entity == entity)
+				if (picked.entity == armature.rootBoneID)
 				{
 					fx.col = XMFLOAT4(1, 1, 0, 1);
 					break;

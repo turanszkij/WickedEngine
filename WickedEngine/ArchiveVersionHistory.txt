@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+26: removed ArmatureComponent::remapMatrix, added ArmatureComponent::rootBoneID
 25: emissiveColor separated from baseColor
 24: emissive map moved to separate texture (non-grayscale)
 23: serialize lightmap atlas per object

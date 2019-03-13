@@ -373,7 +373,16 @@ namespace wiSceneSystem
 			}
 
 			archive >> inverseBindMatrices;
-			archive >> remapMatrix;
+
+			if (archive.GetVersion() < 26)
+			{
+				XMFLOAT4X4 remapMatrix;
+				archive >> remapMatrix; // no longer used
+			}
+			if (archive.GetVersion() >= 26)
+			{
+				SerializeEntity(archive, rootBoneID, seed);
+			}
 		}
 		else
 		{
@@ -387,7 +396,10 @@ namespace wiSceneSystem
 			}
 
 			archive << inverseBindMatrices;
-			archive << remapMatrix;
+			if (archive.GetVersion() >= 26)
+			{
+				SerializeEntity(archive, rootBoneID, seed);
+			}
 		}
 	}
 	void LightComponent::Serialize(wiArchive& archive, uint32_t seed)

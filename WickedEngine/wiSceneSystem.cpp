@@ -937,7 +937,7 @@ namespace wiSceneSystem
 
 		RunHierarchyUpdateSystem(hierarchy, transforms, layers);
 
-		RunArmatureUpdateSystem(transforms, armatures);
+		RunArmatureUpdateSystem(hierarchy, transforms, armatures);
 
 		RunMaterialUpdateSystem(materials, dt);
 
@@ -1574,6 +1574,7 @@ namespace wiSceneSystem
 		}
 	}
 	void RunArmatureUpdateSystem(
+		const ComponentManager<HierarchyComponent>& hierarchy,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<ArmatureComponent>& armatures
 	)
@@ -1587,7 +1588,22 @@ namespace wiSceneSystem
 				armature.boneData.resize(armature.boneCollection.size());
 			}
 
-			XMMATRIX R = XMLoadFloat4x4(&armature.remapMatrix);
+			// The transform world matrices are in global space, but skinning needs them in armature-local space, 
+			//	so that the skin is reusable for instanced meshes. 
+			//	The bones can be in NOT armature-local space if the root bone is parented to something,
+			//	so we look into the hierarchy to find out if the root bone has a parent or not. 
+			//	If it has, we will premultiply all skinning bone matrices with the inverse of it to transform them
+			//	back into armature-local space.
+			XMMATRIX R = XMMatrixIdentity();
+			if (armature.rootBoneID != INVALID_ENTITY)
+			{
+				const HierarchyComponent* parent = hierarchy.GetComponent(armature.rootBoneID);
+				if (parent != nullptr)
+				{
+					const TransformComponent* transform = transforms.GetComponent(parent->parentID);
+					R = R * XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform->world));
+				}
+			}
 
 			int boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
