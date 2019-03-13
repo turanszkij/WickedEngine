@@ -212,6 +212,7 @@ void LoadNode(tinygltf::Node* node, Entity parent, LoaderState& state)
 	{
 		entity = CreateEntity();
 		state.scene.transforms.Create(entity);
+		state.scene.names.Create(entity) = node->name;
 	}
 
 	state.entityMap[node] = entity;

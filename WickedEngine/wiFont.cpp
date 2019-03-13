@@ -502,7 +502,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 	device->BindGraphicsPSO(&PSO, threadID);
 	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
 
-	GPUBuffer* vbs[] = {
+	const GPUBuffer* vbs[] = {
 		mem.buffer,
 	};
 	const UINT strides[] = {

@@ -1625,7 +1625,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 					{
 					case BOUNDVERTEXBUFFERTYPE::POSITION:
 					{
-						GPUBuffer* vbs[] = {
+						const GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							instances.buffer
 						};
@@ -1642,7 +1642,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 					break;
 					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
 					{
-						GPUBuffer* vbs[] = {
+						const GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
 							instances.buffer
@@ -1662,7 +1662,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 					break;
 					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
 					{
-						GPUBuffer* vbs[] = {
+						const GPUBuffer* vbs[] = {
 							mesh.streamoutBuffer_POS.get() != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 							mesh.vertexBuffer_TEX.get(),
 							mesh.vertexBuffer_ATL.get(),
@@ -5431,7 +5431,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				j++;
 			}
 
-			GPUBuffer* vbs[] = {
+			const GPUBuffer* vbs[] = {
 				mem.buffer
 			};
 			const UINT strides[] = {
@@ -5478,7 +5478,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			i++;
 		}
 
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			mem.buffer,
 		};
 		const UINT strides[] = {
@@ -5541,7 +5541,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			i++;
 		}
 
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			mem.buffer,
 		};
 		const UINT strides[] = {
@@ -6315,7 +6315,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			const AABB& bbox = mesh.aabb;
 			const XMFLOAT3 extents = bbox.getHalfWidth();
 
-			GPUBuffer* vbs[] = {
+			const GPUBuffer* vbs[] = {
 				mesh.IsSkinned() ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
 				mesh.vertexBuffer_TEX.get(),
 				mesh.vertexBuffer_ATL.get(),
@@ -7728,7 +7728,7 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	volatile InstancePrev* instance = (volatile InstancePrev*)mem.data;
 	instance->Create(transform.world);
 
-	GPUBuffer* vbs[] = {
+	const GPUBuffer* vbs[] = {
 		mesh.vertexBuffer_POS.get(),
 		mesh.vertexBuffer_ATL.get(),
 		mem.buffer,

@@ -156,8 +156,8 @@ namespace wiGraphics
 
 		struct GPUAllocation
 		{
-			void* data = nullptr;				// application can write to this, but not read. The offset is already applied
-			GPUBuffer* buffer = nullptr;		// application can bind it to the GPU
+			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
+			const GPUBuffer* buffer = nullptr;	// application can bind it to the GPU
 			UINT offset = 0;					// allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
