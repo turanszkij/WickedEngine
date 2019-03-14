@@ -937,7 +937,7 @@ namespace wiSceneSystem
 
 		RunHierarchyUpdateSystem(hierarchy, transforms, layers);
 
-		RunArmatureUpdateSystem(hierarchy, transforms, armatures);
+		RunArmatureUpdateSystem(transforms, armatures);
 
 		RunMaterialUpdateSystem(materials, dt);
 
@@ -1574,7 +1574,6 @@ namespace wiSceneSystem
 		}
 	}
 	void RunArmatureUpdateSystem(
-		const ComponentManager<HierarchyComponent>& hierarchy,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<ArmatureComponent>& armatures
 	)
@@ -1582,27 +1581,24 @@ namespace wiSceneSystem
 		wiJobSystem::Dispatch((uint32_t)armatures.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
+			Entity entity = armatures.GetEntity(args.jobIndex);
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+
+			// The transform world matrices are in world space, but skinning needs them in armature-local space, 
+			//	so that the skin is reusable for instanced meshes.
+			//	We remove the armature's world matrix from the bone world matrix to obtain the bone local transform
+			//	These local bone matrices will only be used for skinning, the actual transform components for the bones
+			//	remain unchanged.
+			//
+			//	This is useful for an other thing too:
+			//	If a whole transform tree is transformed by some parent (even gltf import does that to convert from RH to LH space)
+			//	then the inverseBindMatrices are not reflected in that because they are not contained in the hierarchy system. 
+			//	But this will correct them too.
+			XMMATRIX R = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
 			if (armature.boneData.size() != armature.boneCollection.size())
 			{
 				armature.boneData.resize(armature.boneCollection.size());
-			}
-
-			// The transform world matrices are in global space, but skinning needs them in armature-local space, 
-			//	so that the skin is reusable for instanced meshes. 
-			//	The bones can be in NOT armature-local space if the root bone is parented to something,
-			//	so we look into the hierarchy to find out if the root bone has a parent or not. 
-			//	If it has, we will premultiply all skinning bone matrices with the inverse of it to transform them
-			//	back into armature-local space.
-			XMMATRIX R = XMMatrixIdentity();
-			if (armature.rootBoneID != INVALID_ENTITY)
-			{
-				const HierarchyComponent* parent = hierarchy.GetComponent(armature.rootBoneID);
-				if (parent != nullptr)
-				{
-					const TransformComponent* transform = transforms.GetComponent(parent->parentID);
-					R = R * XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform->world));
-				}
 			}
 
 			int boneIndex = 0;

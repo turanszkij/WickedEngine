@@ -379,8 +379,9 @@ namespace wiSceneSystem
 				XMFLOAT4X4 remapMatrix;
 				archive >> remapMatrix; // no longer used
 			}
-			if (archive.GetVersion() >= 26)
+			if (archive.GetVersion() == 26)
 			{
+				Entity rootBoneID;
 				SerializeEntity(archive, rootBoneID, seed);
 			}
 		}
@@ -396,8 +397,9 @@ namespace wiSceneSystem
 			}
 
 			archive << inverseBindMatrices;
-			if (archive.GetVersion() >= 26)
+			if (archive.GetVersion() == 26)
 			{
+				Entity rootBoneID;
 				SerializeEntity(archive, rootBoneID, seed);
 			}
 		}

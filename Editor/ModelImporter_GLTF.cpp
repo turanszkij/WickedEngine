@@ -157,7 +157,7 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 struct LoaderState
 {
 	tinygltf::Model gltfModel;
-	Scene scene;
+	Scene* scene;
 	unordered_map<int, Entity> entityMap;  // node -> entity
 };
 
@@ -169,27 +169,33 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 		return;
 	}
 	auto& node = state.gltfModel.nodes[nodeIndex];
+	Scene& scene = *state.scene;
 	Entity entity = INVALID_ENTITY;
 
 	if(node.mesh >= 0)
 	{
-		entity = state.scene.Entity_CreateObject(node.name);
-		ObjectComponent& object = *state.scene.objects.GetComponent(entity);
+		assert(node.mesh < (int)scene.meshes.GetCount());
 
-		if (node.mesh < (int)state.scene.meshes.GetCount())
+		if (node.skin >= 0)
 		{
-			object.meshID = state.scene.meshes.GetEntity(node.mesh);
+			// This node is an armature:
+			MeshComponent& mesh = scene.meshes[node.mesh];
+			assert(!mesh.vertex_boneindices.empty());
+			entity = scene.armatures.GetEntity(node.skin);
+			mesh.armatureID = entity;
 
-			if (node.skin >= 0)
-			{
-				MeshComponent& mesh = *state.scene.meshes.GetComponent(object.meshID);
-				assert(!mesh.vertex_boneindices.empty());
-				mesh.armatureID = state.scene.armatures.GetEntity(node.skin);
-			}
+			// The object component will use an identity transform but will be parented to the armature:
+			Entity objectEntity = scene.Entity_CreateObject(node.name);
+			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
+			object.meshID = scene.meshes.GetEntity(node.mesh);
+			scene.Component_Attach(objectEntity, entity);
 		}
 		else
 		{
-			assert(0);
+			// This node is a mesh instance:
+			entity = scene.Entity_CreateObject(node.name);
+			ObjectComponent& object = *scene.objects.GetComponent(entity);
+			object.meshID = scene.meshes.GetEntity(node.mesh);
 		}
 	}
 	else if (node.camera >= 0)
@@ -202,19 +208,19 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 			node.name = ss.str();
 		}
 
-		entity = state.scene.Entity_CreateCamera(node.name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
+		entity = scene.Entity_CreateCamera(node.name, (float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0.1f, 800);
 	}
 
 	if (entity == INVALID_ENTITY)
 	{
 		entity = CreateEntity();
-		state.scene.transforms.Create(entity);
-		state.scene.names.Create(entity) = node.name;
+		scene.transforms.Create(entity);
+		scene.names.Create(entity) = node.name;
 	}
 
 	state.entityMap[nodeIndex] = entity;
 
-	TransformComponent& transform = *state.scene.transforms.GetComponent(entity);
+	TransformComponent& transform = *scene.transforms.GetComponent(entity);
 	if (!node.scale.empty())
 	{
 		transform.scale_local = XMFLOAT3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
@@ -255,7 +261,7 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 
 	if (parent != INVALID_ENTITY)
 	{
-		state.scene.Component_Attach(entity, parent);
+		scene.Component_Attach(entity, parent);
 	}
 
 	if (!node.children.empty())
@@ -267,7 +273,7 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	}
 }
 
-void ImportModel_GLTF(const std::string& fileName)
+void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 {
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
@@ -283,6 +289,7 @@ void ImportModel_GLTF(const std::string& fileName)
 	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
 	
 	LoaderState state;
+	state.scene = &scene;
 
 	bool ret;
 	if (!extension.compare("GLTF"))
@@ -298,14 +305,14 @@ void ImportModel_GLTF(const std::string& fileName)
 	}
 
 	Entity rootEntity = CreateEntity();
-	state.scene.transforms.Create(rootEntity);
+	scene.transforms.Create(rootEntity);
 
 	// Create materials:
 	for (auto& x : state.gltfModel.materials)
 	{
-		Entity materialEntity = state.scene.Entity_CreateMaterial(x.name);
+		Entity materialEntity = scene.Entity_CreateMaterial(x.name);
 
-		MaterialComponent& material = *state.scene.materials.GetComponent(materialEntity);
+		MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 
 		material.baseColor = XMFLOAT4(1, 1, 1, 1);
 		material.roughness = 1.0f;
@@ -410,16 +417,16 @@ void ImportModel_GLTF(const std::string& fileName)
 
 	}
 
-	if (state.scene.materials.GetCount() == 0)
+	if (scene.materials.GetCount() == 0)
 	{
-		state.scene.Entity_CreateMaterial("gltfimport_defaultMaterial");
+		scene.Entity_CreateMaterial("gltfimport_defaultMaterial");
 	}
 
 	// Create meshes:
 	for (auto& x : state.gltfModel.meshes)
 	{
-		Entity meshEntity = state.scene.Entity_CreateMesh(x.name);
-		MeshComponent& mesh = *state.scene.meshes.GetComponent(meshEntity);
+		Entity meshEntity = scene.Entity_CreateMesh(x.name);
+		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
 		for (auto& prim : x.primitives)
 		{
@@ -439,7 +446,7 @@ void ImportModel_GLTF(const std::string& fileName)
 			mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
 			mesh.subsets.back().indexCount = (uint32_t)indexCount;
 
-			mesh.subsets.back().materialID = state.scene.materials.GetEntity(max(0, prim.material));
+			mesh.subsets.back().materialID = scene.materials.GetEntity(max(0, prim.material));
 
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
 
@@ -622,9 +629,10 @@ void ImportModel_GLTF(const std::string& fileName)
 	for (auto& skin : state.gltfModel.skins)
 	{
 		Entity armatureEntity = CreateEntity();
-		state.scene.names.Create(armatureEntity) = skin.name;
-		state.scene.layers.Create(armatureEntity);
-		ArmatureComponent& armature = state.scene.armatures.Create(armatureEntity);
+		scene.names.Create(armatureEntity) = skin.name;
+		scene.layers.Create(armatureEntity);
+		scene.transforms.Create(armatureEntity);
+		ArmatureComponent& armature = scene.armatures.Create(armatureEntity);
 
 		if (skin.inverseBindMatrices >= 0)
 		{
@@ -651,8 +659,7 @@ void ImportModel_GLTF(const std::string& fileName)
 	int armatureIndex = 0;
 	for (auto& skin : state.gltfModel.skins)
 	{
-		Entity entity = state.scene.armatures.GetEntity(armatureIndex++);
-		ArmatureComponent& armature = *state.scene.armatures.GetComponent(entity);
+		ArmatureComponent& armature = scene.armatures[armatureIndex++];
 
 		const size_t jointCount = skin.joints.size();
 
@@ -666,21 +673,14 @@ void ImportModel_GLTF(const std::string& fileName)
 
 			armature.boneCollection[i] = boneEntity;
 		}
-
-		// Save the root bone ID:
-		//	It is important because if the root bone is transformed, we still need to remain in armature-local space for instanced skinning
-		if (skin.skeleton >= 0)
-		{
-			armature.rootBoneID = state.entityMap.at(skin.skeleton);
-		}
 	}
 
 	// Create animations:
 	for (auto& anim : state.gltfModel.animations)
 	{
 		Entity entity = CreateEntity();
-		state.scene.names.Create(entity) = anim.name;
-		AnimationComponent& animationcomponent = state.scene.animations.Create(entity);
+		scene.names.Create(entity) = anim.name;
+		AnimationComponent& animationcomponent = scene.animations.Create(entity);
 		animationcomponent.samplers.resize(anim.samplers.size());
 		animationcomponent.channels.resize(anim.channels.size());
 
@@ -795,18 +795,10 @@ void ImportModel_GLTF(const std::string& fileName)
 
 	if (transform_to_LH)
 	{
-		TransformComponent& transform = *state.scene.transforms.GetComponent(rootEntity);
+		TransformComponent& transform = *scene.transforms.GetComponent(rootEntity);
 		transform.scale_local.z = -transform.scale_local.z;
 		transform.SetDirty();
 	}
 
-	// We parented everything to a root transform, but we actually don't need that after loading model.
-	//	Apply every transformation according to root transform, then remove root all together. 
-	//	We could also keep it, but right now, it seems better to delete and have less hierarchy
-	state.scene.Update(0);
-	state.scene.Component_DetachChildren(rootEntity);
-	state.scene.Entity_Remove(rootEntity);
-
-	wiRenderer::GetScene().Merge(state.scene);
 
 }

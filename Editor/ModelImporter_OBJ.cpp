@@ -15,13 +15,11 @@ using namespace wiECS;
 // Transform the data from OBJ space to engine-space:
 static const bool transform_to_LH = true;
 
-void ImportModel_OBJ(const std::string& fileName)
+void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
 	string directory, name;
 	wiHelper::SplitPath(fileName, directory, name);
 	wiHelper::RemoveExtensionFromFileName(name);
-
-	Scene scene;
 
 	tinyobj::attrib_t obj_attrib;
 	vector<tinyobj::shape_t> obj_shapes;
@@ -188,7 +186,6 @@ void ImportModel_OBJ(const std::string& fileName)
 			mesh.CreateRenderData();
 		}
 
-		wiRenderer::GetScene().Merge(scene);
 	}
 	else
 	{

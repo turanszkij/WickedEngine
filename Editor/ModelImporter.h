@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 
-void ImportModel_OBJ(const std::string& fileName);
-void ImportModel_GLTF(const std::string& fileName);
+struct wiSceneSystem::Scene;
+
+void ImportModel_OBJ(const std::string& fileName, wiSceneSystem::Scene& scene);
+void ImportModel_GLTF(const std::string& fileName, wiSceneSystem::Scene& scene);
 

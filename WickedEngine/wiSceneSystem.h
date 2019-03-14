@@ -559,7 +559,6 @@ namespace wiSceneSystem
 
 		std::vector<wiECS::Entity> boneCollection;
 		std::vector<XMFLOAT4X4> inverseBindMatrices;
-		wiECS::Entity rootBoneID = wiECS::INVALID_ENTITY;
 
 		// Non-serialized attributes:
 
@@ -1039,7 +1038,6 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<LayerComponent>& layers
 	);
 	void RunArmatureUpdateSystem(
-		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<ArmatureComponent>& armatures
 	);
