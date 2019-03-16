@@ -290,28 +290,38 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		float w = 1 - u - v;
 
 		hit.N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
-		hit.UV = tri.t0 * w + tri.t1 * u + tri.t2 * v;
+		hit.uvsets = tri.u0 * w + tri.u1 * u + tri.u2 * v;
 		hit.color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
 		hit.materialIndex = tri.materialIndex;
 
 		TracedRenderingMaterial mat = materialBuffer[hit.materialIndex];
 
-		hit.UV = frac(hit.UV); // emulate wrap
-		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, hit.UV * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
-		float4 surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, hit.UV * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
+		hit.uvsets = frac(hit.uvsets); // emulate wrap
+
+		const float2 UV_baseColorMap = mat.uvset_baseColorMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
+
+		const float2 UV_surfaceMap = mat.uvset_surfaceMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+		float4 surface_ao_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
+
+		if (mat.specularGlossinessWorkflow)
+		{
+			ConvertToSpecularGlossiness(surface_ao_roughness_metallic_reflectance);
+		}
 
 		float4 baseColor = baseColorMap;
 		baseColor.rgb = DEGAMMA(baseColor.rgb);
 		baseColor *= hit.color;
-		float roughness = mat.roughness * surfaceMap.g;
-		float metalness = mat.metalness * surfaceMap.b;
-		float reflectance = mat.reflectance * surfaceMap.a;
+		float roughness = mat.roughness * surface_ao_roughness_metallic_reflectance.g;
+		float metalness = mat.metalness * surface_ao_roughness_metallic_reflectance.b;
+		float reflectance = mat.reflectance * surface_ao_roughness_metallic_reflectance.a;
 		roughness = sqr(roughness); // convert linear roughness to cone aperture
 		float4 emissiveColor;
 		[branch]
 		if (mat.emissiveColor.a > 0)
 		{
-			emissiveColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, hit.UV * mat.emissiveMapAtlasMulAdd.xy + mat.emissiveMapAtlasMulAdd.zw, 0);
+			const float2 UV_emissiveMap = mat.uvset_emissiveMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+			emissiveColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * mat.emissiveMapAtlasMulAdd.xy + mat.emissiveMapAtlasMulAdd.zw, 0);
 			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
 			emissiveColor *= mat.emissiveColor;
 		}

@@ -5,16 +5,15 @@ struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
 	float4 color			: COLOR;
-	float2 tex				: TEXCOORD0;
+	float4 uvsets			: UVSETS;
 };
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
 	float2 pixel = input.pos.xy;
 
-	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
-
-	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
+	const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
 	color.rgb = DEGAMMA(color.rgb);
 	color *= input.color;
 	ALPHATEST(color.a);
@@ -24,8 +23,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	// Use the alpha channel for refraction caustics effect:
 	float3 bumpColor;
-	
-	bumpColor = float3(2.0f * xNormalMap.Sample(sampler_objectshader, UV - g_xMat_texMulAdd.ww).rg - 1.0f, 1);
+
+	const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	bumpColor = float3(2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMat_texMulAdd.ww).rg - 1.0f, 1);
 	bumpColor.rg *= g_xMat_refractionIndex;
 	bumpColor.rg *= g_xMat_normalMapStrength;
 	bumpColor = normalize(max(bumpColor, float3(0, 0, 0.0001f)));

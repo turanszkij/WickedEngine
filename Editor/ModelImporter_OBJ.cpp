@@ -177,7 +177,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 						uniqueVertices[vertexHash] = (uint32_t)mesh.vertex_positions.size();
 						mesh.vertex_positions.push_back(pos);
 						mesh.vertex_normals.push_back(nor);
-						mesh.vertex_texcoords.push_back(tex);
+						mesh.vertex_uvset_0.push_back(tex);
 					}
 					mesh.indices.push_back(uniqueVertices[vertexHash]);
 					mesh.subsets.back().indexCount++;

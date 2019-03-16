@@ -6,7 +6,8 @@ struct HullInputType
 {
 	float4 pos								: POSITION;
 	float4 color							: COLOR;
-	float4 tex								: TEXCOORD0;
+	float4 uvsets							: UVSETS;
+	float4 atlas							: ATLAS;
 	float4 nor								: NORMAL;
 	float4 posPrev							: POSITIONPREV;
 };
@@ -25,9 +26,13 @@ struct ConstantOutputType
 	float4 color1 : COLOR1;
 	float4 color2 : COLOR2;
 
-	float4 tex0 : TEXCOORD0;
-	float4 tex1 : TEXCOORD1;
-	float4 tex2 : TEXCOORD2;
+	float4 uvsets0 : UVSETS0;
+	float4 uvsets1 : UVSETS1;
+	float4 uvsets2 : UVSETS2;
+
+	float4 atlas0 : ATLAS0;
+	float4 atlas1 : ATLAS1;
+	float4 atlas2 : ATLAS2;
 
 	float4 nor0 : NORMAL0;
 	float4 nor1 : NORMAL1;
@@ -43,7 +48,8 @@ struct HullOutputType
 {
 	float4 pos								: POSITION;
 	float4 color							: COLOR;
-	float4 tex								: TEXCOORD0;
+	float4 uvsets							: UVSETS;
+	float4 atlas							: ATLAS;
 	float4 nor								: NORMAL;
 	float4 posPrev							: POSITIONPREV;
 };
@@ -113,9 +119,13 @@ ConstantOutputType PatchConstantFunction(InputPatch<HullInputType, 3> I)
 	Out.color1 = I[1].color;
 	Out.color2 = I[2].color;
 
-	Out.tex0 = I[0].tex;
-	Out.tex1 = I[1].tex;
-	Out.tex2 = I[2].tex;
+	Out.uvsets0 = I[0].uvsets;
+	Out.uvsets1 = I[1].uvsets;
+	Out.uvsets2 = I[2].uvsets;
+
+	Out.atlas0 = I[0].atlas;
+	Out.atlas1 = I[1].atlas;
+	Out.atlas2 = I[2].atlas;
     
 	Out.nor0 = I[0].nor;
 	Out.nor1 = I[1].nor;
@@ -142,7 +152,8 @@ HullOutputType main(InputPatch<HullInputType, 3> patch, uint pointId : SV_Output
 
 	Out.pos				= patch[pointId].pos;
 	Out.color			= patch[pointId].color;
-	Out.tex				= patch[pointId].tex;
+	Out.uvsets			= patch[pointId].uvsets;
+	Out.atlas			= patch[pointId].atlas;
     Out.nor				= patch[pointId].nor;
 	Out.posPrev			= patch[pointId].posPrev;
 

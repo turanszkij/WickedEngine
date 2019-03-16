@@ -26,9 +26,9 @@ static const bool transform_to_LH = true;
 
 namespace tinygltf
 {
-	bool LoadImageData(Image *image, std::string *err, std::string *warn,
-		int req_width, int req_height, const unsigned char *bytes,
-		int size, void *)
+	bool LoadImageData(Image *image, const int image_idx, std::string *err,
+		std::string *warn, int req_width, int req_height,
+		const unsigned char *bytes, int size, void *)
 	{
 		(void)warn;
 
@@ -319,15 +319,17 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		material.metalness = 1.0f;
 		material.reflectance = 0.02f;
 
+		// metallic-roughness workflow:
 		auto& baseColorTexture = x.values.find("baseColorTexture");
 		auto& metallicRoughnessTexture = x.values.find("metallicRoughnessTexture");
-		auto& normalTexture = x.additionalValues.find("normalTexture");
-		auto& emissiveTexture = x.additionalValues.find("emissiveTexture");
-		auto& occlusionTexture = x.additionalValues.find("occlusionTexture");
-
 		auto& baseColorFactor = x.values.find("baseColorFactor");
 		auto& roughnessFactor = x.values.find("roughnessFactor");
 		auto& metallicFactor = x.values.find("metallicFactor");
+
+		// common workflow:
+		auto& normalTexture = x.additionalValues.find("normalTexture");
+		auto& emissiveTexture = x.additionalValues.find("emissiveTexture");
+		auto& occlusionTexture = x.additionalValues.find("occlusionTexture");
 		auto& emissiveFactor = x.additionalValues.find("emissiveFactor");
 		auto& alphaCutoff = x.additionalValues.find("alphaCutoff");
 		auto& alphaMode = x.additionalValues.find("alphaMode");
@@ -338,23 +340,16 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img, "basecolor");
 			material.baseColorMapName = img.uri;
+			material.uvset_baseColorMap = baseColorTexture->second.TextureTexCoord();
 		}
-		else if(!state.gltfModel.images.empty())
-		{
-			// For some reason, we don't have diffuse texture, but have other textures
-			//	I have a problem, because one model viewer displays textures on a model which has no basecolor set in its material...
-			//	This is probably not how it should be (todo)
-			RegisterTexture2D(&state.gltfModel.images[0], "basecolor");
-			material.baseColorMapName = state.gltfModel.images[0].uri;
-		}
-
 		if (normalTexture != x.additionalValues.end())
 		{
 			auto& tex = state.gltfModel.textures[normalTexture->second.TextureIndex()];
 			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img, "normal");
 			material.normalMapName = img.uri;
-			material.SetFlipNormalMap(true);
+			material.SetFlipNormalMap(true); // gltf import will always flip normal map by default
+			material.uvset_normalMap = normalTexture->second.TextureTexCoord();
 		}
 		if (metallicRoughnessTexture != x.values.end())
 		{
@@ -362,6 +357,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img, "roughness_metallic");
 			material.surfaceMapName = img.uri;
+			material.uvset_surfaceMap = metallicRoughnessTexture->second.TextureTexCoord();
 		}
 		if (emissiveTexture != x.additionalValues.end())
 		{
@@ -369,17 +365,16 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			auto& img = state.gltfModel.images[tex.source];
 			RegisterTexture2D(&img, "emissive");
 			material.emissiveMapName = img.uri;
+			material.uvset_emissiveMap = emissiveTexture->second.TextureTexCoord();
 		}
-
-		// Retrieve textures by name:
-		if (!material.baseColorMapName.empty())
-			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
-		if (!material.normalMapName.empty())
-			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
-		if (!material.surfaceMapName.empty())
-			material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
-		if (!material.emissiveMapName.empty())
-			material.emissiveMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.emissiveMapName);
+		if (occlusionTexture != x.additionalValues.end())
+		{
+			auto& tex = state.gltfModel.textures[occlusionTexture->second.TextureIndex()];
+			auto& img = state.gltfModel.images[tex.source];
+			RegisterTexture2D(&img, "occlusion");
+			material.occlusionMapName = img.uri;
+			material.uvset_occlusionMap = occlusionTexture->second.TextureTexCoord();
+		}
 
 		if (baseColorFactor != x.values.end())
 		{
@@ -414,6 +409,69 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				material.blendMode = BLENDMODE_ALPHA;
 			}
 		}
+
+		// specular-glossiness workflow (todo):
+		auto& specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
+		if (specularGlossinessWorkflow != x.extensions.end())
+		{
+			material.SetUseSpecularGlossinessWorkflow(true);
+
+			if (specularGlossinessWorkflow->second.Has("diffuseTexture"))
+			{
+				int index = specularGlossinessWorkflow->second.Get("diffuseTexture").Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				RegisterTexture2D(&img, "diffuse");
+				material.baseColorMapName = img.uri;
+				material.uvset_baseColorMap = (uint32_t)specularGlossinessWorkflow->second.Get("diffuseTexture").Get("texCoord").Get<int>();
+			}
+			if (specularGlossinessWorkflow->second.Has("specularGlossinessTexture"))
+			{
+				int index = specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				RegisterTexture2D(&img, "specular_glossiness");
+				material.surfaceMapName = img.uri;
+				material.uvset_surfaceMap = (uint32_t)specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("texCoord").Get<int>();
+			}
+
+			if (specularGlossinessWorkflow->second.Has("diffuseFactor"))
+			{
+				auto& factor = specularGlossinessWorkflow->second.Get("diffuseFactor");
+				material.baseColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
+				material.baseColor.y = factor.ArrayLen() > 1 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
+				material.baseColor.z = factor.ArrayLen() > 2 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
+				material.baseColor.w = factor.ArrayLen() > 3 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
+			}
+			//if (specularGlossinessWorkflow->second.Has("specularFactor"))
+			//{
+			//	auto& factor = specularGlossinessWorkflow->second.Get("specularFactor");
+			//	material.baseColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
+			//	material.baseColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
+			//	material.baseColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
+			//	material.baseColor.w = factor.ArrayLen() > 0 ? float(factor.Get(3).IsNumber() ? factor.Get(3).Get<double>() : factor.Get(3).Get<int>()) : 1.0f;
+			//}
+			if (specularGlossinessWorkflow->second.Has("glossinessFactor"))
+			{
+				auto& factor = specularGlossinessWorkflow->second.Get("glossinessFactor");
+				material.roughness = 1 - float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+		}
+
+		// Avoid zero roughness factors:
+		material.roughness = max(0.001f, material.roughness);
+
+		// Retrieve textures by name:
+		if (!material.baseColorMapName.empty())
+			material.baseColorMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.baseColorMapName);
+		if (!material.normalMapName.empty())
+			material.normalMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.normalMapName);
+		if (!material.surfaceMapName.empty())
+			material.surfaceMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.surfaceMapName);
+		if (!material.emissiveMapName.empty())
+			material.emissiveMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.emissiveMapName);
+		if (!material.occlusionMapName.empty())
+			material.occlusionMap = (Texture2D*)wiResourceManager::GetGlobal().add(material.occlusionMapName);
 
 	}
 
@@ -532,26 +590,26 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 				else if (!attr_name.compare("TEXCOORD_0"))
 				{
-					mesh.vertex_texcoords.resize(vertexOffset + vertexCount);
+					mesh.vertex_uvset_0.resize(vertexOffset + vertexCount);
 					assert(stride == 8);
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
 						const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
 
-						mesh.vertex_texcoords[vertexOffset + i].x = tex.x;
-						mesh.vertex_texcoords[vertexOffset + i].y = tex.y;
+						mesh.vertex_uvset_0[vertexOffset + i].x = tex.x;
+						mesh.vertex_uvset_0[vertexOffset + i].y = tex.y;
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_1"))
 				{
-					mesh.vertex_atlas.resize(vertexOffset + vertexCount);
+					mesh.vertex_uvset_1.resize(vertexOffset + vertexCount);
 					assert(stride == 8);
 					for (size_t i = 0; i < vertexCount; ++i)
 					{
 						const XMFLOAT2& tex = ((XMFLOAT2*)data)[i];
 
-						mesh.vertex_atlas[vertexOffset + i].x = tex.x;
-						mesh.vertex_atlas[vertexOffset + i].y = tex.y;
+						mesh.vertex_uvset_1[vertexOffset + i].x = tex.x;
+						mesh.vertex_uvset_1[vertexOffset + i].y = tex.y;
 					}
 				}
 				else if (!attr_name.compare("JOINTS_0"))

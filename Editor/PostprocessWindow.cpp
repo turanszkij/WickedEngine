@@ -296,7 +296,7 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	ppWindow->AddWidget(outlineThicknessSlider);
 
 
-	ppWindow->Translate(XMFLOAT3(screenW - 380, 50, 0));
+	ppWindow->Translate(XMFLOAT3(screenW - 500, 50, 0));
 	ppWindow->SetVisible(false);
 
 }

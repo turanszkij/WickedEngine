@@ -166,15 +166,15 @@ void EditorComponent::Load()
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
-	float step = 105, x = -step;
-
+	XMFLOAT2 option_size = XMFLOAT2(100, 28);
+	float step = (option_size.y + 5) * -1, x = screenW - option_size.x, y = screenH - option_size.y;
 
 
 
 	wiButton* rendererWnd_Toggle = new wiButton("Renderer");
 	rendererWnd_Toggle->SetTooltip("Renderer settings window");
-	rendererWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	rendererWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	rendererWnd_Toggle->SetPos(XMFLOAT2(x, y));
+	rendererWnd_Toggle->SetSize(option_size);
 	rendererWnd_Toggle->OnClick([=](wiEventArgs args) {
 		rendererWnd->rendererWindow->SetVisible(!rendererWnd->rendererWindow->IsVisible());
 	});
@@ -182,8 +182,8 @@ void EditorComponent::Load()
 
 	wiButton* weatherWnd_Toggle = new wiButton("Weather");
 	weatherWnd_Toggle->SetTooltip("World settings window");
-	weatherWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	weatherWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	weatherWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	weatherWnd_Toggle->SetSize(option_size);
 	weatherWnd_Toggle->OnClick([=](wiEventArgs args) {
 		weatherWnd->weatherWindow->SetVisible(!weatherWnd->weatherWindow->IsVisible());
 	});
@@ -191,8 +191,8 @@ void EditorComponent::Load()
 
 	wiButton* objectWnd_Toggle = new wiButton("Object");
 	objectWnd_Toggle->SetTooltip("Object settings window");
-	objectWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	objectWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	objectWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	objectWnd_Toggle->SetSize(option_size);
 	objectWnd_Toggle->OnClick([=](wiEventArgs args) {
 		objectWnd->objectWindow->SetVisible(!objectWnd->objectWindow->IsVisible());
 	});
@@ -200,8 +200,8 @@ void EditorComponent::Load()
 
 	wiButton* meshWnd_Toggle = new wiButton("Mesh");
 	meshWnd_Toggle->SetTooltip("Mesh settings window");
-	meshWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	meshWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	meshWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	meshWnd_Toggle->SetSize(option_size);
 	meshWnd_Toggle->OnClick([=](wiEventArgs args) {
 		meshWnd->meshWindow->SetVisible(!meshWnd->meshWindow->IsVisible());
 	});
@@ -209,8 +209,8 @@ void EditorComponent::Load()
 
 	wiButton* materialWnd_Toggle = new wiButton("Material");
 	materialWnd_Toggle->SetTooltip("Material settings window");
-	materialWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	materialWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	materialWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	materialWnd_Toggle->SetSize(option_size);
 	materialWnd_Toggle->OnClick([=](wiEventArgs args) {
 		materialWnd->materialWindow->SetVisible(!materialWnd->materialWindow->IsVisible());
 	});
@@ -218,8 +218,8 @@ void EditorComponent::Load()
 
 	wiButton* postprocessWnd_Toggle = new wiButton("PostProcess");
 	postprocessWnd_Toggle->SetTooltip("Postprocess settings window");
-	postprocessWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	postprocessWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	postprocessWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	postprocessWnd_Toggle->SetSize(option_size);
 	postprocessWnd_Toggle->OnClick([=](wiEventArgs args) {
 		postprocessWnd->ppWindow->SetVisible(!postprocessWnd->ppWindow->IsVisible());
 	});
@@ -227,8 +227,8 @@ void EditorComponent::Load()
 
 	wiButton* cameraWnd_Toggle = new wiButton("Camera");
 	cameraWnd_Toggle->SetTooltip("Camera settings window");
-	cameraWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	cameraWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	cameraWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	cameraWnd_Toggle->SetSize(option_size);
 	cameraWnd_Toggle->OnClick([=](wiEventArgs args) {
 		cameraWnd->cameraWindow->SetVisible(!cameraWnd->cameraWindow->IsVisible());
 	});
@@ -236,8 +236,8 @@ void EditorComponent::Load()
 
 	wiButton* envProbeWnd_Toggle = new wiButton("EnvProbe");
 	envProbeWnd_Toggle->SetTooltip("Environment probe settings window");
-	envProbeWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	envProbeWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	envProbeWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	envProbeWnd_Toggle->SetSize(option_size);
 	envProbeWnd_Toggle->OnClick([=](wiEventArgs args) {
 		envProbeWnd->envProbeWindow->SetVisible(!envProbeWnd->envProbeWindow->IsVisible());
 	});
@@ -245,8 +245,8 @@ void EditorComponent::Load()
 
 	wiButton* decalWnd_Toggle = new wiButton("Decal");
 	decalWnd_Toggle->SetTooltip("Decal settings window");
-	decalWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	decalWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	decalWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	decalWnd_Toggle->SetSize(option_size);
 	decalWnd_Toggle->OnClick([=](wiEventArgs args) {
 		decalWnd->decalWindow->SetVisible(!decalWnd->decalWindow->IsVisible());
 	});
@@ -254,8 +254,8 @@ void EditorComponent::Load()
 
 	wiButton* lightWnd_Toggle = new wiButton("Light");
 	lightWnd_Toggle->SetTooltip("Light settings window");
-	lightWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	lightWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	lightWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	lightWnd_Toggle->SetSize(option_size);
 	lightWnd_Toggle->OnClick([=](wiEventArgs args) {
 		lightWnd->lightWindow->SetVisible(!lightWnd->lightWindow->IsVisible());
 	});
@@ -263,8 +263,8 @@ void EditorComponent::Load()
 
 	wiButton* animWnd_Toggle = new wiButton("Animation");
 	animWnd_Toggle->SetTooltip("Animation inspector window");
-	animWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	animWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	animWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	animWnd_Toggle->SetSize(option_size);
 	animWnd_Toggle->OnClick([=](wiEventArgs args) {
 		animWnd->animWindow->SetVisible(!animWnd->animWindow->IsVisible());
 	});
@@ -272,8 +272,8 @@ void EditorComponent::Load()
 
 	wiButton* emitterWnd_Toggle = new wiButton("Emitter");
 	emitterWnd_Toggle->SetTooltip("Emitter Particle System properties");
-	emitterWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	emitterWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	emitterWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	emitterWnd_Toggle->SetSize(option_size);
 	emitterWnd_Toggle->OnClick([=](wiEventArgs args) {
 		emitterWnd->emitterWindow->SetVisible(!emitterWnd->emitterWindow->IsVisible());
 	});
@@ -281,8 +281,8 @@ void EditorComponent::Load()
 
 	wiButton* hairWnd_Toggle = new wiButton("HairParticle");
 	hairWnd_Toggle->SetTooltip("Emitter Particle System properties");
-	hairWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	hairWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	hairWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	hairWnd_Toggle->SetSize(option_size);
 	hairWnd_Toggle->OnClick([=](wiEventArgs args) {
 		hairWnd->hairWindow->SetVisible(!hairWnd->hairWindow->IsVisible());
 	});
@@ -290,8 +290,8 @@ void EditorComponent::Load()
 
 	wiButton* forceFieldWnd_Toggle = new wiButton("ForceField");
 	forceFieldWnd_Toggle->SetTooltip("Force Field properties");
-	forceFieldWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	forceFieldWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	forceFieldWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	forceFieldWnd_Toggle->SetSize(option_size);
 	forceFieldWnd_Toggle->OnClick([=](wiEventArgs args) {
 		forceFieldWnd->forceFieldWindow->SetVisible(!forceFieldWnd->forceFieldWindow->IsVisible());
 	});
@@ -299,8 +299,8 @@ void EditorComponent::Load()
 
 	wiButton* oceanWnd_Toggle = new wiButton("Ocean");
 	oceanWnd_Toggle->SetTooltip("Ocean Simulator properties");
-	oceanWnd_Toggle->SetPos(XMFLOAT2(x += step, screenH - 40));
-	oceanWnd_Toggle->SetSize(XMFLOAT2(100, 40));
+	oceanWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	oceanWnd_Toggle->SetSize(option_size);
 	oceanWnd_Toggle->OnClick([=](wiEventArgs args) {
 		oceanWnd->oceanWindow->SetVisible(!oceanWnd->oceanWindow->IsVisible());
 	});

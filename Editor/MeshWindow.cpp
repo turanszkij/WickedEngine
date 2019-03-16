@@ -224,7 +224,7 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	meshWindow->Translate(XMFLOAT3(1300, 520, 0));
+	meshWindow->Translate(XMFLOAT3(screenW - 910, 520, 0));
 	meshWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -257,7 +257,8 @@ void MeshWindow::SetEntity(Entity entity)
 		ss << "Subset count: " << mesh->subsets.size() << endl;
 		ss << endl << "Vertex buffers: ";
 		if (mesh->vertexBuffer_POS != nullptr) ss << "position; ";
-		if (mesh->vertexBuffer_TEX != nullptr) ss << "texcoord; ";
+		if (mesh->vertexBuffer_UV0 != nullptr) ss << "uvset_0; ";
+		if (mesh->vertexBuffer_UV1 != nullptr) ss << "uvset_1; ";
 		if (mesh->vertexBuffer_ATL != nullptr) ss << "atlas; ";
 		if (mesh->vertexBuffer_COL != nullptr) ss << "color; ";
 		if (mesh->vertexBuffer_PRE != nullptr) ss << "prevPos; ";

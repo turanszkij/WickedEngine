@@ -152,7 +152,15 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				global_material.normalMapStrength = material.normalMapStrength;
 				global_material.normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
 				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
-				global_material.g_xMat_useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
+				global_material.displacementMapping = material.displacementMapping;
+				global_material.useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
+				global_material.uvset_baseColorMap = material.uvset_baseColorMap;
+				global_material.uvset_surfaceMap = material.uvset_surfaceMap;
+				global_material.uvset_normalMap = material.uvset_normalMap;
+				global_material.uvset_displacementMap = material.uvset_displacementMap;
+				global_material.uvset_emissiveMap = material.uvset_emissiveMap;
+				global_material.uvset_occlusionMap = material.uvset_occlusionMap;
+				global_material.specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
 
 				// Add extended properties:
 				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
@@ -477,7 +485,8 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 					&globalMaterialBuffer,
 					mesh.indexBuffer.get(),
 					mesh.vertexBuffer_POS.get(),
-					mesh.vertexBuffer_TEX.get(),
+					mesh.vertexBuffer_UV0.get(),
+					mesh.vertexBuffer_UV1.get(),
 					mesh.vertexBuffer_COL.get(),
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);

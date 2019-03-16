@@ -2,9 +2,13 @@
 
 float4 main(PixelInputType input) : SV_Target0
 {
-	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
+	const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	float4 surface_ao_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
 
-	float4 surface_ao_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV);
+	if (g_xMat_specularGlossinessWorkflow)
+	{
+		ConvertToSpecularGlossiness(surface_ao_roughness_metallic_reflectance);
+	}
 
 	float4 surface;
 	surface.r = surface_ao_roughness_metallic_reflectance.r;

@@ -105,6 +105,7 @@ namespace wiSceneSystem
 			WATER = 1 << 3,
 			FLIP_NORMALMAP = 1 << 4,
 			USE_VERTEXCOLORS = 1 << 5,
+			SPECULAR_GLOSSINESS_WORKFLOW = 1 << 6,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
 
@@ -122,6 +123,7 @@ namespace wiSceneSystem
 		float subsurfaceScattering = 0.0f;
 		float normalMapStrength = 1.0f;
 		float parallaxOcclusionMapping = 0.0f;
+		float displacementMapping = 0.0f;
 
 		float alphaRef = 1.0f;
 		
@@ -134,6 +136,14 @@ namespace wiSceneSystem
 		std::string normalMapName;
 		std::string displacementMapName;
 		std::string emissiveMapName;
+		std::string occlusionMapName;
+
+		uint32_t uvset_baseColorMap = 0;
+		uint32_t uvset_surfaceMap = 0;
+		uint32_t uvset_normalMap = 0;
+		uint32_t uvset_displacementMap = 0;
+		uint32_t uvset_emissiveMap = 0;
+		uint32_t uvset_occlusionMap = 0;
 
 		// Non-serialized attributes:
 		const wiGraphics::Texture2D* baseColorMap = nullptr;
@@ -141,6 +151,7 @@ namespace wiSceneSystem
 		const wiGraphics::Texture2D* normalMap = nullptr;
 		const wiGraphics::Texture2D* displacementMap = nullptr;
 		const wiGraphics::Texture2D* emissiveMap = nullptr;
+		const wiGraphics::Texture2D* occlusionMap = nullptr;
 		std::unique_ptr<wiGraphics::GPUBuffer> constantBuffer;
 
 		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
@@ -160,6 +171,7 @@ namespace wiSceneSystem
 		const wiGraphics::Texture2D* GetSurfaceMap() const;
 		const wiGraphics::Texture2D* GetDisplacementMap() const;
 		const wiGraphics::Texture2D* GetEmissiveMap() const;
+		const wiGraphics::Texture2D* GetOcclusionMap() const;
 
 		inline float GetOpacity() const { return baseColor.w; }
 		inline float GetEmissiveStrength() const { return emissiveColor.w; }
@@ -179,6 +191,7 @@ namespace wiSceneSystem
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
+		inline bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
@@ -191,12 +204,20 @@ namespace wiSceneSystem
 		inline void SetSubsurfaceScattering(float value) { SetDirty(); subsurfaceScattering = value; }
 		inline void SetNormalMapStrength(float value) { SetDirty(); normalMapStrength = value; }
 		inline void SetParallaxOcclusionMapping(float value) { SetDirty(); parallaxOcclusionMapping = value; }
+		inline void SetDisplacementMapping(float value) { SetDirty(); displacementMapping = value; }
 		inline void SetOpacity(float value) { SetDirty(); baseColor.w = value; }
 		inline void SetAlphaRef(float value) { SetDirty();  alphaRef = value; }
 		inline void SetFlipNormalMap(bool value) { SetDirty(); if (value) { _flags |= FLIP_NORMALMAP; } else { _flags &= ~FLIP_NORMALMAP; } }
-		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; }  }
+		inline void SetUseVertexColors(bool value) { SetDirty(); if (value) { _flags |= USE_VERTEXCOLORS; } else { _flags &= ~USE_VERTEXCOLORS; } }
+		inline void SetUseSpecularGlossinessWorkflow(bool value) { SetDirty(); if (value) { _flags |= SPECULAR_GLOSSINESS_WORKFLOW; } else { _flags &= ~SPECULAR_GLOSSINESS_WORKFLOW; }  }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
+		inline void SetUVSet_BaseColorMap(uint32_t value) { uvset_baseColorMap = value; SetDirty(); }
+		inline void SetUVSet_NormalMap(uint32_t value) { uvset_normalMap = value; SetDirty(); }
+		inline void SetUVSet_SurfaceMap(uint32_t value) { uvset_surfaceMap = value; SetDirty(); }
+		inline void SetUVSet_DisplacementMap(uint32_t value) { uvset_displacementMap = value; SetDirty(); }
+		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
+		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -214,7 +235,8 @@ namespace wiSceneSystem
 
 		std::vector<XMFLOAT3>		vertex_positions;
 		std::vector<XMFLOAT3>		vertex_normals;
-		std::vector<XMFLOAT2>		vertex_texcoords;
+		std::vector<XMFLOAT2>		vertex_uvset_0;
+		std::vector<XMFLOAT2>		vertex_uvset_1;
 		std::vector<XMUINT4>		vertex_boneindices;
 		std::vector<XMFLOAT4>		vertex_boneweights;
 		std::vector<XMFLOAT2>		vertex_atlas;
@@ -236,7 +258,8 @@ namespace wiSceneSystem
 		AABB aabb;
 		std::unique_ptr<wiGraphics::GPUBuffer>	indexBuffer;
 		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_POS;
-		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_TEX;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_UV0;
+		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_UV1;
 		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_BON;
 		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_COL;
 		std::unique_ptr<wiGraphics::GPUBuffer>	vertexBuffer_ATL;

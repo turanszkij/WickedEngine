@@ -28,13 +28,15 @@ struct Input_Object_POS
 struct Input_Object_POS_TEX
 {
 	float4 pos : POSITION_NORMAL_SUBSETINDEX;
-	float2 tex : TEXCOORD0;
+	float2 uv0 : UVSET0;
+	float2 uv1 : UVSET1;
 	Input_Instance inst;
 };
 struct Input_Object_ALL
 {
 	float4 pos : POSITION_NORMAL_SUBSETINDEX;
-	float2 tex : TEXCOORD;
+	float2 uv0 : UVSET0;
+	float2 uv1 : UVSET1;
 	float2 atl : ATLAS;
 	float4 col : COLOR;
 	float4 pre : PREVPOS;
@@ -65,7 +67,7 @@ inline float4x4 MakeWorldMatrixFromInstance(in Input_InstancePrev input)
 struct VertexSurface
 {
 	float4 position;
-	float2 uv;
+	float4 uvsets;
 	float2 atlas;
 	float4 color;
 	float3 normal;
@@ -102,7 +104,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
-	surface.uv = input.tex;
+	surface.uvsets = float4(input.uv0, input.uv1) * g_xMat_texMulAdd.xyxy + g_xMat_texMulAdd.zwzw;
 
 	return surface;
 }
@@ -125,7 +127,7 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
 	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
 
-	surface.uv = input.tex;
+	surface.uvsets = float4(input.uv0, input.uv1) * g_xMat_texMulAdd.xyxy + g_xMat_texMulAdd.zwzw;
 
 	surface.atlas = input.atl * input.instAtlas.atlasMulAdd.xy + input.instAtlas.atlasMulAdd.zw;
 

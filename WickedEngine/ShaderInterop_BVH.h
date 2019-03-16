@@ -24,7 +24,7 @@ struct BVHMeshTriangle
 {
 	float3 v0, v1, v2;	// positions
 	float3 n0, n1, n2;	// normals
-	float2 t0, t1, t2;	// texcoords
+	float4 u0, u1, u2;	// uv sets
 	float4 c0, c1, c2;	// vertex colors
 	uint materialIndex;
 };

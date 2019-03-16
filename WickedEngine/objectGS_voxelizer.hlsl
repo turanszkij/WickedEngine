@@ -4,7 +4,7 @@ struct GSInput
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
-	float2 tex : TEXCOORD;
+	float4 uvsets : UVSETS;
 	float3 nor : NORMAL;
 };
 
@@ -12,7 +12,7 @@ struct GSOutput
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
-	float2 tex : TEXCOORD;
+	float4 uvsets : UVSETS;
 	float3 N : NORMAL;
 	float3 P : POSITION3D;
 };
@@ -66,7 +66,7 @@ void main(
 
 		// Append the rest of the parameters as is:
 		output[j].color = input[j].color;
-		output[j].tex = input[j].tex;
+		output[j].uvsets = input[j].uvsets;
 		output[j].N = input[j].nor;
 		output[j].P = input[j].pos.xyz;
 

@@ -140,7 +140,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 	SetEntity(INVALID_ENTITY);
 
 
-	cameraWindow->Translate(XMFLOAT3(800, 500, 0));
+	cameraWindow->Translate(XMFLOAT3(screenW - 720, 500, 0));
 	cameraWindow->SetVisible(false);
 }
 

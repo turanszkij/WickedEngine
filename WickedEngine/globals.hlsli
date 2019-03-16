@@ -99,6 +99,13 @@ inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline uint2 GetTemporalAASampleRotation() { return float2((g_xFrame_TemporalAASampleRotation >> 0) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0f; }
+inline void ConvertToSpecularGlossiness(inout float4 surface_ao_roughness_metallic_reflectance)
+{
+	surface_ao_roughness_metallic_reflectance.r = 1;
+	surface_ao_roughness_metallic_reflectance.g = 1 - surface_ao_roughness_metallic_reflectance.a;
+	surface_ao_roughness_metallic_reflectance.b = max(surface_ao_roughness_metallic_reflectance.r, max(surface_ao_roughness_metallic_reflectance.g, surface_ao_roughness_metallic_reflectance.b));
+	surface_ao_roughness_metallic_reflectance.a = 0.02f;
+}
 
 struct ComputeShaderInput
 {

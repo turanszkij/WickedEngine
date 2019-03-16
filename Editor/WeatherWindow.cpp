@@ -277,7 +277,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	weatherWindow->AddWidget(zenithColorPicker);
 
 
-	weatherWindow->Translate(XMFLOAT3(30, 30, 0));
+	weatherWindow->Translate(XMFLOAT3(130, 30, 0));
 	weatherWindow->SetVisible(false);
 }
 

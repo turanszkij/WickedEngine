@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+28: extended MaterialComponent with occlusionMap and uvsets, and displacement map factor; MeshComponent extended with second uv set
 27: removed ArmatureComponent::rootBoneID
 26: removed ArmatureComponent::remapMatrix, added ArmatureComponent::rootBoneID
 25: emissiveColor separated from baseColor

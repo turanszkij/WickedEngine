@@ -13,8 +13,9 @@
 STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
-TYPEDBUFFER(meshVertexBuffer_TEX, float2, TEXSLOT_ONDEMAND3);
-TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND4);
+TYPEDBUFFER(meshVertexBuffer_UV0, float2, TEXSLOT_ONDEMAND3);
+TYPEDBUFFER(meshVertexBuffer_UV1, float2, TEXSLOT_ONDEMAND4);
+TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND5);
 
 RWSTRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, 0);
 RWRAWBUFFER(clusterCounterBuffer, 1);
@@ -129,9 +130,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		prim.n0 = mul((float3x3)WORLD, nor0);
 		prim.n1 = mul((float3x3)WORLD, nor1);
 		prim.n2 = mul((float3x3)WORLD, nor2);
-		prim.t0 = meshVertexBuffer_TEX[i0];
-		prim.t1 = meshVertexBuffer_TEX[i1];
-		prim.t2 = meshVertexBuffer_TEX[i2];
+		prim.u0 = float4(meshVertexBuffer_UV0[i0], meshVertexBuffer_UV1[i0]);
+		prim.u1 = float4(meshVertexBuffer_UV0[i1], meshVertexBuffer_UV1[i1]);
+		prim.u2 = float4(meshVertexBuffer_UV0[i2], meshVertexBuffer_UV1[i2]);
 		prim.materialIndex = xTraceBVHMaterialOffset + materialIndex;
 
 		TracedRenderingMaterial mat = materialBuffer[prim.materialIndex];
@@ -142,7 +143,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		prim.c2 = color;
 
 		[branch]
-		if (mat.g_xMat_useVertexColors)
+		if (mat.useVertexColors)
 		{
 			prim.c0 *= meshVertexBuffer_COL[i0];
 			prim.c1 *= meshVertexBuffer_COL[i1];

@@ -83,8 +83,8 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 			mesh.vertexNormalData = meshcomponent.vertex_normals.data();
 			mesh.vertexNormalStride = sizeof(float) * 3;
 		}
-		if (!meshcomponent.vertex_texcoords.empty()) {
-			mesh.vertexUvData = meshcomponent.vertex_texcoords.data();
+		if (!meshcomponent.vertex_uvset_0.empty()) {
+			mesh.vertexUvData = meshcomponent.vertex_uvset_0.data();
 			mesh.vertexUvStride = sizeof(float) * 2;
 		}
 		mesh.indexCount = (int)meshcomponent.indices.size();
@@ -116,7 +116,8 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		std::vector<XMFLOAT3> positions(mesh->vertexCount);
 		std::vector<XMFLOAT2> atlas(mesh->vertexCount);
 		std::vector<XMFLOAT3> normals;
-		std::vector<XMFLOAT2> texcoords;
+		std::vector<XMFLOAT2> uvset_0;
+		std::vector<XMFLOAT2> uvset_1;
 		std::vector<uint32_t> colors;
 		std::vector<XMUINT4> boneindices;
 		std::vector<XMFLOAT4> boneweights;
@@ -124,9 +125,13 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		{
 			normals.resize(mesh->vertexCount);
 		}
-		if (!meshcomponent.vertex_texcoords.empty())
+		if (!meshcomponent.vertex_uvset_0.empty())
 		{
-			texcoords.resize(mesh->vertexCount);
+			uvset_0.resize(mesh->vertexCount);
+		}
+		if (!meshcomponent.vertex_uvset_1.empty())
+		{
+			uvset_1.resize(mesh->vertexCount);
 		}
 		if (!meshcomponent.vertex_colors.empty())
 		{
@@ -153,9 +158,13 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 			{
 				normals[ind] = meshcomponent.vertex_normals[v.xref];
 			}
-			if (!texcoords.empty())
+			if (!uvset_0.empty())
 			{
-				texcoords[ind] = meshcomponent.vertex_texcoords[v.xref];
+				uvset_0[ind] = meshcomponent.vertex_uvset_0[v.xref];
+			}
+			if (!uvset_1.empty())
+			{
+				uvset_1[ind] = meshcomponent.vertex_uvset_1[v.xref];
 			}
 			if (!colors.empty())
 			{
@@ -177,9 +186,13 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		{
 			meshcomponent.vertex_normals = normals;
 		}
-		if (!texcoords.empty())
+		if (!uvset_0.empty())
 		{
-			meshcomponent.vertex_texcoords = texcoords;
+			meshcomponent.vertex_uvset_0 = uvset_0;
+		}
+		if (!uvset_1.empty())
+		{
+			meshcomponent.vertex_uvset_1 = uvset_1;
 		}
 		if (!colors.empty())
 		{
@@ -521,7 +534,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 
 
-	objectWindow->Translate(XMFLOAT3(1300, 120, 0));
+	objectWindow->Translate(XMFLOAT3(screenW - 720, 120, 0));
 	objectWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

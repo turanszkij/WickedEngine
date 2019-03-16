@@ -113,6 +113,20 @@ namespace wiSceneSystem
 				archive >> emissiveMapName;
 			}
 
+			if (archive.GetVersion() >= 28)
+			{
+				archive >> occlusionMapName;
+
+				archive >> uvset_baseColorMap;
+				archive >> uvset_surfaceMap;
+				archive >> uvset_normalMap;
+				archive >> uvset_displacementMap;
+				archive >> uvset_emissiveMap;
+				archive >> uvset_occlusionMap;
+
+				archive >> displacementMapping;
+			}
+
 			SetDirty();
 
 			if (!baseColorMapName.empty())
@@ -134,6 +148,10 @@ namespace wiSceneSystem
 			if (!emissiveMapName.empty())
 			{
 				emissiveMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + emissiveMapName);
+			}
+			if (!occlusionMapName.empty())
+			{
+				occlusionMap = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + occlusionMapName);
 			}
 
 		}
@@ -207,6 +225,20 @@ namespace wiSceneSystem
 			{
 				archive << emissiveMapName;
 			}
+
+			if (archive.GetVersion() >= 28)
+			{
+				archive << occlusionMapName;
+
+				archive << uvset_baseColorMap;
+				archive << uvset_surfaceMap;
+				archive << uvset_normalMap;
+				archive << uvset_displacementMap;
+				archive << uvset_emissiveMap;
+				archive << uvset_occlusionMap;
+
+				archive << displacementMapping;
+			}
 		}
 	}
 	void MeshComponent::Serialize(wiArchive& archive, uint32_t seed)
@@ -217,7 +249,7 @@ namespace wiSceneSystem
 			archive >> _flags;
 			archive >> vertex_positions;
 			archive >> vertex_normals;
-			archive >> vertex_texcoords;
+			archive >> vertex_uvset_0;
 			archive >> vertex_boneindices;
 			archive >> vertex_boneweights;
 			archive >> vertex_atlas;
@@ -237,6 +269,11 @@ namespace wiSceneSystem
 			archive >> tessellationFactor;
 			SerializeEntity(archive, armatureID, seed);
 
+			if (archive.GetVersion() >= 28)
+			{
+				archive >> vertex_uvset_1;
+			}
+
 			CreateRenderData();
 		}
 		else
@@ -244,7 +281,7 @@ namespace wiSceneSystem
 			archive << _flags;
 			archive << vertex_positions;
 			archive << vertex_normals;
-			archive << vertex_texcoords;
+			archive << vertex_uvset_0;
 			archive << vertex_boneindices;
 			archive << vertex_boneweights;
 			archive << vertex_atlas;
@@ -261,6 +298,11 @@ namespace wiSceneSystem
 
 			archive << tessellationFactor;
 			SerializeEntity(archive, armatureID, seed);
+
+			if (archive.GetVersion() >= 28)
+			{
+				archive << vertex_uvset_1;
+			}
 
 		}
 	}

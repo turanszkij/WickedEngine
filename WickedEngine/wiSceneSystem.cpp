@@ -265,6 +265,14 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
+	const Texture2D* MaterialComponent::GetOcclusionMap() const
+	{
+		if (occlusionMap != nullptr)
+		{
+			return occlusionMap;
+		}
+		return wiTextureHelper::getWhite();
+	}
 
 	void MeshComponent::CreateRenderData()
 	{
@@ -409,13 +417,13 @@ namespace wiSceneSystem
 			assert(SUCCEEDED(hr));
 		}
 
-		// vertexBuffer - TEXCOORDS
-		if(!vertex_texcoords.empty())
+		// vertexBuffer - UV SET 0
+		if(!vertex_uvset_0.empty())
 		{
-			std::vector<Vertex_TEX> vertices(vertex_texcoords.size());
+			std::vector<Vertex_TEX> vertices(vertex_uvset_0.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
-				vertices[i].FromFULL(vertex_texcoords[i]);
+				vertices[i].FromFULL(vertex_uvset_0[i]);
 			}
 
 			GPUBufferDesc bd;
@@ -429,8 +437,33 @@ namespace wiSceneSystem
 
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
-			vertexBuffer_TEX.reset(new GPUBuffer);
-			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_TEX.get());
+			vertexBuffer_UV0.reset(new GPUBuffer);
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_UV0.get());
+			assert(SUCCEEDED(hr));
+		}
+
+		// vertexBuffer - UV SET 1
+		if (!vertex_uvset_1.empty())
+		{
+			std::vector<Vertex_TEX> vertices(vertex_uvset_1.size());
+			for (size_t i = 0; i < vertices.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_uvset_1[i]);
+			}
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_IMMUTABLE;
+			bd.CPUAccessFlags = 0;
+			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.MiscFlags = 0;
+			bd.StructureByteStride = sizeof(Vertex_TEX);
+			bd.ByteWidth = (UINT)(bd.StructureByteStride * vertices.size());
+			bd.Format = Vertex_TEX::FORMAT;
+
+			SubresourceData InitData;
+			InitData.pSysMem = vertices.data();
+			vertexBuffer_UV1.reset(new GPUBuffer);
+			hr = device->CreateBuffer(&bd, &InitData, vertexBuffer_UV1.get());
 			assert(SUCCEEDED(hr));
 		}
 
@@ -545,7 +578,7 @@ namespace wiSceneSystem
 				}
 			}
 
-			// 3.) Find duplicated vertices by POSITION and TEXCOORD and SUBSET and remove them:
+			// 3.) Find duplicated vertices by POSITION and UV0 and UV1 and ATLAS and SUBSET and remove them:
 			for (auto& subset : subsets)
 			{
 				for (uint32_t i = 0; i < subset.indexCount - 1; i++)
@@ -553,7 +586,9 @@ namespace wiSceneSystem
 					uint32_t ind0 = indices[subset.indexOffset + (uint32_t)i];
 					const XMFLOAT3& p0 = vertex_positions[ind0];
 					const XMFLOAT3& n0 = vertex_normals[ind0];
-					const XMFLOAT2& t0 = vertex_texcoords[ind0];
+					const XMFLOAT2& u00 = vertex_uvset_0.empty() ? XMFLOAT2(0, 0) : vertex_uvset_0[ind0];
+					const XMFLOAT2& u10 = vertex_uvset_1.empty() ? XMFLOAT2(0, 0) : vertex_uvset_1[ind0];
+					const XMFLOAT2& at0 = vertex_atlas.empty() ? XMFLOAT2(0, 0) : vertex_atlas[ind0];
 
 					for (uint32_t j = i + 1; j < subset.indexCount; j++)
 					{
@@ -566,18 +601,28 @@ namespace wiSceneSystem
 
 						const XMFLOAT3& p1 = vertex_positions[ind1];
 						const XMFLOAT3& n1 = vertex_normals[ind1];
-						const XMFLOAT2& t1 = vertex_texcoords[ind1];
+						const XMFLOAT2& u01 = vertex_uvset_0.empty() ? XMFLOAT2(0, 0) : vertex_uvset_0[ind1];
+						const XMFLOAT2& u11 = vertex_uvset_1.empty() ? XMFLOAT2(0, 0) : vertex_uvset_1[ind1];
+						const XMFLOAT2& at1 = vertex_atlas.empty() ? XMFLOAT2(0, 0) : vertex_atlas[ind1];
 
-						bool duplicated_pos =
+						const bool duplicated_pos =
 							fabs(p0.x - p1.x) < FLT_EPSILON &&
 							fabs(p0.y - p1.y) < FLT_EPSILON &&
 							fabs(p0.z - p1.z) < FLT_EPSILON;
 
-						bool duplicated_tex =
-							fabs(t0.x - t1.x) < FLT_EPSILON &&
-							fabs(t0.y - t1.y) < FLT_EPSILON;
+						const bool duplicated_uv0 =
+							fabs(u00.x - u01.x) < FLT_EPSILON &&
+							fabs(u00.y - u01.y) < FLT_EPSILON;
 
-						if (duplicated_pos && duplicated_tex)
+						const bool duplicated_uv1 =
+							fabs(u10.x - u11.x) < FLT_EPSILON &&
+							fabs(u10.y - u11.y) < FLT_EPSILON;
+
+						const bool duplicated_atl =
+							fabs(at0.x - at1.x) < FLT_EPSILON &&
+							fabs(at0.y - at1.y) < FLT_EPSILON;
+
+						if (duplicated_pos && duplicated_uv0 && duplicated_uv1 && duplicated_atl)
 						{
 							// Erase vertices[ind1] because it is a duplicate:
 							if (ind1 < vertex_positions.size())
@@ -588,9 +633,17 @@ namespace wiSceneSystem
 							{
 								vertex_normals.erase(vertex_normals.begin() + ind1);
 							}
-							if (ind1 < vertex_texcoords.size())
+							if (ind1 < vertex_uvset_0.size())
 							{
-								vertex_texcoords.erase(vertex_texcoords.begin() + ind1);
+								vertex_uvset_0.erase(vertex_uvset_0.begin() + ind1);
+							}
+							if (ind1 < vertex_uvset_1.size())
+							{
+								vertex_uvset_1.erase(vertex_uvset_1.begin() + ind1);
+							}
+							if (ind1 < vertex_atlas.size())
+							{
+								vertex_atlas.erase(vertex_atlas.begin() + ind1);
 							}
 							if (ind1 < vertex_boneindices.size())
 							{
@@ -629,7 +682,9 @@ namespace wiSceneSystem
 			std::vector<uint32_t> newIndexBuffer;
 			std::vector<XMFLOAT3> newPositionsBuffer;
 			std::vector<XMFLOAT3> newNormalsBuffer;
-			std::vector<XMFLOAT2> newTexcoordsBuffer;
+			std::vector<XMFLOAT2> newUV0Buffer;
+			std::vector<XMFLOAT2> newUV1Buffer;
+			std::vector<XMFLOAT2> newAtlasBuffer;
 			std::vector<XMUINT4> newBoneIndicesBuffer;
 			std::vector<XMFLOAT4> newBoneWeightsBuffer;
 
@@ -660,9 +715,26 @@ namespace wiSceneSystem
 				newNormalsBuffer.push_back(normal);
 				newNormalsBuffer.push_back(normal);
 
-				newTexcoordsBuffer.push_back(vertex_texcoords[i0]);
-				newTexcoordsBuffer.push_back(vertex_texcoords[i1]);
-				newTexcoordsBuffer.push_back(vertex_texcoords[i2]);
+				if (!vertex_uvset_0.empty())
+				{
+					newUV0Buffer.push_back(vertex_uvset_0[i0]);
+					newUV0Buffer.push_back(vertex_uvset_0[i1]);
+					newUV0Buffer.push_back(vertex_uvset_0[i2]);
+				}
+
+				if (!vertex_uvset_1.empty())
+				{
+					newUV1Buffer.push_back(vertex_uvset_1[i0]);
+					newUV1Buffer.push_back(vertex_uvset_1[i1]);
+					newUV1Buffer.push_back(vertex_uvset_1[i2]);
+				}
+
+				if (!vertex_atlas.empty())
+				{
+					newAtlasBuffer.push_back(vertex_atlas[i0]);
+					newAtlasBuffer.push_back(vertex_atlas[i1]);
+					newAtlasBuffer.push_back(vertex_atlas[i2]);
+				}
 
 				if (!vertex_boneindices.empty())
 				{
@@ -686,7 +758,9 @@ namespace wiSceneSystem
 			// For hard surface normals, we created a new mesh in the previous loop through faces, so swap data:
 			vertex_positions = newPositionsBuffer;
 			vertex_normals = newNormalsBuffer;
-			vertex_texcoords = newTexcoordsBuffer;
+			vertex_uvset_0 = newUV0Buffer;
+			vertex_uvset_1 = newUV1Buffer;
+			vertex_atlas = newAtlasBuffer;
 			if (!vertex_boneindices.empty())
 			{
 				vertex_boneindices = newBoneIndicesBuffer;

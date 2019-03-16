@@ -4,7 +4,7 @@ struct VSOut
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
-	float2 tex : TEXCOORD;
+	float4 uvsets : UVSETS;
 	float3 nor : NORMAL;
 };
 
@@ -17,7 +17,7 @@ VSOut main(Input_Object_POS_TEX input)
 
 	Out.pos = mul(surface.position, WORLD);
 	Out.color = surface.color;
-	Out.tex = surface.uv;
+	Out.uvsets = surface.uvsets;
 	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
 
 	return Out;

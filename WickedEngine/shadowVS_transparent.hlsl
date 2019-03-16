@@ -4,7 +4,7 @@ struct VertexOut
 {
 	float4 pos				: SV_POSITION;
 	float4 color			: COLOR;
-	float2 tex				: TEXCOORD0;
+	float4 uvsets			: UVSETS;
 };
 
 VertexOut main(Input_Object_POS_TEX input)
@@ -18,7 +18,7 @@ VertexOut main(Input_Object_POS_TEX input)
 
 	Out.pos = mul(surface.position, g_xCamera_VP);
 	Out.color = surface.color;
-	Out.tex = surface.uv;
+	Out.uvsets = surface.uvsets;
 
 	return Out;
 }

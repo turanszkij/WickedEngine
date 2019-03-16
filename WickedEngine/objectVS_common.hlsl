@@ -20,7 +20,7 @@ PixelInputType main(Input_Object_ALL input)
 	Out.pos2DPrev = mul(surface.prevPos, g_xFrame_MainCamera_PrevVP);
 	Out.pos3D = surface.position.xyz;
 	Out.color = surface.color;
-	Out.tex = surface.uv;
+	Out.uvsets = surface.uvsets;
 	Out.atl = surface.atlas;
 	Out.nor = surface.normal;
 	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_View).xy;

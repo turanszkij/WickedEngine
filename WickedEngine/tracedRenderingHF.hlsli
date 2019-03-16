@@ -101,7 +101,7 @@ struct RayHit
 
 	// these will only be filled when bestHit is determined to avoid recomputing them for every intersection:
 	float3 N;
-	float2 UV;
+	float4 uvsets;
 	uint materialIndex;
 	float4 color;
 };
@@ -115,7 +115,7 @@ inline RayHit CreateRayHit()
 	hit.bary = 0;
 
 	hit.N = 0;
-	hit.UV = 0;
+	hit.uvsets = 0;
 	hit.materialIndex = 0;
 	hit.color = 0;
 

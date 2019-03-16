@@ -37,6 +37,7 @@
 #define xSurfaceMap				texture_2	// r: ao, g: roughness, b: metallic, a: reflectance
 #define xDisplacementMap		texture_3	// r: heightmap
 #define xEmissiveMap			texture_4	// rgba: emissive
+#define xOcclusionMap			texture_5	// r: ao
 
 // These are bound by RenderPath (based on Render Path):
 #define xReflection				texture_6	// rgba: scene color from reflected camera angle
@@ -51,14 +52,14 @@ struct PixelInputType_Simple
 	float4 pos								: SV_POSITION;
 	float  clip								: SV_ClipDistance0;
 	float4 color							: COLOR;
-	float2 tex								: TEXCOORD0;
+	float4 uvsets							: UVSETS;
 };
 struct PixelInputType
 {
 	float4 pos								: SV_POSITION;
 	float  clip								: SV_ClipDistance0;
 	float4 color							: COLOR;
-	float2 tex								: TEXCOORD0;
+	float4 uvsets							: UVSETS;
 	float2 atl								: ATLAS;
 	float3 nor								: NORMAL;
 	float4 pos2D							: SCREENPOSITION;
@@ -150,15 +151,16 @@ inline float3 PlanarReflection(in float2 reflectionUV, in float2 bumpColor)
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
-inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 TBN)
+inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
 	V = mul(TBN, V);
 	float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
 	float curLayerHeight = 0;
 	float2 dtex = g_xMat_parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-	float2 currentTextureCoords = UV;
-	float2 derivX = ddx_coarse(UV);
-	float2 derivY = ddy_coarse(UV);
+	float2 originalTextureCoords = g_xMat_uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+	float2 currentTextureCoords = originalTextureCoords;
+	float2 derivX = ddx_coarse(currentTextureCoords);
+	float2 derivY = ddy_coarse(currentTextureCoords);
 	float heightFromTexture = 1 - xDisplacementMap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
 	uint iter = 0;
 	[loop]
@@ -173,8 +175,9 @@ inline void ParallaxOcclusionMapping(inout float2 UV, in float3 V, in float3x3 T
 	float nextH = heightFromTexture - curLayerHeight;
 	float prevH = 1 - xDisplacementMap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
 	float weight = nextH / (nextH - prevH);
-	float2 finalTexCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
-	UV = finalTexCoords;
+	float2 finalTextureCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
+	float2 difference = finalTextureCoords - originalTextureCoords;
+	uvsets += difference.xyxy;
 }
 
 inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout Surface surface, inout float4 color, inout float3 diffuse)
@@ -734,9 +737,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 
-
-	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
-
 	Surface surface;
 
 #ifndef SIMPLE_INPUT
@@ -746,14 +746,15 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	surface.V /= dist;
 	surface.N = normalize(input.nor);
 
-	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, UV);
+	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, input.uvsets.xy);
 #endif // SIMPLE_INPUT
 
 #ifdef POM
-	ParallaxOcclusionMapping(UV, surface.V, TBN);
+	ParallaxOcclusionMapping(input.uvsets, surface.V, TBN);
 #endif // POM
 
-	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
+	const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
 	color.rgb = DEGAMMA(color.rgb);
 	color *= input.color;
 	ALPHATEST(color.a);
@@ -783,15 +784,24 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // SIMPLE_INPUT
 
 #ifdef NORMALMAP
-	NormalMapping(UV, surface.P, surface.N, TBN, bumpColor);
+	const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	NormalMapping(UV_normalMap, surface.P, surface.N, TBN, bumpColor);
 #endif // NORMALMAP
 
-	float4 surface_ao_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV);
+	const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	float4 surface_ao_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
+
+	if (g_xMat_specularGlossinessWorkflow)
+	{
+		ConvertToSpecularGlossiness(surface_ao_roughness_metallic_reflectance);
+	}
+
 	float4 emissiveColor;
 	[branch]
 	if (g_xMat_emissiveColor.a > 0)
 	{
-		emissiveColor = xEmissiveMap.Sample(sampler_objectshader, UV);
+		const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		emissiveColor = xEmissiveMap.Sample(sampler_objectshader, UV_emissiveMap);
 		emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
 		emissiveColor *= g_xMat_emissiveColor;
 	}
@@ -800,12 +810,15 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		emissiveColor = 0;
 	}
 
+	const float2 UV_occlusionMap = g_xMat_uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	float occlusion = xOcclusionMap.Sample(sampler_objectshader, UV_occlusionMap).r;
+
 	surface = CreateSurface(
 		surface.P, 
 		surface.N, 
 		surface.V, 
 		color,
-		surface_ao_roughness_metallic_reflectance.r,
+		surface_ao_roughness_metallic_reflectance.r * occlusion,
 		g_xMat_roughness * surface_ao_roughness_metallic_reflectance.g,
 		g_xMat_metalness * surface_ao_roughness_metallic_reflectance.b,
 		g_xMat_reflectance * surface_ao_roughness_metallic_reflectance.a,
@@ -824,8 +837,9 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float2 bumpColor0 = 0;
 	float2 bumpColor1 = 0;
 	float2 bumpColor2 = 0;
-	bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV - g_xMat_texMulAdd.ww).rg - 1.0f;
-	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV + g_xMat_texMulAdd.zw).rg - 1.0f;
+	const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMat_texMulAdd.ww).rg - 1.0f;
+	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap + g_xMat_texMulAdd.zw).rg - 1.0f;
 	bumpColor2 = xWaterRipples.Sample(sampler_objectshader, ScreenCoord).rg;
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMat_refractionIndex;
 	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));

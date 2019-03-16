@@ -13,7 +13,7 @@ void main(triangle VSOut_EnvmapRendering input[3], inout TriangleStream<PSIn_Env
 		{
 			output.pos = mul(input[v].pos, xCubeShadowVP[f]);
 			output.color = input[v].color;
-			output.tex = input[v].tex;
+			output.uvsets = input[v].uvsets;
 			output.atl = input[v].atl;
 			output.nor = input[v].nor;
 			output.pos3D = input[v].pos.xyz;

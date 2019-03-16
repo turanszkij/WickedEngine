@@ -13,7 +13,7 @@ PixelInputType_Simple main(Input_Object_POS_TEX input)
 
 	Out.pos = mul(surface.position, g_xCamera_VP);
 	Out.color = surface.color;
-	Out.tex = surface.uv;
+	Out.uvsets = surface.uvsets;
 
 	return Out;
 }

@@ -11,7 +11,7 @@ VSOut_EnvmapRendering main(Input_Object_ALL input)
 
 	Out.pos = mul(surface.position, WORLD);
 	Out.color = surface.color;
-	Out.tex = surface.uv;
+	Out.uvsets = surface.uvsets;
 	Out.atl = surface.atlas;
 	Out.nor = normalize(mul(surface.normal, (float3x3)WORLD));
 

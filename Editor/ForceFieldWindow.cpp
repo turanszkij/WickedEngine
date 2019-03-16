@@ -92,7 +92,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 
 
 
-	forceFieldWindow->Translate(XMFLOAT3(810, 50, 0));
+	forceFieldWindow->Translate(XMFLOAT3(screenW - 720, 50, 0));
 	forceFieldWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

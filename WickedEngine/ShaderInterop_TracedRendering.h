@@ -41,12 +41,22 @@ struct TracedRenderingMaterial
 	float		normalMapFlip;
 	float		parallaxOcclusionMapping;
 
+	float		displacementMapping;
+	uint		useVertexColors;
+	uint		uvset_baseColorMap;
+	uint		uvset_surfaceMap;
+
+	uint		uvset_normalMap;
+	uint		uvset_displacementMap;
+	uint		uvset_emissiveMap;
+	uint		uvset_occlusionMap;
+
+	uint		specularGlossinessWorkflow;
+	uint3		padding;
+
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;
 	float4		emissiveMapAtlasMulAdd;
-
-	uint		g_xMat_useVertexColors;
-	uint3		g_xMat_padding;
 };
 
 

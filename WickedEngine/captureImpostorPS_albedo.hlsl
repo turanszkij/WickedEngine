@@ -2,9 +2,8 @@
 
 float4 main(PixelInputType input) : SV_Target0
 {
-	float2 UV = input.tex * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw;
-
-	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV);
+	const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
 	color.rgb = DEGAMMA(color.rgb);
 	color *= input.color;
 	ALPHATEST(color.a);

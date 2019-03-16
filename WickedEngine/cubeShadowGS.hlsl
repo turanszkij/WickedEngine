@@ -2,11 +2,11 @@
 
 struct GS_CUBEMAP_IN 
 { 
-	float4 Pos		: SV_POSITION;
+	float4 pos		: SV_POSITION;
 }; 
 struct PS_CUBEMAP_IN
 {
-	float4 Pos		: SV_POSITION;
+	float4 pos		: SV_POSITION;
 	float3 pos3D	: POSITION3D;
     uint RTIndex	: SV_RenderTargetArrayIndex; 
 };
@@ -23,8 +23,8 @@ void main( triangle GS_CUBEMAP_IN input[3], inout TriangleStream<PS_CUBEMAP_IN> 
 		[unroll]
 		for (int v = 0; v < 3; v++)
 		{
-			output.Pos = mul(input[v].Pos, xCubeShadowVP[f]);
-			output.pos3D = input[v].Pos.xyz;
+			output.pos = mul(input[v].pos, xCubeShadowVP[f]);
+			output.pos3D = input[v].pos.xyz;
 			CubeMapStream.Append(output);
 		}
 		CubeMapStream.RestartStrip();

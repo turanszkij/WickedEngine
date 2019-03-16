@@ -7,7 +7,7 @@ struct PSInput
 {
 	float4 pos : SV_POSITION;
 	float4 color : COLOR;
-	float2 tex : TEXCOORD;
+	float4 uvsets : UVSETS;
 	float3 N : NORMAL;
 	float3 P : POSITION3D;
 };
@@ -23,7 +23,8 @@ void main(PSInput input)
 	[branch]
 	if (is_saturated(uvw))
 	{
-		float4 baseColor = xBaseColorMap.Sample(sampler_linear_wrap, input.tex);
+		const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		float4 baseColor = xBaseColorMap.Sample(sampler_linear_wrap, UV_baseColorMap);
 		baseColor.rgb = DEGAMMA(baseColor.rgb);
 		baseColor *= input.color;
 		float4 color = baseColor;
@@ -31,7 +32,8 @@ void main(PSInput input)
 		[branch]
 		if (g_xMat_emissiveColor.a > 0)
 		{
-			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, input.tex);
+			const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, UV_emissiveMap);
 			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
 			emissiveColor *= g_xMat_emissiveColor;
 		}

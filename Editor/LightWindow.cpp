@@ -218,7 +218,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	lightWindow->AddWidget(typeSelectorComboBox);
 
 
-	lightWindow->Translate(XMFLOAT3(30, 30, 0));
+	lightWindow->Translate(XMFLOAT3(120, 30, 0));
 	lightWindow->SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
