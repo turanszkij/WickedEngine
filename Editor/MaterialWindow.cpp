@@ -24,7 +24,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	GUI->AddWidget(materialWindow);
 
 	materialNameField = new wiTextInputField("MaterialName");
-	materialNameField->SetPos(XMFLOAT2(10, 30));
+	materialNameField->SetPos(XMFLOAT2(10, 60));
 	materialNameField->SetSize(XMFLOAT2(300, 20));
 	materialNameField->OnInputAccepted([&](wiEventArgs args) {
 		NameComponent* name = wiRenderer::GetScene().names.GetComponent(entity);
@@ -35,8 +35,8 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	});
 	materialWindow->AddWidget(materialNameField);
 
-	float x = 540, y = 0;
-	float step = 35;
+	float x = 540, y = 30;
+	float step = 25;
 
 	waterCheckBox = new wiCheckBox("Water: ");
 	waterCheckBox->SetTooltip("Set material as special water material.");
@@ -97,6 +97,9 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
 	});
 	materialWindow->AddWidget(specularGlossinessCheckBox);
+
+
+	step = 35;
 
 	normalMapSlider = new wiSlider(0, 4, 1, 4000, "Normalmap: ");
 	normalMapSlider->SetTooltip("How much the normal map should distort the face normals (bumpiness).");

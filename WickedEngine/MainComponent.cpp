@@ -124,8 +124,6 @@ void MainComponent::Run()
 	wiProfiler::BeginFrame();
 	wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
-	wiInputManager::Update();
-
 	deltaTime = float(max(0, timer.elapsed() / 1000.0));
 	timer.record();
 
@@ -174,6 +172,8 @@ void MainComponent::Run()
 		deltaTimeAccumulator = 0;
 		wiLua::GetGlobal()->SetDeltaTime(0);
 	}
+
+	wiInputManager::Update();
 
 	wiProfiler::BeginRange("Render", wiProfiler::DOMAIN_CPU);
 	Render();
