@@ -4,10 +4,12 @@
 #include "Matrix_BindLua.h"
 #include "wiEmittedParticle.h"
 #include "Texture_BindLua.h"
+#include "wiIntersect_BindLua.h"
 
 using namespace std;
 using namespace wiECS;
 using namespace wiSceneSystem;
+using namespace wiIntersect_BindLua;
 
 namespace wiSceneSystem_BindLua
 {
@@ -17,6 +19,77 @@ int CreateEntity_BindLua(lua_State* L)
 	Entity entity = CreateEntity();
 	wiLua::SSetInt(L, (int)entity);
 	return 1;
+}
+
+int GetScene(lua_State* L)
+{
+	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiSceneSystem::GetScene()));
+	return 1;
+}
+int LoadModel(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		string fileName = wiLua::SGetString(L, 1);
+		XMMATRIX transform = XMMatrixIdentity();
+		if (argc > 1)
+		{
+			Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
+			if (matrix != nullptr)
+			{
+				transform = matrix->matrix;
+			}
+			else
+			{
+				wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
+			}
+		}
+		Entity root = wiSceneSystem::LoadModel(fileName, transform, true);
+		wiLua::SSetInt(L, int(root));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) not enough arguments!");
+	}
+	return 0;
+}
+int Pick(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
+		if (ray != nullptr)
+		{
+			UINT renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t layerMask = 0xFFFFFFFF;
+			if (argc > 1)
+			{
+				renderTypeMask = (UINT)wiLua::SGetInt(L, 2);
+				if (argc > 2)
+				{
+					int mask = wiLua::SGetInt(L, 3);
+					layerMask = *reinterpret_cast<uint32_t*>(&mask);
+				}
+			}
+			auto& pick = wiSceneSystem::Pick(ray->ray, renderTypeMask, layerMask);
+			wiLua::SSetInt(L, (int)pick.entity);
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
+			wiLua::SSetFloat(L, pick.distance);
+			return 4;
+		}
+
+		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) first argument must be of Vector type!");
+	}
+	else
+	{
+		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) not enough arguments!");
+	}
+
+	return 0;
 }
 
 void Bind()
@@ -30,6 +103,10 @@ void Bind()
 
 		wiLua::GetGlobal()->RegisterFunc("CreateEntity", CreateEntity_BindLua);
 		wiLua::GetGlobal()->RunText("INVALID_ENTITY = 0");
+
+		wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
+		wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
+		wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);

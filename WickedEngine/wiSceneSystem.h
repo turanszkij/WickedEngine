@@ -1115,5 +1115,40 @@ namespace wiSceneSystem
 		WeatherComponent& weather
 	);
 
+
+
+	// Helper that manages a global scene
+	inline Scene& GetScene()
+	{
+		static Scene scene;
+		return scene;
+	}
+
+	// Helper function to open a wiscene file and add the contents to the global scene
+	//	transformMatrix	:	everything will be transformed by this matrix (optional)
+	//	attached		:	everything will be attached to a base entity
+	//
+	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
+	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
+
+	struct PickResult
+	{
+		wiECS::Entity entity = wiECS::INVALID_ENTITY;
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
+		float distance = FLT_MAX;
+		int subsetIndex = -1;
+		int vertexID0 = -1;
+		int vertexID1 = -1;
+		int vertexID2 = -1;
+		XMFLOAT4X4 orientation = IDENTITYMATRIX;
+
+		bool operator==(const PickResult& other)
+		{
+			return entity == other.entity;
+		}
+	};
+	// Given a ray, finds the closest intersection point against all instances
+	PickResult Pick(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);
 }
 

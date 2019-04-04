@@ -231,6 +231,9 @@ namespace wiImage
 
 			device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], threadID);
 
+			device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+
 			fullScreenEffect = false;
 		}
 		else // Post process
@@ -314,10 +317,16 @@ namespace wiImage
 				break;
 			}
 
+			device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
+
 		}
-		device->BindResource(PS, params.maskMap, TEXSLOT_ONDEMAND1, threadID);
-		device->BindResource(PS, params.distortionMap, TEXSLOT_ONDEMAND2, threadID);
-		device->BindResource(PS, params.refractionSource, TEXSLOT_ONDEMAND3, threadID);
+
+		const GPUResource* res[] = {
+			params.maskMap,
+			params.distortionMap,
+			params.refractionSource,
+		};
+		device->BindResources(PS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
 
 		device->Draw((fullScreenEffect ? 3 : 4), 0, threadID);
 
@@ -518,21 +527,6 @@ namespace wiImage
 		device->CreateGraphicsPSO(&desc, &deferredPSO);
 
 
-	}
-
-	void BindPersistentState(GRAPHICSTHREAD threadID)
-	{
-		if (!initialized.load())
-		{
-			return;
-		}
-
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
-		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
-
-		device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
 	}
 
 	void Initialize()

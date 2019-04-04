@@ -11,6 +11,8 @@
 #include <functional>
 #include <unordered_map>
 
+#include <DirectXCollision.h>
+
 using namespace wiECS;
 using namespace wiGraphics;
 
@@ -2061,4 +2063,191 @@ namespace wiSceneSystem
 		}
 	}
 
+
+
+
+
+
+	Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
+	{
+		wiArchive archive(fileName, true);
+		if (archive.IsOpen())
+		{
+			// Create new scene
+			Scene scene;
+
+			// Serialize it from file:
+			scene.Serialize(archive);
+
+			// First, create new root parent:
+			Entity parent = CreateEntity();
+			scene.transforms.Create(parent);
+			scene.layers.Create(parent).layerMask = ~0;
+
+			{
+				// Apply the optional transformation matrix to the new scene:
+
+				// Parent all unparented(root) transforms to "parent"
+				for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "parent"
+				{
+					Entity entity = scene.transforms.GetEntity(i);
+					if (!scene.hierarchy.Contains(entity))
+					{
+						scene.Component_Attach(entity, parent);
+					}
+				}
+
+				// The parent component is transformed, scene is updated:
+				scene.transforms.GetComponent(parent)->MatrixTransform(transformMatrix);
+				scene.Update(0);
+			}
+
+			if (!attached)
+			{
+				// In this case, we don't care about the root anymore, so delete it. This will simplify overall hierarchy
+				scene.Component_DetachChildren(parent);
+				scene.Entity_Remove(parent);
+				parent = INVALID_ENTITY;
+			}
+
+			// Merge with the original scene:
+			GetScene().Merge(scene);
+
+			return parent;
+		}
+
+		return INVALID_ENTITY;
+	}
+
+	PickResult Pick(const RAY& ray, UINT renderTypeMask, uint32_t layerMask)
+	{
+		const Scene& scene = GetScene();
+
+		PickResult result;
+
+		if (scene.objects.GetCount() > 0)
+		{
+			const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
+			const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
+
+			for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
+			{
+				const AABB& aabb = scene.aabb_objects[i];
+				if (!ray.intersects(aabb))
+				{
+					continue;
+				}
+
+				const ObjectComponent& object = scene.objects[i];
+				if (object.meshID == INVALID_ENTITY)
+				{
+					continue;
+				}
+				if (!(renderTypeMask & object.GetRenderTypes()))
+				{
+					continue;
+				}
+
+				Entity entity = scene.aabb_objects.GetEntity(i);
+				const LayerComponent& layer = *scene.layers.GetComponent(entity);
+
+				if (layer.GetLayerMask() & layerMask)
+				{
+					const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+
+					const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
+					const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+
+					const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+					const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+
+					const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
+
+					int subsetCounter = 0;
+					for (auto& subset : mesh.subsets)
+					{
+						for (size_t i = 0; i < subset.indexCount; i += 3)
+						{
+							const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
+							const uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
+							const uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+
+							XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+							XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+							XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+
+							if (armature != nullptr)
+							{
+								const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
+								const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
+								const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
+
+								const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
+								const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
+								const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
+
+								XMMATRIX sump;
+
+								sump = armature->boneData[ind0.x].Load() * wei0.x;
+								sump += armature->boneData[ind0.y].Load() * wei0.y;
+								sump += armature->boneData[ind0.z].Load() * wei0.z;
+								sump += armature->boneData[ind0.w].Load() * wei0.w;
+
+								p0 = XMVector3Transform(p0, sump);
+
+								sump = armature->boneData[ind1.x].Load() * wei1.x;
+								sump += armature->boneData[ind1.y].Load() * wei1.y;
+								sump += armature->boneData[ind1.z].Load() * wei1.z;
+								sump += armature->boneData[ind1.w].Load() * wei1.w;
+
+								p1 = XMVector3Transform(p1, sump);
+
+								sump = armature->boneData[ind2.x].Load() * wei2.x;
+								sump += armature->boneData[ind2.y].Load() * wei2.y;
+								sump += armature->boneData[ind2.z].Load() * wei2.z;
+								sump += armature->boneData[ind2.w].Load() * wei2.w;
+
+								p2 = XMVector3Transform(p2, sump);
+							}
+
+							float distance;
+							if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance))
+							{
+								const XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+								distance = wiMath::Distance(pos, rayOrigin);
+
+								if (distance < result.distance)
+								{
+									const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
+
+									result.entity = entity;
+									XMStoreFloat3(&result.position, pos);
+									XMStoreFloat3(&result.normal, nor);
+									result.distance = distance;
+									result.subsetIndex = subsetCounter;
+									result.vertexID0 = (int)i0;
+									result.vertexID1 = (int)i1;
+									result.vertexID2 = (int)i2;
+								}
+							}
+						}
+						subsetCounter++;
+					}
+
+				}
+
+			}
+		}
+
+		// Construct a matrix that will orient to position (P) according to surface normal (N):
+		XMVECTOR N = XMLoadFloat3(&result.normal);
+		XMVECTOR P = XMLoadFloat3(&result.position);
+		XMVECTOR E = XMLoadFloat3(&ray.origin);
+		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		XMMATRIX M = { T, N, B, P };
+		XMStoreFloat4x4(&result.orientation, M);
+
+		return result;
+	}
 }

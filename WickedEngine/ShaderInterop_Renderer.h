@@ -104,7 +104,7 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 12;
 
-// ---------- Persistent Constant buffers: -----------------
+// ---------- Common Constant buffers: -----------------
 
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
@@ -214,6 +214,18 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_WorldBoundsExtents_Inverse;	float pad3_frameCB;		// world enclosing AABB 1.0f / abs(max - min)
 };
 
+CBUFFER(APICB, CBSLOT_API)
+{
+	float4		g_xClipPlane;
+	float		g_xAlphaRef;
+	float3		g_xPadding0_APICB;
+};
+
+
+
+
+// ------- On demand Constant buffers: ----------
+
 // The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 {
@@ -258,18 +270,6 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 	float4x4	g_xTransform;
 	float4		g_xColor;
 };
-
-CBUFFER(APICB, CBSLOT_API)
-{
-	float4		g_xClipPlane;
-	float		g_xAlphaRef;
-	float3		g_xPadding0_APICB;
-};
-
-
-
-
-// ------- On demand Constant buffers: ----------
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {

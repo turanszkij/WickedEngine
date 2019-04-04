@@ -22,7 +22,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 	realTimeCheckBox->SetPos(XMFLOAT2(x, y += step));
 	realTimeCheckBox->SetEnabled(false);
 	realTimeCheckBox->OnClick([&](wiEventArgs args) {
-		EnvironmentProbeComponent* probe = wiRenderer::GetScene().probes.GetComponent(entity);
+		EnvironmentProbeComponent* probe = wiSceneSystem::GetScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
 			probe->SetRealTime(args.bValue);
@@ -36,7 +36,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 	generateButton->OnClick([](wiEventArgs args) {
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, XMVectorAdd(wiRenderer::GetCamera().GetEye(), wiRenderer::GetCamera().GetAt() * 4));
-		wiRenderer::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
+		wiSceneSystem::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
 	});
 	envProbeWindow->AddWidget(generateButton);
 
@@ -44,7 +44,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 	refreshButton->SetPos(XMFLOAT2(x, y += step));
 	refreshButton->SetEnabled(false);
 	refreshButton->OnClick([&](wiEventArgs args) {
-		EnvironmentProbeComponent* probe = wiRenderer::GetScene().probes.GetComponent(entity);
+		EnvironmentProbeComponent* probe = wiSceneSystem::GetScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
 			probe->SetDirty();
@@ -56,7 +56,7 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 	refreshAllButton->SetPos(XMFLOAT2(x, y += step));
 	refreshAllButton->SetEnabled(true);
 	refreshAllButton->OnClick([&](wiEventArgs args) {
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
 			EnvironmentProbeComponent& probe = scene.probes[i];
@@ -86,7 +86,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	const EnvironmentProbeComponent* probe = wiRenderer::GetScene().probes.GetComponent(entity);
+	const EnvironmentProbeComponent* probe = wiSceneSystem::GetScene().probes.GetComponent(entity);
 
 	if (probe == nullptr)
 	{

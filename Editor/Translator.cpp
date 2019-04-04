@@ -196,7 +196,7 @@ Translator::~Translator()
 
 void Translator::Update()
 {
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	if (!scene.transforms.Contains(entityID))
 	{
@@ -433,7 +433,7 @@ void Translator::Update()
 }
 void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) const
 {
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	if (!scene.transforms.Contains(entityID))
 	{
@@ -471,18 +471,24 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) co
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// xz
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// yz
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 	device->Draw(vertexCount_Plane, 0, threadID);
 
 	// Lines:
@@ -501,18 +507,24 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) co
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// y
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// z
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
 	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 	device->Draw(vertexCount_Axis, 0, threadID);
 
 	// Origin:
@@ -528,6 +540,8 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) co
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(mat));
 		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
 		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
+		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
+		device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
 		device->Draw(vertexCount_Origin, 0, threadID);
 	}
 

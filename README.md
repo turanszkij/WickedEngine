@@ -142,9 +142,9 @@ Some basic usage examples (C++):
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
-wiRenderer::LoadModel("myModel.wiscene"); // Simply load a model into the current render scene
-wiRenderer::GetScene(); // Get the current render scene
-wiRenderer::ClearWorld(); // Delete every model, etc. from the current render scene
+wiSceneSystem::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
+wiSceneSystem::GetScene(); // Get the current global scene
+wiRenderer::ClearWorld(); // Delete every model, etc. from the current global scene
 
 myGame.setSSAOEnabled(true); // You can enable post process effects this way...
 
@@ -176,14 +176,14 @@ main.SetActivePath(path);    -- "main" is created automatically
 -- Load a model entity:
 entity = LoadModel("myModel.wiscene");
 
--- Get the current render scene:
+-- Get the current global scene:
 scene = GetScene();
 
 -- Move model to the right using the entity-component system:
 transform = scene.Component_GetTransform(entity);
 transform.Translate(Vector(2, 0, 0));
 
--- Clear every model from the current render scene:
+-- Clear every model from the current global scene:
 ClearWorld();
 
 -- Print any WickedEngine class information to the backlog:

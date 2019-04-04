@@ -115,7 +115,6 @@ void MainComponent::Run()
 	{
 		// Until engine is not loaded, present initialization screen...
 		wiRenderer::GetDevice()->PresentBegin();
-		wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
 		wiRenderer::GetDevice()->PresentEnd();
 		return;
@@ -225,9 +224,6 @@ void MainComponent::Render()
 	wiLua::GetGlobal()->Render();
 
 	wiProfiler::BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
-	wiRenderer::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-	wiImage::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
-	wiFont::BindPersistentState(GRAPHICSTHREAD_IMMEDIATE);
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Render();

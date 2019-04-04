@@ -33,12 +33,12 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	patchSizeSlider = new wiSlider(1, 1000, 1000, 100000, "Patch size: ");
 	patchSizeSlider->SetSize(XMFLOAT2(100, 30));
 	patchSizeSlider->SetPos(XMFLOAT2(x, y += inc));
-	patchSizeSlider->SetValue(wiRenderer::GetScene().weather.oceanParameters.patch_length);
+	patchSizeSlider->SetValue(wiSceneSystem::GetScene().weather.oceanParameters.patch_length);
 	patchSizeSlider->SetTooltip("Adjust water tiling patch size");
 	patchSizeSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.patch_length = args.fValue;
 			wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck());
 		}
@@ -48,12 +48,12 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	waveAmplitudeSlider = new wiSlider(0, 1000, 1000, 100000, "Wave amplitude: ");
 	waveAmplitudeSlider->SetSize(XMFLOAT2(100, 30));
 	waveAmplitudeSlider->SetPos(XMFLOAT2(x, y += inc));
-	waveAmplitudeSlider->SetValue(wiRenderer::GetScene().weather.oceanParameters.wave_amplitude);
+	waveAmplitudeSlider->SetValue(wiSceneSystem::GetScene().weather.oceanParameters.wave_amplitude);
 	waveAmplitudeSlider->SetTooltip("Adjust wave size");
 	waveAmplitudeSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.wave_amplitude = args.fValue;
 			wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck());
 		}
@@ -63,12 +63,12 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	choppyScaleSlider = new wiSlider(0, 10, 1000, 100000, "Choppiness: ");
 	choppyScaleSlider->SetSize(XMFLOAT2(100, 30));
 	choppyScaleSlider->SetPos(XMFLOAT2(x, y += inc));
-	choppyScaleSlider->SetValue(wiRenderer::GetScene().weather.oceanParameters.choppy_scale);
+	choppyScaleSlider->SetValue(wiSceneSystem::GetScene().weather.oceanParameters.choppy_scale);
 	choppyScaleSlider->SetTooltip("Adjust wave choppiness");
 	choppyScaleSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.choppy_scale = args.fValue;
 			wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck());
 		}
@@ -78,12 +78,12 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	windDependencySlider = new wiSlider(0, 1, 1000, 100000, "Wind dependency: ");
 	windDependencySlider->SetSize(XMFLOAT2(100, 30));
 	windDependencySlider->SetPos(XMFLOAT2(x, y += inc));
-	windDependencySlider->SetValue(wiRenderer::GetScene().weather.oceanParameters.wind_dependency);
+	windDependencySlider->SetValue(wiSceneSystem::GetScene().weather.oceanParameters.wind_dependency);
 	windDependencySlider->SetTooltip("Adjust wind contribution");
 	windDependencySlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.wind_dependency = args.fValue;
 			wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck());
 		}
@@ -93,12 +93,12 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	timeScaleSlider = new wiSlider(0, 4, 1000, 100000, "Time scale: ");
 	timeScaleSlider->SetSize(XMFLOAT2(100, 30));
 	timeScaleSlider->SetPos(XMFLOAT2(x, y += inc));
-	timeScaleSlider->SetValue(wiRenderer::GetScene().weather.oceanParameters.time_scale);
+	timeScaleSlider->SetValue(wiSceneSystem::GetScene().weather.oceanParameters.time_scale);
 	timeScaleSlider->SetTooltip("Adjust simulation speed");
 	timeScaleSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.time_scale = args.fValue;
 			wiRenderer::SetOceanEnabled(enabledCheckBox->GetCheck());
 		}
@@ -111,9 +111,9 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	heightSlider->SetValue(0);
 	heightSlider->SetTooltip("Adjust water level");
 	heightSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.waterHeight = args.fValue;
 		}
 	});
@@ -125,9 +125,9 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	detailSlider->SetValue(4);
 	detailSlider->SetTooltip("Adjust surface tessellation resolution. High values can decrease performance.");
 	detailSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.surfaceDetail = (uint32_t)args.iValue;
 		}
 	});
@@ -139,9 +139,9 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	toleranceSlider->SetValue(2);
 	toleranceSlider->SetTooltip("Big waves can introduce glitches on screen borders, this can fix that but surface detail will decrease.");
 	toleranceSlider->OnSlide([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.surfaceDisplacementTolerance = args.fValue;
 		}
 	});
@@ -154,9 +154,9 @@ OceanWindow::OceanWindow(wiGUI* gui) :GUI(gui)
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		if (wiRenderer::GetScene().weathers.GetCount() > 0)
+		if (wiSceneSystem::GetScene().weathers.GetCount() > 0)
 		{
-			WeatherComponent& weather = wiRenderer::GetScene().weathers[0];
+			WeatherComponent& weather = wiSceneSystem::GetScene().weathers[0];
 			weather.oceanParameters.waterColor = args.color.toFloat3();
 		}
 	});

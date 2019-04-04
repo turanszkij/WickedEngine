@@ -271,7 +271,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	renderableCheckBox->SetPos(XMFLOAT2(x, y += 30));
 	renderableCheckBox->SetCheck(true);
 	renderableCheckBox->OnClick([&](wiEventArgs args) {
-		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
+		ObjectComponent* object = wiSceneSystem::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			object->SetRenderable(args.bValue);
@@ -284,7 +284,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	ditherSlider->SetSize(XMFLOAT2(100, 30));
 	ditherSlider->SetPos(XMFLOAT2(x, y += 30));
 	ditherSlider->OnSlide([&](wiEventArgs args) {
-		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
+		ObjectComponent* object = wiSceneSystem::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			object->color.w = 1 - args.fValue;
@@ -297,7 +297,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	cascadeMaskSlider->SetSize(XMFLOAT2(100, 30));
 	cascadeMaskSlider->SetPos(XMFLOAT2(x, y += 30));
 	cascadeMaskSlider->OnSlide([&](wiEventArgs args) {
-		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
+		ObjectComponent* object = wiSceneSystem::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			object->cascadeMask = (uint32_t)args.iValue;
@@ -312,7 +312,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	colorPicker->SetVisible(true);
 	colorPicker->SetEnabled(true);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
-		ObjectComponent* object = wiRenderer::GetScene().objects.GetComponent(entity);
+		ObjectComponent* object = wiSceneSystem::GetScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{
 			XMFLOAT3 col = args.color.toFloat3();
@@ -337,7 +337,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	rigidBodyCheckBox->SetCheck(false);
 	rigidBodyCheckBox->OnClick([&](wiEventArgs args) 
 	{
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 		RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
 
 		if (args.bValue)
@@ -366,7 +366,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	kinematicCheckBox->SetPos(XMFLOAT2(x, y += 30));
 	kinematicCheckBox->SetCheck(false);
 	kinematicCheckBox->OnClick([&](wiEventArgs args) {
-		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+		RigidBodyPhysicsComponent* physicscomponent = wiSceneSystem::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->SetKinematic(args.bValue);
@@ -379,7 +379,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	disabledeactivationCheckBox->SetPos(XMFLOAT2(x, y += 30));
 	disabledeactivationCheckBox->SetCheck(false);
 	disabledeactivationCheckBox->OnClick([&](wiEventArgs args) {
-		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+		RigidBodyPhysicsComponent* physicscomponent = wiSceneSystem::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->SetDisableDeactivation(args.bValue);
@@ -397,7 +397,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	collisionShapeComboBox->AddItem("Triangle Mesh");
 	collisionShapeComboBox->OnSelect([&](wiEventArgs args) 
 	{
-		RigidBodyPhysicsComponent* physicscomponent = wiRenderer::GetScene().rigidbodies.GetComponent(entity);
+		RigidBodyPhysicsComponent* physicscomponent = wiSceneSystem::GetScene().rigidbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			switch (args.iValue)
@@ -448,7 +448,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	generateLightmapButton->SetSize(XMFLOAT2(140,30));
 	generateLightmapButton->OnClick([&](wiEventArgs args) {
 
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 
 		std::unordered_set<ObjectComponent*> gen_objects;
 		std::unordered_map<MeshComponent*, Atlas_Dim> gen_meshes;
@@ -497,7 +497,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	stopLightmapGenButton->SetSize(XMFLOAT2(140, 30));
 	stopLightmapGenButton->OnClick([&](wiEventArgs args) {
 
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 
 		for (auto& x : this->editor->selected)
 		{
@@ -518,7 +518,7 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	clearLightmapButton->SetSize(XMFLOAT2(140, 30));
 	clearLightmapButton->OnClick([&](wiEventArgs args) {
 
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 
 		for (auto& x : this->editor->selected)
 		{
@@ -556,7 +556,7 @@ void ObjectWindow::SetEntity(Entity entity)
 
 	this->entity = entity;
 
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	const ObjectComponent* object = scene.objects.GetComponent(entity);
 

@@ -29,7 +29,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	emitterNameField->SetPos(XMFLOAT2(x, y += step));
 	emitterNameField->SetSize(XMFLOAT2(300, 20));
 	emitterNameField->OnInputAccepted([&](wiEventArgs args) {
-		NameComponent* name = wiRenderer::GetScene().names.GetComponent(entity);
+		NameComponent* name = wiSceneSystem::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
@@ -41,7 +41,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(150, 30));
 	addButton->OnClick([&](wiEventArgs args) {
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 		scene.Entity_CreateEmitter("editorEmitter");
 	});
 	addButton->SetTooltip("Add new emitter particle system.");
@@ -74,7 +74,7 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 			}
 			else
 			{
-				Scene& scene = wiRenderer::GetScene();
+				Scene& scene = wiSceneSystem::GetScene();
 				emitter->meshID = scene.meshes.GetEntity(args.iValue - 1);
 			}
 		}
@@ -492,7 +492,7 @@ wiEmittedParticle* EmitterWindow::GetEmitter()
 		return nullptr;
 	}
 
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 	wiEmittedParticle* emitter = scene.emitters.GetComponent(entity);
 
 	return emitter;
@@ -506,7 +506,7 @@ void EmitterWindow::UpdateData()
 		return;
 	}
 
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	meshComboBox->ClearItems();
 	meshComboBox->AddItem("NO MESH");

@@ -84,13 +84,13 @@ public:
 	};
 
 	Translator translator;
-	std::list<wiRenderer::RayIntersectWorldResult> selected;
+	std::list<wiSceneSystem::PickResult> selected;
 	wiECS::ComponentManager<wiSceneSystem::HierarchyComponent> savedHierarchy;
-	wiRenderer::RayIntersectWorldResult hovered;
+	wiSceneSystem::PickResult hovered;
 
 	void BeginTranslate();
 	void EndTranslate();
-	void AddSelected(const wiRenderer::RayIntersectWorldResult& picked);
+	void AddSelected(const wiSceneSystem::PickResult& picked);
 
 
 

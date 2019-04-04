@@ -16,8 +16,6 @@ namespace wiImage
 		GRAPHICSTHREAD threadID, 
 		int stencilref = 0);
 
-	void BindPersistentState(GRAPHICSTHREAD threadID);
-
 	void LoadShaders();
 	void Initialize();
 };

@@ -28,7 +28,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	animationsComboBox->SetPos(XMFLOAT2(x, y += step));
 	animationsComboBox->SetEnabled(false);
 	animationsComboBox->OnSelect([&](wiEventArgs args) {
-		entity = wiRenderer::GetScene().animations.GetEntity(args.iValue);
+		entity = wiSceneSystem::GetScene().animations.GetEntity(args.iValue);
 	});
 	animationsComboBox->SetTooltip("Choose an animation clip...");
 	animWindow->AddWidget(animationsComboBox);
@@ -37,7 +37,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	loopedCheckBox->SetTooltip("Toggle animation looping behaviour.");
 	loopedCheckBox->SetPos(XMFLOAT2(150, y += step));
 	loopedCheckBox->OnClick([&](wiEventArgs args) {
-		AnimationComponent* animation = wiRenderer::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = wiSceneSystem::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->SetLooped(args.bValue);
@@ -49,7 +49,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	playButton->SetTooltip("Play/Pause animation.");
 	playButton->SetPos(XMFLOAT2(200, y));
 	playButton->OnClick([&](wiEventArgs args) {
-		AnimationComponent* animation = wiRenderer::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = wiSceneSystem::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			if (animation->IsPlaying())
@@ -68,7 +68,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	stopButton->SetTooltip("Stop animation.");
 	stopButton->SetPos(XMFLOAT2(310, y));
 	stopButton->OnClick([&](wiEventArgs args) {
-		AnimationComponent* animation = wiRenderer::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = wiSceneSystem::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->Stop();
@@ -80,7 +80,7 @@ AnimationWindow::AnimationWindow(wiGUI* gui) :GUI(gui)
 	timerSlider->SetSize(XMFLOAT2(250, 30));
 	timerSlider->SetPos(XMFLOAT2(x, y += step * 2));
 	timerSlider->OnSlide([&](wiEventArgs args) {
-		AnimationComponent* animation = wiRenderer::GetScene().animations.GetComponent(entity);
+		AnimationComponent* animation = wiSceneSystem::GetScene().animations.GetComponent(entity);
 		if (animation != nullptr)
 		{
 			animation->timer = args.fValue;
@@ -110,7 +110,7 @@ void AnimationWindow::Update()
 {
 	animationsComboBox->ClearItems();
 	
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	if (!scene.animations.Contains(entity))
 	{

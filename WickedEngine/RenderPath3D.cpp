@@ -483,7 +483,7 @@ void RenderPath3D::RenderOutline(const Texture2D& dstSceneRT, GRAPHICSTHREAD thr
 }
 void RenderPath3D::RenderLightShafts(GRAPHICSTHREAD threadID) const
 {
-	XMVECTOR sunDirection = XMLoadFloat3(&wiRenderer::GetScene().weather.sunDirection);
+	XMVECTOR sunDirection = XMLoadFloat3(&wiSceneSystem::GetScene().weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();

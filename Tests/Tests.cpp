@@ -108,7 +108,7 @@ TestsRenderer::TestsRenderer()
 		wiRenderer::SetToDrawGridHelper(false);
 		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld();
-		wiRenderer::GetScene().weather = WeatherComponent();
+		wiSceneSystem::GetScene().weather = WeatherComponent();
 		this->clearSprites();
 		this->clearFonts();
 		wiLua::GetGlobal()->KillProcesses();
@@ -135,16 +135,16 @@ TestsRenderer::TestsRenderer()
 		}
 		case 1:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiRenderer::LoadModel("../models/teapot.wiscene");
+			wiSceneSystem::LoadModel("../models/teapot.wiscene");
 			break;
 		case 2:
-			wiRenderer::LoadModel("../models/emitter_smoke.wiscene");
+			wiSceneSystem::LoadModel("../models/emitter_smoke.wiscene");
 			break;
 		case 3:
-			wiRenderer::LoadModel("../models/emitter_skinned.wiscene");
+			wiSceneSystem::LoadModel("../models/emitter_skinned.wiscene");
 			break;
 		case 4:
-			wiRenderer::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiSceneSystem::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 5:
 			wiRenderer::SetToDrawGridHelper(true);
@@ -152,18 +152,18 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 6:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiRenderer::LoadModel("../models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiSceneSystem::LoadModel("../models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 7:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiRenderer::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiSceneSystem::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 8:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiRenderer::LoadModel("../models/physics_test.wiscene");
+			wiSceneSystem::LoadModel("../models/physics_test.wiscene");
 			break;
 		case 9:
-			wiRenderer::LoadModel("../models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
+			wiSceneSystem::LoadModel("../models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
 		case 10:
 			RunJobSystemTest();
@@ -173,7 +173,7 @@ TestsRenderer::TestsRenderer()
 			break;
 		case 12:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiRenderer::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wiSceneSystem::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 13:
 			RunSpriteTest();
@@ -181,7 +181,7 @@ TestsRenderer::TestsRenderer()
 		case 14:
 			wiRenderer::GetDevice()->SetVSyncEnabled(false); // turn off vsync if we can to accelerate the baking
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiRenderer::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wiSceneSystem::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		default:
 			assert(0);

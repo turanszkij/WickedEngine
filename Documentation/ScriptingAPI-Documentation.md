@@ -94,7 +94,6 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
-- GetScene() : Scene result
 - GetGameSpeed() : float result
 - SetResolutionScale(float scale)
 - SetGamma(float gamma)
@@ -104,7 +103,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
 - GetCamera() : Camera result		-- returns the main camera
-- LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
 - SetEnvironmentMap(Texture cubemap)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
@@ -117,7 +115,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetDebugForceFieldsEnabled(bool enabled)
 - SetVSyncEnabled(opt bool enabled)
 - SetOcclusionCullingEnabled(bool enabled)
-- Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against
 - DrawLine(Vector origin,end, opt Vector color)
 - DrawPoint(Vector origin, opt float size, opt Vector color)
 - DrawBox(Matrix boxMatrix, opt Vector color)
@@ -291,7 +288,9 @@ Manipulate the 3D scene with these components.
 An entity is just an int value and works as a handle to retrieve associated components
 
 #### Scene
-- [outer]GetScene()  -- returns the current scene
+- [outer]GetScene() : Scene result  -- returns the current scene
+- [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
+- [outer]Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise

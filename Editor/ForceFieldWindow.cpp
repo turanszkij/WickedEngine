@@ -26,7 +26,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	typeComboBox->SetPos(XMFLOAT2(x, y += step));
 	typeComboBox->SetSize(XMFLOAT2(300, 25));
 	typeComboBox->OnSelect([&](wiEventArgs args) {
-		ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
 		{
 			switch (args.iValue)
@@ -54,7 +54,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	gravitySlider->SetSize(XMFLOAT2(200, 30));
 	gravitySlider->SetPos(XMFLOAT2(x, y += step));
 	gravitySlider->OnSlide([&](wiEventArgs args) {
-		ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->gravity = args.fValue;
@@ -69,7 +69,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	rangeSlider->SetSize(XMFLOAT2(200, 30));
 	rangeSlider->SetPos(XMFLOAT2(x, y += step));
 	rangeSlider->OnSlide([&](wiEventArgs args) {
-		ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
+		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
 			force->range = args.fValue;
@@ -84,7 +84,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetSize(XMFLOAT2(150, 30));
 	addButton->SetPos(XMFLOAT2(x, y += step * 2));
 	addButton->OnClick([](wiEventArgs args) {
-		wiRenderer::GetScene().Entity_CreateForce("editorForce");
+		wiSceneSystem::GetScene().Entity_CreateForce("editorForce");
 	});
 	addButton->SetEnabled(true);
 	addButton->SetTooltip("Add new Force Field to the simulation.");
@@ -113,7 +113,7 @@ void ForceFieldWindow::SetEntity(Entity entity)
 
 	this->entity = entity;
 
-	const ForceFieldComponent* force = wiRenderer::GetScene().forces.GetComponent(entity);
+	const ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
 
 	if (force != nullptr)
 	{

@@ -3,7 +3,6 @@
 #include "wiHelper.h"
 #include "wiSceneSystem.h"
 #include "wiSceneSystem_BindLua.h"
-#include "wiIntersect_BindLua.h"
 #include "Vector_BindLua.h"
 #include "Matrix_BindLua.h"
 #include "Texture_BindLua.h"
@@ -15,7 +14,6 @@ using namespace wiECS;
 using namespace wiGraphics;
 using namespace wiSceneSystem;
 using namespace wiSceneSystem_BindLua;
-using namespace wiIntersect_BindLua;
 
 namespace wiRenderer_BindLua
 {
@@ -74,40 +72,6 @@ namespace wiRenderer_BindLua
 	{
 		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wiRenderer::GetCamera()));
 		return 1;
-	}
-	int GetScene(lua_State* L)
-	{
-		Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiRenderer::GetScene()));
-		return 1;
-	}
-	int LoadModel(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			string fileName = wiLua::SGetString(L, 1);
-			XMMATRIX transform = XMMatrixIdentity();
-			if (argc > 1)
-			{
-				Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
-				if (matrix != nullptr)
-				{
-					transform = matrix->matrix;
-				}
-				else
-				{
-					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
-				}
-			}
-			Entity root = wiRenderer::LoadModel(fileName, transform, true);
-			wiLua::SSetInt(L, int(root));
-			return 1;
-		}
-		else
-		{
-			wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) not enough arguments!");
-		}
-		return 0;
 	}
 
 	int SetEnvironmentMap(lua_State* L)
@@ -248,42 +212,6 @@ namespace wiRenderer_BindLua
 		return 0;
 	}
 
-	int Pick(lua_State* L)
-	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 0)
-		{
-			Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
-			if (ray != nullptr)
-			{
-				UINT renderTypeMask = RENDERTYPE_OPAQUE;
-				uint32_t layerMask = 0xFFFFFFFF;
-				if (argc > 1)
-				{
-					renderTypeMask = (UINT)wiLua::SGetInt(L, 2);
-					if (argc > 2)
-					{
-						int mask = wiLua::SGetInt(L, 3);
-						layerMask = *reinterpret_cast<uint32_t*>(&mask);
-					}
-				}
-				auto& pick = wiRenderer::RayIntersectWorld(ray->ray, renderTypeMask, layerMask);
-				wiLua::SSetInt(L, (int)pick.entity);
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
-				Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
-				wiLua::SSetFloat(L, pick.distance);
-				return 4;
-			}
-
-			wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) first argument must be of Vector type!");
-		}
-		else
-		{
-			wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) not enough arguments!");
-		}
-
-		return 0;
-	}
 	int DrawLine(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -431,8 +359,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 
 			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
-			wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
-			wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);
@@ -448,7 +374,6 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
 			wiLua::GetGlobal()->RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
 
-			wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
 			wiLua::GetGlobal()->RegisterFunc("DrawLine", DrawLine);
 			wiLua::GetGlobal()->RegisterFunc("DrawPoint", DrawPoint);
 			wiLua::GetGlobal()->RegisterFunc("DrawBox", DrawBox);

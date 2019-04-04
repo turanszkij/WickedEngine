@@ -324,19 +324,8 @@ void wiFont::LoadShaders()
 	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO);
 }
 
-void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
+void UpdatePendingGlyphs()
 {
-	if (!initialized)
-	{
-		return;
-	}
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
-	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
-
-
 	// If there are pending glyphs, render them and repack the atlas:
 	if (!pendingGlyphs.empty())
 	{
@@ -440,9 +429,6 @@ void wiFont::BindPersistentState(GRAPHICSTHREAD threadID)
 			assert(SUCCEEDED(hr));
 		}
 	}
-
-	// Bind the whole font atlas once for the whole frame:
-	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, threadID);
 }
 const Texture2D* wiFont::GetAtlas()
 {
@@ -500,6 +486,10 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 	device->EventBegin("Font", threadID);
 
 	device->BindGraphicsPSO(&PSO, threadID);
+
+	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
+	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
+	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, threadID);
 	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
 
 	const GPUBuffer* vbs[] = {
@@ -542,6 +532,8 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 	device->DrawIndexed(quadCount * 6, 0, 0, threadID);
 
 	device->EventEnd(threadID);
+
+	UpdatePendingGlyphs();
 }
 
 

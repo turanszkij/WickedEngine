@@ -228,7 +228,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	eliminateCoarseCascadesButton->SetPos(XMFLOAT2(x - 100, y += step * 3));
 	eliminateCoarseCascadesButton->OnClick([=](wiEventArgs args) {
 
-		Scene& scene = wiRenderer::GetScene();
+		Scene& scene = wiSceneSystem::GetScene();
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			scene.objects[i].cascadeMask = 1;
@@ -304,7 +304,7 @@ void WeatherWindow::UpdateFromRenderer()
 
 WeatherComponent& WeatherWindow::GetWeather() const
 {
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 	if (scene.weathers.GetCount() == 0)
 	{
 		scene.weathers.Create(CreateEntity());
@@ -314,7 +314,7 @@ WeatherComponent& WeatherWindow::GetWeather() const
 
 void WeatherWindow::InvalidateProbes() const
 {
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	// Also, we invalidate all environment probes to reflect the sky changes.
 	for (size_t i = 0; i < scene.probes.GetCount(); ++i)

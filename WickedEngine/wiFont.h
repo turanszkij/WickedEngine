@@ -39,7 +39,6 @@ public:
 	static void CleanUp();
 
 	static void LoadShaders();
-	static void BindPersistentState(GRAPHICSTHREAD threadID);
 	static const wiGraphics::Texture2D* GetAtlas();
 
 	// Returns the font path that can be modified

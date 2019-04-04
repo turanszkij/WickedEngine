@@ -400,7 +400,7 @@ void EditorComponent::Load()
 			wiArchive archive(fileName, false);
 			if (archive.IsOpen())
 			{
-				Scene& scene = wiRenderer::GetScene();
+				Scene& scene = wiSceneSystem::GetScene();
 
 				scene.Serialize(archive);
 
@@ -449,25 +449,25 @@ void EditorComponent::Load()
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
-						wiRenderer::LoadModel(fileName);
+						wiSceneSystem::LoadModel(fileName);
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
 						Scene scene;
 						ImportModel_OBJ(fileName, scene);
-						wiRenderer::GetScene().Merge(scene);
+						wiSceneSystem::GetScene().Merge(scene);
 					}
 					else if (!extension.compare("GLTF")) // text-based gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
-						wiRenderer::GetScene().Merge(scene);
+						wiSceneSystem::GetScene().Merge(scene);
 					}
 					else if (!extension.compare("GLB")) // binary gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
-						wiRenderer::GetScene().Merge(scene);
+						wiSceneSystem::GetScene().Merge(scene);
 					}
 				});
 				loader->onFinished([=] {
@@ -710,7 +710,7 @@ void EditorComponent::FixedUpdate()
 }
 void EditorComponent::Update(float dt)
 {
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 	CameraComponent& camera = wiRenderer::GetCamera();
 
 	animWnd->Update();
@@ -854,12 +854,12 @@ void EditorComponent::Update(float dt)
 		UINT pickMask = rendererWnd->GetPickType();
 		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y);
 		{
-			hovered = wiRenderer::RayIntersectWorldResult();
+			hovered = wiSceneSystem::PickResult();
 
 			// Try to pick objects-meshes:
 			if (pickMask & PICK_OBJECT)
 			{
-				hovered = wiRenderer::RayIntersectWorld(pickRay, pickMask);
+				hovered = wiSceneSystem::Pick(pickRay, pickMask);
 			}
 
 			if (pickMask & PICK_LIGHT)
@@ -873,7 +873,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -890,7 +890,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -907,7 +907,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -924,7 +924,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -941,7 +941,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -959,7 +959,7 @@ void EditorComponent::Update(float dt)
 						float dis = wiMath::Distance(transform.GetPosition(), pickRay.origin);
 						if (dis < hovered.distance)
 						{
-							hovered = wiRenderer::RayIntersectWorldResult();
+							hovered = wiSceneSystem::PickResult();
 							hovered.entity = entity;
 							hovered.distance = dis;
 						}
@@ -978,7 +978,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -995,7 +995,7 @@ void EditorComponent::Update(float dt)
 					float dis = XMVectorGetX(disV);
 					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiRenderer::RayIntersectWorldResult();
+						hovered = wiSceneSystem::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1120,7 +1120,7 @@ void EditorComponent::Update(float dt)
 				{
 					Entity entity = scene.names.GetEntity(i);
 
-					wiRenderer::RayIntersectWorldResult picked;
+					wiSceneSystem::PickResult picked;
 					picked.entity = entity;
 					AddSelected(picked);
 				}
@@ -1134,9 +1134,9 @@ void EditorComponent::Update(float dt)
 				if (!selected.empty() && wiInputManager::down(VK_LSHIFT))
 				{
 					// Union selection:
-					list<wiRenderer::RayIntersectWorldResult> saved = selected;
+					list<wiSceneSystem::PickResult> saved = selected;
 					EndTranslate();
-					for (const wiRenderer::RayIntersectWorldResult& picked : saved)
+					for (const wiSceneSystem::PickResult& picked : saved)
 					{
 						AddSelected(picked);
 					}
@@ -1188,7 +1188,7 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			const wiRenderer::RayIntersectWorldResult& picked = selected.back();
+			const wiSceneSystem::PickResult& picked = selected.back();
 
 			assert(picked.entity != INVALID_ENTITY);
 
@@ -1277,7 +1277,7 @@ void EditorComponent::Update(float dt)
 				*clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					wiRenderer::RayIntersectWorldResult picked;
+					wiSceneSystem::PickResult picked;
 					picked.entity = scene.Entity_Serialize(*clipboard, INVALID_ENTITY, wiRandom::getRandom(1, INT_MAX), false);
 					AddSelected(picked);
 				}
@@ -1291,7 +1291,7 @@ void EditorComponent::Update(float dt)
 				EndTranslate();
 				for (auto& x : prevSel)
 				{
-					wiRenderer::RayIntersectWorldResult picked;
+					wiSceneSystem::PickResult picked;
 					picked.entity = scene.Entity_Duplicate(x.entity);
 					AddSelected(picked);
 				}
@@ -1363,7 +1363,7 @@ void EditorComponent::Update(float dt)
 }
 void EditorComponent::Render() const
 {
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	// Hovered item boxes:
 	if (!cinemaModeCheckBox->GetCheck())
@@ -1488,7 +1488,7 @@ void EditorComponent::Compose() const
 
 	const CameraComponent& camera = wiRenderer::GetCamera();
 
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	if (rendererWnd->GetPickType() & PICK_LIGHT)
 	{
@@ -1769,7 +1769,7 @@ void EditorComponent::BeginTranslate()
 		return;
 	}
 
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	// Insert translator into scene:
 	scene.transforms.Create(translator.entityID);
@@ -1778,7 +1778,7 @@ void EditorComponent::BeginTranslate()
 	savedHierarchy.Copy(scene.hierarchy);
 
 	// All selected entities will be attached to translator entity:
-	TransformComponent* translator_transform = wiRenderer::GetScene().transforms.GetComponent(translator.entityID);
+	TransformComponent* translator_transform = wiSceneSystem::GetScene().transforms.GetComponent(translator.entityID);
 	translator_transform->ClearTransform();
 
 	// Find the center of all the entities that are selected:
@@ -1786,7 +1786,7 @@ void EditorComponent::BeginTranslate()
 	float count = 0;
 	for (auto& x : selected)
 	{
-		TransformComponent* transform = wiRenderer::GetScene().transforms.GetComponent(x.entity);
+		TransformComponent* transform = wiSceneSystem::GetScene().transforms.GetComponent(x.entity);
 		if (transform != nullptr)
 		{
 			centerV = XMVectorAdd(centerV, transform->GetPositionV());
@@ -1806,7 +1806,7 @@ void EditorComponent::BeginTranslate()
 
 		for (auto& x : selected)
 		{
-			wiRenderer::GetScene().Component_Attach(x.entity, translator.entityID);
+			wiSceneSystem::GetScene().Component_Attach(x.entity, translator.entityID);
 		}
 	}
 }
@@ -1817,7 +1817,7 @@ void EditorComponent::EndTranslate()
 		return;
 	}
 
-	Scene& scene = wiRenderer::GetScene();
+	Scene& scene = wiSceneSystem::GetScene();
 
 	// Remove translator from scene:
 	scene.Entity_Remove(translator.entityID);
@@ -1843,7 +1843,7 @@ void EditorComponent::EndTranslate()
 
 	// If an attached entity got moved, then the world transform was applied to it (**),
 	//	so we need to reattach it properly to the parent matrix:
-	for (const wiRenderer::RayIntersectWorldResult& x : selected)
+	for (const wiSceneSystem::PickResult& x : selected)
 	{
 		HierarchyComponent* parent = scene.hierarchy.GetComponent(x.entity);
 		if (parent != nullptr)
@@ -1867,7 +1867,7 @@ void EditorComponent::EndTranslate()
 
 	selected.clear();
 }
-void EditorComponent::AddSelected(const wiRenderer::RayIntersectWorldResult& picked)
+void EditorComponent::AddSelected(const wiSceneSystem::PickResult& picked)
 {
 	for (auto it = selected.begin(); it != selected.end(); ++it)
 	{
@@ -1932,7 +1932,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				*archive >> start >> end;
 				translator.enabled = true;
 
-				Scene& scene = wiRenderer::GetScene();
+				Scene& scene = wiSceneSystem::GetScene();
 
 				TransformComponent& transform = *scene.transforms.GetComponent(translator.entityID);
 				transform.ClearTransform();
@@ -1948,7 +1948,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			break;
 		case HISTORYOP_DELETE:
 			{
-				Scene& scene = wiRenderer::GetScene();
+				Scene& scene = wiSceneSystem::GetScene();
 
 				size_t count;
 				*archive >> count;
@@ -1981,12 +1981,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 				// Read selections states from archive:
 
-				list<wiRenderer::RayIntersectWorldResult> selectedBEFORE;
+				list<wiSceneSystem::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				*archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
 				{
-					wiRenderer::RayIntersectWorldResult sel;
+					wiSceneSystem::PickResult sel;
 					*archive >> sel.entity;
 					*archive >> sel.position;
 					*archive >> sel.normal;
@@ -1998,12 +1998,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				ComponentManager<HierarchyComponent> savedHierarchyBEFORE;
 				savedHierarchyBEFORE.Serialize(*archive);
 
-				list<wiRenderer::RayIntersectWorldResult> selectedAFTER;
+				list<wiSceneSystem::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				*archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
 				{
-					wiRenderer::RayIntersectWorldResult sel;
+					wiSceneSystem::PickResult sel;
 					*archive >> sel.entity;
 					*archive >> sel.position;
 					*archive >> sel.normal;

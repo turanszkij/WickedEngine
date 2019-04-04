@@ -66,8 +66,6 @@ namespace wiRenderer
 	// Reload shaders, use the argument to modify the shader path. If the argument is empty, the shader path will not be modified
 	void ReloadShaders(const std::string& path = "");
 
-	// Returns the main scene which is currently being used in rendering
-	wiSceneSystem::Scene& GetScene();
 	// Returns the main camera that is currently being used in rendering (and also for post processing)
 	wiSceneSystem::CameraComponent& GetCamera();
 	// Returns the previous frame's camera that is currently being used in rendering to reproject
@@ -80,8 +78,8 @@ namespace wiRenderer
 	// Updates the GPU state according to the previously called UpatePerFrameData()
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
-	// Binds all persistent constant buffers, samplers that can used globally in all shaders for a whole frame
-	void BindPersistentState(GRAPHICSTHREAD threadID);
+	// Binds all common constant buffers and samplers that may be used in all shaders
+	void BindCommonResources(GRAPHICSTHREAD threadID);
 	// Updates the per frame constant buffer (need to call at least once per frame)
 	void UpdateFrameCB(GRAPHICSTHREAD threadID);
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
@@ -298,26 +296,6 @@ namespace wiRenderer
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY);
 
-	struct RayIntersectWorldResult
-	{
-		wiECS::Entity entity = wiECS::INVALID_ENTITY;
-		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
-		float distance = FLT_MAX;
-		int subsetIndex = -1;
-		int vertexID0 = -1;
-		int vertexID1 = -1;
-		int vertexID2 = -1;
-		XMFLOAT4X4 orientation = IDENTITYMATRIX;
-
-		bool operator==(const RayIntersectWorldResult& other)
-		{
-			return entity == other.entity;
-		}
-	};
-	// Given a ray, finds the closest intersection point against all instances
-	RayIntersectWorldResult RayIntersectWorld(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);
-
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()
 	void AddRenderableBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
@@ -341,13 +319,6 @@ namespace wiRenderer
 
 	// Add a texture that should be mipmapped whenever it is feasible to do so
 	void AddDeferredMIPGen(const wiGraphics::Texture2D* tex);
-
-	// Helper function to open a wiscene file and add the contents to the current scene
-	//	transformMatrix	:	everything will be transformed by this matrix (optional)
-	//	attached		:	everything will be attached to a base entity
-	//
-	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
-	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
 	struct CustomShader
 	{
