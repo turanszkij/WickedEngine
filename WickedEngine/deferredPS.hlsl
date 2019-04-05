@@ -15,10 +15,10 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float  depth = texture_lineardepth[(uint2)PSIn.pos.xy].r * g_xFrame_MainCamera_ZFarP;
 
-	float4 diffuse = texture_0[uint2(PSIn.pos.xy)]; // light diffuse
-	float4 specular = texture_1[uint2(PSIn.pos.xy)]; // light specular
+	float3 diffuse = texture_0[uint2(PSIn.pos.xy)].rgb; // light diffuse
+	float3 specular = texture_1[uint2(PSIn.pos.xy)].rgb; // light specular
 
-	float4 color = float4(diffuse.rgb * albedo + specular.rgb, 1);
+	float4 color = float4(albedo * diffuse + specular, 1);
 
 	ApplyFog(depth, color);
 

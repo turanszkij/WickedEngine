@@ -29,6 +29,8 @@ public:
 	wiCheckBox* flipNormalMapCheckBox;
 	wiCheckBox* useVertexColorsCheckBox;
 	wiCheckBox* specularGlossinessCheckBox;
+	wiCheckBox* occlusionPrimaryCheckBox;
+	wiCheckBox* occlusionSecondaryCheckBox;
 	wiSlider*	normalMapSlider;
 	wiSlider*	roughnessSlider;
 	wiSlider*	reflectanceSlider;

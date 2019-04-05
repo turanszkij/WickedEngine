@@ -302,19 +302,19 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
 
 		const float2 UV_surfaceMap = mat.uvset_surfaceMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
-		float4 surface_ao_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
+		float4 surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
 
 		if (mat.specularGlossinessWorkflow)
 		{
-			ConvertToSpecularGlossiness(surface_ao_roughness_metallic_reflectance);
+			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
 		}
 
 		float4 baseColor = baseColorMap;
 		baseColor.rgb = DEGAMMA(baseColor.rgb);
 		baseColor *= hit.color;
-		float roughness = mat.roughness * surface_ao_roughness_metallic_reflectance.g;
-		float metalness = mat.metalness * surface_ao_roughness_metallic_reflectance.b;
-		float reflectance = mat.reflectance * surface_ao_roughness_metallic_reflectance.a;
+		float roughness = mat.roughness * surface_occlusion_roughness_metallic_reflectance.g;
+		float metalness = mat.metalness * surface_occlusion_roughness_metallic_reflectance.b;
+		float reflectance = mat.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
 		roughness = sqr(roughness); // convert linear roughness to cone aperture
 		float4 emissiveColor;
 		[branch]

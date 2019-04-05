@@ -374,6 +374,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			RegisterTexture2D(&img, "occlusion");
 			material.occlusionMapName = img.uri;
 			material.uvset_occlusionMap = occlusionTexture->second.TextureTexCoord();
+			material.SetOcclusionEnabled_Secondary(true);
 		}
 
 		if (baseColorFactor != x.values.end())

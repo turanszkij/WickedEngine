@@ -19,7 +19,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	materialWindow = new wiWindow(GUI, "Material Window");
-	materialWindow->SetSize(XMFLOAT2(760, 860));
+	materialWindow->SetSize(XMFLOAT2(760, 890));
 	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
@@ -97,6 +97,26 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
 	});
 	materialWindow->AddWidget(specularGlossinessCheckBox);
+
+	occlusionPrimaryCheckBox = new wiCheckBox("Occlusion - Primary: ");
+	occlusionPrimaryCheckBox->SetTooltip("If enabled, surface map's RED channel will be used as occlusion map");
+	occlusionPrimaryCheckBox->SetPos(XMFLOAT2(670, y += step));
+	occlusionPrimaryCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiSceneSystem::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetOcclusionEnabled_Primary(args.bValue);
+	});
+	materialWindow->AddWidget(occlusionPrimaryCheckBox);
+
+	occlusionSecondaryCheckBox = new wiCheckBox("Occlusion - Secondary: ");
+	occlusionSecondaryCheckBox->SetTooltip("If enabled, occlusion map's RED channel will be used as occlusion map");
+	occlusionSecondaryCheckBox->SetPos(XMFLOAT2(670, y += step));
+	occlusionSecondaryCheckBox->OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiSceneSystem::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetOcclusionEnabled_Secondary(args.bValue);
+	});
+	materialWindow->AddWidget(occlusionSecondaryCheckBox);
 
 
 	step = 35;
@@ -821,6 +841,8 @@ void MaterialWindow::SetEntity(Entity entity)
 		flipNormalMapCheckBox->SetCheck(material->IsFlipNormalMap());
 		useVertexColorsCheckBox->SetCheck(material->IsUsingVertexColors());
 		specularGlossinessCheckBox->SetCheck(material->IsUsingSpecularGlossinessWorkflow());
+		occlusionPrimaryCheckBox->SetCheck(material->IsOcclusionEnabled_Primary());
+		occlusionSecondaryCheckBox->SetCheck(material->IsOcclusionEnabled_Secondary());
 		normalMapSlider->SetValue(material->normalMapStrength);
 		roughnessSlider->SetValue(material->roughness);
 		reflectanceSlider->SetValue(material->reflectance);

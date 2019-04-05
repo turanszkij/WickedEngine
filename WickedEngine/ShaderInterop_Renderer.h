@@ -262,7 +262,9 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 	uint		g_xMat_uvset_occlusionMap;
 
 	uint		g_xMat_specularGlossinessWorkflow;
-	uint3		g_xMat_padding;
+	uint		g_xMat_occlusion_primary;
+	uint		g_xMat_occlusion_secondary;
+	uint		g_xMat_padding;
 };
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)

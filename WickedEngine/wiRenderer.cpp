@@ -1416,7 +1416,6 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 		// Do we need to bind all textures or just a reduced amount for this pass?
 		const bool easyTextureBind =
-			renderPass == RENDERPASS_TEXTURE ||
 			renderPass == RENDERPASS_SHADOW ||
 			renderPass == RENDERPASS_SHADOWCUBE ||
 			renderPass == RENDERPASS_DEPTHONLY;
@@ -1730,18 +1729,31 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 
-				const GPUResource* res[] = {
-					material.GetBaseColorMap(),
-					material.GetNormalMap(),
-					material.GetSurfaceMap(),
-					material.GetDisplacementMap(),
-					material.GetEmissiveMap(),
-					material.GetOcclusionMap(),
-				};
-				device->BindResources(PS, res, TEXSLOT_ONDEMAND0, (easyTextureBind ? 2 : ARRAYSIZE(res)), threadID);
+				if (easyTextureBind)
+				{
+					const GPUResource* res[] = {
+						material.GetBaseColorMap(),
+					};
+					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				}
+				else
+				{
+					const GPUResource* res[] = {
+						material.GetBaseColorMap(),
+						material.GetNormalMap(),
+						material.GetSurfaceMap(),
+						material.GetDisplacementMap(),
+						material.GetEmissiveMap(),
+						material.GetOcclusionMap(),
+					};
+					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				}
 
 				if (tessellatorRequested)
 				{
+					const GPUResource* res[] = {
+						material.GetDisplacementMap(),
+					};
 					device->BindResources(DS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 					device->BindConstantBuffer(DS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
 				}
@@ -3424,17 +3436,17 @@ void SetUpStates()
 	bd.IndependentBlendEnable = false,
 		bd.AlphaToCoverageEnable = false;
 	device->CreateBlendState(&bd, &blendStates[BSTYPE_DEFERREDLIGHT]);
-
+	 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = BLEND_ONE;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable = false,
-		bd.AlphaToCoverageEnable = false;
+	bd.IndependentBlendEnable = false;
+	bd.AlphaToCoverageEnable = false;
 	device->CreateBlendState(&bd, &blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
 
 	bd.RenderTarget[0].SrcBlend = BLEND_INV_SRC_COLOR;
@@ -3814,6 +3826,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		materialGPUData.g_xMat_uvset_emissiveMap = material.uvset_emissiveMap;
 		materialGPUData.g_xMat_uvset_occlusionMap = material.uvset_occlusionMap;
 		materialGPUData.g_xMat_specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
+		materialGPUData.g_xMat_occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
+		materialGPUData.g_xMat_occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;
 
 		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, threadID);
 	}

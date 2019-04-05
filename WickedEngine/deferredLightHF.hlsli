@@ -25,6 +25,8 @@ struct LightOutputType
 #define DEFERREDLIGHT_MAKEPARAMS														\
 	ShaderEntityType light = EntityArray[(uint)g_xColor.x];								\
 	float3 diffuse, specular;															\
+	float diffuse_alpha = 1;															\
+	float specular_alpha = 1;															\
 	float2 ScreenCoord = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f, -0.5f) + 0.5f;		\
 	float depth = texture_depth[PSIn.pos.xy];											\
 	float4 g0 = texture_gbuffer0[PSIn.pos.xy];											\
@@ -76,8 +78,8 @@ struct LightOutputType
 
 #define DEFERREDLIGHT_RETURN															\
 	LightOutputType Out;																\
-	Out.diffuse = float4(diffuse, 1);													\
-	Out.specular = float4(specular, 1);													\
+	Out.diffuse = float4(diffuse, diffuse_alpha);										\
+	Out.specular = float4(specular, specular_alpha);									\
 	return Out;
 
 #endif // _LIGHTHF_

@@ -106,6 +106,8 @@ namespace wiSceneSystem
 			FLIP_NORMALMAP = 1 << 4,
 			USE_VERTEXCOLORS = 1 << 5,
 			SPECULAR_GLOSSINESS_WORKFLOW = 1 << 6,
+			OCCLUSION_PRIMARY = 1 << 7,
+			OCCLUSION_SECONDARY = 1 << 8,
 		};
 		uint32_t _flags = DIRTY | CAST_SHADOW;
 
@@ -183,6 +185,8 @@ namespace wiSceneSystem
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetPlanarReflections(bool value) { if (value) { _flags |= PLANAR_REFLECTION; } else { _flags &= ~PLANAR_REFLECTION; } }
 		inline void SetWater(bool value) { if (value) { _flags |= WATER; } else { _flags &= ~WATER; } }
+		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_PRIMARY; } else { _flags &= ~OCCLUSION_PRIMARY; } }
+		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_SECONDARY; } else { _flags &= ~OCCLUSION_SECONDARY; } }
 
 		inline bool IsTransparent() const { return GetOpacity() < 1.0f || blendMode != BLENDMODE_OPAQUE || IsCustomShader(); }
 		inline bool IsWater() const { return _flags & WATER; }
@@ -192,6 +196,8 @@ namespace wiSceneSystem
 		inline bool IsFlipNormalMap() const { return _flags & FLIP_NORMALMAP; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
 		inline bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
+		inline bool IsOcclusionEnabled_Primary() const { return _flags & OCCLUSION_PRIMARY; }
+		inline bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }

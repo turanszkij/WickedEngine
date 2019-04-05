@@ -331,8 +331,8 @@ void main(ComputeShaderInput IN)
 		if (pixel.x >= (uint)GetInternalResolution().x || pixel.y >= (uint)GetInternalResolution().y)
 			continue;
 
-		float3 diffuse = 0, specular = 0;
-		float3 reflection = 0;
+		float3 diffuse = deferred_Diffuse[pixel].rgb;
+		float3 specular = deferred_Specular[pixel].rgb;
 		float4 g0 = texture_gbuffer0[pixel];
 		float4 g1 = texture_gbuffer1[pixel];
 		float4 g2 = texture_gbuffer2[pixel];
@@ -411,8 +411,14 @@ void main(ComputeShaderInput IN)
 		{
 			envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 		}
-		reflection = max(0, envmapAccumulation.rgb);
+		specular += max(0, envmapAccumulation.rgb) * surface.F;
 #endif // DISABLE_ENVMAPS
+
+#ifndef DISABLE_VOXELGI
+		VoxelGIResult vxgiresult = VoxelGI(surface);
+		diffuse = lerp(diffuse, vxgiresult.diffuse.rgb, vxgiresult.diffuse.a);
+		specular = lerp(specular, vxgiresult.specular.rgb, vxgiresult.specular.a);
+#endif //DISABLE_VOXELGI
 
 		[branch]
 		if (g_xFrame_LightArrayCount > 0)
@@ -495,21 +501,14 @@ void main(ComputeShaderInput IN)
 			}
 		}
 
-		VoxelGI(surface, diffuse, reflection);
-
 		float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
 		float2 velocity = g1.zw;
 		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 		float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
-		reflection = lerp(reflection, ssr.rgb, ssr.a);
+		specular = lerp(specular, ssr.rgb * surface.F, ssr.a);
 
-		specular += reflection * surface.F;
-
-		float3 ambient = GetAmbient(N) * surface.ao;
-		diffuse += ambient;
-
-		deferred_Diffuse[pixel] += float4(diffuse, 1);
-		deferred_Specular[pixel] += float4(specular, 1);
+		deferred_Diffuse[pixel] = float4(diffuse, 1);
+		deferred_Specular[pixel] = float4(specular, 1);
 	}
 #endif // DEFERRED
 

@@ -79,7 +79,7 @@ struct Surface
 	float3 N;				// world space normal
 	float3 V;				// world space view vector
 	float4 baseColor;		// base color [0 -> 1] (rgba)
-	float ao;				// ambient occlusion [0 -> 1]
+	float occlusion;		// occlusion [0 -> 1]
 	float roughness;		// roughness: [0:smooth -> 1:rough] (linear)
 	float metalness;		// metalness [0:dielectric -> 1:metal]
 	float reflectance;		// reflectivity [0:diffuse -> 1:specular]
@@ -104,7 +104,7 @@ struct Surface
 
 		R = -reflect(V, N);
 		float f90 = saturate(50.0 * dot(f0, 0.33));
-		F = F_Schlick(f0, f90, NdotV);
+		F = F_Schlick(f0, f90, NdotV) * occlusion;
 	}
 };
 inline Surface CreateSurface(
@@ -112,7 +112,7 @@ inline Surface CreateSurface(
 	in float3 N, 
 	in float3 V, 
 	in float4 baseColor, 
-	in float ao,
+	in float occlusion,
 	in float roughness,
 	in float metalness,
 	in float reflectance, 
@@ -125,7 +125,7 @@ inline Surface CreateSurface(
 	surface.N = N;
 	surface.V = V;
 	surface.baseColor = baseColor;
-	surface.ao = ao;
+	surface.occlusion = occlusion;
 	surface.roughness = roughness;
 	surface.metalness = metalness;
 	surface.reflectance = reflectance;

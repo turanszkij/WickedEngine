@@ -52,7 +52,9 @@ struct TracedRenderingMaterial
 	uint		uvset_occlusionMap;
 
 	uint		specularGlossinessWorkflow;
-	uint3		padding;
+	uint		occlusion_primary;
+	uint		occlusion_secondary;
+	uint		padding;
 
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;

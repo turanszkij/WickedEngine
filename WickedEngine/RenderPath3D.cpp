@@ -350,7 +350,7 @@ void RenderPath3D::RenderSSAO(GRAPHICSTHREAD threadID) const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSAO, 1, threadID);
+		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, threadID);
 		device->EventBegin("SSAO", threadID);
 		fx.stencilRef = STENCILREF_DEFAULT;
 		fx.stencilComp = STENCILMODE_LESS;
@@ -409,7 +409,7 @@ void RenderPath3D::RenderSSR(const Texture2D& srcSceneRT, GRAPHICSTHREAD threadI
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		device->UnbindResources(TEXSLOT_RENDERABLECOMPONENT_SSR, 1, threadID);
+		device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, threadID);
 		device->EventBegin("SSR", threadID);
 		{
 			const Texture2D* rts[] = { &rtSSR };
@@ -647,9 +647,9 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 	{
 		wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
-		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERABLECOMPONENT_REFLECTION, threadID);
-		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERABLECOMPONENT_REFRACTION, threadID);
-		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERABLECOMPONENT_WATERRIPPLES, threadID);
+		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
+		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, threadID);
+		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, threadID);
 		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, getHairParticlesEnabled(), true, getLayerMask());
 
 		wiProfiler::EndRange(threadID); // Transparent Scene

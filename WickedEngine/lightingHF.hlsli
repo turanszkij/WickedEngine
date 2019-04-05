@@ -695,8 +695,15 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 // VOXEL RADIANCE
 
-inline void VoxelGI(inout Surface surface, inout float3 diffuse, inout float3 specular)
+struct VoxelGIResult
 {
+	float4 diffuse;  // diffuse + contribution(alpha)
+	float4 specular; // specular + contribution(alpha)
+};
+inline VoxelGIResult VoxelGI(in Surface surface)
+{
+	VoxelGIResult result;
+
 	[branch]if (g_xFrame_VoxelRadianceDataRes != 0)
 	{
 		// determine blending factor (we will blend out voxel GI on grid edges):
@@ -707,16 +714,26 @@ inline void VoxelGI(inout Surface surface, inout float3 diffuse, inout float3 sp
 		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, surface.P, surface.N);
-		diffuse += lerp(0, radiance.rgb, blend);
-		surface.ao *= 1 - lerp(0, radiance.a, blend);
+		result.diffuse = float4(radiance.rgb * surface.occlusion, radiance.a * blend);
 
 		[branch]
 		if (g_xFrame_VoxelRadianceReflectionsEnabled)
 		{
 			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
-			specular = lerp(specular, reflection.rgb, reflection.a * blend);
+			result.specular = float4(reflection.rgb * surface.F, reflection.a * blend);
+		}
+		else
+		{
+			result.specular = 0;
 		}
 	}
+	else
+	{
+		result.diffuse = 0;
+		result.specular = 0;
+	}
+
+	return result;
 }
 
 

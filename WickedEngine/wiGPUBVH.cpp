@@ -161,6 +161,8 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				global_material.uvset_emissiveMap = material.uvset_emissiveMap;
 				global_material.uvset_occlusionMap = material.uvset_occlusionMap;
 				global_material.specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
+				global_material.occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
+				global_material.occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;
 
 				// Add extended properties:
 				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
