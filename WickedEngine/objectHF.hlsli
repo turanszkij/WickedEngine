@@ -775,7 +775,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float3 bumpColor = 0;
 	float opacity = color.a;
 	float depth = input.pos.z;
-	float ssao = 1;
 #ifndef ENVMAPRENDERING
 	const float lineardepth = input.pos2D.w;
 	input.pos2D.xy /= input.pos2D.w;
@@ -830,6 +829,16 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		occlusion = xOcclusionMap.Sample(sampler_objectshader, UV_occlusionMap).r;
 	}
 
+
+#ifndef SIMPLE_INPUT
+#ifndef ENVMAPRENDERING
+#ifndef TRANSPARENT
+	const float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
+	occlusion *= ssao;
+#endif // TRANSPARENT
+#endif // ENVMAPRENDERING
+#endif // SIMPLE_INPUT
+
 	surface = CreateSurface(
 		surface.P, 
 		surface.N, 
@@ -876,14 +885,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float3 fresnelTerm = F_Fresnel(surface.f0, surface.NdotV);
 	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 #endif // WATER
-
-
-#ifndef ENVMAPRENDERING
-#ifndef TRANSPARENT
-	ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
-	surface.occlusion *= ssao;
-#endif // TRANSPARENT
-#endif // ENVMAPRENDERING
 
 
 
