@@ -37,13 +37,12 @@ float4 main(Input input) : SV_TARGET
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 		{
 			ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			Lighting lighting = CreateLighting(0, 0, 0, 0);
 
 			if (!(light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC))
 			{
 				continue; // dynamic lights will not be baked into lightmap
 			}
-
-			LightingResult result = (LightingResult)0;
 
 			float3 L = 0;
 			float dist = 0;
@@ -58,7 +57,7 @@ float4 main(Input input) : SV_TARGET
 
 				L = light.directionWS.xyz;
 
-				result.diffuse = lightColor;
+				lighting.direct.diffuse = lightColor;
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
@@ -74,13 +73,13 @@ float4 main(Input input) : SV_TARGET
 
 					const float3 lightColor = light.GetColor().rgb*light.energy;
 
-					result.diffuse = lightColor;
+					lighting.direct.diffuse = lightColor;
 
 					const float range2 = light.range * light.range;
 					const float att = saturate(1.0 - (dist2 / range2));
 					const float attenuation = att * att;
 
-					result.diffuse *= attenuation;
+					lighting.direct.diffuse *= attenuation;
 				}
 			}
 			break;
@@ -103,14 +102,14 @@ float4 main(Input input) : SV_TARGET
 					[branch]
 					if (SpotFactor > spotCutOff)
 					{
-						result.diffuse = lightColor;
+						lighting.direct.diffuse = lightColor;
 
 						const float range2 = light.range * light.range;
 						const float att = saturate(1.0 - (dist2 / range2));
 						float attenuation = att * att;
 						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 
-						result.diffuse *= attenuation;
+						lighting.direct.diffuse *= attenuation;
 					}
 				}
 			}
@@ -137,7 +136,7 @@ float4 main(Input input) : SV_TARGET
 
 			if (NdotL > 0 && dist > 0)
 			{
-				result.diffuse = max(0.0f, result.diffuse);
+				lighting.direct.diffuse = max(0.0f, lighting.direct.diffuse);
 
 				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
 
@@ -147,7 +146,7 @@ float4 main(Input input) : SV_TARGET
 				newRay.direction_inverse = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
-				finalResult += ray.energy * (hit ? 0 : NdotL) * (result.diffuse);
+				finalResult += ray.energy * (hit ? 0 : NdotL) * (lighting.direct.diffuse);
 			}
 		}
 	}

@@ -76,8 +76,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 		{
 			ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
-
-			LightingResult result = (LightingResult)0;
+			Lighting lighting = CreateLighting(0, 0, 0, 0);
 		
 			float3 L = 0;
 			float dist = 0;
@@ -93,8 +92,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				L = light.directionWS.xyz;
 				SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-				result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-				result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+				lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+				lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
@@ -112,15 +111,15 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 					SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-					result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-					result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
 					const float range2 = light.range * light.range;
 					const float att = saturate(1.0 - (dist2 / range2));
 					const float attenuation = att * att;
 
-					result.diffuse *= attenuation;
-					result.specular *= attenuation;
+					lighting.direct.diffuse *= attenuation;
+					lighting.direct.specular *= attenuation;
 				}
 			}
 			break;
@@ -145,16 +144,16 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					{
 						SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-						result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-						result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
 						const float range2 = light.range * light.range;
 						const float att = saturate(1.0 - (dist2 / range2));
 						float attenuation = att * att;
 						attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
 
-						result.diffuse *= attenuation;
-						result.specular *= attenuation;
+						lighting.direct.diffuse *= attenuation;
+						lighting.direct.specular *= attenuation;
 					}
 				}
 			}
@@ -181,8 +180,8 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		
 			if (NdotL > 0 && dist > 0)
 			{
-				result.diffuse = max(0.0f, result.diffuse);
-				result.specular = max(0.0f, result.specular);
+				lighting.direct.diffuse = max(0.0f, lighting.direct.diffuse);
+				lighting.direct.specular = max(0.0f, lighting.direct.specular);
 
 				Ray newRay;
 				newRay.origin = P;
@@ -190,7 +189,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				newRay.direction_inverse = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
-				finalResult += (hit ? 0 : NdotL) * (result.diffuse + result.specular);
+				finalResult += (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular);
 			}
 		}
 		

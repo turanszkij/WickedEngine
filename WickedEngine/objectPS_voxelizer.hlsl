@@ -46,7 +46,7 @@ void main(PSInput input)
 		//	(just uncomment if there are any noticable artifacts)
 		//N = normalize(N);
 
-		float3 diffuse = 0;
+		Lighting lighting = CreateLighting(0, 0, 0, 0);
 
 		[branch]
 		if (any(xForwardLightMask))
@@ -76,8 +76,6 @@ void main(PSInput input)
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
-					LightingResult result = (LightingResult)0;
-
 					switch (light.GetType())
 					{
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
@@ -99,7 +97,7 @@ void main(PSInput input)
 							}
 						}
 
-						result.diffuse = lightColor;
+						lighting.direct.diffuse += lightColor;
 					}
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
@@ -124,7 +122,7 @@ void main(PSInput input)
 								lightColor *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 							}
 
-							result.diffuse = lightColor;
+							lighting.direct.diffuse += lightColor;
 						}
 					}
 					break;
@@ -165,19 +163,17 @@ void main(PSInput input)
 									}
 								}
 
-								result.diffuse = lightColor;
+								lighting.direct.diffuse += lightColor;
 							}
 						}
 					}
 					break;
 					}
-
-					diffuse += result.diffuse;
 				}
 			}
 		}
 
-		color.rgb *= diffuse;
+		color.rgb *= lighting.direct.diffuse;
 		
 		color.rgb += emissiveColor.rgb * emissiveColor.a;
 

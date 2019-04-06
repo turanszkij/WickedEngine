@@ -331,15 +331,16 @@ void main(ComputeShaderInput IN)
 		if (pixel.x >= (uint)GetInternalResolution().x || pixel.y >= (uint)GetInternalResolution().y)
 			continue;
 
-		float3 diffuse = deferred_Diffuse[pixel].rgb;
-		float3 specular = deferred_Specular[pixel].rgb;
 		float4 g0 = texture_gbuffer0[pixel];
 		float4 g1 = texture_gbuffer1[pixel];
 		float4 g2 = texture_gbuffer2[pixel];
+		float3 ld = deferred_Diffuse[pixel].rgb;
+		float3 ls = deferred_Specular[pixel].rgb;
 		float3 N = decode(g1.xy);
 		float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
+		Lighting lighting = CreateLighting(0, ls, ld, 0);
 
 #ifndef DISABLE_ENVMAPS
 		// Apply environment maps:
@@ -411,13 +412,11 @@ void main(ComputeShaderInput IN)
 		{
 			envmapAccumulation.rgb = lerp(EnvironmentReflection_Global(surface, envMapMIP), envmapAccumulation.rgb, envmapAccumulation.a);
 		}
-		specular += max(0, envmapAccumulation.rgb) * surface.F;
+		lighting.indirect.specular += max(0, envmapAccumulation.rgb);
 #endif // DISABLE_ENVMAPS
 
 #ifndef DISABLE_VOXELGI
-		VoxelGIResult vxgiresult = VoxelGI(surface);
-		diffuse = lerp(diffuse, vxgiresult.diffuse.rgb, vxgiresult.diffuse.a);
-		specular = lerp(specular, vxgiresult.specular.rgb, vxgiresult.specular.a);
+		VoxelGI(surface, lighting);
 #endif //DISABLE_VOXELGI
 
 		[branch]
@@ -446,49 +445,44 @@ void main(ComputeShaderInput IN)
 					{
 						ShaderEntityType light = EntityArray[entity_index];
 
-						LightingResult result = (LightingResult)0;
-
 						switch (light.GetType())
 						{
 						case ENTITY_TYPE_DIRECTIONALLIGHT:
 						{
-							result = DirectionalLight(light, surface);
+							DirectionalLight(light, surface, lighting);
 						}
 						break;
 						case ENTITY_TYPE_POINTLIGHT:
 						{
-							result = PointLight(light, surface);
+							PointLight(light, surface, lighting);
 						}
 						break;
 						case ENTITY_TYPE_SPOTLIGHT:
 						{
-							result = SpotLight(light, surface);
+							SpotLight(light, surface, lighting);
 						}
 						break;
 						case ENTITY_TYPE_SPHERELIGHT:
 						{
-							result = SphereLight(light, surface);
+							SphereLight(light, surface, lighting);
 						}
 						break;
 						case ENTITY_TYPE_DISCLIGHT:
 						{
-							result = DiscLight(light, surface);
+							DiscLight(light, surface, lighting);
 						}
 						break;
 						case ENTITY_TYPE_RECTANGLELIGHT:
 						{
-							result = RectangleLight(light, surface);
+							RectangleLight(light, surface, lighting);
 						}
 						break;
 						case ENTITY_TYPE_TUBELIGHT:
 						{
-							result = TubeLight(light, surface);
+							TubeLight(light, surface, lighting);
 						}
 						break;
 						}
-
-						diffuse += max(0.0f, result.diffuse);
-						specular += max(0.0f, result.specular);
 					}
 					else if (entity_index > last_item)
 					{
@@ -501,14 +495,15 @@ void main(ComputeShaderInput IN)
 			}
 		}
 
-		float2 ScreenCoord = (float2)pixel * g_xFrame_ScreenWidthHeight_Inverse;
+		float2 ScreenCoord = (float2)pixel * g_xFrame_InternalResolution_Inverse;
 		float2 velocity = g1.zw;
 		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 		float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
-		specular = lerp(specular, ssr.rgb * surface.F, ssr.a);
+		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
-		deferred_Diffuse[pixel] = float4(diffuse, 1);
-		deferred_Specular[pixel] = float4(specular, 1);
+		LightingPart combined_lighting = CombineLighting(surface, lighting);
+		deferred_Diffuse[pixel] = float4(combined_lighting.diffuse, 1);
+		deferred_Specular[pixel] = float4(combined_lighting.specular, 1);
 	}
 #endif // DEFERRED
 

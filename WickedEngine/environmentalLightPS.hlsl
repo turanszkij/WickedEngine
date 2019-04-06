@@ -8,18 +8,15 @@ LightOutputType main(VertexToPixel PSIn)
 	DEFERREDLIGHT_MAKEPARAMS
 
 	float envMapMIP = surface.roughness * g_xFrame_EnvProbeMipCount;
-	specular = max(0, EnvironmentReflection_Global(surface, envMapMIP)) * surface.F;
-	specular_alpha = 1;
+	lighting.indirect.specular = max(0, EnvironmentReflection_Global(surface, envMapMIP));
 
-	VoxelGIResult vxgiresult = VoxelGI(surface);
-	diffuse = vxgiresult.diffuse.rgb;
-	diffuse_alpha = vxgiresult.diffuse.a;
-	specular = lerp(specular, vxgiresult.specular.rgb, vxgiresult.specular.a);
+	LightingContribution vxgi_contribution = VoxelGI(surface, lighting);
 
 	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
-	specular = lerp(specular, ssr.rgb * surface.F, ssr.a);
+	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
-	specular_alpha = max(vxgiresult.specular.a, ssr.a);
+	diffuse_alpha = vxgi_contribution.diffuse;
+	specular_alpha = max(vxgi_contribution.specular, ssr.a);
 
 	DEFERREDLIGHT_RETURN
 }

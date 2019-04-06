@@ -20,10 +20,9 @@ float4 main(PSIn input) : SV_TARGET
 	V /= dist;
 	float emissive = 0;
 	Surface surface = CreateSurface(input.pos3D, normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y)), V, color, 1, 0.001, 0, 0.02);
+	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;
-	float3 diffuse = GetAmbient(surface.N);
-	float3 specular = 0;
 
 	float lineardepth = input.pos2D.w;
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
@@ -48,9 +47,9 @@ float4 main(PSIn input) : SV_TARGET
 	surface.albedo.rgb = lerp(refractiveColor, reflectiveColor.rgb, fresnelTerm);
 	surface.F = fresnelTerm;
 
-	TiledLighting(pixel, surface, diffuse, specular);
+	TiledLighting(pixel, surface, lighting);
 
-	ApplyLighting(surface, diffuse, specular, color);
+	ApplyLighting(surface, lighting, color);
 
 	//SOFT EDGE
 	float fade = saturate(0.3 * abs(refDepth - lineardepth));

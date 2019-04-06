@@ -4,11 +4,46 @@
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
 
-struct LightingResult
+struct LightingContribution
+{
+	float diffuse;
+	float specular;
+};
+struct LightingPart
 {
 	float3 diffuse;
 	float3 specular;
 };
+struct Lighting
+{
+	LightingPart direct;
+	LightingPart indirect;
+};
+
+inline Lighting CreateLighting(
+	in float3 diffuse_direct,
+	in float3 specular_direct,
+	in float3 diffuse_indirect,
+	in float3 specular_indirect)
+{
+	Lighting lighting;
+	lighting.direct.diffuse = diffuse_direct;
+	lighting.direct.specular = specular_direct;
+	lighting.indirect.diffuse = diffuse_indirect;
+	lighting.indirect.specular = specular_indirect;
+	return lighting;
+}
+
+// Combine the direct and indirect lighting into final contribution
+inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
+{
+	LightingPart result;
+	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
+	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.F * surface.occlusion;
+	return result;
+}
+
+
 
 inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
@@ -55,16 +90,12 @@ inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, 
 }
 
 
-inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface surface)
+inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result;
-	const float3 lightColor = light.GetColor().rgb*light.energy;
+	float3 lightColor = light.GetColor().rgb*light.energy;
 
 	float3 L = light.directionWS.xyz;
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
-
-	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-	result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
 	float3 sh = max(surfaceToLight.NdotL, 0).xxx;
 
@@ -112,18 +143,13 @@ inline LightingResult DirectionalLight(in ShaderEntityType light, in Surface sur
 		}
 
 	}
+	lightColor *= sh;
 
-	result.diffuse *= sh;
-	result.specular *= sh;
-
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
-	return result;
+	lighting.direct.diffuse += max(0.0f, lightColor * BRDF_GetDiffuse(surface, surfaceToLight));
+	lighting.direct.specular += max(0.0f, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 }
-inline LightingResult PointLight(in ShaderEntityType light, in Surface surface)
+inline void PointLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result = (LightingResult)0;
-
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
 	const float dist = sqrt(dist2);
@@ -133,19 +159,14 @@ inline LightingResult PointLight(in ShaderEntityType light, in Surface surface)
 	{
 		L /= dist;
 
-		const float3 lightColor = light.GetColor().rgb*light.energy;
+		float3 lightColor = light.GetColor().rgb*light.energy;
 
 		SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
-
-		result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-		result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
 
 		const float range2 = light.range * light.range;
 		const float att = saturate(1.0 - (dist2 / range2));
 		const float attenuation = att * att;
-
-		result.diffuse *= attenuation;
-		result.specular *= attenuation;
+		lightColor *= attenuation;
 
 		float sh = max(surfaceToLight.NdotL, 0);
 #ifndef DISABLE_SHADOWMAPS
@@ -154,19 +175,14 @@ inline LightingResult PointLight(in ShaderEntityType light, in Surface surface)
 			sh *= texture_shadowarray_cube.SampleCmpLevelZero(sampler_cmp_depth, float4(-L, light.GetShadowMapIndex()), 1 - dist / light.range * (1 - light.shadowBias)).r;
 		}
 #endif
-		result.diffuse *= sh;
-		result.specular *= sh;
+		lightColor *= sh;
 
-		result.diffuse = max(0.0f, result.diffuse);
-		result.specular = max(0.0f, result.specular);
+		lighting.direct.diffuse += max(0.0f, lightColor * BRDF_GetDiffuse(surface, surfaceToLight));
+		lighting.direct.specular += max(0.0f, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 	}
-
-	return result;
 }
-inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
+inline void SpotLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result = (LightingResult)0;
-
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
 	const float dist = sqrt(dist2);
@@ -176,7 +192,7 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 	{
 		L /= dist;
 
-		const float3 lightColor = light.GetColor().rgb*light.energy;
+		float3 lightColor = light.GetColor().rgb*light.energy;
 
 		const float SpotFactor = dot(L, light.directionWS);
 		const float spotCutOff = light.coneAngleCos;
@@ -186,16 +202,11 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 		{
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-			result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-			result.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-
 			const float range2 = light.range * light.range;
 			const float att = saturate(1.0 - (dist2 / range2));
 			float attenuation = att * att;
 			attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
-
-			result.diffuse *= attenuation;
-			result.specular *= attenuation;
+			lightColor *= attenuation;
 
 			float3 sh = max(surfaceToLight.NdotL, 0).xxx;
 			[branch]
@@ -210,15 +221,12 @@ inline LightingResult SpotLight(in ShaderEntityType light, in Surface surface)
 					sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
 				}
 			}
-			result.diffuse *= sh;
-			result.specular *= sh;
+			lightColor *= sh;
 
-			result.diffuse = max(0.0f, result.diffuse);
-			result.specular = max(0.0f, result.specular);
+			lighting.direct.diffuse += max(0.0f, lightColor * BRDF_GetDiffuse(surface, surfaceToLight));
+			lighting.direct.specular += max(0.0f, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 		}
 	}
-
-	return result;
 }
 
 
@@ -387,10 +395,8 @@ float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
 	return max(illuminance, 0.0f);
 }
 
-inline LightingResult SphereLight(in ShaderEntityType light, in Surface surface)
+inline void SphereLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result = (LightingResult)0;
-
 	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
 	float3 L = Lunormalized / dist;
@@ -427,18 +433,11 @@ inline LightingResult SphereLight(in ShaderEntityType light, in Surface surface)
 
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
-	result.diffuse = lightColor * fLight / PI;
-
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
-
-	return result;
+	lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight);
+	lighting.direct.diffuse += max(0, lightColor * fLight / PI);
 }
-inline LightingResult DiscLight(in ShaderEntityType light, in Surface surface)
+inline void DiscLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result = (LightingResult)0;
-
 	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
 	float3 L = Lunormalized / dist;
@@ -478,19 +477,11 @@ inline LightingResult DiscLight(in ShaderEntityType light, in Surface surface)
 
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
-	result.diffuse = lightColor * fLight / PI;
-
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
-
-	return result;
+	lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight);
+	lighting.direct.diffuse += max(0, lightColor * fLight / PI);
 }
-inline LightingResult RectangleLight(in ShaderEntityType light, in Surface surface)
+inline void RectangleLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result = (LightingResult)0;
-
-
 	float3 L = light.positionWS - surface.P;
 	float dist = length(L);
 	L /= dist;
@@ -589,18 +580,11 @@ inline LightingResult RectangleLight(in ShaderEntityType light, in Surface surfa
 
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
-	result.diffuse = lightColor * fLight / PI;
-
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
-
-	return result;
+	lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight);
+	lighting.direct.diffuse += max(0, lightColor * fLight / PI);
 }
-inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
+inline void TubeLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
 {
-	LightingResult result = (LightingResult)0;
-
 	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
 	float3 L = Lunormalized / dist;
@@ -683,26 +667,16 @@ inline LightingResult TubeLight(in ShaderEntityType light, in Surface surface)
 
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-	result.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight;
-	result.diffuse = lightColor * fLight / PI;
-
-	result.diffuse = max(0.0f, result.diffuse);
-	result.specular = max(0.0f, result.specular);
-
-	return result;
+	lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight) * fLight);
+	lighting.direct.diffuse += max(0, lightColor * fLight / PI);
 }
 
 
 // VOXEL RADIANCE
 
-struct VoxelGIResult
+inline LightingContribution VoxelGI(in Surface surface, inout Lighting lighting)
 {
-	float4 diffuse;  // diffuse + contribution(alpha)
-	float4 specular; // specular + contribution(alpha)
-};
-inline VoxelGIResult VoxelGI(in Surface surface)
-{
-	VoxelGIResult result;
+	LightingContribution contribution;
 
 	[branch]if (g_xFrame_VoxelRadianceDataRes != 0)
 	{
@@ -714,26 +688,33 @@ inline VoxelGIResult VoxelGI(in Surface surface)
 		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
 		float4 radiance = ConeTraceRadiance(texture_voxelradiance, surface.P, surface.N);
-		result.diffuse = float4(radiance.rgb * surface.occlusion, radiance.a * blend);
+
+		contribution.diffuse = radiance.a * blend;
+
+		lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, radiance.rgb, contribution.diffuse);
+
 
 		[branch]
 		if (g_xFrame_VoxelRadianceReflectionsEnabled)
 		{
 			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
-			result.specular = float4(reflection.rgb * surface.F, reflection.a * blend);
+
+			contribution.specular = reflection.a * blend;
+
+			lighting.indirect.specular = lerp(lighting.indirect.specular, reflection.rgb, contribution.specular);
 		}
 		else
 		{
-			result.specular = 0;
+			contribution.specular = 0;
 		}
 	}
 	else
 	{
-		result.diffuse = 0;
-		result.specular = 0;
+		contribution.diffuse = 0;
+		contribution.specular = 0;
 	}
 
-	return result;
+	return contribution;
 }
 
 

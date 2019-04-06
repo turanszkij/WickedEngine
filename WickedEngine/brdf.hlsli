@@ -104,7 +104,7 @@ struct Surface
 
 		R = -reflect(V, N);
 		float f90 = saturate(50.0 * dot(f0, 0.33));
-		F = F_Schlick(f0, f90, NdotV) * occlusion;
+		F = F_Schlick(f0, f90, NdotV);
 	}
 };
 inline Surface CreateSurface(

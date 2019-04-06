@@ -27,15 +27,14 @@ GBUFFEROutputType_Thin main(VSOut input)
 	float dist = length(V);
 	V /= dist;
 	Surface surface = CreateSurface(input.pos3D, N, V, color, ao, roughness, reflectance, metalness);
+	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
 	float2 pixel = input.pos.xy;
 	float depth = input.pos.z;
-	float3 diffuse = 0;
-	float3 specular = 0;
 	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 
-	ForwardLighting(surface, diffuse, specular);
+	ForwardLighting(surface, lighting);
 
-	ApplyLighting(surface, diffuse, specular, color);
+	ApplyLighting(surface, lighting, color);
 
 	ApplyFog(dist, color);
 
