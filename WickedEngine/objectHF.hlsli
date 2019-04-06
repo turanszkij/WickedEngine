@@ -924,6 +924,8 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 #endif // DEFERRED
 
+#endif // SIMPLE_INPUT
+
 
 #ifdef TEXTUREONLY
 	color.rgb += surface.emissiveColor.rgb * surface.emissiveColor.a;
@@ -933,8 +935,6 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #ifdef BLACKOUT
 	color = float4(0, 0, 0, 1);
 #endif
-
-#endif // SIMPLE_INPUT
 
 	color = max(0, color);
 
