@@ -1362,7 +1362,7 @@ namespace wiSceneSystem
 		transform.Translate(position);
 		transform.UpdateTransform();
 
-		materials.Create(entity).blendMode = BLENDMODE_ALPHA;
+		materials.Create(entity).userBlendMode = BLENDMODE_ALPHA;
 
 		return entity;
 	}

@@ -80,7 +80,7 @@ namespace wiSceneSystem
 			archive >> _flags;
 			archive >> (uint8_t&)engineStencilRef;
 			archive >> userStencilRef;
-			archive >> (uint8_t&)blendMode;
+			archive >> (uint8_t&)userBlendMode;
 			archive >> baseColor;
 			if (archive.GetVersion() >= 25)
 			{
@@ -160,7 +160,7 @@ namespace wiSceneSystem
 			archive << _flags;
 			archive << (uint8_t)engineStencilRef;
 			archive << userStencilRef;
-			archive << (uint8_t)blendMode;
+			archive << (uint8_t)userBlendMode;
 			archive << baseColor;
 			if (archive.GetVersion() >= 25)
 			{

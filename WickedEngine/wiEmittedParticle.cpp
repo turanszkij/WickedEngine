@@ -600,7 +600,8 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO[material.blendMode][shaderType], threadID);
+		const BLENDMODE blendMode = material.GetBlendMode();
+		device->BindGraphicsPSO(&PSO[blendMode][shaderType], threadID);
 		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
 	}
 

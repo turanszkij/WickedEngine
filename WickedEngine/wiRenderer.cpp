@@ -549,12 +549,6 @@ enum OBJECTRENDERING_ALPHATEST
 	OBJECTRENDERING_ALPHATEST_ENABLED,
 	OBJECTRENDERING_ALPHATEST_COUNT
 };
-enum OBJECTRENDERING_TRANSPARENCY
-{
-	OBJECTRENDERING_TRANSPARENCY_DISABLED,
-	OBJECTRENDERING_TRANSPARENCY_ENABLED,
-	OBJECTRENDERING_TRANSPARENCY_COUNT
-};
 enum OBJECTRENDERING_NORMALMAP
 {
 	OBJECTRENDERING_NORMALMAP_DISABLED,
@@ -573,7 +567,7 @@ enum OBJECTRENDERING_POM
 	OBJECTRENDERING_POM_ENABLED,
 	OBJECTRENDERING_POM_COUNT
 };
-GraphicsPSO PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_TRANSPARENCY_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
+GraphicsPSO PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
 GraphicsPSO PSO_object_water[RENDERPASS_COUNT];
 GraphicsPSO PSO_object_wire;
 inline const GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
@@ -597,13 +591,12 @@ inline const GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, 
 	}
 
 	const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-	const bool transparent = material.IsTransparent();
 	const bool normalmap = material.GetNormalMap() != nullptr;
 	const bool planarreflection = material.HasPlanarReflection();
 	const bool pom = material.parallaxOcclusionMapping > 0;
-	const BLENDMODE blendMode = material.blendMode;
+	const BLENDMODE blendMode = material.GetBlendMode();
 
-	const GraphicsPSO& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparent][normalmap][planarreflection][pom];
+	const GraphicsPSO& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom];
 	assert(pso.IsValid());
 	return &pso;
 }
@@ -2160,181 +2153,193 @@ void LoadShaders()
 				{
 					for (int alphatest = 0; alphatest < OBJECTRENDERING_ALPHATEST_COUNT; ++alphatest)
 					{
-						for (int transparency = 0; transparency < OBJECTRENDERING_TRANSPARENCY_COUNT; ++transparency)
+						for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
 						{
-							for (int normalmap = 0; normalmap < OBJECTRENDERING_NORMALMAP_COUNT; ++normalmap)
+							for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
 							{
-								for (int planarreflection = 0; planarreflection < OBJECTRENDERING_PLANARREFLECTION_COUNT; ++planarreflection)
+								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 								{
-									for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
+									const bool transparency = blendMode != BLENDMODE_OPAQUE;
+									VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+									VLTYPES realVL = GetVLTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+									HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
+									DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
+									GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
+									PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
+
+									if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
 									{
-										VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										VLTYPES realVL = GetVLTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-										HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
-										DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
-										GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
-										PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
+										continue;
+									}
 
-										if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
+									GraphicsPSODesc desc;
+									desc.vs = vertexShaders[realVS];
+									desc.il = &vertexLayouts[realVL];
+									desc.hs = hullShaders[realHS];
+									desc.ds = domainShaders[realDS];
+									desc.gs = geometryShaders[realGS];
+									desc.ps = pixelShaders[realPS];
+
+									switch (blendMode)
+									{
+									case BLENDMODE_OPAQUE:
+										desc.bs = &blendStates[BSTYPE_OPAQUE];
+										break;
+									case BLENDMODE_ALPHA:
+										desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+										break;
+									case BLENDMODE_ADDITIVE:
+										desc.bs = &blendStates[BSTYPE_ADDITIVE];
+										break;
+									case BLENDMODE_PREMULTIPLIED:
+										desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+										break;
+									default:
+										assert(0);
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_DEPTHONLY:
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+										desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+										break;
+									default:
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+										desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+										break;
+									case RENDERPASS_TILEDFORWARD:
+										if (blendMode == BLENDMODE_ADDITIVE)
 										{
-											continue;
-										}
-
-										GraphicsPSODesc desc;
-										desc.vs = vertexShaders[realVS];
-										desc.il = &vertexLayouts[realVL];
-										desc.hs = hullShaders[realHS];
-										desc.ds = domainShaders[realDS];
-										desc.gs = geometryShaders[realGS];
-										desc.ps = pixelShaders[realPS];
-
-										switch (blendMode)
-										{
-										case BLENDMODE_OPAQUE:
-											desc.bs = &blendStates[BSTYPE_OPAQUE];
-											break;
-										case BLENDMODE_ALPHA:
-											desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-											break;
-										case BLENDMODE_ADDITIVE:
-											desc.bs = &blendStates[BSTYPE_ADDITIVE];
-											break;
-										case BLENDMODE_PREMULTIPLIED:
-											desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-											break;
-										default:
-											assert(0);
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_DEPTHONLY:
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
-											break;
-										default:
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-											break;
-										case RENDERPASS_TILEDFORWARD:
-											desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-											break;
-										case RENDERPASS_ENVMAPCAPTURE:
-											desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.dss = &depthStencils[DSSTYPE_XRAY];
-											break;
-										default:
-											desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_SHADOW:
-										case RENDERPASS_SHADOWCUBE:
-											desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-											break;
-										default:
-											desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
-											break;
-										}
-
-										switch (renderPass)
-										{
-										case RENDERPASS_TEXTURE:
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_DEFERRED:
-											desc.numRTs = 5;
-											desc.RTFormats[0] = RTFormat_gbuffer_0;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.RTFormats[2] = RTFormat_gbuffer_2;
-											desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
-											desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_FORWARD:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-											}
-											else
-											{
-												desc.numRTs = 2;
-											}
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_TILEDFORWARD:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-											}
-											else
-											{
-												desc.numRTs = 2;
-											}
-											desc.RTFormats[0] = RTFormat_hdr;
-											desc.RTFormats[1] = RTFormat_gbuffer_1;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_DEPTHONLY:
-											desc.numRTs = 0;
-											desc.DSFormat = DSFormat_full;
-											break;
-										case RENDERPASS_ENVMAPCAPTURE:
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_envprobe;
-											desc.DSFormat = DSFormat_small;
-											break;
-										case RENDERPASS_SHADOW:
-											if (transparency)
-											{
-												desc.numRTs = 1;
-												desc.RTFormats[0] = RTFormat_ldr;
-											}
-											else
-											{
-												desc.numRTs = 0;
-											}
-											desc.DSFormat = DSFormat_small;
-											break;
-										case RENDERPASS_SHADOWCUBE:
-											desc.numRTs = 0;
-											desc.DSFormat = DSFormat_small;
-											break;
-										case RENDERPASS_VOXELIZE:
-											desc.numRTs = 0;
-											break;
-										}
-
-										if (tessellation)
-										{
-											desc.pt = PATCHLIST;
+											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 										}
 										else
 										{
-											desc.pt = TRIANGLELIST;
+											desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
 										}
-
-										device->CreateGraphicsPSO(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][transparency][normalmap][planarreflection][pom]);
+										break;
+									case RENDERPASS_ENVMAPCAPTURE:
+										desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.dss = &depthStencils[DSSTYPE_XRAY];
+										break;
+									default:
+										if (blendMode == BLENDMODE_ADDITIVE)
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+										}
+										else
+										{
+											desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+										}
+										break;
 									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_SHADOW:
+									case RENDERPASS_SHADOWCUBE:
+										desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+										break;
+									default:
+										desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+										break;
+									}
+
+									switch (renderPass)
+									{
+									case RENDERPASS_TEXTURE:
+										desc.numRTs = 1;
+										desc.RTFormats[0] = RTFormat_hdr;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case RENDERPASS_DEFERRED:
+										desc.numRTs = 5;
+										desc.RTFormats[0] = RTFormat_gbuffer_0;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.RTFormats[2] = RTFormat_gbuffer_2;
+										desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
+										desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case RENDERPASS_FORWARD:
+										if (transparency)
+										{
+											desc.numRTs = 1;
+										}
+										else
+										{
+											desc.numRTs = 2;
+										}
+										desc.RTFormats[0] = RTFormat_hdr;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case RENDERPASS_TILEDFORWARD:
+										if (transparency)
+										{
+											desc.numRTs = 1;
+										}
+										else
+										{
+											desc.numRTs = 2;
+										}
+										desc.RTFormats[0] = RTFormat_hdr;
+										desc.RTFormats[1] = RTFormat_gbuffer_1;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case RENDERPASS_DEPTHONLY:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_full;
+										break;
+									case RENDERPASS_ENVMAPCAPTURE:
+										desc.numRTs = 1;
+										desc.RTFormats[0] = RTFormat_envprobe;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case RENDERPASS_SHADOW:
+										if (transparency)
+										{
+											desc.numRTs = 1;
+											desc.RTFormats[0] = RTFormat_ldr;
+										}
+										else
+										{
+											desc.numRTs = 0;
+										}
+										desc.DSFormat = DSFormat_small;
+										break;
+									case RENDERPASS_SHADOWCUBE:
+										desc.numRTs = 0;
+										desc.DSFormat = DSFormat_small;
+										break;
+									case RENDERPASS_VOXELIZE:
+										desc.numRTs = 0;
+										break;
+									}
+
+									if (tessellation)
+									{
+										desc.pt = PATCHLIST;
+									}
+									else
+									{
+										desc.pt = TRIANGLELIST;
+									}
+
+									device->CreateGraphicsPSO(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
 								}
 							}
 						}

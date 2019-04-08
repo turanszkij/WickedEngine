@@ -166,7 +166,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(metalnessSlider);
 
 	alphaSlider = new wiSlider(0, 1, 1.0f, 1000, "Alpha: ");
-	alphaSlider->SetTooltip("Adjusts the overall transparency of the surface. Don't forget to set a Blend mode or refraction index to take effect.");
+	alphaSlider->SetTooltip("Adjusts the overall transparency of the surface. No effect when BlendMode is set to OPAQUE.");
 	alphaSlider->SetSize(XMFLOAT2(100, 30));
 	alphaSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaSlider->OnSlide([&](wiEventArgs args) {
@@ -177,7 +177,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(alphaSlider);
 
 	alphaRefSlider = new wiSlider(0, 1, 1.0f, 1000, "AlphaRef: ");
-	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold. This disables some optimizations so performance can be affected.");
+	alphaRefSlider->SetTooltip("Adjust the alpha cutoff threshold. Some performance optimizations will be disabled.");
 	alphaRefSlider->SetSize(XMFLOAT2(100, 30));
 	alphaRefSlider->SetPos(XMFLOAT2(x, y += step));
 	alphaRefSlider->OnSlide([&](wiEventArgs args) {
@@ -188,7 +188,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 	materialWindow->AddWidget(alphaRefSlider);
 
 	refractionIndexSlider = new wiSlider(0, 1.0f, 0.02f, 1000, "Refraction Index: ");
-	refractionIndexSlider->SetTooltip("Adjust the IOR (index of refraction). It controls the amount of distortion of the scene visible through the transparent object.");
+	refractionIndexSlider->SetTooltip("Adjust the IOR (index of refraction). It controls the amount of distortion of the scene visible through the transparent object. No effect when BlendMode is set to OPAQUE.");
 	refractionIndexSlider->SetSize(XMFLOAT2(100, 30));
 	refractionIndexSlider->SetPos(XMFLOAT2(x, y += step));
 	refractionIndexSlider->OnSlide([&](wiEventArgs args) {
@@ -349,7 +349,7 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 		MaterialComponent* material = wiSceneSystem::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->blendMode = static_cast<BLENDMODE>(args.iValue);
+			material->userBlendMode = static_cast<BLENDMODE>(args.iValue);
 		}
 	});
 	blendModeComboBox->AddItem("Opaque");
@@ -862,7 +862,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		materialWindow->SetEnabled(true);
 		baseColorPicker->SetEnabled(true);
 		emissiveColorPicker->SetEnabled(true);
-		blendModeComboBox->SetSelected((int)material->blendMode);
+		blendModeComboBox->SetSelected((int)material->userBlendMode);
 		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
 
 		texture_baseColor_Button->SetText(wiHelper::GetFileNameFromPath(material->baseColorMapName));

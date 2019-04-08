@@ -164,6 +164,12 @@ void MainComponent::Run()
 		wiProfiler::BeginRange("Update", wiProfiler::DOMAIN_CPU);
 		Update(deltaTime);
 		wiProfiler::EndRange(); // Update
+
+		wiInputManager::Update();
+
+		wiProfiler::BeginRange("Render", wiProfiler::DOMAIN_CPU);
+		Render();
+		wiProfiler::EndRange(); // Render
 	}
 	else
 	{
@@ -172,14 +178,7 @@ void MainComponent::Run()
 		wiLua::GetGlobal()->SetDeltaTime(0);
 	}
 
-	wiInputManager::Update();
-
-	wiProfiler::BeginRange("Render", wiProfiler::DOMAIN_CPU);
-	Render();
-	wiProfiler::EndRange(); // Render
-
 	wiProfiler::EndRange(); // CPU Frame
-
 
 	wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
 	wiRenderer::GetDevice()->PresentBegin();
