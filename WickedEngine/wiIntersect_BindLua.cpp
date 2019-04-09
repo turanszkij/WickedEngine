@@ -1,5 +1,6 @@
 #include "wiIntersect_BindLua.h"
 #include "Vector_BindLua.h"
+#include "Matrix_BindLua.h"
 
 namespace wiIntersect_BindLua
 {
@@ -104,6 +105,7 @@ namespace wiIntersect_BindLua
 		lunamethod(AABB_BindLua, GetMax),
 		lunamethod(AABB_BindLua, GetCenter),
 		lunamethod(AABB_BindLua, GetHalfExtents),
+		lunamethod(AABB_BindLua, Transform),
 		{ NULL, NULL }
 	};
 	Luna<AABB_BindLua>::PropertyType AABB_BindLua::properties[] = {
@@ -147,8 +149,9 @@ namespace wiIntersect_BindLua
 			AABB_BindLua* _aabb = Luna<AABB_BindLua>::lightcheck(L, 1);
 			if (_aabb)
 			{
-				int intersects = (int)aabb.intersects(_aabb->aabb);
-				wiLua::SSetInt(L, intersects);
+				//int intersects = (int)aabb.intersects(_aabb->aabb);
+				//wiLua::SSetInt(L, intersects);
+				wiLua::SSetBool(L, aabb.intersects(_aabb->aabb) != AABB::INTERSECTION_TYPE::OUTSIDE); // int intersection type cannot be checked like bool in lua so we give simple bool result here!
 				return 1;
 			}
 
@@ -191,6 +194,25 @@ namespace wiIntersect_BindLua
 	{
 		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&aabb.getHalfWidth())));
 		return 1;
+	}
+	int AABB_BindLua::Transform(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Matrix_BindLua* _matrix = Luna<Matrix_BindLua>::lightcheck(L, 1);
+			if (_matrix)
+			{
+				Luna<AABB_BindLua>::push(L, new AABB_BindLua(aabb.get(_matrix->matrix)));
+				return 1;
+			}
+			else
+			{
+				wiLua::SError(L, "Transform(Matrix matrix) argument is not a Matrix! ");
+			}
+		}
+		wiLua::SError(L, "Transform(Matrix matrix) not enough arguments! ");
+		return 0;
 	}
 
 

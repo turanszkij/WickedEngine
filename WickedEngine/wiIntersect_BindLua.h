@@ -44,6 +44,7 @@ namespace wiIntersect_BindLua
 		int GetMax(lua_State* L);
 		int GetCenter(lua_State* L);
 		int GetHalfExtents(lua_State* L);
+		int Transform(lua_State* L);
 	};
 
 	class Sphere_BindLua

@@ -473,13 +473,14 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with other primitives.
 - [constructor]AABB(Vector min,max)
-- Intersects(AABB aabb) : int result  -- result can be 0 (outside, no intersection), 1 (intersection), 2 (completely inside)
+- Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Ray ray) : bool result
 - GetMin() : Vector result
 - GetMax() : Vector result
 - GetCenter() : Vector result
 - GetHalfExtents() : Vector result
+- Transform(Matrix matrix) : AABB result  -- transforms the AABB with a matrix and returns the resulting conservative AABB
 
 #### Sphere
 Sphere defined by center Vector and radius. Can be intersected with other primitives.
