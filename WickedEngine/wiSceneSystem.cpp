@@ -1414,25 +1414,33 @@ namespace wiSceneSystem
 		HierarchyComponent& parentcomponent = *hierarchy.GetComponent(entity);
 
 		TransformComponent* transform_parent = transforms.GetComponent(parent);
-		if (transform_parent != nullptr)
+		if (transform_parent == nullptr)
 		{
-			// Save the parent's inverse worldmatrix:
-			XMStoreFloat4x4(&parentcomponent.world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
-
-			TransformComponent* transform_child = transforms.GetComponent(entity);
-			if (transform_child != nullptr)
-			{
-				// Child updated immediately, to that it can be immediately attached to afterwards:
-				transform_child->UpdateTransform_Parented(*transform_parent, parentcomponent.world_parent_inverse_bind);
-			}
+			transform_parent = &transforms.Create(parent);
 		}
+		// Save the parent's inverse worldmatrix:
+		XMStoreFloat4x4(&parentcomponent.world_parent_inverse_bind, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
 
+		TransformComponent* transform_child = transforms.GetComponent(entity);
+		if (transform_child == nullptr)
+		{
+			transform_child = &transforms.Create(entity);
+		}
+		// Child updated immediately, to that it can be immediately attached to afterwards:
+		transform_child->UpdateTransform_Parented(*transform_parent, parentcomponent.world_parent_inverse_bind);
+
+		LayerComponent* layer_parent = layers.GetComponent(parent);
+		if (layer_parent == nullptr)
+		{
+			layer_parent = &layers.Create(parent);
+		}
 		LayerComponent* layer_child = layers.GetComponent(entity);
-		if (layer_child != nullptr)
+		if (layer_child == nullptr)
 		{
-			// Save the initial layermask of the child so that it can be restored if detached:
-			parentcomponent.layerMask_bind = layer_child->GetLayerMask();
+			layer_child = &layers.Create(entity);
 		}
+		// Save the initial layermask of the child so that it can be restored if detached:
+		parentcomponent.layerMask_bind = layer_child->GetLayerMask();
 	}
 	void Scene::Component_Detach(Entity entity)
 	{

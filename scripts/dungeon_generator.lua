@@ -7,7 +7,7 @@ dungeon={
 	
 	Generate = function(complexity)
 	
-		local scalingMat = matrix.Scale(Vector(1,1,1))
+		local scalingMat = matrix.Scale(Vector(6,6,6))
 		
 		-- This will hold the bounding boxes of the placed segments
 		local boxes = {}

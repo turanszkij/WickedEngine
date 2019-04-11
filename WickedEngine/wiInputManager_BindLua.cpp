@@ -162,6 +162,7 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("VK_F10			= 0x79");
 		wiLua::GetGlobal()->RunText("VK_F11			= 0x7A");
 		wiLua::GetGlobal()->RunText("VK_F12			= 0x7B");
+		wiLua::GetGlobal()->RunText("VK_ESCAPE		= 0x1B");
 
 		//Mouse
 		wiLua::GetGlobal()->RunText("VK_LBUTTON		= 0x01");

@@ -859,5 +859,6 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		transform.SetDirty();
 	}
 
+	scene.Update(0);
 
 }

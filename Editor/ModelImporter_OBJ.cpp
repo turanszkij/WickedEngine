@@ -191,6 +191,8 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 			mesh.CreateRenderData();
 		}
 
+		scene.Update(0);
+
 	}
 	else
 	{

@@ -64,6 +64,9 @@
     <Filter Include="ENGINE\High level interface">
       <UniqueIdentifier>{a25b4076-72bb-4c78-8bc1-84c59a8984fd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="scripts">
+      <UniqueIdentifier>{0b9a1138-b94c-416f-838b-89f81f53fbc3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h">
@@ -1942,6 +1945,39 @@
     <None Include="$(MSBuildThisFileDirectory)..\CODE_OF_CONDUCT.md" />
     <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_clamped.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_repeat.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\character_controller_tps.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\debug_draw.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\dungeon_generator.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\emitter_burst.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\move_object.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\pick.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_color.lua">
+      <Filter>scripts</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua">
+      <Filter>scripts</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">

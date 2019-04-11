@@ -3788,6 +3788,7 @@ void UpdatePerFrameData(float dt)
 	ManageLightmapAtlas();
 	ManageImpostors();
 	ManageEnvProbes();
+	ManageWaterRipples();
 
 	wiJobSystem::Wait();
 }

@@ -555,6 +555,7 @@ Describes a touch contact point
 - [outer]VK_F10 : int
 - [outer]VK_F11 : int
 - [outer]VK_F12 : int
+- [outer]VK_ESCAPE : int
 - You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes
