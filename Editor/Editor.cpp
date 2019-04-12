@@ -751,12 +751,12 @@ void EditorComponent::Update(float dt)
 			xDif = 0.1f*xDif*(1.0f / 60.0f);
 			yDif = 0.1f*yDif*(1.0f / 60.0f);
 			wiInputManager::setpointer(originalMouse);
-			wiInputManager::hidepointer(false);
+			wiInputManager::hidepointer(true);
 		}
 		else
 		{
 			camControlStart = true;
-			wiInputManager::hidepointer(true);
+			wiInputManager::hidepointer(false);
 		}
 
 		const float buttonrotSpeed = 2.0f / 60.0f;

@@ -454,7 +454,7 @@ namespace wiSceneSystem
 			archive >> color;
 			archive >> (uint32_t&)type;
 			archive >> energy;
-			archive >> range;
+			archive >> range_local;
 			archive >> fov;
 			archive >> shadowBias;
 			archive >> radius;
@@ -469,7 +469,7 @@ namespace wiSceneSystem
 			archive << color;
 			archive << (uint32_t&)type;
 			archive << energy;
-			archive << range;
+			archive << range_local;
 			archive << fov;
 			archive << shadowBias;
 			archive << radius;
@@ -522,14 +522,14 @@ namespace wiSceneSystem
 			archive >> _flags;
 			archive >> type;
 			archive >> gravity;
-			archive >> range;
+			archive >> range_local;
 		}
 		else
 		{
 			archive << _flags;
 			archive << type;
 			archive << gravity;
-			archive << range;
+			archive << range_local;
 		}
 	}
 	void DecalComponent::Serialize(wiArchive& archive, uint32_t seed)

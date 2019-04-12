@@ -62,7 +62,7 @@ dungeon={
 		local function GenerateDungeon(remaining, pos, rotY)
 			remaining = remaining - 1
 			local rotMat = matrix.RotationY(rotY)
-			local transformMat = matrix.Multiply( rotMat, matrix.Multiply( matrix.Translation(pos), scalingMat ) )
+			local transformMat = matrix.Multiply(rotMat, matrix.Multiply(matrix.Translation(pos), scalingMat))
 			
 			-- Mark exit point if the generation ended and return from recursion
 			if (remaining < 0) then
@@ -77,14 +77,14 @@ dungeon={
 				if(select2 < 1) then --left turn
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,2,2)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/turnleft.wiscene",transformMat)
-						GenerateDungeon(remaining,pos:Add(Vector(-1,0,1).Transform(rotMat)),rotY-0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(-1,0,1):Transform(rotMat)),rotY-0.5*math.pi)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
 				elseif(select2 < 2) then --right turn
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,2,2)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/turnright.wiscene",transformMat)
-						GenerateDungeon(remaining,pos:Add(Vector(1,0,1).Transform(rotMat)),rotY+0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(1,0,1):Transform(rotMat)),rotY+0.5*math.pi)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
@@ -92,9 +92,9 @@ dungeon={
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,2,2)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/tjunction.wiscene",transformMat)
 						-- right
-						GenerateDungeon(remaining,pos:Add(Vector(1,0,1).Transform(rotMat)),rotY+0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(1,0,1):Transform(rotMat)),rotY+0.5*math.pi)
 						-- left
-						GenerateDungeon(remaining,pos:Add(Vector(-1,0,1).Transform(rotMat)),rotY-0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(-1,0,1):Transform(rotMat)),rotY-0.5*math.pi)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
@@ -102,18 +102,18 @@ dungeon={
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,2,2)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/crossjunction.wiscene",transformMat)
 						-- right
-						GenerateDungeon(remaining,pos:Add(Vector(1,0,1).Transform(rotMat)),rotY+0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(1,0,1):Transform(rotMat)),rotY+0.5*math.pi)
 						-- left
-						GenerateDungeon(remaining,pos:Add(Vector(-1,0,1).Transform(rotMat)),rotY-0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(-1,0,1):Transform(rotMat)),rotY-0.5*math.pi)
 						-- straight
-						GenerateDungeon(remaining,pos:Add(Vector(0,0,2).Transform(rotMat)),rotY)
+						GenerateDungeon(remaining,pos:Add(Vector(0,0,2):Transform(rotMat)),rotY)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
 				else --straight block
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,2,2)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/block.wiscene",transformMat)
-						GenerateDungeon(remaining,pos:Add(Vector(0,0,2).Transform(rotMat)),rotY)
+						GenerateDungeon(remaining,pos:Add(Vector(0,0,2):Transform(rotMat)),rotY)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
@@ -123,28 +123,28 @@ dungeon={
 				if( select2 < 20 ) then --small room left
 					if CheckSegmentCanBePlaced(AABB(Vector(-5,0,0),Vector(1,2,6)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/smallroomleft.wiscene",transformMat )
-						GenerateDungeon(remaining,pos:Add(Vector(-5,0,5).Transform(rotMat)),rotY-0.5*math.pi)
+						GenerateDungeon(remaining,pos:Add(Vector(-5,0,5):Transform(rotMat)),rotY-0.5*math.pi)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
 				elseif( select2 < 30 ) then --odd corridor
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(3,2,8)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/oddcorridor.wiscene",transformMat )
-						GenerateDungeon(remaining,pos:Add(Vector(2,0,8).Transform(rotMat)),rotY)
+						GenerateDungeon(remaining,pos:Add(Vector(2,0,8):Transform(rotMat)),rotY)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
 				elseif( select2 < 60 ) then --up corridor
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,4,6)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/upcorridor.wiscene",transformMat )
-						GenerateDungeon(remaining,pos:Add(Vector(0,2,6).Transform(rotMat)),rotY)
+						GenerateDungeon(remaining,pos:Add(Vector(0,2,6):Transform(rotMat)),rotY)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
 				else --corridor
 					if CheckSegmentCanBePlaced(AABB(Vector(-1,0,0),Vector(1,2,6)).Transform(transformMat)) then
 						LoadModel(modelpath .. "dungeon/corridor.wiscene",transformMat )
-						GenerateDungeon(remaining,pos:Add(Vector(0,0,6).Transform(rotMat)),rotY)
+						GenerateDungeon(remaining,pos:Add(Vector(0,0,6):Transform(rotMat)),rotY)
 					else
 						GenerateDungeon(remaining,pos,rotY)
 					end
@@ -153,11 +153,11 @@ dungeon={
 				if CheckSegmentCanBePlaced(AABB(Vector(-4,0,0),Vector(4,8,8)).Transform(transformMat)) then
 					LoadModel(modelpath .. "dungeon/room.wiscene",transformMat )
 					-- right
-					GenerateDungeon(remaining,pos:Add(Vector(4,0,4).Transform(rotMat)),rotY + 0.5*math.pi)
+					GenerateDungeon(remaining,pos:Add(Vector(4,0,4):Transform(rotMat)),rotY + 0.5*math.pi)
 					-- left
-					GenerateDungeon(remaining,pos:Add(Vector(-4,0,4).Transform(rotMat)),rotY - 0.5*math.pi)
+					GenerateDungeon(remaining,pos:Add(Vector(-4,0,4):Transform(rotMat)),rotY - 0.5*math.pi)
 					-- straight
-					GenerateDungeon(remaining,pos:Add(Vector(0,0,8).Transform(rotMat)),rotY)
+					GenerateDungeon(remaining,pos:Add(Vector(0,0,8):Transform(rotMat)),rotY)
 				else
 					GenerateDungeon(remaining,pos,rotY)
 				end

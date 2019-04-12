@@ -199,12 +199,12 @@ void MainComponent::Run()
 
 void MainComponent::Update(float dt)
 {
+	wiLua::GetGlobal()->Update();
+
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Update(dt);
 	}
-
-	wiLua::GetGlobal()->Update();
 }
 
 void MainComponent::FixedUpdate()

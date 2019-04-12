@@ -247,10 +247,11 @@ A four component floating point vector. Provides efficient calculations with SIM
 - SetY(float value)
 - SetZ(float value)
 - SetW(float value)
-- Transform(Matrix matrix)
 - Length() : float result
 - Normalize() : Vector result
 - QuaternionNormalize() : Vector result
+- Transform(Vector vec, Matrix matrix)
+- TransformNormal(Vector vec, Matrix matrix)
 - Add(Vector v1,v2) : Vector result
 - Subtract(Vector v1,v2) : Vector result
 - Multiply(Vector v1,v2) : Vector result

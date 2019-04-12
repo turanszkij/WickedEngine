@@ -177,11 +177,11 @@ namespace wiInputManager
 #ifndef WINSTORE_SUPPORT
 		if (value)
 		{
-			while (ShowCursor(true) < 0) {};
+			while (ShowCursor(false) >= 0) {};
 		}
 		else
 		{
-			while (ShowCursor(false) >= 0) {};
+			while (ShowCursor(true) < 0) {};
 		}
 #endif
 	}

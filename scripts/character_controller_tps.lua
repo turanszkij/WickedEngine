@@ -14,8 +14,14 @@ Character = {
 	target = INVALID_ENTITY, -- Camera will look at this location, rays will be started from this location, etc.
 	idle_anim = INVALID_ENTITY,
 	walk_anim = INVALID_ENTITY,
+	head = INVALID_ENTITY,
+	left_hand = INVALID_ENTITY,
+	right_hand = INVALID_ENTITY,
+	left_foot = INVALID_ENTITY,
+	right_foot = INVALID_ENTITY,
 	face = Vector(0,0,1), -- forward direction
 	velocity = Vector(),
+	velocityPrev = Vector(),
 	ray = Ray(Vector(),Vector()),
 	o = INVALID_ENTITY, -- collision prop with scene (entity)
 	p,n = Vector(), -- collision props with scene (position,normal)
@@ -39,6 +45,11 @@ Character = {
 		
 		self.idle_anim = scene.Entity_FindByName("idle")
 		self.walk_anim = scene.Entity_FindByName("walk")
+		self.head = scene.Entity_FindByName("testa")
+		self.left_hand = scene.Entity_FindByName("mano_L")
+		self.right_hand = scene.Entity_FindByName("mano_R")
+		self.left_foot = scene.Entity_FindByName("avampiede_L")
+		self.right_foot = scene.Entity_FindByName("avampiede_R")
 		
 		local model_transform = scene.Component_GetTransform(self.model)
 		model_transform.ClearTransform()
@@ -54,37 +65,6 @@ Character = {
 		scene.Component_Attach(self.target, self.model)
 	end,
 	
-	MoveForward = function(self,f)
-		local model_transform = scene.Component_GetTransform(self.model)
-		local target_transform = scene.Component_GetTransform(self.target)
-		
-		-- avoid falling outside the world
-		local velocityPrev = self.velocity;
-		self.velocity = self.face:Multiply(Vector(f,f,f))
-		self.velocity.SetY(velocityPrev.GetY())
-		self.ray = Ray(target_transform.GetPosition():Add(self.velocity),Vector(0,-1,0))
-		self.o,self.p,self.n = Pick(self.ray, PICK_OPAQUE, ~self.layerMask)
-		if(self.o ~= INVALID_ENTITY) then
-			self.state = self.states.WALK
-		else
-			self.state = self.states.STAND
-			self.velocity = velocityPrev
-		end
-		
-		-- front block
-		local ray2 = Ray(target_transform.GetPosition(),self.face)
-		local o2,p2,n2 = Pick(ray2, PICK_OPAQUE, ~self.layerMask)
-		local dist = vector.Subtract(target_transform.GetPosition(),p2):Length()
-		if(o2 ~= INVALID_ENTITY and dist < 1.5) then
-			-- run along wall instead of going through it
-			local velocityLen = self.velocity.Length()
-			local velocityNormalized = self.velocity.Normalize()
-			local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
-			local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
-			self.velocity = vector.Multiply(desiredMotion, velocityLen)
-		end
-		
-	end,
 	Jump = function(self,f)
 		self.velocity = self.velocity:Add(Vector(0,f,0))
 		self.state = self.states.JUMP
@@ -94,7 +74,7 @@ Character = {
 		local target_transform = scene.Component_GetTransform(self.target)
 		local savedPos = model_transform.GetPosition()
 		model_transform.ClearTransform()
-		self.face = dir:Normalize().Transform(target_transform.GetMatrix())
+		self.face = vector.Transform(dir:Normalize(), target_transform.GetMatrix())
 		self.face.SetY(0)
 		self.face = self.face.Normalize()
 		model_transform.MatrixTransform(matrix.LookTo(Vector(),self.face):Inverse())
@@ -104,7 +84,10 @@ Character = {
 		model_transform.UpdateTransform()
 		scene.Component_Detach(self.target)
 		scene.Component_Attach(self.target, self.model)
-		self:MoveForward(f)
+		self.velocityPrev = self.velocity;
+		self.velocity = self.face:Multiply(Vector(f,f,f))
+		self.velocity.SetY(self.velocityPrev.GetY())
+		self.state = self.states.WALK
 	end,
 	
 	Input = function(self)
@@ -149,8 +132,10 @@ Character = {
 			self.face.SetY(0)
 			self.face=self.face:Normalize()
 			input.SetPointer(self.savedPointerPos)
+			input.HidePointer(true)
 		else
 			self.savedPointerPos = input.GetPointer()
+			input.HidePointer(false)
 		end
 		
 	end,
@@ -174,6 +159,24 @@ Character = {
 			self.state = self.states.STAND
 		end
 		
+		-- front block shoots multiple rays in front to try to find obstruction
+		local rotations = {0, 3.1415*0.3, -3.1415*0.3}
+		for i,rot in ipairs(rotations) do
+			local origin = target_transform.GetPosition()
+			local dir = vector.Transform(self.face, matrix.RotationY(rot))
+			local ray2 = Ray(origin,dir)
+			local o2,p2,n2 = Pick(ray2, PICK_OPAQUE, ~self.layerMask)
+			local dist = vector.Subtract(origin,p2):Length()
+			if(o2 ~= INVALID_ENTITY and dist < 1) then
+				-- run along wall instead of going through it
+				local velocityLen = self.velocity.Length()
+				local velocityNormalized = self.velocity.Normalize()
+				local undesiredMotion = n2:Multiply(vector.Dot(velocityNormalized, n2))
+				local desiredMotion = vector.Subtract(velocityNormalized, undesiredMotion)
+				self.velocity = vector.Multiply(desiredMotion, velocityLen)
+			end
+		end
+		
 		-- check what is below the character
 		self.ray = Ray(target_transform.GetPosition(),Vector(0,-1,0))
 		local pPrev = self.p
@@ -182,8 +185,10 @@ Character = {
 			self.p=pPrev -- if nothing, go back to previous position
 		end
 		
-		-- try to put water ripple if character is directly above water
-		local w,wp,wn = Pick(self.ray,PICK_WATER)
+		-- try to put water ripple if character head is directly above water
+		local head_transform = scene.Component_GetTransform(self.head)
+		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
+		local w,wp,wn = Pick(waterRay,PICK_WATER)
 		if(w ~= INVALID_ENTITY and self.velocity.Length()>0.1) then
 			PutWaterRipple("../Editor/images/ripple.png",wp)
 		end
@@ -191,10 +196,10 @@ Character = {
 		-- add gravity:
 		self.velocity = vector.Add(self.velocity, Vector(0,-0.04,0))
 		
-		-- check if we are below the ground:
+		-- check if we are below or on the ground:
 		if(model_transform.GetPosition().GetY() <= self.p.GetY() and self.velocity.GetY()<=0) then
 			self.state = self.states.STAND
-			model_transform.Translate(vector.Subtract(self.p,model_transform.GetPosition()))
+			model_transform.Translate(vector.Subtract(self.p,model_transform.GetPosition())) -- snap back to last succesfully traced position
 			self.velocity.SetY(0) -- don't fall below ground
 			self.velocity = vector.Multiply(self.velocity, 0.8) -- slow down gradually on ground
 		end
@@ -220,7 +225,7 @@ ThirdPersonCamera = {
 		self.camera = CreateEntity()
 		local camera_transform = scene.Component_CreateTransform(self.camera)
 		camera_transform.ClearTransform()
-		camera_transform.Translate(Vector(self.side_offset,self.height,-self.rest_distance))
+		camera_transform.Translate(Vector(self.side_offset,self.height))
 		scene.Component_Attach(self.camera, character.target)
 	end,
 	
@@ -228,30 +233,27 @@ ThirdPersonCamera = {
 		if(self.character ~= nil) then
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = scene.Component_GetTransform(self.character.target)
-		
-			local camTargetDiff = vector.Subtract(target_transform.GetPosition(), camera_transform.GetPosition())
+			
+			-- Keep distance from player
+			local camPos = camera_transform.GetPosition()
+			local camTargetDiff = vector.Subtract(target_transform.GetPosition(), camPos)
 			local camTargetDistance = camTargetDiff.Length()
-			
-			local use_correction = true
+			if(camTargetDistance < self.rest_distance) then
+				camera_transform.Translate(Vector(0,0,-(self.rest_distance - camTargetDistance)))
+			end
 
-			-- Cast a ray from the camera eye and check if it hits something other than the player...
-			local camRay = Ray(camera_transform.GetPosition(),camTargetDiff.Normalize())
-			local camCollObj,camCollPos,camCollNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
-			if(camCollObj ~= INVALID_ENTITY) then
-				-- It hit something, see if it is between the player and camera:
-				local camCollDiff = vector.Subtract(camCollPos, camera_transform.GetPosition())
-				local camCollDistance = camCollDiff.Length()
-				if(camCollDistance < camTargetDistance) then
-					-- If there was something between player and camera, clamp camera position inside:
-					camera_transform.Translate(Vector(0,0,camCollDistance-0.1))
-					use_correction = false
+			-- Cast ray from the camera eye and check if it hits something other than the player...
+			local rayDir = camTargetDiff.Normalize()
+				local camRay = Ray(camPos, rayDir)
+				local camCollObj,camCollPos,camCollNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
+				if(camCollObj ~= INVALID_ENTITY) then
+					-- It hit something, see if it is between the player and camera:
+					local camCollDiff = vector.Subtract(camCollPos, camPos)
+					local camCollDistance = camCollDiff.Length()
+					if(camCollDistance < camTargetDistance) then
+						camera_transform.Translate(Vector(0,0,camCollDistance))
+					end
 				end
-			end
-			
-			if(use_correction and camTargetDistance < self.rest_distance) then
-				-- Camera is closer to target than rest distance, push it back some amount...
-				camera_transform.Translate(vector.Multiply(getDeltaTime() * 60, Vector(0,0,-self.correction_speed)))
-			end
 			
 			local cam = GetCamera()
 			cam.TransformCamera(camera_transform)
@@ -319,11 +321,6 @@ end
 
 -- Draw
 runProcess(function()
-	local head = scene.Entity_FindByName("testa")
-	local left_hand = scene.Entity_FindByName("mano_L")
-	local right_hand = scene.Entity_FindByName("mano_R")
-	local left_foot = scene.Entity_FindByName("avampiede_L")
-	local right_foot = scene.Entity_FindByName("avampiede_R")
 	
 	while true do
 	
@@ -347,15 +344,15 @@ runProcess(function()
 		DrawBox(target_transform.GetMatrix())
 		
 		-- Head bone
-		DrawPoint(scene.Component_GetTransform(head).GetPosition(),0.2, Vector(0,1,1,1))
+		DrawPoint(scene.Component_GetTransform(player.head).GetPosition(),0.2, Vector(0,1,1,1))
 		-- Left hand bone
-		DrawPoint(scene.Component_GetTransform(left_hand).GetPosition(),0.2, Vector(0,1,1,1))
+		DrawPoint(scene.Component_GetTransform(player.left_hand).GetPosition(),0.2, Vector(0,1,1,1))
 		-- Right hand bone
-		DrawPoint(scene.Component_GetTransform(right_hand).GetPosition(),0.2, Vector(0,1,1,1))
+		DrawPoint(scene.Component_GetTransform(player.right_hand).GetPosition(),0.2, Vector(0,1,1,1))
 		-- Left foot bone
-		DrawPoint(scene.Component_GetTransform(left_foot).GetPosition(),0.2, Vector(0,1,1,1))
+		DrawPoint(scene.Component_GetTransform(player.left_foot).GetPosition(),0.2, Vector(0,1,1,1))
 		-- Right foot bone
-		DrawPoint(scene.Component_GetTransform(right_foot).GetPosition(),0.2, Vector(0,1,1,1))
+		DrawPoint(scene.Component_GetTransform(player.right_foot).GetPosition(),0.2, Vector(0,1,1,1))
 		
 		
 		-- Wait for the engine to render the scene

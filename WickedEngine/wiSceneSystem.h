@@ -651,7 +651,7 @@ namespace wiSceneSystem
 		};
 		LightType type = POINT;
 		float energy = 1.0f;
-		float range = 10.0f;
+		float range_local = 10.0f;
 		float fov = XM_PIDIV4;
 		float shadowBias = 0.0001f;
 		float radius = 1.0f; // area light
@@ -662,6 +662,7 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
+		float range;
 		XMFLOAT3 direction;
 		XMFLOAT4 rotation;
 		XMFLOAT3 front;
@@ -789,10 +790,11 @@ namespace wiSceneSystem
 
 		int type = ENTITY_TYPE_FORCEFIELD_POINT;
 		float gravity = 0.0f; // negative = deflector, positive = attractor
-		float range = 0.0f; // affection range
+		float range_local = 0.0f; // affection range
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
+		float range;
 		XMFLOAT3 direction;
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);

@@ -16,6 +16,7 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, SetZ),
 	lunamethod(Vector_BindLua, SetW),
 	lunamethod(Vector_BindLua, Transform),
+	lunamethod(Vector_BindLua, TransformNormal),
 	lunamethod(Vector_BindLua, Length),
 	lunamethod(Vector_BindLua, Normalize),
 	lunamethod(Vector_BindLua, QuaternionNormalize),
@@ -138,19 +139,39 @@ int Vector_BindLua::SetW(lua_State* L)
 int Vector_BindLua::Transform(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
+	if (argc > 1)
 	{
-		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 1);
-		if (mat)
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
+		if (vec && mat)
 		{
-			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector4Transform(vector, mat->matrix)));
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector4Transform(vec->vector, mat->matrix)));
 			return 1;
 		}
 		else
-			wiLua::SError(L, "Transform(Matrix matrix) argument is not a Matrix!");
+			wiLua::SError(L, "Transform(Vector vec, Matrix matrix) argument types mismatch!");
 	}
 	else
-		wiLua::SError(L, "Transform(Matrix matrix) not enough arguments!");
+		wiLua::SError(L, "Transform(Vector vec, Matrix matrix) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::TransformNormal(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
+		if (vec && mat)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3TransformNormal(vec->vector, mat->matrix)));
+			return 1;
+		}
+		else
+			wiLua::SError(L, "TransformNormal(Vector vec, Matrix matrix) argument types mismatch!");
+	}
+	else
+		wiLua::SError(L, "TransformNormal(Vector vec, Matrix matrix) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Length(lua_State* L)

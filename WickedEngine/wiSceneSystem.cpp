@@ -1965,8 +1965,15 @@ namespace wiSceneSystem
 			ForceFieldComponent& force = forces[args.jobIndex];
 			Entity entity = forces.GetEntity(args.jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
-			force.position = transform.GetPosition();
-			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), XMLoadFloat4x4(&transform.world))));
+
+			XMMATRIX W = XMLoadFloat4x4(&transform.world);
+			XMVECTOR S, R, T;
+			XMMatrixDecompose(&S, &R, &T, W);
+
+			XMStoreFloat3(&force.position, T);
+			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), W)));
+
+			force.range = force.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
 	void RunLightUpdateSystem(
@@ -1991,6 +1998,8 @@ namespace wiSceneSystem
 			XMStoreFloat3(&light.position, T);
 			XMStoreFloat4(&light.rotation, R);
 			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
+
+			light.range = light.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 			switch (light.type)
 			{
