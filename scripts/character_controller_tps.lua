@@ -224,35 +224,39 @@ ThirdPersonCamera = {
 		
 		self.camera = CreateEntity()
 		local camera_transform = scene.Component_CreateTransform(self.camera)
-		camera_transform.ClearTransform()
-		camera_transform.Translate(Vector(self.side_offset,self.height))
-		scene.Component_Attach(self.camera, character.target)
+		scene.Component_Attach(self.camera, self.character.target)
 	end,
 	
 	Update = function(self)
 		if(self.character ~= nil) then
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = scene.Component_GetTransform(self.character.target)
-			
-			-- Keep distance from player
-			local camPos = camera_transform.GetPosition()
-			local camTargetDiff = vector.Subtract(target_transform.GetPosition(), camPos)
-			local camTargetDistance = camTargetDiff.Length()
-			camera_transform.Translate(Vector(0,0,-(self.rest_distance - camTargetDistance)))
 
-			-- Cast ray from the camera eye and check if it hits something other than the player...
-			local rayDir = camTargetDiff.Normalize()
+			local camPos = camera_transform.GetPosition()
+			local targetPos = target_transform.GetPosition()
+
+			local bestDistance = self.rest_distance
+
+			-- Camera collision:
+			local camDiff = vector.Subtract(targetPos, camPos)
+			local camDist = camDiff.Length()
+			local rayDir = camDiff.Normalize()
 			local camRay = Ray(camPos, rayDir)
-			local camCollObj,camCollPos,camCollNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
-			if(camCollObj ~= INVALID_ENTITY) then
+			local collObj,collPos,collNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
+			if(collObj ~= INVALID_ENTITY) then
 				-- It hit something, see if it is between the player and camera:
-				local camCollDiff = vector.Subtract(camCollPos, camPos)
-				local camCollDistance = camCollDiff.Length()
-				if(camCollDistance < camTargetDistance) then
-					camera_transform.Translate(Vector(0,0,camCollDistance))
+				if(vector.Subtract(collPos, camPos).Length() < camDist) then
+					local collDiff = vector.Subtract(targetPos, collPos)
+					local collDist = collDiff.Length()
+					bestDistance = math.min(bestDistance, collDist)
+					bestDistance = math.max(0, bestDistance)
 				end
 			end
+
+			camera_transform.ClearTransform()
+			camera_transform.Translate(Vector(self.side_offset, self.height, -bestDistance))
 			
+			-- because the main camera is not part of the scene, we ensure that it is following our script camera entity
 			AttachCamera(self.camera)
 			
 		end
