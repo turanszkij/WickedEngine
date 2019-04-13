@@ -729,7 +729,6 @@ namespace wiSceneSystem
 		XMFLOAT4X4 View, Projection, VP;
 		Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
-		XMFLOAT4X4 realProjection; // because reverse zbuffering projection complicates things...
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateProjection();
@@ -747,7 +746,6 @@ namespace wiSceneSystem
 		inline XMMATRIX GetInvProjection() const { return XMLoadFloat4x4(&InvProjection); }
 		inline XMMATRIX GetViewProjection() const { return XMLoadFloat4x4(&VP); }
 		inline XMMATRIX GetInvViewProjection() const { return XMLoadFloat4x4(&InvVP); }
-		inline XMMATRIX GetRealProjection() const { return XMLoadFloat4x4(&realProjection); }
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }

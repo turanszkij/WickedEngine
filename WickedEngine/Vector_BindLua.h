@@ -29,6 +29,7 @@ public:
 
 	int Transform(lua_State* L);
 	int TransformNormal(lua_State* L);
+	int TransformCoord(lua_State* L);
 	int Length(lua_State* L);
 	int Normalize(lua_State* L);
 	int QuaternionNormalize(lua_State* L);

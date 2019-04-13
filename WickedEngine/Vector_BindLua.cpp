@@ -17,6 +17,7 @@ Luna<Vector_BindLua>::FunctionType Vector_BindLua::methods[] = {
 	lunamethod(Vector_BindLua, SetW),
 	lunamethod(Vector_BindLua, Transform),
 	lunamethod(Vector_BindLua, TransformNormal),
+	lunamethod(Vector_BindLua, TransformCoord),
 	lunamethod(Vector_BindLua, Length),
 	lunamethod(Vector_BindLua, Normalize),
 	lunamethod(Vector_BindLua, QuaternionNormalize),
@@ -172,6 +173,25 @@ int Vector_BindLua::TransformNormal(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "TransformNormal(Vector vec, Matrix matrix) not enough arguments!");
+	return 0;
+}
+int Vector_BindLua::TransformCoord(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
+		Matrix_BindLua* mat = Luna<Matrix_BindLua>::lightcheck(L, 2);
+		if (vec && mat)
+		{
+			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMVector3TransformCoord(vec->vector, mat->matrix)));
+			return 1;
+		}
+		else
+			wiLua::SError(L, "TransformCoord(Vector vec, Matrix matrix) argument types mismatch!");
+	}
+	else
+		wiLua::SError(L, "TransformCoord(Vector vec, Matrix matrix) not enough arguments!");
 	return 0;
 }
 int Vector_BindLua::Length(lua_State* L)

@@ -1247,7 +1247,7 @@ void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent
 	float nearPlane = camera.zNearP;
 	float farPlane = camera.zFarP;
 	XMMATRIX view = camera.GetView();
-	XMMATRIX projection = camera.GetRealProjection();
+	XMMATRIX projection = camera.GetProjection();
 	XMMATRIX world = XMMatrixIdentity();
 
 	// Set up three shadow cascades (far - mid - near):
@@ -1261,13 +1261,13 @@ void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent
 																				// Place the shadow cascades inside the viewport:
 
 																				// frustum top left - near
-	XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	XMVECTOR a0 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 	// frustum top left - far
-	XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	XMVECTOR a1 = XMVector3Unproject(XMVectorSet(0, 0, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 	// frustum bottom right - near
-	XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	XMVECTOR b0 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 	// frustum bottom right - far
-	XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	XMVECTOR b1 = XMVector3Unproject(XMVectorSet(screen.x, screen.y, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 
 	// calculate cascade projection sizes:
 	float size0 = XMVectorGetX(XMVector3Length(XMVectorSubtract(XMVectorLerp(b0, b1, lerp0), XMVectorLerp(a0, a1, lerp0))));
@@ -1282,9 +1282,9 @@ void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent
 	shcams[2] = SHCAM(size2, rotDefault, -farPlane * 0.5f, farPlane * 0.5f);
 
 	// frustum center - near
-	XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	XMVECTOR c = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 	// frustum center - far
-	XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 1, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
+	XMVECTOR d = XMVector3Unproject(XMVectorSet(screen.x * 0.5f, screen.y * 0.5f, 0, 1), 0, 0, screen.x, screen.y, 0.0f, 1.0f, projection, view, world);
 
 	// Avoid shadowmap texel swimming by aligning them to a discrete grid:
 	float f0 = shcams[0].size / (float)wiRenderer::GetShadowRes2D();
@@ -4806,11 +4806,10 @@ void DrawLensFlares(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				) * 100000;
 			}
 
-			// Get the screen position of the flare:
-			XMVECTOR flarePos = XMVector3Project(POS, 0.f, 0.f, (float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.0f, 1.0f, camera.GetRealProjection(), camera.GetView(), XMMatrixIdentity());
-
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, camera.GetEye()), camera.GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
+				// Get the screen position of the flare:
+				XMVECTOR flarePos = XMVector3Project(POS, 0.f, 0.f, (float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.0f, 1.0f, camera.GetProjection(), camera.GetView(), XMMatrixIdentity());
 				wiLensFlare::Draw(threadID, flarePos, light.lensFlareRimTextures);
 			}
 
@@ -8285,10 +8284,10 @@ RAY GetPickRay(long cursorX, long cursorY)
 {
 	const CameraComponent& camera = GetCamera();
 	XMMATRIX V = camera.GetView();
-	XMMATRIX P = camera.GetRealProjection();
+	XMMATRIX P = camera.GetProjection();
 	XMMATRIX W = XMMatrixIdentity();
-	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 0, 1), 0, 0, camera.width, camera.height, 0.0f, 1.0f, P, V, W);
-	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0, camera.width, camera.height, 0.0f, 1.0f, P, V, W);
+	XMVECTOR& lineStart = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0, camera.width, camera.height, 0.0f, 1.0f, P, V, W);
+	XMVECTOR& lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 0, 1), 0, 0, camera.width, camera.height, 0.0f, 1.0f, P, V, W);
 	XMVECTOR& rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd, lineStart));
 	return RAY(lineStart, rayDirection);
 }

@@ -934,7 +934,6 @@ namespace wiSceneSystem
 	void CameraComponent::UpdateProjection()
 	{
 		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
-		XMStoreFloat4x4(&realProjection, XMMatrixPerspectiveFovLH(fov, width / height, zNearP, zFarP)); // normal zbuffer!
 	}
 	void CameraComponent::UpdateCamera()
 	{
@@ -957,7 +956,7 @@ namespace wiSceneSystem
 		XMStoreFloat4x4(&Projection, _P);
 		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
 
-		frustum.Create(realProjection, View, zFarP);
+		frustum.Create(Projection, View, zFarP);
 	}
 	void CameraComponent::TransformCamera(const TransformComponent& transform)
 	{

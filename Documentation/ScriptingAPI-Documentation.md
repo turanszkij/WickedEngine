@@ -252,6 +252,7 @@ A four component floating point vector. Provides efficient calculations with SIM
 - QuaternionNormalize() : Vector result
 - Transform(Vector vec, Matrix matrix)
 - TransformNormal(Vector vec, Matrix matrix)
+- TransformCoord(Vector vec, Matrix matrix)
 - Add(Vector v1,v2) : Vector result
 - Subtract(Vector v1,v2) : Vector result
 - Multiply(Vector v1,v2) : Vector result
@@ -336,6 +337,13 @@ Describes an orientation in 3D space.
 #### CameraComponent
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
+- GetFOV() : float result
+- GetView() : Matrix result
+- GetProjection() : Matrix result
+- GetViewProjection() : Matrix result
+- GetInvView() : Matrix result
+- GetInvProjection() : Matrix result
+- GetInvViewProjection() : Matrix result
 
 #### AnimationComponent
 - Play()

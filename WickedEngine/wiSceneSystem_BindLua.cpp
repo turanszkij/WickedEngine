@@ -788,6 +788,13 @@ const char CameraComponent_BindLua::className[] = "CameraComponent";
 Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] = {
 	lunamethod(CameraComponent_BindLua, UpdateCamera),
 	lunamethod(CameraComponent_BindLua, TransformCamera),
+	lunamethod(CameraComponent_BindLua, GetFOV),
+	lunamethod(CameraComponent_BindLua, GetView),
+	lunamethod(CameraComponent_BindLua, GetProjection),
+	lunamethod(CameraComponent_BindLua, GetViewProjection),
+	lunamethod(CameraComponent_BindLua, GetInvView),
+	lunamethod(CameraComponent_BindLua, GetInvProjection),
+	lunamethod(CameraComponent_BindLua, GetInvViewProjection),
 	{ NULL, NULL }
 };
 Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
@@ -833,6 +840,41 @@ int CameraComponent_BindLua::TransformCamera(lua_State* L)
 		wiLua::SError(L, "TransformCamera(TransformComponent transform) not enough arguments!");
 	}
 	return 0;
+}
+int CameraComponent_BindLua::GetFOV(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->fov);
+	return 1;
+}
+int CameraComponent_BindLua::GetView(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetView()));
+	return 1;
+}
+int CameraComponent_BindLua::GetProjection(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetProjection()));
+	return 1;
+}
+int CameraComponent_BindLua::GetViewProjection(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetViewProjection()));
+	return 1;
+}
+int CameraComponent_BindLua::GetInvView(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetInvView()));
+	return 1;
+}
+int CameraComponent_BindLua::GetInvProjection(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetInvProjection()));
+	return 1;
+}
+int CameraComponent_BindLua::GetInvViewProjection(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetInvViewProjection()));
+	return 1;
 }
 
 

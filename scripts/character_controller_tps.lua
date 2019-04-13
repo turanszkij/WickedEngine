@@ -214,10 +214,9 @@ Character = {
 ThirdPersonCamera = {
 	camera = INVALID_ENTITY,
 	character = nil,
-	side_offset = 1.4,
+	side_offset = 1,
 	height = 3,
 	rest_distance = 6,
-	correction_speed = 1.4,
 	
 	Create = function(self, character)
 		self.character = character
@@ -229,30 +228,47 @@ ThirdPersonCamera = {
 	
 	Update = function(self)
 		if(self.character ~= nil) then
+		
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = scene.Component_GetTransform(self.character.target)
 
 			local camPos = camera_transform.GetPosition()
 			local targetPos = target_transform.GetPosition()
 
+			-- By default, an unobstructed camera is this far from the player:
 			local bestDistance = self.rest_distance
 
-			-- Camera collision:
-			local camDiff = vector.Subtract(targetPos, camPos)
-			local camDist = camDiff.Length()
-			local rayDir = camDiff.Normalize()
-			local camRay = Ray(camPos, rayDir)
-			local collObj,collPos,collNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
-			if(collObj ~= INVALID_ENTITY) then
-				-- It hit something, see if it is between the player and camera:
-				if(vector.Subtract(collPos, camPos).Length() < camDist) then
-					local collDiff = vector.Subtract(targetPos, collPos)
+			-- Camera collision (TODO fix):
+			--	Cast rays from target to clip space points on the camera near plane to avoid clipping through objects:
+			local unproj = GetCamera().GetInvViewProjection()	-- camera matrix used to unproject from clip space to world space
+			local clip_coords = {
+				Vector(0,0,1,1),	-- center
+				Vector(-1,-1,1,1),	-- bottom left
+				Vector(-1,1,1,1),	-- top left
+				Vector(1,-1,1,1),	-- bottom right
+				Vector(1,1,1,1),	-- top right
+			}
+			for i,coord in ipairs(clip_coords) do
+				local rayOrigin = vector.TransformCoord(coord, unproj)
+				local camDiff = vector.Subtract(rayOrigin, targetPos)
+				local camDist = camDiff.Length()
+				local rayDir = vector.Multiply(camDiff, 1.0 / camDist)
+				local camRay = Ray(targetPos, rayDir)
+				local collObj,collPos,collNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
+				if(collObj ~= INVALID_ENTITY) then
+					-- It hit something, see if it is between the player and camera:
+					local collDiff = vector.Subtract(collPos, targetPos)
 					local collDist = collDiff.Length()
-					bestDistance = math.min(bestDistance, collDist)
-					bestDistance = math.max(0, bestDistance)
+					if(collDist < camDist) then
+						bestDistance = math.min(bestDistance, collDist)
+						bestDistance = math.max(0, bestDistance)
+						DrawPoint(collPos, 0.1, Vector(1,0,0,1))
+					end
 				end
 			end
-
+			
+			-- Camera transform is translated in local space. Because it is attached however to the player target,
+			--	rotations and final world position will be calculated by the hierarchy system of the Scene
 			camera_transform.ClearTransform()
 			camera_transform.Translate(Vector(self.side_offset, self.height, -bestDistance))
 			

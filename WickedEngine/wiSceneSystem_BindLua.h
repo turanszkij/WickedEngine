@@ -123,6 +123,13 @@ namespace wiSceneSystem_BindLua
 
 		int UpdateCamera(lua_State* L);
 		int TransformCamera(lua_State* L);
+		int GetFOV(lua_State* L);
+		int GetView(lua_State* L);
+		int GetProjection(lua_State* L);
+		int GetViewProjection(lua_State* L);
+		int GetInvView(lua_State* L);
+		int GetInvProjection(lua_State* L);
+		int GetInvViewProjection(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua
