@@ -103,7 +103,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetRenderWidth() : float result
 - GetRenderHeight(): float result
 - GetCamera() : Camera result		-- returns the main camera
-- DuplicateInstance(Object object) : Object result		-- Copies the specified object in the scene as an instanced mesh
+- AttachCamera(Entity entity)	-- attaches camera to an entity in the current frame
 - SetEnvironmentMap(Texture cubemap)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetAlphaCompositionEnabled(opt bool enabled)

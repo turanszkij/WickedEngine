@@ -60,7 +60,7 @@ Character = {
 		self.target = CreateEntity()
 		local target_transform = scene.Component_CreateTransform(self.target)
 		target_transform.ClearTransform()
-		target_transform.Translate(Vector(0,2))
+		target_transform.Translate(Vector(0,3))
 		
 		scene.Component_Attach(self.target, self.model)
 	end,
@@ -162,7 +162,7 @@ Character = {
 		-- front block shoots multiple rays in front to try to find obstruction
 		local rotations = {0, 3.1415*0.3, -3.1415*0.3}
 		for i,rot in ipairs(rotations) do
-			local origin = target_transform.GetPosition()
+			local origin = vector.Add(model_transform.GetPosition(), Vector(0,1,0)) -- this ray starts a little above character ground position
 			local dir = vector.Transform(self.face, matrix.RotationY(rot))
 			local ray2 = Ray(origin,dir)
 			local o2,p2,n2 = Pick(ray2, PICK_OPAQUE, ~self.layerMask)
@@ -238,26 +238,22 @@ ThirdPersonCamera = {
 			local camPos = camera_transform.GetPosition()
 			local camTargetDiff = vector.Subtract(target_transform.GetPosition(), camPos)
 			local camTargetDistance = camTargetDiff.Length()
-			if(camTargetDistance < self.rest_distance) then
-				camera_transform.Translate(Vector(0,0,-(self.rest_distance - camTargetDistance)))
-			end
+			camera_transform.Translate(Vector(0,0,-(self.rest_distance - camTargetDistance)))
 
 			-- Cast ray from the camera eye and check if it hits something other than the player...
 			local rayDir = camTargetDiff.Normalize()
-				local camRay = Ray(camPos, rayDir)
-				local camCollObj,camCollPos,camCollNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
-				if(camCollObj ~= INVALID_ENTITY) then
-					-- It hit something, see if it is between the player and camera:
-					local camCollDiff = vector.Subtract(camCollPos, camPos)
-					local camCollDistance = camCollDiff.Length()
-					if(camCollDistance < camTargetDistance) then
-						camera_transform.Translate(Vector(0,0,camCollDistance))
-					end
+			local camRay = Ray(camPos, rayDir)
+			local camCollObj,camCollPos,camCollNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
+			if(camCollObj ~= INVALID_ENTITY) then
+				-- It hit something, see if it is between the player and camera:
+				local camCollDiff = vector.Subtract(camCollPos, camPos)
+				local camCollDistance = camCollDiff.Length()
+				if(camCollDistance < camTargetDistance) then
+					camera_transform.Translate(Vector(0,0,camCollDistance))
 				end
+			end
 			
-			local cam = GetCamera()
-			cam.TransformCamera(camera_transform)
-			cam.UpdateCamera()
+			AttachCamera(self.camera)
 			
 		end
 	end,
@@ -294,6 +290,7 @@ runProcess(function()
 			main.SetActivePath(prevPath)
 			return
 		end
+
 
 		player:Input()
 		

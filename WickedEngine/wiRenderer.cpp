@@ -113,6 +113,7 @@ bool temporalAA = false;
 bool temporalAADEBUG = false;
 uint32_t lightmapBakeBounceCount = 4;
 bool raytraceDebugVisualizer = false;
+Entity cameraTransform = INVALID_ENTITY;
 
 
 struct VoxelizedSceneData
@@ -464,6 +465,10 @@ CameraComponent& GetRefCamera()
 {
 	static CameraComponent camera;
 	return camera;
+}
+void AttachCamera(wiECS::Entity entity)
+{
+	cameraTransform = entity;
 }
 
 
@@ -3519,6 +3524,18 @@ void UpdatePerFrameData(float dt)
 	Scene& scene = GetScene();
 
 	scene.Update(deltaTime);
+
+	// Because main camera is not part of the scene, update it if it is attached to an entity here:
+	if (cameraTransform != INVALID_ENTITY)
+	{
+		const TransformComponent* transform = scene.transforms.GetComponent(cameraTransform);
+		if (transform != nullptr)
+		{
+			GetCamera().TransformCamera(*transform);
+			GetCamera().UpdateCamera();
+		}
+		cameraTransform = INVALID_ENTITY; // but this is only active for the current frame
+	}
 
 	// See which materials will need to update their GPU render data:
 	wiJobSystem::Execute([&] {

@@ -158,8 +158,6 @@ void MainComponent::Run()
 		}
 		wiProfiler::EndRange(); // Fixed Update
 
-		wiLua::GetGlobal()->SetDeltaTime(double(deltaTime));
-
 		// Variable-timed update:
 		wiProfiler::BeginRange("Update", wiProfiler::DOMAIN_CPU);
 		Update(deltaTime);
@@ -175,7 +173,6 @@ void MainComponent::Run()
 	{
 		// If the application is not active, disable Update loops:
 		deltaTimeAccumulator = 0;
-		wiLua::GetGlobal()->SetDeltaTime(0);
 	}
 
 	wiProfiler::EndRange(); // CPU Frame
@@ -199,6 +196,7 @@ void MainComponent::Run()
 
 void MainComponent::Update(float dt)
 {
+	wiLua::GetGlobal()->SetDeltaTime(double(dt));
 	wiLua::GetGlobal()->Update();
 
 	if (GetActivePath() != nullptr)

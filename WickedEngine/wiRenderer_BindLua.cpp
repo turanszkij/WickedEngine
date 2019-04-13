@@ -73,6 +73,20 @@ namespace wiRenderer_BindLua
 		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wiRenderer::GetCamera()));
 		return 1;
 	}
+	int AttachCamera(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Entity entity = (Entity)wiLua::SGetInt(L, 1);
+			wiRenderer::AttachCamera(entity);
+		}
+		else
+		{
+			wiLua::SError(L, "AttachCamera(Entity entity) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int SetEnvironmentMap(lua_State* L)
 	{
@@ -359,6 +373,7 @@ namespace wiRenderer_BindLua
 			wiLua::GetGlobal()->RegisterFunc("GetScreenHeight", GetScreenHeight);
 
 			wiLua::GetGlobal()->RegisterFunc("GetCamera", GetCamera);
+			wiLua::GetGlobal()->RegisterFunc("AttachCamera", AttachCamera);
 
 			wiLua::GetGlobal()->RegisterFunc("SetEnvironmentMap", SetEnvironmentMap);
 			wiLua::GetGlobal()->RegisterFunc("SetAlphaCompositionEnabled", SetAlphaCompositionEnabled);

@@ -72,6 +72,8 @@ namespace wiRenderer
 	wiSceneSystem::CameraComponent& GetPrevCamera();
 	// Returns the planar reflection camera that is currently being used in rendering
 	wiSceneSystem::CameraComponent& GetRefCamera();
+	// Attach camera to entity for the current frame
+	void AttachCamera(wiECS::Entity entity);
 
 	// Updates the main scene, performs frustum culling for main camera and other tasks that are only done once per frame
 	void UpdatePerFrameData(float dt);
