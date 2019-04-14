@@ -328,7 +328,7 @@ runProcess(function()
 	main.SetActivePath(path)
 
 	local font = Font("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows: walk\nSHIFT: movement speed\nSPACE: Jump\nRight Mouse Button: rotate camera\nScoll middle mouse: adjust camera distance\nESCAPE key: quit");
-	font.SetSize(38)
+	font.SetSize(20)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
 	font.SetColor(0xFFADA3FF)
