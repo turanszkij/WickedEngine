@@ -215,7 +215,7 @@ ThirdPersonCamera = {
 	camera = INVALID_ENTITY,
 	character = nil,
 	side_offset = 1,
-	height = 3,
+	height = 0,
 	rest_distance = 6,
 	
 	Create = function(self, character)
@@ -223,23 +223,42 @@ ThirdPersonCamera = {
 		
 		self.camera = CreateEntity()
 		local camera_transform = scene.Component_CreateTransform(self.camera)
-		scene.Component_Attach(self.camera, self.character.target)
 	end,
 	
 	Update = function(self)
 		if(self.character ~= nil) then
-		
+
+			-- We update the scene so that character's target_transform will be using up to date values
+			scene.Update(0)
+
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = scene.Component_GetTransform(self.character.target)
 
+			
+			-- First calculate the rest orientation (transform) of the camera:
+			local mat = matrix.Translation(Vector(self.side_offset, self.height, -self.rest_distance))
+			mat = matrix.Multiply(mat, target_transform.GetMatrix())
+			camera_transform.ClearTransform()
+			camera_transform.MatrixTransform(mat)
+			camera_transform.UpdateTransform()
+
+
+			-- Camera collision:
+
+			-- Compute the relation vectors between camera and target:
 			local camPos = camera_transform.GetPosition()
 			local targetPos = target_transform.GetPosition()
+			local camDistance = vector.Subtract(camPos, targetPos).Length()
 
-			-- By default, an unobstructed camera is this far from the player:
-			local bestDistance = self.rest_distance
+			-- These will store the closest collision distance and required camera position:
+			local bestDistance = camDistance
+			local bestPos = camPos
 
-			-- Camera collision (TODO fix):
-			--	Cast rays from target to clip space points on the camera near plane to avoid clipping through objects:
+			-- Update global camera matrices for rest position:
+			GetCamera().TransformCamera(camera_transform)
+			GetCamera().UpdateCamera()
+
+			-- Cast rays from target to clip space points on the camera near plane to avoid clipping through objects:
 			local unproj = GetCamera().GetInvViewProjection()	-- camera matrix used to unproject from clip space to world space
 			local clip_coords = {
 				Vector(0,0,1,1),	-- center
@@ -249,31 +268,36 @@ ThirdPersonCamera = {
 				Vector(1,1,1,1),	-- top right
 			}
 			for i,coord in ipairs(clip_coords) do
-				local rayOrigin = vector.TransformCoord(coord, unproj)
-				local camDiff = vector.Subtract(rayOrigin, targetPos)
-				local camDist = camDiff.Length()
-				local rayDir = vector.Multiply(camDiff, 1.0 / camDist)
-				local camRay = Ray(targetPos, rayDir)
-				local collObj,collPos,collNor = Pick(camRay, PICK_OPAQUE, ~self.character.layerMask)
+				local corner = vector.TransformCoord(coord, unproj)
+				local target_to_corner = vector.Subtract(corner, targetPos)
+				local corner_to_campos = vector.Subtract(camPos, corner)
+
+				local ray = Ray(targetPos, target_to_corner.Normalize())
+
+				local collObj,collPos,collNor = Pick(ray, PICK_OPAQUE, ~self.character.layerMask)
 				if(collObj ~= INVALID_ENTITY) then
 					-- It hit something, see if it is between the player and camera:
 					local collDiff = vector.Subtract(collPos, targetPos)
 					local collDist = collDiff.Length()
-					if(collDist < camDist) then
-						bestDistance = math.min(bestDistance, collDist)
-						bestDistance = math.max(0, bestDistance)
-						DrawPoint(collPos, 0.1, Vector(1,0,0,1))
+					if(collDist > 0 and collDist < bestDistance) then
+						bestDistance = collDist
+						bestPos = vector.Add(collPos, corner_to_campos)
+						--DrawPoint(collPos, 0.1, Vector(1,0,0,1))
 					end
 				end
 			end
 			
-			-- Camera transform is translated in local space. Because it is attached however to the player target,
-			--	rotations and final world position will be calculated by the hierarchy system of the Scene
+			-- We have the best candidate for new camera position now, so offset the camera with the delta between the old and new camera position:
+			local collision_offset = vector.Subtract(bestPos, camPos)
+			mat = matrix.Multiply(mat, matrix.Translation(collision_offset))
 			camera_transform.ClearTransform()
-			camera_transform.Translate(Vector(self.side_offset, self.height, -bestDistance))
+			camera_transform.MatrixTransform(mat)
+			camera_transform.UpdateTransform()
+			--DrawPoint(bestPos, 0.1, Vector(1,1,0,1))
 			
-			-- because the main camera is not part of the scene, we ensure that it is following our script camera entity
-			AttachCamera(self.camera)
+			-- Feed back camera after collision:
+			GetCamera().TransformCamera(camera_transform)
+			GetCamera().UpdateCamera()
 			
 		end
 	end,
