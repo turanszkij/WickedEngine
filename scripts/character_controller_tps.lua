@@ -6,6 +6,8 @@
 --		SHIFT: speed
 --		SPACE: Jump
 --		Right Mouse Button: rotate camera
+--		Scoll middle mouse: adjust camera distance
+--		ESCAPE key: quit
 
 local scene = GetScene()
 
@@ -217,6 +219,7 @@ ThirdPersonCamera = {
 	side_offset = 1,
 	height = 0,
 	rest_distance = 6,
+	rest_distance_new = 6,
 	
 	Create = function(self, character)
 		self.character = character
@@ -227,6 +230,11 @@ ThirdPersonCamera = {
 	
 	Update = function(self)
 		if(self.character ~= nil) then
+
+			-- Mouse scroll will move the camera distance:
+			local mouse_scroll = input.GetPointer().GetZ() -- pointer.z is the mouse wheel delta this frame
+			self.rest_distance_new = math.max(self.rest_distance_new - mouse_scroll, 2) -- do not allow too close using max
+			self.rest_distance = math.lerp(self.rest_distance, self.rest_distance_new, 0.1) -- lerp will smooth out the zooming
 
 			-- We update the scene so that character's target_transform will be using up to date values
 			scene.Update(0)
@@ -319,6 +327,14 @@ runProcess(function()
 	path.SetLightShaftsEnabled(true)
 	main.SetActivePath(path)
 
+	local font = Font("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows: walk\nSHIFT: movement speed\nSPACE: Jump\nRight Mouse Button: rotate camera\nScoll middle mouse: adjust camera distance\nESCAPE key: quit");
+	font.SetSize(38)
+	font.SetPos(Vector(10, GetScreenHeight() - 10))
+	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
+	font.SetColor(0xFFADA3FF)
+	font.SetShadowColor(Vector(0,0,0,1))
+	path.AddFont(font)
+
 	LoadModel("../models/playground.wiscene")
 	
 	player:Create(LoadModel("../models/girl.wiscene"))
@@ -351,9 +367,7 @@ end)
 
 
 
--- Debug draw:
-
--- Draw Helpers
+-- Debug Draw Helper
 local DrawAxis = function(point,f)
 	DrawLine(point,point:Add(Vector(f,0,0)),Vector(1,0,0,1))
 	DrawLine(point,point:Add(Vector(0,f,0)),Vector(0,1,0,1))
@@ -364,15 +378,16 @@ end
 runProcess(function()
 	
 	while true do
+
+		-- Do some debug draw geometry:
 	
-		while( backlog_isactive() ) do
+		-- If backlog is opened, skip debug draw:
+		while(backlog_isactive()) do
 			waitSeconds(1)
 		end
 		
 		local model_transform = scene.Component_GetTransform(player.model)
 		local target_transform = scene.Component_GetTransform(player.target)
-		
-		-- Drawing additional render data (slow, only for debug purposes)
 		
 		--velocity
 		DrawLine(target_transform.GetPosition(),target_transform.GetPosition():Add(player.velocity))

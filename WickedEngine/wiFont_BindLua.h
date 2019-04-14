@@ -23,12 +23,16 @@ public:
 	int SetPos(lua_State* L);
 	int SetSpacing(lua_State* L);
 	int SetAlign(lua_State* L);
+	int SetColor(lua_State* L);
+	int SetShadowColor(lua_State* L);
 
 	int GetText(lua_State* L);
 	int GetSize(lua_State* L);
 	int GetPos(lua_State* L);
 	int GetSpacing(lua_State* L);
 	int GetAlign(lua_State* L);
+	int GetColor(lua_State* L);
+	int GetShadowColor(lua_State* L);
 
 	int Destroy(lua_State* L);
 

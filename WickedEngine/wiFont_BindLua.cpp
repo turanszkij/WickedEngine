@@ -13,6 +13,8 @@ Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
 	lunamethod(wiFont_BindLua, SetPos),
 	lunamethod(wiFont_BindLua, SetSpacing),
 	lunamethod(wiFont_BindLua, SetAlign),
+	lunamethod(wiFont_BindLua, SetColor),
+	lunamethod(wiFont_BindLua, SetShadowColor),
 
 	lunamethod(wiFont_BindLua, SetStyle),
 	lunamethod(wiFont_BindLua, SetText),
@@ -20,6 +22,8 @@ Luna<wiFont_BindLua>::FunctionType wiFont_BindLua::methods[] = {
 	lunamethod(wiFont_BindLua, GetPos),
 	lunamethod(wiFont_BindLua, GetSpacing),
 	lunamethod(wiFont_BindLua, GetAlign),
+	lunamethod(wiFont_BindLua, GetColor),
+	lunamethod(wiFont_BindLua, GetShadowColor),
 
 	lunamethod(wiFont_BindLua, Destroy),
 	{ NULL, NULL }
@@ -136,6 +140,50 @@ int wiFont_BindLua::SetAlign(lua_State* L)
 		wiLua::SError(L, "SetAlign(WIFALIGN Halign, opt WIFALIGN Valign) not enough arguments!");
 	return 0;
 }
+int wiFont_BindLua::SetColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (param != nullptr)
+		{
+			XMFLOAT4 unpacked;
+			XMStoreFloat4(&unpacked, param->vector);
+			font->params.color = wiColor::fromFloat4(unpacked);
+		}
+		else
+		{
+			int code = wiLua::SGetInt(L, 1);
+			font->params.color.rgba = *((uint32_t*)&code);
+		}
+	}
+	else
+		wiLua::SError(L, "SetColor(Vector pos) not enough arguments!");
+	return 0;
+}
+int wiFont_BindLua::SetShadowColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (param != nullptr)
+		{
+			XMFLOAT4 unpacked;
+			XMStoreFloat4(&unpacked, param->vector);
+			font->params.shadowColor = wiColor::fromFloat4(unpacked);
+		}
+		else
+		{
+			int code = wiLua::SGetInt(L, 1);
+			font->params.shadowColor.rgba = *((uint32_t*)&code);
+		}
+	}
+	else
+		wiLua::SError(L, "SetShadowColor(Vector pos) not enough arguments!");
+	return 0;
+}
 
 int wiFont_BindLua::GetText(lua_State* L)
 {
@@ -162,6 +210,16 @@ int wiFont_BindLua::GetAlign(lua_State* L)
 	wiLua::SSetInt(L, font->params.h_align);
 	wiLua::SSetInt(L, font->params.v_align);
 	return 2;
+}
+int wiFont_BindLua::GetColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font->params.color.toFloat4())));
+	return 1;
+}
+int wiFont_BindLua::GetShadowColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&font->params.color.toFloat4())));
+	return 1;
 }
 
 int wiFont_BindLua::Destroy(lua_State* L)

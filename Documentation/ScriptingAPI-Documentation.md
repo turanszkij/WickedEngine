@@ -139,11 +139,17 @@ Gives you the ability to render text with a custom font.
 	- [outer]WIFALIGN_RIGHT : int
 	- [outer]WIFALIGN_TOP : int
 	- [outer]WIFALIGN_BOTTOM : int
+- SetColor(Vector color)
+- SetColor(int colorHexCode)
+- SetShadowColor(Vector shadowcolor)
+- SetShadowColor(int colorHexCode)
 - GetText() : string result
 - GetSize() : int result
 - GetPos() : Vector result
 - GetSpacing() : Vector result
 - GetAlign() : WIFALIGN halign,valign
+- GetColor() : Vector result
+- GetShadowColor() : Vector result
 - Destroy()
 
 ### Sprite

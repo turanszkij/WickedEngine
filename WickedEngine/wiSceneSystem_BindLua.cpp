@@ -82,7 +82,7 @@ int Pick(lua_State* L)
 			return 4;
 		}
 
-		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) first argument must be of Vector type!");
+		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) first argument must be of Ray type!");
 	}
 	else
 	{
