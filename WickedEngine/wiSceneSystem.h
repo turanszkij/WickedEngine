@@ -1132,11 +1132,21 @@ namespace wiSceneSystem
 	}
 
 	// Helper function to open a wiscene file and add the contents to the global scene
+	//	fileName		:	file path
 	//	transformMatrix	:	everything will be transformed by this matrix (optional)
 	//	attached		:	everything will be attached to a base entity
 	//
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
 	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
+
+	// Helper function to open a wiscene file and add the contents to the specified scene. This is thread safe as it doesn't modify global scene
+	//	scene			:	the scene that will contain the model
+	//	fileName		:	file path
+	//	transformMatrix	:	everything will be transformed by this matrix (optional)
+	//	attached		:	everything will be attached to a base entity
+	//
+	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
+	wiECS::Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
 	struct PickResult
 	{
@@ -1155,7 +1165,11 @@ namespace wiSceneSystem
 			return entity == other.entity;
 		}
 	};
-	// Given a ray, finds the closest intersection point against all instances
-	PickResult Pick(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0);
+	// Given a ray, finds the closest intersection point against all mesh instances
+	//	ray				:	the incoming ray that will be traced
+	//	renderTypeMask	:	filter based on render type
+	//	layerMask		:	filter based on layer
+	//	scene			:	the scene that will be traced against the ray
+	PickResult Pick(const RAY& ray, UINT renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 }
 

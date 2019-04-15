@@ -155,7 +155,7 @@ int wiFont_BindLua::SetColor(lua_State* L)
 		else
 		{
 			int code = wiLua::SGetInt(L, 1);
-			font->params.color.rgba = *((uint32_t*)&code);
+			font->params.color.rgba = (uint32_t)code;
 		}
 	}
 	else
@@ -177,7 +177,7 @@ int wiFont_BindLua::SetShadowColor(lua_State* L)
 		else
 		{
 			int code = wiLua::SGetInt(L, 1);
-			font->params.shadowColor.rgba = *((uint32_t*)&code);
+			font->params.shadowColor.rgba = (uint32_t)code;
 		}
 	}
 	else

@@ -10,6 +10,7 @@ namespace wiSceneSystem_BindLua
 	class Scene_BindLua
 	{
 	public:
+		bool owning = false;
 		wiSceneSystem::Scene* scene = nullptr;
 
 		static const char className[];
@@ -22,9 +23,11 @@ namespace wiSceneSystem_BindLua
 
 		int Update(lua_State* L);
 		int Clear(lua_State* L);
+		int Merge(lua_State* L);
 
 		int Entity_FindByName(lua_State* L);
 		int Entity_Remove(lua_State* L);
+		int Entity_Duplicate(lua_State* L);
 
 		int Component_CreateName(lua_State* L);
 		int Component_CreateLayer(lua_State* L);

@@ -838,6 +838,7 @@ void EditorComponent::Update(float dt)
 			else if (wiInputManager::down(VK_LCONTROL) || currentMouse.z != 0.0f)
 			{
 				cameraWnd->camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4 + currentMouse.z));
+				cameraWnd->camera_transform.translation_local.z = min(0, cameraWnd->camera_transform.translation_local.z);
 				camera.SetDirty();
 			}
 			else if(abs(xDif) + abs(yDif) > 0)

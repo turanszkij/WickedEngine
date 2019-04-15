@@ -31,23 +31,57 @@ int LoadModel(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string fileName = wiLua::SGetString(L, 1);
-		XMMATRIX transform = XMMatrixIdentity();
-		if (argc > 1)
+		Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 1);
+		if (custom_scene)
 		{
-			Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
-			if (matrix != nullptr)
+			// Overload 1: thread safe version
+			if (argc > 1)
 			{
-				transform = matrix->matrix;
+				string fileName = wiLua::SGetString(L, 2);
+				XMMATRIX transform = XMMatrixIdentity();
+				if (argc > 2)
+				{
+					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 3);
+					if (matrix != nullptr)
+					{
+						transform = matrix->matrix;
+					}
+					else
+					{
+						wiLua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) argument is not a matrix!");
+					}
+				}
+				Entity root = wiSceneSystem::LoadModel(*custom_scene->scene, fileName, transform, true);
+				wiLua::SSetInt(L, int(root));
+				return 1;
 			}
 			else
 			{
-				wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
+				wiLua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) not enough arguments!");
+				return 0;
 			}
 		}
-		Entity root = wiSceneSystem::LoadModel(fileName, transform, true);
-		wiLua::SSetInt(L, int(root));
-		return 1;
+		else
+		{
+			// Overload 2: global scene version
+			string fileName = wiLua::SGetString(L, 1);
+			XMMATRIX transform = XMMatrixIdentity();
+			if (argc > 1)
+			{
+				Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
+				if (matrix != nullptr)
+				{
+					transform = matrix->matrix;
+				}
+				else
+				{
+					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
+				}
+			}
+			Entity root = wiSceneSystem::LoadModel(fileName, transform, true);
+			wiLua::SSetInt(L, int(root));
+			return 1;
+		}
 	}
 	else
 	{
@@ -65,6 +99,7 @@ int Pick(lua_State* L)
 		{
 			UINT renderTypeMask = RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
+			Scene* scene = &wiSceneSystem::GetScene();
 			if (argc > 1)
 			{
 				renderTypeMask = (UINT)wiLua::SGetInt(L, 2);
@@ -72,9 +107,22 @@ int Pick(lua_State* L)
 				{
 					int mask = wiLua::SGetInt(L, 3);
 					layerMask = *reinterpret_cast<uint32_t*>(&mask);
+
+					if (argc > 3)
+					{
+						Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 4);
+						if (custom_scene)
+						{
+							scene = custom_scene->scene;
+						}
+						else
+						{
+							wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
+						}
+					}
 				}
 			}
-			auto& pick = wiSceneSystem::Pick(ray->ray, renderTypeMask, layerMask);
+			auto& pick = wiSceneSystem::Pick(ray->ray, renderTypeMask, layerMask, *scene);
 			wiLua::SSetInt(L, (int)pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
@@ -82,11 +130,11 @@ int Pick(lua_State* L)
 			return 4;
 		}
 
-		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) first argument must be of Ray type!");
+		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Ray type!");
 	}
 	else
 	{
-		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) not enough arguments!");
+		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
 	}
 
 	return 0;
@@ -126,8 +174,10 @@ const char Scene_BindLua::className[] = "Scene";
 Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Update),
 	lunamethod(Scene_BindLua, Clear),
+	lunamethod(Scene_BindLua, Merge),
 	lunamethod(Scene_BindLua, Entity_FindByName),
 	lunamethod(Scene_BindLua, Entity_Remove),
+	lunamethod(Scene_BindLua, Entity_Duplicate),
 	lunamethod(Scene_BindLua, Component_CreateName),
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
@@ -149,9 +199,15 @@ Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
 
 Scene_BindLua::Scene_BindLua(lua_State *L)
 {
+	owning = true;
+	scene = new Scene;
 }
 Scene_BindLua::~Scene_BindLua()
 {
+	if (owning)
+	{
+		delete scene;
+	}
 }
 
 
@@ -172,6 +228,27 @@ int Scene_BindLua::Update(lua_State* L)
 int Scene_BindLua::Clear(lua_State* L)
 {
 	scene->Clear();
+	return 0;
+}
+int Scene_BindLua::Merge(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Scene_BindLua* other = Luna<Scene_BindLua>::lightcheck(L, 1);
+		if (other)
+		{
+			scene->Merge(*other->scene);
+		}
+		else
+		{
+			wiLua::SError(L, "Scene::Merge(Scene other) argument is not of type Scene!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Merge(Scene other) not enough arguments!");
+	}
 	return 0;
 }
 
@@ -205,6 +282,24 @@ int Scene_BindLua::Entity_Remove(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "Scene::Entity_Remove(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Entity_Duplicate(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		Entity clone = scene->Entity_Duplicate(entity);
+
+		wiLua::SSetInt(L, (int)clone);
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
 	}
 	return 0;
 }

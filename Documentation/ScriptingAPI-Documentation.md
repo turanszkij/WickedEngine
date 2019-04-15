@@ -298,11 +298,14 @@ An entity is just an int value and works as a handle to retrieve associated comp
 #### Scene
 - [outer]GetScene() : Scene result  -- returns the current scene
 - [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
-- [outer]Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against
+- [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
+- [outer]Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
+- Merge()  -- moves contents from an other scene into this one
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
 - Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
+- Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
 - Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned TransformComponent is associated with the entity and can be manipulated

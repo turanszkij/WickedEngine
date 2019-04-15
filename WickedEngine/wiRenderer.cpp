@@ -5504,15 +5504,19 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			int j = 0;
 			for (Entity entity : armature.boneCollection)
 			{
+				const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+				if (hierarchy == nullptr)
+				{
+					continue;
+				}
 				const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+				const TransformComponent& parent = *scene.transforms.GetComponent(hierarchy->parentID);
 
-				XMMATRIX world = XMLoadFloat4x4(&transform.world);
-				XMVECTOR a = XMVectorSet(0, 0, 0, 1);
-				XMVECTOR b = XMVectorSet(0, 0, 1, 1);
+				XMMATRIX transform_world = XMLoadFloat4x4(&transform.world);
+				XMMATRIX parent_world = XMLoadFloat4x4(&parent.world);
 
-				a = XMVector4Transform(a, world);
-				b = XMVector4Transform(b, world);
-
+				XMVECTOR a = XMVector3Transform(XMVectorSet(0, 0, 0, 1), transform_world);
+				XMVECTOR b = XMVector3Transform(XMVectorSet(0, 0, 0, 1), parent_world);
 
 				LineSegment segment;
 				XMStoreFloat4(&segment.a, a);

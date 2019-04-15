@@ -2086,59 +2086,59 @@ namespace wiSceneSystem
 
 	Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
 	{
+		Scene scene;
+		Entity root = LoadModel(scene, fileName, transformMatrix, attached);
+		GetScene().Merge(scene);
+		return root;
+	}
+
+	Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
+	{
 		wiArchive archive(fileName, true);
 		if (archive.IsOpen())
 		{
-			// Create new scene
-			Scene scene;
-
 			// Serialize it from file:
 			scene.Serialize(archive);
 
-			// First, create new root parent:
-			Entity parent = CreateEntity();
-			scene.transforms.Create(parent);
-			scene.layers.Create(parent).layerMask = ~0;
+			// First, create new root:
+			Entity root = CreateEntity();
+			scene.transforms.Create(root);
+			scene.layers.Create(root).layerMask = ~0;
 
 			{
 				// Apply the optional transformation matrix to the new scene:
 
-				// Parent all unparented(root) transforms to "parent"
-				for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "parent"
+				// Parent all unparented transforms to new root entity
+				for (size_t i = 0; i < scene.transforms.GetCount() - 1; ++i) // GetCount() - 1 because the last added was the "root"
 				{
 					Entity entity = scene.transforms.GetEntity(i);
 					if (!scene.hierarchy.Contains(entity))
 					{
-						scene.Component_Attach(entity, parent);
+						scene.Component_Attach(entity, root);
 					}
 				}
 
-				// The parent component is transformed, scene is updated:
-				scene.transforms.GetComponent(parent)->MatrixTransform(transformMatrix);
+				// The root component is transformed, scene is updated:
+				scene.transforms.GetComponent(root)->MatrixTransform(transformMatrix);
 				scene.Update(0);
 			}
 
 			if (!attached)
 			{
 				// In this case, we don't care about the root anymore, so delete it. This will simplify overall hierarchy
-				scene.Component_DetachChildren(parent);
-				scene.Entity_Remove(parent);
-				parent = INVALID_ENTITY;
+				scene.Component_DetachChildren(root);
+				scene.Entity_Remove(root);
+				root = INVALID_ENTITY;
 			}
 
-			// Merge with the original scene:
-			GetScene().Merge(scene);
-
-			return parent;
+			return root;
 		}
 
 		return INVALID_ENTITY;
 	}
 
-	PickResult Pick(const RAY& ray, UINT renderTypeMask, uint32_t layerMask)
+	PickResult Pick(const RAY& ray, UINT renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
-		const Scene& scene = GetScene();
-
 		PickResult result;
 
 		if (scene.objects.GetCount() > 0)
