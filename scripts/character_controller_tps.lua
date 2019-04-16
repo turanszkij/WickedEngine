@@ -8,6 +8,7 @@
 --		Right Mouse Button: rotate camera
 --		Scoll middle mouse: adjust camera distance
 --		ESCAPE key: quit
+--		ENTER: reload script
 
 local scene = GetScene()
 
@@ -198,16 +199,22 @@ Character = {
 		-- add gravity:
 		self.velocity = vector.Add(self.velocity, Vector(0,-0.04,0))
 		
+		-- apply velocity:
+		model_transform.Translate(vector.Multiply(getDeltaTime() * 60, self.velocity))
+		model_transform.UpdateTransform()
+		
 		-- check if we are below or on the ground:
-		if(model_transform.GetPosition().GetY() <= self.p.GetY() and self.velocity.GetY()<=0) then
+		local posY = model_transform.GetPosition().GetY()
+		if(posY <= self.p.GetY() and self.velocity.GetY()<=0) then
 			self.state = self.states.STAND
-			model_transform.Translate(vector.Subtract(self.p,model_transform.GetPosition())) -- snap back to last succesfully traced position
+			if(self.o == INVALID_ENTITY) then
+				model_transform.Translate(vector.Subtract(self.p,model_transform.GetPosition())) -- snap back to last succesfully traced position
+			else
+				model_transform.Translate(Vector(0,self.p.GetY()-posY,0)) -- snap to ground
+			end
 			self.velocity.SetY(0) -- don't fall below ground
 			self.velocity = vector.Multiply(self.velocity, 0.8) -- slow down gradually on ground
 		end
-		
-		-- apply velocity:
-		model_transform.Translate(vector.Multiply(getDeltaTime() * 60, self.velocity))
 		
 	end
 }
@@ -320,6 +327,8 @@ local camera = ThirdPersonCamera
 -- Main loop:
 runProcess(function()
 
+	ClearWorld()
+
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
 	local prevPath = main.GetActivePath()
@@ -327,7 +336,7 @@ runProcess(function()
 	path.SetLightShaftsEnabled(true)
 	main.SetActivePath(path)
 
-	local font = Font("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows: walk\nSHIFT: movement speed\nSPACE: Jump\nRight Mouse Button: rotate camera\nScoll middle mouse: adjust camera distance\nESCAPE key: quit");
+	local font = Font("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows: walk\nSHIFT: movement speed\nSPACE: Jump\nRight Mouse Button: rotate camera\nScoll middle mouse: adjust camera distance\nESCAPE key: quit\nR: reload script");
 	font.SetSize(20)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
@@ -341,16 +350,6 @@ runProcess(function()
 	camera:Create(player)
 	
 	while true do
-	
-		if(input.Press(VK_ESCAPE)) then
-			-- restore previous component
-			--	so if you loaded this script from the editor, you can go back to the editor with ESC
-			backlog_post("EXIT")
-			killProcesses()
-			main.SetActivePath(prevPath)
-			return
-		end
-
 
 		player:Input()
 		
@@ -360,6 +359,25 @@ runProcess(function()
 		
 		-- Wait for Engine update tick
 		update()
+
+
+	
+		if(input.Press(VK_ESCAPE)) then
+			-- restore previous component
+			--	so if you loaded this script from the editor, you can go back to the editor with ESC
+			backlog_post("EXIT")
+			killProcesses()
+			main.SetActivePath(prevPath)
+			return
+		end
+		if(input.Press(string.byte('R'))) then
+			-- reload script
+			backlog_post("RELOAD")
+			killProcesses()
+			main.SetActivePath(prevPath)
+			dofile("character_controller_tps.lua")
+			return
+		end
 		
 	end
 end)
