@@ -727,6 +727,7 @@
     <None Include="$(MSBuildThisFileDirectory)..\scripts\debug_draw.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\dungeon_generator.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\emitter_burst.lua" />
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\fighting_game.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\move_object.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\pick.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua" />

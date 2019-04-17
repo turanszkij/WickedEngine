@@ -1978,6 +1978,9 @@
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua">
       <Filter>scripts</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)..\scripts\fighting_game.lua">
+      <Filter>scripts</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">

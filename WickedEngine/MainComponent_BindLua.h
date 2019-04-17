@@ -20,6 +20,8 @@ public:
 	int GetActivePath(lua_State *L);
 	int SetActivePath(lua_State *L);
 	int SetFrameSkip(lua_State *L);
+	int SetTargetFrameRate(lua_State *L);
+	int SetFrameRateLock(lua_State *L);
 	int SetInfoDisplay(lua_State *L);
 	int SetWatermarkDisplay(lua_State *L);
 	int SetFPSDisplay(lua_State *L);
