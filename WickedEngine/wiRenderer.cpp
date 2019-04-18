@@ -1235,7 +1235,7 @@ struct SHCAM
 void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
 	const float zNearP = 0.1f;
-	const float zFarP = max(1.0f, light.range);
+	const float zFarP = max(1.0f, light.GetRange());
 	shcam = SHCAM(XMFLOAT4(0, 0, 0, 1), zNearP, zFarP, light.fov);
 	shcam.Update(XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
 		XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)));
@@ -3967,7 +3967,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[entityCounter].SetType(light.GetType());
 			entityArray[entityCounter].positionWS = light.position;
 			XMStoreFloat3(&entityArray[entityCounter].positionVS, XMVector3TransformCoord(XMLoadFloat3(&entityArray[entityCounter].positionWS), viewMatrix));
-			entityArray[entityCounter].range = light.range;
+			entityArray[entityCounter].range = light.GetRange();
 			entityArray[entityCounter].color = wiMath::CompressColor(light.color);
 			entityArray[entityCounter].energy = light.energy;
 			entityArray[entityCounter].shadowBias = light.shadowBias;
@@ -4055,8 +4055,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].positionWS = force.position;
 			entityArray[entityCounter].energy = force.gravity;
-			entityArray[entityCounter].range = 1.0f / max(0.0001f, force.range); // avoid division in shader
-			entityArray[entityCounter].coneAngleCos = force.range; // this will be the real range in the less common shaders...
+			entityArray[entityCounter].range = 1.0f / max(0.0001f, force.GetRange()); // avoid division in shader
+			entityArray[entityCounter].coneAngleCos = force.GetRange(); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			entityArray[entityCounter].directionWS = force.direction;
 
@@ -4531,7 +4531,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				{
 					MiscCB miscCb;
 					miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
-					float sca = light.range + 1;
+					float sca = light.GetRange() + 1;
 					XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
 					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
@@ -4546,7 +4546,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 					const float coneS = (const float)(light.fov / XM_PIDIV4);
 					XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(
-						XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
+						XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
 						XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 						camera.GetViewProjection()
@@ -4597,11 +4597,11 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 
 					VolumeLightCB lcb;
 					lcb.lightColor = XMFLOAT4(light.color.x, light.color.y, light.color.z, 1);
-					lcb.lightEnerdis = XMFLOAT4(light.energy, light.range, light.fov, light.energy);
+					lcb.lightEnerdis = XMFLOAT4(light.energy, light.GetRange(), light.fov, light.energy);
 
 					if (type == LightComponent::POINT)
 					{
-						lcb.lightEnerdis.w = light.range*light.energy*0.01f; // scale
+						lcb.lightEnerdis.w = light.GetRange()*light.energy*0.01f; // scale
 						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
 							XMMatrixScaling(lcb.lightEnerdis.w, lcb.lightEnerdis.w, lcb.lightEnerdis.w)*
 							camrot*
@@ -4615,7 +4615,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 					else if (type == LightComponent::SPOT)
 					{
 						float coneS = (float)(light.fov / 0.7853981852531433);
-						lcb.lightEnerdis.w = light.range*light.energy*0.03f; // scale
+						lcb.lightEnerdis.w = light.GetRange()*light.energy*0.03f; // scale
 						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
 							XMMatrixScaling(coneS*lcb.lightEnerdis.w, lcb.lightEnerdis.w, coneS*lcb.lightEnerdis.w)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
@@ -4737,7 +4737,7 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
-						float sca = light.range + 1;
+						float sca = light.GetRange() + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
 						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
@@ -4752,7 +4752,7 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 						const float coneS = (const float)(light.fov / XM_PIDIV4);
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(
-							XMMatrixScaling(coneS*light.range, light.range, coneS*light.range)*
+							XMMatrixScaling(coneS*light.GetRange(), light.GetRange(), coneS*light.GetRange())*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							camera.GetViewProjection()
@@ -5059,7 +5059,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
 
-					const float zFarP = max(1.0f, light.range);
+					const float zFarP = max(1.0f, light.GetRange());
 					Frustum frustum;
 					frustum.Create(shcam.realProjection, shcam.View, zFarP);
 
@@ -5137,7 +5137,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 					{
 						const AABB& aabb = scene.aabb_objects[i];
-						if (SPHERE(light.position, light.range).intersects(aabb))
+						if (SPHERE(light.position, light.GetRange()).intersects(aabb))
 						{
 							const ObjectComponent& object = scene.objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
@@ -5171,7 +5171,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 
 						const float zNearP = 0.1f;
-						const float zFarP = max(1.0f, light.range);
+						const float zFarP = max(1.0f, light.GetRange());
 						SHCAM cameras[] = {
 							SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
 							SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x

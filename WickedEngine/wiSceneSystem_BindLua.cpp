@@ -990,6 +990,7 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, SetLooped),
 	lunamethod(AnimationComponent_BindLua, IsLooped),
 	lunamethod(AnimationComponent_BindLua, IsPlaying),
+	lunamethod(AnimationComponent_BindLua, IsEnded),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -1046,6 +1047,11 @@ int AnimationComponent_BindLua::IsLooped(lua_State* L)
 int AnimationComponent_BindLua::IsPlaying(lua_State* L)
 {
 	wiLua::SSetBool(L, component->IsPlaying());
+	return 1;
+}
+int AnimationComponent_BindLua::IsEnded(lua_State* L)
+{
+	wiLua::SSetBool(L, component->IsEnded());
 	return 1;
 }
 

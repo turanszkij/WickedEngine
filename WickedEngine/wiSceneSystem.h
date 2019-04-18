@@ -662,7 +662,7 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
-		float range;
+		float range_global;
 		XMFLOAT3 direction;
 		XMFLOAT4 rotation;
 		XMFLOAT3 front;
@@ -681,7 +681,7 @@ namespace wiSceneSystem
 		inline bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		inline bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 
-		inline float GetRange() const { return range; }
+		inline float GetRange() const { return range_global; }
 
 		inline void SetType(LightType val) {
 			type = val;
@@ -792,8 +792,10 @@ namespace wiSceneSystem
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
-		float range;
+		float range_global;
 		XMFLOAT3 direction;
+
+		inline float GetRange() const { return range_global; }
 
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
@@ -881,6 +883,7 @@ namespace wiSceneSystem
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
 		inline float GetLength() const { return end - start; }
+		inline bool IsEnded() const { return timer >= end; }
 
 		inline void Play() { _flags |= PLAYING; }
 		inline void Pause() { _flags &= ~PLAYING; }

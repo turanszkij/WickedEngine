@@ -42,7 +42,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
-			light->range = args.fValue;
+			light->range_local = args.fValue;
 		}
 	});
 	rangeSlider->SetEnabled(false);
@@ -246,7 +246,7 @@ void LightWindow::SetEntity(Entity entity)
 		//lightWindow->SetEnabled(true);
 		energySlider->SetEnabled(true);
 		energySlider->SetValue(light->energy);
-		rangeSlider->SetValue(light->range);
+		rangeSlider->SetValue(light->range_local);
 		radiusSlider->SetValue(light->radius);
 		widthSlider->SetValue(light->width);
 		heightSlider->SetValue(light->height);
