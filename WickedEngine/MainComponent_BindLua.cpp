@@ -17,6 +17,8 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, GetActivePath),
 	lunamethod(MainComponent_BindLua, SetActivePath),
 	lunamethod(MainComponent_BindLua, SetFrameSkip),
+	lunamethod(MainComponent_BindLua, SetTargetFrameRate),
+	lunamethod(MainComponent_BindLua, SetFrameRateLock),
 	lunamethod(MainComponent_BindLua, SetInfoDisplay),
 	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
@@ -233,6 +235,40 @@ int MainComponent_BindLua::SetFrameSkip(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetTargetFrameRate(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetTargetFrameRate(float value) component is empty!");
+		return 0;
+	}
+
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->setTargetFrameRate(wiLua::SGetFloat(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetTargetFrameRate(float value) not enought arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetFrameRateLock(lua_State *L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetFrameRateLock(bool enabled) component is empty!");
+		return 0;
+	}
+
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->setFrameRateLock(wiLua::SGetBool(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetFrameRateLock(bool enabled) not enought arguments!");
 	return 0;
 }
 int MainComponent_BindLua::SetInfoDisplay(lua_State *L)

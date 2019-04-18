@@ -152,6 +152,10 @@ namespace wiSceneSystem_BindLua
 		int Play(lua_State* L);
 		int Pause(lua_State* L);
 		int Stop(lua_State* L);
+		int SetLooped(lua_State* L);
+		int IsLooped(lua_State* L);
+		int IsPlaying(lua_State* L);
+		int IsEnded(lua_State* L);
 	};
 
 	class MaterialComponent_BindLua

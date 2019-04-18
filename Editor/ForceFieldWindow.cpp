@@ -72,7 +72,7 @@ ForceFieldWindow::ForceFieldWindow(wiGUI* gui) : GUI(gui)
 		ForceFieldComponent* force = wiSceneSystem::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
-			force->range = args.fValue;
+			force->range_local = args.fValue;
 		}
 	});
 	rangeSlider->SetEnabled(false);
@@ -119,7 +119,7 @@ void ForceFieldWindow::SetEntity(Entity entity)
 	{
 		typeComboBox->SetSelected(force->type == ENTITY_TYPE_FORCEFIELD_POINT ? 0 : 1);
 		gravitySlider->SetValue(force->gravity);
-		rangeSlider->SetValue(force->range);
+		rangeSlider->SetValue(force->range_local);
 
 		forceFieldWindow->SetEnabled(true);
 	}

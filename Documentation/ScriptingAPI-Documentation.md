@@ -358,6 +358,9 @@ Describes an orientation in 3D space.
 - Play()
 - Stop()
 - Pause()
+- SetLooped(bool value)
+- IsLooped() : bool result
+- IsPlaying() : bool result
 
 #### MaterialComponent
 - SetBaseColor()
@@ -384,7 +387,9 @@ This is the main entry point and manages the lifetime of the application. Even t
 - GetContent() : Resource? result
 - GetActivePath() : RenderPath? result
 - SetActivePath(RenderPath path, opt float fadeSeconds,fadeColorR,fadeColorG,fadeColorB)
-- SetFrameSkip(bool enabled)
+- SetFrameSkip(bool enabled)	-- enable/disable frame skipping in fixed update 
+- SetTargetFrameRate(float fps)	-- set target frame rate for fixed update and variable rate update when frame rate is locked
+- SetFrameRateLock(bool enabled)	-- if enabled, variable rate update will use a fixed delta time
 - SetInfoDisplay(bool active)
 - SetWatermarkDisplay(bool active)
 - SetFPSDisplay(bool active)

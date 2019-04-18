@@ -1245,7 +1245,7 @@ namespace wiSceneSystem
 
 		LightComponent& light = lights.Create(entity);
 		light.energy = energy;
-		light.range = range;
+		light.range_local = range;
 		light.fov = XM_PIDIV4;
 		light.color = color;
 		light.SetType(LightComponent::POINT);
@@ -1269,7 +1269,7 @@ namespace wiSceneSystem
 
 		ForceFieldComponent& force = forces.Create(entity);
 		force.gravity = 0;
-		force.range = 0;
+		force.range_local = 0;
 		force.type = ENTITY_TYPE_FORCEFIELD_POINT;
 
 		return entity;
@@ -1972,7 +1972,7 @@ namespace wiSceneSystem
 			XMStoreFloat3(&force.position, T);
 			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), W)));
 
-			force.range = force.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
+			force.range_global = force.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
 	void RunLightUpdateSystem(
@@ -1998,7 +1998,7 @@ namespace wiSceneSystem
 			XMStoreFloat4(&light.rotation, R);
 			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
-			light.range = light.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
+			light.range_global = light.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 			switch (light.type)
 			{
@@ -2006,10 +2006,10 @@ namespace wiSceneSystem
 				aabb.createFromHalfWidth(wiRenderer::GetCamera().Eye, XMFLOAT3(10000, 10000, 10000));
 				break;
 			case LightComponent::SPOT:
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
+				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::POINT:
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.range, light.range, light.range));
+				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::SPHERE:
 			case LightComponent::DISC:

@@ -987,6 +987,10 @@ Luna<AnimationComponent_BindLua>::FunctionType AnimationComponent_BindLua::metho
 	lunamethod(AnimationComponent_BindLua, Play),
 	lunamethod(AnimationComponent_BindLua, Pause),
 	lunamethod(AnimationComponent_BindLua, Stop),
+	lunamethod(AnimationComponent_BindLua, SetLooped),
+	lunamethod(AnimationComponent_BindLua, IsLooped),
+	lunamethod(AnimationComponent_BindLua, IsPlaying),
+	lunamethod(AnimationComponent_BindLua, IsEnded),
 	{ NULL, NULL }
 };
 Luna<AnimationComponent_BindLua>::PropertyType AnimationComponent_BindLua::properties[] = {
@@ -1020,6 +1024,35 @@ int AnimationComponent_BindLua::Stop(lua_State* L)
 {
 	component->Stop();
 	return 0;
+}
+int AnimationComponent_BindLua::SetLooped(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		bool looped = wiLua::SGetBool(L, 1);
+		component->SetLooped(looped);
+	}
+	else
+	{
+		wiLua::SError(L, "SetLooped(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int AnimationComponent_BindLua::IsLooped(lua_State* L)
+{
+	wiLua::SSetBool(L, component->IsLooped());
+	return 1;
+}
+int AnimationComponent_BindLua::IsPlaying(lua_State* L)
+{
+	wiLua::SSetBool(L, component->IsPlaying());
+	return 1;
+}
+int AnimationComponent_BindLua::IsEnded(lua_State* L)
+{
+	wiLua::SSetBool(L, component->IsEnded());
+	return 1;
 }
 
 

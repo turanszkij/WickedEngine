@@ -123,7 +123,14 @@ void MainComponent::Run()
 	wiProfiler::BeginFrame();
 	wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
-	deltaTime = float(max(0, timer.elapsed() / 1000.0));
+	if (framerate_lock)
+	{
+		deltaTime = 1.0f / targetFrameRate;
+	}
+	else
+	{
+		deltaTime = float(max(0, timer.elapsed() / 1000.0));
+	}
 	timer.record();
 
 	if (wiWindowRegistration::IsWindowActive())
