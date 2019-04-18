@@ -27,12 +27,17 @@ local function Character(face, shirt_color)
 
 		-- Common requirement conditions for state transitions:
 		require_input_window = function(self, inputString, window) -- player input notation with some tolerance to input execution window (in frames) (help: see readme on top of this file)
+			-- reduce remaining input with non-expired commands:
+			local remaining_input = inputString
 			for i,element in ipairs(self.input_buffer) do
-				if(element.age <= window and element.command == inputString) then
-					return true
+				if(element.age <= window and element.command == string.sub(remaining_input, 0, string.len(element.command))) then
+					remaining_input = string.sub(remaining_input, string.len(element.command) + 1)
+					if(string.len(remaining_input) == 0) then
+						return true
+					end
 				end
 			end
-			return false
+			return false -- match failure
 		end,
 		require_input = function(self, inputString) -- player input notation (immediate) (help: see readme on top of this file)
 			return self:require_input_window(inputString, 0)
@@ -45,6 +50,24 @@ local function Character(face, shirt_color)
 		end,
 		require_animationfinish = function(self) -- animation is finished
 			return scene.Component_GetAnimation(self.states[self.state].anim).IsEnded()
+		end,
+		
+		-- Common motion helpers:
+		require_motion_qcf = function(self, button)
+			local window = 60
+			return 
+				self:require_input_window("236" .. button, window) or
+				self:require_input_window("2365" .. button, window) or
+				self:require_input_window("26" .. button, window) or
+				self:require_input_window("265" .. button, window)
+		end,
+		require_motion_shoryuken = function(self, button)
+			local window = 60
+			return 
+				self:require_input_window("623" .. button, window) or
+				self:require_input_window("6235" .. button, window) or
+				self:require_input_window("626" .. button, window) or
+				self:require_input_window("6265" .. button, window)
 		end,
 
 		-- List all possible states:
@@ -176,6 +199,16 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 			},
+			SpearJaunt = {
+				anim_name = "SpearJaunt",
+				anim = INVALID_ENTITY,
+				looped = false,
+				update = function(self)
+					if(self:require_frame(16)) then
+						self.force = vector.Add(self.force, Vector(1.3 * self.face))
+					end
+				end,
+			},
 			Shoryuken = {
 				anim_name = "Shoryuken",
 				anim = INVALID_ENTITY,
@@ -195,6 +228,8 @@ local function Character(face, shirt_color)
 		--	}
 		statemachine = {
 			Idle = { 
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
+				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face and self:require_input("5") end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
@@ -207,6 +242,7 @@ local function Character(face, shirt_color)
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
 			},
 			Walk_Backward = { 
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
@@ -218,6 +254,8 @@ local function Character(face, shirt_color)
 				{ "HeavyKick", condition = function(self) return self:require_input("6C") end, },
 			},
 			Walk_Forward = { 
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
+				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
@@ -256,7 +294,6 @@ local function Character(face, shirt_color)
 				{ "LowPunch", condition = function(self) return self:require_input("2A") or self:require_input("1A") or self:require_input("3A") end, },
 				{ "LowKick", condition = function(self) return self:require_input("2C") or self:require_input("1C") or self:require_input("3C") end, },
 				{ "Uppercut", condition = function(self) return self:require_input("2B") or self:require_input("1B") or self:require_input("3B") end, },
-				{ "Shoryuken", condition = function(self) return self:require_input("2D") end, },
 			},
 			CrouchEnd = { 
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
@@ -286,6 +323,9 @@ local function Character(face, shirt_color)
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Uppercut = { 
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
+			},
+			SpearJaunt = { 
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Shoryuken = { 
@@ -395,40 +435,39 @@ local function Character(face, shirt_color)
 			end
 
 			if(up and left) then
-				input_string = "7"
+				table.insert(self.input_buffer, {age = 0, command = "7"})
 			elseif(up and right) then
-				input_string = "9"
+				table.insert(self.input_buffer, {age = 0, command = "9"})
 			elseif(up) then
-				input_string = "8"
+				table.insert(self.input_buffer, {age = 0, command = "8"})
 			elseif(down and left) then
-				input_string = "1"
+				table.insert(self.input_buffer, {age = 0, command = "1"})
 			elseif(down and right) then
-				input_string = "3"
+				table.insert(self.input_buffer, {age = 0, command = "3"})
 			elseif(down) then
-				input_string = "2"
+				table.insert(self.input_buffer, {age = 0, command = "2"})
 			elseif(left) then
-				input_string = "4"
+				table.insert(self.input_buffer, {age = 0, command = "4"})
 			elseif(right) then
-				input_string = "6"
+				table.insert(self.input_buffer, {age = 0, command = "6"})
 			else
-				input_string = "5"
+				table.insert(self.input_buffer, {age = 0, command = "5"})
 			end
 			
 			if(A) then
-				input_string = input_string .. "A"
+				table.insert(self.input_buffer, {age = 0, command = "A"})
 			end
 			if(B) then
-				input_string = input_string .. "B"
+				table.insert(self.input_buffer, {age = 0, command = "B"})
 			end
 			if(C) then
-				input_string = input_string .. "C"
+				table.insert(self.input_buffer, {age = 0, command = "C"})
 			end
 			if(D) then
-				input_string = input_string .. "D"
+				table.insert(self.input_buffer, {age = 0, command = "D"})
 			end
 
 
-			table.insert(self.input_buffer, {age = 0, command = input_string})
 
 		end,
 
@@ -568,7 +607,26 @@ runProcess(function()
 	local path = RenderPath3D_TiledForward()
 	main.SetActivePath(path)
 
-	local font = Font("This script is showcasing how to write a simple fighting game.\nControls:\n#####################\nWASD: move\narrows: actions (ABCD)\nESCAPE key: quit\nR: reload script");
+	local help_text = ""
+	help_text = help_text .. "This script is showcasing how to write a simple fighting game."
+	help_text = help_text .. "\nControls:\n#####################\nESCAPE key: quit\nR: reload script"
+	help_text = help_text .. "\nWASD: move"
+	help_text = help_text .. "\nRight: action A"
+	help_text = help_text .. "\nUp: action B"
+	help_text = help_text .. "\nLeft: action C"
+	help_text = help_text .. "\nDown: action D"
+	help_text = help_text .. "\n\nMovelist:"
+	help_text = help_text .. "\n\t A : Light Punch"
+	help_text = help_text .. "\n\t B : Heavy Punch"
+	help_text = help_text .. "\n\t C : Light Kick"
+	help_text = help_text .. "\n\t 6A : Forward Light Punch"
+	help_text = help_text .. "\n\t 6C : Heavy Kick"
+	help_text = help_text .. "\n\t 2A : Low Punch"
+	help_text = help_text .. "\n\t 2B : Uppercut"
+	help_text = help_text .. "\n\t 2C : Low Kick"
+	help_text = help_text .. "\n\t 623D: Shoryuken"
+	help_text = help_text .. "\n\t 236D: Jaunt"
+	local font = Font(help_text);
 	font.SetSize(20)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
@@ -599,7 +657,13 @@ runProcess(function()
 
 		ResolveCharacters(player1, player2)
 
-		info.SetText("state = " .. player1.state .. "\nframe = " .. player1.frame)
+		local inputString = "input: "
+		for i,element in ipairs(player1.input_buffer) do
+			if(element.command ~= "5") then
+				inputString = inputString .. element.command
+			end
+		end
+		info.SetText(inputString .. "\nstate = " .. player1.state .. "\nframe = " .. player1.frame)
 		
 		-- Wait for Engine update tick
 		update()
