@@ -54,7 +54,7 @@ local function Character(face, shirt_color)
 		
 		-- Common motion helpers:
 		require_motion_qcf = function(self, button)
-			local window = 60
+			local window = 20
 			return 
 				self:require_input_window("236" .. button, window) or
 				self:require_input_window("2365" .. button, window) or
@@ -62,7 +62,7 @@ local function Character(face, shirt_color)
 				self:require_input_window("265" .. button, window)
 		end,
 		require_motion_shoryuken = function(self, button)
-			local window = 60
+			local window = 20
 			return 
 				self:require_input_window("623" .. button, window) or
 				self:require_input_window("6235" .. button, window) or
@@ -89,6 +89,31 @@ local function Character(face, shirt_color)
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(0.025 * self.face, 0))
 				end,
+			},
+			Dash_Backward = {
+				anim_name = "BDash",
+				anim = INVALID_ENTITY,
+				looped = false,
+				update = function(self)
+					if(self:require_window(0,6)) then
+						self.force = vector.Add(self.force, Vector(-0.08 * self.face, 0))
+					end
+				end,
+			},
+			RunStart = {
+				anim_name = "RunStart",
+				anim = INVALID_ENTITY,
+			},
+			Run = {
+				anim_name = "Run",
+				anim = INVALID_ENTITY,
+				update = function(self)
+					self.force = vector.Add(self.force, Vector(0.06 * self.face, 0))
+				end,
+			},
+			RunEnd = {
+				anim_name = "RunEnd",
+				anim = INVALID_ENTITY,
 			},
 			Jump = {
 				anim_name = "Jump",
@@ -245,6 +270,7 @@ local function Character(face, shirt_color)
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
+				{ "Dash_Backward", condition = function(self) return self:require_input_window("454",10) end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
@@ -258,6 +284,7 @@ local function Character(face, shirt_color)
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
+				{ "RunStart", condition = function(self) return self:require_input_window("656", 10) end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
@@ -265,6 +292,21 @@ local function Character(face, shirt_color)
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
 				{ "HeavyKick", condition = function(self) return self:require_input("6C") end, },
+			},
+			Dash_Backward = { 
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
+			},
+			RunStart = { 
+				{ "Run", condition = function(self) return self:require_animationfinish() end, },
+			},
+			Run = { 
+				{ "RunEnd", condition = function(self) return self:require_input("5") end, },
+				{ "Jump", condition = function(self) return self:require_input("8") end, },
+				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
+				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
+			},
+			RunEnd = { 
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Jump = { 
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
@@ -415,9 +457,7 @@ local function Character(face, shirt_color)
 
 		Input = function(self)
 
-			local input_string = ""
-
-			-- read input:
+			-- read input (todo gamepad):
 			local left = input.Down(string.byte('A'))
 			local right = input.Down(string.byte('D'))
 			local up = input.Down(string.byte('W'))
@@ -478,10 +518,10 @@ local function Character(face, shirt_color)
 			self:ExecuteCurrentState()
 
 			-- Manage input buffer:
-			for i,element in pairs(self.input_buffer) do
+			for i,element in pairs(self.input_buffer) do -- every input gets older by one frame
 				element.age = element.age + 1
 			end
-			if(#self.input_buffer > 120) then
+			if(#self.input_buffer > 60) then -- only keep the last 60 inputs
 				table.remove(self.input_buffer, 1)
 			end
 		
