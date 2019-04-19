@@ -10,6 +10,9 @@
 --	For a full circle motion, the input would be: "23698741"
 --		But because that full circle motion is difficult to execute properly, we can make it easier by accpeting similar inputs, like:
 --			"2684" or "2369874"...
+--	The require_input("inputstring") facility will help detect instant input execution
+--	The require_input_window("inputstring", allowed_latency_window) facility can detect inputs that are executed over multiple frames
+--	Neutral motion is "5", that is not necessary to put into input strings in most cases, but it can help, for example: double tap right button would need a neutral in between the two presses, like this: 656
 
 local scene = GetScene()
 
@@ -28,11 +31,10 @@ local function Character(face, shirt_color)
 		-- Common requirement conditions for state transitions:
 		require_input_window = function(self, inputString, window) -- player input notation with some tolerance to input execution window (in frames) (help: see readme on top of this file)
 			-- reduce remaining input with non-expired commands:
-			local remaining_input = inputString
 			for i,element in ipairs(self.input_buffer) do
-				if(element.age <= window and element.command == string.sub(remaining_input, 0, string.len(element.command))) then
-					remaining_input = string.sub(remaining_input, string.len(element.command) + 1)
-					if(string.len(remaining_input) == 0) then
+				if(element.age <= window and element.command == string.sub(inputString, 0, string.len(element.command))) then
+					inputString = string.sub(inputString, string.len(element.command) + 1)
+					if(inputString == "") then
 						return true
 					end
 				end
@@ -57,17 +59,13 @@ local function Character(face, shirt_color)
 			local window = 20
 			return 
 				self:require_input_window("236" .. button, window) or
-				self:require_input_window("2365" .. button, window) or
-				self:require_input_window("26" .. button, window) or
-				self:require_input_window("265" .. button, window)
+				self:require_input_window("26" .. button, window)
 		end,
 		require_motion_shoryuken = function(self, button)
 			local window = 20
 			return 
 				self:require_input_window("623" .. button, window) or
-				self:require_input_window("6235" .. button, window) or
-				self:require_input_window("626" .. button, window) or
-				self:require_input_window("6265" .. button, window)
+				self:require_input_window("626" .. button, window)
 		end,
 
 		-- List all possible states:
@@ -95,8 +93,8 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				update = function(self)
-					if(self:require_window(0,6)) then
-						self.force = vector.Add(self.force, Vector(-0.08 * self.face, 0))
+					if(self:require_window(0,2)) then
+						self.force = vector.Add(self.force, Vector(-0.07 * self.face, 0.1))
 					end
 				end,
 			},
@@ -246,7 +244,7 @@ local function Character(face, shirt_color)
 			},
 		},
 
-		-- State machine describes all possible state transitions:
+		-- State machine describes all possible state transitions (item order is priority high->low):
 		--	StateFrom = {
 		--		{ "StateTo1", condition = function(self) return [requirements that should be met] end },
 		--		{ "StateTo2", condition = function(self) return [requirements that should be met] end },
@@ -270,7 +268,7 @@ local function Character(face, shirt_color)
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
-				{ "Dash_Backward", condition = function(self) return self:require_input_window("454",10) end, },
+				{ "Dash_Backward", condition = function(self) return self:require_input_window("454", 7) end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
@@ -284,7 +282,7 @@ local function Character(face, shirt_color)
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
-				{ "RunStart", condition = function(self) return self:require_input_window("656", 10) end, },
+				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
@@ -632,7 +630,8 @@ end
 -- Main loop:
 runProcess(function()
 
-	ClearWorld()
+	ClearWorld() -- clears global scene and renderer
+	SetProfilerEnabled(false) -- have a bit more screen space
 	
 	-- Fighting game needs stable frame rate and deterministic controls at all times. We will also refer to frames in this script instead of time units.
 	--	We lock the framerate to 60 FPS, so if frame rate goes below, game will play slower
