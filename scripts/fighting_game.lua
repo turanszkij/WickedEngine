@@ -27,6 +27,7 @@ local function Character(face, shirt_color)
 		force = Vector(),
 		frame = 0,
 		input_buffer = {},
+		clipbox = AABB(),
 
 		-- Common requirement conditions for state transitions:
 		require_input_window = function(self, inputString, window) -- player input notation with some tolerance to input execution window (in frames) (help: see readme on top of this file)
@@ -73,10 +74,12 @@ local function Character(face, shirt_color)
 			Idle = {
 				anim_name = "Idle",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			Walk_Backward = {
 				anim_name = "Back",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(-0.025 * self.face, 0))
 				end,
@@ -84,6 +87,7 @@ local function Character(face, shirt_color)
 			Walk_Forward = {
 				anim_name = "Forward",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(0.025 * self.face, 0))
 				end,
@@ -92,6 +96,7 @@ local function Character(face, shirt_color)
 				anim_name = "BDash",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					if(self:require_window(0,2)) then
 						self.force = vector.Add(self.force, Vector(-0.07 * self.face, 0.1))
@@ -101,10 +106,12 @@ local function Character(face, shirt_color)
 			RunStart = {
 				anim_name = "RunStart",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-0.5), Vector(2, 5)),
 			},
 			Run = {
 				anim_name = "Run",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-0.5), Vector(2, 5)),
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(0.06 * self.face, 0))
 				end,
@@ -112,11 +119,13 @@ local function Character(face, shirt_color)
 			RunEnd = {
 				anim_name = "RunEnd",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-0.5), Vector(2, 5)),
 			},
 			Jump = {
 				anim_name = "Jump",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.force = vector.Add(self.force, Vector(0, 0.8))
@@ -127,6 +136,7 @@ local function Character(face, shirt_color)
 				anim_name = "Jump",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.force = vector.Add(self.force, Vector(-0.2 * self.face, 0.8))
@@ -137,6 +147,7 @@ local function Character(face, shirt_color)
 				anim_name = "Jump",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.force = vector.Add(self.force, Vector(0.2 * self.face, 0.8))
@@ -147,34 +158,41 @@ local function Character(face, shirt_color)
 				anim_name = "FallStart",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			Fall = {
 				anim_name = "Fall",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			FallEnd = {
 				anim_name = "FallEnd",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			CrouchStart = {
 				anim_name = "CrouchStart",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 3)),
 			},
 			Crouch = {
 				anim_name = "Crouch",
 				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 3)),
 			},
 			CrouchEnd = {
 				anim_name = "CrouchEnd",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 3)),
 			},
 			Turn = {
 				anim_name = "Turn",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.face = self.request_face
@@ -186,46 +204,55 @@ local function Character(face, shirt_color)
 				anim_name = "LightPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			ForwardLightPunch = {
 				anim_name = "FLightPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			HeavyPunch = {
 				anim_name = "HeavyPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			LowPunch = {
 				anim_name = "LowPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			LightKick = {
 				anim_name = "LightKick",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			HeavyKick = {
 				anim_name = "HeavyKick",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			LowKick = {
 				anim_name = "LowKick",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			Uppercut = {
 				anim_name = "Uppercut",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 			},
 			SpearJaunt = {
 				anim_name = "SpearJaunt",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1.5), Vector(1.5, 5)),
 				update = function(self)
 					if(self:require_frame(16)) then
 						self.force = vector.Add(self.force, Vector(1.3 * self.face))
@@ -236,6 +263,7 @@ local function Character(face, shirt_color)
 				anim_name = "Shoryuken",
 				anim = INVALID_ENTITY,
 				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				update = function(self)
 					if(self:require_frame(0)) then
 						self.force = vector.Add(self.force, Vector(0.3 * self.face, 0.9))
@@ -407,10 +435,16 @@ local function Character(face, shirt_color)
 		end,
 		-- Execute the currently active state:
 		ExecuteCurrentState = function(self)
+
+			self.clipbox = AABB()
+
 			local current_state = self.states[self.state]
 			if(current_state ~= nil) then
 				if(current_state.update ~= nil) then
 					current_state.update(self)
+				end
+				if(current_state.clipbox ~= nil) then
+					self.clipbox = current_state.clipbox
 				end
 			end
 		end,
@@ -550,10 +584,13 @@ local function Character(face, shirt_color)
 			model_transform.Rotate(Vector(0, 3.1415 * ((self.face - 1) * 0.5)))
 			model_transform.UpdateTransform()
 
+			self.clipbox = self.clipbox.Transform(model_transform.GetMatrix())
+
 			-- Some debug draw:
 			DrawPoint(model_transform.GetPosition(), 0.1, Vector(1,0,0,1))
 			DrawLine(model_transform.GetPosition(),model_transform.GetPosition():Add(self.velocity), Vector(0,1,0,1))
 			DrawLine(model_transform.GetPosition(),model_transform.GetPosition():Add(Vector(self.face)), Vector(0,0,1,1))
+			DrawBox(self.clipbox.GetAsBoxMatrix(), Vector(1,1,0,1))
 		
 		end
 
@@ -578,6 +615,19 @@ local ResolveCharacters = function(player1, player2)
 	else
 		player1.request_face = -1
 		player2.request_face = 1
+	end
+
+	-- Clipping:
+	if(player1.clipbox.Intersects(player2.clipbox)) then
+		local center1 = player1.clipbox.GetCenter().GetX()
+		local center2 = player2.clipbox.GetCenter().GetX()
+		local extent1 = player1.clipbox.GetHalfExtents().GetX()
+		local extent2 = player2.clipbox.GetHalfExtents().GetX()
+		local diff = math.abs(center2 - center1)
+		local target_diff = math.abs(extent2 + extent1)
+		local offset = target_diff - diff
+		player1.position.SetX(player1.position.GetX() - offset * player1.face)
+		player2.position.SetX(player2.position.GetX() - offset * player2.face)
 	end
 
 	-- Camera:

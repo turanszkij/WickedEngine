@@ -106,6 +106,7 @@ namespace wiIntersect_BindLua
 		lunamethod(AABB_BindLua, GetCenter),
 		lunamethod(AABB_BindLua, GetHalfExtents),
 		lunamethod(AABB_BindLua, Transform),
+		lunamethod(AABB_BindLua, GetAsBoxMatrix),
 		{ NULL, NULL }
 	};
 	Luna<AABB_BindLua>::PropertyType AABB_BindLua::properties[] = {
@@ -127,14 +128,21 @@ namespace wiIntersect_BindLua
 
 				aabb = AABB(_min, _max);
 			}
+			else if (_minV)
+			{
+				XMFLOAT3 _min;
+				XMStoreFloat3(&_min, _minV->vector);
+
+				aabb = AABB(_min);
+			}
 			else
 			{
-				wiLua::SError(L, "AABB(Vector min,max) requires two arguments of Vector type!");
+				wiLua::SError(L, "AABB(opt Vector min,max) arguments must be of Vector type!");
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "AABB(Vector min,max) not enough arguments!");
+			aabb = AABB();
 		}
 	}
 	AABB_BindLua::~AABB_BindLua()
@@ -213,6 +221,11 @@ namespace wiIntersect_BindLua
 		}
 		wiLua::SError(L, "Transform(Matrix matrix) not enough arguments! ");
 		return 0;
+	}
+	int AABB_BindLua::GetAsBoxMatrix(lua_State* L)
+	{
+		Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(aabb.getAsBoxMatrix()));
+		return 1;
 	}
 
 

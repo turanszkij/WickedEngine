@@ -45,6 +45,7 @@ namespace wiIntersect_BindLua
 		int GetCenter(lua_State* L);
 		int GetHalfExtents(lua_State* L);
 		int Transform(lua_State* L);
+		int GetAsBoxMatrix(lua_State* L);
 	};
 
 	class Sphere_BindLua
