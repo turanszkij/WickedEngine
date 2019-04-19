@@ -625,9 +625,9 @@ local ResolveCharacters = function(player1, player2)
 		local extent2 = player2.clipbox.GetHalfExtents().GetX()
 		local diff = math.abs(center2 - center1)
 		local target_diff = math.abs(extent2 + extent1)
-		local offset = target_diff - diff
-		player1.position.SetX(player1.position.GetX() - offset * player1.face)
-		player2.position.SetX(player2.position.GetX() - offset * player2.face)
+		local offset = (target_diff - diff) * 0.5
+		player1.position.SetX(player1.position.GetX() - offset * player1.request_face)
+		player2.position.SetX(player2.position.GetX() - offset * player2.request_face)
 	end
 
 	-- Camera:
