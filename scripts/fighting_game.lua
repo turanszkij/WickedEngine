@@ -383,6 +383,70 @@ local function Character(face, shirt_color)
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
+
+			StaggerCrouchStart = {
+				anim_name = "StaggerCrouchStart",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+			StaggerCrouch = {
+				anim_name = "StaggerCrouch",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+			StaggerCrouchEnd = {
+				anim_name = "StaggerCrouchEnd",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+
+			StaggerAirStart = {
+				anim_name = "StaggerAirStart",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					self.velocity = Vector()
+				end,
+			},
+			StaggerAir = {
+				anim_name = "StaggerAir",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					self.velocity = Vector()
+				end,
+			},
+			StaggerAirEnd = {
+				anim_name = "StaggerAirEnd",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+			
+			Downed = {
+				anim_name = "Downed",
+				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+			Getup = {
+				anim_name = "Getup",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
 		},
 
 		-- State machine describes all possible state transitions (item order is priority high->low):
@@ -455,29 +519,43 @@ local function Character(face, shirt_color)
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Jump = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			JumpForward = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			JumpBack = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			FallStart = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
 				{ "Fall", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Fall = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
 			},
 			FallEnd = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self.position.GetY() <= 0 and self:require_animationfinish() end, },
 			},
 			CrouchStart = { 
+				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "Crouch", condition = function(self) return (self:require_input("1") or self:require_input("2") or self:require_input("3")) and self:require_animationfinish() end, },
 			},
 			Crouch = { 
+				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "CrouchEnd", condition = function(self) return self:require_input("5") or self:require_input("4") or self:require_input("6") or self:require_input("7") or self:require_input("8") or self:require_input("9") end, },
 				{ "LowPunch", condition = function(self) return self:require_input("2A") or self:require_input("1A") or self:require_input("3A") end, },
 				{ "LowKick", condition = function(self) return self:require_input("2C") or self:require_input("1C") or self:require_input("3C") end, },
@@ -542,6 +620,39 @@ local function Character(face, shirt_color)
 			},
 			StaggerEnd = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
+			},
+			
+			StaggerCrouchStart = { 
+				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
+				{ "StaggerCrouch", condition = function(self) return self:require_animationfinish() end, },
+			},
+			StaggerCrouch = { 
+				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
+				{ "StaggerCrouchEnd", condition = function(self) return not self:require_hurt() end, },
+			},
+			StaggerCrouchEnd = { 
+				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
+				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
+			},
+			
+			StaggerAirStart = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() end, },
+				{ "StaggerAir", condition = function(self) return self:require_animationfinish() end, },
+			},
+			StaggerAir = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() end, },
+				{ "StaggerAirEnd", condition = function(self) return not self:require_hurt() end, },
+			},
+			StaggerAirEnd = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() end, },
+				{ "Downed", condition = function(self) return self:require_animationfinish() and self.position.GetY() < 0.2 end, },
+			},
+
+			Downed = { 
+				{ "Getup", condition = function(self) return self:require_input("A") or self:require_input("B") or self:require_input("C") or self.frame > 60 end, },
+			},
+			Getup = { 
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 		},
@@ -632,9 +743,16 @@ local function Character(face, shirt_color)
 
 		end,
 	
+		ai_state = "Idle",
 		AI = function(self)
-			-- todo some AI bot behaviour
-			table.insert(self.input_buffer, {age = 0, command = "5"})
+			-- todo some better AI bot behaviour
+			if(self.ai_state == "Jump") then
+				table.insert(self.input_buffer, {age = 0, command = "8"})
+			elseif(self.ai_state == "Crouch") then
+				table.insert(self.input_buffer, {age = 0, command = "2"})
+			else
+				table.insert(self.input_buffer, {age = 0, command = "5"})
+			end
 		end,
 
 		Input = function(self)
@@ -781,7 +899,6 @@ local ResolveCharacters = function(player1, player2)
 	for i,hitbox in pairs(player1.hitboxes) do
 		for j,hurtbox in pairs(player2.hurtboxes) do
 			if(hitbox.Intersects(hurtbox)) then
-				backlog_post("HIT: " .. hitbox.GetMin().GetX() .. " : " .. hurtbox.GetMin().GetX())
 				player1.hitconfirm = true
 				player2.hurt = true
 				break
@@ -929,6 +1046,14 @@ runProcess(function()
 	while true do
 
 		ResolveCharacters(player1, player2)
+
+		if(input.Press(string.byte('I'))) then
+			player2.ai_state = "Idle"
+		elseif(input.Press(string.byte('J'))) then
+			player2.ai_state = "Jump"
+		elseif(input.Press(string.byte('C'))) then
+			player2.ai_state = "Crouch"
+		end
 
 		local inputString = "input: "
 		for i,element in ipairs(player1.input_buffer) do
