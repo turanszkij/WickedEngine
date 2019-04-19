@@ -1,6 +1,14 @@
 -- Lua Fighting game sample script
 --
 -- README:
+--
+-- Structure of this script:
+--	
+--	**) Character "class"	- holds all character specific information, like hitboxes, moves, state machine, and Update(), Input() functions
+--	***) ResolveCharacters() function	- updates the two players and checks for collision, moves the camera, etc.
+--	****) Main loop process	- initialize script and do call update() in an infinite loop
+--
+--
 -- The script is programmable using common fighting game "numpad notations" (read this if you are unfamiliar: http://www.dustloop.com/wiki/index.php/Notation )
 -- There are four action buttons: A, B, C, D
 --	So for example a forward motion combined with action D would look like this in code: "6D" 
@@ -16,7 +24,7 @@
 
 local scene = GetScene()
 
--- The character "class" is a wrapper function that returns a local internal table called "self"
+-- **The character "class" is a wrapper function that returns a local internal table called "self"
 local function Character(face, shirt_color)
 	local self = {
 		model = INVALID_ENTITY,
@@ -28,6 +36,10 @@ local function Character(face, shirt_color)
 		frame = 0,
 		input_buffer = {},
 		clipbox = AABB(),
+		hurtboxes = {},
+		hitboxes = {},
+		hitconfirm = false,
+		hurt = false,
 
 		-- Common requirement conditions for state transitions:
 		require_input_window = function(self, inputString, window) -- player input notation with some tolerance to input execution window (in frames) (help: see readme on top of this file)
@@ -54,6 +66,12 @@ local function Character(face, shirt_color)
 		require_animationfinish = function(self) -- animation is finished
 			return scene.Component_GetAnimation(self.states[self.state].anim).IsEnded()
 		end,
+		require_hitconfirm = function(self) -- true if this player successfully hit the other
+			return self.hitconfirm
+		end,
+		require_hurt = function(self) -- true if this player was hit by the other
+			return self.hurt
+		end,
 		
 		-- Common motion helpers:
 		require_motion_qcf = function(self, button)
@@ -75,11 +93,13 @@ local function Character(face, shirt_color)
 				anim_name = "Idle",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
 			Walk_Backward = {
 				anim_name = "Back",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(-0.025 * self.face, 0))
 				end,
@@ -88,6 +108,7 @@ local function Character(face, shirt_color)
 				anim_name = "Forward",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(0.025 * self.face, 0))
 				end,
@@ -97,6 +118,7 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self:require_window(0,2)) then
 						self.force = vector.Add(self.force, Vector(-0.07 * self.face, 0.1))
@@ -107,25 +129,29 @@ local function Character(face, shirt_color)
 				anim_name = "RunStart",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-0.5), Vector(2, 5)),
+				hurtbox = AABB(Vector(-0.7), Vector(2.2, 5.5)),
 			},
 			Run = {
 				anim_name = "Run",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-0.5), Vector(2, 5)),
+				hurtbox = AABB(Vector(-0.7), Vector(2.2, 5.5)),
 				update = function(self)
-					self.force = vector.Add(self.force, Vector(0.06 * self.face, 0))
+					self.force = vector.Add(self.force, Vector(0.08 * self.face, 0))
 				end,
 			},
 			RunEnd = {
 				anim_name = "RunEnd",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-0.5), Vector(2, 5)),
+				hurtbox = AABB(Vector(-0.7), Vector(2.2, 5.5)),
 			},
 			Jump = {
 				anim_name = "Jump",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.force = vector.Add(self.force, Vector(0, 0.8))
@@ -137,6 +163,7 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.force = vector.Add(self.force, Vector(-0.2 * self.face, 0.8))
@@ -148,6 +175,7 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.force = vector.Add(self.force, Vector(0.2 * self.face, 0.8))
@@ -159,40 +187,47 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
 			Fall = {
 				anim_name = "Fall",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
 			FallEnd = {
 				anim_name = "FallEnd",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
 			CrouchStart = {
 				anim_name = "CrouchStart",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 3)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
 			},
 			Crouch = {
 				anim_name = "Crouch",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-1), Vector(1, 3)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
 			},
 			CrouchEnd = {
 				anim_name = "CrouchEnd",
 				anim = INVALID_ENTITY,
 				looped = false,
-				clipbox = AABB(Vector(-1), Vector(1, 3)),
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
 			Turn = {
 				anim_name = "Turn",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
 						self.face = self.request_face
@@ -205,57 +240,109 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(3,6)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
+					end
+				end,
 			},
 			ForwardLightPunch = {
 				anim_name = "FLightPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(12,14)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
+					end
+				end,
 			},
 			HeavyPunch = {
 				anim_name = "HeavyPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(3,6)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
+					end
+				end,
 			},
 			LowPunch = {
 				anim_name = "LowPunch",
 				anim = INVALID_ENTITY,
 				looped = false,
-				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				clipbox = AABB(Vector(-1), Vector(1, 3)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
+				update = function(self)
+					if(self:require_window(3,6)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
+					end
+				end,
 			},
 			LightKick = {
 				anim_name = "LightKick",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(6,8)) then
+						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+					end
+				end,
 			},
 			HeavyKick = {
 				anim_name = "HeavyKick",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(8,13)) then
+						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
+					end
+				end,
 			},
 			LowKick = {
 				anim_name = "LowKick",
 				anim = INVALID_ENTITY,
 				looped = false,
-				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				clipbox = AABB(Vector(-1), Vector(1, 3)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
+				update = function(self)
+					if(self:require_window(3,6)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
+					end
+				end,
 			},
 			Uppercut = {
 				anim_name = "Uppercut",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(3,14)) then
+						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
+					end
+				end,
 			},
 			SpearJaunt = {
 				anim_name = "SpearJaunt",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1.5), Vector(1.5, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self:require_frame(16)) then
 						self.force = vector.Add(self.force, Vector(1.3 * self.face))
+					end
+					if(self:require_window(17,40)) then
+						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
 					end
 				end,
 			},
@@ -264,11 +351,37 @@ local function Character(face, shirt_color)
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self:require_frame(0)) then
 						self.force = vector.Add(self.force, Vector(0.3 * self.face, 0.9))
 					end
+					if(self:require_window(2,30)) then
+						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
+					end
 				end,
+			},
+			
+			StaggerStart = {
+				anim_name = "StaggerStart",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+			Stagger = {
+				anim_name = "Stagger",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
+			StaggerEnd = {
+				anim_name = "StaggerEnd",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 			},
 		},
 
@@ -279,6 +392,7 @@ local function Character(face, shirt_color)
 		--	}
 		statemachine = {
 			Idle = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face and self:require_input("5") end, },
@@ -293,6 +407,7 @@ local function Character(face, shirt_color)
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
 			},
 			Walk_Backward = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
@@ -306,6 +421,7 @@ local function Character(face, shirt_color)
 				{ "HeavyKick", condition = function(self) return self:require_input("6C") end, },
 			},
 			Walk_Forward = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
@@ -320,18 +436,22 @@ local function Character(face, shirt_color)
 				{ "HeavyKick", condition = function(self) return self:require_input("6C") end, },
 			},
 			Dash_Backward = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			RunStart = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Run", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Run = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "RunEnd", condition = function(self) return self:require_input("5") end, },
 				{ "Jump", condition = function(self) return self:require_input("8") end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 			},
 			RunEnd = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Jump = { 
@@ -364,40 +484,65 @@ local function Character(face, shirt_color)
 				{ "Uppercut", condition = function(self) return self:require_input("2B") or self:require_input("1B") or self:require_input("3B") end, },
 			},
 			CrouchEnd = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Turn = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			LightPunch = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			ForwardLightPunch = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			HeavyPunch = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			LowPunch = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
 			},
 			LightKick = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			HeavyKick = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			LowKick = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Uppercut = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			SpearJaunt = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Shoryuken = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallStart", condition = function(self) return self:require_animationfinish() end, },
+			},
+			
+			StaggerStart = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Stagger", condition = function(self) return self:require_animationfinish() end, },
+			},
+			Stagger = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "StaggerEnd", condition = function(self) return not self:require_hurt() end, },
+			},
+			StaggerEnd = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 		},
 
@@ -437,6 +582,8 @@ local function Character(face, shirt_color)
 		ExecuteCurrentState = function(self)
 
 			self.clipbox = AABB()
+			self.hurtboxes = {}
+			self.hitboxes = {}
 
 			local current_state = self.states[self.state]
 			if(current_state ~= nil) then
@@ -445,6 +592,9 @@ local function Character(face, shirt_color)
 				end
 				if(current_state.clipbox ~= nil) then
 					self.clipbox = current_state.clipbox
+				end
+				if(current_state.hurtbox ~= nil) then
+					table.insert(self.hurtboxes, current_state.hurtbox)
 				end
 			end
 		end,
@@ -584,7 +734,16 @@ local function Character(face, shirt_color)
 			model_transform.Rotate(Vector(0, 3.1415 * ((self.face - 1) * 0.5)))
 			model_transform.UpdateTransform()
 
-			self.clipbox = self.clipbox.Transform(model_transform.GetMatrix())
+			local model_mat = model_transform.GetMatrix()
+			self.clipbox = self.clipbox.Transform(model_mat)
+			for i,hitbox in ipairs(self.hitboxes) do
+				self.hitboxes[i] = hitbox.Transform(model_mat)
+				DrawBox(self.hitboxes[i].GetAsBoxMatrix(), Vector(1,0,0,1))
+			end
+			for i,hurtbox in ipairs(self.hurtboxes) do
+				self.hurtboxes[i] = hurtbox.Transform(model_mat)
+				DrawBox(self.hurtboxes[i].GetAsBoxMatrix(), Vector(0,1,0,1))
+			end
 
 			-- Some debug draw:
 			DrawPoint(model_transform.GetPosition(), 0.1, Vector(1,0,0,1))
@@ -605,16 +764,38 @@ end
 local camera_position = Vector()
 local camera_transform = TransformComponent()
 
--- Interaction between two characters:
+-- ***Interaction between two characters:
 local ResolveCharacters = function(player1, player2)
+		
+	player1:Input()
+	player2:AI()
 
-	-- Facing direction requests:
-	if(player1.position.GetX() < player2.position.GetX()) then
-		player1.request_face = 1
-		player2.request_face = -1
-	else
-		player1.request_face = -1
-		player2.request_face = 1
+	player1:Update()
+	player2:Update()
+
+	-- Hit/Hurt:
+	player1.hitconfirm = false
+	player1.hurt = false
+	player2.hitconfirm = false
+	player2.hurt = false
+	for i,hitbox in pairs(player1.hitboxes) do
+		for j,hurtbox in pairs(player2.hurtboxes) do
+			if(hitbox.Intersects(hurtbox)) then
+				backlog_post("HIT: " .. hitbox.GetMin().GetX() .. " : " .. hurtbox.GetMin().GetX())
+				player1.hitconfirm = true
+				player2.hurt = true
+				break
+			end
+		end
+	end
+	for i,hitbox in ipairs(player2.hitboxes) do
+		for j,hurtbox in ipairs(player1.hurtboxes) do
+			if(hitbox.Intersects(hurtbox)) then
+				player2.hitconfirm = true
+				player1.hurt = true
+				break
+			end
+		end
 	end
 
 	-- Clipping:
@@ -628,6 +809,15 @@ local ResolveCharacters = function(player1, player2)
 		local offset = (target_diff - diff) * 0.5
 		player1.position.SetX(player1.position.GetX() - offset * player1.request_face)
 		player2.position.SetX(player2.position.GetX() - offset * player2.request_face)
+	end
+
+	-- Facing direction requests:
+	if(player1.position.GetX() < player2.position.GetX()) then
+		player1.request_face = 1
+		player2.request_face = -1
+	else
+		player1.request_face = -1
+		player2.request_face = 1
 	end
 
 	-- Camera:
@@ -677,7 +867,7 @@ local ResolveCharacters = function(player1, player2)
 
 end
 
--- Main loop:
+-- ****Main loop:
 runProcess(function()
 
 	ClearWorld() -- clears global scene and renderer
@@ -737,12 +927,6 @@ runProcess(function()
 	local player2 = Character(-1, Vector(1,0,0,1)) -- facing to left, red shirt
 	
 	while true do
-		
-		player1:Input()
-		player2:AI()
-
-		player1:Update()
-		player2:Update()
 
 		ResolveCharacters(player1, player2)
 
