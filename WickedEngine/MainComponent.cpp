@@ -123,28 +123,23 @@ void MainComponent::Run()
 	wiProfiler::BeginFrame();
 	wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
-	if (framerate_lock)
-	{
-		deltaTime = 1.0f / targetFrameRate;
-	}
-	else
-	{
-		deltaTime = float(max(0, timer.elapsed() / 1000.0));
-	}
+	deltaTime = float(max(0, timer.elapsed() / 1000.0));
 	timer.record();
 
 	if (wiWindowRegistration::IsWindowActive())
 	{
 		// If the application is active, run Update loops:
 
-		fadeManager.Update(deltaTime);
+		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
+
+		fadeManager.Update(dt);
 
 		// Fixed time update:
 		wiProfiler::BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
 		{
 			if (frameskip)
 			{
-				deltaTimeAccumulator += deltaTime;
+				deltaTimeAccumulator += dt;
 				if (deltaTimeAccumulator > 10)
 				{
 					// application probably lost control, fixed update would be take long
@@ -167,7 +162,7 @@ void MainComponent::Run()
 
 		// Variable-timed update:
 		wiProfiler::BeginRange("Update", wiProfiler::DOMAIN_CPU);
-		Update(deltaTime);
+		Update(dt);
 		wiProfiler::EndRange(); // Update
 
 		wiInputManager::Update();

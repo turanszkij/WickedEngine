@@ -154,10 +154,9 @@ namespace wiProfiler
 	}
 	void EndRange(GRAPHICSTHREAD threadID)
 	{
-		if (!ENABLED || !initialized)
+		if (!ENABLED || !initialized || rangeStack.empty())
 			return;
 
-		assert(!rangeStack.empty() && "There is no range to end!");
 		const std::string& top = rangeStack.top();
 
 		auto& it = ranges.find(top);
