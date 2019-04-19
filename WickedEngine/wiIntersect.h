@@ -30,6 +30,7 @@ struct AABB
 	XMMATRIX getAsBoxMatrix() const;
 	float getArea() const;
 	float getRadius() const;
+	INTERSECTION_TYPE intersects2D(const AABB& b) const;
 	INTERSECTION_TYPE intersects(const AABB& b) const;
 	bool intersects(const XMFLOAT3& p) const;
 	bool intersects(const RAY& ray) const;

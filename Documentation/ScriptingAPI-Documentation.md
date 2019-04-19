@@ -496,6 +496,7 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 #### AABB
 Axis Aligned Bounding Box. Can be intersected with other primitives.
 - [constructor]AABB(opt Vector min,max)	-- if no argument is given, it will be infinitely inverse that can't intersect
+- Intersects2D(AABB aabb) : bool result	-- omit the z component for intersection check for more precise 2D intersection
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Ray ray) : bool result

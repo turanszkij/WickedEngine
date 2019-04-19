@@ -40,6 +40,7 @@ namespace wiIntersect_BindLua
 		~AABB_BindLua();
 
 		int Intersects(lua_State* L);
+		int Intersects2D(lua_State* L);
 		int GetMin(lua_State* L);
 		int GetMax(lua_State* L);
 		int GetCenter(lua_State* L);

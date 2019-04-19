@@ -101,6 +101,7 @@ namespace wiIntersect_BindLua
 
 	Luna<AABB_BindLua>::FunctionType AABB_BindLua::methods[] = {
 		lunamethod(AABB_BindLua, Intersects),
+		lunamethod(AABB_BindLua, Intersects2D),
 		lunamethod(AABB_BindLua, GetMin),
 		lunamethod(AABB_BindLua, GetMax),
 		lunamethod(AABB_BindLua, GetCenter),
@@ -181,6 +182,24 @@ namespace wiIntersect_BindLua
 
 		}
 		wiLua::SError(L, "[Intersects(AABB), Intersects(Sphere), Intersects(Ray)] no matching arguments! ");
+		return 0;
+	}
+	int AABB_BindLua::Intersects2D(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			AABB_BindLua* _aabb = Luna<AABB_BindLua>::lightcheck(L, 1);
+			if (_aabb)
+			{
+				//int intersects = (int)aabb.intersects(_aabb->aabb);
+				//wiLua::SSetInt(L, intersects);
+				wiLua::SSetBool(L, aabb.intersects2D(_aabb->aabb) != AABB::INTERSECTION_TYPE::OUTSIDE); // int intersection type cannot be checked like bool in lua so we give simple bool result here!
+				return 1;
+			}
+
+		}
+		wiLua::SError(L, "Intersects2D(AABB) not enough arguments! ");
 		return 0;
 	}
 	int AABB_BindLua::GetMin(lua_State* L)

@@ -898,7 +898,7 @@ local ResolveCharacters = function(player1, player2)
 	player2.hurt = false
 	for i,hitbox in pairs(player1.hitboxes) do
 		for j,hurtbox in pairs(player2.hurtboxes) do
-			if(hitbox.Intersects(hurtbox)) then
+			if(hitbox.Intersects2D(hurtbox)) then
 				player1.hitconfirm = true
 				player2.hurt = true
 				break
@@ -907,7 +907,7 @@ local ResolveCharacters = function(player1, player2)
 	end
 	for i,hitbox in ipairs(player2.hitboxes) do
 		for j,hurtbox in ipairs(player1.hurtboxes) do
-			if(hitbox.Intersects(hurtbox)) then
+			if(hitbox.Intersects2D(hurtbox)) then
 				player2.hitconfirm = true
 				player1.hurt = true
 				break
@@ -916,7 +916,7 @@ local ResolveCharacters = function(player1, player2)
 	end
 
 	-- Clipping:
-	if(player1.clipbox.Intersects(player2.clipbox)) then
+	if(player1.clipbox.Intersects2D(player2.clipbox)) then
 		local center1 = player1.clipbox.GetCenter().GetX()
 		local center2 = player2.clipbox.GetCenter().GetX()
 		local extent1 = player1.clipbox.GetHalfExtents().GetX()
@@ -1011,6 +1011,9 @@ runProcess(function()
 	help_text = help_text .. "\nUp: action B"
 	help_text = help_text .. "\nLeft: action C"
 	help_text = help_text .. "\nDown: action D"
+	help_text = help_text .. "\nJ: player2 will always jump"
+	help_text = help_text .. "\nC: player2 will always crouch"
+	help_text = help_text .. "\nI: player2 will be idle"
 	help_text = help_text .. "\n\nMovelist:"
 	help_text = help_text .. "\n\t A : Light Punch"
 	help_text = help_text .. "\n\t B : Heavy Punch"

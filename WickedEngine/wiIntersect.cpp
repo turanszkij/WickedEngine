@@ -86,6 +86,24 @@ AABB::INTERSECTION_TYPE AABB::intersects(const AABB& b) const {
 
 	return INTERSECTS;
 }
+AABB::INTERSECTION_TYPE AABB::intersects2D(const AABB& b) const {
+
+	XMFLOAT3 aMin = getMin(), aMax = getMax();
+	XMFLOAT3 bMin = b.getMin(), bMax = b.getMax();
+
+	if (bMin.x >= aMin.x && bMax.x <= aMax.x &&
+		bMin.y >= aMin.y && bMax.y <= aMax.y)
+	{
+		return INSIDE;
+	}
+
+	if (aMax.x < bMin.x || aMin.x > bMax.x)
+		return OUTSIDE;
+	if (aMax.y < bMin.y || aMin.y > bMax.y)
+		return OUTSIDE;
+
+	return INTERSECTS;
+}
 bool AABB::intersects(const XMFLOAT3& p) const {
 	XMFLOAT3 max = getMax();
 	XMFLOAT3 min = getMin();
