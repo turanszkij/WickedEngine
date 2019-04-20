@@ -28,6 +28,7 @@ local scene = GetScene()
 local function Character(face, shirt_color)
 	local self = {
 		model = INVALID_ENTITY,
+		effect_dust = INVALID_ENTITY,
 		face = 1, -- face direction (X)
 		request_face = 1,
 		position = Vector(),
@@ -201,6 +202,15 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_frame(2)) then
+						local emitter_component = scene.Component_GetEmitter(self.effect_dust)
+						emitter_component.Burst(10)
+						local transform_component = scene.Component_GetTransform(self.effect_dust)
+						transform_component.ClearTransform()
+						transform_component.Translate(self.position)
+					end
+				end,
 			},
 			CrouchStart = {
 				anim_name = "CrouchStart",
@@ -424,6 +434,7 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					self.velocity = Vector()
+					self.force = vector.Add(self.force, Vector(-0.3 * self.face))
 				end,
 			},
 			StaggerAirEnd = {
@@ -738,6 +749,14 @@ local function Character(face, shirt_color)
 
 			-- Move the custom scene into the global scene:
 			scene.Merge(model_scene)
+
+			-- Load effects:
+			local effect_scene = Scene()
+			local model_dust = LoadModel(effect_scene, "../models/emitter_dust.wiscene")
+			self.effect_dust = effect_scene.Entity_FindByName("dust")  -- query the emitter entity by name
+			local emitter_component = effect_scene.Component_GetEmitter(self.effect_dust)
+			emitter_component.SetEmitCount(0)  -- don't emit continuously
+			scene.Merge(effect_scene)
 
 			self:StartState(self.state)
 
