@@ -29,6 +29,7 @@ local function Character(face, shirt_color)
 	local self = {
 		model = INVALID_ENTITY,
 		effect_dust = INVALID_ENTITY,
+		effect_hit = INVALID_ENTITY,
 		face = 1, -- face direction (X)
 		request_face = 1,
 		position = Vector(),
@@ -41,6 +42,21 @@ local function Character(face, shirt_color)
 		hitboxes = {},
 		hitconfirm = false,
 		hurt = false,
+		jumps_remaining = 2,
+
+		-- Effect helpers:
+		spawn_effect_hit = function(self, local_pos)
+			scene.Component_GetEmitter(self.effect_hit).Burst(50)
+			local transform_component = scene.Component_GetTransform(self.effect_hit)
+			transform_component.ClearTransform()
+			transform_component.Translate(vector.Add(self.position, local_pos))
+		end,
+		spawn_effect_dust = function(self, local_pos)
+			local emitter_component = scene.Component_GetEmitter(self.effect_dust).Burst(10)
+			local transform_component = scene.Component_GetTransform(self.effect_dust)
+			transform_component.ClearTransform()
+			transform_component.Translate(self.position)
+		end,
 
 		-- Common requirement conditions for state transitions:
 		require_input_window = function(self, inputString, window) -- player input notation with some tolerance to input execution window (in frames) (help: see readme on top of this file)
@@ -90,11 +106,15 @@ local function Character(face, shirt_color)
 
 		-- List all possible states:
 		states = {
+			-- Common states:
 			Idle = {
 				anim_name = "Idle",
 				anim = INVALID_ENTITY,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					self.jumps_remaining = 2
+				end,
 			},
 			Walk_Backward = {
 				anim_name = "Back",
@@ -123,6 +143,9 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(0,2)) then
 						self.force = vector.Add(self.force, Vector(-0.07 * self.face, 0.1))
+					end
+					if(self:require_frame(14)) then
+						self:spawn_effect_dust(Vector())
 					end
 				end,
 			},
@@ -155,6 +178,8 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
+						self.jumps_remaining = self.jumps_remaining - 1
+						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(0, 0.8))
 					end
 				end,
@@ -167,6 +192,8 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
+						self.jumps_remaining = self.jumps_remaining - 1
+						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(-0.2 * self.face, 0.8))
 					end
 				end,
@@ -179,6 +206,8 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.frame == 0) then
+						self.jumps_remaining = self.jumps_remaining - 1
+						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(0.2 * self.face, 0.8))
 					end
 				end,
@@ -204,11 +233,7 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self:require_frame(2)) then
-						local emitter_component = scene.Component_GetEmitter(self.effect_dust)
-						emitter_component.Burst(10)
-						local transform_component = scene.Component_GetTransform(self.effect_dust)
-						transform_component.ClearTransform()
-						transform_component.Translate(self.position)
+						self:spawn_effect_dust(Vector())
 					end
 				end,
 			},
@@ -245,6 +270,7 @@ local function Character(face, shirt_color)
 				end,
 			},
 			
+			-- Attack states:
 			LightPunch = {
 				anim_name = "LightPunch",
 				anim = INVALID_ENTITY,
@@ -254,6 +280,9 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 					end
 				end,
 			},
@@ -267,6 +296,9 @@ local function Character(face, shirt_color)
 					if(self:require_window(12,14)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
 					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+					end
 				end,
 			},
 			HeavyPunch = {
@@ -278,6 +310,9 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 					end
 				end,
 			},
@@ -291,6 +326,9 @@ local function Character(face, shirt_color)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
 					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.5 * self.face,2,-1))
+					end
 				end,
 			},
 			LightKick = {
@@ -302,6 +340,9 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
 					end
 				end,
 			},
@@ -315,6 +356,9 @@ local function Character(face, shirt_color)
 					if(self:require_window(8,13)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
 					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.6 * self.face,1.4,-1))
+					end
 				end,
 			},
 			LowKick = {
@@ -327,6 +371,9 @@ local function Character(face, shirt_color)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
 					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2 * self.face,1,-1))
+					end
 				end,
 			},
 			Uppercut = {
@@ -338,6 +385,9 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,14)) then
 						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 					end
 				end,
 			},
@@ -354,6 +404,9 @@ local function Character(face, shirt_color)
 					if(self:require_window(17,40)) then
 						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
 					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(3 * self.face,3.6,-1))
+					end
 				end,
 			},
 			Shoryuken = {
@@ -369,9 +422,13 @@ local function Character(face, shirt_color)
 					if(self:require_window(2,30)) then
 						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
 					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+					end
 				end,
 			},
 			
+			-- Hurt states:
 			StaggerStart = {
 				anim_name = "StaggerStart",
 				anim = INVALID_ENTITY,
@@ -385,6 +442,9 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					self.force = vector.Add(self.force, Vector(-0.3 * self.request_face))
+				end,
 			},
 			StaggerEnd = {
 				anim_name = "StaggerEnd",
@@ -407,6 +467,9 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					self.force = vector.Add(self.force, Vector(-0.3 * self.request_face))
+				end,
 			},
 			StaggerCrouchEnd = {
 				anim_name = "StaggerCrouchEnd",
@@ -434,7 +497,7 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					self.velocity = Vector()
-					self.force = vector.Add(self.force, Vector(-0.3 * self.face))
+					self.force = vector.Add(self.force, Vector(-0.3 * self.request_face))
 				end,
 			},
 			StaggerAirEnd = {
@@ -443,6 +506,11 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self.position.GetY() < 0.1 and self.velocity.GetY() < 0) then
+						self:spawn_effect_dust(Vector())
+					end
+				end,
 			},
 			
 			Downed = {
@@ -470,7 +538,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
-				{ "Turn", condition = function(self) return self.request_face ~= self.face and self:require_input("5") end, },
+				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
 				{ "Jump", condition = function(self) return self:require_input("8") end, },
@@ -553,6 +621,9 @@ local function Character(face, shirt_color)
 			Fall = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Jump", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("58", 7) end, },
+				{ "JumpBack", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("57", 7) end, },
+				{ "JumpForward", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("59", 7) end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
 			},
 			FallEnd = { 
@@ -750,13 +821,23 @@ local function Character(face, shirt_color)
 			-- Move the custom scene into the global scene:
 			scene.Merge(model_scene)
 
+
+
 			-- Load effects:
 			local effect_scene = Scene()
-			local model_dust = LoadModel(effect_scene, "../models/emitter_dust.wiscene")
+			
+			effect_scene.Clear()
+			LoadModel(effect_scene, "../models/emitter_dust.wiscene")
 			self.effect_dust = effect_scene.Entity_FindByName("dust")  -- query the emitter entity by name
-			local emitter_component = effect_scene.Component_GetEmitter(self.effect_dust)
-			emitter_component.SetEmitCount(0)  -- don't emit continuously
+			effect_scene.Component_GetEmitter(self.effect_dust).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
+
+			effect_scene.Clear()
+			LoadModel(effect_scene, "../models/emitter_hiteffect.wiscene")
+			self.effect_hit = effect_scene.Entity_FindByName("hit")  -- query the emitter entity by name
+			effect_scene.Component_GetEmitter(self.effect_hit).SetEmitCount(0)  -- don't emit continuously
+			scene.Merge(effect_scene)
+
 
 			self:StartState(self.state)
 
@@ -871,6 +952,7 @@ local function Character(face, shirt_color)
 			model_transform.Rotate(Vector(0, 3.1415 * ((self.face - 1) * 0.5)))
 			model_transform.UpdateTransform()
 
+			-- Update hitboxes, etc:
 			local model_mat = model_transform.GetMatrix()
 			self.clipbox = self.clipbox.Transform(model_mat)
 			for i,hitbox in ipairs(self.hitboxes) do
@@ -962,7 +1044,7 @@ local ResolveCharacters = function(player1, player2)
 	local MODIFIED_CAMERADISTANCE = -11.5 -- if the two players are far enough from each other, the camera will zoom out to this distance
 	local CAMERA_DISTANCE_MODIFIER = 10 -- the required distance between the characters when the camera should zoom out
 	local XBOUNDS = 20 -- play area horizontal bounds
-	local CAMERA_SIDE_LENGTH = 11 -- play area inside the camera (character can't move outside camera even if inside the play area)
+	local CAMERA_SIDE_LENGTH = 10 -- play area inside the camera (character can't move outside camera even if inside the play area)
 
 	-- Clamp the players inside the camera:
 	local camera_side_left = camera_position.GetX() - CAMERA_SIDE_LENGTH
