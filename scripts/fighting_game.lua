@@ -43,6 +43,7 @@ local function Character(face, shirt_color)
 		hitconfirm = false,
 		hurt = false,
 		jumps_remaining = 2,
+		opponent_force = Vector(),
 
 		-- Effect helpers:
 		spawn_effect_hit = function(self, local_pos)
@@ -162,6 +163,9 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-0.7), Vector(2.2, 5.5)),
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(0.08 * self.face, 0))
+					if(self.frame % 15 == 0) then
+						self:spawn_effect_dust(Vector())
+					end
 				end,
 			},
 			RunEnd = {
@@ -181,6 +185,9 @@ local function Character(face, shirt_color)
 						self.jumps_remaining = self.jumps_remaining - 1
 						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(0, 0.8))
+						if(self.position.GetY() == 0) then
+							self:spawn_effect_dust(Vector())
+						end
 					end
 				end,
 			},
@@ -195,6 +202,9 @@ local function Character(face, shirt_color)
 						self.jumps_remaining = self.jumps_remaining - 1
 						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(-0.2 * self.face, 0.8))
+						if(self.position.GetY() == 0) then
+							self:spawn_effect_dust(Vector())
+						end
 					end
 				end,
 			},
@@ -209,6 +219,9 @@ local function Character(face, shirt_color)
 						self.jumps_remaining = self.jumps_remaining - 1
 						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(0.2 * self.face, 0.8))
+						if(self.position.GetY() == 0) then
+							self:spawn_effect_dust(Vector())
+						end
 					end
 				end,
 			},
@@ -280,6 +293,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
+						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
@@ -295,6 +309,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(12,14)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
+						self.opponent_force = Vector(0.01 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
@@ -310,6 +325,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
+						self.opponent_force = Vector(0.08 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
@@ -325,6 +341,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
+						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,2,-1))
@@ -340,6 +357,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
@@ -355,9 +373,42 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(8,13)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
+						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.6 * self.face,1.4,-1))
+					end
+				end,
+			},
+			AirKick = {
+				anim_name = "AirKick",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(6,8)) then
+						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self.opponent_force = Vector(0.04 * self.face)
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+					end
+				end,
+			},
+			AirHeavyKick = {
+				anim_name = "AirHeavyKick",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					if(self:require_window(6,8)) then
+						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self.opponent_force = Vector(0.04 * self.face)
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
 					end
 				end,
 			},
@@ -370,6 +421,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
+						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,1,-1))
@@ -383,8 +435,9 @@ local function Character(face, shirt_color)
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
-					if(self:require_window(3,14)) then
+					if(self:require_window(3,5)) then
 						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
+						self.opponent_force = Vector(0.04 * self.face, 0.4)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
@@ -403,6 +456,7 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_window(17,40)) then
 						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
+						self.opponent_force = Vector(0.08 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(3 * self.face,3.6,-1))
@@ -419,8 +473,11 @@ local function Character(face, shirt_color)
 					if(self:require_frame(0)) then
 						self.force = vector.Add(self.force, Vector(0.3 * self.face, 0.9))
 					end
-					if(self:require_window(2,30)) then
-						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
+					if(self:require_window(2,20)) then
+						table.insert(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
+					end
+					if(self:require_window(2,8)) then
+						self.opponent_force = Vector(0, 1)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
@@ -442,9 +499,6 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
-					self.force = vector.Add(self.force, Vector(-0.3 * self.request_face))
-				end,
 			},
 			StaggerEnd = {
 				anim_name = "StaggerEnd",
@@ -467,9 +521,6 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
-					self.force = vector.Add(self.force, Vector(-0.3 * self.request_face))
-				end,
 			},
 			StaggerCrouchEnd = {
 				anim_name = "StaggerCrouchEnd",
@@ -485,9 +536,6 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
-					self.velocity = Vector()
-				end,
 			},
 			StaggerAir = {
 				anim_name = "StaggerAir",
@@ -495,10 +543,6 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
-					self.velocity = Vector()
-					self.force = vector.Add(self.force, Vector(-0.3 * self.request_face))
-				end,
 			},
 			StaggerAirEnd = {
 				anim_name = "StaggerAirEnd",
@@ -507,7 +551,7 @@ local function Character(face, shirt_color)
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
-					if(self.position.GetY() < 0.1 and self.velocity.GetY() < 0) then
+					if(self.position.GetY() < 1 and self.velocity.GetY() < 0) then
 						self:spawn_effect_dust(Vector())
 					end
 				end,
@@ -516,8 +560,8 @@ local function Character(face, shirt_color)
 			Downed = {
 				anim_name = "Downed",
 				anim = INVALID_ENTITY,
-				clipbox = AABB(Vector(-1), Vector(1, 5)),
-				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				clipbox = AABB(Vector(-1), Vector(1, 1)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 1)),
 			},
 			Getup = {
 				anim_name = "Getup",
@@ -588,10 +632,10 @@ local function Character(face, shirt_color)
 			},
 			Run = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "RunEnd", condition = function(self) return self:require_input("5") end, },
 				{ "Jump", condition = function(self) return self:require_input("8") end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
+				{ "RunEnd", condition = function(self) return not self:require_input("6") end, },
 			},
 			RunEnd = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -600,16 +644,22 @@ local function Character(face, shirt_color)
 			Jump = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			JumpForward = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			JumpBack = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			FallStart = { 
@@ -617,6 +667,8 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
 				{ "Fall", condition = function(self) return self:require_animationfinish() end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 			},
 			Fall = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
@@ -625,6 +677,8 @@ local function Character(face, shirt_color)
 				{ "JumpBack", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("57", 7) end, },
 				{ "JumpForward", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("59", 7) end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 			},
 			FallEnd = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
@@ -675,6 +729,14 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
+			AirKick = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fall", condition = function(self) return self:require_animationfinish() end, },
+			},
+			AirHeavyKick = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fall", condition = function(self) return self:require_animationfinish() end, },
+			},
 			LowKick = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
@@ -693,27 +755,33 @@ local function Character(face, shirt_color)
 			},
 			
 			StaggerStart = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Stagger", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Stagger = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "StaggerEnd", condition = function(self) return not self:require_hurt() end, },
 			},
 			StaggerEnd = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			
 			StaggerCrouchStart = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "StaggerCrouch", condition = function(self) return self:require_animationfinish() end, },
 			},
 			StaggerCrouch = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "StaggerCrouchEnd", condition = function(self) return not self:require_hurt() end, },
 			},
 			StaggerCrouchEnd = { 
+				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
 			},
@@ -857,7 +925,7 @@ local function Character(face, shirt_color)
 
 		Input = function(self)
 
-			-- read input (todo gamepad):
+			-- read input (todo gamepad/stick):
 			local left = input.Down(string.byte('A'))
 			local right = input.Down(string.byte('D'))
 			local up = input.Down(string.byte('W'))
@@ -867,7 +935,7 @@ local function Character(face, shirt_color)
 			local C = input.Press(VK_LEFT)
 			local D = input.Press(VK_DOWN)
 
-			-- swap left and right if facing is opposite side:
+			-- swap left and right if facing the opposite side:
 			if(self.face < 0) then
 				local tmp = right
 				right = left
@@ -942,14 +1010,14 @@ local function Character(face, shirt_color)
 			if(self.position.GetY() <= 0 and self.velocity.GetY()<=0) then
 				self.position.SetY(0) -- snap to ground
 				self.velocity.SetY(0) -- don't fall below ground
-				self.velocity = vector.Multiply(self.velocity, 0.8) -- ground drag:
+				self.velocity = vector.Multiply(self.velocity, 0.8) -- ground drag
 			end
 			
 			-- Transform component gets set as absolute coordinates every frame:
 			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
 			model_transform.Translate(self.position)
-			model_transform.Rotate(Vector(0, 3.1415 * ((self.face - 1) * 0.5)))
+			model_transform.Rotate(Vector(0, math.pi * ((self.face - 1) * 0.5)))
 			model_transform.UpdateTransform()
 
 			-- Update hitboxes, etc:
@@ -966,8 +1034,8 @@ local function Character(face, shirt_color)
 
 			-- Some debug draw:
 			DrawPoint(model_transform.GetPosition(), 0.1, Vector(1,0,0,1))
-			DrawLine(model_transform.GetPosition(),model_transform.GetPosition():Add(self.velocity), Vector(0,1,0,1))
-			DrawLine(model_transform.GetPosition(),model_transform.GetPosition():Add(Vector(self.face)), Vector(0,0,1,1))
+			DrawLine(model_transform.GetPosition(),model_transform.GetPosition():Add(self.velocity), Vector(0,1,0,10))
+			DrawLine(vector.Add(model_transform.GetPosition(), Vector(0,1)),vector.Add(model_transform.GetPosition(), Vector(0,1)):Add(Vector(self.face)), Vector(0,0,1,1))
 			DrawBox(self.clipbox.GetAsBoxMatrix(), Vector(1,1,0,1))
 		
 		end
@@ -997,24 +1065,30 @@ local ResolveCharacters = function(player1, player2)
 	player1.hurt = false
 	player2.hitconfirm = false
 	player2.hurt = false
+	-- player1 hits player2:
 	for i,hitbox in pairs(player1.hitboxes) do
 		for j,hurtbox in pairs(player2.hurtboxes) do
 			if(hitbox.Intersects2D(hurtbox)) then
 				player1.hitconfirm = true
 				player2.hurt = true
+				player2.velocity = player1.opponent_force
 				break
 			end
 		end
 	end
+	player1.opponent_force = Vector()
+	-- player2 hits player1:
 	for i,hitbox in ipairs(player2.hitboxes) do
 		for j,hurtbox in ipairs(player1.hurtboxes) do
 			if(hitbox.Intersects2D(hurtbox)) then
 				player2.hitconfirm = true
 				player1.hurt = true
+				player1.velocity = player2.opponent_force
 				break
 			end
 		end
 	end
+	player2.opponent_force = Vector()
 
 	-- Clipping:
 	if(player1.clipbox.Intersects2D(player2.clipbox)) then
@@ -1124,6 +1198,8 @@ runProcess(function()
 	help_text = help_text .. "\n\t 2A : Low Punch"
 	help_text = help_text .. "\n\t 2B : Uppercut"
 	help_text = help_text .. "\n\t 2C : Low Kick"
+	help_text = help_text .. "\n\t C : Air Kick (while jumping)"
+	help_text = help_text .. "\n\t 2C : Air Heavy Kick (while jumping)"
 	help_text = help_text .. "\n\t 623D: Shoryuken"
 	help_text = help_text .. "\n\t 236D: Jaunt"
 	local font = Font(help_text);
