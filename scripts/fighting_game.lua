@@ -31,19 +31,19 @@ local function Character(face, shirt_color)
 		effect_dust = INVALID_ENTITY,
 		effect_hit = INVALID_ENTITY,
 		face = 1, -- face direction (X)
-		request_face = 1,
-		position = Vector(),
-		velocity = Vector(),
-		force = Vector(),
-		frame = 0,
-		input_buffer = {},
-		clipbox = AABB(),
-		hurtboxes = {},
-		hitboxes = {},
-		hitconfirm = false,
-		hurt = false,
-		jumps_remaining = 2,
-		opponent_force = Vector(),
+		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
+		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
+		velocity = Vector(), -- velocity will affect position
+		force = Vector(), -- force will affect velocity
+		frame = 0, -- the current animation's elapsed frames starting from 0
+		input_buffer = {}, -- list of input history
+		clipbox = AABB(), -- AABB that makes the two players not clip into each other
+		hurtboxes = {}, -- list of AABBs that the opponent can hit with a hitbox
+		hitboxes = {}, -- list of AABBs that can hit the opponent's hurtboxes
+		hitconfirm = false, -- will be true in this frame if this player hit the opponent
+		hurt = false, -- will be true in a frame if this player was hit by the opponent
+		jumps_remaining = 2, -- for double jump
+		push = Vector(), -- will affect opponent's velocity
 
 		-- Effect helpers:
 		spawn_effect_hit = function(self, local_pos)
@@ -293,10 +293,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self.push = Vector(0.05 * self.face)
 					end
 				end,
 			},
@@ -309,10 +309,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(12,14)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
-						self.opponent_force = Vector(0.01 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self.push = Vector(0.07 * self.face)
 					end
 				end,
 			},
@@ -325,10 +325,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
-						self.opponent_force = Vector(0.08 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -341,10 +341,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,2,-1))
+						self.push = Vector(0.05 * self.face)
 					end
 				end,
 			},
@@ -357,10 +357,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+						self.push = Vector(0.05 * self.face)
 					end
 				end,
 			},
@@ -373,10 +373,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(8,13)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.6 * self.face,1.4,-1))
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -389,10 +389,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -405,10 +405,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -421,10 +421,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
-						self.opponent_force = Vector(0.04 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,1,-1))
+						self.push = Vector(0.05 * self.face)
 					end
 				end,
 			},
@@ -437,10 +437,10 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_window(3,5)) then
 						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
-						self.opponent_force = Vector(0.04 * self.face, 0.4)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self.push = Vector(0.1 * self.face, 0.25)
 					end
 				end,
 			},
@@ -456,10 +456,10 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_window(17,40)) then
 						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
-						self.opponent_force = Vector(0.08 * self.face)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(3 * self.face,3.6,-1))
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -476,11 +476,11 @@ local function Character(face, shirt_color)
 					if(self:require_window(2,20)) then
 						table.insert(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
 					end
-					if(self:require_window(2,8)) then
-						self.opponent_force = Vector(0, 1)
-					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						if(self:require_window(2,3)) then
+							self.push = Vector(0, 1)
+						end
 					end
 				end,
 			},
@@ -1071,24 +1071,20 @@ local ResolveCharacters = function(player1, player2)
 			if(hitbox.Intersects2D(hurtbox)) then
 				player1.hitconfirm = true
 				player2.hurt = true
-				player2.velocity = player1.opponent_force
 				break
 			end
 		end
 	end
-	player1.opponent_force = Vector()
 	-- player2 hits player1:
 	for i,hitbox in ipairs(player2.hitboxes) do
 		for j,hurtbox in ipairs(player1.hurtboxes) do
 			if(hitbox.Intersects2D(hurtbox)) then
 				player2.hitconfirm = true
 				player1.hurt = true
-				player1.velocity = player2.opponent_force
 				break
 			end
 		end
 	end
-	player2.opponent_force = Vector()
 
 	-- Clipping:
 	if(player1.clipbox.Intersects2D(player2.clipbox)) then
@@ -1156,6 +1152,32 @@ local ResolveCharacters = function(player1, player2)
 	camera_transform.Translate(camera_position)
 	camera_transform.UpdateTransform()
 	GetCamera().TransformCamera(camera_transform)
+	
+
+	-- Push:
+
+	-- player on the edge of screen can initiate push transfer:
+	--	it means that the player cannot be pushed further, so the opponent will be pushed back instead to compensate:
+	if(player2.position.GetX() <= camera_side_left and player1.push.GetX() < 0) then
+		player2.push.SetX(-player1.push.GetX())
+	end
+	if(player2.position.GetX() >= camera_side_right and player1.push.GetX() > 0) then
+		player2.push.SetX(-player1.push.GetX())
+	end
+	if(player1.position.GetX() <= camera_side_left and player2.push.GetX() < 0) then
+		player1.push.SetX(-player1.push.GetX())
+	end
+	if(player1.position.GetX() >= camera_side_right and player2.push.GetX() > 0) then
+		player1.push.SetX(-player1.push.GetX())
+	end
+
+	-- apply push forces:
+	player2.force = vector.Add(player2.force, player1.push)
+	player1.force = vector.Add(player1.force, player2.push)
+
+	-- reset push forces:
+	player1.push = Vector()
+	player2.push = Vector()
 
 end
 
@@ -1203,15 +1225,15 @@ runProcess(function()
 	help_text = help_text .. "\n\t 623D: Shoryuken"
 	help_text = help_text .. "\n\t 236D: Jaunt"
 	local font = Font(help_text);
-	font.SetSize(20)
+	font.SetSize(22)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
-	font.SetColor(0xFFADA3FF)
+	font.SetColor(0xFF4D21FF)
 	font.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(font)
 
 	local info = Font("");
-	info.SetSize(20)
+	info.SetSize(24)
 	info.SetPos(Vector(GetScreenWidth() / 2, GetScreenHeight() * 0.9))
 	info.SetAlign(WIFALIGN_LEFT, WIFALIGN_CENTER)
 	info.SetShadowColor(Vector(0,0,0,1))
