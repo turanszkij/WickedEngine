@@ -428,6 +428,25 @@ local function Character(face, shirt_color)
 					end
 				end,
 			},
+			ChargeKick = {
+				anim_name = "ChargeKick",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(0), Vector(2, 5)),
+				hurtbox = AABB(Vector(0), Vector(2.2, 5.5)),
+				update = function(self)
+					if(self:require_frame(4)) then
+						self.force = vector.Add(self.force, Vector(0.9 * self.face))
+					end
+					if(self:require_window(11,41)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(5.6,3)) )
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(Vector(5 * self.face,3,-1))
+						self.push = Vector(0.5 * self.face, 0.1)
+					end
+				end,
+			},
 			Uppercut = {
 				anim_name = "Uppercut",
 				anim = INVALID_ENTITY,
@@ -440,7 +459,7 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						self.push = Vector(0.1 * self.face, 0.25)
+						self.push = Vector(0.05 * self.face, 0.15)
 					end
 				end,
 			},
@@ -589,6 +608,7 @@ local function Character(face, shirt_color)
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("5B") end, },
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
@@ -601,6 +621,7 @@ local function Character(face, shirt_color)
 				{ "Dash_Backward", condition = function(self) return self:require_input_window("454", 7) end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("5B") end, },
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
@@ -616,6 +637,7 @@ local function Character(face, shirt_color)
 				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
 				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("5B") end, },
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
@@ -740,6 +762,10 @@ local function Character(face, shirt_color)
 			LowKick = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
+			},
+			ChargeKick = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Uppercut = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -1010,7 +1036,7 @@ local function Character(face, shirt_color)
 			if(self.position.GetY() <= 0 and self.velocity.GetY()<=0) then
 				self.position.SetY(0) -- snap to ground
 				self.velocity.SetY(0) -- don't fall below ground
-				self.velocity = vector.Multiply(self.velocity, 0.8) -- ground drag
+				self.velocity = vector.Multiply(self.velocity, 0.86) -- ground drag
 			end
 			
 			-- Transform component gets set as absolute coordinates every frame:
@@ -1220,6 +1246,7 @@ runProcess(function()
 	help_text = help_text .. "\n\t 2A : Low Punch"
 	help_text = help_text .. "\n\t 2B : Uppercut"
 	help_text = help_text .. "\n\t 2C : Low Kick"
+	help_text = help_text .. "\n\t 4(charge) 6C : Charge Kick"
 	help_text = help_text .. "\n\t C : Air Kick (while jumping)"
 	help_text = help_text .. "\n\t 2C : Air Heavy Kick (while jumping)"
 	help_text = help_text .. "\n\t 623D: Shoryuken"
