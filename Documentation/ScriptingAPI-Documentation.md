@@ -309,6 +309,7 @@ An entity is just an int value and works as a handle to retrieve associated comp
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
 - Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned TransformComponent is associated with the entity and can be manipulated
+- Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
 - Component_GetTransform(Entity entity) : TransformComponent? result  -- query the transform component of the entity (if exists)
@@ -378,6 +379,20 @@ Describes an orientation in 3D space.
 - SetScaleY(float value)  -- set scaling along lifetime in Y axis
 - SetRotation(float value)  -- set rotation speed
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
+
+#### LightComponent
+- SetType(int type)  -- set light type, see accepted values below (by default it is a point light)
+- [outer]DIRECTIONAL : int
+- [outer]POINT : int
+- [outer]SPOT : int
+- [outer]SPHERE : int
+- [outer]DISC : int
+- [outer]RECTANGLE : int
+- [outer]TUBE : int
+- SetRange(float value)
+- SetEnergy(float value)
+- SetColor(Vector value)
+- SetCastShadow(bool value)
 
 ## High Level Interface
 ### MainComponent

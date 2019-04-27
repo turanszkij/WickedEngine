@@ -152,6 +152,14 @@ void Bind()
 		wiLua::GetGlobal()->RegisterFunc("CreateEntity", CreateEntity_BindLua);
 		wiLua::GetGlobal()->RunText("INVALID_ENTITY = 0");
 
+		wiLua::GetGlobal()->RunText("DIRECTIONAL = 0");
+		wiLua::GetGlobal()->RunText("POINT = 1");
+		wiLua::GetGlobal()->RunText("SPOT = 2");
+		wiLua::GetGlobal()->RunText("SPHERE = 3");
+		wiLua::GetGlobal()->RunText("DISC = 4");
+		wiLua::GetGlobal()->RunText("RECTANGLE = 5");
+		wiLua::GetGlobal()->RunText("TUBE = 6");
+
 		wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
 		wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 		wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
@@ -164,6 +172,7 @@ void Bind()
 		Luna<AnimationComponent_BindLua>::Register(L);
 		Luna<MaterialComponent_BindLua>::Register(L);
 		Luna<EmitterComponent_BindLua>::Register(L);
+		Luna<LightComponent_BindLua>::Register(L);
 	}
 }
 
@@ -181,6 +190,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateName),
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
+	lunamethod(Scene_BindLua, Component_CreateLight),
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
 	lunamethod(Scene_BindLua, Component_GetTransform),
@@ -352,6 +362,25 @@ int Scene_BindLua::Component_CreateTransform(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "Scene::Component_CreateTransform(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_CreateLight(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		scene->aabb_lights.Create(entity);
+
+		LightComponent& component = scene->lights.Create(entity);
+		Luna<LightComponent_BindLua>::push(L, new LightComponent_BindLua(&component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_CreateLight(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -1329,6 +1358,124 @@ int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "SetMotionBlurAmount(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+const char LightComponent_BindLua::className[] = "LightComponent";
+
+Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
+	lunamethod(LightComponent_BindLua, SetType),
+	lunamethod(LightComponent_BindLua, SetRange),
+	lunamethod(LightComponent_BindLua, SetEnergy),
+	lunamethod(LightComponent_BindLua, SetColor),
+	lunamethod(LightComponent_BindLua, SetCastShadow),
+	{ NULL, NULL }
+};
+Luna<LightComponent_BindLua>::PropertyType LightComponent_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+LightComponent_BindLua::LightComponent_BindLua(lua_State *L)
+{
+	owning = true;
+	component = new LightComponent;
+}
+LightComponent_BindLua::~LightComponent_BindLua()
+{
+	if (owning)
+	{
+		delete component;
+	}
+}
+
+int LightComponent_BindLua::SetType(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		int value = wiLua::SGetInt(L, 1);
+		component->SetType((LightComponent::LightType)value);
+	}
+	else
+	{
+		wiLua::SError(L, "SetType(int value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetRange(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wiLua::SGetFloat(L, 1);
+		component->range_local = value;
+	}
+	else
+	{
+		wiLua::SError(L, "SetRange(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetEnergy(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wiLua::SGetFloat(L, 1);
+		component->energy = value;
+	}
+	else
+	{
+		wiLua::SError(L, "SetEnergy(float value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (value)
+		{
+			XMStoreFloat3(&component->color, value->vector);
+		}
+		else
+		{
+			wiLua::SError(L, "SetColor(Vector value) argument must be Vector type!");
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetColor(Vector value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetCastShadow(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetCastShadow(wiLua::SGetBool(L, 1));
+	}
+	else
+	{
+		wiLua::SError(L, "SetCastShadow(bool value) not enough arguments!");
 	}
 
 	return 0;

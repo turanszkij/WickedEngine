@@ -51,6 +51,19 @@ local function Character(face, shirt_color)
 			local transform_component = scene.Component_GetTransform(self.effect_hit)
 			transform_component.ClearTransform()
 			transform_component.Translate(vector.Add(self.position, local_pos))
+			runProcess(function() -- this sub-process will spawn a light, wait a bit then remove it
+				local entity = CreateEntity()
+				local light_transform = scene.Component_CreateTransform(entity)
+				light_transform.Translate(vector.Add(self.position, local_pos))
+				local light_component = scene.Component_CreateLight(entity)
+				light_component.SetType(POINT)
+				light_component.SetRange(8)
+				light_component.SetEnergy(4)
+				light_component.SetColor(Vector(1,0.5,0))
+				light_component.SetCastShadow(false)
+				waitSeconds(0.1)
+				scene.Entity_Remove(entity)
+			end)
 		end,
 		spawn_effect_dust = function(self, local_pos)
 			local emitter_component = scene.Component_GetEmitter(self.effect_dust).Burst(10)
@@ -1222,6 +1235,7 @@ runProcess(function()
 
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
+	update()
 	local prevPath = main.GetActivePath()
 	local path = RenderPath3D_TiledForward()
 	main.SetActivePath(path)

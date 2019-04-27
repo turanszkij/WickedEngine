@@ -32,6 +32,7 @@ namespace wiSceneSystem_BindLua
 		int Component_CreateName(lua_State* L);
 		int Component_CreateLayer(lua_State* L);
 		int Component_CreateTransform(lua_State* L);
+		int Component_CreateLight(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -201,6 +202,27 @@ namespace wiSceneSystem_BindLua
 		int SetScaleY(lua_State* L);
 		int SetRotation(lua_State* L);
 		int SetMotionBlurAmount(lua_State* L);
+	};
+
+	class LightComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiSceneSystem::LightComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<LightComponent_BindLua>::FunctionType methods[];
+		static Luna<LightComponent_BindLua>::PropertyType properties[];
+
+		LightComponent_BindLua(wiSceneSystem::LightComponent* component) :component(component) {}
+		LightComponent_BindLua(lua_State *L);
+		~LightComponent_BindLua();
+
+		int SetType(lua_State* L);
+		int SetRange(lua_State* L);
+		int SetEnergy(lua_State* L);
+		int SetColor(lua_State* L);
+		int SetCastShadow(lua_State* L);
 	};
 
 }
