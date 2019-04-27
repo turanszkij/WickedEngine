@@ -84,14 +84,23 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, const
 		return;
 	}
 
-	// Fade manager will activate on fadeout
-	fadeManager.Clear();
-	fadeManager.Start(fadeSeconds, fadeColor, [this,component]() {
+	if (fadeSeconds > 0)
+	{
+		// Fade manager will activate on fadeout
+		fadeManager.Clear();
+		fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
 
-		if (component == nullptr)
-		{
-			return;
-		}
+			if (activePath != nullptr)
+			{
+				activePath->Stop();
+			}
+
+			component->Start();
+			activePath = component;
+		});
+	}
+	else
+	{
 
 		if (activePath != nullptr)
 		{
@@ -100,7 +109,7 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, const
 
 		component->Start();
 		activePath = component;
-	});
+	}
 }
 
 void MainComponent::Run()
