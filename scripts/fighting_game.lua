@@ -121,6 +121,12 @@ local function Character(face, shirt_color)
 		-- List all possible states:
 		states = {
 			-- Common states:
+			--	anim_name			: name of the animation track in the model file
+			--	anim				: this will be initialized automatically to animation entity reference if the animation track is found by name
+			--	clipbox				: (optional) AABB that describes the clip area for the character in this state. Characters can not clip into each other's clip area
+			--	hurtbox				: (optional) AABB that describes the area the character can be hit/hurt
+			--	update_collision	: (optional) this function will be executed in the continuous collision detection phase, multiple times per frame. Describe the hitboxes here
+			--	update				: (optional) this function will be executed once every frame
 			Idle = {
 				anim_name = "Idle",
 				anim = INVALID_ENTITY,
@@ -303,10 +309,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 						self.push = Vector(0.05 * self.face)
@@ -319,10 +327,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(12,14)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 						self.push = Vector(0.07 * self.face)
@@ -335,10 +345,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 						self.push = Vector(0.1 * self.face)
@@ -351,10 +363,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 3)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,2,-1))
 						self.push = Vector(0.05 * self.face)
@@ -367,10 +381,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
 						self.push = Vector(0.05 * self.face)
@@ -383,10 +399,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(8,13)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.6 * self.face,1.4,-1))
 						self.push = Vector(0.1 * self.face)
@@ -399,10 +417,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
 						self.push = Vector(0.1 * self.face)
@@ -415,10 +435,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
 						self.push = Vector(0.1 * self.face)
@@ -431,10 +453,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 3)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,1,-1))
 						self.push = Vector(0.05 * self.face)
@@ -447,12 +471,14 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(0), Vector(2, 5)),
 				hurtbox = AABB(Vector(0), Vector(2.2, 5.5)),
+				update_collision = function(self)
+					if(self:require_window(11,41)) then
+						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(5.6,3)) )
+					end
+				end,
 				update = function(self)
 					if(self:require_frame(4)) then
 						self.force = vector.Add(self.force, Vector(0.9 * self.face))
-					end
-					if(self:require_window(11,41)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(5.6,3)) )
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(5 * self.face,3,-1))
@@ -466,10 +492,12 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
-				update = function(self)
+				update_collision = function(self)
 					if(self:require_window(3,5)) then
 						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
 					end
+				end,
+				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
 						self.push = Vector(0.05 * self.face, 0.15)
@@ -482,12 +510,14 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1.5), Vector(1.5, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update_collision = function(self)
+					if(self:require_window(17,40)) then
+						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
+					end
+				end,
 				update = function(self)
 					if(self:require_frame(16)) then
 						self.force = vector.Add(self.force, Vector(1.3 * self.face))
-					end
-					if(self:require_window(17,40)) then
-						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(3 * self.face,3.6,-1))
@@ -501,12 +531,14 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update_collision = function(self)
+					if(self:require_window(2,20)) then
+						table.insert(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
+					end
+				end,
 				update = function(self)
 					if(self:require_frame(0)) then
 						self.force = vector.Add(self.force, Vector(0.3 * self.face, 0.9))
-					end
-					if(self:require_window(2,20)) then
-						table.insert(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
@@ -859,8 +891,9 @@ local function Character(face, shirt_color)
 			self.frame = 0
 			self.state = dst_state
 		end,
-		-- Parse state machine at current state and perform transition if applicable:
-		StepStateMachine = function(self)
+		-- Step state machine and execute current state:
+		ExecuteStateMachine = function(self)
+			-- Parse state machine at current state and perform transition if applicable:
 			local transition_candidates = self.statemachine[self.state]
 			if(transition_candidates ~= nil) then
 				for i,dst in pairs(transition_candidates) do
@@ -873,30 +906,19 @@ local function Character(face, shirt_color)
 						-- transition to new state when all requirements are met:
 						self:EndState()
 						self:StartState(dst[1])
-						return
+						break
 					end
 				end
 			end
-		end,
-		-- Execute the currently active state:
-		ExecuteCurrentState = function(self)
 
-			self.clipbox = AABB()
-			self.hurtboxes = {}
-			self.hitboxes = {}
-
+			-- Execute the currently active state:
 			local current_state = self.states[self.state]
 			if(current_state ~= nil) then
 				if(current_state.update ~= nil) then
 					current_state.update(self)
 				end
-				if(current_state.clipbox ~= nil) then
-					self.clipbox = current_state.clipbox
-				end
-				if(current_state.hurtbox ~= nil) then
-					table.insert(self.hurtboxes, current_state.hurtbox)
-				end
 			end
+
 		end,
 	
 
@@ -962,6 +984,7 @@ local function Character(face, shirt_color)
 			end
 		end,
 
+		-- Read input and store in the buffer:
 		Input = function(self)
 
 			-- read input (todo gamepad/stick):
@@ -1014,15 +1037,13 @@ local function Character(face, shirt_color)
 				table.insert(self.input_buffer, {age = 0, command = "D"})
 			end
 
-
-
 		end,
 
+		-- Update character state and forces once per frame:
 		Update = function(self)
 			self.frame = self.frame + 1
 
-			self:StepStateMachine()
-			self:ExecuteCurrentState()
+			self:ExecuteStateMachine()
 
 			-- Manage input buffer:
 			for i,element in pairs(self.input_buffer) do -- every input gets older by one frame
@@ -1051,33 +1072,62 @@ local function Character(face, shirt_color)
 				self.velocity.SetY(0) -- don't fall below ground
 				self.velocity = vector.Multiply(self.velocity, 0.86) -- ground drag
 			end
+		
+		end,
+
+		-- Updates the character bounding boxes that will be used for collision. This will be processed multiple times per frame:
+		UpdateCollisionState = function(self)
+
+			-- Reset collision boxes:
+			self.clipbox = AABB()
+			self.hurtboxes = {}
+			self.hitboxes = {}
 			
-			-- Transform component gets set as absolute coordinates every frame:
+			-- Set collision boxes in local space:
+			local current_state = self.states[self.state]
+			if(current_state ~= nil) then
+				if(current_state.update_collision ~= nil) then
+					current_state.update_collision(self)
+				end
+				if(current_state.clipbox ~= nil) then
+					self.clipbox = current_state.clipbox
+				end
+				if(current_state.hurtbox ~= nil) then
+					table.insert(self.hurtboxes, current_state.hurtbox)
+				end
+			end
+			
+			-- Compute global transform for the model:
 			local model_transform = scene.Component_GetTransform(self.model)
 			model_transform.ClearTransform()
 			model_transform.Translate(self.position)
 			model_transform.Rotate(Vector(0, math.pi * ((self.face - 1) * 0.5)))
 			model_transform.UpdateTransform()
 
-			-- Update hitboxes, etc:
+			-- Update collision boxes with global model transform:
 			local model_mat = model_transform.GetMatrix()
 			self.clipbox = self.clipbox.Transform(model_mat)
 			for i,hitbox in ipairs(self.hitboxes) do
 				self.hitboxes[i] = hitbox.Transform(model_mat)
-				DrawBox(self.hitboxes[i].GetAsBoxMatrix(), Vector(1,0,0,1))
 			end
 			for i,hurtbox in ipairs(self.hurtboxes) do
 				self.hurtboxes[i] = hurtbox.Transform(model_mat)
+			end
+		end,
+
+		-- Draws the hitboxes, etc.
+		DebugDraw = function(self)
+			DrawPoint(self.position, 0.1, Vector(1,0,0,1))
+			DrawLine(self.position,self.position:Add(self.velocity), Vector(0,1,0,10))
+			DrawLine(vector.Add(self.position, Vector(0,1)),vector.Add(self.position, Vector(0,1)):Add(Vector(self.face)), Vector(0,0,1,1))
+			DrawBox(self.clipbox.GetAsBoxMatrix(), Vector(1,1,0,1))
+			for i,hitbox in ipairs(self.hitboxes) do
+				DrawBox(self.hitboxes[i].GetAsBoxMatrix(), Vector(1,0,0,1))
+			end
+			for i,hurtbox in ipairs(self.hurtboxes) do
 				DrawBox(self.hurtboxes[i].GetAsBoxMatrix(), Vector(0,1,0,1))
 			end
-
-			-- Some debug draw:
-			DrawPoint(model_transform.GetPosition(), 0.1, Vector(1,0,0,1))
-			DrawLine(model_transform.GetPosition(),model_transform.GetPosition():Add(self.velocity), Vector(0,1,0,10))
-			DrawLine(vector.Add(model_transform.GetPosition(), Vector(0,1)),vector.Add(model_transform.GetPosition(), Vector(0,1)):Add(Vector(self.face)), Vector(0,0,1,1))
-			DrawBox(self.clipbox.GetAsBoxMatrix(), Vector(1,1,0,1))
-		
-		end
+		end,
 
 	}
 
@@ -1089,6 +1139,12 @@ end
 -- script camera state:
 local camera_position = Vector()
 local camera_transform = TransformComponent()
+local CAMERA_HEIGHT = 4 -- camera height from ground
+local DEFAULT_CAMERADISTANCE = -9.5 -- the default camera distance when characters are close to each other
+local MODIFIED_CAMERADISTANCE = -11.5 -- if the two players are far enough from each other, the camera will zoom out to this distance
+local CAMERA_DISTANCE_MODIFIER = 10 -- the required distance between the characters when the camera should zoom out
+local XBOUNDS = 20 -- play area horizontal bounds
+local CAMERA_SIDE_LENGTH = 10 -- play area inside the camera (character can't move outside camera even if inside the play area)
 
 -- ***Interaction between two characters:
 local ResolveCharacters = function(player1, player2)
@@ -1099,45 +1155,6 @@ local ResolveCharacters = function(player1, player2)
 	player1:Update()
 	player2:Update()
 
-	-- Hit/Hurt:
-	player1.hitconfirm = false
-	player1.hurt = false
-	player2.hitconfirm = false
-	player2.hurt = false
-	-- player1 hits player2:
-	for i,hitbox in pairs(player1.hitboxes) do
-		for j,hurtbox in pairs(player2.hurtboxes) do
-			if(hitbox.Intersects2D(hurtbox)) then
-				player1.hitconfirm = true
-				player2.hurt = true
-				break
-			end
-		end
-	end
-	-- player2 hits player1:
-	for i,hitbox in ipairs(player2.hitboxes) do
-		for j,hurtbox in ipairs(player1.hurtboxes) do
-			if(hitbox.Intersects2D(hurtbox)) then
-				player2.hitconfirm = true
-				player1.hurt = true
-				break
-			end
-		end
-	end
-
-	-- Clipping:
-	if(player1.clipbox.Intersects2D(player2.clipbox)) then
-		local center1 = player1.clipbox.GetCenter().GetX()
-		local center2 = player2.clipbox.GetCenter().GetX()
-		local extent1 = player1.clipbox.GetHalfExtents().GetX()
-		local extent2 = player2.clipbox.GetHalfExtents().GetX()
-		local diff = math.abs(center2 - center1)
-		local target_diff = math.abs(extent2 + extent1)
-		local offset = (target_diff - diff) * 0.5
-		player1.position.SetX(player1.position.GetX() - offset * player1.request_face)
-		player2.position.SetX(player2.position.GetX() - offset * player2.request_face)
-	end
-
 	-- Facing direction requests:
 	if(player1.position.GetX() < player2.position.GetX()) then
 		player1.request_face = 1
@@ -1146,52 +1163,10 @@ local ResolveCharacters = function(player1, player2)
 		player1.request_face = -1
 		player2.request_face = 1
 	end
-
-	-- Camera:
-	local CAMERA_HEIGHT = 4 -- camera height from ground
-	local DEFAULT_CAMERADISTANCE = -9.5 -- the default camera distance when characters are close to each other
-	local MODIFIED_CAMERADISTANCE = -11.5 -- if the two players are far enough from each other, the camera will zoom out to this distance
-	local CAMERA_DISTANCE_MODIFIER = 10 -- the required distance between the characters when the camera should zoom out
-	local XBOUNDS = 20 -- play area horizontal bounds
-	local CAMERA_SIDE_LENGTH = 10 -- play area inside the camera (character can't move outside camera even if inside the play area)
-
-	-- Clamp the players inside the camera:
+	
+	-- Camera bounds:
 	local camera_side_left = camera_position.GetX() - CAMERA_SIDE_LENGTH
 	local camera_side_right = camera_position.GetX() + CAMERA_SIDE_LENGTH
-	player1.position.SetX(math.clamp(player1.position.GetX(), camera_side_left, camera_side_right))
-	player2.position.SetX(math.clamp(player2.position.GetX(), camera_side_left, camera_side_right))
-	
-	local camera_position_new = Vector()
-	local distanceX = math.abs(player1.position.GetX() - player2.position.GetX())
-	local distanceY = math.abs(player1.position.GetY() - player2.position.GetY())
-
-	-- camera height:
-	if(player1.position.GetY() > 4 or player2.position.GetY() > 4) then
-		camera_position_new.SetY( math.min(player1.position.GetY(), player2.position.GetY()) + distanceY )
-	else
-		camera_position_new.SetY(CAMERA_HEIGHT)
-	end
-
-	-- camera distance:
-	if(distanceX > CAMERA_DISTANCE_MODIFIER) then
-		camera_position_new.SetZ(MODIFIED_CAMERADISTANCE)
-	else
-		camera_position_new.SetZ(DEFAULT_CAMERADISTANCE)
-	end
-
-	-- camera horizontal position:
-	local centerX = math.clamp((player1.position.GetX() + player2.position.GetX()) * 0.5, -XBOUNDS, XBOUNDS)
-	camera_position_new.SetX(centerX)
-
-	-- smooth camera:
-	camera_position = vector.Lerp(camera_position, camera_position_new, 0.1)
-
-	-- finally update the global camera with current values:
-	camera_transform.ClearTransform()
-	camera_transform.Translate(camera_position)
-	camera_transform.UpdateTransform()
-	GetCamera().TransformCamera(camera_transform)
-	
 
 	-- Push:
 
@@ -1217,6 +1192,95 @@ local ResolveCharacters = function(player1, player2)
 	-- reset push forces:
 	player1.push = Vector()
 	player2.push = Vector()
+
+
+	-- Continuous collision detection will be iterated multiple times to avoid "bullet through paper problem":
+	local iterations = 8
+	for i=1,iterations, 1 do
+
+		player1:UpdateCollisionState()
+		player2:UpdateCollisionState()
+
+		-- Hit/Hurt:
+		player1.hitconfirm = false
+		player1.hurt = false
+		player2.hitconfirm = false
+		player2.hurt = false
+		-- player1 hits player2:
+		for i,hitbox in pairs(player1.hitboxes) do
+			for j,hurtbox in pairs(player2.hurtboxes) do
+				if(hitbox.Intersects2D(hurtbox)) then
+					player1.hitconfirm = true
+					player2.hurt = true
+					break
+				end
+			end
+		end
+		-- player2 hits player1:
+		for i,hitbox in ipairs(player2.hitboxes) do
+			for j,hurtbox in ipairs(player1.hurtboxes) do
+				if(hitbox.Intersects2D(hurtbox)) then
+					player2.hitconfirm = true
+					player1.hurt = true
+					break
+				end
+			end
+		end
+
+		-- Clipping:
+		if(player1.clipbox.Intersects2D(player2.clipbox)) then
+			local center1 = player1.clipbox.GetCenter().GetX()
+			local center2 = player2.clipbox.GetCenter().GetX()
+			local extent1 = player1.clipbox.GetHalfExtents().GetX()
+			local extent2 = player2.clipbox.GetHalfExtents().GetX()
+			local diff = math.abs(center2 - center1)
+			local target_diff = math.abs(extent2 + extent1)
+			local offset = (target_diff - diff) * 0.5
+			offset = math.lerp( offset, math.min(offset, 0.3 / iterations), math.saturate(math.abs(player1.position.GetY() - player2.position.GetY())) ) -- smooth out clipping in mid-air
+			player1.position.SetX(player1.position.GetX() - offset * player1.request_face)
+			player2.position.SetX(player2.position.GetX() - offset * player2.request_face)
+		end
+
+
+		-- Clamp the players inside the camera:
+		player1.position.SetX(math.clamp(player1.position.GetX(), camera_side_left, camera_side_right))
+		player2.position.SetX(math.clamp(player2.position.GetX(), camera_side_left, camera_side_right))
+	
+		local camera_position_new = Vector()
+		local distanceX = math.abs(player1.position.GetX() - player2.position.GetX())
+		local distanceY = math.abs(player1.position.GetY() - player2.position.GetY())
+
+		-- camera height:
+		if(player1.position.GetY() > 4 or player2.position.GetY() > 4) then
+			camera_position_new.SetY( math.min(player1.position.GetY(), player2.position.GetY()) + distanceY )
+		else
+			camera_position_new.SetY(CAMERA_HEIGHT)
+		end
+
+		-- camera distance:
+		if(distanceX > CAMERA_DISTANCE_MODIFIER) then
+			camera_position_new.SetZ(MODIFIED_CAMERADISTANCE)
+		else
+			camera_position_new.SetZ(DEFAULT_CAMERADISTANCE)
+		end
+
+		-- camera horizontal position:
+		local centerX = math.clamp((player1.position.GetX() + player2.position.GetX()) * 0.5, -XBOUNDS, XBOUNDS)
+		camera_position_new.SetX(centerX)
+
+		-- smooth camera:
+		camera_position = vector.Lerp(camera_position, camera_position_new, 0.1 / iterations)
+
+	end
+
+	-- Update the system global camera with current values:
+	camera_transform.ClearTransform()
+	camera_transform.Translate(camera_position)
+	camera_transform.UpdateTransform()
+	GetCamera().TransformCamera(camera_transform)
+
+	player1:DebugDraw()
+	player2:DebugDraw()
 
 end
 

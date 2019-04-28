@@ -182,7 +182,7 @@ function math.clamp(x,min,max)
 end
 -- clamp number between 0,1
 function math.saturate(x)
-	return clamp(x,0,1)
+	return math.clamp(x,0,1)
 end
 -- round number to nearest integer
 function math.round(x)
