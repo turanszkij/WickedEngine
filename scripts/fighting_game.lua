@@ -317,7 +317,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						self.push = Vector(0.05 * self.face)
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -335,7 +335,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						self.push = Vector(0.07 * self.face)
+						self.push = Vector(0.12 * self.face)
 					end
 				end,
 			},
@@ -353,7 +353,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						self.push = Vector(0.1 * self.face)
+						self.push = Vector(0.2 * self.face)
 					end
 				end,
 			},
@@ -371,7 +371,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,2,-1))
-						self.push = Vector(0.05 * self.face)
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -389,7 +389,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
-						self.push = Vector(0.05 * self.face)
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -407,7 +407,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.6 * self.face,1.4,-1))
-						self.push = Vector(0.1 * self.face)
+						self.push = Vector(0.15 * self.face)
 					end
 				end,
 			},
@@ -425,7 +425,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
-						self.push = Vector(0.1 * self.face)
+						self.push = Vector(0.2 * self.face)
 					end
 				end,
 			},
@@ -443,7 +443,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
-						self.push = Vector(0.1 * self.face)
+						self.push = Vector(0.25 * self.face)
 					end
 				end,
 			},
@@ -461,7 +461,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2 * self.face,1,-1))
-						self.push = Vector(0.05 * self.face)
+						self.push = Vector(0.1 * self.face)
 					end
 				end,
 			},
@@ -482,7 +482,7 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(5 * self.face,3,-1))
-						self.push = Vector(0.5 * self.face, 0.1)
+						self.push = Vector(0.8 * self.face, 0.2)
 					end
 				end,
 			},
@@ -500,7 +500,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						self.push = Vector(0.05 * self.face, 0.15)
+						self.push = Vector(0.1 * self.face, 0.5)
 					end
 				end,
 			},
@@ -521,7 +521,7 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(3 * self.face,3.6,-1))
-						self.push = Vector(0.1 * self.face)
+						self.push = Vector(0.3 * self.face)
 					end
 				end,
 			},
@@ -1186,8 +1186,12 @@ local ResolveCharacters = function(player1, player2)
 	end
 
 	-- apply push forces:
-	player2.velocity = vector.Add(player2.velocity, player1.push)
-	player1.velocity = vector.Add(player1.velocity, player2.push)
+	if(player1.push.Length() > 0) then
+		player2.velocity = player1.push
+	end
+	if(player2.push.Length() > 0) then
+		player1.velocity = player2.push
+	end
 
 	-- reset push forces:
 	player1.push = Vector()
