@@ -30,6 +30,7 @@ local function Character(face, shirt_color)
 		model = INVALID_ENTITY,
 		effect_dust = INVALID_ENTITY,
 		effect_hit = INVALID_ENTITY,
+		effect_guard = INVALID_ENTITY,
 		face = 1, -- face direction (X)
 		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
 		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
@@ -40,17 +41,34 @@ local function Character(face, shirt_color)
 		clipbox = AABB(), -- AABB that makes the two players not clip into each other
 		hurtboxes = {}, -- list of AABBs that the opponent can hit with a hitbox
 		hitboxes = {}, -- list of AABBs that can hit the opponent's hurtboxes
+		guardboxes = {}, -- list of AABBs that can indicate to the opponent that guarding can be started
 		hitconfirm = false, -- will be true in this frame if this player hit the opponent
 		hurt = false, -- will be true in a frame if this player was hit by the opponent
 		jumps_remaining = 2, -- for double jump
 		push = Vector(), -- will affect opponent's velocity
+		can_guard = false, -- true when player is inside opponent's guard box and can initiate guarding state
+		guarding = false, -- if true, player can't be hit
+		hit_guard = false, -- true when opponent is guarding the attack
 
 		-- Effect helpers:
 		spawn_effect_hit = function(self, local_pos)
-			scene.Component_GetEmitter(self.effect_hit).Burst(50)
-			local transform_component = scene.Component_GetTransform(self.effect_hit)
+
+			-- depending on if the attack is guarded or not, we will spawn different effects:
+			local emitter_entity = INVALID_ENTITY
+			local burst_count = 0
+			if(self.hit_guard) then
+				emitter_entity = self.effect_guard
+				burst_count = 4
+			else
+				emitter_entity = self.effect_hit
+				burst_count = 50
+			end
+
+			scene.Component_GetEmitter(emitter_entity).Burst(burst_count)
+			local transform_component = scene.Component_GetTransform(emitter_entity)
 			transform_component.ClearTransform()
 			transform_component.Translate(vector.Add(self.position, local_pos))
+
 			runProcess(function() -- this sub-process will spawn a light, wait a bit then remove it
 				local entity = CreateEntity()
 				local light_transform = scene.Component_CreateTransform(entity)
@@ -59,7 +77,11 @@ local function Character(face, shirt_color)
 				light_component.SetType(POINT)
 				light_component.SetRange(8)
 				light_component.SetEnergy(4)
-				light_component.SetColor(Vector(1,0.5,0))
+				if(self.hit_guard) then
+					light_component.SetColor(Vector(0,0.5,1)) -- guarded attack emits blueish light
+				else
+					light_component.SetColor(Vector(1,0.5,0)) -- successful attack emits orangeish light
+				end
 				light_component.SetCastShadow(false)
 				waitSeconds(0.1)
 				scene.Entity_Remove(entity)
@@ -97,11 +119,17 @@ local function Character(face, shirt_color)
 		require_animationfinish = function(self) -- animation is finished
 			return scene.Component_GetAnimation(self.states[self.state].anim).IsEnded()
 		end,
-		require_hitconfirm = function(self) -- true if this player successfully hit the other
+		require_hitconfirm = function(self) -- true if this player hit the other
+			return self.hitconfirm
+		end,
+		require_hitconfirm_guard = function(self) -- true if this player hit the opponent but the opponent guarded it
 			return self.hitconfirm
 		end,
 		require_hurt = function(self) -- true if this player was hit by the other
 			return self.hurt
+		end,
+		require_guard = function(self) -- true if player can start guarding
+			return self.can_guard
 		end,
 		
 		-- Common motion helpers:
@@ -301,6 +329,24 @@ local function Character(face, shirt_color)
 					end
 				end,
 			},
+			Guard = {
+				anim_name = "Block",
+				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				update = function(self)
+					self.guarding = true
+				end,
+			},
+			LowGuard = {
+				anim_name = "LowBlock",
+				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(-1), Vector(1, 3)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
+				update = function(self)
+					self.guarding = true
+				end,
+			},
 			
 			-- Attack states:
 			LightPunch = {
@@ -309,6 +355,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
@@ -327,6 +374,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(12,14)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
@@ -345,6 +393,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(8,10)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
@@ -363,6 +412,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 3)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,4)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
@@ -381,6 +431,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
@@ -399,6 +450,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(8,13)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
@@ -417,6 +469,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,-6),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
@@ -435,6 +488,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,-6),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
 						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
@@ -453,6 +507,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 3)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 3.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,4)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
@@ -471,6 +526,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(0), Vector(2, 5)),
 				hurtbox = AABB(Vector(0), Vector(2.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(16,8)),
 				update_collision = function(self)
 					if(self:require_window(11,41)) then
 						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(5.6,3)) )
@@ -482,7 +538,11 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(5 * self.face,3,-1))
-						self.push = Vector(0.8 * self.face, 0.2)
+						if(self:require_hitconfirm_guard()) then
+							self.push = Vector(0.8 * self.face, 0)
+						else
+							self.push = Vector(0.8 * self.face, 0.2)
+						end
 					end
 				end,
 			},
@@ -492,6 +552,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(3,5)) then
 						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
@@ -500,7 +561,11 @@ local function Character(face, shirt_color)
 				update = function(self)
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						self.push = Vector(0.1 * self.face, 0.5)
+						if(self:require_hitconfirm_guard()) then
+							self.push = Vector(0.1 * self.face, 0) -- if guarded, don't push opponent up
+						else
+							self.push = Vector(0.1 * self.face, 0.5) -- if not guarded, push opponent up
+						end
 					end
 				end,
 			},
@@ -510,6 +575,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1.5), Vector(1.5, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(16,8)),
 				update_collision = function(self)
 					if(self:require_window(17,40)) then
 						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
@@ -531,6 +597,7 @@ local function Character(face, shirt_color)
 				looped = false,
 				clipbox = AABB(Vector(-1), Vector(1, 5)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(8,15)),
 				update_collision = function(self)
 					if(self:require_window(2,20)) then
 						table.insert(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
@@ -542,7 +609,7 @@ local function Character(face, shirt_color)
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
-						if(self:require_window(2,3)) then
+						if(self:require_window(2,3) and not self:require_hitconfirm_guard()) then
 							self.push = Vector(0, 1)
 						end
 					end
@@ -643,6 +710,7 @@ local function Character(face, shirt_color)
 		--	}
 		statemachine = {
 			Idle = { 
+				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
@@ -659,6 +727,7 @@ local function Character(face, shirt_color)
 				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
 			},
 			Walk_Backward = { 
+				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
@@ -758,6 +827,7 @@ local function Character(face, shirt_color)
 				{ "Crouch", condition = function(self) return (self:require_input("1") or self:require_input("2") or self:require_input("3")) and self:require_animationfinish() end, },
 			},
 			Crouch = { 
+				{ "LowGuard", condition = function(self) return self:require_guard() and self:require_input("1") end, },
 				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "CrouchEnd", condition = function(self) return self:require_input("5") or self:require_input("4") or self:require_input("6") or self:require_input("7") or self:require_input("8") or self:require_input("9") end, },
 				{ "LowPunch", condition = function(self) return self:require_input("2A") or self:require_input("1A") or self:require_input("3A") end, },
@@ -772,6 +842,13 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
+			Guard = { 
+				{ "Idle", condition = function(self) return not self:require_input("4") end, },
+			},
+			LowGuard = { 
+				{ "Crouch", condition = function(self) return not self:require_input("1") end, },
+			},
+
 			LightPunch = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
@@ -967,6 +1044,12 @@ local function Character(face, shirt_color)
 			effect_scene.Component_GetEmitter(self.effect_hit).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
 
+			effect_scene.Clear()
+			LoadModel(effect_scene, "../models/emitter_guardeffect.wiscene")
+			self.effect_guard = effect_scene.Entity_FindByName("guard")  -- query the emitter entity by name
+			effect_scene.Component_GetEmitter(self.effect_guard).SetEmitCount(0)  -- don't emit continuously
+			scene.Merge(effect_scene)
+
 
 			self:StartState(self.state)
 
@@ -979,6 +1062,8 @@ local function Character(face, shirt_color)
 				table.insert(self.input_buffer, {age = 0, command = "8"})
 			elseif(self.ai_state == "Crouch") then
 				table.insert(self.input_buffer, {age = 0, command = "2"})
+			elseif(self.ai_state == "Guard" and self:require_guard()) then
+				table.insert(self.input_buffer, {age = 0, command = "4"})
 			else
 				table.insert(self.input_buffer, {age = 0, command = "5"})
 			end
@@ -1042,6 +1127,7 @@ local function Character(face, shirt_color)
 		-- Update character state and forces once per frame:
 		Update = function(self)
 			self.frame = self.frame + 1
+			self.guarding = false
 
 			-- force from gravity:
 			self.force = Vector(0,-0.04,0)
@@ -1082,6 +1168,7 @@ local function Character(face, shirt_color)
 			self.clipbox = AABB()
 			self.hurtboxes = {}
 			self.hitboxes = {}
+			self.guardboxes = {}
 			
 			-- Set collision boxes in local space:
 			local current_state = self.states[self.state]
@@ -1094,6 +1181,9 @@ local function Character(face, shirt_color)
 				end
 				if(current_state.hurtbox ~= nil) then
 					table.insert(self.hurtboxes, current_state.hurtbox)
+				end
+				if(current_state.guardbox ~= nil) then
+					table.insert(self.guardboxes, current_state.guardbox)
 				end
 			end
 			
@@ -1113,6 +1203,9 @@ local function Character(face, shirt_color)
 			for i,hurtbox in ipairs(self.hurtboxes) do
 				self.hurtboxes[i] = hurtbox.Transform(model_mat)
 			end
+			for i,guardbox in ipairs(self.guardboxes) do
+				self.guardboxes[i] = guardbox.Transform(model_mat)
+			end
 		end,
 
 		-- Draws the hitboxes, etc.
@@ -1126,6 +1219,9 @@ local function Character(face, shirt_color)
 			end
 			for i,hurtbox in ipairs(self.hurtboxes) do
 				DrawBox(self.hurtboxes[i].GetAsBoxMatrix(), Vector(0,1,0,1))
+			end
+			for i,guardbox in ipairs(self.guardboxes) do
+				DrawBox(self.guardboxes[i].GetAsBoxMatrix(), Vector(0,0,1,1))
 			end
 		end,
 
@@ -1176,17 +1272,22 @@ local ResolveCharacters = function(player1, player2)
 		player1:UpdateCollisionState(ccd_step)
 		player2:UpdateCollisionState(ccd_step)
 
-		-- Hit/Hurt:
+		-- Hit/Hurt/Guard:
 		player1.hitconfirm = false
 		player1.hurt = false
+		player1.hit_guard = false
 		player2.hitconfirm = false
 		player2.hurt = false
+		player2.hit_guard = false
 		-- player1 hits player2:
 		for i,hitbox in pairs(player1.hitboxes) do
 			for j,hurtbox in pairs(player2.hurtboxes) do
 				if(hitbox.Intersects2D(hurtbox)) then
 					player1.hitconfirm = true
 					player2.hurt = true
+					if(player2.guarding) then
+						player1.hit_guard = true
+					end
 					break
 				end
 			end
@@ -1197,6 +1298,30 @@ local ResolveCharacters = function(player1, player2)
 				if(hitbox.Intersects2D(hurtbox)) then
 					player2.hitconfirm = true
 					player1.hurt = true
+					if(player1.guarding) then
+						player2.hit_guard = true
+					end
+					break
+				end
+			end
+		end
+
+		player1.can_guard = false
+		player2.can_guard = false
+		-- player1 guardbox player2:
+		for i,guardbox in pairs(player1.guardboxes) do
+			for j,hurtbox in pairs(player2.hurtboxes) do
+				if(guardbox.Intersects2D(hurtbox)) then
+					player2.can_guard = true
+					break
+				end
+			end
+		end
+		-- player2 guardbox player1:
+		for i,guardbox in pairs(player2.guardboxes) do
+			for j,hurtbox in pairs(player1.hurtboxes) do
+				if(guardbox.Intersects2D(hurtbox)) then
+					player1.can_guard = true
 					break
 				end
 			end
@@ -1321,6 +1446,7 @@ runProcess(function()
 	help_text = help_text .. "\nDown: action D"
 	help_text = help_text .. "\nJ: player2 will always jump"
 	help_text = help_text .. "\nC: player2 will always crouch"
+	help_text = help_text .. "\nG: player2 will always guard"
 	help_text = help_text .. "\nI: player2 will be idle"
 	help_text = help_text .. "\n\nMovelist:"
 	help_text = help_text .. "\n\t A : Light Punch"
@@ -1367,6 +1493,8 @@ runProcess(function()
 			player2.ai_state = "Jump"
 		elseif(input.Press(string.byte('C'))) then
 			player2.ai_state = "Crouch"
+		elseif(input.Press(string.byte('G'))) then
+			player2.ai_state = "Guard"
 		end
 
 		local inputString = "input: "
