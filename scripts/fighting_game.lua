@@ -1304,7 +1304,6 @@ runProcess(function()
 
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
-	update()
 	local prevPath = main.GetActivePath()
 	local path = RenderPath3D_TiledForward()
 	main.SetActivePath(path)

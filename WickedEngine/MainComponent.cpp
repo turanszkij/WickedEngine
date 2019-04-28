@@ -96,6 +96,8 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, const
 		component->Start();
 		activePath = component;
 	});
+
+	fadeManager.Update(0); // If user calls ActivatePath without fadeout, it will be instant
 }
 
 void MainComponent::Run()
