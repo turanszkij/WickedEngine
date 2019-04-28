@@ -160,7 +160,6 @@ void EditorComponent::Load()
 	__super::Load();
 
 	translator.enabled = false;
-	Translator::LoadShaders();
 
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();

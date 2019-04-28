@@ -440,6 +440,13 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) co
 		return;
 	}
 
+	static bool shaders_loaded = false;
+	if (!shaders_loaded)
+	{
+		shaders_loaded = true;
+		LoadShaders();
+	}
+
 	TransformComponent& transform = *scene.transforms.GetComponent(entityID);
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
