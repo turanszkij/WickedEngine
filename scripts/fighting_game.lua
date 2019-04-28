@@ -123,7 +123,7 @@ local function Character(face, shirt_color)
 			return self.hitconfirm
 		end,
 		require_hitconfirm_guard = function(self) -- true if this player hit the opponent but the opponent guarded it
-			return self.hitconfirm
+			return self.hitconfirm and self.hit_guard
 		end,
 		require_hurt = function(self) -- true if this player was hit by the other
 			return self.hurt
