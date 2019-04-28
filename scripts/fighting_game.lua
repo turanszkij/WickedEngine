@@ -1043,6 +1043,9 @@ local function Character(face, shirt_color)
 		Update = function(self)
 			self.frame = self.frame + 1
 
+			-- force from gravity:
+			self.force = Vector(0,-0.04,0)
+
 			self:ExecuteStateMachine()
 
 			-- Manage input buffer:
@@ -1052,19 +1055,13 @@ local function Character(face, shirt_color)
 			if(#self.input_buffer > 60) then -- only keep the last 60 inputs
 				table.remove(self.input_buffer, 1)
 			end
-		
-			-- force from gravity:
-			self.force = vector.Add(self.force, Vector(0,-0.04,0))
 
 			-- apply force:
 			self.velocity = vector.Add(self.velocity, self.force)
-			self.force = Vector()
 
 			-- aerial drag:
 			self.velocity = vector.Multiply(self.velocity, 0.98)
 		
-			-- apply velocity:
-			self.position = vector.Add(self.position, self.velocity)
 		
 			-- check if we are below or on the ground:
 			if(self.position.GetY() <= 0 and self.velocity.GetY()<=0) then
@@ -1076,7 +1073,10 @@ local function Character(face, shirt_color)
 		end,
 
 		-- Updates the character bounding boxes that will be used for collision. This will be processed multiple times per frame:
-		UpdateCollisionState = function(self)
+		UpdateCollisionState = function(self, ccd_step)
+		
+			-- apply velocity:
+			self.position = vector.Add(self.position, vector.Multiply(self.velocity, ccd_step))
 
 			-- Reset collision boxes:
 			self.clipbox = AABB()
@@ -1186,8 +1186,8 @@ local ResolveCharacters = function(player1, player2)
 	end
 
 	-- apply push forces:
-	player2.force = vector.Add(player2.force, player1.push)
-	player1.force = vector.Add(player1.force, player2.push)
+	player2.velocity = vector.Add(player2.velocity, player1.push)
+	player1.velocity = vector.Add(player1.velocity, player2.push)
 
 	-- reset push forces:
 	player1.push = Vector()
@@ -1195,11 +1195,12 @@ local ResolveCharacters = function(player1, player2)
 
 
 	-- Continuous collision detection will be iterated multiple times to avoid "bullet through paper problem":
-	local iterations = 8
+	local iterations = 10
+	local ccd_step = 1.0 / iterations
 	for i=1,iterations, 1 do
 
-		player1:UpdateCollisionState()
-		player2:UpdateCollisionState()
+		player1:UpdateCollisionState(ccd_step)
+		player2:UpdateCollisionState(ccd_step)
 
 		-- Hit/Hurt:
 		player1.hitconfirm = false
@@ -1236,7 +1237,7 @@ local ResolveCharacters = function(player1, player2)
 			local diff = math.abs(center2 - center1)
 			local target_diff = math.abs(extent2 + extent1)
 			local offset = (target_diff - diff) * 0.5
-			offset = math.lerp( offset, math.min(offset, 0.3 / iterations), math.saturate(math.abs(player1.position.GetY() - player2.position.GetY())) ) -- smooth out clipping in mid-air
+			offset = math.lerp( offset, math.min(offset, 0.3 * ccd_step), math.saturate(math.abs(player1.position.GetY() - player2.position.GetY())) ) -- smooth out clipping in mid-air
 			player1.position.SetX(player1.position.GetX() - offset * player1.request_face)
 			player2.position.SetX(player2.position.GetX() - offset * player2.request_face)
 		end
@@ -1269,9 +1270,13 @@ local ResolveCharacters = function(player1, player2)
 		camera_position_new.SetX(centerX)
 
 		-- smooth camera:
-		camera_position = vector.Lerp(camera_position, camera_position_new, 0.1 / iterations)
+		camera_position = vector.Lerp(camera_position, camera_position_new, 0.1 * ccd_step)
 
 	end
+
+	-- Update collision state once more (but with ccd_step = 0) so that bounding boxes and system transform is up to date:
+	player1:UpdateCollisionState(0)
+	player2:UpdateCollisionState(0)
 
 	-- Update the system global camera with current values:
 	camera_transform.ClearTransform()
