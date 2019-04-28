@@ -1168,36 +1168,6 @@ local ResolveCharacters = function(player1, player2)
 	local camera_side_left = camera_position.GetX() - CAMERA_SIDE_LENGTH
 	local camera_side_right = camera_position.GetX() + CAMERA_SIDE_LENGTH
 
-	-- Push:
-
-	-- player on the edge of screen can initiate push transfer:
-	--	it means that the player cannot be pushed further, so the opponent will be pushed back instead to compensate:
-	if(player2.position.GetX() <= camera_side_left and player1.push.GetX() < 0) then
-		player2.push.SetX(-player1.push.GetX())
-	end
-	if(player2.position.GetX() >= camera_side_right and player1.push.GetX() > 0) then
-		player2.push.SetX(-player1.push.GetX())
-	end
-	if(player1.position.GetX() <= camera_side_left and player2.push.GetX() < 0) then
-		player1.push.SetX(-player1.push.GetX())
-	end
-	if(player1.position.GetX() >= camera_side_right and player2.push.GetX() > 0) then
-		player1.push.SetX(-player1.push.GetX())
-	end
-
-	-- apply push forces:
-	if(player1.push.Length() > 0) then
-		player2.velocity = player1.push
-	end
-	if(player2.push.Length() > 0) then
-		player1.velocity = player2.push
-	end
-
-	-- reset push forces:
-	player1.push = Vector()
-	player2.push = Vector()
-
-
 	-- Continuous collision detection will be iterated multiple times to avoid "bullet through paper problem":
 	local iterations = 10
 	local ccd_step = 1.0 / iterations
@@ -1277,6 +1247,35 @@ local ResolveCharacters = function(player1, player2)
 		camera_position = vector.Lerp(camera_position, camera_position_new, 0.1 * ccd_step)
 
 	end
+
+	-- Push:
+
+	-- player on the edge of screen can initiate push transfer:
+	--	it means that the player cannot be pushed further, so the opponent will be pushed back instead to compensate:
+	if(player2.position.GetX() <= camera_side_left and player1.push.GetX() < 0) then
+		player2.push.SetX(-player1.push.GetX())
+	end
+	if(player2.position.GetX() >= camera_side_right and player1.push.GetX() > 0) then
+		player2.push.SetX(-player1.push.GetX())
+	end
+	if(player1.position.GetX() <= camera_side_left and player2.push.GetX() < 0) then
+		player1.push.SetX(-player1.push.GetX())
+	end
+	if(player1.position.GetX() >= camera_side_right and player2.push.GetX() > 0) then
+		player1.push.SetX(-player1.push.GetX())
+	end
+
+	-- apply push forces:
+	if(player1.push.Length() > 0) then
+		player2.velocity = player1.push
+	end
+	if(player2.push.Length() > 0) then
+		player1.velocity = player2.push
+	end
+
+	-- reset push forces:
+	player1.push = Vector()
+	player2.push = Vector()
 
 	-- Update collision state once more (but with ccd_step = 0) so that bounding boxes and system transform is up to date:
 	player1:UpdateCollisionState(0)
