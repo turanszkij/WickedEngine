@@ -71,7 +71,7 @@ void EditorLoadingScreen::Load()
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	addFont(&font);
 
-	sprite = wiSprite("../logo/logo_small.png");
+	sprite = wiSprite("../images/logo_small.png");
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
 	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);

@@ -32,6 +32,7 @@ local function Character(face, shirt_color)
 		effect_hit = INVALID_ENTITY,
 		effect_guard = INVALID_ENTITY,
 		effect_spark = INVALID_ENTITY,
+		sprite_hpbar = Sprite(),
 		face = 1, -- face direction (X)
 		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
 		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
@@ -1068,6 +1069,12 @@ local function Character(face, shirt_color)
 			scene.Merge(effect_scene)
 
 
+
+			-- HP bar, etc. sprites:
+			self.sprite_hpbar = Sprite("../images/hp_bar.png")
+			main.GetActivePath().AddSprite(self.sprite_hpbar)
+
+
 			self:StartState(self.state)
 
 		end,
@@ -1172,6 +1179,24 @@ local function Character(face, shirt_color)
 				self.velocity.SetY(0) -- don't fall below ground
 				self.velocity = vector.Multiply(self.velocity, 0.86) -- ground drag
 			end
+
+
+
+			-- update sprites:
+			local scaling = GetScreenWidth() / 3840.0
+			local fx = self.sprite_hpbar.GetParams()
+			fx.SetPos(Vector(GetScreenWidth() / 2 + 140 * scaling * self.face, GetScreenHeight() / 16))
+			fx.SetSize(vector.Multiply(Vector(1430, 180), scaling))
+			fx.EnableDrawRect(Vector(0, 0, 1430, 180))
+			fx.SetColor(Vector(1,0,0,1))
+			if(self.face<0) then
+				fx.EnableMirror()
+				fx.SetPivot(Vector(1,0))
+			else
+				fx.DisableMirror()
+				fx.SetPivot(Vector(0,0))
+			end
+			self.sprite_hpbar.SetParams(fx)
 		
 		end,
 

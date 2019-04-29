@@ -6,17 +6,28 @@ const char wiImageParams_BindLua::className[] = "ImageParams";
 Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, GetPos),
 	lunamethod(wiImageParams_BindLua, GetSize),
+	lunamethod(wiImageParams_BindLua, GetPivot),
+	lunamethod(wiImageParams_BindLua, GetColor),
 	lunamethod(wiImageParams_BindLua, GetOpacity),
 	lunamethod(wiImageParams_BindLua, GetFade),
 	lunamethod(wiImageParams_BindLua, GetRotation),
 	lunamethod(wiImageParams_BindLua, GetMipLevel),
+	lunamethod(wiImageParams_BindLua, GetDrawRect),
+	lunamethod(wiImageParams_BindLua, IsDrawRectEnabled),
+	lunamethod(wiImageParams_BindLua, IsMirrorEnabled),
 
 	lunamethod(wiImageParams_BindLua, SetPos),
 	lunamethod(wiImageParams_BindLua, SetSize),
+	lunamethod(wiImageParams_BindLua, SetPivot),
+	lunamethod(wiImageParams_BindLua, SetColor),
 	lunamethod(wiImageParams_BindLua, SetOpacity),
 	lunamethod(wiImageParams_BindLua, SetFade),
 	lunamethod(wiImageParams_BindLua, SetRotation),
 	lunamethod(wiImageParams_BindLua, SetMipLevel),
+	lunamethod(wiImageParams_BindLua, EnableDrawRect),
+	lunamethod(wiImageParams_BindLua, DisableDrawRect),
+	lunamethod(wiImageParams_BindLua, EnableMirror),
+	lunamethod(wiImageParams_BindLua, DisableMirror),
 	{ NULL, NULL }
 };
 Luna<wiImageParams_BindLua>::PropertyType wiImageParams_BindLua::properties[] = {
@@ -38,6 +49,16 @@ int wiImageParams_BindLua::GetSize(lua_State* L)
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&params.siz)));
 	return 1;
 }
+int wiImageParams_BindLua::GetPivot(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&params.pivot)));
+	return 1;
+}
+int wiImageParams_BindLua::GetColor(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&params.col)));
+	return 1;
+}
 int wiImageParams_BindLua::GetOpacity(lua_State* L)
 {
 	wiLua::SSetFloat(L, params.opacity);
@@ -56,6 +77,21 @@ int wiImageParams_BindLua::GetRotation(lua_State* L)
 int wiImageParams_BindLua::GetMipLevel(lua_State* L)
 {
 	wiLua::SSetFloat(L, params.mipLevel);
+	return 1;
+}
+int wiImageParams_BindLua::GetDrawRect(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&params.drawRect)));
+	return 1;
+}
+int wiImageParams_BindLua::IsDrawRectEnabled(lua_State* L)
+{
+	wiLua::SSetBool(L, params.isDrawRectEnabled());
+	return 1;
+}
+int wiImageParams_BindLua::IsMirrorEnabled(lua_State* L)
+{
+	wiLua::SSetBool(L, params.isMirrorEnabled());
 	return 1;
 }
 
@@ -90,6 +126,40 @@ int wiImageParams_BindLua::SetSize(lua_State* L)
 	else
 	{
 		wiLua::SError(L, "SetSize(Vector size) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::SetPivot(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMStoreFloat2(&params.pivot, vector->vector);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetPivot(Vector value) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::SetColor(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMStoreFloat4(&params.col, vector->vector);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetColor(Vector value) not enough arguments!");
 	}
 	return 0;
 }
@@ -143,6 +213,40 @@ int wiImageParams_BindLua::SetMipLevel(lua_State* L)
 	{
 		wiLua::SError(L, "SetMipLevel(float x) not enough arguments!");
 	}
+	return 0;
+}
+int wiImageParams_BindLua::EnableDrawRect(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMFLOAT4 drawrect;
+			XMStoreFloat4(&drawrect, vector->vector);
+			params.enableDrawRect(drawrect);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "EnableDrawRect(Vector value) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::DisableDrawRect(lua_State* L)
+{
+	params.disableDrawRect();
+	return 0;
+}
+int wiImageParams_BindLua::EnableMirror(lua_State* L)
+{
+	params.enableMirror();
+	return 0;
+}
+int wiImageParams_BindLua::DisableMirror(lua_State* L)
+{
+	params.disableMirror();
 	return 0;
 }
 

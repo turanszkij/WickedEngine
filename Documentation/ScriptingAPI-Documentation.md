@@ -167,16 +167,27 @@ Specify Sprite properties, like position, size, etc.
 - [constructor]ImageParams(float posX, float posY, float width, opt float height)
 - GetPos() : Vector result
 - GetSize() : Vector result
+- GetPivot() : Vector result
+- GetColor() : Vector result
 - GetOpacity() : float result
 - GetFade() : float result
 - GetRotation() : float result
 - GetMipLevel() : float result
+- GetDrawRect() : Vector result
+- IsDrawRectEnabled() : bool result
+- IsMirrorEnabled() : bool result
 - SetPos(Vector pos)
 - SetSize(Vector size)
+- SetPivot(Vector value)
+- SetColor(Vector size)
 - SetOpacity(float opacity)
 - SetFade(float fade)
 - SetRotation(float rotation)
 - SetMipLevel(float mipLevel)
+- EnableDrawRect(Vector value)
+- DisableDrawRect()
+- EnableMirror()
+- DisableMirror()
 
 #### SpriteAnim
 Animate Sprites easily with this helper.

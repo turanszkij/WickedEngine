@@ -360,7 +360,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, no animation:
 	{
-		static wiSprite sprite("../logo/logo_small.png");
+		static wiSprite sprite("../images/logo_small.png");
 		sprite.params = params;
 		addSprite(&sprite);
 
@@ -376,7 +376,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, fade animation:
 	{
-		static wiSprite sprite("../logo/logo_small.png");
+		static wiSprite sprite("../images/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.fad = 1.2f; // (you can also do opacity animation with sprite.anim.opa)
@@ -395,7 +395,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, wobble animation:
 	{
-		static wiSprite sprite("../logo/logo_small.png");
+		static wiSprite sprite("../images/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.wobbleAnim.amount = XMFLOAT2(1.2f, 0.8f);
@@ -413,7 +413,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, rotate animation:
 	{
-		static wiSprite sprite("../logo/logo_small.png");
+		static wiSprite sprite("../images/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.rot = 2.8f;
@@ -432,7 +432,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, movingtex:
 	{
-		static wiSprite sprite("images/movingtex.png", "../logo/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
+		static wiSprite sprite("images/movingtex.png", "../images/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
 		// Don't overwrite all params for this, because we want to keep the mask...
 		sprite.params.pos = params.pos;
 		sprite.params.siz = params.siz;

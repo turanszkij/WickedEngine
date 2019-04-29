@@ -18,6 +18,8 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 
 	Out.tex = inTex * xTexMulAdd.xy + xTexMulAdd.zw;
 
+	Out.tex.x = xMirror == 1 ? (1 - Out.tex.x) : Out.tex.x;
+
 	Out.pos2D = Out.pos;
 
 	return Out;
