@@ -58,14 +58,14 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xSPH_h3;				// smoothing radius ^ 3
 
 	float		xSPH_poly6_constant;	// precomputed Poly6 kernel constant term
-	float		xSPH_spiky_constant;	// precomputed Spiky kernel function constaant term
+	float		xSPH_spiky_constant;	// precomputed Spiky kernel function constant term
 	float		xSPH_K;					// pressure constant
 	float		xSPH_p0;				// reference density
 
 	float		xSPH_e;					// viscosity constant
 	uint		xSPH_ENABLED;			// is SPH enabled?
 	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
-	float		__padding;
+	float		xParticleEmissive;
 
 };
 

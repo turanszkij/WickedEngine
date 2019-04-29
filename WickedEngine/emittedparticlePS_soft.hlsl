@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "depthConvertHF.hlsli"
+#include "ShaderInterop_EmittedParticle.h"
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
@@ -20,7 +21,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = saturate(color.a * inputColor.a * fade);
 
-	color.rgb *= inputColor.rgb;
+	color.rgb *= inputColor.rgb * (1 + xParticleEmissive);
 	color.a = opacity;
 
 #ifdef DISTORTION

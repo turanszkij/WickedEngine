@@ -292,6 +292,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleMotionBlurAmount = motionBlurAmount;
 		cb.xParticleRotation = rotation * XM_PI * 60;
 		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material.baseColor.x, material.baseColor.y, material.baseColor.z, 1));
+		cb.xParticleEmissive = material.emissiveColor.w;
 		cb.xEmitterOpacity = material.GetOpacity();
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
@@ -606,6 +607,7 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	}
 
 	device->BindConstantBuffer(VS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
+	device->BindConstantBuffer(PS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
 
 	GPUResource* res[] = {
 		particleBuffer.get(),

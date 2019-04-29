@@ -31,6 +31,7 @@ local function Character(face, shirt_color)
 		effect_dust = INVALID_ENTITY,
 		effect_hit = INVALID_ENTITY,
 		effect_guard = INVALID_ENTITY,
+		effect_spark = INVALID_ENTITY,
 		face = 1, -- face direction (X)
 		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
 		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
@@ -56,18 +57,28 @@ local function Character(face, shirt_color)
 			-- depending on if the attack is guarded or not, we will spawn different effects:
 			local emitter_entity = INVALID_ENTITY
 			local burst_count = 0
+			local spark_color = Vector()
 			if(self.hit_guard) then
 				emitter_entity = self.effect_guard
 				burst_count = 4
+				spark_color = Vector(0,0.5,1,1)
 			else
 				emitter_entity = self.effect_hit
 				burst_count = 50
+				spark_color = Vector(1,0.5,0,1)
 			end
 
 			scene.Component_GetEmitter(emitter_entity).Burst(burst_count)
 			local transform_component = scene.Component_GetTransform(emitter_entity)
 			transform_component.ClearTransform()
 			transform_component.Translate(vector.Add(self.position, local_pos))
+
+			scene.Component_GetEmitter(self.effect_spark).Burst(4)
+			transform_component = scene.Component_GetTransform(self.effect_spark)
+			transform_component.ClearTransform()
+			transform_component.Translate(vector.Add(self.position, local_pos))
+			local material_component_spark = scene.Component_GetMaterial(self.effect_spark)
+			material_component_spark.SetBaseColor(spark_color)
 
 			runProcess(function() -- this sub-process will spawn a light, wait a bit then remove it
 				local entity = CreateEntity()
@@ -1048,6 +1059,12 @@ local function Character(face, shirt_color)
 			LoadModel(effect_scene, "../models/emitter_guardeffect.wiscene")
 			self.effect_guard = effect_scene.Entity_FindByName("guard")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_guard).SetEmitCount(0)  -- don't emit continuously
+			scene.Merge(effect_scene)
+
+			effect_scene.Clear()
+			LoadModel(effect_scene, "../models/emitter_spark.wiscene")
+			self.effect_spark = effect_scene.Entity_FindByName("spark")  -- query the emitter entity by name
+			effect_scene.Component_GetEmitter(self.effect_spark).SetEmitCount(0)  -- don't emit continuously
 			scene.Merge(effect_scene)
 
 
