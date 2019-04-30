@@ -12,8 +12,12 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, GetFade),
 	lunamethod(wiImageParams_BindLua, GetRotation),
 	lunamethod(wiImageParams_BindLua, GetMipLevel),
+	lunamethod(wiImageParams_BindLua, GetTexOffset),
+	lunamethod(wiImageParams_BindLua, GetTexOffset2),
 	lunamethod(wiImageParams_BindLua, GetDrawRect),
+	lunamethod(wiImageParams_BindLua, GetDrawRect2),
 	lunamethod(wiImageParams_BindLua, IsDrawRectEnabled),
+	lunamethod(wiImageParams_BindLua, IsDrawRect2Enabled),
 	lunamethod(wiImageParams_BindLua, IsMirrorEnabled),
 
 	lunamethod(wiImageParams_BindLua, SetPos),
@@ -22,10 +26,18 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, SetColor),
 	lunamethod(wiImageParams_BindLua, SetOpacity),
 	lunamethod(wiImageParams_BindLua, SetFade),
+	lunamethod(wiImageParams_BindLua, SetStencil),
+	lunamethod(wiImageParams_BindLua, SetBlendMode),
+	lunamethod(wiImageParams_BindLua, SetQuality),
+	lunamethod(wiImageParams_BindLua, SetSampleMode),
 	lunamethod(wiImageParams_BindLua, SetRotation),
 	lunamethod(wiImageParams_BindLua, SetMipLevel),
+	lunamethod(wiImageParams_BindLua, SetTexOffset),
+	lunamethod(wiImageParams_BindLua, SetTexOffset2),
 	lunamethod(wiImageParams_BindLua, EnableDrawRect),
+	lunamethod(wiImageParams_BindLua, EnableDrawRect2),
 	lunamethod(wiImageParams_BindLua, DisableDrawRect),
+	lunamethod(wiImageParams_BindLua, DisableDrawRect2),
 	lunamethod(wiImageParams_BindLua, EnableMirror),
 	lunamethod(wiImageParams_BindLua, DisableMirror),
 	{ NULL, NULL }
@@ -79,14 +91,34 @@ int wiImageParams_BindLua::GetMipLevel(lua_State* L)
 	wiLua::SSetFloat(L, params.mipLevel);
 	return 1;
 }
+int wiImageParams_BindLua::GetTexOffset(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&params.texOffset)));
+	return 1;
+}
+int wiImageParams_BindLua::GetTexOffset2(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat2(&params.texOffset2)));
+	return 1;
+}
 int wiImageParams_BindLua::GetDrawRect(lua_State* L)
 {
 	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&params.drawRect)));
 	return 1;
 }
+int wiImageParams_BindLua::GetDrawRect2(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&params.drawRect2)));
+	return 1;
+}
 int wiImageParams_BindLua::IsDrawRectEnabled(lua_State* L)
 {
 	wiLua::SSetBool(L, params.isDrawRectEnabled());
+	return 1;
+}
+int wiImageParams_BindLua::IsDrawRect2Enabled(lua_State* L)
+{
+	wiLua::SSetBool(L, params.isDrawRect2Enabled());
 	return 1;
 }
 int wiImageParams_BindLua::IsMirrorEnabled(lua_State* L)
@@ -189,6 +221,59 @@ int wiImageParams_BindLua::SetFade(lua_State* L)
 	}
 	return 0;
 }
+int wiImageParams_BindLua::SetStencil(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 1)
+	{
+		params.stencilComp = (STENCILMODE)wiLua::SGetInt(L, 1);
+		params.stencilRef = (uint8_t)wiLua::SGetInt(L, 2);
+	}
+	else
+	{
+		wiLua::SError(L, "SetStencil(int stencilmode,stencilref) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::SetBlendMode(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		params.blendFlag = (BLENDMODE)wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetBlendMode(int blendMode) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::SetQuality(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		params.quality = (QUALITY)wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetQuality(int quality) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::SetSampleMode(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		params.sampleFlag = (SAMPLEMODE)wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetSampleMode(int sampleMode) not enough arguments!");
+	}
+	return 0;
+}
 int wiImageParams_BindLua::SetRotation(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -215,6 +300,40 @@ int wiImageParams_BindLua::SetMipLevel(lua_State* L)
 	}
 	return 0;
 }
+int wiImageParams_BindLua::SetTexOffset(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMStoreFloat2(&params.texOffset, vector->vector);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetTexOffset(Vector value) not enough arguments!");
+	}
+	return 0;
+}
+int wiImageParams_BindLua::SetTexOffset2(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMStoreFloat2(&params.texOffset2, vector->vector);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "SetTexOffset2(Vector value) not enough arguments!");
+	}
+	return 0;
+}
 int wiImageParams_BindLua::EnableDrawRect(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -234,9 +353,33 @@ int wiImageParams_BindLua::EnableDrawRect(lua_State* L)
 	}
 	return 0;
 }
+int wiImageParams_BindLua::EnableDrawRect2(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (vector != nullptr)
+		{
+			XMFLOAT4 drawrect2;
+			XMStoreFloat4(&drawrect2, vector->vector);
+			params.enableDrawRect2(drawrect2);
+		}
+	}
+	else
+	{
+		wiLua::SError(L, "EnableDrawRect2(Vector value) not enough arguments!");
+	}
+	return 0;
+}
 int wiImageParams_BindLua::DisableDrawRect(lua_State* L)
 {
 	params.disableDrawRect();
+	return 0;
+}
+int wiImageParams_BindLua::DisableDrawRect2(lua_State* L)
+{
+	params.disableDrawRect2();
 	return 0;
 }
 int wiImageParams_BindLua::EnableMirror(lua_State* L)
@@ -288,6 +431,28 @@ void wiImageParams_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<wiImageParams_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+
+		wiLua::GetGlobal()->RunText("STENCILMODE_DISABLED		= 0");
+		wiLua::GetGlobal()->RunText("STENCILMODE_EQUAL			= 1");
+		wiLua::GetGlobal()->RunText("STENCILMODE_LESS			= 2");
+		wiLua::GetGlobal()->RunText("STENCILMODE_LESSEQUAL		= 3");
+		wiLua::GetGlobal()->RunText("STENCILMODE_GREATER		= 4");
+		wiLua::GetGlobal()->RunText("STENCILMODE_GREATEREQUAL	= 5");
+		wiLua::GetGlobal()->RunText("STENCILMODE_NOT			= 6");
+
+		wiLua::GetGlobal()->RunText("SAMPLEMODE_CLAMP			= 0");
+		wiLua::GetGlobal()->RunText("SAMPLEMODE_WRAP			= 1");
+		wiLua::GetGlobal()->RunText("SAMPLEMODE_MIRROR			= 2");
+
+		wiLua::GetGlobal()->RunText("QUALITY_NEAREST			= 0");
+		wiLua::GetGlobal()->RunText("QUALITY_LINEAR				= 1");
+		wiLua::GetGlobal()->RunText("QUALITY_ANISOTROPIC		= 2");
+		wiLua::GetGlobal()->RunText("QUALITY_BICUBIC			= 3");
+
+		wiLua::GetGlobal()->RunText("BLENDMODE_OPAQUE			= 0");
+		wiLua::GetGlobal()->RunText("BLENDMODE_ALPHA			= 1");
+		wiLua::GetGlobal()->RunText("BLENDMODE_PREMULTIPLIED	= 2");
+		wiLua::GetGlobal()->RunText("BLENDMODE_ADDITIVE			= 3");
 	}
 }
 

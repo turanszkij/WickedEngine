@@ -186,6 +186,21 @@ namespace wiImage
 			}
 			cb.xTexMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
 			cb.xTexMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+
+			if (params.isDrawRect2Enabled())
+			{
+				cb.xTexMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
+				cb.xTexMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
+				cb.xTexMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
+				cb.xTexMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			}
+			else
+			{
+				cb.xTexMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			}
+			cb.xTexMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
+			cb.xTexMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
+
 			cb.xColor = params.col;
 			const float darken = 1 - params.fade;
 			cb.xColor.x *= darken;
@@ -469,7 +484,7 @@ namespace wiImage
 			}
 			else if (i == wiImageParams::PostProcess::SSSS)
 			{
-				desc.dss = &depthStencilStates[STENCILMODE_LESS];
+				desc.dss = &depthStencilStates[STENCILMODE_EQUAL];
 				desc.numRTs = 1;
 				desc.RTFormats[0] = wiRenderer::RTFormat_deferred_lightbuffer;
 				desc.DSFormat = wiRenderer::DSFormat_full;
@@ -518,7 +533,7 @@ namespace wiImage
 		desc.vs = screenVS;
 		desc.ps = deferredPS;
 		desc.bs = &blendStates[BLENDMODE_OPAQUE];
-		desc.dss = &depthStencilStates[STENCILMODE_LESS];
+		desc.dss = &depthStencilStates[STENCILMODE_LESSEQUAL];
 		desc.rs = &rasterizerState;
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
@@ -571,46 +586,42 @@ namespace wiImage
 
 		DepthStencilStateDesc dsd;
 		dsd.DepthEnable = false;
-		dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		dsd.DepthFunc = COMPARISON_GREATER;
+		dsd.StencilEnable = false;
+		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_DISABLED]);
 
 		dsd.StencilEnable = true;
 		dsd.StencilReadMask = 0xff;
 		dsd.StencilWriteMask = 0;
-		dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 		dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 		dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
 		dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-		dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
 		dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 		dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 		dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESS]);
 
 		dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
 		dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
 		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_EQUAL]);
 
+		dsd.FrontFace.StencilFunc = COMPARISON_LESS;
+		dsd.BackFace.StencilFunc = COMPARISON_LESS;
+		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESS]);
 
-		dsd.DepthEnable = false;
-		dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		dsd.DepthFunc = COMPARISON_GREATER;
+		dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
+		dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
+		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESSEQUAL]);
 
-		dsd.StencilEnable = true;
-		dsd.StencilReadMask = 0xff;
-		dsd.StencilWriteMask = 0;
 		dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
-		dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-		dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-		dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 		dsd.BackFace.StencilFunc = COMPARISON_GREATER;
-		dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-		dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-		dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATER]);
 
-		dsd.StencilEnable = false;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_DISABLED]);
+		dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+		dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATEREQUAL]);
+
+		dsd.FrontFace.StencilFunc = COMPARISON_NOT_EQUAL;
+		dsd.BackFace.StencilFunc = COMPARISON_NOT_EQUAL;
+		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_NOT]);
 
 
 		dsd.DepthEnable = true;

@@ -158,9 +158,10 @@ namespace wiSceneSystem
 
 		int customShaderID = -1; // for now, this is not serialized; need to consider actual proper use case first
 
+		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
 		{
-			assert(value < 128);
+			assert(value < 16);
 			userStencilRef = value & 0x0F;
 		}
 		inline UINT GetStencilRef() const

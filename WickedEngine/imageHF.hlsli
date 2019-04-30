@@ -12,8 +12,8 @@ SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
-	float2 tex_original		: TEXCOORD0;
-	float2 tex				: TEXCOORD1;
+	float2 tex				: TEXCOORD0;
+	float2 tex2				: TEXCOORD1;
 	float4 pos2D			: TEXCOORD2;
 };
 struct VertexToPixelPostProcess

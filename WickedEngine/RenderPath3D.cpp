@@ -352,8 +352,6 @@ void RenderPath3D::RenderSSAO(GRAPHICSTHREAD threadID) const
 
 		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, threadID);
 		device->EventBegin("SSAO", threadID);
-		fx.stencilRef = STENCILREF_DEFAULT;
-		fx.stencilComp = STENCILMODE_LESS;
 		{
 			const Texture2D* rts[] = { &rtSSAO[0] };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
@@ -397,8 +395,6 @@ void RenderPath3D::RenderSSAO(GRAPHICSTHREAD threadID) const
 			wiImage::Draw(&rtSSAO[1], fx, threadID);
 			fx.process.clear();
 		}
-		fx.stencilRef = 0;
-		fx.stencilComp = STENCILMODE_DISABLED;
 		device->EventEnd(threadID);
 	}
 }

@@ -41,6 +41,25 @@ namespace wiSceneSystem_BindLua
 		int Component_GetAnimation(lua_State* L);
 		int Component_GetMaterial(lua_State* L);
 		int Component_GetEmitter(lua_State* L);
+		int Component_GetLight(lua_State* L);
+
+		int Component_GetNameArray(lua_State* L);
+		int Component_GetLayerArray(lua_State* L);
+		int Component_GetTransformArray(lua_State* L);
+		int Component_GetCameraArray(lua_State* L);
+		int Component_GetAnimationArray(lua_State* L);
+		int Component_GetMaterialArray(lua_State* L);
+		int Component_GetEmitterArray(lua_State* L);
+		int Component_GetLightArray(lua_State* L);
+
+		int Entity_GetNameArray(lua_State* L);
+		int Entity_GetLayerArray(lua_State* L);
+		int Entity_GetTransformArray(lua_State* L);
+		int Entity_GetCameraArray(lua_State* L);
+		int Entity_GetAnimationArray(lua_State* L);
+		int Entity_GetMaterialArray(lua_State* L);
+		int Entity_GetEmitterArray(lua_State* L);
+		int Entity_GetLightArray(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -175,6 +194,9 @@ namespace wiSceneSystem_BindLua
 
 		int SetBaseColor(lua_State* L);
 		int SetEmissiveColor(lua_State* L);
+		int SetEngineStencilRef(lua_State* L);
+		int SetUserStencilRef(lua_State* L);
+		int GetStencilRef(lua_State* L);
 	};
 
 	class EmitterComponent_BindLua

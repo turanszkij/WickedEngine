@@ -21,6 +21,16 @@ void RenderPath2D::ResizeBuffers()
 
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
 
+	if(GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
+	{
+		TextureDesc desc;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.Format = defaultTextureFormat;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		device->CreateTexture2D(&desc, nullptr, &rtStenciled);
+		device->SetName(&rtStenciled, "rtStenciled");
+	}
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
@@ -103,8 +113,42 @@ void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	const Texture2D* dsv = GetDepthStencil();
+
+	// Special care for internal resolution, because stencil buffer is of internal resolution, 
+	//	so we might need to render stencil sprites to separate render target that matches internal resolution!
+	if (GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
+	{
+		const Texture2D* rts[] = { &rtStenciled };
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, GRAPHICSTHREAD_IMMEDIATE);
+
+		float clear[] = { 0,0,0,0 };
+		device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
+
+		ViewPort vp;
+		vp.Width = (float)rtStenciled.GetDesc().Width;
+		vp.Height = (float)rtStenciled.GetDesc().Height;
+		device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
+
+		wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+		for (auto& x : layers)
+		{
+			for (auto& y : x.items)
+			{
+				if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
+				{
+					y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+				}
+			}
+		}
+		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+
+		dsv = nullptr;
+	}
+
+
 	const Texture2D* rts[] = { &rtFinal };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, GRAPHICSTHREAD_IMMEDIATE);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, GRAPHICSTHREAD_IMMEDIATE);
 
 	float clear[] = { 0,0,0,0 };
 	device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
@@ -114,14 +158,39 @@ void RenderPath2D::Render() const
 	vp.Height = (float)rtFinal.GetDesc().Height;
 	device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
 
-
+	if (GetDepthStencil() != nullptr)
+	{
+		if (wiRenderer::GetResolutionScale() != 1.0f)
+		{
+			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+			wiImageParams fx;
+			fx.enableFullScreen();
+			wiImage::Draw(&rtStenciled, fx, GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+		}
+		else
+		{
+			wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+			for (auto& x : layers)
+			{
+				for (auto& y : x.items)
+				{
+					if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
+					{
+						y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+					}
+				}
+			}
+			wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+		}
+	}
 
 	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
 	for (auto& x : layers)
 	{
 		for (auto& y : x.items)
 		{
-			if (y.sprite != nullptr)
+			if (y.sprite != nullptr && y.sprite->params.stencilComp == STENCILMODE_DISABLED)
 			{
 				y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
 			}

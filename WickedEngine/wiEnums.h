@@ -47,17 +47,15 @@ enum RENDERPASS
 	RENDERPASS_COUNT
 };
 
-// engine stencil reference values. These can be in range of 0-127. 128-255 are for user stencil values.
+// engine stencil reference values. These can be in range of [0, 15].
+// Do not alter order or value because it is bound to lua manually!
 enum STENCILREF 
 {
-	STENCILREF_EMPTY = 0x00,
-	STENCILREF_SKY = 0x01,
-	STENCILREF_DEFAULT = 0x02,
-	STENCILREF_TRANSPARENT = 0x03,
-	STENCILREF_CHARACTER = 0x04,
-	STENCILREF_SHADELESS = 0x05,
-	STENCILREF_SKIN = 0x06,
-	STENCILREF_LAST = 0x0F
+	STENCILREF_EMPTY = 0,
+	STENCILREF_SKY = 1,
+	STENCILREF_DEFAULT = 2,
+	STENCILREF_SKIN = 3,
+	STENCILREF_LAST = 15
 };
 
 // constant buffers

@@ -24,6 +24,8 @@
 
 local scene = GetScene()
 
+local debug_draw = true -- press H button to toggle
+
 -- **The character "class" is a wrapper function that returns a local internal table called "self"
 local function Character(face, shirt_color)
 	local self = {
@@ -32,7 +34,11 @@ local function Character(face, shirt_color)
 		effect_hit = INVALID_ENTITY,
 		effect_guard = INVALID_ENTITY,
 		effect_spark = INVALID_ENTITY,
-		sprite_hpbar = Sprite(),
+		sprite_hpbar_background = Sprite(),
+		sprite_hpbar_hp = Sprite(),
+		sprite_hpbar_pattern = Sprite(),
+		sprite_hpbar_pattern2 = Sprite(),
+		sprite_hpbar_border = Sprite(),
 		face = 1, -- face direction (X)
 		request_face = 1, -- the suggested facing of this player, it might not be the actual facing if the player haven't been able to turn yet (for example an other action hasn't finished yet)
 		position = Vector(), -- the absolute position of this player in the world, a 2D Vector
@@ -51,6 +57,8 @@ local function Character(face, shirt_color)
 		can_guard = false, -- true when player is inside opponent's guard box and can initiate guarding state
 		guarding = false, -- if true, player can't be hit
 		hit_guard = false, -- true when opponent is guarding the attack
+		max_hp = 10000, -- maximum health
+		hp = 10000, -- current health
 
 		-- Effect helpers:
 		spawn_effect_hit = function(self, local_pos)
@@ -142,6 +150,9 @@ local function Character(face, shirt_color)
 		end,
 		require_guard = function(self) -- true if player can start guarding
 			return self.can_guard
+		end,
+		require_dead = function(self) -- true if player can start guarding
+			return self.hp <= 0
 		end,
 		
 		-- Common motion helpers:
@@ -706,6 +717,32 @@ local function Character(face, shirt_color)
 				clipbox = AABB(Vector(-1), Vector(1, 1)),
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 1)),
 			},
+			DownedDieStart = {
+				anim_name = "DownedDieStart",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(), Vector()),
+				hurtbox = AABB(Vector(), Vector()),
+			},
+			DownedDie = {
+				anim_name = "DownedDie",
+				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(), Vector()),
+				hurtbox = AABB(Vector(), Vector()),
+			},
+			DieStart = {
+				anim_name = "DieStart.001", -- todo fix anim name
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(), Vector()),
+				hurtbox = AABB(Vector(), Vector()),
+			},
+			Die = {
+				anim_name = "Die",
+				anim = INVALID_ENTITY,
+				clipbox = AABB(Vector(), Vector()),
+				hurtbox = AABB(Vector(), Vector()),
+			},
 			Getup = {
 				anim_name = "Getup",
 				anim = INVALID_ENTITY,
@@ -925,6 +962,7 @@ local function Character(face, shirt_color)
 				{ "StaggerEnd", condition = function(self) return not self:require_hurt() end, },
 			},
 			StaggerEnd = { 
+				{ "DieStart", condition = function(self) return self:require_dead() end, },
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
@@ -941,6 +979,7 @@ local function Character(face, shirt_color)
 				{ "StaggerCrouchEnd", condition = function(self) return not self:require_hurt() end, },
 			},
 			StaggerCrouchEnd = { 
+				{ "DieStart", condition = function(self) return self:require_dead() end, },
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
 				{ "Crouch", condition = function(self) return self:require_animationfinish() end, },
@@ -960,7 +999,18 @@ local function Character(face, shirt_color)
 			},
 
 			Downed = { 
+				{ "DownedDieStart", condition = function(self) return self:require_dead() end, },
 				{ "Getup", condition = function(self) return self:require_input("A") or self:require_input("B") or self:require_input("C") or self.frame > 60 end, },
+			},
+			DownedDieStart = { 
+				{ "DownedDie", condition = function(self) return self:require_animationfinish() end, },
+			},
+			DownedDie = { 
+			},
+			DieStart = { 
+				{ "Die", condition = function(self) return self:require_animationfinish() end, },
+			},
+			Die = { 
 			},
 			Getup = { 
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
@@ -1024,9 +1074,15 @@ local function Character(face, shirt_color)
 			self.request_face = face
 			self.position = Vector(self.face * -4)
 
-			-- Set shirt color todifferentiate between characters:
+			-- Set shirt color to differentiate between characters:
 			local shirt_material_entity = model_scene.Entity_FindByName("material_shirt")
 			model_scene.Component_GetMaterial(shirt_material_entity).SetBaseColor(shirt_color)
+
+			-- Set user stencil ref for all materials:
+			for i,material in ipairs(model_scene.Component_GetMaterialArray()) do
+				material.SetUserStencilRef(1)
+			end
+			local stencilref_cutout = model_scene.Component_GetMaterialArray()[1].GetStencilRef() -- we will use the final material stencilref from the first material to cut out the hp bar sprites...
 		
 			-- Initialize states:
 			for i,state in pairs(self.states) do
@@ -1071,8 +1127,103 @@ local function Character(face, shirt_color)
 
 
 			-- HP bar, etc. sprites:
-			self.sprite_hpbar = Sprite("../images/hp_bar.png")
-			main.GetActivePath().AddSprite(self.sprite_hpbar)
+			local renderPath = main.GetActivePath()
+
+			self.sprite_hpbar_background = Sprite("../images/hp_bar.png")
+			local fx = self.sprite_hpbar_background.GetParams()
+			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
+			fx.EnableDrawRect(Vector(0, 180, 1430, 180))
+			fx.SetColor(Vector(0,0,0,0.5))
+			if(self.face > 0) then
+				fx.EnableMirror()
+				fx.SetPivot(Vector(1,0))
+			else
+				fx.DisableMirror()
+				fx.SetPivot(Vector(0,0))
+			end
+			self.sprite_hpbar_background.SetParams(fx)
+			renderPath.AddSprite(self.sprite_hpbar_background)
+
+			self.sprite_hpbar_hp = Sprite("../images/hp_bar.png")
+			fx = self.sprite_hpbar_hp.GetParams()
+			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
+			fx.EnableDrawRect(Vector(0, 180, 1430, 180))
+			fx.SetColor(Vector(0,1,0.5,1))
+			if(self.face > 0) then
+				fx.EnableMirror()
+				fx.SetPivot(Vector(1,0))
+			else
+				fx.DisableMirror()
+				fx.SetPivot(Vector(0,0))
+			end
+			self.sprite_hpbar_hp.SetParams(fx)
+			renderPath.AddSprite(self.sprite_hpbar_hp)
+
+			self.sprite_hpbar_pattern = Sprite("../images/hp_bar.png", "../images/hp_bar.png")
+			fx = self.sprite_hpbar_pattern.GetParams()
+			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
+			fx.EnableDrawRect(Vector(0, 360, 1430, 180))
+			fx.EnableDrawRect2(Vector(0, 180, 1430, 180))
+			fx.SetColor(Vector(1,1,1,0.2))
+			if(self.face > 0) then
+				fx.EnableMirror()
+				fx.SetPivot(Vector(1,0))
+			else
+				fx.DisableMirror()
+				fx.SetPivot(Vector(0,0))
+			end
+			self.sprite_hpbar_pattern.SetParams(fx)
+			local pattern_anim = self.sprite_hpbar_pattern.GetAnim()
+			local movingtexanim = MovingTexAnim()
+			movingtexanim.SetSpeedX(60)
+			pattern_anim.SetMovingTexAnim(movingtexanim)
+			self.sprite_hpbar_pattern.SetAnim(pattern_anim)
+			renderPath.AddSprite(self.sprite_hpbar_pattern)
+
+			self.sprite_hpbar_pattern2 = Sprite("../images/hp_bar.png", "../images/hp_bar.png")
+			fx = self.sprite_hpbar_pattern2.GetParams()
+			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
+			fx.EnableDrawRect(Vector(0, 360, 1430, 180))
+			fx.EnableDrawRect2(Vector(0, 180, 1430, 180))
+			fx.SetColor(Vector(1,1,1,0.2))
+			if(self.face > 0) then
+				fx.EnableMirror()
+				fx.SetPivot(Vector(1,0))
+			else
+				fx.DisableMirror()
+				fx.SetPivot(Vector(0,0))
+			end
+			self.sprite_hpbar_pattern2.SetParams(fx)
+			local pattern_anim = self.sprite_hpbar_pattern.GetAnim()
+			local movingtexanim = MovingTexAnim()
+			movingtexanim.SetSpeedX(-40)
+			pattern_anim.SetMovingTexAnim(movingtexanim)
+			self.sprite_hpbar_pattern2.SetAnim(pattern_anim)
+			renderPath.AddSprite(self.sprite_hpbar_pattern2)
+
+			self.sprite_hpbar_border = Sprite("../images/hp_bar.png")
+			fx = self.sprite_hpbar_border.GetParams()
+			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
+			fx.EnableDrawRect(Vector(0, 0, 1430, 180))
+			if(self.face > 0) then
+				fx.EnableMirror()
+				fx.SetPivot(Vector(1,0))
+			else
+				fx.DisableMirror()
+				fx.SetPivot(Vector(0,0))
+			end
+			self.sprite_hpbar_border.SetParams(fx)
+			renderPath.AddSprite(self.sprite_hpbar_border)
+			
+			if(self.face > 0) then
+				self.sprite_timer = Sprite("../images/hp_bar.png")
+				fx = self.sprite_timer.GetParams()
+				fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
+				fx.EnableDrawRect(Vector(0,540,360,180))
+				fx.SetPivot(Vector(0.5,0))
+				self.sprite_timer.SetParams(fx)
+				renderPath.AddSprite(self.sprite_timer)
+			end
 
 
 			self:StartState(self.state)
@@ -1088,6 +1239,8 @@ local function Character(face, shirt_color)
 				table.insert(self.input_buffer, {age = 0, command = "2"})
 			elseif(self.ai_state == "Guard" and self:require_guard()) then
 				table.insert(self.input_buffer, {age = 0, command = "4"})
+			elseif(self.ai_state == "Attack") then
+				table.insert(self.input_buffer, {age = 0, command = "5A"})
 			else
 				table.insert(self.input_buffer, {age = 0, command = "5"})
 			end
@@ -1183,20 +1336,56 @@ local function Character(face, shirt_color)
 
 
 			-- update sprites:
+
 			local scaling = GetScreenWidth() / 3840.0
-			local fx = self.sprite_hpbar.GetParams()
-			fx.SetPos(Vector(GetScreenWidth() / 2 + 140 * scaling * self.face, GetScreenHeight() / 16))
-			fx.SetSize(vector.Multiply(Vector(1430, 180), scaling))
-			fx.EnableDrawRect(Vector(0, 0, 1430, 180))
-			fx.SetColor(Vector(1,0,0,1))
-			if(self.face<0) then
-				fx.EnableMirror()
-				fx.SetPivot(Vector(1,0))
-			else
-				fx.DisableMirror()
-				fx.SetPivot(Vector(0,0))
+			local hp_percentage = self.hp / self.max_hp
+			local fx = self.sprite_hpbar_background.GetParams()
+			local offset_from_center = 200 * scaling
+			if(fx.IsMirrorEnabled()) then
+				offset_from_center = offset_from_center * -1
 			end
-			self.sprite_hpbar.SetParams(fx)
+			fx.SetPos(Vector(GetScreenWidth() / 2 + offset_from_center, GetScreenHeight() / 16))
+			fx.SetSize(vector.Multiply(Vector(1430, 180), scaling))
+			self.sprite_hpbar_background.SetParams(fx)
+			
+			fx = self.sprite_hpbar_hp.GetParams()
+			fx.SetPos(Vector(GetScreenWidth() / 2 + offset_from_center, GetScreenHeight() / 16))
+			fx.SetSize(vector.Multiply(Vector(1430 * hp_percentage, 180), scaling))
+			fx.EnableDrawRect(Vector(0, 180, 1430 * hp_percentage, 180))
+			if(hp_percentage < 0.25) then
+				fx.SetColor(Vector(1,0.25,0,1))
+			elseif(hp_percentage < 1) then
+				fx.SetColor(Vector(1,1,0,1))
+			else
+				fx.SetColor(Vector(0,1,0.5,1))
+			end
+			self.sprite_hpbar_hp.SetParams(fx)
+			
+			fx = self.sprite_hpbar_pattern.GetParams()
+			fx.SetPos(Vector(GetScreenWidth() / 2 + offset_from_center, GetScreenHeight() / 16))
+			fx.SetSize(vector.Multiply(Vector(1430 * hp_percentage, 180), scaling))
+			fx.EnableDrawRect(Vector(0, 360, 1430 * hp_percentage, 180))
+			fx.EnableDrawRect2(Vector(0, 180, 1430 * hp_percentage, 180))
+			self.sprite_hpbar_pattern.SetParams(fx)
+			
+			fx = self.sprite_hpbar_pattern2.GetParams()
+			fx.SetPos(Vector(GetScreenWidth() / 2 + offset_from_center, GetScreenHeight() / 16))
+			fx.SetSize(vector.Multiply(Vector(1430 * hp_percentage, 180), scaling))
+			fx.EnableDrawRect(Vector(0, 370, 1430 * hp_percentage, 180))
+			fx.EnableDrawRect2(Vector(0, 180, 1430 * hp_percentage, 180))
+			self.sprite_hpbar_pattern2.SetParams(fx)
+
+			fx = self.sprite_hpbar_border.GetParams()
+			fx.SetPos(Vector(GetScreenWidth() / 2 + offset_from_center, GetScreenHeight() / 16))
+			fx.SetSize(vector.Multiply(Vector(1430, 180), scaling))
+			self.sprite_hpbar_border.SetParams(fx)
+
+			if(self.sprite_timer ~= nil) then
+				fx = self.sprite_timer.GetParams()
+				fx.SetPos(Vector(GetScreenWidth()/2, GetScreenHeight() / 16))
+				fx.SetSize(vector.Multiply(Vector(360, 180), scaling))
+				self.sprite_timer.SetParams(fx)
+			end
 		
 		end,
 
@@ -1252,6 +1441,10 @@ local function Character(face, shirt_color)
 
 		-- Draws the hitboxes, etc.
 		DebugDraw = function(self)
+			if(not debug_draw) then
+				return
+			end
+
 			DrawPoint(self.position, 0.1, Vector(1,0,0,1))
 			DrawLine(self.position,self.position:Add(self.velocity), Vector(0,1,0,10))
 			DrawLine(vector.Add(self.position, Vector(0,1)),vector.Add(self.position, Vector(0,1)):Add(Vector(self.face)), Vector(0,0,1,1))
@@ -1306,6 +1499,35 @@ local ResolveCharacters = function(player1, player2)
 	local camera_side_left = camera_position.GetX() - CAMERA_SIDE_LENGTH
 	local camera_side_right = camera_position.GetX() + CAMERA_SIDE_LENGTH
 
+	-- Push:
+
+	-- player on the edge of screen can initiate push transfer:
+	--	it means that the player cannot be pushed further, so the opponent will be pushed back instead to compensate:
+	if(player2.position.GetX() <= camera_side_left and player1.push.GetX() < 0) then
+		player2.push.SetX(-player1.push.GetX())
+	end
+	if(player2.position.GetX() >= camera_side_right and player1.push.GetX() > 0) then
+		player2.push.SetX(-player1.push.GetX())
+	end
+	if(player1.position.GetX() <= camera_side_left and player2.push.GetX() < 0) then
+		player1.push.SetX(-player1.push.GetX())
+	end
+	if(player1.position.GetX() >= camera_side_right and player2.push.GetX() > 0) then
+		player1.push.SetX(-player1.push.GetX())
+	end
+
+	-- apply push forces:
+	if(player1.push.Length() > 0) then
+		player2.velocity = player1.push
+	end
+	if(player2.push.Length() > 0) then
+		player1.velocity = player2.push
+	end
+
+	-- reset push forces:
+	player1.push = Vector()
+	player2.push = Vector()
+
 	-- Continuous collision detection will be iterated multiple times to avoid "bullet through paper problem":
 	local iterations = 10
 	local ccd_step = 1.0 / iterations
@@ -1329,6 +1551,8 @@ local ResolveCharacters = function(player1, player2)
 					player2.hurt = true
 					if(player2.guarding) then
 						player1.hit_guard = true
+					else
+						player2.hp = math.max(0, player2.hp - 10)
 					end
 					break
 				end
@@ -1342,6 +1566,8 @@ local ResolveCharacters = function(player1, player2)
 					player1.hurt = true
 					if(player1.guarding) then
 						player2.hit_guard = true
+					else
+						player1.hp = math.max(0, player1.hp - 10)
 					end
 					break
 				end
@@ -1415,35 +1641,6 @@ local ResolveCharacters = function(player1, player2)
 
 	end
 
-	-- Push:
-
-	-- player on the edge of screen can initiate push transfer:
-	--	it means that the player cannot be pushed further, so the opponent will be pushed back instead to compensate:
-	if(player2.position.GetX() <= camera_side_left and player1.push.GetX() < 0) then
-		player2.push.SetX(-player1.push.GetX())
-	end
-	if(player2.position.GetX() >= camera_side_right and player1.push.GetX() > 0) then
-		player2.push.SetX(-player1.push.GetX())
-	end
-	if(player1.position.GetX() <= camera_side_left and player2.push.GetX() < 0) then
-		player1.push.SetX(-player1.push.GetX())
-	end
-	if(player1.position.GetX() >= camera_side_right and player2.push.GetX() > 0) then
-		player1.push.SetX(-player1.push.GetX())
-	end
-
-	-- apply push forces:
-	if(player1.push.Length() > 0) then
-		player2.velocity = player1.push
-	end
-	if(player2.push.Length() > 0) then
-		player1.velocity = player2.push
-	end
-
-	-- reset push forces:
-	player1.push = Vector()
-	player2.push = Vector()
-
 	-- Update collision state once more (but with ccd_step = 0) so that bounding boxes and system transform is up to date:
 	player1:UpdateCollisionState(0)
 	player2:UpdateCollisionState(0)
@@ -1479,8 +1676,8 @@ runProcess(function()
 	main.SetActivePath(path)
 
 	local help_text = ""
-	help_text = help_text .. "This script is showcasing how to write a simple fighting game."
-	help_text = help_text .. "\nControls:\n#####################\nESCAPE key: quit\nR: reload script"
+	help_text = help_text .. "This script is showcasing how to write a simple fighting game.\n"
+	help_text = help_text .. "\nESCAPE key: quit\nR: reload script"
 	help_text = help_text .. "\nWASD: move"
 	help_text = help_text .. "\nRight: action A"
 	help_text = help_text .. "\nUp: action B"
@@ -1489,7 +1686,9 @@ runProcess(function()
 	help_text = help_text .. "\nJ: player2 will always jump"
 	help_text = help_text .. "\nC: player2 will always crouch"
 	help_text = help_text .. "\nG: player2 will always guard"
+	help_text = help_text .. "\nK: player2 will always attack"
 	help_text = help_text .. "\nI: player2 will be idle"
+	help_text = help_text .. "\nH: toggle Debug Draw"
 	help_text = help_text .. "\n\nMovelist:"
 	help_text = help_text .. "\n\t A : Light Punch"
 	help_text = help_text .. "\n\t B : Heavy Punch"
@@ -1537,6 +1736,10 @@ runProcess(function()
 			player2.ai_state = "Crouch"
 		elseif(input.Press(string.byte('G'))) then
 			player2.ai_state = "Guard"
+		elseif(input.Press(string.byte('K'))) then
+			player2.ai_state = "Attack"
+		elseif(input.Press(string.byte('H'))) then
+			debug_draw = not debug_draw
 		end
 
 		local inputString = "input: "

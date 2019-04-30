@@ -33,6 +33,7 @@ class RenderPath2D :
 	public RenderPath
 {
 private:
+	wiGraphics::Texture2D rtStenciled;
 	wiGraphics::Texture2D rtFinal;
 	wiGUI GUI;
 	float spriteSpeed = 1.0f;
@@ -51,7 +52,8 @@ public:
 	void Render() const override;
 	void Compose() const override;
 
-	const wiGraphics::Texture2D& GetRenderResult() { return rtFinal; }
+	const wiGraphics::Texture2D& GetRenderResult() const { return rtFinal; }
+	virtual const wiGraphics::Texture2D* GetDepthStencil() const { return nullptr; }
 
 	void addSprite(wiSprite* sprite, const std::string& layer = DEFAULT_RENDERLAYER);
 	void removeSprite(wiSprite* sprite);

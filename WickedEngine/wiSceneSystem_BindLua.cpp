@@ -160,6 +160,11 @@ void Bind()
 		wiLua::GetGlobal()->RunText("RECTANGLE = 5");
 		wiLua::GetGlobal()->RunText("TUBE = 6");
 
+		wiLua::GetGlobal()->RunText("STENCILREF_EMPTY = 0");
+		wiLua::GetGlobal()->RunText("STENCILREF_SKY = 1");
+		wiLua::GetGlobal()->RunText("STENCILREF_DEFAULT = 2");
+		wiLua::GetGlobal()->RunText("STENCILREF_SKIN = 3");
+
 		wiLua::GetGlobal()->RegisterFunc("GetScene", GetScene);
 		wiLua::GetGlobal()->RegisterFunc("LoadModel", LoadModel);
 		wiLua::GetGlobal()->RegisterFunc("Pick", Pick);
@@ -191,6 +196,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateLayer),
 	lunamethod(Scene_BindLua, Component_CreateTransform),
 	lunamethod(Scene_BindLua, Component_CreateLight),
+
 	lunamethod(Scene_BindLua, Component_GetName),
 	lunamethod(Scene_BindLua, Component_GetLayer),
 	lunamethod(Scene_BindLua, Component_GetTransform),
@@ -198,6 +204,26 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetAnimation),
 	lunamethod(Scene_BindLua, Component_GetMaterial),
 	lunamethod(Scene_BindLua, Component_GetEmitter),
+	lunamethod(Scene_BindLua, Component_GetLight),
+
+	lunamethod(Scene_BindLua, Component_GetNameArray),
+	lunamethod(Scene_BindLua, Component_GetLayerArray),
+	lunamethod(Scene_BindLua, Component_GetTransformArray),
+	lunamethod(Scene_BindLua, Component_GetCameraArray),
+	lunamethod(Scene_BindLua, Component_GetAnimationArray),
+	lunamethod(Scene_BindLua, Component_GetMaterialArray),
+	lunamethod(Scene_BindLua, Component_GetEmitterArray),
+	lunamethod(Scene_BindLua, Component_GetLightArray),
+
+	lunamethod(Scene_BindLua, Entity_GetNameArray),
+	lunamethod(Scene_BindLua, Entity_GetLayerArray),
+	lunamethod(Scene_BindLua, Entity_GetTransformArray),
+	lunamethod(Scene_BindLua, Entity_GetCameraArray),
+	lunamethod(Scene_BindLua, Entity_GetAnimationArray),
+	lunamethod(Scene_BindLua, Entity_GetMaterialArray),
+	lunamethod(Scene_BindLua, Entity_GetEmitterArray),
+	lunamethod(Scene_BindLua, Entity_GetLightArray),
+
 	lunamethod(Scene_BindLua, Component_Attach),
 	lunamethod(Scene_BindLua, Component_Detach),
 	lunamethod(Scene_BindLua, Component_DetachChildren),
@@ -483,7 +509,7 @@ int Scene_BindLua::Component_GetMaterial(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
+		wiLua::SError(L, "Scene::Component_GetMaterial(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -500,9 +526,204 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
+		wiLua::SError(L, "Scene::Component_GetEmitter(Entity entity) not enough arguments!");
 	}
 	return 0;
+}
+int Scene_BindLua::Component_GetLight(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wiLua::SGetInt(L, 1);
+
+		LightComponent* component = scene->lights.GetComponent(entity);
+		Luna<LightComponent_BindLua>::push(L, new LightComponent_BindLua(component));
+		return 1;
+	}
+	else
+	{
+		wiLua::SError(L, "Scene::Component_GetLight(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+
+int Scene_BindLua::Component_GetNameArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->names.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->names.GetCount(); ++i)
+	{
+		Luna<NameComponent_BindLua>::push(L, new NameComponent_BindLua(&scene->names[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetLayerArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->layers.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->layers.GetCount(); ++i)
+	{
+		Luna<LayerComponent_BindLua>::push(L, new LayerComponent_BindLua(&scene->layers[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetTransformArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->transforms.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->transforms.GetCount(); ++i)
+	{
+		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(&scene->transforms[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetCameraArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->cameras.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->cameras.GetCount(); ++i)
+	{
+		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&scene->cameras[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetAnimationArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->animations.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->animations.GetCount(); ++i)
+	{
+		Luna<AnimationComponent_BindLua>::push(L, new AnimationComponent_BindLua(&scene->animations[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetMaterialArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->materials.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->materials.GetCount(); ++i)
+	{
+		Luna<MaterialComponent_BindLua>::push(L, new MaterialComponent_BindLua(&scene->materials[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetEmitterArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->emitters.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->emitters.GetCount(); ++i)
+	{
+		Luna<EmitterComponent_BindLua>::push(L, new EmitterComponent_BindLua(&scene->emitters[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Component_GetLightArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->lights.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->lights.GetCount(); ++i)
+	{
+		Luna<LightComponent_BindLua>::push(L, new LightComponent_BindLua(&scene->lights[i]));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+
+int Scene_BindLua::Entity_GetNameArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->names.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->names.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->names.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetLayerArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->layers.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->layers.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->layers.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetTransformArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->transforms.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->transforms.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->transforms.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetCameraArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->cameras.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->cameras.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->cameras.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetAnimationArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->animations.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->animations.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->animations.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetMaterialArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->materials.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->materials.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->materials.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetEmitterArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->emitters.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->emitters.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->emitters.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetLightArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->lights.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->lights.GetCount(); ++i)
+	{
+		wiLua::SSetInt(L, scene->lights.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
 }
 
 int Scene_BindLua::Component_Attach(lua_State* L)
@@ -1098,6 +1319,9 @@ const char MaterialComponent_BindLua::className[] = "MaterialComponent";
 Luna<MaterialComponent_BindLua>::FunctionType MaterialComponent_BindLua::methods[] = {
 	lunamethod(MaterialComponent_BindLua, SetBaseColor),
 	lunamethod(MaterialComponent_BindLua, SetEmissiveColor),
+	lunamethod(MaterialComponent_BindLua, SetEngineStencilRef),
+	lunamethod(MaterialComponent_BindLua, SetUserStencilRef),
+	lunamethod(MaterialComponent_BindLua, GetStencilRef),
 	{ NULL, NULL }
 };
 Luna<MaterialComponent_BindLua>::PropertyType MaterialComponent_BindLua::properties[] = {
@@ -1164,6 +1388,40 @@ int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 	}
 
 	return 0;
+}
+int MaterialComponent_BindLua::SetEngineStencilRef(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->engineStencilRef = (STENCILREF)wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetEngineStencilRef(int value) not enough arguments!");
+	}
+
+	return 0;
+}
+int MaterialComponent_BindLua::SetUserStencilRef(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint8_t value = (uint8_t)wiLua::SGetInt(L, 1);
+		component->SetUserStencilRef(value);
+	}
+	else
+	{
+		wiLua::SError(L, "SetUserStencilRef(int value) not enough arguments!");
+	}
+
+	return 0;
+}
+int MaterialComponent_BindLua::GetStencilRef(lua_State* L)
+{
+	wiLua::SSetInt(L, (int)component->GetStencilRef());
+	return 1;
 }
 
 

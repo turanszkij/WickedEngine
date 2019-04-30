@@ -15,7 +15,7 @@ protected:
 	void ResizeBuffers() override;
 
 public:
-	const wiGraphics::Texture2D* GetDepthBuffer() override { return nullptr; };
+	const wiGraphics::Texture2D* GetDepthStencil() const override { return nullptr; };
 
 	void Update(float dt) override;
 	void Render() const override;

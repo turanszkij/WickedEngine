@@ -6,6 +6,7 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 {
 	float4		xCorners[4];
 	float4		xTexMulAdd;
+	float4		xTexMulAdd2;
 	float4		xColor;
 	uint		xMirror;
 	float		xMipLevel;

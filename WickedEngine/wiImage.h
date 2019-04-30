@@ -20,12 +20,16 @@ namespace wiImage
 	void Initialize();
 };
 
+// Do not alter order or value because it is bound to lua manually!
 enum STENCILMODE
 {
 	STENCILMODE_DISABLED,
-	STENCILMODE_GREATER,
-	STENCILMODE_LESS,
 	STENCILMODE_EQUAL,
+	STENCILMODE_LESS,
+	STENCILMODE_LESSEQUAL,
+	STENCILMODE_GREATER,
+	STENCILMODE_GREATEREQUAL,
+	STENCILMODE_NOT,
 	STENCILMODE_COUNT
 };
 enum SAMPLEMODE
@@ -55,10 +59,11 @@ struct wiImageParams
 	{
 		EMPTY = 0,
 		DRAWRECT = 1 << 0,
-		MIRROR = 1 << 1,
-		EXTRACT_NORMALMAP = 1 << 2,
-		HDR = 1 << 3,
-		FULLSCREEN = 1 << 4,
+		DRAWRECT2 = 1 << 1,
+		MIRROR = 1 << 2,
+		EXTRACT_NORMALMAP = 1 << 3,
+		HDR = 1 << 4,
+		FULLSCREEN = 1 << 5,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -67,8 +72,10 @@ struct wiImageParams
 	XMFLOAT2 scale;
 	XMFLOAT4 col;
 	XMFLOAT4 drawRect;
+	XMFLOAT4 drawRect2;
 	XMFLOAT4 lookAt;			//(x,y,z) : direction, (w) :isenabled?
 	XMFLOAT2 texOffset;
+	XMFLOAT2 texOffset2;
 	XMFLOAT2 pivot;				// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
 	float rotation;
 	float mipLevel;
@@ -76,7 +83,7 @@ struct wiImageParams
 	float opacity;
 	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 
-	UINT stencilRef;
+	uint8_t stencilRef;
 	STENCILMODE stencilComp;
 	BLENDMODE blendFlag;
 	ImageType typeFlag;
@@ -185,7 +192,9 @@ struct wiImageParams
 		col = XMFLOAT4(1, 1, 1, 1);
 		scale = XMFLOAT2(1, 1);
 		drawRect = XMFLOAT4(0, 0, 0, 0);
+		drawRect2 = XMFLOAT4(0, 0, 0, 0);
 		texOffset = XMFLOAT2(0, 0);
+		texOffset2 = XMFLOAT2(0, 0);
 		lookAt = XMFLOAT4(0, 0, 0, 0);
 		pivot = XMFLOAT2(0, 0);
 		fade = rotation = 0.0f;
@@ -207,13 +216,16 @@ struct wiImageParams
 	}
 
 	constexpr bool isDrawRectEnabled() const { return _flags & DRAWRECT; }
+	constexpr bool isDrawRect2Enabled() const { return _flags & DRAWRECT2; }
 	constexpr bool isMirrorEnabled() const { return _flags & MIRROR; }
 	constexpr bool isExtractNormalMapEnabled() const { return _flags & EXTRACT_NORMALMAP; }
 	constexpr bool isHDREnabled() const { return _flags & HDR; }
 	constexpr bool isFullScreenEnabled() const { return _flags & FULLSCREEN; }
 
-	// enables draw rectangle (cutout texture outside draw rectangle)
+	// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 	void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
+	// enables draw rectangle for mask texture (cutout texture outside draw rectangle)
+	void enableDrawRect2(const XMFLOAT4& rect) { _flags |= DRAWRECT2; drawRect2 = rect; }
 	// mirror the image horizontally
 	void enableMirror() { _flags |= MIRROR; }
 	// enable normal map extraction shader that will perform texcolor * 2 - 1 (preferably onto a signed render target)
@@ -223,8 +235,10 @@ struct wiImageParams
 	// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
 	void enableFullScreen() { _flags |= FULLSCREEN; }
 
-	// disable draw rectangle (whole texture will be drawn, no cutout)
+	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 	void disableDrawRect() { _flags &= ~DRAWRECT; }
+	// disable draw rectangle for mask texture (whole texture will be drawn, no cutout)
+	void disableDrawRect2() { _flags &= ~DRAWRECT2; }
 	// disable mirroring
 	void disableMirror() { _flags &= ~MIRROR; }
 	// disable normal map extraction shader

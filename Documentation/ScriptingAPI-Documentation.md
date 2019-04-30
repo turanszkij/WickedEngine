@@ -173,8 +173,12 @@ Specify Sprite properties, like position, size, etc.
 - GetFade() : float result
 - GetRotation() : float result
 - GetMipLevel() : float result
+- GetTexOffset() : Vector result
+- GetTexOffset2() : Vector result
 - GetDrawRect() : Vector result
+- GetDrawRect2() : Vector result
 - IsDrawRectEnabled() : bool result
+- IsDrawRect2Enabled() : bool result
 - IsMirrorEnabled() : bool result
 - SetPos(Vector pos)
 - SetSize(Vector size)
@@ -182,12 +186,42 @@ Specify Sprite properties, like position, size, etc.
 - SetColor(Vector size)
 - SetOpacity(float opacity)
 - SetFade(float fade)
+- SetStencil(int stencilMode,stencilRef)
+- SetBlendMode(int blendMode)
+- SetQuality(int quality)
+- SetSampleMode(int sampleMode)
 - SetRotation(float rotation)
 - SetMipLevel(float mipLevel)
+- SetTexOffset()
+- SetTexOffset2()
 - EnableDrawRect(Vector value)
+- EnableDrawRect2(Vector value)
 - DisableDrawRect()
+- DisableDrawRect2()
 - EnableMirror()
 - DisableMirror()
+
+- [outer]STENCILMODE_DISABLED : int
+- [outer]STENCILMODE_EQUAL : int
+- [outer]STENCILMODE_LESS : int
+- [outer]STENCILMODE_LESSEQUAL : int
+- [outer]STENCILMODE_GREATER : int
+- [outer]STENCILMODE_GREATEREQUAL : int
+- [outer]STENCILMODE_NOT : int
+
+- [outer]SAMPLEMODE_CLAMP : int
+- [outer]SAMPLEMODE_WRAP : int
+- [outer]SAMPLEMODE_MIRROR : int
+
+- [outer]QUALITY_NEAREST : int
+- [outer]QUALITY_LINEAR : int
+- [outer]QUALITY_ANISOTROPIC : int
+- [outer]QUALITY_BICUBIC : int
+
+- [outer]BLENDMODE_OPAQUE : int
+- [outer]BLENDMODE_ALPHA : int
+- [outer]BLENDMODE_PREMULTIPLIED : int
+- [outer]BLENDMODE_ADDITIVE : int
 
 #### SpriteAnim
 Animate Sprites easily with this helper.
@@ -314,18 +348,43 @@ An entity is just an int value and works as a handle to retrieve associated comp
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge()  -- moves contents from an other scene into this one
+
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
 - Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
+
 - Component_CreateName(Entity entity) : NameComponent result  -- attach a name component to an entity. The returned NameComponent is associated with the entity and can be manipulated
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
 - Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned TransformComponent is associated with the entity and can be manipulated
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
+
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
 - Component_GetTransform(Entity entity) : TransformComponent? result  -- query the transform component of the entity (if exists)
 - Component_GetCamera(Entity entity) : CameraComponent? result  -- query the camera component of the entity (if exists)
 - Component_GetAnimation(Entity entity) : AnimationComponent? result  -- query the animation component of the entity (if exists)
+- Component_GetMaterial(Entity entity) : MaterialComponent? result  -- query the animation component of the entity (if exists)
+- Component_GetEmitter(Entity entity) : EmitterComponent? result  -- query the animation component of the entity (if exists)
+- Component_GetLight(Entity entity) : LightComponent? result  -- query the animation component of the entity (if exists)
+
+- Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
+- Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
+- Component_GetTransformArray() : TransformComponent[] result  -- returns the array of all components of this type
+- Component_GetCameraArray() : CameraComponent[] result  -- returns the array of all components of this type
+- Component_GetAnimationArray() : AnimationComponent[] result  -- returns the array of all components of this type
+- Component_GetMaterialArray() : MaterialComponent[] result  -- returns the array of all components of this type
+- Component_GetEmitterArray() : EmitterComponent[] result  -- returns the array of all components of this type
+- Component_GetLightArray() : LightComponent[] result  -- returns the array of all components of this type
+
+- Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetTransformArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetCameraArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetAnimationArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetMaterialArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetEmitterArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetLightArray() : Entity[] result  -- returns the array of all entities that have this component type
+
 - Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
 - Component_DetachChildren(Entity parent)  -- detaches all children from parent, as if calling Component_Detach for all of its children
@@ -375,8 +434,11 @@ Describes an orientation in 3D space.
 - IsPlaying() : bool result
 
 #### MaterialComponent
-- SetBaseColor()
-- SetEmissiveColor()
+- SetBaseColor(Vector value)
+- SetEmissiveColor(Vector value)
+- SetEngineStencilRef(int value)
+- SetUserStencilRef(int value)
+- GetStencilRef() : int result
 
 #### EmitterComponent
 - Burst(int value)  -- spawns a specific amount of particles immediately

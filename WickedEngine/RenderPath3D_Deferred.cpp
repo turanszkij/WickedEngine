@@ -197,7 +197,7 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
 		device->BindViewports(1, &vp, threadID);
 
 		fx.stencilRef = STENCILREF_SKIN;
-		fx.stencilComp = STENCILMODE_LESS;
+		fx.stencilComp = STENCILMODE_EQUAL;
 		fx.quality = QUALITY_LINEAR;
 		fx.sampleFlag = SAMPLEMODE_CLAMP;
 		static int sssPassCount = 6;
@@ -239,18 +239,16 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
 			fx.quality = QUALITY_NEAREST;
 			fx.sampleFlag = SAMPLEMODE_CLAMP;
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			fx.stencilRef = 0;
-			fx.stencilComp = STENCILMODE_DISABLED;
+			fx.stencilRef = STENCILREF_SKIN;
+			fx.stencilComp = STENCILMODE_NOT;
 			fx.enableFullScreen();
 			fx.enableHDR();
 			wiImage::Draw(&lightbuffer_diffuse, fx, threadID);
 			fx.stencilRef = STENCILREF_SKIN;
-			fx.stencilComp = STENCILMODE_LESS;
+			fx.stencilComp = STENCILMODE_EQUAL;
 			wiImage::Draw(&rtSSS[1], fx, threadID);
 		}
 
-		fx.stencilRef = 0;
-		fx.stencilComp = STENCILMODE_DISABLED;
 		device->EventEnd(threadID);
 	}
 }

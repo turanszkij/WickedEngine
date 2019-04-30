@@ -103,7 +103,7 @@ protected:
 	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
 	
 public:
-	virtual const wiGraphics::Texture2D* GetDepthBuffer() { return &depthBuffer; }
+	const wiGraphics::Texture2D* GetDepthStencil() const override { return &depthBuffer; }
 
 	inline float getExposure() const { return exposure; }
 	inline float getLightShaftQuality() const { return lightShaftQuality; }
