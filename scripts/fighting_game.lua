@@ -107,6 +107,38 @@ local function Character(face, shirt_color)
 				scene.Entity_Remove(entity)
 			end)
 		end,
+		spawn_effect_fireball = function(self, local_pos) -- todo
+			runProcess(function() -- first subprocess begins effects, and attaches light
+				scene.Component_GetEmitter(self.effect_hit).SetEmitCount(1000)
+				local transform_component = scene.Component_GetTransform(self.effect_hit)
+				transform_component.ClearTransform()
+				transform_component.Translate(vector.Add(self.position, local_pos))
+				transform_component.UpdateTransform()
+
+				local entity = CreateEntity()
+				scene.Component_Attach(entity, self.effect_hit)
+				local light_transform = scene.Component_CreateTransform(entity)
+				light_transform.Translate(vector.Add(self.position, local_pos))
+				local light_component = scene.Component_CreateLight(entity)
+				light_component.SetType(POINT)
+				light_component.SetRange(8)
+				light_component.SetEnergy(10)
+				light_component.SetColor(Vector(1,0.5,0))
+				light_component.SetCastShadow(false)
+
+				waitSignal("fireball_end") -- wait for fireball to end
+				scene.Entity_Remove(entity)
+				scene.Component_GetEmitter(self.effect_hit).SetEmitCount(0)
+			end)
+			runProcess(function()
+				for i=1,60,1 do -- move the fireball effect for some time
+					local transform_component = scene.Component_GetTransform(self.effect_hit)
+					transform_component.Translate(Vector(self.face * 0.2))
+					waitSeconds(0.016)
+				end
+				signal("fireball_end") -- end the first subprocess
+			end)
+		end,
 		spawn_effect_dust = function(self, local_pos)
 			local emitter_component = scene.Component_GetEmitter(self.effect_dust).Burst(10)
 			local transform_component = scene.Component_GetTransform(self.effect_dust)
@@ -638,6 +670,24 @@ local function Character(face, shirt_color)
 					end
 				end,
 			},
+			Fireball = {
+				anim_name = "SpearJaunt", -- todo: needs new anim
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1.5), Vector(1.5, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				guardbox = AABB(Vector(-2,0),Vector(16,8)),
+				update_collision = function(self)
+					if(self:require_window(17,40)) then
+						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
+					end
+				end,
+				update = function(self)
+					if(self:require_frame(16)) then
+						self:spawn_effect_fireball(Vector(2.5 * self.face, 3.6, -1))
+					end
+				end,
+			},
 			
 			-- Hurt states:
 			StaggerStart = {
@@ -763,6 +813,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
@@ -796,6 +847,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
 				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
@@ -823,6 +875,7 @@ local function Character(face, shirt_color)
 				{ "RunEnd", condition = function(self) return not self:require_input("6") end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
@@ -838,6 +891,7 @@ local function Character(face, shirt_color)
 				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
@@ -980,6 +1034,10 @@ local function Character(face, shirt_color)
 			Shoryuken = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallStart", condition = function(self) return self:require_animationfinish() end, },
+			},
+			Fireball = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			
 			StaggerStart = { 
@@ -1734,6 +1792,7 @@ runProcess(function()
 	help_text = help_text .. "\n\t 2C : Air Heavy Kick (while jumping)"
 	help_text = help_text .. "\n\t 623B: Shoryuken"
 	help_text = help_text .. "\n\t 236B: Jaunt"
+	help_text = help_text .. "\n\t 236A: Fireball"
 	local font = Font(help_text);
 	font.SetSize(22)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
