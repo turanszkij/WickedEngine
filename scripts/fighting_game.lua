@@ -761,8 +761,8 @@ local function Character(face, shirt_color)
 			Idle = { 
 				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
-				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
+				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
@@ -771,41 +771,41 @@ local function Character(face, shirt_color)
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
-				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
-				{ "HeavyPunch", condition = function(self) return self:require_input("5B") end, },
-				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
+				{ "LightPunch", condition = function(self) return self:require_input("A") end, },
+				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
+				{ "LightKick", condition = function(self) return self:require_input("C") end, },
+				{ "HeavyKick", condition = function(self) return self:require_input("D") end, },
 			},
 			Walk_Backward = { 
 				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Dash_Backward", condition = function(self) return self:require_input_window("454", 7) end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
-				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
-				{ "HeavyPunch", condition = function(self) return self:require_input("5B") end, },
-				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
+				{ "LightPunch", condition = function(self) return self:require_input("A") end, },
+				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
+				{ "LightKick", condition = function(self) return self:require_input("C") end, },
+				{ "HeavyKick", condition = function(self) return self:require_input("D") end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
-				{ "HeavyKick", condition = function(self) return self:require_input("6C") end, },
 			},
 			Walk_Forward = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("D") end, },
-				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("D") end, },
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
+				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
 				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
-				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
-				{ "HeavyPunch", condition = function(self) return self:require_input("5B") end, },
-				{ "LightKick", condition = function(self) return self:require_input("5C") end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
-				{ "HeavyKick", condition = function(self) return self:require_input("6C") end, },
+				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
+				{ "LightKick", condition = function(self) return self:require_input("C") end, },
+				{ "HeavyKick", condition = function(self) return self:require_input("D") end, },
 			},
 			Dash_Backward = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -821,29 +821,55 @@ local function Character(face, shirt_color)
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "RunEnd", condition = function(self) return not self:require_input("6") end, },
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
+				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
+				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
+				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
+				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
+				{ "LightPunch", condition = function(self) return self:require_input("5A") end, },
+				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
+				{ "LightKick", condition = function(self) return self:require_input("C") end, },
+				{ "HeavyKick", condition = function(self) return self:require_input("D") end, },
 			},
 			RunEnd = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
+				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
+				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
+				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
+				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
+				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
+				{ "Jump", condition = function(self) return self:require_input("8") end, },
+				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
+				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
+				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
+				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
+				{ "LightPunch", condition = function(self) return self:require_input("A") end, },
+				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
+				{ "LightKick", condition = function(self) return self:require_input("C") end, },
+				{ "HeavyKick", condition = function(self) return self:require_input("D") end, },
 			},
 			Jump = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			JumpForward = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
 			JumpBack = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
 			},
@@ -852,7 +878,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
 				{ "Fall", condition = function(self) return self:require_animationfinish() end, },
-				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 			},
 			Fall = { 
@@ -862,13 +888,16 @@ local function Character(face, shirt_color)
 				{ "JumpBack", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("57", 7) end, },
 				{ "JumpForward", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("59", 7) end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
-				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("2C") end, },
+				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 			},
 			FallEnd = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Turn", condition = function(self) return self.position.GetY() <= 0 and self.request_face ~= self.face end, },
 				{ "Idle", condition = function(self) return self.position.GetY() <= 0 and self:require_animationfinish() end, },
+				{ "RunStart", condition = function(self) return self.position.GetY() <= 0 and self:require_input_window("656", 7) end, },
+				{ "Dash_Backward", condition = function(self) return self.position.GetY() <= 0 and self:require_input_window("454", 7) end, },
 			},
 			CrouchStart = { 
 				{ "StaggerCrouchStart", condition = function(self) return self:require_hurt() end, },
@@ -892,9 +921,11 @@ local function Character(face, shirt_color)
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
 			Guard = { 
+				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Idle", condition = function(self) return not self:require_input("4") end, },
 			},
 			LowGuard = { 
+				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Crouch", condition = function(self) return not self:require_input("1") end, },
 			},
 
@@ -1693,16 +1724,16 @@ runProcess(function()
 	help_text = help_text .. "\n\t A : Light Punch"
 	help_text = help_text .. "\n\t B : Heavy Punch"
 	help_text = help_text .. "\n\t C : Light Kick"
+	help_text = help_text .. "\n\t D : Heavy Kick"
 	help_text = help_text .. "\n\t 6A : Forward Light Punch"
-	help_text = help_text .. "\n\t 6C : Heavy Kick"
 	help_text = help_text .. "\n\t 2A : Low Punch"
 	help_text = help_text .. "\n\t 2B : Uppercut"
 	help_text = help_text .. "\n\t 2C : Low Kick"
 	help_text = help_text .. "\n\t 4(charge) 6C : Charge Kick"
 	help_text = help_text .. "\n\t C : Air Kick (while jumping)"
 	help_text = help_text .. "\n\t 2C : Air Heavy Kick (while jumping)"
-	help_text = help_text .. "\n\t 623D: Shoryuken"
-	help_text = help_text .. "\n\t 236D: Jaunt"
+	help_text = help_text .. "\n\t 623B: Shoryuken"
+	help_text = help_text .. "\n\t 236B: Jaunt"
 	local font = Font(help_text);
 	font.SetSize(22)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
