@@ -121,6 +121,7 @@ local function Character(face, shirt_color)
 		end,
 		spawn_effect_fireball = function(self, pos, velocity) -- todo
 			self.fireball_active = true
+			local fireball_life = 8 -- can hit the player so many times
 			runProcess(function() -- first subprocess begins effect
 				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(2000)
 				scene.Component_GetEmitter(self.effect_fireball_haze).SetEmitCount(10)
@@ -135,13 +136,17 @@ local function Character(face, shirt_color)
 			runProcess(function()
 				for i=1,120,1 do -- move the fireball effect for some frames
 					local transform_component = scene.Component_GetTransform(self.model_fireball)
-					transform_component.Translate(velocity)
-					transform_component.UpdateTransform()
-					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(transform_component.GetPosition())
+					if(fireball_life == 0) then
 						signal("fireball_end" .. self.model) -- end the first subprocess
 						self.fireball_active = false
 						return
+					end
+					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(transform_component.GetPosition())
+						fireball_life = fireball_life - 1
+					else
+						transform_component.Translate(velocity)
+						transform_component.UpdateTransform()
 					end
 					waitSignal("subprocess_update" .. self.model)
 				end
@@ -702,7 +707,7 @@ local function Character(face, shirt_color)
 					if(self:require_frame(16)) then
 						local fireball_velocity = Vector(self.face * 0.3)
 						if(self.position.GetY() > 0) then
-							fireball_velocity.SetY(-0.1)
+							fireball_velocity.SetY(-0.18)
 						end
 						self:spawn_effect_fireball(vector.Add(self.position, Vector(2.5 * self.face, 3.4)), fireball_velocity)
 					end
