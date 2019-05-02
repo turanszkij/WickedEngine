@@ -34,6 +34,8 @@ local function Character(face, shirt_color)
 		effect_hit = INVALID_ENTITY,
 		effect_guard = INVALID_ENTITY,
 		effect_spark = INVALID_ENTITY,
+		model_fireball = INVALID_ENTITY,
+		effect_fireball = INVALID_ENTITY,
 		sprite_hpbar_background = Sprite(),
 		sprite_hpbar_hp = Sprite(),
 		sprite_hpbar_pattern = Sprite(),
@@ -59,6 +61,15 @@ local function Character(face, shirt_color)
 		hit_guard = false, -- true when opponent is guarding the attack
 		max_hp = 10000, -- maximum health
 		hp = 10000, -- current health
+		fireball_active = false, -- fireball is on screen or not
+
+		-- Box helpers:
+		set_box_local = function(self, boxlist, aabb) -- sets box relative to character orientation
+			table.insert(boxlist, aabb.Transform(scene.Component_GetTransform(self.model).GetMatrix()))
+		end,
+		set_box_global = function(self, boxlist, aabb) -- sets box in absolute orientation
+			table.insert(boxlist, aabb)
+		end,
 
 		-- Effect helpers:
 		spawn_effect_hit = function(self, local_pos)
@@ -107,36 +118,38 @@ local function Character(face, shirt_color)
 				scene.Entity_Remove(entity)
 			end)
 		end,
-		spawn_effect_fireball = function(self, local_pos) -- todo
-			runProcess(function() -- first subprocess begins effects, and attaches light
-				scene.Component_GetEmitter(self.effect_hit).SetEmitCount(1000)
-				local transform_component = scene.Component_GetTransform(self.effect_hit)
+		spawn_effect_fireball = function(self, local_pos, velocity) -- todo
+			self.fireball_active = true
+			runProcess(function() -- first subprocess begins effect
+				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(2000)
+				local transform_component = scene.Component_GetTransform(self.model_fireball)
 				transform_component.ClearTransform()
 				transform_component.Translate(vector.Add(self.position, local_pos))
-				transform_component.UpdateTransform()
-
-				local entity = CreateEntity()
-				scene.Component_Attach(entity, self.effect_hit)
-				local light_transform = scene.Component_CreateTransform(entity)
-				light_transform.Translate(vector.Add(self.position, local_pos))
-				local light_component = scene.Component_CreateLight(entity)
-				light_component.SetType(POINT)
-				light_component.SetRange(8)
-				light_component.SetEnergy(10)
-				light_component.SetColor(Vector(1,0.5,0))
-				light_component.SetCastShadow(false)
-
-				waitSignal("fireball_end") -- wait for fireball to end
-				scene.Entity_Remove(entity)
-				scene.Component_GetEmitter(self.effect_hit).SetEmitCount(0)
+				waitSignal("fireball_end" .. self.model) -- wait for fireball to end
+				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)
+				transform_component.Translate(Vector(0,0,-1000000))
 			end)
 			runProcess(function()
-				for i=1,60,1 do -- move the fireball effect for some time
-					local transform_component = scene.Component_GetTransform(self.effect_hit)
-					transform_component.Translate(Vector(self.face * 0.2))
-					waitSeconds(0.016)
+				for i=1,120,1 do -- move the fireball effect for some frames
+					local transform_component = scene.Component_GetTransform(self.model_fireball)
+					transform_component.Translate(velocity)
+					transform_component.UpdateTransform()
+					if(self:require_hitconfirm()) then
+						signal("fireball_end" .. self.model) -- end the first subprocess
+						self.fireball_active = false
+						return
+					end
+					waitSignal("subprocess_update" .. self.model)
 				end
-				signal("fireball_end") -- end the first subprocess
+				signal("fireball_end" .. self.model) -- end the first subprocess
+				self.fireball_active = false
+			end)
+			runProcess(function() -- while there is a fireball, activate hitboxes
+				while(self.fireball_active) do
+					local transform_component = scene.Component_GetTransform(self.model_fireball)
+					self:set_box_global(self.hitboxes, AABB(Vector(-0.5,-0.5), Vector(0.5,0.5)).Transform(transform_component.GetMatrix()) )
+					waitSignal("subprocess_update_collisions" .. self.model)
+				end
 			end)
 		end,
 		spawn_effect_dust = function(self, local_pos)
@@ -413,7 +426,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0.5,2), Vector(3,5)) )
 					end
 				end,
 				update = function(self)
@@ -432,7 +445,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(12,14)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,6)) )
 					end
 				end,
 				update = function(self)
@@ -451,7 +464,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(8,10)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0.5,2), Vector(3.5,5)) )
 					end
 				end,
 				update = function(self)
@@ -470,7 +483,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,4)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0.5,0), Vector(2.8,3)) )
 					end
 				end,
 				update = function(self)
@@ -489,7 +502,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
-						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
 					end
 				end,
 				update = function(self)
@@ -508,7 +521,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(8,13)) then
-						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,0), Vector(4,3)) )
 					end
 				end,
 				update = function(self)
@@ -527,7 +540,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,-6),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
-						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
 					end
 				end,
 				update = function(self)
@@ -546,7 +559,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,-6),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
-						table.insert(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
 					end
 				end,
 				update = function(self)
@@ -565,7 +578,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,4)),
 				update_collision = function(self)
 					if(self:require_window(3,6)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0.5,0), Vector(3,3)) )
 					end
 				end,
 				update = function(self)
@@ -584,7 +597,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(16,8)),
 				update_collision = function(self)
 					if(self:require_window(11,41)) then
-						table.insert(self.hitboxes, AABB(Vector(0.5,0), Vector(5.6,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0.5,0), Vector(5.6,3)) )
 					end
 				end,
 				update = function(self)
@@ -610,7 +623,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(3,5)) then
-						table.insert(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,3), Vector(2.3,7)) )
 					end
 				end,
 				update = function(self)
@@ -633,7 +646,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(16,8)),
 				update_collision = function(self)
 					if(self:require_window(17,40)) then
-						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
 					end
 				end,
 				update = function(self)
@@ -655,7 +668,7 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,0),Vector(8,15)),
 				update_collision = function(self)
 					if(self:require_window(2,20)) then
-						table.insert(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
 					end
 				end,
 				update = function(self)
@@ -678,13 +691,15 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				guardbox = AABB(Vector(-2,0),Vector(16,8)),
 				update_collision = function(self)
-					if(self:require_window(17,40)) then
-						table.insert(self.hitboxes, AABB(Vector(0,1), Vector(4.5,5)) )
-					end
+					self.velocity = Vector()
 				end,
 				update = function(self)
 					if(self:require_frame(16)) then
-						self:spawn_effect_fireball(Vector(2.5 * self.face, 3.6, -1))
+						local fireball_velocity = Vector(self.face * 0.2)
+						if(self.position.GetY() > 0) then
+							fireball_velocity.SetY(-0.1)
+						end
+						self:spawn_effect_fireball(Vector(2.5 * self.face, 3.4), fireball_velocity)
 					end
 				end,
 			},
@@ -813,7 +828,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
-				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
@@ -847,7 +862,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
-				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
 				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
@@ -875,7 +890,7 @@ local function Character(face, shirt_color)
 				{ "RunEnd", condition = function(self) return not self:require_input("6") end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
-				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
@@ -891,7 +906,7 @@ local function Character(face, shirt_color)
 				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
 				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
-				{ "Fireball", condition = function(self) return self:require_motion_qcf("A") end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
@@ -909,6 +924,7 @@ local function Character(face, shirt_color)
 			Jump = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self.position.GetY() > 3 and self:require_motion_qcf("A") end, },
 				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
@@ -916,6 +932,7 @@ local function Character(face, shirt_color)
 			JumpForward = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self.position.GetY() > 3 and self:require_motion_qcf("A") end, },
 				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
@@ -923,6 +940,7 @@ local function Character(face, shirt_color)
 			JumpBack = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self.position.GetY() > 3 and self:require_motion_qcf("A") end, },
 				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
 				{ "AirKick", condition = function(self) return self.position.GetY() > 2 and self:require_input("C") end, },
 				{ "FallStart", condition = function(self) return self.velocity.GetY() <= 0 end, },
@@ -930,6 +948,7 @@ local function Character(face, shirt_color)
 			FallStart = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self.position.GetY() > 3 and self:require_motion_qcf("A") end, },
 				{ "FallEnd", condition = function(self) return self.position.GetY() <= 0.5 end, },
 				{ "Fall", condition = function(self) return self:require_animationfinish() end, },
 				{ "AirHeavyKick", condition = function(self) return self.position.GetY() > 4 and self:require_input("D") end, },
@@ -938,6 +957,7 @@ local function Character(face, shirt_color)
 			Fall = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self.position.GetY() > 3 and self:require_motion_qcf("A") end, },
 				{ "Jump", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("58", 7) end, },
 				{ "JumpBack", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("57", 7) end, },
 				{ "JumpForward", condition = function(self) return self.jumps_remaining > 0 and self:require_input_window("59", 7) end, },
@@ -1037,7 +1057,7 @@ local function Character(face, shirt_color)
 			},
 			Fireball = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
-				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
+				{ "Idle", condition = function(self) return self:require_frame(32) end, },
 			},
 			
 			StaggerStart = { 
@@ -1211,6 +1231,13 @@ local function Character(face, shirt_color)
 			LoadModel(effect_scene, "../models/emitter_spark.wiscene")
 			self.effect_spark = effect_scene.Entity_FindByName("spark")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_spark).SetEmitCount(0)  -- don't emit continuously
+			scene.Merge(effect_scene)
+
+			effect_scene.Clear()
+			self.model_fireball = LoadModel(effect_scene, "../models/emitter_fireball.wiscene")
+			self.effect_fireball = effect_scene.Entity_FindByName("fireball")  -- query the emitter entity by name
+			effect_scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)  -- don't emit continuously
+			effect_scene.Component_GetTransform(self.model_fireball).Translate(Vector(0,0,-1000000))
 			scene.Merge(effect_scene)
 
 
@@ -1475,6 +1502,8 @@ local function Character(face, shirt_color)
 				fx.SetSize(vector.Multiply(Vector(360, 180), scaling))
 				self.sprite_timer.SetParams(fx)
 			end
+
+			signal("subprocess_update" .. self.model)
 		
 		end,
 
@@ -1483,6 +1512,13 @@ local function Character(face, shirt_color)
 		
 			-- apply velocity:
 			self.position = vector.Add(self.position, vector.Multiply(self.velocity, ccd_step))
+			
+			-- Compute global transform for the model:
+			local model_transform = scene.Component_GetTransform(self.model)
+			model_transform.ClearTransform()
+			model_transform.Translate(self.position)
+			model_transform.Rotate(Vector(0, math.pi * ((self.face - 1) * 0.5)))
+			model_transform.UpdateTransform()
 
 			-- Reset collision boxes:
 			self.clipbox = AABB()
@@ -1497,35 +1533,18 @@ local function Character(face, shirt_color)
 					current_state.update_collision(self)
 				end
 				if(current_state.clipbox ~= nil) then
-					self.clipbox = current_state.clipbox
+					self.clipbox = current_state.clipbox.Transform(model_transform.GetMatrix())
 				end
 				if(current_state.hurtbox ~= nil) then
-					table.insert(self.hurtboxes, current_state.hurtbox)
+					self:set_box_local(self.hurtboxes, current_state.hurtbox)
 				end
 				if(current_state.guardbox ~= nil) then
-					table.insert(self.guardboxes, current_state.guardbox)
+					self:set_box_local(self.guardboxes, current_state.guardbox)
 				end
 			end
-			
-			-- Compute global transform for the model:
-			local model_transform = scene.Component_GetTransform(self.model)
-			model_transform.ClearTransform()
-			model_transform.Translate(self.position)
-			model_transform.Rotate(Vector(0, math.pi * ((self.face - 1) * 0.5)))
-			model_transform.UpdateTransform()
 
-			-- Update collision boxes with global model transform:
-			local model_mat = model_transform.GetMatrix()
-			self.clipbox = self.clipbox.Transform(model_mat)
-			for i,hitbox in ipairs(self.hitboxes) do
-				self.hitboxes[i] = hitbox.Transform(model_mat)
-			end
-			for i,hurtbox in ipairs(self.hurtboxes) do
-				self.hurtboxes[i] = hurtbox.Transform(model_mat)
-			end
-			for i,guardbox in ipairs(self.guardboxes) do
-				self.guardboxes[i] = guardbox.Transform(model_mat)
-			end
+			signal("subprocess_update_collisions" .. self.model)
+
 		end,
 
 		-- Draws the hitboxes, etc.
@@ -1778,7 +1797,7 @@ runProcess(function()
 	help_text = help_text .. "\nK: player2 will always attack"
 	help_text = help_text .. "\nI: player2 will be idle"
 	help_text = help_text .. "\nH: toggle Debug Draw"
-	help_text = help_text .. "\n\nMovelist:"
+	help_text = help_text .. "\n\nMovelist (using numpad notation):"
 	help_text = help_text .. "\n\t A : Light Punch"
 	help_text = help_text .. "\n\t B : Heavy Punch"
 	help_text = help_text .. "\n\t C : Light Kick"
@@ -1792,7 +1811,7 @@ runProcess(function()
 	help_text = help_text .. "\n\t 2C : Air Heavy Kick (while jumping)"
 	help_text = help_text .. "\n\t 623B: Shoryuken"
 	help_text = help_text .. "\n\t 236B: Jaunt"
-	help_text = help_text .. "\n\t 236A: Fireball"
+	help_text = help_text .. "\n\t 236A: Fireball (also in mid-air)"
 	local font = Font(help_text);
 	font.SetSize(22)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
