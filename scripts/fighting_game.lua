@@ -36,6 +36,7 @@ local function Character(face, shirt_color)
 		effect_spark = INVALID_ENTITY,
 		model_fireball = INVALID_ENTITY,
 		effect_fireball = INVALID_ENTITY,
+		effect_fireball_haze = INVALID_ENTITY,
 		sprite_hpbar_background = Sprite(),
 		sprite_hpbar_hp = Sprite(),
 		sprite_hpbar_pattern = Sprite(),
@@ -72,7 +73,7 @@ local function Character(face, shirt_color)
 		end,
 
 		-- Effect helpers:
-		spawn_effect_hit = function(self, local_pos)
+		spawn_effect_hit = function(self, pos)
 
 			-- depending on if the attack is guarded or not, we will spawn different effects:
 			local emitter_entity = INVALID_ENTITY
@@ -91,19 +92,19 @@ local function Character(face, shirt_color)
 			scene.Component_GetEmitter(emitter_entity).Burst(burst_count)
 			local transform_component = scene.Component_GetTransform(emitter_entity)
 			transform_component.ClearTransform()
-			transform_component.Translate(vector.Add(self.position, local_pos))
+			transform_component.Translate(pos)
 
 			scene.Component_GetEmitter(self.effect_spark).Burst(4)
 			transform_component = scene.Component_GetTransform(self.effect_spark)
 			transform_component.ClearTransform()
-			transform_component.Translate(vector.Add(self.position, local_pos))
+			transform_component.Translate(pos)
 			local material_component_spark = scene.Component_GetMaterial(self.effect_spark)
 			material_component_spark.SetBaseColor(spark_color)
 
 			runProcess(function() -- this sub-process will spawn a light, wait a bit then remove it
 				local entity = CreateEntity()
 				local light_transform = scene.Component_CreateTransform(entity)
-				light_transform.Translate(vector.Add(self.position, local_pos))
+				light_transform.Translate(pos)
 				local light_component = scene.Component_CreateLight(entity)
 				light_component.SetType(POINT)
 				light_component.SetRange(8)
@@ -118,15 +119,17 @@ local function Character(face, shirt_color)
 				scene.Entity_Remove(entity)
 			end)
 		end,
-		spawn_effect_fireball = function(self, local_pos, velocity) -- todo
+		spawn_effect_fireball = function(self, pos, velocity) -- todo
 			self.fireball_active = true
 			runProcess(function() -- first subprocess begins effect
 				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(2000)
+				scene.Component_GetEmitter(self.effect_fireball_haze).SetEmitCount(10)
 				local transform_component = scene.Component_GetTransform(self.model_fireball)
 				transform_component.ClearTransform()
-				transform_component.Translate(vector.Add(self.position, local_pos))
+				transform_component.Translate(pos)
 				waitSignal("fireball_end" .. self.model) -- wait for fireball to end
 				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)
+				scene.Component_GetEmitter(self.effect_fireball_haze).SetEmitCount(0)
 				transform_component.Translate(Vector(0,0,-1000000))
 			end)
 			runProcess(function()
@@ -135,6 +138,7 @@ local function Character(face, shirt_color)
 					transform_component.Translate(velocity)
 					transform_component.UpdateTransform()
 					if(self:require_hitconfirm()) then
+						self:spawn_effect_hit(transform_component.GetPosition())
 						signal("fireball_end" .. self.model) -- end the first subprocess
 						self.fireball_active = false
 						return
@@ -148,15 +152,16 @@ local function Character(face, shirt_color)
 				while(self.fireball_active) do
 					local transform_component = scene.Component_GetTransform(self.model_fireball)
 					self:set_box_global(self.hitboxes, AABB(Vector(-0.5,-0.5), Vector(0.5,0.5)).Transform(transform_component.GetMatrix()) )
+					self:set_box_global(self.guardboxes, AABB(Vector(-10,-10), Vector(10,10)).Transform(transform_component.GetMatrix()) )
 					waitSignal("subprocess_update_collisions" .. self.model)
 				end
 			end)
 		end,
-		spawn_effect_dust = function(self, local_pos)
+		spawn_effect_dust = function(self, pos)
 			local emitter_component = scene.Component_GetEmitter(self.effect_dust).Burst(10)
 			local transform_component = scene.Component_GetTransform(self.effect_dust)
 			transform_component.ClearTransform()
-			transform_component.Translate(self.position)
+			transform_component.Translate(pos)
 		end,
 
 		-- Common requirement conditions for state transitions:
@@ -261,7 +266,7 @@ local function Character(face, shirt_color)
 						self.force = vector.Add(self.force, Vector(-0.07 * self.face, 0.1))
 					end
 					if(self:require_frame(14)) then
-						self:spawn_effect_dust(Vector())
+						self:spawn_effect_dust(self.position)
 					end
 				end,
 			},
@@ -279,7 +284,7 @@ local function Character(face, shirt_color)
 				update = function(self)
 					self.force = vector.Add(self.force, Vector(0.08 * self.face, 0))
 					if(self.frame % 15 == 0) then
-						self:spawn_effect_dust(Vector())
+						self:spawn_effect_dust(self.position)
 					end
 				end,
 			},
@@ -301,7 +306,7 @@ local function Character(face, shirt_color)
 						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(0, 0.8))
 						if(self.position.GetY() == 0) then
-							self:spawn_effect_dust(Vector())
+							self:spawn_effect_dust(self.position)
 						end
 					end
 				end,
@@ -318,7 +323,7 @@ local function Character(face, shirt_color)
 						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(-0.2 * self.face, 0.8))
 						if(self.position.GetY() == 0) then
-							self:spawn_effect_dust(Vector())
+							self:spawn_effect_dust(self.position)
 						end
 					end
 				end,
@@ -335,7 +340,7 @@ local function Character(face, shirt_color)
 						self.velocity.SetY(0)
 						self.force = vector.Add(self.force, Vector(0.2 * self.face, 0.8))
 						if(self.position.GetY() == 0) then
-							self:spawn_effect_dust(Vector())
+							self:spawn_effect_dust(self.position)
 						end
 					end
 				end,
@@ -361,7 +366,7 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self:require_frame(2)) then
-						self:spawn_effect_dust(Vector())
+						self:spawn_effect_dust(self.position)
 					end
 				end,
 			},
@@ -431,7 +436,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.5 * self.face,4,-1)))
 						self.push = Vector(0.1 * self.face)
 					end
 				end,
@@ -450,7 +455,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.5 * self.face,4,-1)))
 						self.push = Vector(0.12 * self.face)
 					end
 				end,
@@ -469,7 +474,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.5 * self.face,4,-1)))
 						self.push = Vector(0.2 * self.face)
 					end
 				end,
@@ -488,7 +493,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.5 * self.face,2,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.5 * self.face,2,-1)))
 						self.push = Vector(0.1 * self.face)
 					end
 				end,
@@ -507,7 +512,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2 * self.face,2,-1)))
 						self.push = Vector(0.1 * self.face)
 					end
 				end,
@@ -526,7 +531,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.6 * self.face,1.4,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.6 * self.face,1.4,-1)))
 						self.push = Vector(0.15 * self.face)
 					end
 				end,
@@ -545,7 +550,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2 * self.face,2,-1)))
 						self.push = Vector(0.2 * self.face)
 					end
 				end,
@@ -564,7 +569,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2 * self.face,2,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2 * self.face,2,-1)))
 						self.push = Vector(0.25 * self.face)
 					end
 				end,
@@ -583,7 +588,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2 * self.face,1,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2 * self.face,1,-1)))
 						self.push = Vector(0.1 * self.face)
 					end
 				end,
@@ -605,7 +610,7 @@ local function Character(face, shirt_color)
 						self.force = vector.Add(self.force, Vector(0.9 * self.face))
 					end
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(5 * self.face,3,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(5 * self.face,3,-1)))
 						if(self:require_hitconfirm_guard()) then
 							self.push = Vector(0.8 * self.face, 0)
 						else
@@ -628,7 +633,7 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.5 * self.face,4,-1)))
 						if(self:require_hitconfirm_guard()) then
 							self.push = Vector(0.1 * self.face, 0) -- if guarded, don't push opponent up
 						else
@@ -654,7 +659,7 @@ local function Character(face, shirt_color)
 						self.force = vector.Add(self.force, Vector(1.3 * self.face))
 					end
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(3 * self.face,3.6,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(3 * self.face,3.6,-1)))
 						self.push = Vector(0.3 * self.face)
 					end
 				end,
@@ -676,7 +681,7 @@ local function Character(face, shirt_color)
 						self.force = vector.Add(self.force, Vector(0.3 * self.face, 0.9))
 					end
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(Vector(2.5 * self.face,4,-1))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2.5 * self.face,4,-1)))
 						if(self:require_window(2,3) and not self:require_hitconfirm_guard()) then
 							self.push = Vector(0, 1)
 						end
@@ -695,11 +700,11 @@ local function Character(face, shirt_color)
 				end,
 				update = function(self)
 					if(self:require_frame(16)) then
-						local fireball_velocity = Vector(self.face * 0.2)
+						local fireball_velocity = Vector(self.face * 0.3)
 						if(self.position.GetY() > 0) then
 							fireball_velocity.SetY(-0.1)
 						end
-						self:spawn_effect_fireball(Vector(2.5 * self.face, 3.4), fireball_velocity)
+						self:spawn_effect_fireball(vector.Add(self.position, Vector(2.5 * self.face, 3.4)), fireball_velocity)
 					end
 				end,
 			},
@@ -771,7 +776,7 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				update = function(self)
 					if(self.position.GetY() < 1 and self.velocity.GetY() < 0) then
-						self:spawn_effect_dust(Vector())
+						self:spawn_effect_dust(self.position)
 					end
 				end,
 			},
@@ -968,6 +973,7 @@ local function Character(face, shirt_color)
 			FallEnd = { 
 				{ "StaggerAirStart", condition = function(self) return self:require_hurt() and self.position.GetY() > 0 end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.position.GetY() <= 0 and self.request_face ~= self.face end, },
 				{ "Idle", condition = function(self) return self.position.GetY() <= 0 and self:require_animationfinish() end, },
 				{ "RunStart", condition = function(self) return self.position.GetY() <= 0 and self:require_input_window("656", 7) end, },
@@ -1237,6 +1243,8 @@ local function Character(face, shirt_color)
 			self.model_fireball = LoadModel(effect_scene, "../models/emitter_fireball.wiscene")
 			self.effect_fireball = effect_scene.Entity_FindByName("fireball")  -- query the emitter entity by name
 			effect_scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)  -- don't emit continuously
+			self.effect_fireball_haze = effect_scene.Entity_FindByName("haze")  -- query the emitter entity by name
+			effect_scene.Component_GetEmitter(self.effect_fireball_haze).SetEmitCount(0)  -- don't emit continuously
 			effect_scene.Component_GetTransform(self.model_fireball).Translate(Vector(0,0,-1000000))
 			scene.Merge(effect_scene)
 
