@@ -25,6 +25,7 @@
 local scene = GetScene()
 
 local debug_draw = true -- press H button to toggle
+local player2_control = "CPU" -- can be "CPU" or "Controller2". player1 will always use Keyboard and Controller1 for now (for simplicity)
 
 -- **The character "class" is a wrapper function that returns a local internal table called "self"
 local function Character(face, shirt_color)
@@ -128,18 +129,12 @@ local function Character(face, shirt_color)
 				local transform_component = scene.Component_GetTransform(self.model_fireball)
 				transform_component.ClearTransform()
 				transform_component.Translate(pos)
-				waitSignal("fireball_end" .. self.model) -- wait for fireball to end
-				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)
-				scene.Component_GetEmitter(self.effect_fireball_haze).SetEmitCount(0)
-				transform_component.Translate(Vector(0,0,-1000000))
 			end)
 			runProcess(function()
 				for i=1,120,1 do -- move the fireball effect for some frames
 					local transform_component = scene.Component_GetTransform(self.model_fireball)
 					if(fireball_life == 0) then
-						signal("fireball_end" .. self.model) -- end the first subprocess
-						self.fireball_active = false
-						return
+						break
 					end
 					if(self:require_hitconfirm()) then
 						self:spawn_effect_hit(transform_component.GetPosition())
@@ -150,7 +145,9 @@ local function Character(face, shirt_color)
 					end
 					waitSignal("subprocess_update" .. self.model)
 				end
-				signal("fireball_end" .. self.model) -- end the first subprocess
+				scene.Component_GetEmitter(self.effect_fireball).SetEmitCount(0)
+				scene.Component_GetEmitter(self.effect_fireball_haze).SetEmitCount(0)
+				scene.Component_GetTransform(self.model_fireball).Translate(Vector(0,0,-1000000))
 				self.fireball_active = false
 			end)
 			runProcess(function() -- while there is a fireball, activate hitboxes
@@ -407,6 +404,13 @@ local function Character(face, shirt_color)
 					end
 				end,
 			},
+			Taunt = {
+				anim_name = "Taunt",
+				anim = INVALID_ENTITY,
+				looped = false,
+				clipbox = AABB(Vector(-1), Vector(1, 5)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+			},
 			Guard = {
 				anim_name = "Block",
 				anim = INVALID_ENTITY,
@@ -569,12 +573,12 @@ local function Character(face, shirt_color)
 				guardbox = AABB(Vector(-2,-6),Vector(6,8)),
 				update_collision = function(self)
 					if(self:require_window(6,8)) then
-						self:set_box_local(self.hitboxes, AABB(Vector(0,0), Vector(3,3)) )
+						self:set_box_local(self.hitboxes, AABB(Vector(0,-3), Vector(3,3)) )
 					end
 				end,
 				update = function(self)
 					if(self:require_hitconfirm()) then
-						self:spawn_effect_hit(vector.Add(self.position, Vector(2 * self.face,2,-1)))
+						self:spawn_effect_hit(vector.Add(self.position, Vector(2 * self.face,1,-1)))
 						self.push = Vector(0.25 * self.face)
 					end
 				end,
@@ -647,7 +651,7 @@ local function Character(face, shirt_color)
 					end
 				end,
 			},
-			SpearJaunt = {
+			Jaunt = {
 				anim_name = "SpearJaunt",
 				anim = INVALID_ENTITY,
 				looped = false,
@@ -837,7 +841,7 @@ local function Character(face, shirt_color)
 				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
-				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Jaunt", condition = function(self) return self:require_motion_qcf("B") end, },
 				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
@@ -846,7 +850,8 @@ local function Character(face, shirt_color)
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
-				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) or self:require_input_window("1111111111111111116C", 30) end, },
+				{ "Taunt", condition = function(self) return self:require_input_window("T", 10) end, },
 				{ "LightPunch", condition = function(self) return self:require_input("A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
 				{ "LightKick", condition = function(self) return self:require_input("C") end, },
@@ -861,7 +866,7 @@ local function Character(face, shirt_color)
 				{ "Dash_Backward", condition = function(self) return self:require_input_window("454", 7) end, },
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
-				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) or self:require_input_window("1111111111111111116C", 30) end, },
 				{ "LightPunch", condition = function(self) return self:require_input("A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
 				{ "LightKick", condition = function(self) return self:require_input("C") end, },
@@ -871,14 +876,14 @@ local function Character(face, shirt_color)
 			Walk_Forward = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
-				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Jaunt", condition = function(self) return self:require_motion_qcf("B") end, },
 				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
 				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
-				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) or self:require_input_window("1111111111111111116C", 30) end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
 				{ "LightKick", condition = function(self) return self:require_input("C") end, },
@@ -899,7 +904,7 @@ local function Character(face, shirt_color)
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "RunEnd", condition = function(self) return not self:require_input("6") end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
-				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Jaunt", condition = function(self) return self:require_motion_qcf("B") end, },
 				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
@@ -915,7 +920,7 @@ local function Character(face, shirt_color)
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 				{ "Guard", condition = function(self) return self:require_guard() and self:require_input("4") end, },
 				{ "Shoryuken", condition = function(self) return self:require_motion_shoryuken("B") end, },
-				{ "SpearJaunt", condition = function(self) return self:require_motion_qcf("B") end, },
+				{ "Jaunt", condition = function(self) return self:require_motion_qcf("B") end, },
 				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Walk_Forward", condition = function(self) return self:require_input("6") end, },
@@ -924,7 +929,7 @@ local function Character(face, shirt_color)
 				{ "JumpBack", condition = function(self) return self:require_input("7") end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
-				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) end, },
+				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) or self:require_input_window("1111111111111111116C", 30) end, },
 				{ "ForwardLightPunch", condition = function(self) return self:require_input("6A") end, },
 				{ "LightPunch", condition = function(self) return self:require_input("A") end, },
 				{ "HeavyPunch", condition = function(self) return self:require_input("B") end, },
@@ -1005,6 +1010,10 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
+			Taunt = { 
+				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
+			},
 			Guard = { 
 				{ "Turn", condition = function(self) return self.request_face ~= self.face end, },
 				{ "Idle", condition = function(self) return not self:require_input("4") end, },
@@ -1058,7 +1067,7 @@ local function Character(face, shirt_color)
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
-			SpearJaunt = { 
+			Jaunt = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
 			},
@@ -1068,6 +1077,7 @@ local function Character(face, shirt_color)
 			},
 			Fireball = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
+				{ "Fall", condition = function(self) return self:require_frame(32) and self.position.GetY() > 0 end, },
 				{ "Idle", condition = function(self) return self:require_frame(32) end, },
 			},
 			
@@ -1376,17 +1386,19 @@ local function Character(face, shirt_color)
 		end,
 
 		-- Read input and store in the buffer:
-		Input = function(self)
+		--	playerindex can differentiate between multiple controllers. eg: controller1 = playerindex0; controller2 = playerindex1
+		Input = function(self, playerindex)
 
 			-- read input (todo gamepad/stick):
-			local left = input.Down(string.byte('A'))
-			local right = input.Down(string.byte('D'))
-			local up = input.Down(string.byte('W'))
-			local down = input.Down(string.byte('S'))
-			local A = input.Press(VK_RIGHT)
-			local B = input.Press(VK_UP)
-			local C = input.Press(VK_LEFT)
-			local D = input.Press(VK_DOWN)
+			local left = input.Down(string.byte('A'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_LEFT, INPUT_TYPE_GAMEPAD, playerindex)
+			local right = input.Down(string.byte('D'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_RIGHT, INPUT_TYPE_GAMEPAD, playerindex)
+			local up = input.Down(string.byte('W'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_UP, INPUT_TYPE_GAMEPAD, playerindex)
+			local down = input.Down(string.byte('S'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_DOWN, INPUT_TYPE_GAMEPAD, playerindex)
+			local A = input.Press(VK_RIGHT, INPUT_TYPE_KEYBOARD, playerindex) or input.Press(GAMEPAD_BUTTON_3, INPUT_TYPE_GAMEPAD, playerindex)
+			local B = input.Press(VK_UP, INPUT_TYPE_KEYBOARD, playerindex) or input.Press(GAMEPAD_BUTTON_4, INPUT_TYPE_GAMEPAD, playerindex)
+			local C = input.Press(VK_LEFT, INPUT_TYPE_KEYBOARD, playerindex) or input.Press(GAMEPAD_BUTTON_1, INPUT_TYPE_GAMEPAD, playerindex)
+			local D = input.Press(VK_DOWN, INPUT_TYPE_KEYBOARD, playerindex) or input.Press(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD, playerindex)
+			local T = input.Press(string.byte('T'), INPUT_TYPE_KEYBOARD, playerindex) or input.Press(GAMEPAD_BUTTON_5, INPUT_TYPE_GAMEPAD, playerindex)
 
 			-- swap left and right if facing the opposite side:
 			if(self.face < 0) then
@@ -1396,36 +1408,39 @@ local function Character(face, shirt_color)
 			end
 
 			if(up and left) then
-				table.insert(self.input_buffer, {age = 0, command = "7"})
+				table.insert(self.input_buffer, {age = 0, command = '7'})
 			elseif(up and right) then
-				table.insert(self.input_buffer, {age = 0, command = "9"})
+				table.insert(self.input_buffer, {age = 0, command = '9'})
 			elseif(up) then
-				table.insert(self.input_buffer, {age = 0, command = "8"})
+				table.insert(self.input_buffer, {age = 0, command = '8'})
 			elseif(down and left) then
-				table.insert(self.input_buffer, {age = 0, command = "1"})
+				table.insert(self.input_buffer, {age = 0, command = '1'})
 			elseif(down and right) then
-				table.insert(self.input_buffer, {age = 0, command = "3"})
+				table.insert(self.input_buffer, {age = 0, command = '3'})
 			elseif(down) then
-				table.insert(self.input_buffer, {age = 0, command = "2"})
+				table.insert(self.input_buffer, {age = 0, command = '2'})
 			elseif(left) then
-				table.insert(self.input_buffer, {age = 0, command = "4"})
+				table.insert(self.input_buffer, {age = 0, command = '4'})
 			elseif(right) then
-				table.insert(self.input_buffer, {age = 0, command = "6"})
+				table.insert(self.input_buffer, {age = 0, command = '6'})
 			else
-				table.insert(self.input_buffer, {age = 0, command = "5"})
+				table.insert(self.input_buffer, {age = 0, command = '5'})
 			end
 			
 			if(A) then
-				table.insert(self.input_buffer, {age = 0, command = "A"})
+				table.insert(self.input_buffer, {age = 0, command = 'A'})
 			end
 			if(B) then
-				table.insert(self.input_buffer, {age = 0, command = "B"})
+				table.insert(self.input_buffer, {age = 0, command = 'B'})
 			end
 			if(C) then
-				table.insert(self.input_buffer, {age = 0, command = "C"})
+				table.insert(self.input_buffer, {age = 0, command = 'C'})
 			end
 			if(D) then
-				table.insert(self.input_buffer, {age = 0, command = "D"})
+				table.insert(self.input_buffer, {age = 0, command = 'D'})
+			end
+			if(T) then
+				table.insert(self.input_buffer, {age = 0, command = 'T'})
 			end
 
 		end,
@@ -1601,8 +1616,12 @@ local CAMERA_SIDE_LENGTH = 10 -- play area inside the camera (character can't mo
 -- ***Interaction between two characters:
 local ResolveCharacters = function(player1, player2)
 		
-	player1:Input()
-	player2:AI()
+	player1:Input(0)
+	if(player2_control == "CPU") then
+		player2:AI()
+	else
+		player2:Input(1)
+	end
 
 	player1:Update()
 	player2:Update()
@@ -1799,11 +1818,12 @@ runProcess(function()
 	local help_text = ""
 	help_text = help_text .. "This script is showcasing how to write a simple fighting game.\n"
 	help_text = help_text .. "\nESCAPE key: quit\nR: reload script"
-	help_text = help_text .. "\nWASD: move"
-	help_text = help_text .. "\nRight: action A"
-	help_text = help_text .. "\nUp: action B"
-	help_text = help_text .. "\nLeft: action C"
-	help_text = help_text .. "\nDown: action D"
+	help_text = help_text .. "\nWASD / Gamepad direction buttons: move"
+	help_text = help_text .. "\nRight / Gamepad button 1: action A"
+	help_text = help_text .. "\nUp	/ Gamepad button 2: action B"
+	help_text = help_text .. "\nLeft / Gamepad button 3: action C"
+	help_text = help_text .. "\nDown / Gamepad button 4: action D"
+	help_text = help_text .. "\nT / Gamepad button 5: Taunt"
 	help_text = help_text .. "\nJ: player2 will always jump"
 	help_text = help_text .. "\nC: player2 will always crouch"
 	help_text = help_text .. "\nG: player2 will always guard"
@@ -1815,16 +1835,16 @@ runProcess(function()
 	help_text = help_text .. "\n\t B : Heavy Punch"
 	help_text = help_text .. "\n\t C : Light Kick"
 	help_text = help_text .. "\n\t D : Heavy Kick"
-	help_text = help_text .. "\n\t 6A : Forward Light Punch"
-	help_text = help_text .. "\n\t 2A : Low Punch"
-	help_text = help_text .. "\n\t 2B : Uppercut"
-	help_text = help_text .. "\n\t 2C : Low Kick"
-	help_text = help_text .. "\n\t 4(charge) 6C : Charge Kick"
+	help_text = help_text .. "\n\t 6A : Forward Light Punch (forward + A)"
+	help_text = help_text .. "\n\t 2A : Low Punch (down + A)"
+	help_text = help_text .. "\n\t 2B : Uppercut (down + B)"
+	help_text = help_text .. "\n\t 2C : Low Kick (down + C)"
+	help_text = help_text .. "\n\t 4(charge) 6C : Charge Kick (charge back + 6, also while crouching)"
 	help_text = help_text .. "\n\t C : Air Kick (while jumping)"
-	help_text = help_text .. "\n\t 2C : Air Heavy Kick (while jumping)"
-	help_text = help_text .. "\n\t 623B: Shoryuken"
-	help_text = help_text .. "\n\t 236B: Jaunt"
-	help_text = help_text .. "\n\t 236A: Fireball (also in mid-air)"
+	help_text = help_text .. "\n\t D : Air Heavy Kick (while jumping)"
+	help_text = help_text .. "\n\t 623B: Shoryuken (forward, then quater circle forward + B)"
+	help_text = help_text .. "\n\t 236B: Jaunt (quarter circle forward + B)"
+	help_text = help_text .. "\n\t 236A: Fireball (quarter circle forward + A, also in mid-air)"
 	local font = Font(help_text);
 	font.SetSize(22)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
@@ -1835,7 +1855,7 @@ runProcess(function()
 
 	local info = Font("");
 	info.SetSize(24)
-	info.SetPos(Vector(GetScreenWidth() / 2, GetScreenHeight() * 0.9))
+	info.SetPos(Vector(GetScreenWidth() / 2.5, GetScreenHeight() * 0.9))
 	info.SetAlign(WIFALIGN_LEFT, WIFALIGN_CENTER)
 	info.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(info)
@@ -1862,15 +1882,39 @@ runProcess(function()
 			player2.ai_state = "Attack"
 		elseif(input.Press(string.byte('H'))) then
 			debug_draw = not debug_draw
-		end
-
-		local inputString = "input: "
-		for i,element in ipairs(player1.input_buffer) do
-			if(element.command ~= "5") then
-				inputString = inputString .. element.command
+		elseif(input.Press(GAMEPAD_BUTTON_10, INPUT_TYPE_GAMEPAD, 1)) then
+			if(player2_control == "CPU") then
+				player2_control = "Controller2"
+			else
+				player2_control = "CPU"
 			end
 		end
-		info.SetText(inputString .. "\nstate = " .. player1.state .. "\nframe = " .. player1.frame)
+
+
+		-- Print player 1 and player2 specific debug information:
+		local infoText = ""
+		infoText = infoText .. "Player 1: "
+		infoText = infoText .. "\n\tControl: Keyboard / Controller1"
+		infoText = infoText .. "\n\tInput: "
+		for i,element in ipairs(player1.input_buffer) do
+			if(element.command ~= "5") then
+				infoText = infoText .. element.command
+			end
+		end
+		infoText = infoText .. "\n\tstate = " .. player1.state .. "\n\tframe = " .. player1.frame .. "\n\n"
+		
+		infoText = infoText .. "Player 2: "
+		infoText = infoText .. "\n\tControl: " .. player2_control .. " (Press START / BUTTON10 on Gamepad2 to join)"
+		infoText = infoText .. "\n\tInput: "
+		for i,element in ipairs(player2.input_buffer) do
+			if(element.command ~= "5") then
+				infoText = infoText .. element.command
+			end
+		end
+		infoText = infoText .. "\n\tstate = " .. player2.state .. "\n\tframe = " .. player2.frame .. "\n\n"
+
+		info.SetText(infoText)
+
 		
 		-- Wait for Engine update tick
 		update()
