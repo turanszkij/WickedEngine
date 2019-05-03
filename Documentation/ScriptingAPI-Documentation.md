@@ -623,9 +623,9 @@ These provide functions to check the state of the input devices.
 Query input devices
 - [outer]input : InputManager
 - [void-constructor]InputManager()
-- Down(int code, opt int type = KEYBOARD) : bool result  -- Check whether a button is currently being held down
-- Press(int code, opt int type = KEYBOARD) : bool result  -- Check whether a button has just been pushed that wasn't before
-- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = KEYBOARD) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
+- Down(int code, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
+- Press(int code, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button has just been pushed that wasn't before
+- Hold(int code, opt int duration = 30, opt boolean continuous = false, opt int type = INPUT_TYPE_KEYBOARD, opt int playerindex = 0) : bool result  -- Check whether a button was being held down for a specific duration (nunmber of frames). If continuous == true, than it will also return true after the duration was reached
 - GetPointer() : Vector result
 - SetPointer(Vector pos)
 - HidePointer(bool visible)
@@ -643,9 +643,8 @@ Describes a touch contact point
 - [outer]TOUCHSTATE_MOVED : int
 
 #### Input types
-- [outer]DIRECTINPUT_JOYPAD : int
-- [outer]XINPUT_JOYPAD : int
-- [outer]KEYBOARD : int
+- [outer]INPUT_TYPE_KEYBOARD : int  -- keyboard or mouse
+- [outer]INPUT_TYPE_GAMEPAD : int  -- xinput or directinput gamepad
 
 #### Keyboard Key codes
 - [outer]VK_UP : int
@@ -675,6 +674,18 @@ Describes a touch contact point
 - [outer]VK_LBUTTON : int
 - [outer]VK_MBUTTON : int
 - [outer]VK_RBUTTON : int
+
+#### Gamepad Key Codes
+- [outer]GAMEPAD_BUTTON_UP : int
+- [outer]GAMEPAD_BUTTON_LEFT : int
+- [outer]GAMEPAD_BUTTON_DOWN : int
+- [outer]GAMEPAD_BUTTON_RIGHT : int
+- [outer]GAMEPAD_BUTTON_1 : int
+- [outer]GAMEPAD_BUTTON_2 : int
+- [outer]GAMEPAD_BUTTON_3 : int
+- [outer]GAMEPAD_BUTTON_4 : int
+...
+- [outer]GAMEPAD_14 : int
 
 ### ResourceManager
 Stores and manages resources such as textures, sounds and shaders.

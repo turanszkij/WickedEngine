@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include <Xinput.h>
 
+// TODO REFACTOR
+
 
 #pragma comment(lib,"xinput.lib")
 

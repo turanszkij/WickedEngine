@@ -48,8 +48,6 @@ void Editor::Initialize()
 	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
-	wiInputManager::addXInput(new wiXInput());
-
 	renderComponent = new EditorComponent;
 	renderComponent->Initialize();
 	loader = new EditorLoadingScreen;
@@ -793,12 +791,12 @@ void EditorComponent::Update(float dt)
 			if (!wiInputManager::down(VK_CONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wiInputManager::down('A')) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (wiInputManager::down('D')) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
-				if (wiInputManager::down('W')) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
-				if (wiInputManager::down('S')) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (wiInputManager::down('E')) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
-				if (wiInputManager::down('Q')) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (wiInputManager::down('A') || wiInputManager::down(GAMEPAD_BUTTON_LEFT, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wiInputManager::down('D') || wiInputManager::down(GAMEPAD_BUTTON_RIGHT, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(1, 0, 0, 0);	 }
+				if (wiInputManager::down('W') || wiInputManager::down(GAMEPAD_BUTTON_UP, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, 0, 1, 0);	 }
+				if (wiInputManager::down('S') || wiInputManager::down(GAMEPAD_BUTTON_DOWN, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wiInputManager::down('E') || wiInputManager::down(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
+				if (wiInputManager::down('Q') || wiInputManager::down(GAMEPAD_BUTTON_1, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew = XMVector3Normalize(moveNew) * speed;
 			}
 

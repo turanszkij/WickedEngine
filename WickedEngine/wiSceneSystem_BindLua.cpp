@@ -419,6 +419,11 @@ int Scene_BindLua::Component_GetName(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		NameComponent* component = scene->names.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<NameComponent_BindLua>::push(L, new NameComponent_BindLua(component));
 		return 1;
 	}
@@ -436,6 +441,11 @@ int Scene_BindLua::Component_GetLayer(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		LayerComponent* component = scene->layers.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<LayerComponent_BindLua>::push(L, new LayerComponent_BindLua(component));
 		return 1;
 	}
@@ -453,6 +463,11 @@ int Scene_BindLua::Component_GetTransform(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		TransformComponent* component = scene->transforms.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(component));
 		return 1;
 	}
@@ -470,6 +485,11 @@ int Scene_BindLua::Component_GetCamera(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		CameraComponent* component = scene->cameras.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(component));
 		return 1;
 	}
@@ -487,6 +507,11 @@ int Scene_BindLua::Component_GetAnimation(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		AnimationComponent* component = scene->animations.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<AnimationComponent_BindLua>::push(L, new AnimationComponent_BindLua(component));
 		return 1;
 	}
@@ -504,6 +529,11 @@ int Scene_BindLua::Component_GetMaterial(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		MaterialComponent* component = scene->materials.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<MaterialComponent_BindLua>::push(L, new MaterialComponent_BindLua(component));
 		return 1;
 	}
@@ -521,6 +551,11 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		wiEmittedParticle* component = scene->emitters.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<EmitterComponent_BindLua>::push(L, new EmitterComponent_BindLua(component));
 		return 1;
 	}
@@ -538,6 +573,11 @@ int Scene_BindLua::Component_GetLight(lua_State* L)
 		Entity entity = (Entity)wiLua::SGetInt(L, 1);
 
 		LightComponent* component = scene->lights.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
 		Luna<LightComponent_BindLua>::push(L, new LightComponent_BindLua(component));
 		return 1;
 	}

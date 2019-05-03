@@ -159,9 +159,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   if (!editor.SetWindow(hWnd, hInst))
-	   return false;
-
+   editor.SetWindow(hWnd, hInst);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);

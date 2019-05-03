@@ -115,10 +115,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   if (!tests.SetWindow(hWnd, hInst))
-   {
-	   return FALSE;
-   }
+   tests.SetWindow(hWnd, hInst);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);

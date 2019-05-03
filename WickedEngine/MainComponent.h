@@ -62,12 +62,11 @@ public:
 	virtual void Compose();
 
 #ifndef WINSTORE_SUPPORT
-	HINSTANCE hInst = NULL;
 	// You need to call this before calling Run() or Initialize() if you want to render to a Win32 window handle
-	bool SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst = NULL);
+	void SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst = NULL);
 #else
 	// You need to call this before calling Run() or Initialize() if you want to render to a UWP window
-	bool SetWindow(wiWindowRegistration::window_type window);
+	void SetWindow(wiWindowRegistration::window_type window);
 #endif
 
 

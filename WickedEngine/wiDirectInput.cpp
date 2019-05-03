@@ -1,6 +1,8 @@
 #include "wiDirectInput.h"
 #include "CommonInclude.h"
 
+short wiDirectInput::connectedJoys = 0;
+
 #ifndef WINSTORE_SUPPORT
 
 #include <stdio.h>
@@ -136,7 +138,6 @@ wiDirectInput::~wiDirectInput()
 IDirectInputDevice8* m_keyboard = 0;
 IDirectInputDevice8* joystick[2] = {0,0};
 IDirectInput8*  m_directInput = 0;
-short wiDirectInput::connectedJoys = 0;
 
 BOOL CALLBACK enumCallback(const DIDEVICEINSTANCE* instance, VOID* context)
 {
@@ -404,7 +405,7 @@ DWORD wiDirectInput::getDirections(short pIndex)
 	if(connectedJoys)
 		for(short i=0;i<4;i++){
 			//if((LOWORD(joyState[pIndex].rgdwPOV[i]) != 0xFFFF))
-			if(buttons+=joyState[pIndex].rgdwPOV[i]!=POV_IDLE)
+			if(buttons+=joyState[pIndex].rgdwPOV[i] != DIRECTINPUT_POV_IDLE)
 				buttons+=joyState[pIndex].rgdwPOV[i];
 		}
 	return buttons;

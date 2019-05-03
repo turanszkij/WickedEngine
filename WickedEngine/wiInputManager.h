@@ -3,56 +3,52 @@
 
 #include <vector>
 
-class wiXInput;
-class wiDirectInput;
-class wiRawInput;
+enum INPUT_TYPE
+{
+	INPUT_TYPE_KEYBOARD,
+	INPUT_TYPE_GAMEPAD,
+};
+enum GAMEPAD_BUTTON
+{
+	GAMEPAD_BUTTON_UP,
+	GAMEPAD_BUTTON_LEFT,
+	GAMEPAD_BUTTON_DOWN,
+	GAMEPAD_BUTTON_RIGHT,
+	GAMEPAD_BUTTON_1,
+	GAMEPAD_BUTTON_2,
+	GAMEPAD_BUTTON_3,
+	GAMEPAD_BUTTON_4,
+	GAMEPAD_BUTTON_5,
+	GAMEPAD_BUTTON_6,
+	GAMEPAD_BUTTON_7,
+	GAMEPAD_BUTTON_8,
+	GAMEPAD_BUTTON_9,
+	GAMEPAD_BUTTON_10,
+	GAMEPAD_BUTTON_11,
+	GAMEPAD_BUTTON_12,
+	GAMEPAD_BUTTON_13,
+	GAMEPAD_BUTTON_14,
+};
 
 namespace wiInputManager
 {
-	void addXInput(wiXInput* input);
-	void addDirectInput(wiDirectInput* input);
-	void addRawInput(wiRawInput* input);
+	// call once at app start
+	void Initialize();
 
+	// call once per frame
 	void Update();
-
-	enum InputType{
-		DIRECTINPUT_JOYPAD,
-		XINPUT_JOYPAD,
-		KEYBOARD,
-		RAWINPUT_JOYPAD,
-		INPUTTYPE_COUNT
-	};
-	struct Input{
-		InputType type;
-		DWORD button;
-		short playerIndex;
-
-		Input(){
-			type=InputType::DIRECTINPUT_JOYPAD;
-			button=(DWORD)0;
-			playerIndex=0;
-		}
-		bool operator<(const Input other){
-			return (button!=other.button || type!=other.type || playerIndex!=other.playerIndex);
-		}
-		struct LessComparer{
-			bool operator()(Input const& a,Input const& b) const{
-				return (a.button<b.button || a.type<b.type || a.playerIndex<b.playerIndex);
-			}
-		};
-	};
 	
-	//check if a button is down
-	bool down(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
-	//check if a button is pressed once
-	bool press(DWORD button, InputType inputType = InputType::KEYBOARD, short playerindex = 0);
-	//check if a button is held down
-	bool hold(DWORD button, DWORD frames = 30, bool continuous = false, InputType inputType = InputType::KEYBOARD, short playerIndex = 0);
-	//get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
+	// check if a button is down
+	bool down(uint32_t button, INPUT_TYPE inputType = INPUT_TYPE::INPUT_TYPE_KEYBOARD, short playerindex = 0);
+	// check if a button is pressed once
+	bool press(uint32_t button, INPUT_TYPE inputType = INPUT_TYPE::INPUT_TYPE_KEYBOARD, short playerindex = 0);
+	// check if a button is held down
+	bool hold(uint32_t button, uint32_t frames = 30, bool continuous = false, INPUT_TYPE inputType = INPUT_TYPE::INPUT_TYPE_KEYBOARD, short playerIndex = 0);
+	// get pointer position (eg. mouse pointer) (.xy) + scroll delta (.z) + 1 unused (.w)
 	XMFLOAT4 getpointer();
-	//set pointer position (eg. mouse pointer) + scroll delta (.z)
+	// set pointer position (eg. mouse pointer) + scroll delta (.z)
 	void setpointer(const XMFLOAT4& props);
-	//hide pointer
+	// hide pointer
 	void hidepointer(bool value);
 
 	struct Touch

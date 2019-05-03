@@ -291,20 +291,15 @@ void MainComponent::Compose()
 }
 
 #ifndef WINSTORE_SUPPORT
-bool MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
+void MainComponent::SetWindow(wiWindowRegistration::window_type window, HINSTANCE hInst)
 {
-	this->hInst = hInst;
-
+	wiWindowRegistration::RegisterInstance(hInst);
 	wiWindowRegistration::RegisterWindow(window);
-
-	return true;
 }
 #else
-bool MainComponent::SetWindow(wiWindowRegistration::window_type window)
+void MainComponent::SetWindow(wiWindowRegistration::window_type window)
 {
 	wiWindowRegistration::RegisterWindow(window);
-
-	return true;
 }
 #endif
 

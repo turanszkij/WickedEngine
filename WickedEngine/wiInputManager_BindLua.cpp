@@ -22,17 +22,22 @@ int wiInputManager_BindLua::Down(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int code = wiLua::SGetInt(L, 1);
-		wiInputManager::InputType type = wiInputManager::KEYBOARD;
+		uint32_t code = (uint32_t)wiLua::SGetInt(L, 1);
+		INPUT_TYPE type = INPUT_TYPE_KEYBOARD;
 		if (argc > 1)
 		{
-			type = (wiInputManager::InputType)wiLua::SGetInt(L, 2);
+			type = (INPUT_TYPE)wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInputManager::down((DWORD)code, type));
+		short playerindex = 0;
+		if (argc > 2)
+		{
+			playerindex = (short)wiLua::SGetInt(L, 3);
+		}
+		wiLua::SSetBool(L, wiInputManager::down(code, type, playerindex));
 		return 1;
 	}
 	else
-		wiLua::SError(L, "Down(int code, opt int type = KEYBOARD) not enough arguments!");
+		wiLua::SError(L, "Down(int code, opt int type = INPUT_TYPE_KEYBOARD) not enough arguments!");
 	return 0;
 }
 int wiInputManager_BindLua::Press(lua_State* L)
@@ -40,17 +45,22 @@ int wiInputManager_BindLua::Press(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int code = wiLua::SGetInt(L, 1);
-		wiInputManager::InputType type = wiInputManager::KEYBOARD;
+		uint32_t code = (uint32_t)wiLua::SGetInt(L, 1);
+		INPUT_TYPE type = INPUT_TYPE_KEYBOARD;
 		if (argc > 1)
 		{
-			type = (wiInputManager::InputType)wiLua::SGetInt(L, 2);
+			type = (INPUT_TYPE)wiLua::SGetInt(L, 2);
 		}
-		wiLua::SSetBool(L, wiInputManager::press((DWORD)code, type));
+		short playerindex = 0;
+		if (argc > 2)
+		{
+			playerindex = (short)wiLua::SGetInt(L, 3);
+		}
+		wiLua::SSetBool(L, wiInputManager::press(code, type, playerindex));
 		return 1;
 	}
 	else
-		wiLua::SError(L, "Press(int code, opt int type = KEYBOARD) not enough arguments!");
+		wiLua::SError(L, "Press(int code, opt int type = INPUT_TYPE_KEYBOARD) not enough arguments!");
 	return 0;
 }
 int wiInputManager_BindLua::Hold(lua_State* L)
@@ -58,8 +68,8 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int code = wiLua::SGetInt(L, 1);
-		int duration = 30;
+		uint32_t code = (uint32_t)wiLua::SGetInt(L, 1);
+		uint32_t duration = 30;
 		if (argc > 1)
 		{
 			duration = wiLua::SGetInt(L, 2);
@@ -69,12 +79,17 @@ int wiInputManager_BindLua::Hold(lua_State* L)
 		{
 			continuous = wiLua::SGetBool(L, 3);
 		}
-		wiInputManager::InputType type = wiInputManager::KEYBOARD;
+		INPUT_TYPE type = INPUT_TYPE_KEYBOARD;
 		if (argc > 3)
 		{
-			type = (wiInputManager::InputType)wiLua::SGetInt(L, 4);
+			type = (INPUT_TYPE)wiLua::SGetInt(L, 4);
 		}
-		wiLua::SSetBool(L, wiInputManager::hold((DWORD)code, (DWORD)duration, continuous, type));
+		short playerindex = 0;
+		if (argc > 4)
+		{
+			playerindex = (short)wiLua::SGetInt(L, 5);
+		}
+		wiLua::SSetBool(L, wiInputManager::hold(code, duration, continuous, type, playerindex));
 		return 1;
 	}
 	else
@@ -136,10 +151,8 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("input = InputManager()");
 
 		//Input types
-		wiLua::GetGlobal()->RunText("DIRECTINPUT_JOYPAD		= 0");
-		wiLua::GetGlobal()->RunText("XINPUT_JOYPAD			= 1");
-		wiLua::GetGlobal()->RunText("KEYBOARD				= 2");
-		wiLua::GetGlobal()->RunText("RAWINPUT_JOYPAD		= 3");
+		wiLua::GetGlobal()->RunText("INPUT_TYPE_KEYBOARD		= 0");
+		wiLua::GetGlobal()->RunText("INPUT_TYPE_GAMEPAD			= 1");
 
 		//Keyboard
 		wiLua::GetGlobal()->RunText("VK_UP			= 0x26");
@@ -168,6 +181,26 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("VK_LBUTTON		= 0x01");
 		wiLua::GetGlobal()->RunText("VK_MBUTTON		= 0x04");
 		wiLua::GetGlobal()->RunText("VK_RBUTTON		= 0x02");
+
+		//Gamepad
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_UP		= 0");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_LEFT	= 1");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_DOWN	= 2");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_RIGHT	= 3");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_1		= 4");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_2		= 5");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_3		= 6");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_4		= 7");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_5		= 8");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_6		= 9");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_7		= 10");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_8		= 11");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_9		= 12");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_10		= 13");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_11		= 14");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_12		= 15");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_13		= 16");
+		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_14		= 17");
 
 		//Touch
 		wiLua::GetGlobal()->RunText("TOUCHSTATE_PRESSED		= 0");
