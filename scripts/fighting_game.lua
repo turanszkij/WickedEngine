@@ -28,7 +28,7 @@ local debug_draw = true -- press H button to toggle
 local player2_control = "CPU" -- can be "CPU" or "Controller2". player1 will always use Keyboard and Controller1 for now (for simplicity)
 
 -- **The character "class" is a wrapper function that returns a local internal table called "self"
-local function Character(face, shirt_color)
+local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 	local self = {
 		model = INVALID_ENTITY,
 		effect_dust = INVALID_ENTITY,
@@ -120,7 +120,7 @@ local function Character(face, shirt_color)
 				scene.Entity_Remove(entity)
 			end)
 		end,
-		spawn_effect_fireball = function(self, pos, velocity) -- todo
+		spawn_effect_fireball = function(self, pos, velocity)
 			self.fireball_active = true
 			local fireball_life = 8 -- can hit the player so many times
 			runProcess(function() -- first subprocess begins effect
@@ -810,7 +810,7 @@ local function Character(face, shirt_color)
 				hurtbox = AABB(Vector(), Vector()),
 			},
 			DieStart = {
-				anim_name = "DieStart.001", -- todo fix anim name
+				anim_name = "DieStart",
 				anim = INVALID_ENTITY,
 				looped = false,
 				clipbox = AABB(Vector(), Vector()),
@@ -1191,7 +1191,7 @@ local function Character(face, shirt_color)
 		end,
 	
 
-		Create = function(self, face, shirt_color)
+		Create = function(self, face, skin_color, shirt_color, hair_color, shoe_color)
 
 			-- Load the model into a custom scene:
 			--	We use a custom scene because if two models are loaded into the global scene, they will have name collisions
@@ -1205,8 +1205,10 @@ local function Character(face, shirt_color)
 			self.position = Vector(self.face * -4)
 
 			-- Set shirt color to differentiate between characters:
-			local shirt_material_entity = model_scene.Entity_FindByName("material_shirt")
-			model_scene.Component_GetMaterial(shirt_material_entity).SetBaseColor(shirt_color)
+			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_skin")).SetBaseColor(skin_color)
+			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_shirt")).SetBaseColor(shirt_color)
+			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_hair")).SetBaseColor(hair_color)
+			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_shoes")).SetBaseColor(shoe_color)
 
 			-- Set user stencil ref for all materials:
 			for i,material in ipairs(model_scene.Component_GetMaterialArray()) do
@@ -1389,7 +1391,7 @@ local function Character(face, shirt_color)
 		--	playerindex can differentiate between multiple controllers. eg: controller1 = playerindex0; controller2 = playerindex1
 		Input = function(self, playerindex)
 
-			-- read input (todo gamepad/stick):
+			-- read input:
 			local left = input.Down(string.byte('A'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_LEFT, INPUT_TYPE_GAMEPAD, playerindex)
 			local right = input.Down(string.byte('D'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_RIGHT, INPUT_TYPE_GAMEPAD, playerindex)
 			local up = input.Down(string.byte('W'), INPUT_TYPE_KEYBOARD, playerindex) or input.Down(GAMEPAD_BUTTON_UP, INPUT_TYPE_GAMEPAD, playerindex)
@@ -1598,7 +1600,7 @@ local function Character(face, shirt_color)
 
 	}
 
-	self:Create(face, shirt_color)
+	self:Create(face, skin_color, shirt_color, hair_color, shoe_color)
 	return self
 end
 
@@ -1855,16 +1857,17 @@ runProcess(function()
 
 	local info = Font("");
 	info.SetSize(24)
-	info.SetPos(Vector(GetScreenWidth() / 2.5, GetScreenHeight() * 0.9))
-	info.SetAlign(WIFALIGN_LEFT, WIFALIGN_CENTER)
+	info.SetPos(Vector(GetScreenWidth() / 2.5, GetScreenHeight() - 10))
+	info.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
 	info.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(info)
 
 	LoadModel("../models/dojo.wiscene")
 	
-	-- Create the two player characters. Parameters are facing direction and shirt material color to differentiate between them:
-	local player1 = Character(1, Vector(1,1,1,1)) -- facing to right, white shirt
-	local player2 = Character(-1, Vector(1,0,0,1)) -- facing to left, red shirt
+	-- Create the two player characters. Parameters are facing direction and material colors to differentiate between them:
+	--						Facing:		skin color:				shirt color				hair color				shoe color
+	local player1 = Character(	 1,		Vector(0.7,0.6,0.5,1),	Vector(1,1,1,1),		Vector(1,1,1,1),		Vector(1,1,1,1))
+	local player2 = Character(	-1,		Vector(1,1,1,1),		Vector(1,0,0,1),		Vector(1,0.9,0.2,1),	Vector(0.3,0.1,0.1,1))
 	
 	while true do
 
@@ -1911,7 +1914,7 @@ runProcess(function()
 				infoText = infoText .. element.command
 			end
 		end
-		infoText = infoText .. "\n\tstate = " .. player2.state .. "\n\tframe = " .. player2.frame .. "\n\n"
+		infoText = infoText .. "\n\tstate = " .. player2.state .. "\n\tframe = " .. player2.frame
 
 		info.SetText(infoText)
 
