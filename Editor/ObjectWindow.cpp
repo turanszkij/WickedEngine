@@ -442,13 +442,32 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 	});
 	objectWindow->AddWidget(lightmapResolutionSlider);
 
+	lightmapSourceUVSetComboBox = new wiComboBox("Source UV: ");
+	lightmapSourceUVSetComboBox->SetPos(XMFLOAT2(x - 130, y += 30));
+	lightmapSourceUVSetComboBox->AddItem("Copy UV 0");
+	lightmapSourceUVSetComboBox->AddItem("Copy UV 1");
+	lightmapSourceUVSetComboBox->AddItem("Keep Atlas");
+	lightmapSourceUVSetComboBox->AddItem("Generate Atlas");
+	lightmapSourceUVSetComboBox->SetSelected(3);
+	lightmapSourceUVSetComboBox->SetTooltip("Set which UV set to use when generating the lightmap Atlas");
+	objectWindow->AddWidget(lightmapSourceUVSetComboBox);
+
 	generateLightmapButton = new wiButton("Generate Lightmap");
 	generateLightmapButton->SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
-	generateLightmapButton->SetPos(XMFLOAT2(x, y += 30));
+	generateLightmapButton->SetPos(XMFLOAT2(x, y));
 	generateLightmapButton->SetSize(XMFLOAT2(140,30));
 	generateLightmapButton->OnClick([&](wiEventArgs args) {
 
 		Scene& scene = wiSceneSystem::GetScene();
+
+		enum UV_GEN_TYPE
+		{
+			UV_GEN_COPY_UVSET_0,
+			UV_GEN_COPY_UVSET_1,
+			UV_GEN_KEEP_ATLAS,
+			UV_GEN_GENERATE_ATLAS,
+		};
+		UV_GEN_TYPE gen_type = (UV_GEN_TYPE)lightmapSourceUVSetComboBox->GetSelected();
 
 		std::unordered_set<ObjectComponent*> gen_objects;
 		std::unordered_map<MeshComponent*, Atlas_Dim> gen_meshes;
@@ -471,9 +490,23 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 		for (auto& it : gen_meshes)
 		{
-			wiJobSystem::Execute([&] {
-				it.second = GenerateMeshAtlas(*it.first, (uint32_t)lightmapResolutionSlider->GetValue());
-			});
+			MeshComponent& mesh = *it.first;
+			if (gen_type == UV_GEN_COPY_UVSET_0)
+			{
+				mesh.vertex_atlas = mesh.vertex_uvset_0;
+				mesh.CreateRenderData();
+			}
+			else if (gen_type == UV_GEN_COPY_UVSET_1)
+			{
+				mesh.vertex_atlas = mesh.vertex_uvset_1;
+				mesh.CreateRenderData();
+			}
+			else if (gen_type == UV_GEN_GENERATE_ATLAS)
+			{
+				wiJobSystem::Execute([&] {
+					it.second = GenerateMeshAtlas(mesh, (uint32_t)lightmapResolutionSlider->GetValue());
+				});
+			}
 		}
 		wiJobSystem::Wait();
 
@@ -481,8 +514,15 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 		{
 			x->ClearLightmap();
 			MeshComponent* meshcomponent = scene.meshes.GetComponent(x->meshID);
-			x->lightmapWidth = gen_meshes.at(meshcomponent).width;
-			x->lightmapHeight = gen_meshes.at(meshcomponent).height;
+			if (gen_type == UV_GEN_GENERATE_ATLAS)
+			{
+				x->lightmapWidth = gen_meshes.at(meshcomponent).width;
+				x->lightmapHeight = gen_meshes.at(meshcomponent).height;
+			}
+			else
+			{
+				x->lightmapWidth = x->lightmapHeight = (uint32_t)lightmapResolutionSlider->GetValue();
+			}
 			x->SetLightmapRenderRequest(true);
 		}
 

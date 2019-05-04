@@ -36,6 +36,7 @@ public:
 	wiComboBox*	collisionShapeComboBox;
 
 	wiSlider*	lightmapResolutionSlider;
+	wiComboBox*	lightmapSourceUVSetComboBox;
 	wiButton*	generateLightmapButton;
 	wiButton*	stopLightmapGenButton;
 	wiButton*	clearLightmapButton;
