@@ -57,9 +57,9 @@ void Editor::Initialize()
 	renderComponent->loader = loader;
 	renderComponent->main = this;
 
-	loader->addLoadingComponent(renderComponent, this);
+	loader->addLoadingComponent(renderComponent, this, 0.2f);
 
-	ActivatePath(loader);
+	ActivatePath(loader, 0.2f);
 
 }
 

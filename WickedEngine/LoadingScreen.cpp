@@ -34,16 +34,14 @@ void LoadingScreen::addLoadingFunction(function<void()> loadingFunction)
 	}
 }
 
-void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main)
+void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds, const wiColor& fadeColor)
 {
 	addLoadingFunction([=] {
 		component->Load();
 	});
 	onFinished([=] {
-		main->ActivatePath(component);
+		main->ActivatePath(component, fadeSeconds, fadeColor);
 	});
-	//addLoadingFunction(bind(&RenderPath::Load, this, component));
-	//onFinished(bind(&RenderPath::Start, this, component));
 }
 
 void LoadingScreen::onFinished(function<void()> finishFunction)
