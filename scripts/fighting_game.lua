@@ -681,6 +681,9 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
 				guardbox = AABB(Vector(-2,0),Vector(8,15)),
 				update_collision = function(self)
+					if(self:require_window(0,4)) then -- little invincibility at start
+						self.hurtboxes = {}
+					end
 					if(self:require_window(2,20)) then
 						self:set_box_local(self.hitboxes, AABB(Vector(0,2), Vector(2.3,7)) )
 					end
@@ -880,7 +883,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 				{ "Fireball", condition = function(self) return not self.fireball_active and self:require_motion_qcf("A") end, },
 				{ "CrouchStart", condition = function(self) return self:require_input("1") or self:require_input("2") or self:require_input("3") end, },
 				{ "Walk_Backward", condition = function(self) return self:require_input("4") end, },
-				{ "RunStart", condition = function(self) return self:require_input_window("656", 7) end, },
+				{ "RunStart", condition = function(self) return self:require_input_window("656", 10) end, },
 				{ "JumpForward", condition = function(self) return self:require_input("9") end, },
 				{ "Idle", condition = function(self) return self:require_input("5") end, },
 				{ "ChargeKick", condition = function(self) return self:require_input_window("4444444444444444446C", 30) or self:require_input_window("1111111111111111116C", 30) end, },
@@ -1381,7 +1384,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			elseif(self.ai_state == "Guard" and self:require_guard()) then
 				table.insert(self.input_buffer, {age = 0, command = "4"})
 			elseif(self.ai_state == "Attack") then
-				table.insert(self.input_buffer, {age = 0, command = "5A"})
+				table.insert(self.input_buffer, {age = 0, command = "A"})
 			else
 				table.insert(self.input_buffer, {age = 0, command = "5"})
 			end
@@ -1499,11 +1502,11 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			fx.SetSize(vector.Multiply(Vector(1430 * hp_percentage, 180), scaling))
 			fx.EnableDrawRect(Vector(0, 180, 1430 * hp_percentage, 180))
 			if(hp_percentage < 0.25) then
-				fx.SetColor(Vector(1,0.25,0,1))
+				fx.SetColor(Vector(1,0.2,0,1))
 			elseif(hp_percentage < 1) then
 				fx.SetColor(Vector(1,1,0,1))
 			else
-				fx.SetColor(Vector(0,1,0.5,1))
+				fx.SetColor(Vector(0,1,0.6,1))
 			end
 			self.sprite_hpbar_hp.SetParams(fx)
 			
@@ -1559,9 +1562,6 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			-- Set collision boxes in local space:
 			local current_state = self.states[self.state]
 			if(current_state ~= nil) then
-				if(current_state.update_collision ~= nil) then
-					current_state.update_collision(self)
-				end
 				if(current_state.clipbox ~= nil) then
 					self.clipbox = current_state.clipbox.Transform(model_transform.GetMatrix())
 				end
@@ -1570,6 +1570,9 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 				end
 				if(current_state.guardbox ~= nil) then
 					self:set_box_local(self.guardboxes, current_state.guardbox)
+				end
+				if(current_state.update_collision ~= nil) then
+					current_state.update_collision(self)
 				end
 			end
 
@@ -1866,8 +1869,8 @@ runProcess(function()
 	
 	-- Create the two player characters. Parameters are facing direction and material colors to differentiate between them:
 	--						Facing:		skin color:				shirt color				hair color				shoe color
-	local player1 = Character(	 1,		Vector(0.7,0.6,0.5,1),	Vector(1,1,1,1),		Vector(1,1,1,1),		Vector(1,1,1,1))
-	local player2 = Character(	-1,		Vector(1,1,1,1),		Vector(1,0,0,1),		Vector(1,0.9,0.2,1),	Vector(0.3,0.1,0.1,1))
+	local player1 = Character(	 1,		Vector(0.7,0.5,0.3,1),	Vector(1,1,1,1),		Vector(1,1,1,1),		Vector(1,1,1,1))
+	local player2 = Character(	-1,		Vector(1,1,1,1),		Vector(1,0,0,1),		Vector(0.1,0.1,0.4,1),	Vector(0.3,0.1,0.1,1))
 	
 	while true do
 
