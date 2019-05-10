@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <set>
+#include <algorithm>
 
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
@@ -1985,8 +1986,8 @@ namespace wiGraphics
 			VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
 
 			swapChainExtent = { static_cast<uint32_t>(SCREENWIDTH), static_cast<uint32_t>(SCREENHEIGHT) };
-			swapChainExtent.width = max(swapChainSupport.capabilities.minImageExtent.width, min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
-			swapChainExtent.height = max(swapChainSupport.capabilities.minImageExtent.height, min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
+			swapChainExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width, std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
+			swapChainExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height, std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
 
 			//uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
 			//if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -2662,7 +2663,7 @@ namespace wiGraphics
 
 		if (pTexture2D->desc.MipLevels == 0)
 		{
-			pTexture2D->desc.MipLevels = static_cast<UINT>(log2(max(pTexture2D->desc.Width, pTexture2D->desc.Height)));
+			pTexture2D->desc.MipLevels = static_cast<UINT>(log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height)));
 		}
 
 
@@ -2781,8 +2782,8 @@ namespace wiGraphics
 							1
 						};
 
-						width = max(1, width / 2);
-						height /= max(1, height / 2);
+						width = std::max(1u, width / 2);
+						height /= std::max(1u, height / 2);
 
 						copyRegions.push_back(copyRegion);
 					}
@@ -4489,8 +4490,8 @@ namespace wiGraphics
 		for(UINT i = 0; i < numRects; ++i) {
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
 			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
-			scissors[i].offset.x = max(0, rects[i].left);
-			scissors[i].offset.y = max(0, rects[i].top);
+			scissors[i].offset.x = std::max(0l, rects[i].left);
+			scissors[i].offset.y = std::max(0l, rects[i].top);
 		}
 		vkCmdSetScissor(GetDirectCommandList(threadID), 0, numRects, scissors);
 	}
@@ -5019,7 +5020,7 @@ namespace wiGraphics
 			return;
 		}
 
-		dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+		dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
 
 

@@ -12,6 +12,8 @@
 #include "wiProfiler.h"
 #include "wiBackLog.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace wiGraphics;
 
@@ -230,7 +232,7 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	if (IsPaused())
 		return;
 
-	emit = max(0, emit - floorf(emit));
+	emit = std::max(0.0f, emit - floorf(emit));
 
 	CreateSelfBuffers();
 

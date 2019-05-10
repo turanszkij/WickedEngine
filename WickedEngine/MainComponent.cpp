@@ -20,6 +20,7 @@
 #include "wiGraphicsDevice_Vulkan.h"
 
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 using namespace wiGraphics;
@@ -120,7 +121,7 @@ void MainComponent::Run()
 	wiProfiler::BeginFrame();
 	wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
-	deltaTime = float(max(0, timer.elapsed() / 1000.0));
+	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
 	if (wiWindowRegistration::IsWindowActive())

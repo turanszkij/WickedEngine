@@ -15,6 +15,7 @@
 #endif // _DEBUG
 
 #include <sstream>
+#include <algorithm>
 #include <wincodec.h>
 
 using namespace std;
@@ -2327,14 +2328,14 @@ namespace wiGraphics
 
 		if (pTexture2D->desc.MipLevels == 0)
 		{
-			pTexture2D->desc.MipLevels = (UINT)log2(max(pTexture2D->desc.Width, pTexture2D->desc.Height));
+			pTexture2D->desc.MipLevels = (UINT)log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height));
 		}
 
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			UINT dataCount = pDesc->ArraySize * max(1, pDesc->MipLevels);
+			UINT dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
 			D3D12_SUBRESOURCE_DATA* data = new D3D12_SUBRESOURCE_DATA[dataCount];
 			for (UINT slice = 0; slice < dataCount; ++slice)
 			{
@@ -3423,7 +3424,7 @@ namespace wiGraphics
 		result = directQueue->Signal(frameFence, FRAMECOUNT);
 
 		// Determine the last frame that we should not wait on:
-		const uint64_t lastFrameToAllowLatency = max(BACKBUFFER_COUNT - 1, FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
+		const uint64_t lastFrameToAllowLatency = std::max(uint64_t(BACKBUFFER_COUNT - 1u), FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
 
 		// Wait if too many frames are being incomplete:
 		if (frameFence->GetCompletedValue() < lastFrameToAllowLatency)
@@ -3886,7 +3887,7 @@ namespace wiGraphics
 			return;
 		}
 
-		dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+		dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
 
 		size_t alignment = buffer->desc.BindFlags & BIND_CONSTANT_BUFFER ? D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT : D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;

@@ -1101,30 +1101,30 @@ namespace wiSceneSystem
 		// Entities are unique within a ComponentManager, so the most populated ComponentManager
 		//	will actually give us how many entities there are in the scene
 		size_t entityCount = 0;
-		entityCount = max(entityCount, names.GetCount());
-		entityCount = max(entityCount, layers.GetCount());
-		entityCount = max(entityCount, transforms.GetCount());
-		entityCount = max(entityCount, prev_transforms.GetCount());
-		entityCount = max(entityCount, hierarchy.GetCount());
-		entityCount = max(entityCount, materials.GetCount());
-		entityCount = max(entityCount, meshes.GetCount());
-		entityCount = max(entityCount, impostors.GetCount());
-		entityCount = max(entityCount, objects.GetCount());
-		entityCount = max(entityCount, aabb_objects.GetCount());
-		entityCount = max(entityCount, rigidbodies.GetCount());
-		entityCount = max(entityCount, softbodies.GetCount());
-		entityCount = max(entityCount, armatures.GetCount());
-		entityCount = max(entityCount, lights.GetCount());
-		entityCount = max(entityCount, aabb_lights.GetCount());
-		entityCount = max(entityCount, cameras.GetCount());
-		entityCount = max(entityCount, probes.GetCount());
-		entityCount = max(entityCount, aabb_probes.GetCount());
-		entityCount = max(entityCount, forces.GetCount());
-		entityCount = max(entityCount, decals.GetCount());
-		entityCount = max(entityCount, aabb_decals.GetCount());
-		entityCount = max(entityCount, animations.GetCount());
-		entityCount = max(entityCount, emitters.GetCount());
-		entityCount = max(entityCount, hairs.GetCount());
+		entityCount = std::max(entityCount, names.GetCount());
+		entityCount = std::max(entityCount, layers.GetCount());
+		entityCount = std::max(entityCount, transforms.GetCount());
+		entityCount = std::max(entityCount, prev_transforms.GetCount());
+		entityCount = std::max(entityCount, hierarchy.GetCount());
+		entityCount = std::max(entityCount, materials.GetCount());
+		entityCount = std::max(entityCount, meshes.GetCount());
+		entityCount = std::max(entityCount, impostors.GetCount());
+		entityCount = std::max(entityCount, objects.GetCount());
+		entityCount = std::max(entityCount, aabb_objects.GetCount());
+		entityCount = std::max(entityCount, rigidbodies.GetCount());
+		entityCount = std::max(entityCount, softbodies.GetCount());
+		entityCount = std::max(entityCount, armatures.GetCount());
+		entityCount = std::max(entityCount, lights.GetCount());
+		entityCount = std::max(entityCount, aabb_lights.GetCount());
+		entityCount = std::max(entityCount, cameras.GetCount());
+		entityCount = std::max(entityCount, probes.GetCount());
+		entityCount = std::max(entityCount, aabb_probes.GetCount());
+		entityCount = std::max(entityCount, forces.GetCount());
+		entityCount = std::max(entityCount, decals.GetCount());
+		entityCount = std::max(entityCount, aabb_decals.GetCount());
+		entityCount = std::max(entityCount, animations.GetCount());
+		entityCount = std::max(entityCount, emitters.GetCount());
+		entityCount = std::max(entityCount, hairs.GetCount());
 		return entityCount;
 	}
 
@@ -1529,7 +1529,7 @@ namespace wiSceneSystem
 					keyRight--;
 
 					// Left keyframe is just near right:
-					keyLeft = max(0, keyRight - 1);
+					keyLeft = std::max(0, keyRight - 1);
 				}
 
 				float left = sampler.keyframe_times[keyLeft];
@@ -1911,7 +1911,7 @@ namespace wiSceneSystem
 			XMStoreFloat3(&decal.position, T);
 			XMFLOAT3 scale;
 			XMStoreFloat3(&scale, S);
-			decal.range = max(scale.x, max(scale.y, scale.z)) * 2;
+			decal.range = std::max(scale.x, std::max(scale.y, scale.z)) * 2;
 
 			AABB& aabb = aabb_decals[args.jobIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
@@ -1947,7 +1947,7 @@ namespace wiSceneSystem
 			XMMatrixDecompose(&S, &R, &T, W);
 			XMFLOAT3 scale;
 			XMStoreFloat3(&scale, S);
-			probe.range = max(scale.x, max(scale.y, scale.z)) * 2;
+			probe.range = std::max(scale.x, std::max(scale.y, scale.z)) * 2;
 
 			AABB& aabb = aabb_probes[args.jobIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
@@ -1972,7 +1972,7 @@ namespace wiSceneSystem
 			XMStoreFloat3(&force.position, T);
 			XMStoreFloat3(&force.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, -1, 0, 0), W)));
 
-			force.range_global = force.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
+			force.range_global = force.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 		});
 	}
 	void RunLightUpdateSystem(
@@ -1998,7 +1998,7 @@ namespace wiSceneSystem
 			XMStoreFloat4(&light.rotation, R);
 			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
-			light.range_global = light.range_local * max(XMVectorGetX(S), max(XMVectorGetY(S), XMVectorGetZ(S)));
+			light.range_global = light.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
 			switch (light.type)
 			{

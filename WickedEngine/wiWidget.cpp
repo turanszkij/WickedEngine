@@ -649,7 +649,7 @@ void wiTextInputField::DeleteFromInput()
 
 
 wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) :wiWidget()
-, start(start), end(end), value(defaultValue), step(max(step, 1))
+, start(start), end(end), value(defaultValue), step(std::max(step, 1.0f))
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -662,8 +662,8 @@ wiSlider::wiSlider(float start, float end, float defaultValue, float step, const
 	valueInputField->SetValue(end);
 	valueInputField->OnInputAccepted([&](wiEventArgs args) {
 		this->value = args.fValue;
-		this->start = min(this->start, args.fValue);
-		this->end = max(this->end, args.fValue);
+		this->start = std::min(this->start, args.fValue);
+		this->end = std::max(this->end, args.fValue);
 		onSlide(args);
 	});
 	valueInputField->parent = this;
@@ -984,7 +984,7 @@ wiComboBox::~wiComboBox()
 }
 const float wiComboBox::_GetItemOffset(int index) const
 {
-	index = max(firstItemVisible, index) - firstItemVisible;
+	index = std::max(firstItemVisible, index) - firstItemVisible;
 	return scale.y * (index + 1) + 1;
 }
 void wiComboBox::Update(wiGUI* gui, float dt)
@@ -1073,7 +1073,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 		{
 			int scroll = (int)wiInputManager::getpointer().z;
 			firstItemVisible -= scroll;
-			firstItemVisible = max(0, min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+			firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
 
 			hovered = -1;
 			for (size_t i = 0; i < items.size(); ++i)
@@ -1463,7 +1463,7 @@ void wiWindow::Render(const wiGUI* gui) const
 	}
 
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, gui->GetGraphicsThread());
-	wiFont(text, wiFontParams((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
+	wiFont(text, wiFontParams((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y + resizeDragger_UpperLeft->scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(gui->GetGraphicsThread());
 
 }

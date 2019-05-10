@@ -539,7 +539,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 
 int wiFont::textWidth() const
 {
-	if (style >= fontStyles.size())
+	if (style >= (int)fontStyles.size())
 	{
 		return 0;
 	}
@@ -573,14 +573,14 @@ int wiFont::textWidth() const
 			const Glyph& glyph = glyph_lookup.at(hash);
 			currentLineWidth += int((glyph.width + params.spacingX) * params.scaling);
 		}
-		maxWidth = max(maxWidth, currentLineWidth);
+		maxWidth = std::max(maxWidth, currentLineWidth);
 	}
 
 	return maxWidth;
 }
 int wiFont::textHeight() const
 {
-	if (style >= fontStyles.size())
+	if (style >= (int)fontStyles.size())
 	{
 		return 0;
 	}

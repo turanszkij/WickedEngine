@@ -620,7 +620,7 @@ const std::vector<CustomShader>& GetCustomShaders()
 }
 inline const GraphicsPSO* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
 {
-	if (customShaderID >= 0 && customShaderID < customShaders.size())
+	if (customShaderID >= 0 && customShaderID < (int)customShaders.size())
 	{
 		const CustomShader& customShader = customShaders[customShaderID];
 		const CustomShader::Pass& customPass = customShader.passes[renderPass];
@@ -1235,7 +1235,7 @@ struct SHCAM
 void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
 	const float zNearP = 0.1f;
-	const float zFarP = max(1.0f, light.GetRange());
+	const float zFarP = std::max(1.0f, light.GetRange());
 	shcam = SHCAM(XMFLOAT4(0, 0, 0, 1), zNearP, zFarP, light.fov);
 	shcam.Update(XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
 		XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)));
@@ -1316,7 +1316,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 	cb.xForwardEnvProbeMask = 0;
 
 	uint32_t buckets[2] = { 0,0 };
-	for (size_t i = 0; i < min(64, culling.culledLights.size()); ++i) // only support indexing 64 lights at max for now
+	for (size_t i = 0; i < std::min(size_t(64), culling.culledLights.size()); ++i) // only support indexing 64 lights at max for now
 	{
 		const uint32_t lightIndex = culling.culledLights[i];
 		const AABB& light_aabb = scene.aabb_lights[lightIndex];
@@ -1332,7 +1332,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 
 	if (renderPass == RENDERPASS_FORWARD || renderPass == RENDERPASS_ENVMAPCAPTURE)
 	{
-		for (size_t i = 0; i < min(32, culling.culledDecals.size()); ++i)
+		for (size_t i = 0; i < std::min(size_t(32), culling.culledDecals.size()); ++i)
 		{
 			const uint32_t decalIndex = culling.culledDecals[culling.culledDecals.size() - 1 - i]; // note: reverse order, for correct blending!
 			const AABB& decal_aabb = scene.aabb_decals[decalIndex];
@@ -1346,7 +1346,7 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 
 	if (renderPass == RENDERPASS_FORWARD)
 	{
-		for (size_t i = 0; i < min(32, culling.culledEnvProbes.size()); ++i)
+		for (size_t i = 0; i < std::min(size_t(32), culling.culledEnvProbes.size()); ++i)
 		{
 			const uint32_t probeIndex = culling.culledEnvProbes[culling.culledEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
 			const AABB& probe_aabb = scene.aabb_probes[probeIndex];
@@ -1478,7 +1478,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				float distance = batch.GetDistance();
 				float swapDistance = instance.impostorSwapDistance;
 				float fadeThreshold = instance.impostorFadeThresholdRadius;
-				dither = max(0, distance - swapDistance) / fadeThreshold;
+				dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
 			}
 
 			if (dither > 0)
@@ -1818,7 +1818,7 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPH
 					continue;
 				}
 
-				float dither = max(0, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
+				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
 				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, XMFLOAT4((float)impostorID * impostorCaptureAngles * 3, 1, 1, 1), dither);
 
@@ -4055,7 +4055,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			entityArray[entityCounter].SetType(force.type);
 			entityArray[entityCounter].positionWS = force.position;
 			entityArray[entityCounter].energy = force.gravity;
-			entityArray[entityCounter].range = 1.0f / max(0.0001f, force.GetRange()); // avoid division in shader
+			entityArray[entityCounter].range = 1.0f / std::max(0.0001f, force.GetRange()); // avoid division in shader
 			entityArray[entityCounter].coneAngleCos = force.GetRange(); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			entityArray[entityCounter].directionWS = force.direction;
@@ -4668,7 +4668,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 					else if (type == LightComponent::TUBE)
 					{
 						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-							XMMatrixScaling(max(light.width * 0.5f, light.radius), light.radius, light.radius)*
+							XMMatrixScaling(std::max(light.width * 0.5f, light.radius), light.radius, light.radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 							camera.GetViewProjection()
@@ -5059,7 +5059,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
 
-					const float zFarP = max(1.0f, light.GetRange());
+					const float zFarP = std::max(1.0f, light.GetRange());
 					Frustum frustum;
 					frustum.Create(shcam.realProjection, shcam.View, zFarP);
 
@@ -5171,7 +5171,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
 
 						const float zNearP = 0.1f;
-						const float zFarP = max(1.0f, light.GetRange());
+						const float zFarP = std::max(1.0f, light.GetRange());
 						SHCAM cameras[] = {
 							SHCAM(XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
 							SHCAM(XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
@@ -6326,7 +6326,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			for (UINT i = desc.MipLevels - 1; i > 0; --i)
 			{
 				device->BindUAV(CS, texture, 0, threadID, i);
-				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, max(0, (int)i - 2));
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, std::max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -6338,8 +6338,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
 
 				device->Dispatch(
-					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					threadID);
 
@@ -6368,7 +6368,7 @@ void ManageImpostors()
 
 	Scene& scene = GetScene();
 
-	for (size_t impostorIndex = 0; impostorIndex < min(maxImpostorCount, scene.impostors.GetCount()); ++impostorIndex)
+	for (size_t impostorIndex = 0; impostorIndex < std::min((size_t)maxImpostorCount, scene.impostors.GetCount()); ++impostorIndex)
 	{
 		ImpostorComponent& impostor = scene.impostors[impostorIndex];
 		if (!impostor.IsDirty())
@@ -6978,8 +6978,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			{
 				device->BindUAV(CS, texture, 0, threadID, i + 1);
 				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-				desc.Width = max(1, desc.Width / 2);
-				desc.Height = max(1, desc.Height / 2);
+				desc.Width = std::max(1u, desc.Width / 2);
+				desc.Height = std::max(1u, desc.Height / 2);
 
 				GenerateMIPChainCB cb;
 				cb.outputResolution.x = desc.Width;
@@ -6989,8 +6989,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 				device->Dispatch(
-					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					threadID);
 
@@ -7026,8 +7026,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			{
 				device->BindUAV(CS, texture, 0, threadID, i + 1);
 				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-				desc.Width = max(1, desc.Width / 2);
-				desc.Height = max(1, desc.Height / 2);
+				desc.Width = std::max(1u, desc.Width / 2);
+				desc.Height = std::max(1u, desc.Height / 2);
 
 				GenerateMIPChainCB cb;
 				cb.outputResolution.x = desc.Width;
@@ -7037,8 +7037,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 				device->Dispatch(
-					max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
 					threadID);
 
@@ -7084,8 +7084,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 		{
 			device->BindUAV(CS, texture, 0, threadID, i + 1);
 			device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-			desc.Width = max(1, desc.Width / 2);
-			desc.Height = max(1, desc.Height / 2);
+			desc.Width = std::max(1u, desc.Width / 2);
+			desc.Height = std::max(1u, desc.Height / 2);
 
 			GenerateMIPChainCB cb;
 			cb.outputResolution.x = desc.Width;
@@ -7095,8 +7095,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 			device->Dispatch(
-				max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-				max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+				std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+				std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 				1,
 				threadID);
 
@@ -7154,9 +7154,9 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 	{
 		device->BindUAV(CS, texture, 0, threadID, i + 1);
 		device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
-		desc.Width = max(1, desc.Width / 2);
-		desc.Height = max(1, desc.Height / 2);
-		desc.Depth = max(1, desc.Depth / 2);
+		desc.Width = std::max(1u, desc.Width / 2);
+		desc.Height = std::max(1u, desc.Height / 2);
+		desc.Depth = std::max(1u, desc.Depth / 2);
 
 		GenerateMIPChainCB cb;
 		cb.outputResolution.x = desc.Width;
@@ -7167,9 +7167,9 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
 
 		device->Dispatch(
-			max(1, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			max(1, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			max(1, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			std::max(1u, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
 			threadID);
 	}
 
@@ -7531,7 +7531,7 @@ void GenerateClouds(const Texture2D* dst, UINT refinementCount, float randomness
 	cb.xRandomness = randomness;
 	if (refinementCount == 0)
 	{
-		cb.xRefinementCount = max(1, (UINT)log2(dst_desc.Width));
+		cb.xRefinementCount = std::max(1u, (UINT)log2(dst_desc.Width));
 	}
 	else
 	{
@@ -7846,7 +7846,7 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	const Texture2D* rts[] = { object.lightmap.get() };
 	device->BindRenderTargets(1, rts, nullptr, threadID);
 
-	const uint32_t lightmapIterationCount = max(1, object.lightmapIterationCount) - 1; // ManageLightMapAtlas incremented before refresh
+	const uint32_t lightmapIterationCount = std::max(1u, object.lightmapIterationCount) - 1; // ManageLightMapAtlas incremented before refresh
 
 	if (lightmapIterationCount == 0)
 	{
@@ -8031,7 +8031,7 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
 	cb.g_xFrame_VoxelRadianceDataRes_Inverse = 1.0f / (float)cb.g_xFrame_VoxelRadianceDataRes;
 	cb.g_xFrame_VoxelRadianceDataMIPs = voxelSceneData.mips;
-	cb.g_xFrame_VoxelRadianceNumCones = max(min(voxelSceneData.numCones, 16), 1);
+	cb.g_xFrame_VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
 	cb.g_xFrame_VoxelRadianceNumCones_Inverse = 1.0f / (float)cb.g_xFrame_VoxelRadianceNumCones;
 	cb.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
 	cb.g_xFrame_VoxelRadianceReflectionsEnabled = voxelSceneData.reflectionsEnabled;
@@ -8121,10 +8121,10 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_MainCamera_Up = camera.Up;
 	cb.g_xFrame_MainCamera_ZNearP = camera.zNearP;
 	cb.g_xFrame_MainCamera_ZFarP = camera.zFarP;
-	cb.g_xFrame_MainCamera_ZNearP_Recip = 1.0f / max(0.0001f, cb.g_xFrame_MainCamera_ZNearP);
-	cb.g_xFrame_MainCamera_ZFarP_Recip = 1.0f / max(0.0001f, cb.g_xFrame_MainCamera_ZFarP);
+	cb.g_xFrame_MainCamera_ZNearP_Recip = 1.0f / std::max(0.0001f, cb.g_xFrame_MainCamera_ZNearP);
+	cb.g_xFrame_MainCamera_ZFarP_Recip = 1.0f / std::max(0.0001f, cb.g_xFrame_MainCamera_ZFarP);
 	cb.g_xFrame_MainCamera_ZRange = abs(cb.g_xFrame_MainCamera_ZFarP - cb.g_xFrame_MainCamera_ZNearP);
-	cb.g_xFrame_MainCamera_ZRange_Recip = 1.0f / max(0.0001f, cb.g_xFrame_MainCamera_ZRange);
+	cb.g_xFrame_MainCamera_ZRange_Recip = 1.0f / std::max(0.0001f, cb.g_xFrame_MainCamera_ZRange);
 	cb.g_xFrame_FrustumPlanesWS[0] = camera.frustum.getLeftPlane();
 	cb.g_xFrame_FrustumPlanesWS[1] = camera.frustum.getRightPlane();
 	cb.g_xFrame_FrustumPlanesWS[2] = camera.frustum.getTopPlane();
@@ -8229,7 +8229,7 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD t
 
 		while (desc.Width > 1)
 		{
-			desc.Width = max(desc.Width / 16, 1);
+			desc.Width = std::max(desc.Width / 16, 1u);
 			desc.Height = desc.Width;
 
 			Texture2D* tex = new Texture2D;
@@ -8415,7 +8415,7 @@ bool GetAdvancedRefractionsEnabled() { return advancedRefractions; }
 bool IsRequestedReflectionRendering() { return requestReflectionRendering; }
 void SetEnvironmentMap(wiGraphics::Texture2D* tex) { enviroMap = tex; }
 const Texture2D* GetEnvironmentMap() { return enviroMap; }
-void SetGameSpeed(float value) { GameSpeed = max(0, value); }
+void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetOceanEnabled(bool enabled)
 {

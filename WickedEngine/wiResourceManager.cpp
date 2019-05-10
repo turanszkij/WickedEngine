@@ -7,6 +7,8 @@
 #include "Utility/stb_image.h"
 #include "Utility/tinyddsloader.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace wiGraphics;
 
@@ -242,7 +244,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
 					desc.Height = static_cast<uint32_t>(height);
 					desc.Width = static_cast<uint32_t>(width);
-					desc.MipLevels = (UINT)log2(max(width, height));
+					desc.MipLevels = (UINT)log2(std::max(width, height));
 					desc.MiscFlags = 0;
 					desc.Usage = USAGE_DEFAULT;
 
@@ -252,7 +254,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					{
 						InitData[mip].pSysMem = rgb;
 						InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
-						mipwidth = max(1, mipwidth / 2);
+						mipwidth = std::max(1u, mipwidth / 2);
 					}
 
 					Texture2D* image = new Texture2D;

@@ -8,6 +8,7 @@
 #pragma comment(lib,"dxguid.lib")
 
 #include <sstream>
+#include <algorithm>
 
 using namespace std;
 
@@ -1777,7 +1778,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 	D3D11_SUBRESOURCE_DATA* data = nullptr;
 	if (pInitialData != nullptr)
 	{
-		UINT dataCount = pDesc->ArraySize * max(1, pDesc->MipLevels);
+		UINT dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
 		data = new D3D11_SUBRESOURCE_DATA[dataCount];
 		for (UINT slice = 0; slice < dataCount; ++slice)
 		{
@@ -1795,7 +1796,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 	if (pTexture2D->desc.MipLevels == 0)
 	{
-		pTexture2D->desc.MipLevels = (UINT)log2(max(pTexture2D->desc.Width, pTexture2D->desc.Height));
+		pTexture2D->desc.MipLevels = (UINT)log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height));
 	}
 
 	CreateRenderTargetView(pTexture2D);
@@ -1898,7 +1899,7 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 
 	if (pTexture3D->desc.MipLevels == 0)
 	{
-		pTexture3D->desc.MipLevels = (UINT)log2(max(pTexture3D->desc.Width, max(pTexture3D->desc.Height, pTexture3D->desc.Depth)));
+		pTexture3D->desc.MipLevels = (UINT)log2(std::max(pTexture3D->desc.Width, std::max(pTexture3D->desc.Height, pTexture3D->desc.Depth)));
 	}
 
 	CreateShaderResourceView(pTexture3D);
@@ -3227,7 +3228,7 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, const Texture2D* cons
 {
 	// RTVs:
 	ID3D11RenderTargetView* renderTargetViews[8] = {};
-	for (UINT i = 0; i < min(NumViews, 8); ++i)
+	for (UINT i = 0; i < std::min(NumViews, 8u); ++i)
 	{
 		if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs.empty())
 		{
@@ -3400,8 +3401,8 @@ void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource
 		else
 		{
 			raster_uavs[threadID][slot] = (ID3D11UnorderedAccessView*)resource->UAV;
-			raster_uavs_slot[threadID] = min(raster_uavs_slot[threadID], slot);
-			raster_uavs_count[threadID] = max(raster_uavs_count[threadID], 1);
+			raster_uavs_slot[threadID] = std::min(raster_uavs_slot[threadID], uint8_t(slot));
+			raster_uavs_count[threadID] = std::max(raster_uavs_count[threadID], uint8_t(1));
 		}
 	}
 }
@@ -3425,8 +3426,8 @@ void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource *const* 
 	}
 	else
 	{
-		raster_uavs_slot[threadID] = min(raster_uavs_slot[threadID], slot);
-		raster_uavs_count[threadID] = max(raster_uavs_count[threadID], count);
+		raster_uavs_slot[threadID] = std::min(raster_uavs_slot[threadID], uint8_t(slot));
+		raster_uavs_count[threadID] = std::max(raster_uavs_count[threadID], uint8_t(count));
 	}
 }
 void GraphicsDevice_DX11::UnbindResources(UINT slot, UINT num, GRAPHICSTHREAD threadID)
@@ -3720,7 +3721,7 @@ void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data
 		return;
 	}
 
-	dataSize = min((int)buffer->desc.ByteWidth, dataSize);
+	dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 
 	if (buffer->desc.Usage == USAGE_DYNAMIC)
 	{
@@ -3795,7 +3796,7 @@ bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload
 			bool result = SUCCEEDED(hr);
 			if (result)
 			{
-				UINT cpycount = max(1, textureToDownload->desc.Width) * max(1, textureToDownload->desc.Height) * max(1, textureToDownload->desc.Depth);
+				UINT cpycount = std::max(1u, textureToDownload->desc.Width) * std::max(1u, textureToDownload->desc.Height) * std::max(1u, textureToDownload->desc.Depth);
 				UINT cpystride = GetFormatStride(textureToDownload->desc.Format);
 				UINT cpysize = cpycount * cpystride;
 				memcpy(dataDest, mappedResource.pData, cpysize);
@@ -3866,7 +3867,7 @@ GraphicsDevice::GPUAllocation GraphicsDevice_DX11::AllocateGPU(size_t dataSize, 
 	allocator.dirty = true;
 
 
-	dataSize = min(allocator.buffer.desc.ByteWidth, dataSize);
+	dataSize = std::min(size_t(allocator.buffer.desc.ByteWidth), dataSize);
 
 	size_t position = allocator.byteOffset;
 	bool wrap = position + dataSize > allocator.buffer.desc.ByteWidth || allocator.residentFrame != FRAMECOUNT;

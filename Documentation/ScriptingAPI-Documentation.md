@@ -21,20 +21,30 @@ The documentation completion is still pending....
 		2. Music
 	5. Vector
 	6. Matrix
-	7. Scene
-		TODO
-	8. MainComponent
-	9. RenderPath
-		1. RenderPath2D
-		2. RenderPath3D
-			1. RenderPath3D_Forward
-			2. RenderPath3D_Deferred
-		4. LoadingScreen
-	10. Network
+	7. Scene System (using entity-component system)
+		1. Entity
+		2. Scene
+		3. NameComponent
+		4. LayerComponent
+		5. TransformComponent
+		6. CameraComponent
+		7. AnimationComponent
+		8. MaterialComponent
+		9. EmitterComponent
+		10. LightComponent
+	8. High Level Interface
+		1. MainComponent
+		2. RenderPath
+			1. RenderPath2D
+			2. RenderPath3D
+				1. RenderPath3D_Forward
+				2. RenderPath3D_Deferred
+			3. LoadingScreen
+	9. Network
 		1. Server
 		2. Client
-	11. Input Handling
-	12. ResourceManager
+	10. Input Handling
+	11. ResourceManager
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -338,16 +348,18 @@ A four by four matrix, efficient calculations with SIMD support.
 Manipulate the 3D scene with these components.
 
 #### Entity
-An entity is just an int value and works as a handle to retrieve associated components
+An entity is just an int value (int in LUA and uint32 in C++) and works as a handle to retrieve associated components
 
 #### Scene
-- [outer]GetScene() : Scene result  -- returns the current scene
+The scene holds components. Entity handles can be used to retrieve associated components through the scene.
+- [constructor]Scene() : Scene result  -- creates a custom scene
+- [outer]GetScene() : Scene result  -- returns the global scene
 - [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
 - [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
 - [outer]Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified.
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
-- Merge()  -- moves contents from an other scene into this one
+- Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
 
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
 - Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists

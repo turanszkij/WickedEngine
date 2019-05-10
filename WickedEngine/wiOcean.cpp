@@ -5,6 +5,8 @@
 #include "wiSceneSystem.h"
 #include "wiBackLog.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace wiGraphics;
 using namespace wiSceneSystem;
@@ -346,7 +348,7 @@ void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weat
 	cb.xOceanPatchSizeRecip = 1.0f / params.patch_length;
 	cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
 	cb.xOceanWaterHeight = params.waterHeight;
-	cb.xOceanSurfaceDisplacementTolerance = max(1, params.surfaceDisplacementTolerance);
+	cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
 
 	device->UpdateBuffer(&g_pShadingCB, &cb, threadID);
 

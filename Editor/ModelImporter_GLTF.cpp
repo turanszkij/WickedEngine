@@ -119,7 +119,7 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 			{
 				InitData[mip].pSysMem = image->image.data();
 				InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
-				mipwidth = max(1, mipwidth / 2);
+				mipwidth = std::max(1u, mipwidth / 2);
 			}
 
 			Texture2D* tex = new Texture2D;

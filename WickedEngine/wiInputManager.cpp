@@ -151,7 +151,7 @@ namespace wiInputManager
 			}
 			break;
 		case INPUT_TYPE_GAMEPAD:
-			if (playerindex < controllers.size())
+			if (playerindex < (int)controllers.size())
 			{
 
 				const Controller& controller = controllers[playerindex];

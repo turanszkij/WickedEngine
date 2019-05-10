@@ -11,7 +11,7 @@ struct VSOut {
 
 VSOut main(uint vid : SV_VERTEXID)
 {
-	VSOut Out = (VSOut)0;
+	VSOut Out;
 	Out.pos = Out.pos2D = mul(float4(ICOSPHERE[vid].xyz, 0), g_xCamera_VP);
 	Out.nor=ICOSPHERE[vid].xyz;
 	Out.pos2DPrev = mul(float4(ICOSPHERE[vid].xyz, 0), g_xFrame_MainCamera_PrevVP);

@@ -83,7 +83,7 @@ namespace wiMath
 												// We find projection of point p onto the line. 
 												// It falls where t = [(p-v) . (w-v)] / |w-v|^2
 												// We clamp t from [0,1] to handle points outside the segment vw.
-		const float t = max(0, min(1, XMVectorGetX(XMVector3Dot(point - segmentA, segmentB-segmentA)) / l2));
+		const float t = std::max(0.0f, std::min(1.0f, XMVectorGetX(XMVector3Dot(point - segmentA, segmentB-segmentA)) / l2));
 		const XMVECTOR projection = segmentA + t * (segmentB - segmentA);  // Projection falls on the segment
 		return Distance(point, projection);
 	}

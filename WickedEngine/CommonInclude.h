@@ -6,6 +6,9 @@
 
 
 // Platform specific:
+#define NOMINMAX
+#undef min
+#undef max
 #include <SDKDDKVer.h>
 #include <windows.h>
 

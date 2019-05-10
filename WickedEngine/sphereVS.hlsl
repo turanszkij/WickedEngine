@@ -10,7 +10,7 @@ struct VSOut_Sphere
 
 VSOut_Sphere main( uint vID : SV_VERTEXID )
 {
-	VSOut_Sphere o = (VSOut_Sphere)0;
+	VSOut_Sphere o;
 	o.pos = UVSPHERE[vID];
 	o.nor = o.pos.xyz;
 	o.pos = mul(o.pos, g_xTransform);

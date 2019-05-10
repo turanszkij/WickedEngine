@@ -1,7 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
 
-#define saturate(x) min(max(x,0),1)
+#include <algorithm>
+
+#define saturate(x) std::min(std::max(x,0.0f),1.0f)
 
 namespace wiMath
 {
@@ -98,10 +100,10 @@ namespace wiMath
 		return retVal;
 	}
 	inline constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b) {
-		return XMFLOAT3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+		return XMFLOAT3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 	}
 	inline constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b) {
-		return XMFLOAT3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
+		return XMFLOAT3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 	}
 	inline constexpr float Clamp(float val, float min, float max)
 	{

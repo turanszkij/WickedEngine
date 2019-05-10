@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <deque>
 #include <sstream>
+#include <algorithm>
 
 namespace wiJobSystem
 {
@@ -26,7 +27,7 @@ namespace wiJobSystem
 		auto numCores = std::thread::hardware_concurrency();
 
 		// Calculate the actual number of worker threads we want:
-		numThreads = max(1, numCores);
+		numThreads = std::max(1u, numCores);
 
 		for (uint32_t threadID = 0; threadID < numThreads; ++threadID)
 		{
@@ -122,7 +123,7 @@ namespace wiJobSystem
 
 				// Calculate the current group's offset into the jobs:
 				const uint32_t groupJobOffset = groupIndex * groupSize;
-				const uint32_t groupJobEnd = min(groupJobOffset + groupSize, jobCount);
+				const uint32_t groupJobEnd = std::min(groupJobOffset + groupSize, jobCount);
 
 				wiJobDispatchArgs args;
 				args.groupIndex = groupIndex;
