@@ -732,7 +732,6 @@ namespace wiSceneSystem
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
-		void UpdateProjection();
 		void UpdateCamera();
 		void TransformCamera(const TransformComponent& transform);
 		void Reflect(const XMFLOAT4& plane = XMFLOAT4(0, 1, 0, 0));

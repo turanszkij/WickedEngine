@@ -147,6 +147,11 @@ namespace wiSceneSystem_BindLua
 		int UpdateCamera(lua_State* L);
 		int TransformCamera(lua_State* L);
 		int GetFOV(lua_State* L);
+		int SetFOV(lua_State* L);
+		int GetNearPlane(lua_State* L);
+		int SetNearPlane(lua_State* L);
+		int GetFarPlane(lua_State* L);
+		int SetFarPlane(lua_State* L);
 		int GetView(lua_State* L);
 		int GetProjection(lua_State* L);
 		int GetViewProjection(lua_State* L);

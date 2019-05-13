@@ -43,7 +43,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 		Scene& scene = wiSceneSystem::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
 		camera.zFarP = args.fValue;
-		camera.UpdateProjection();
+		camera.UpdateCamera();
 	});
 	cameraWindow->AddWidget(farPlaneSlider);
 
@@ -55,7 +55,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 		Scene& scene = wiSceneSystem::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
 		camera.zNearP = args.fValue;
-		camera.UpdateProjection();
+		camera.UpdateCamera();
 	});
 	cameraWindow->AddWidget(nearPlaneSlider);
 
@@ -66,7 +66,7 @@ CameraWindow::CameraWindow(wiGUI* gui) :GUI(gui)
 		Scene& scene = wiSceneSystem::GetScene();
 		CameraComponent& camera = wiRenderer::GetCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
-		camera.UpdateProjection();
+		camera.UpdateCamera();
 	});
 	cameraWindow->AddWidget(fovSlider);
 

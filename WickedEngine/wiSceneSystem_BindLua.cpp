@@ -1174,6 +1174,11 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	lunamethod(CameraComponent_BindLua, UpdateCamera),
 	lunamethod(CameraComponent_BindLua, TransformCamera),
 	lunamethod(CameraComponent_BindLua, GetFOV),
+	lunamethod(CameraComponent_BindLua, SetFOV),
+	lunamethod(CameraComponent_BindLua, GetNearPlane),
+	lunamethod(CameraComponent_BindLua, SetNearPlane),
+	lunamethod(CameraComponent_BindLua, GetFarPlane),
+	lunamethod(CameraComponent_BindLua, SetFarPlane),
 	lunamethod(CameraComponent_BindLua, GetView),
 	lunamethod(CameraComponent_BindLua, GetProjection),
 	lunamethod(CameraComponent_BindLua, GetViewProjection),
@@ -1230,6 +1235,55 @@ int CameraComponent_BindLua::GetFOV(lua_State* L)
 {
 	wiLua::SSetFloat(L, component->fov);
 	return 1;
+}
+int CameraComponent_BindLua::SetFOV(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->fov = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetFOV(float value) not enough arguments!");
+	}
+	return 0;
+}
+int CameraComponent_BindLua::GetNearPlane(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->zNearP);
+	return 1;
+}
+int CameraComponent_BindLua::SetNearPlane(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->zNearP = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetNearPlane(float value) not enough arguments!");
+	}
+	return 0;
+}
+int CameraComponent_BindLua::GetFarPlane(lua_State* L)
+{
+	wiLua::SSetFloat(L, component->zFarP);
+	return 1;
+}
+int CameraComponent_BindLua::SetFarPlane(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->zFarP = wiLua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetFarPlane(float value) not enough arguments!");
+	}
+	return 0;
 }
 int CameraComponent_BindLua::GetView(lua_State* L)
 {

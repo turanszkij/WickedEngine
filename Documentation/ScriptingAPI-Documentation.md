@@ -430,6 +430,11 @@ Describes an orientation in 3D space.
 - UpdateCamera()  -- update the camera matrices
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 - GetFOV() : float result
+- SetFOV(float value)
+- GetNearPlane() : float result
+- SetNearPlane(float value)
+- GetFarPlane() : float result
+- SetFarPlane(float value)
 - GetView() : Matrix result
 - GetProjection() : Matrix result
 - GetViewProjection() : Matrix result

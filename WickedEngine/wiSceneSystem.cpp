@@ -928,15 +928,12 @@ namespace wiSceneSystem
 		height = newHeight;
 		fov = newFOV;
 
-		UpdateProjection();
 		UpdateCamera();
-	}
-	void CameraComponent::UpdateProjection()
-	{
-		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
 	}
 	void CameraComponent::UpdateCamera()
 	{
+		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, width / height, zFarP, zNearP)); // reverse zbuffer!
+
 		XMVECTOR _Eye = XMLoadFloat3(&Eye);
 		XMVECTOR _At = XMLoadFloat3(&At);
 		XMVECTOR _Up = XMLoadFloat3(&Up);
