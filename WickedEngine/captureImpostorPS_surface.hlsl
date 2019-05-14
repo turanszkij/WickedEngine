@@ -2,12 +2,21 @@
 
 float4 main(PixelInputType input) : SV_Target0
 {
-	const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-	float4 surface_occlusion_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
-
-	if (g_xMat_specularGlossinessWorkflow)
+	float4 surface_occlusion_roughness_metallic_reflectance;
+	[branch]
+	if (g_xMat_uvset_surfaceMap >= 0)
 	{
-		ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+		const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		surface_occlusion_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
+
+		if (g_xMat_specularGlossinessWorkflow)
+		{
+			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+		}
+	}
+	else
+	{
+		surface_occlusion_roughness_metallic_reflectance = 1;
 	}
 
 	float4 surface;

@@ -124,10 +124,13 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	vertexNormal = PhongNormal(fU, fV, fW, input);
 
 	// Displacement
-	const float2 UV_displacementMap = g_xMat_uvset_displacementMap == 0 ? vertexUvsets.xy : vertexUvsets.zw;
-	float3 displacement = 1 - xDisplacementMap.SampleLevel(sampler_linear_wrap, UV_displacementMap, 0).rrr;
-	displacement *= vertexNormal.xyz;
-	displacement *= -g_xMat_displacementMapping;
+	float3 displacement = -g_xMat_displacementMapping * vertexNormal.xyz;
+	[branch]
+	if (g_xMat_uvset_displacementMap >= 0)
+	{
+		const float2 UV_displacementMap = g_xMat_uvset_displacementMap == 0 ? vertexUvsets.xy : vertexUvsets.zw;
+		displacement *= 1 - xDisplacementMap.SampleLevel(sampler_linear_wrap, UV_displacementMap, 0).rrr;
+	}
 	vertexPosition.xyz += displacement;
 	vertexPositionPrev.xyz += displacement;
 	

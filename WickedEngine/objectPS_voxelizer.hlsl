@@ -23,14 +23,23 @@ void main(PSInput input)
 	[branch]
 	if (is_saturated(uvw))
 	{
-		const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		float4 baseColor = xBaseColorMap.Sample(sampler_linear_wrap, UV_baseColorMap);
-		baseColor.rgb = DEGAMMA(baseColor.rgb);
+		float4 baseColor;
+		[branch]
+		if (g_xMat_uvset_baseColorMap >= 0)
+		{
+			const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			baseColor = xBaseColorMap.Sample(sampler_linear_wrap, UV_baseColorMap);
+			baseColor.rgb = DEGAMMA(baseColor.rgb);
+		}
+		else
+		{
+			baseColor = 1;
+		}
 		baseColor *= input.color;
 		float4 color = baseColor;
 		float4 emissiveColor;
 		[branch]
-		if (g_xMat_emissiveColor.a > 0)
+		if (g_xMat_emissiveColor.a > 0 && g_xMat_uvset_emissiveMap >= 0)
 		{
 			const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, UV_emissiveMap);

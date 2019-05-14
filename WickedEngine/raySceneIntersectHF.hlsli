@@ -294,36 +294,52 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		hit.color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
 		hit.materialIndex = tri.materialIndex;
 
-		TracedRenderingMaterial mat = materialBuffer[hit.materialIndex];
+		TracedRenderingMaterial material = materialBuffer[hit.materialIndex];
 
 		hit.uvsets = frac(hit.uvsets); // emulate wrap
 
-		const float2 UV_baseColorMap = mat.uvset_baseColorMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
-		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
-
-		const float2 UV_surfaceMap = mat.uvset_surfaceMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
-		float4 surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
-
-		if (mat.specularGlossinessWorkflow)
+		float4 baseColor;
+		[branch]
+		if (material.uvset_baseColorMap >= 0)
 		{
-			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+			baseColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
+			baseColor.rgb = DEGAMMA(baseColor.rgb);
+		}
+		else
+		{
+			baseColor = 1;
+		}
+		baseColor *= hit.color;
+
+		float4 surface_occlusion_roughness_metallic_reflectance;
+		[branch]
+		if (material.uvset_surfaceMap >= 0)
+		{
+			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+			surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * material.surfaceMapAtlasMulAdd.xy + material.surfaceMapAtlasMulAdd.zw, 0);
+			if (material.specularGlossinessWorkflow)
+			{
+				ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+			}
+		}
+		else
+		{
+			surface_occlusion_roughness_metallic_reflectance = 1;
 		}
 
-		float4 baseColor = baseColorMap;
-		baseColor.rgb = DEGAMMA(baseColor.rgb);
-		baseColor *= hit.color;
-		float roughness = mat.roughness * surface_occlusion_roughness_metallic_reflectance.g;
-		float metalness = mat.metalness * surface_occlusion_roughness_metallic_reflectance.b;
-		float reflectance = mat.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
+		float roughness = material.roughness * surface_occlusion_roughness_metallic_reflectance.g;
+		float metalness = material.metalness * surface_occlusion_roughness_metallic_reflectance.b;
+		float reflectance = material.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
 		roughness = sqr(roughness); // convert linear roughness to cone aperture
 		float4 emissiveColor;
 		[branch]
-		if (mat.emissiveColor.a > 0)
+		if (material.emissiveColor.a > 0 && material.uvset_emissiveMap >= 0)
 		{
-			const float2 UV_emissiveMap = mat.uvset_emissiveMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
-			emissiveColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * mat.emissiveMapAtlasMulAdd.xy + mat.emissiveMapAtlasMulAdd.zw, 0);
+			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+			emissiveColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * material.emissiveMapAtlasMulAdd.xy + material.emissiveMapAtlasMulAdd.zw, 0);
 			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
-			emissiveColor *= mat.emissiveColor;
+			emissiveColor *= material.emissiveColor;
 		}
 		else
 		{
@@ -340,7 +356,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		if (roulette < refractChance)
 		{
 			// Refraction
-			float3 R = refract(ray.direction, hit.N, 1 - mat.refractionIndex);
+			float3 R = refract(ray.direction, hit.N, 1 - material.refractionIndex);
 			ray.direction = lerp(R, SampleHemisphere(R, seed, pixel), roughness);
 			ray.energy *= lerp(baseColor.rgb, 1, refractChance);
 

@@ -752,9 +752,18 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	ParallaxOcclusionMapping(input.uvsets, surface.V, TBN);
 #endif // POM
 
-	const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-	float4 color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
-	color.rgb = DEGAMMA(color.rgb);
+	float4 color;
+	[branch]
+	if (g_xMat_uvset_baseColorMap >= 0)
+	{
+		const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
+		color.rgb = DEGAMMA(color.rgb);
+	}
+	else
+	{
+		color = 1;
+	}
 	color *= input.color;
 	ALPHATEST(color.a);
 
@@ -783,21 +792,31 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	NormalMapping(UV_normalMap, surface.P, surface.N, TBN, bumpColor);
 #endif // NORMALMAP
 
-	const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-	float4 surface_occlusion_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
-	if (g_xMat_occlusion_primary == 0)
+	// Surface map:
+	float4 surface_occlusion_roughness_metallic_reflectance;
+	[branch]
+	if (g_xMat_uvset_surfaceMap >= 0)
 	{
-		surface_occlusion_roughness_metallic_reflectance.r = 1;
+		const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		surface_occlusion_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
+		if (g_xMat_occlusion_primary == 0)
+		{
+			surface_occlusion_roughness_metallic_reflectance.r = 1;
+		}
+		if (g_xMat_specularGlossinessWorkflow)
+		{
+			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+		}
+	}
+	else
+	{
+		surface_occlusion_roughness_metallic_reflectance = 1;
 	}
 
-	if (g_xMat_specularGlossinessWorkflow)
-	{
-		ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
-	}
-
+	// Emissive map:
 	float4 emissiveColor;
 	[branch]
-	if (g_xMat_emissiveColor.a > 0)
+	if (g_xMat_emissiveColor.a > 0 && g_xMat_uvset_emissiveMap >= 0)
 	{
 		const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		emissiveColor = xEmissiveMap.Sample(sampler_objectshader, UV_emissiveMap);
@@ -809,29 +828,30 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		emissiveColor = 0;
 	}
 
-	float occlusion = 1;
-	if (g_xMat_occlusion_secondary)
+	// Secondary occlusion map:
+	[branch]
+	if (g_xMat_occlusion_secondary && g_xMat_uvset_occlusionMap >= 0)
 	{
 		const float2 UV_occlusionMap = g_xMat_uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		occlusion = xOcclusionMap.Sample(sampler_objectshader, UV_occlusionMap).r;
+		surface_occlusion_roughness_metallic_reflectance.r *= xOcclusionMap.Sample(sampler_objectshader, UV_occlusionMap).r;
 	}
-
 
 #ifndef SIMPLE_INPUT
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
 	const float ssao = xSSAO.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0).r;
-	occlusion *= ssao;
+	surface_occlusion_roughness_metallic_reflectance.r *= ssao;
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT
+
 
 	surface = CreateSurface(
 		surface.P, 
 		surface.N, 
 		surface.V, 
 		color,
-		surface_occlusion_roughness_metallic_reflectance.r * occlusion,
+		surface_occlusion_roughness_metallic_reflectance.r,
 		g_xMat_roughness * surface_occlusion_roughness_metallic_reflectance.g,
 		g_xMat_metalness * surface_occlusion_roughness_metallic_reflectance.b,
 		g_xMat_reflectance * surface_occlusion_roughness_metallic_reflectance.a,
@@ -851,9 +871,13 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float2 bumpColor0 = 0;
 	float2 bumpColor1 = 0;
 	float2 bumpColor2 = 0;
-	const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-	bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMat_texMulAdd.ww).rg - 1.0f;
-	bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap + g_xMat_texMulAdd.zw).rg - 1.0f;
+	[branch]
+	if (g_xMat_uvset_normalMap >= 0)
+	{
+		const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMat_texMulAdd.ww).rg - 1.0f;
+		bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap + g_xMat_texMulAdd.zw).rg - 1.0f;
+	}
 	bumpColor2 = xWaterRipples.Sample(sampler_objectshader, ScreenCoord).rg;
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMat_refractionIndex;
 	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));

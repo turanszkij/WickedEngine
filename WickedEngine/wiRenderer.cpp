@@ -3842,12 +3842,12 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		materialGPUData.g_xMat_parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 		materialGPUData.g_xMat_displacementMapping = material.displacementMapping;
 		materialGPUData.g_xMat_useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
-		materialGPUData.g_xMat_uvset_baseColorMap = material.uvset_baseColorMap;
-		materialGPUData.g_xMat_uvset_surfaceMap = material.uvset_surfaceMap;
-		materialGPUData.g_xMat_uvset_normalMap = material.uvset_normalMap;
-		materialGPUData.g_xMat_uvset_displacementMap = material.uvset_displacementMap;
-		materialGPUData.g_xMat_uvset_emissiveMap = material.uvset_emissiveMap;
-		materialGPUData.g_xMat_uvset_occlusionMap = material.uvset_occlusionMap;
+		materialGPUData.g_xMat_uvset_baseColorMap = material.baseColorMap == nullptr ? -1 : material.uvset_baseColorMap;
+		materialGPUData.g_xMat_uvset_surfaceMap = material.surfaceMap == nullptr ? -1 : material.uvset_surfaceMap;
+		materialGPUData.g_xMat_uvset_normalMap = material.normalMap == nullptr ? -1 : material.uvset_normalMap;
+		materialGPUData.g_xMat_uvset_displacementMap = material.displacementMap == nullptr ? -1 : material.uvset_displacementMap;
+		materialGPUData.g_xMat_uvset_emissiveMap = material.emissiveMap == nullptr ? -1 : material.uvset_emissiveMap;
+		materialGPUData.g_xMat_uvset_occlusionMap = material.occlusionMap == nullptr ? -1 : material.uvset_occlusionMap;
 		materialGPUData.g_xMat_specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
 		materialGPUData.g_xMat_occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
 		materialGPUData.g_xMat_occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;

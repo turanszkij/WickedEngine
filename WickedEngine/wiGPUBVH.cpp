@@ -154,12 +154,12 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 				global_material.displacementMapping = material.displacementMapping;
 				global_material.useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
-				global_material.uvset_baseColorMap = material.uvset_baseColorMap;
-				global_material.uvset_surfaceMap = material.uvset_surfaceMap;
-				global_material.uvset_normalMap = material.uvset_normalMap;
-				global_material.uvset_displacementMap = material.uvset_displacementMap;
-				global_material.uvset_emissiveMap = material.uvset_emissiveMap;
-				global_material.uvset_occlusionMap = material.uvset_occlusionMap;
+				global_material.uvset_baseColorMap = material.baseColorMap == nullptr ? -1 : material.uvset_baseColorMap;
+				global_material.uvset_surfaceMap = material.surfaceMap == nullptr ? -1 : material.uvset_surfaceMap;
+				global_material.uvset_normalMap = material.normalMap == nullptr ? -1 : material.uvset_normalMap;
+				global_material.uvset_displacementMap = material.displacementMap == nullptr ? -1 : material.uvset_displacementMap;
+				global_material.uvset_emissiveMap = material.emissiveMap == nullptr ? -1 : material.uvset_emissiveMap;
+				global_material.uvset_occlusionMap = material.occlusionMap == nullptr ? -1 : material.uvset_occlusionMap;
 				global_material.specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
 				global_material.occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
 				global_material.occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;

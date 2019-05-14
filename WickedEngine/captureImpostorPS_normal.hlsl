@@ -7,9 +7,13 @@ float4 main(PixelInputType input) : SV_Target0
 
 	float3x3 TBN = compute_tangent_frame(N, P, input.uvsets.xy);
 
-	float3 bumpColor;
-	const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-	NormalMapping(UV_normalMap, P, N, TBN, bumpColor);
+	[branch]
+	if (g_xMat_uvset_normalMap >= 0)
+	{
+		float3 bumpColor;
+		const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		NormalMapping(UV_normalMap, P, N, TBN, bumpColor);
+	}
 
 	return float4(N * 0.5f + 0.5f, 1);
 }

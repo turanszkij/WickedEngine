@@ -882,6 +882,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		ss << material->uvset_surfaceMap;
 		texture_surface_uvset_Field->SetText(ss.str());
 		ss.str("");
+		ss << material->uvset_displacementMap;
+		texture_displacement_uvset_Field->SetText(ss.str());
+		ss.str("");
 		ss << material->uvset_emissiveMap;
 		texture_emissive_uvset_Field->SetText(ss.str());
 		ss.str("");

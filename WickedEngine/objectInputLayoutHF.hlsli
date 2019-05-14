@@ -71,7 +71,7 @@ struct VertexSurface
 	float2 atlas;
 	float4 color;
 	float3 normal;
-	uint materialIndex;
+	uint subsetIndex;
 	float4 prevPos;
 };
 inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
@@ -82,11 +82,11 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS input)
 
 	surface.color = g_xMat_baseColor * input.inst.color;
 
-	uint normal_wind_matID = asuint(input.pos.w);
-	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
+	uint normal_subsetIndex = asuint(input.pos.w);
+	surface.normal.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_subsetIndex >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_subsetIndex >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.subsetIndex = (normal_subsetIndex >> 24) & 0x000000FF;
 
 	return surface;
 }
@@ -98,13 +98,13 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_POS_TEX input)
 
 	surface.color = g_xMat_baseColor * input.inst.color;
 
-	uint normal_wind_matID = asuint(input.pos.w);
-	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
+	uint normal_subsetIndex = asuint(input.pos.w);
+	surface.normal.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_subsetIndex >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_subsetIndex >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.subsetIndex = (normal_subsetIndex >> 24) & 0x000000FF;
 
-	surface.uvsets = float4(input.uv0, input.uv1) * g_xMat_texMulAdd.xyxy + g_xMat_texMulAdd.zwzw;
+	surface.uvsets = float4(input.uv0 * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw, input.uv1);
 
 	return surface;
 }
@@ -121,13 +121,13 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 		surface.color *= input.col;
 	}
 
-	uint normal_wind_matID = asuint(input.pos.w);
-	surface.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.y = (float)((normal_wind_matID >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.normal.z = (float)((normal_wind_matID >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	surface.materialIndex = (normal_wind_matID >> 24) & 0x000000FF;
+	uint normal_subsetIndex = asuint(input.pos.w);
+	surface.normal.x = (float)((normal_subsetIndex >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.y = (float)((normal_subsetIndex >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.normal.z = (float)((normal_subsetIndex >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	surface.subsetIndex = (normal_subsetIndex >> 24) & 0x000000FF;
 
-	surface.uvsets = float4(input.uv0, input.uv1) * g_xMat_texMulAdd.xyxy + g_xMat_texMulAdd.zwzw;
+	surface.uvsets = float4(input.uv0 * g_xMat_texMulAdd.xy + g_xMat_texMulAdd.zw, input.uv1);
 
 	surface.atlas = input.atl * input.instAtlas.atlasMulAdd.xy + input.instAtlas.atlasMulAdd.zw;
 
