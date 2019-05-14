@@ -796,8 +796,8 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 				anim_name = "StaggerAirEnd",
 				anim = INVALID_ENTITY,
 				looped = false,
-				clipbox = AABB(Vector(-1), Vector(1, 5)),
-				hurtbox = AABB(Vector(-1.2), Vector(1.2, 5.5)),
+				clipbox = AABB(Vector(-1), Vector(1, 1)),
+				hurtbox = AABB(Vector(-1.2), Vector(1.2, 1)),
 				update = function(self)
 					if(self.position.GetY() < 1 and self.velocity.GetY() < 0) then
 						self:spawn_effect_dust(self.position)
@@ -1041,8 +1041,8 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			LightPunch = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
-				{ "LightPunch", condition = function(self) return self:require_frame(11) and self:require_hitconfirm(5) and self:require_input_window("5A", 10) end, },
-				{ "HeavyPunch", condition = function(self) return self:require_frame(11) and self:require_hitconfirm(5) and self:require_input_window("5B", 10) end, },
+				{ "LightPunch", condition = function(self) return self:require_window(11,16) and self:require_hitconfirm(5) and self:require_input_window("5A", 10) end, },
+				{ "HeavyPunch", condition = function(self) return self:require_window(11,16) and self:require_hitconfirm(5) and self:require_input_window("5B", 10) end, },
 			},
 			ForwardLightPunch = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -1051,9 +1051,9 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			HeavyPunch = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
-				{ "ForwardLightPunch", condition = function(self) return self:require_frame(11) and self:require_hitconfirm(6) and self:require_input_window("6A", 10) end, },
-				{ "LightKick", condition = function(self) return self:require_frame(11) and self:require_hitconfirm(6) and self:require_input_window("5C", 10) end, },
-				{ "HeavyKick", condition = function(self) return self:require_frame(11) and self:require_hitconfirm(6) and self:require_input_window("5D", 10) end, },
+				{ "ForwardLightPunch", condition = function(self) return self:require_window(11,21) and self:require_hitconfirm(6) and self:require_input_window("6A", 10) end, },
+				{ "LightKick", condition = function(self) return self:require_window(11,21) and self:require_hitconfirm(6) and self:require_input_window("5C", 10) end, },
+				{ "HeavyKick", condition = function(self) return self:require_window(11,21) and self:require_hitconfirm(6) and self:require_input_window("5D", 10) end, },
 			},
 			LowPunch = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -1062,7 +1062,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			LightKick = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
-				{ "HeavyKick", condition = function(self) return self:require_frame(11) and self:require_hitconfirm(8) and self:require_input_window("5D", 10) end, },
+				{ "HeavyKick", condition = function(self) return self:require_window(11,19) and self:require_hitconfirm(8) and self:require_input_window("5D", 10) end, },
 			},
 			HeavyKick = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -1087,9 +1087,9 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			Uppercut = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
 				{ "Idle", condition = function(self) return self:require_animationfinish() end, },
-				{ "Jump", condition = function(self) return self:require_frame(10) and self:require_hitconfirm(4) and self:require_input_window("8", 20) end, },
-				{ "JumpBack", condition = function(self) return self:require_frame(10) and self:require_hitconfirm(4) and self:require_input_window("7", 20) end, },
-				{ "JumpForward", condition = function(self) return self:require_frame(10) and self:require_hitconfirm(4) and self:require_input_window("9", 20) end, },
+				{ "Jump", condition = function(self) return self:require_window(10,26) and self:require_hitconfirm(4) and self:require_input_window("8", 20) end, },
+				{ "JumpBack", condition = function(self) return self:require_window(10,26) and self:require_hitconfirm(4) and self:require_input_window("7", 20) end, },
+				{ "JumpForward", condition = function(self) return self:require_window(10,26) and self:require_hitconfirm(4) and self:require_input_window("9", 20) end, },
 			},
 			Jaunt = { 
 				{ "StaggerStart", condition = function(self) return self:require_hurt() end, },
@@ -1411,7 +1411,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			elseif(self.ai_state == "Guard" and self:require_guard()) then
 				table.insert(self.input_buffer, {age = 0, command = '4'})
 			elseif(self.ai_state == "Attack") then
-				table.insert(self.input_buffer, {age = 0, command = 'A'})
+				table.insert(self.input_buffer, {age = 0, command = "5A"})
 			else
 				table.insert(self.input_buffer, {age = 0, command = '5'})
 			end
@@ -1503,7 +1503,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			if(self.position.GetY() <= 0 and self.velocity.GetY()<=0) then
 				self.position.SetY(0) -- snap to ground
 				self.velocity.SetY(0) -- don't fall below ground
-				self.velocity = vector.Multiply(self.velocity, 0.86) -- ground drag
+				self.velocity = vector.Multiply(self.velocity, 0.88) -- ground drag
 			end
 
 
@@ -1639,7 +1639,7 @@ local CAMERA_HEIGHT = 4 -- camera height from ground
 local DEFAULT_CAMERADISTANCE = -9.5 -- the default camera distance when characters are close to each other
 local MODIFIED_CAMERADISTANCE = -11.5 -- if the two players are far enough from each other, the camera will zoom out to this distance
 local CAMERA_DISTANCE_MODIFIER = 10 -- the required distance between the characters when the camera should zoom out
-local PLAYAREA = 32 -- play area horizontal bounds
+local PLAYAREA = 30 -- play area horizontal bounds
 
 -- ***Interaction between two characters:
 local ResolveCharacters = function(player1, player2)
@@ -1681,8 +1681,8 @@ local ResolveCharacters = function(player1, player2)
 
 	-- Push:
 
-	-- player on the edge of screen can initiate push transfer:
-	--	it means that the player cannot be pushed further, so the opponent will be pushed back instead to compensate:
+	-- opponent on the edge of screen can initiate push transfer:
+	--	it means that the opponent cannot be pushed further, so the pushing player will be pushed back instead to compensate:
 	if(player2.clipbox.GetMin().GetX() <= camera_side_left and player1.push.GetX() < 0) then
 		player2.push.SetX(-player1.push.GetX())
 	end
@@ -1690,10 +1690,10 @@ local ResolveCharacters = function(player1, player2)
 		player2.push.SetX(-player1.push.GetX())
 	end
 	if(player1.clipbox.GetMin().GetX() <= camera_side_left and player2.push.GetX() < 0) then
-		player1.push.SetX(-player1.push.GetX())
+		player1.push.SetX(-player2.push.GetX())
 	end
 	if(player1.clipbox.GetMax().GetX() >= camera_side_right and player2.push.GetX() > 0) then
-		player1.push.SetX(-player1.push.GetX())
+		player1.push.SetX(-player2.push.GetX())
 	end
 
 	-- apply push forces:
@@ -1726,8 +1726,8 @@ local ResolveCharacters = function(player1, player2)
 		player1.hurt = false
 		player2.hurt = false
 		-- player1 hits player2:
-		for i,hitbox in pairs(player1.hitboxes) do
-			for j,hurtbox in pairs(player2.hurtboxes) do
+		for i,hitbox in ipairs(player1.hitboxes) do
+			for j,hurtbox in ipairs(player2.hurtboxes) do
 				if(hitbox.Intersects2D(hurtbox)) then
 					player1_hitconfirm = true
 					player2.hurt = true
@@ -1759,8 +1759,8 @@ local ResolveCharacters = function(player1, player2)
 		player1.can_guard = false
 		player2.can_guard = false
 		-- player1 guardbox player2:
-		for i,guardbox in pairs(player1.guardboxes) do
-			for j,hurtbox in pairs(player2.hurtboxes) do
+		for i,guardbox in ipairs(player1.guardboxes) do
+			for j,hurtbox in ipairs(player2.hurtboxes) do
 				if(guardbox.Intersects2D(hurtbox)) then
 					player2.can_guard = true
 					break
@@ -1768,8 +1768,8 @@ local ResolveCharacters = function(player1, player2)
 			end
 		end
 		-- player2 guardbox player1:
-		for i,guardbox in pairs(player2.guardboxes) do
-			for j,hurtbox in pairs(player1.hurtboxes) do
+		for i,guardbox in ipairs(player2.guardboxes) do
+			for j,hurtbox in ipairs(player1.hurtboxes) do
 				if(guardbox.Intersects2D(hurtbox)) then
 					player1.can_guard = true
 					break
