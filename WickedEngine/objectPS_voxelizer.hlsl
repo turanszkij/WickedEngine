@@ -96,8 +96,7 @@ void main(PSInput input)
 						[branch]
 						if (light.IsCastingShadow() >= 0)
 						{
-							float4 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
-							ShPos.xyz /= ShPos.w;
+							float3 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]).xyz; // ortho matrix, no divide by .w
 							float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 							[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
@@ -168,7 +167,7 @@ void main(PSInput input)
 									[branch]
 									if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 									{
-										lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
+										lightColor *= shadowCascade(ShPos.xyz, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
 									}
 								}
 

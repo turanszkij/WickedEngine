@@ -51,7 +51,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 				[branch]
 				if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
 				{
-					attenuation *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
+					attenuation *= shadowCascade(ShPos.xyz, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
 				}
 			}
 

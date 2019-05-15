@@ -45,7 +45,7 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 
 
 
-inline float3 shadowCascade(float4 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
+inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
 	float realDistance = shadowPos.z + bias;
 	float sum = 0;
@@ -104,15 +104,15 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 		[branch]
 		if (light.IsCastingShadow())
 		{
-			// calculate shadow map texcoords:
-			float4 ShPos[3];
-			ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
-			ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 1]);
-			ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 2]);
+			// calculate shadow map texcoords (no need to divide by .w because orthographic projection):
+			float3 ShPos[3];
+			ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]).xyz;
+			ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 1]).xyz;
+			ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 2]).xyz;
 			float3 ShTex[3];
-			ShTex[0] = ShPos[0].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-			ShTex[1] = ShPos[1].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-			ShTex[2] = ShPos[2].xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+			ShTex[0] = ShPos[0] * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+			ShTex[1] = ShPos[1] * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+			ShTex[2] = ShPos[2] * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 			// determine the main shadow cascade:
 			int cascade = -1;
@@ -126,7 +126,7 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 			[branch]
 			if (cascade >= 0)
 			{
-				const float3 cascadeBlend = abs(ShTex[cascade] * 2 - 1);
+				const float3 cascadeBlend = saturate(abs(ShPos[cascade]));
 				const int2 cascades = uint2(cascade, cascade - 1);
 				float3 shadows[2] = { float3(1,1,1), float3(1,1,1) };
 
@@ -231,7 +231,7 @@ inline void SpotLight(in ShaderEntityType light, in Surface surface, inout Light
 					[branch]
 					if (is_saturated(ShTex))
 					{
-						sh *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
+						sh *= shadowCascade(ShPos.xyz, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex());
 					}
 				}
 #endif // DISABLE_SHADOWMAPS
