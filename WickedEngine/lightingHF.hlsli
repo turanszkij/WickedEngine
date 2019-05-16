@@ -47,12 +47,10 @@ inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
 
 inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, float bias, float slice) 
 {
-	float realDistance = shadowPos.z + bias;
-	float sum = 0;
-	float3 retVal = 1;
+	const float realDistance = shadowPos.z + bias;
+	float3 shadow = 0;
 #ifndef DISABLE_SHADOWMAPS
 #ifndef DISABLE_SOFT_SHADOWS
-	float samples = 0.0f;
 	const float range = 1.5f;
 	[loop]
 	for (float y = -range; y <= range; y += 1.0f)
@@ -60,13 +58,13 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 		[loop]
 		for (float x = -range; x <= range; x += 1.0f)
 		{
-			sum += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex + float2(x, y) * shadowKernel, slice), realDistance).r;
-			samples++;
+			shadow.x += texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex + float2(x, y) * shadowKernel, slice), realDistance).r;
+			shadow.y++;
 		}
 	}
-	retVal *= sum / samples;
+	shadow = shadow.x / shadow.y;
 #else
-	retVal *= texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex, slice), realDistance).r;
+	shadow = texture_shadowarray_2d.SampleCmpLevelZero(sampler_cmp_depth, float3(ShTex, slice), realDistance).r;
 #endif
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
@@ -77,16 +75,16 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 		// but I don't wanna do that, not overly important for now
 		float4 transparent_shadowmap = texture_shadowarray_transparent.SampleLevel(sampler_linear_clamp, float3(ShTex, slice), 0).rgba;
 		// Tint the shadow:
-		retVal *= transparent_shadowmap.rgb;
+		shadow *= transparent_shadowmap.rgb;
 		// Reduce shadow by caustics (caustics can also increase total light above maximum):
 		const float causticsStrength = 20;
-		retVal += transparent_shadowmap.a * causticsStrength;
+		shadow += transparent_shadowmap.a * causticsStrength;
 	}
 #endif //DISABLE_TRANSPARENT_SHADOWMAP
 
 #endif // DISABLE_SHADOWMAPS
 
-	return retVal;
+	return shadow;
 }
 
 
@@ -116,7 +114,7 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 
 			// determine the main shadow cascade:
 			int cascade = -1;
-			[loop]
+			[unroll]
 			for (uint i = 0; i < 3; ++i)
 			{
 				cascade = is_saturated(ShTex[i]) ? i : cascade;
@@ -126,22 +124,25 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 			[branch]
 			if (cascade >= 0)
 			{
-				const float3 cascadeBlend = saturate(abs(ShPos[cascade]));
-				const int2 cascades = uint2(cascade, cascade - 1);
-				float3 shadows[2] = { float3(1,1,1), float3(1,1,1) };
-
 				// main shadow cascade sampling:
-				shadows[0] = shadowCascade(ShPos[cascades[0]], ShTex[cascades[0]].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascades[0]);
+				const float3 shadow_main = shadowCascade(ShPos[cascade], ShTex[cascade].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
 
-				// fallback shadow cascade sampling (far cascade has no fallback, so avoid sampling):
+				// fallback shadow cascade sampling (far cascade has no fallback, so in that case, do not blend):
 				[branch]
-				if (cascades[1] >= 0)
+				if (cascade > 0)
 				{
-					shadows[1] = shadowCascade(ShPos[cascades[1]], ShTex[cascades[1]].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascades[1]);
-				}
+					const float3 cascadeRange = saturate(abs(ShPos[cascade]));
+					const float fade = pow(max(cascadeRange.x, max(cascadeRange.y, cascadeRange.z)), 8);
 
-				// blend the cascades:
-				sh *= lerp(shadows[0], shadows[1], pow(max(cascadeBlend.x, max(cascadeBlend.y, cascadeBlend.z)), 4));
+					cascade -= 1;
+					const float3 shadow_fallback = shadowCascade(ShPos[cascade], ShTex[cascade].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+
+					sh *= lerp(shadow_main, shadow_fallback, fade);
+				}
+				else
+				{
+					sh *= shadow_main;
+				}
 			}
 
 		}
