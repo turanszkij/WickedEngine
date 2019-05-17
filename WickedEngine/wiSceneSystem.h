@@ -730,6 +730,7 @@ namespace wiSceneSystem
 		XMFLOAT4X4 View, Projection, VP;
 		Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
+		XMFLOAT2 jitter;
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();

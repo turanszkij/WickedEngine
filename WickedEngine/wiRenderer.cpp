@@ -3748,8 +3748,7 @@ void UpdatePerFrameData(float dt)
 		temporalAAJitterPrev = temporalAAJitter;
 		temporalAAJitter.x = jitter * (halton.x * 2 - 1) / (float)GetInternalResolution().x;
 		temporalAAJitter.y = jitter * (halton.y * 2 - 1) / (float)GetInternalResolution().y;
-		GetCamera().Projection.m[2][0] = temporalAAJitter.x;
-		GetCamera().Projection.m[2][1] = temporalAAJitter.y;
+		GetCamera().jitter = temporalAAJitter;
 	}
 	else
 	{
