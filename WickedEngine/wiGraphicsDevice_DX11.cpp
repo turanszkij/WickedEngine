@@ -1380,6 +1380,7 @@ const void* const __nullBlob[128] = {}; // this is initialized to nullptrs and u
 
 GraphicsDevice_DX11::GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 {
+	DEBUGDEVICE = debuglayer;
 	FULLSCREEN = fullscreen;
 
 #ifndef WINSTORE_SUPPORT

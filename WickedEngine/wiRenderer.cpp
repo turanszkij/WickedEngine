@@ -263,6 +263,8 @@ struct FrameCulling
 	vector<uint32_t> culledLights;
 	vector<uint32_t> culledDecals;
 	vector<uint32_t> culledEnvProbes;
+	vector<uint32_t> culledEmitters;
+	vector<uint32_t> culledHairs;
 
 	void Clear()
 	{
@@ -270,6 +272,8 @@ struct FrameCulling
 		culledLights.clear();
 		culledDecals.clear();
 		culledEnvProbes.clear();
+		culledEmitters.clear();
+		culledHairs.clear();
 	}
 };
 unordered_map<const CameraComponent*, FrameCulling> frameCullings;
@@ -3479,7 +3483,7 @@ void SetUpStates()
 }
 
 
-void UpdatePerFrameData(float dt)
+void UpdatePerFrameData(float dt, uint32_t layerMask)
 {
 	renderTime_Prev = renderTime;
 	deltaTime = dt * GetGameSpeed();
@@ -3618,6 +3622,13 @@ void UpdatePerFrameData(float dt)
 			wiJobSystem::Execute([&] {
 				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 				{
+					Entity entity = scene.aabb_objects.GetEntity(i);
+					const LayerComponent* layer = scene.layers.GetComponent(entity);
+					if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+					{
+						continue;
+					}
+
 					const AABB& aabb = scene.aabb_objects[i];
 
 					if (culling.frustum.CheckBox(aabb))
@@ -3644,6 +3655,13 @@ void UpdatePerFrameData(float dt)
 					// Cull decals:
 					for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
 					{
+						Entity entity = scene.aabb_decals.GetEntity(i);
+						const LayerComponent* layer = scene.layers.GetComponent(entity);
+						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+						{
+							continue;
+						}
+
 						const AABB& aabb = scene.aabb_decals[i];
 
 						if (culling.frustum.CheckBox(aabb))
@@ -3657,6 +3675,13 @@ void UpdatePerFrameData(float dt)
 					// Cull probes:
 					for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
 					{
+						Entity entity = scene.aabb_probes.GetEntity(i);
+						const LayerComponent* layer = scene.layers.GetComponent(entity);
+						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+						{
+							continue;
+						}
+
 						const AABB& aabb = scene.aabb_probes[i];
 
 						if (culling.frustum.CheckBox(aabb))
@@ -3670,6 +3695,13 @@ void UpdatePerFrameData(float dt)
 					// Cull lights:
 					for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
 					{
+						Entity entity = scene.aabb_lights.GetEntity(i);
+						const LayerComponent* layer = scene.layers.GetComponent(entity);
+						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+						{
+							continue;
+						}
+
 						const AABB& aabb = scene.aabb_lights[i];
 
 						if (culling.frustum.CheckBox(aabb))
@@ -3679,12 +3711,56 @@ void UpdatePerFrameData(float dt)
 					}
 				});
 
+				wiJobSystem::Execute([&] {
+					// Cull emitters:
+					for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+					{
+						Entity entity = scene.emitters.GetEntity(i);
+						const LayerComponent* layer = scene.layers.GetComponent(entity);
+						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+						{
+							continue;
+						}
+						culling.culledEmitters.push_back((uint32_t)i);
+					}
+				});
+
+				wiJobSystem::Execute([&] {
+					// Cull hairs:
+					for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+					{
+						Entity entity = scene.hairs.GetEntity(i);
+						const LayerComponent* layer = scene.layers.GetComponent(entity);
+						if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
+						{
+							continue;
+						}
+						culling.culledHairs.push_back((uint32_t)i);
+					}
+				});
+
 				wiJobSystem::Wait();
+
+				// Sort lights based on distance so that closer lights will receive shadow map priority:
+				const size_t lightCount = culling.culledLights.size();
+				assert(lightCount < 0x0000FFFF); // watch out for sorting hash truncation!
+				uint32_t* lightSortingHashes = (uint32_t*)frameAllocators[0].allocate(sizeof(uint32_t) * lightCount);
+				for (size_t i = 0; i < lightCount; ++i)
+				{
+					const uint32_t lightIndex = culling.culledLights[i];
+					const LightComponent& light = scene.lights[lightIndex];
+					float distance = wiMath::DistanceEstimated(light.position, camera->Eye);
+					lightSortingHashes[i] = 0;
+					lightSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
+					lightSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
+				}
+				std::sort(lightSortingHashes, lightSortingHashes + lightCount, std::less<uint32_t>());
 
 				int shadowCounter_2D = 0;
 				int shadowCounter_Cube = 0;
-				for (uint32_t lightIndex : culling.culledLights)
+				for (size_t i = 0; i < lightCount; ++i)
 				{
+					const uint32_t lightIndex = culling.culledLights[lightSortingHashes[i] & 0x0000FFFF];
 					LightComponent& light = scene.lights[lightIndex];
 
 					// Link shadowmaps to lights till there are free slots
@@ -4156,10 +4232,10 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
-	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	for (uint32_t emitterIndex : mainCameraCulling.culledEmitters)
 	{
-		const wiEmittedParticle& emitter = scene.emitters[i];
-		Entity entity = scene.emitters.GetEntity(i);
+		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
+		Entity entity = scene.emitters.GetEntity(emitterIndex);
 		const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 		const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
@@ -4168,9 +4244,9 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 	// Hair particle systems GPU simulation:
-	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+	for (uint32_t hairIndex : mainCameraCulling.culledHairs)
 	{
-		const wiHairParticle& hair = scene.hairs[i];
+		const wiHairParticle& hair = scene.hairs[hairIndex];
 
 		if (hair.meshID != INVALID_ENTITY && GetCamera().frustum.CheckBox(hair.aabb))
 		{
@@ -4178,7 +4254,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 			if (mesh != nullptr)
 			{
-				Entity entity = scene.hairs.GetEntity(i);
+				Entity entity = scene.hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 				hair.UpdateGPU(*mesh, material, threadID);
@@ -4412,14 +4488,16 @@ void DrawWaterRipples(GRAPHICSTHREAD threadID)
 void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
 {
 	const Scene& scene = GetScene();
-	size_t emitterCount = scene.emitters.GetCount();
+	const FrameCulling& culling = frameCullings.at(&camera);
+	size_t emitterCount = culling.culledEmitters.size();
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
 	uint32_t* emitterSortingHashes = (uint32_t*)frameAllocators[threadID].allocate(sizeof(uint32_t) * emitterCount);
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
-		const wiEmittedParticle& emitter = scene.emitters[i];
+		const uint32_t emitterIndex = culling.culledEmitters[i];
+		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
 		float distance = wiMath::DistanceEstimated(emitter.center, camera.Eye);
 		emitterSortingHashes[i] = 0;
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
@@ -4429,9 +4507,9 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
-		uint32_t emitterIndex = emitterSortingHashes[i] & 0x0000FFFF;
+		const uint32_t emitterIndex = culling.culledEmitters[emitterSortingHashes[i] & 0x0000FFFF];
 		const wiEmittedParticle& emitter = scene.emitters[emitterIndex];
-		Entity entity = scene.emitters.GetEntity(emitterIndex);
+		const Entity entity = scene.emitters.GetEntity(emitterIndex);
 		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
@@ -4619,7 +4697,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 					else if (type == LightComponent::RECTANGLE)
 					{
 						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-							XMMatrixScaling(light.width * 0.5f, light.height * 0.5f, 0.5f)*
+							XMMatrixScaling(light.width * 0.5f * light.scale.x, light.height * 0.5f * light.scale.y, 0.5f)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 							camera.GetViewProjection()
@@ -4632,7 +4710,7 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 					else if (type == LightComponent::TUBE)
 					{
 						XMStoreFloat4x4(&lcb.lightWorld, XMMatrixTranspose(
-							XMMatrixScaling(std::max(light.width * 0.5f, light.radius), light.radius, light.radius)*
+							XMMatrixScaling(std::max(light.width * 0.5f, light.radius) * light.scale.x, light.radius, light.radius)*
 							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))*
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))*
 							camera.GetViewProjection()
@@ -4872,8 +4950,6 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		BindConstantBuffers(VS, threadID);
 		BindConstantBuffers(PS, threadID);
 
-		const bool all_layers = layerMask == 0xFFFFFFFF;
-
 
 		ViewPort vp;
 
@@ -4957,14 +5033,11 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 								const ObjectComponent& object = scene.objects[i];
 								if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
 								{
-									if (!all_layers)
+									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+									const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+									if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 									{
-										Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-										const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-										if (!(layerMask & layer.GetLayerMask()))
-										{
-											continue;
-										}
+										continue;
 									}
 
 									RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
@@ -5028,15 +5101,13 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							const ObjectComponent& object = scene.objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow())
 							{
-								if (!all_layers)
+								Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+								const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+								if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 								{
-									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-									if (!(layerMask & layer.GetLayerMask()))
-									{
-										continue;
-									}
+									continue;
 								}
+
 								RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
 								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
@@ -5099,14 +5170,11 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							const ObjectComponent& object = scene.objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && object.GetRenderTypes() == RENDERTYPE_OPAQUE)
 							{
-								if (!all_layers)
+								Entity cullable_entity = scene.aabb_objects.GetEntity(i);
+								const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+								if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 								{
-									Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-									const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-									if (!(layerMask & layer.GetLayerMask()))
-									{
-										continue;
-									}
+									continue;
 								}
 
 								RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
@@ -5166,7 +5234,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 	}
 }
 
-void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
@@ -5191,13 +5259,13 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 			SetAlphaRef(0.25f, threadID);
 		}
 
-		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		for (uint32_t hairIndex : culling.culledHairs)
 		{
-			const wiHairParticle& hair = scene.hairs[i];
+			const wiHairParticle& hair = scene.hairs[hairIndex];
 
 			if (camera.frustum.CheckBox(hair.aabb))
 			{
-				Entity entity = scene.hairs.GetEntity(i);
+				Entity entity = scene.hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 				if (renderPass == RENDERPASS_FORWARD)
@@ -5218,16 +5286,6 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	renderQueue.camera = &camera;
 	for (uint32_t instanceIndex : culling.culledObjects)
 	{
-		if (layerMask != ~0)
-		{
-			Entity entity = scene.objects.GetEntity(instanceIndex);
-			const LayerComponent& layer = *scene.layers.GetComponent(entity);
-			if (!(layer.GetLayerMask() & layerMask))
-			{
-				continue;
-			}
-		}
-
 		const ObjectComponent& object = scene.objects[instanceIndex];
 
 		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
@@ -5258,7 +5316,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 }
 
-void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask)
+void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
@@ -5284,13 +5342,13 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 	{
 		// transparent passes can only render hair when alpha composition is enabled
 
-		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		for (uint32_t hairIndex : culling.culledHairs)
 		{
-			const wiHairParticle& hair = scene.hairs[i];
+			const wiHairParticle& hair = scene.hairs[hairIndex];
 
 			if (camera.frustum.CheckBox(hair.aabb))
 			{
-				Entity entity = scene.hairs.GetEntity(i);
+				Entity entity = scene.hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
 				if (renderPass == RENDERPASS_FORWARD)
@@ -5309,16 +5367,6 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 	renderQueue.camera = &camera;
 	for (uint32_t instanceIndex : culling.culledObjects)
 	{
-		if (layerMask != ~0)
-		{
-			Entity entity = scene.objects.GetEntity(instanceIndex);
-			const LayerComponent& layer = *scene.layers.GetComponent(entity);
-			if (!(layer.GetLayerMask() & layerMask))
-			{
-				continue;
-			}
-		}
-
 		const ObjectComponent& object = scene.objects[instanceIndex];
 
 		if (GetOcclusionCullingEnabled() && occlusionCulling && object.IsOccluded())
@@ -6218,8 +6266,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			if (culler.intersects(aabb))
 			{
 				Entity cullable_entity = scene.aabb_objects.GetEntity(i);
-				const LayerComponent& layer = *scene.layers.GetComponent(cullable_entity);
-				if ((layerMask & layer.GetLayerMask()))
+				const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
+				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
 					const ObjectComponent& object = scene.objects[i];
 					if (object.IsRenderable())

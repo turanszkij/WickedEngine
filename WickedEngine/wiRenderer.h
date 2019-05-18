@@ -75,8 +75,8 @@ namespace wiRenderer
 	// Attach camera to entity for the current frame
 	void AttachCamera(wiECS::Entity entity);
 
-	// Updates the main scene, performs frustum culling for main camera and other tasks that are only done once per frame
-	void UpdatePerFrameData(float dt);
+	// Updates the main scene, performs frustum culling for main camera and other tasks that are only done once per frame. Specify layerMask to only include specific entities in the render frame.
+	void UpdatePerFrameData(float dt, uint32_t layerMask = ~0);
 	// Updates the GPU state according to the previously called UpatePerFrameData()
 	void UpdateRenderData(GRAPHICSTHREAD threadID);
 
@@ -109,11 +109,11 @@ namespace wiRenderer
 	// A black skydome will be draw with only the sun being visible on it
 	void DrawSun(GRAPHICSTHREAD threadID);
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling);
 	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling);
 	// Draw shadow maps for each visible light that has associated shadow maps
-	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = 0xFFFFFFFF);
+	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask = ~0);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
 	void DrawDebugWorld(const wiSceneSystem::CameraComponent& camera, GRAPHICSTHREAD threadID);
 	// Draw Soft offscreen particles. Linear depth should be already readable (see BindDepthTextures())

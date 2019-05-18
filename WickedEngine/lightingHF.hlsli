@@ -502,11 +502,14 @@ inline void DiscLight(in ShaderEntityType light, in Surface surface, inout Light
 		[branch]
 		if (fLight > 0)
 		{
-			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
-			{
-				float3 r = surface.R;
-				r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
+			float3 r = surface.R;
+			r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
+			float specularAttenuation = saturate(abs(dot(lightPlaneNormal, r))); // if ray is perpendicular to light plane, it would break specular, so fade in that case
 
+			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
+			[branch]
+			if(specularAttenuation > 0)
+			{
 				float t = Trace_plane(surface.P, r, light.positionWS, lightPlaneNormal);
 				float3 p = surface.P + r * t;
 				float3 centerToRay = p - light.positionWS;
@@ -518,7 +521,7 @@ inline void DiscLight(in ShaderEntityType light, in Surface surface, inout Light
 
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
+			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
 		}
 	}
@@ -575,11 +578,14 @@ inline void RectangleLight(in ShaderEntityType light, in Surface surface, inout 
 		[branch]
 		if (fLight > 0)
 		{
-			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
-			{
-				float3 r = surface.R;
-				r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
+			float3 r = surface.R;
+			r = getSpecularDominantDirArea(surface.N, r, surface.roughness);
+			float specularAttenuation = saturate(abs(dot(lightPlaneNormal, r))); // if ray is perpendicular to light plane, it would break specular, so fade in that case
 
+			// We approximate L by the closest point on the reflection ray to the light source (representative point technique) to achieve a nice looking specular reflection
+			[branch]
+			if(specularAttenuation > 0)
+			{
 				float traced = Trace_rectangle(surface.P, r, p0, p1, p2, p3);
 
 				[branch]
@@ -630,7 +636,7 @@ inline void RectangleLight(in ShaderEntityType light, in Surface surface, inout 
 
 			SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
 
-			lighting.direct.specular += max(0, lightColor * BRDF_GetSpecular(surface, surfaceToLight));
+			lighting.direct.specular += max(0, specularAttenuation * lightColor * BRDF_GetSpecular(surface, surfaceToLight));
 			lighting.direct.diffuse += max(0, lightColor / PI);
 		}
 	}

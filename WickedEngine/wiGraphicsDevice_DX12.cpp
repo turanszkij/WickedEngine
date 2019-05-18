@@ -1541,6 +1541,7 @@ namespace wiGraphics
 
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
+		DEBUGDEVICE = debuglayer;
 		FULLSCREEN = fullscreen;
 
 #ifndef WINSTORE_SUPPORT

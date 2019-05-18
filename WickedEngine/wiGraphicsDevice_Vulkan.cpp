@@ -1573,6 +1573,7 @@ namespace wiGraphics
 
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
+		DEBUGDEVICE = debuglayer;
 		BACKBUFFER_FORMAT = FORMAT::FORMAT_B8G8R8A8_UNORM;
 
 		FULLSCREEN = fullscreen;

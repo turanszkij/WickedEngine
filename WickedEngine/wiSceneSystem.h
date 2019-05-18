@@ -666,6 +666,7 @@ namespace wiSceneSystem
 		float range_global;
 		XMFLOAT3 direction;
 		XMFLOAT4 rotation;
+		XMFLOAT3 scale;
 		XMFLOAT3 front;
 		XMFLOAT3 right;
 		int shadowMap_index = -1;

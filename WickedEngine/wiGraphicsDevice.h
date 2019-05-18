@@ -16,6 +16,7 @@ namespace wiGraphics
 		bool VSYNC = true;
 		int SCREENWIDTH = 0;
 		int SCREENHEIGHT = 0;
+		bool DEBUGDEVICE = false;
 		bool FULLSCREEN = false;
 		bool RESOLUTIONCHANGED = false;
 		FORMAT BACKBUFFER_FORMAT = FORMAT_R10G10B10A2_UNORM;
@@ -112,6 +113,8 @@ namespace wiGraphics
 		}
 		inline FORMAT GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
 		inline static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
+
+		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
 
 
 		///////////////Thread-sensitive////////////////////////

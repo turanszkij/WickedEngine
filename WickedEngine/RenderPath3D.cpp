@@ -226,7 +226,7 @@ void RenderPath3D::Update(float dt)
 {
 	RenderPath2D::Update(dt);
 
-	wiRenderer::UpdatePerFrameData(dt);
+	wiRenderer::UpdatePerFrameData(dt, getLayerMask());
 }
 
 void RenderPath3D::Compose() const
@@ -302,7 +302,7 @@ void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
 
 			wiRenderer::SetClipPlane(water, threadID);
 
-			wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, threadID, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false, getLayerMask());
+			wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, threadID, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
 			wiRenderer::DrawSky(threadID);
 
 			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
@@ -646,7 +646,7 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, threadID);
 		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, threadID);
-		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, getHairParticlesEnabled(), true, getLayerMask());
+		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, getHairParticlesEnabled(), true);
 
 		wiProfiler::EndRange(threadID); // Transparent Scene
 	}

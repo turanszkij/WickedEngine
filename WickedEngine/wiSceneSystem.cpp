@@ -1995,6 +1995,7 @@ namespace wiSceneSystem
 
 			XMStoreFloat3(&light.position, T);
 			XMStoreFloat4(&light.rotation, R);
+			XMStoreFloat3(&light.scale, S);
 			XMStoreFloat3(&light.direction, XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W));
 
 			light.range_global = light.range_local * std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
@@ -2164,91 +2165,91 @@ namespace wiSceneSystem
 				}
 
 				Entity entity = scene.aabb_objects.GetEntity(i);
-				const LayerComponent& layer = *scene.layers.GetComponent(entity);
-
-				if (layer.GetLayerMask() & layerMask)
+				const LayerComponent* layer = scene.layers.GetComponent(entity);
+				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
-					const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+					continue;
+				}
 
-					const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
-					const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
+				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
-					const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
-					const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
+				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
+				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
-					const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
+				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
+				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 
-					int subsetCounter = 0;
-					for (auto& subset : mesh.subsets)
+				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
+
+				int subsetCounter = 0;
+				for (auto& subset : mesh.subsets)
+				{
+					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
-						for (size_t i = 0; i < subset.indexCount; i += 3)
+						const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
+						const uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
+						const uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+
+						XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
+						XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
+						XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+
+						if (armature != nullptr)
 						{
-							const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
-							const uint32_t i1 = mesh.indices[subset.indexOffset + i + 1];
-							const uint32_t i2 = mesh.indices[subset.indexOffset + i + 2];
+							const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
+							const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
+							const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
 
-							XMVECTOR p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
-							XMVECTOR p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
-							XMVECTOR p2 = XMLoadFloat3(&mesh.vertex_positions[i2]);
+							const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
+							const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
+							const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
 
-							if (armature != nullptr)
+							XMMATRIX sump;
+
+							sump = armature->boneData[ind0.x].Load() * wei0.x;
+							sump += armature->boneData[ind0.y].Load() * wei0.y;
+							sump += armature->boneData[ind0.z].Load() * wei0.z;
+							sump += armature->boneData[ind0.w].Load() * wei0.w;
+
+							p0 = XMVector3Transform(p0, sump);
+
+							sump = armature->boneData[ind1.x].Load() * wei1.x;
+							sump += armature->boneData[ind1.y].Load() * wei1.y;
+							sump += armature->boneData[ind1.z].Load() * wei1.z;
+							sump += armature->boneData[ind1.w].Load() * wei1.w;
+
+							p1 = XMVector3Transform(p1, sump);
+
+							sump = armature->boneData[ind2.x].Load() * wei2.x;
+							sump += armature->boneData[ind2.y].Load() * wei2.y;
+							sump += armature->boneData[ind2.z].Load() * wei2.z;
+							sump += armature->boneData[ind2.w].Load() * wei2.w;
+
+							p2 = XMVector3Transform(p2, sump);
+						}
+
+						float distance;
+						if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance))
+						{
+							const XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
+							distance = wiMath::Distance(pos, rayOrigin);
+
+							if (distance < result.distance)
 							{
-								const XMUINT4& ind0 = mesh.vertex_boneindices[i0];
-								const XMUINT4& ind1 = mesh.vertex_boneindices[i1];
-								const XMUINT4& ind2 = mesh.vertex_boneindices[i2];
+								const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
 
-								const XMFLOAT4& wei0 = mesh.vertex_boneweights[i0];
-								const XMFLOAT4& wei1 = mesh.vertex_boneweights[i1];
-								const XMFLOAT4& wei2 = mesh.vertex_boneweights[i2];
-
-								XMMATRIX sump;
-
-								sump = armature->boneData[ind0.x].Load() * wei0.x;
-								sump += armature->boneData[ind0.y].Load() * wei0.y;
-								sump += armature->boneData[ind0.z].Load() * wei0.z;
-								sump += armature->boneData[ind0.w].Load() * wei0.w;
-
-								p0 = XMVector3Transform(p0, sump);
-
-								sump = armature->boneData[ind1.x].Load() * wei1.x;
-								sump += armature->boneData[ind1.y].Load() * wei1.y;
-								sump += armature->boneData[ind1.z].Load() * wei1.z;
-								sump += armature->boneData[ind1.w].Load() * wei1.w;
-
-								p1 = XMVector3Transform(p1, sump);
-
-								sump = armature->boneData[ind2.x].Load() * wei2.x;
-								sump += armature->boneData[ind2.y].Load() * wei2.y;
-								sump += armature->boneData[ind2.z].Load() * wei2.z;
-								sump += armature->boneData[ind2.w].Load() * wei2.w;
-
-								p2 = XMVector3Transform(p2, sump);
-							}
-
-							float distance;
-							if (TriangleTests::Intersects(rayOrigin_local, rayDirection_local, p0, p1, p2, distance))
-							{
-								const XMVECTOR pos = XMVector3Transform(XMVectorAdd(rayOrigin_local, rayDirection_local*distance), objectMat);
-								distance = wiMath::Distance(pos, rayOrigin);
-
-								if (distance < result.distance)
-								{
-									const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
-
-									result.entity = entity;
-									XMStoreFloat3(&result.position, pos);
-									XMStoreFloat3(&result.normal, nor);
-									result.distance = distance;
-									result.subsetIndex = subsetCounter;
-									result.vertexID0 = (int)i0;
-									result.vertexID1 = (int)i1;
-									result.vertexID2 = (int)i2;
-								}
+								result.entity = entity;
+								XMStoreFloat3(&result.position, pos);
+								XMStoreFloat3(&result.normal, nor);
+								result.distance = distance;
+								result.subsetIndex = subsetCounter;
+								result.vertexID0 = (int)i0;
+								result.vertexID1 = (int)i1;
+								result.vertexID2 = (int)i2;
 							}
 						}
-						subsetCounter++;
 					}
-
+					subsetCounter++;
 				}
 
 			}
