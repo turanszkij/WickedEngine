@@ -29,6 +29,13 @@ enum GAMEPAD_BUTTON
 	GAMEPAD_BUTTON_13,
 	GAMEPAD_BUTTON_14,
 };
+enum GAMEPAD_ANALOG
+{
+	GAMEPAD_ANALOG_THUMBSTICK_L,
+	GAMEPAD_ANALOG_THUMBSTICK_R,
+	GAMEPAD_ANALOG_TRIGGER_L,
+	GAMEPAD_ANALOG_TRIGGER_R,
+};
 
 namespace wiInputManager
 {
@@ -50,6 +57,8 @@ namespace wiInputManager
 	void setpointer(const XMFLOAT4& props);
 	// hide pointer
 	void hidepointer(bool value);
+	// read analog input from controllers, like thumbsticks or triggers
+	XMFLOAT4 getanalog(GAMEPAD_ANALOG analog, short playerIndex = 0);
 
 	struct Touch
 	{

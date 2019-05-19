@@ -2,11 +2,11 @@
 --	This script will load a simple scene with a character that can be controlled
 --
 -- 	CONTROLS:
---		WASD: walk
---		SHIFT: speed
---		SPACE: Jump
---		Right Mouse Button: rotate camera
---		Scoll middle mouse: adjust camera distance
+--		WASD/left thumbstick: walk
+--		SHIFT/right shoulder button: speed
+--		SPACE/gamepad X/gamepad button 2: Jump
+--		Right Mouse Button/Right thumbstick: rotate camera
+--		Scoll middle mouse/Left-Right triggers: adjust camera distance
 --		ESCAPE key: quit
 --		ENTER: reload script
 
@@ -110,9 +110,12 @@ Character = {
 			if(input.Down(VK_DOWN) or input.Down(string.byte('S'))) then
 				lookDir = lookDir:Add( Vector(0,0,-1) )
 			end
+
+			local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
+			lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
 			
 			if(lookDir:Length()>0) then
-				if(input.Down(VK_LSHIFT)) then
+				if(input.Down(VK_LSHIFT) or input.Down(GAMEPAD_BUTTON_6, INPUT_TYPE_GAMEPAD)) then
 					self:MoveDirection(lookDir,self.moveSpeed*2)
 				else
 					self:MoveDirection(lookDir,self.moveSpeed)
@@ -121,25 +124,33 @@ Character = {
 		
 		end
 		
-		if( input.Press(string.byte('J'))  or input.Press(VK_SPACE) ) then
+		if( input.Press(string.byte('J'))  or input.Press(VK_SPACE) or input.Press(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD) ) then
 			self:Jump(0.6)
 		end
+
+		-- Camera target control:
+
+		-- read from gamepad analog stick:
+		local diff = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_R)
+		diff = vector.Multiply(diff, getDeltaTime() * 4)
 		
-		-- mouse control
+		-- read from mouse:
 		if(input.Down(VK_RBUTTON)) then
 			local mousePosNew = input.GetPointer()
 			local mouseDif = vector.Subtract(mousePosNew,self.savedPointerPos)
 			mouseDif = mouseDif:Multiply(getDeltaTime() * 0.3)
-			local target_transform = scene.Component_GetTransform(self.target)
-			target_transform.Rotate(Vector(mouseDif.GetY(),mouseDif.GetX()))
-			self.face.SetY(0)
-			self.face=self.face:Normalize()
+			diff = vector.Add(diff, mouseDif)
 			input.SetPointer(self.savedPointerPos)
 			input.HidePointer(true)
 		else
 			self.savedPointerPos = input.GetPointer()
 			input.HidePointer(false)
 		end
+		
+		local target_transform = scene.Component_GetTransform(self.target)
+		target_transform.Rotate(Vector(diff.GetY(),diff.GetX()))
+		self.face.SetY(0)
+		self.face=self.face:Normalize()
 		
 	end,
 	
@@ -238,9 +249,11 @@ ThirdPersonCamera = {
 	Update = function(self)
 		if(self.character ~= nil) then
 
-			-- Mouse scroll will move the camera distance:
-			local mouse_scroll = input.GetPointer().GetZ() -- pointer.z is the mouse wheel delta this frame
-			self.rest_distance_new = math.max(self.rest_distance_new - mouse_scroll, 2) -- do not allow too close using max
+			-- Mouse scroll or gamepad triggers will move the camera distance:
+			local scroll = input.GetPointer().GetZ() -- pointer.z is the mouse wheel delta this frame
+			scroll = scroll + input.GetAnalog(GAMEPAD_ANALOG_TRIGGER_R).GetX()
+			scroll = scroll - input.GetAnalog(GAMEPAD_ANALOG_TRIGGER_L).GetX()
+			self.rest_distance_new = math.max(self.rest_distance_new - scroll, 2) -- do not allow too close using max
 			self.rest_distance = math.lerp(self.rest_distance, self.rest_distance_new, 0.1) -- lerp will smooth out the zooming
 
 			-- We update the scene so that character's target_transform will be using up to date values
@@ -336,8 +349,8 @@ runProcess(function()
 	path.SetLightShaftsEnabled(true)
 	main.SetActivePath(path)
 
-	local font = Font("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows: walk\nSHIFT: movement speed\nSPACE: Jump\nRight Mouse Button: rotate camera\nScoll middle mouse: adjust camera distance\nESCAPE key: quit\nR: reload script");
-	font.SetSize(20)
+	local font = Font("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows/left analog stick: walk\nSHIFT/right shoulder button: movement speed\nSPACE/gamepad X/gamepad button 2: Jump\nRight Mouse Button/Right thumbstick: rotate camera\nScoll middle mouse/Left-Right triggers: adjust camera distance\nESCAPE key: quit\nR: reload script");
+	font.SetSize(24)
 	font.SetPos(Vector(10, GetScreenHeight() - 10))
 	font.SetAlign(WIFALIGN_LEFT, WIFALIGN_BOTTOM)
 	font.SetColor(0xFFADA3FF)

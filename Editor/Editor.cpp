@@ -774,6 +774,14 @@ void EditorComponent::Update(float dt)
 			yDif += buttonrotSpeed;
 		}
 
+		const XMFLOAT4 leftStick = wiInputManager::getanalog(GAMEPAD_ANALOG_THUMBSTICK_L, 0);
+		const XMFLOAT4 rightStick = wiInputManager::getanalog(GAMEPAD_ANALOG_THUMBSTICK_R, 0);
+		const XMFLOAT4 rightTrigger = wiInputManager::getanalog(GAMEPAD_ANALOG_TRIGGER_R, 0);
+		
+		const float jostickrotspeed = 0.05f;
+		xDif += rightStick.x * jostickrotspeed;
+		yDif += rightStick.y * jostickrotspeed;
+
 		xDif *= cameraWnd->rotationspeedSlider->GetValue();
 		yDif *= cameraWnd->rotationspeedSlider->GetValue();
 
@@ -783,10 +791,9 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-			const float speed = (wiInputManager::down(VK_SHIFT) ? 10.0f : 1.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
+			const float speed = ((wiInputManager::down(VK_SHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd->movespeedSlider->GetValue() * clampedDT;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
-			XMVECTOR moveNew = XMVectorSet(0, 0, 0, 0);
-
+			XMVECTOR moveNew = XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 
 			if (!wiInputManager::down(VK_CONTROL))
 			{
@@ -797,8 +804,9 @@ void EditorComponent::Update(float dt)
 				if (wiInputManager::down('S') || wiInputManager::down(GAMEPAD_BUTTON_DOWN, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, 0, -1, 0); }
 				if (wiInputManager::down('E') || wiInputManager::down(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, 1, 0, 0);	 }
 				if (wiInputManager::down('Q') || wiInputManager::down(GAMEPAD_BUTTON_1, INPUT_TYPE_GAMEPAD)) { moveNew += XMVectorSet(0, -1, 0, 0); }
-				moveNew = XMVector3Normalize(moveNew) * speed;
+				moveNew += XMVector3Normalize(moveNew);
 			}
+			moveNew *= speed;
 
 			move = XMVectorLerp(move, moveNew, 0.18f * clampedDT / 0.0166f); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));

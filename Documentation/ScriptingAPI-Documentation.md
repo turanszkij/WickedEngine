@@ -646,6 +646,7 @@ Query input devices
 - GetPointer() : Vector result
 - SetPointer(Vector pos)
 - HidePointer(bool visible)
+- GetAnalog(int type, opt int playerindex = 0) : Vector result  -- read analog data from gamepad. type parameter must be from GAMEPAD_ANALOG values
 - GetTouches() : Touch result[]
 
 #### Touch
@@ -703,6 +704,12 @@ Describes a touch contact point
 - [outer]GAMEPAD_BUTTON_4 : int
 ...
 - [outer]GAMEPAD_14 : int
+
+#### Gamepad Analog Codes
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_L : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_R : int
+- [outer]GAMEPAD_ANALOG_TRIGGER_L : int
+- [outer]GAMEPAD_ANALOG_TRIGGER_R : int
 
 ### ResourceManager
 Stores and manages resources such as textures, sounds and shaders.

@@ -6,6 +6,7 @@
 #include "wiHelper.h"
 #include "wiBackLog.h"
 
+#include <algorithm>
 #include <map>
 #include <atomic>
 #include <thread>
@@ -291,6 +292,59 @@ namespace wiInputManager
 			while (ShowCursor(true) < 0) {};
 		}
 #endif
+	}
+
+	inline float deadzone(float x)
+	{
+		if ((x) > -0.24f && (x) < 0.24f)
+			x = 0;
+		if (x < -1.0f)
+			x = -1.0f;
+		if (x > 1.0f)
+			x = 1.0f;
+		return x;
+	}
+	XMFLOAT4 getanalog(GAMEPAD_ANALOG analog, short playerindex)
+	{
+		if (playerindex < (int)controllers.size())
+		{
+			const Controller& controller = controllers[playerindex];
+
+			if (xinput != nullptr && controller.deviceType == Controller::XINPUT)
+			{
+				const auto& state = xinput->controllers[controller.deviceIndex].state.Gamepad;
+
+				switch (analog)
+				{
+				case GAMEPAD_ANALOG_THUMBSTICK_L: return XMFLOAT4(deadzone((float)state.sThumbLX / 32767.0f), deadzone((float)state.sThumbLY / 32767.0f), 0, 0);
+				case GAMEPAD_ANALOG_THUMBSTICK_R: return XMFLOAT4(deadzone((float)state.sThumbRX / 32767.0f), deadzone((float)state.sThumbRY / 32767.0f), 0, 0);
+				case GAMEPAD_ANALOG_TRIGGER_L: return XMFLOAT4((float)state.bLeftTrigger / 255.0f, 0, 0, 0);
+				case GAMEPAD_ANALOG_TRIGGER_R: return XMFLOAT4((float)state.bRightTrigger / 255.0f, 0, 0, 0);
+				default:
+					break;
+				}
+			}
+
+#ifndef WINSTORE_SUPPORT
+			if (dinput != nullptr && controller.deviceType == Controller::DIRECTINPUT)
+			{
+				const auto& state = dinput->joyState[controller.deviceIndex];
+
+				switch (analog)
+				{
+				case GAMEPAD_ANALOG_THUMBSTICK_L: return XMFLOAT4(deadzone((float)state.lX / 1000.0f), deadzone(-(float)state.lY / 1000.0f), 0, 0);
+				case GAMEPAD_ANALOG_THUMBSTICK_R: return XMFLOAT4(deadzone((float)state.lZ / 1000.0f), deadzone((float)state.lRz / 1000.0f), 0, 0);
+				case GAMEPAD_ANALOG_TRIGGER_L: return XMFLOAT4((float)state.lRx / 1000.0f * 0.5f + 0.5f, 0, 0, 0);
+				case GAMEPAD_ANALOG_TRIGGER_R: return XMFLOAT4((float)state.lRy / 1000.0f * 0.5f + 0.5f, 0, 0, 0);
+				default:
+					break;
+				}
+			}
+#endif
+
+		}
+
+		return XMFLOAT4(0, 0, 0, 0);
 	}
 
 

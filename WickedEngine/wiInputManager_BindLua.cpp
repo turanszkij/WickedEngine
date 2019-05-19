@@ -10,6 +10,7 @@ Luna<wiInputManager_BindLua>::FunctionType wiInputManager_BindLua::methods[] = {
 	lunamethod(wiInputManager_BindLua, GetPointer),
 	lunamethod(wiInputManager_BindLua, SetPointer),
 	lunamethod(wiInputManager_BindLua, HidePointer),
+	lunamethod(wiInputManager_BindLua, GetAnalog),
 	lunamethod(wiInputManager_BindLua, GetTouches),
 	{ NULL, NULL }
 };
@@ -131,6 +132,27 @@ int wiInputManager_BindLua::HidePointer(lua_State* L)
 		wiLua::SError(L, "HidePointer(bool value) not enough arguments!");
 	return 0;
 }
+int wiInputManager_BindLua::GetAnalog(lua_State* L)
+{
+	XMFLOAT4 result = XMFLOAT4(0, 0, 0, 0);
+
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		GAMEPAD_ANALOG type = (GAMEPAD_ANALOG)wiLua::SGetInt(L, 1);
+		short playerindex = 0;
+		if (argc > 1)
+		{
+			playerindex = (short)wiLua::SGetInt(L, 2);
+		}
+		result = wiInputManager::getanalog(type, playerindex);
+	}
+	else
+		wiLua::SError(L, "GetAnalog(int type, opt int playerindex = 0) not enough arguments!");
+
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&result)));
+	return 1;
+}
 int wiInputManager_BindLua::GetTouches(lua_State* L)
 {
 	auto& touches = wiInputManager::getTouches();
@@ -201,6 +223,12 @@ void wiInputManager_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_12		= 15");
 		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_13		= 16");
 		wiLua::GetGlobal()->RunText("GAMEPAD_BUTTON_14		= 17");
+
+		//Analog
+		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_THUMBSTICK_L	= 0");
+		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_THUMBSTICK_R	= 1");
+		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_TRIGGER_L		= 2");
+		wiLua::GetGlobal()->RunText("GAMEPAD_ANALOG_TRIGGER_R		= 3");
 
 		//Touch
 		wiLua::GetGlobal()->RunText("TOUCHSTATE_PRESSED		= 0");
