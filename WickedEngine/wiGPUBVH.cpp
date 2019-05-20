@@ -56,6 +56,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				sceneTextures.insert(material.GetBaseColorMap());
 				sceneTextures.insert(material.GetSurfaceMap());
 				sceneTextures.insert(material.GetEmissiveMap());
+				sceneTextures.insert(material.GetNormalMap());
 			}
 		}
 
@@ -154,12 +155,12 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
 				global_material.displacementMapping = material.displacementMapping;
 				global_material.useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
-				global_material.uvset_baseColorMap = material.baseColorMap == nullptr ? -1 : material.uvset_baseColorMap;
-				global_material.uvset_surfaceMap = material.surfaceMap == nullptr ? -1 : material.uvset_surfaceMap;
-				global_material.uvset_normalMap = material.normalMap == nullptr ? -1 : material.uvset_normalMap;
-				global_material.uvset_displacementMap = material.displacementMap == nullptr ? -1 : material.uvset_displacementMap;
-				global_material.uvset_emissiveMap = material.emissiveMap == nullptr ? -1 : material.uvset_emissiveMap;
-				global_material.uvset_occlusionMap = material.occlusionMap == nullptr ? -1 : material.uvset_occlusionMap;
+				global_material.uvset_baseColorMap = material.baseColorMap == nullptr ? -1 : (int)material.uvset_baseColorMap;
+				global_material.uvset_surfaceMap = material.surfaceMap == nullptr ? -1 : (int)material.uvset_surfaceMap;
+				global_material.uvset_normalMap = material.normalMap == nullptr ? -1 : (int)material.uvset_normalMap;
+				global_material.uvset_displacementMap = material.displacementMap == nullptr ? -1 : (int)material.uvset_displacementMap;
+				global_material.uvset_emissiveMap = material.emissiveMap == nullptr ? -1 : (int)material.uvset_emissiveMap;
+				global_material.uvset_occlusionMap = material.occlusionMap == nullptr ? -1 : (int)material.uvset_occlusionMap;
 				global_material.specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
 				global_material.occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
 				global_material.occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;
@@ -211,7 +212,6 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				}
 				else
 				{
-
 					rect = storedTextures[wiTextureHelper::getWhite()];
 				}
 				// eliminate border expansion:
@@ -220,6 +220,24 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 				rect.w -= atlasWrapBorder * 2;
 				rect.h -= atlasWrapBorder * 2;
 				global_material.emissiveMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
+
+
+
+				if (material.GetNormalMap() != nullptr)
+				{
+					rect = storedTextures[material.GetNormalMap()];
+				}
+				else
+				{
+					rect = storedTextures[wiTextureHelper::getNormalMapDefault()];
+				}
+				// eliminate border expansion:
+				rect.x += atlasWrapBorder;
+				rect.y += atlasWrapBorder;
+				rect.w -= atlasWrapBorder * 2;
+				rect.h -= atlasWrapBorder * 2;
+				global_material.normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
 					(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
 
 				materialArray.push_back(global_material);

@@ -43,13 +43,13 @@ struct TracedRenderingMaterial
 
 	float		displacementMapping;
 	uint		useVertexColors;
-	uint		uvset_baseColorMap;
-	uint		uvset_surfaceMap;
+	int			uvset_baseColorMap;
+	int			uvset_surfaceMap;
 
-	uint		uvset_normalMap;
-	uint		uvset_displacementMap;
-	uint		uvset_emissiveMap;
-	uint		uvset_occlusionMap;
+	int			uvset_normalMap;
+	int			uvset_displacementMap;
+	int			uvset_emissiveMap;
+	int			uvset_occlusionMap;
 
 	uint		specularGlossinessWorkflow;
 	uint		occlusion_primary;
@@ -59,6 +59,7 @@ struct TracedRenderingMaterial
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;
 	float4		emissiveMapAtlasMulAdd;
+	float4		normalMapAtlasMulAdd;
 };
 
 

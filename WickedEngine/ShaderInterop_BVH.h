@@ -26,6 +26,7 @@ struct BVHMeshTriangle
 	float3 n0, n1, n2;	// normals
 	float4 u0, u1, u2;	// uv sets
 	float4 c0, c1, c2;	// vertex colors
+	uint2 tangent;
 	uint materialIndex;
 };
 struct BVHAABB

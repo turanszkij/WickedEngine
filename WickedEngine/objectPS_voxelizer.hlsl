@@ -37,18 +37,14 @@ void main(PSInput input)
 		}
 		baseColor *= input.color;
 		float4 color = baseColor;
-		float4 emissiveColor;
+		float4 emissiveColor = g_xMat_emissiveColor;
 		[branch]
 		if (g_xMat_emissiveColor.a > 0 && g_xMat_uvset_emissiveMap >= 0)
 		{
 			const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			emissiveColor = xEmissiveMap.Sample(sampler_linear_wrap, UV_emissiveMap);
-			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
-			emissiveColor *= g_xMat_emissiveColor;
-		}
-		else
-		{
-			emissiveColor = 0;
+			float4 emissiveMap = xEmissiveMap.Sample(sampler_linear_wrap, UV_emissiveMap);
+			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+			emissiveColor *= emissiveMap;
 		}
 
 		// fake normals are good enough because it's only coarse diffuse light, no need to normalize:

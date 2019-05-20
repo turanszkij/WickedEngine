@@ -332,18 +332,28 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		float metalness = material.metalness * surface_occlusion_roughness_metallic_reflectance.b;
 		float reflectance = material.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
 		roughness = sqr(roughness); // convert linear roughness to cone aperture
-		float4 emissiveColor;
+		float4 emissiveColor = material.emissiveColor;
 		[branch]
 		if (material.emissiveColor.a > 0 && material.uvset_emissiveMap >= 0)
 		{
 			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
-			emissiveColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * material.emissiveMapAtlasMulAdd.xy + material.emissiveMapAtlasMulAdd.zw, 0);
-			emissiveColor.rgb = DEGAMMA(emissiveColor.rgb);
-			emissiveColor *= material.emissiveColor;
+			float4 emissiveMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * material.emissiveMapAtlasMulAdd.xy + material.emissiveMapAtlasMulAdd.zw, 0);
+			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+			emissiveColor *= emissiveMap;
 		}
-		else
+
+		[branch]
+		if (material.uvset_normalMap >= 0)
 		{
-			emissiveColor = 0;
+			const float2 UV_normalMap = material.uvset_normalMap == 0 ? hit.uvsets.xy : hit.uvsets.zw;
+			float3 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_normalMap * material.normalMapAtlasMulAdd.xy + material.normalMapAtlasMulAdd.zw, 0).rgb;
+			normalMap = normalMap.rgb * 2 - 1;
+			normalMap.g *= material.normalMapFlip;
+			const float3 N = hit.N;
+			const float4 T = float4(f16tof32(tri.tangent.x), f16tof32(tri.tangent.x >> 16), f16tof32(tri.tangent.y), f16tof32(tri.tangent.y >> 16));
+			const float3 B = normalize(cross(T.xyz, N) * T.w);
+			const float3x3 TBN = float3x3(T.xyz, B, N);
+			hit.N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 
 

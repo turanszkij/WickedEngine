@@ -137,6 +137,35 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		prim.u2 = float4(meshVertexBuffer_UV0[i2] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i2]);
 		prim.materialIndex = materialIndex;
 
+		// Compute tangent vector:
+		{
+			const float3 facenormal = normalize(prim.n0 + prim.n1 + prim.n2);
+
+			float x1 = prim.v1.x - prim.v0.x;
+			float x2 = prim.v2.x - prim.v0.x;
+			float y1 = prim.v1.y - prim.v0.y;
+			float y2 = prim.v2.y - prim.v0.y;
+			float z1 = prim.v1.z - prim.v0.z;
+			float z2 = prim.v2.z - prim.v0.z;
+
+			float s1 = prim.u1.x - prim.u0.x;
+			float s2 = prim.u2.x - prim.u0.x;
+			float t1 = prim.u1.y - prim.u0.y;
+			float t2 = prim.u2.y - prim.u0.y;
+
+			float r = 1.0F / (s1 * t2 - s2 * t1);
+			float3 sdir = float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+				(t2 * z1 - t1 * z2) * r);
+			float3 tdir = float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+				(s1 * z2 - s2 * z1) * r);
+
+			float4 tangent;
+			tangent.xyz = normalize(sdir - facenormal * dot(facenormal, sdir));
+			tangent.w = (dot(cross(facenormal, tangent.xyz), tdir) < 0.0f) ? -1.0f : 1.0f;
+			prim.tangent.x = f32tof16(tangent.x) | (f32tof16(tangent.y) << 16);
+			prim.tangent.y = f32tof16(tangent.z) | (f32tof16(tangent.w) << 16);
+		}
+
 		float4 color = xTraceBVHInstanceColor * material.baseColor;
 		prim.c0 = color;
 		prim.c1 = color;

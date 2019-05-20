@@ -253,13 +253,13 @@ CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 
 	float		g_xMat_displacementMapping;
 	uint		g_xMat_useVertexColors;
-	uint		g_xMat_uvset_baseColorMap;
-	uint		g_xMat_uvset_surfaceMap;
+	int			g_xMat_uvset_baseColorMap;
+	int			g_xMat_uvset_surfaceMap;
 
-	uint		g_xMat_uvset_normalMap;
-	uint		g_xMat_uvset_displacementMap;
-	uint		g_xMat_uvset_emissiveMap;
-	uint		g_xMat_uvset_occlusionMap;
+	int			g_xMat_uvset_normalMap;
+	int			g_xMat_uvset_displacementMap;
+	int			g_xMat_uvset_emissiveMap;
+	int			g_xMat_uvset_occlusionMap;
 
 	uint		g_xMat_specularGlossinessWorkflow;
 	uint		g_xMat_occlusion_primary;

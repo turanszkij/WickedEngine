@@ -44,31 +44,61 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float3 N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 		float4 uvsets = tri.u0 * w + tri.u1 * u + tri.u2 * v;
+		float4 color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
 
 
 		uint materialIndex = tri.materialIndex;
 
-		TracedRenderingMaterial mat = materialBuffer[materialIndex];
+		TracedRenderingMaterial material = materialBuffer[materialIndex];
 
 		uvsets = frac(uvsets); // emulate wrap
 
-		const float2 UV_baseColorMap = mat.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * mat.baseColorAtlasMulAdd.xy + mat.baseColorAtlasMulAdd.zw, 0);
-
-		const float2 UV_surfaceMap = mat.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * mat.surfaceMapAtlasMulAdd.xy + mat.surfaceMapAtlasMulAdd.zw, 0);
-
-		if (mat.specularGlossinessWorkflow)
+		float4 baseColor;
+		[branch]
+		if (material.uvset_baseColorMap >= 0)
 		{
-			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
+			baseColor = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
+			baseColor = DEGAMMA(baseColor);
+		}
+		else
+		{
+			baseColor = 1;
+		}
+		baseColor *= color;
+
+		float4 surface_occlusion_roughness_metallic_reflectance;
+		[branch]
+		if (material.uvset_surfaceMap >= 0)
+		{
+			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
+			surface_occlusion_roughness_metallic_reflectance = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * material.surfaceMapAtlasMulAdd.xy + material.surfaceMapAtlasMulAdd.zw, 0);
+			if (material.specularGlossinessWorkflow)
+			{
+				ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
+			}
+		}
+		else
+		{
+			surface_occlusion_roughness_metallic_reflectance = 1;
 		}
 
-		float4 baseColor = baseColorMap;
-		baseColor.rgb = DEGAMMA(baseColor.rgb);
-		baseColor *= mat.baseColor;
-		float roughness = mat.roughness * surface_occlusion_roughness_metallic_reflectance.g;
-		float metalness = mat.metalness * surface_occlusion_roughness_metallic_reflectance.b;
-		float reflectance = mat.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
+		[branch]
+		if (material.uvset_normalMap >= 0)
+		{
+			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+			float3 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_normalMap * material.normalMapAtlasMulAdd.xy + material.normalMapAtlasMulAdd.zw, 0).rgb;
+			normalMap = normalMap.rgb * 2 - 1;
+			normalMap.g *= material.normalMapFlip;
+			const float4 T = float4(f16tof32(tri.tangent.x), f16tof32(tri.tangent.x >> 16), f16tof32(tri.tangent.y), f16tof32(tri.tangent.y >> 16));
+			const float3 B = normalize(cross(T.xyz, N) * T.w);
+			const float3x3 TBN = float3x3(T.xyz, B, N);
+			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
+		}
+
+		float roughness = material.roughness * surface_occlusion_roughness_metallic_reflectance.g;
+		float metalness = material.metalness * surface_occlusion_roughness_metallic_reflectance.b;
+		float reflectance = material.reflectance * surface_occlusion_roughness_metallic_reflectance.a;
 
 		Surface surface = CreateSurface(P, N, V, baseColor, 1, roughness, metalness, reflectance);
 
