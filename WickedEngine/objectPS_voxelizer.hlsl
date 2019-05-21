@@ -1,3 +1,4 @@
+#define DISABLE_SOFT_SHADOWS
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 
@@ -92,12 +93,13 @@ void main(PSInput input)
 						[branch]
 						if (light.IsCastingShadow() >= 0)
 						{
-							float3 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]).xyz; // ortho matrix, no divide by .w
+							const uint cascade = g_xFrame_ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
+							float3 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz; // ortho matrix, no divide by .w
 							float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 							[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
 							{
-								lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + 0);
+								lightColor *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
 							}
 						}
 

@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <deque>
+#include <array>
 
 using namespace std;
 using namespace wiGraphics;
@@ -67,11 +68,11 @@ string SHADERPATH = "shaders/";
 LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
 
 float GAMMA = 2.2f;
-int SHADOWRES_2D = 1024;
-int SHADOWRES_CUBE = 256;
-int SHADOWCOUNT_2D = 5 + 3 + 3;
-int SHADOWCOUNT_CUBE = 5;
-int SOFTSHADOWQUALITY_2D = 2;
+uint32_t SHADOWRES_2D = 1024;
+uint32_t SHADOWRES_CUBE = 256;
+uint32_t SHADOWCOUNT_2D = 5 + 3 + 3;
+uint32_t SHADOWCOUNT_CUBE = 5;
+uint32_t SOFTSHADOWQUALITY_2D = 2;
 bool TRANSPARENTSHADOWSENABLED = false;
 bool ALPHACOMPOSITIONENABLED = false;
 bool wireRender = false;
@@ -1150,7 +1151,7 @@ ComputePSO CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_CO
 ComputePSO CPSO[CSTYPE_LAST];
 
 
-
+static const uint32_t CASCADE_COUNT = 3;
 struct SHCAM
 {
 	XMFLOAT4X4 View;
@@ -1176,7 +1177,7 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
 	shcam = SHCAM(XMLoadFloat3(&light.position), XMLoadFloat4(&light.rotation), 0.1f, light.GetRange(), light.fov);
 }
-inline void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent& camera, SHCAM* shcams /*[3]*/)
+inline void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent& camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
 {
 	const XMMATRIX lightRotation = XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation));
 	const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), lightRotation);
@@ -1186,11 +1187,11 @@ inline void CreateDirLightShadowCams(const LightComponent& light, const CameraCo
 	const float farPlane = camera.zFarP;
 	const float referenceFarPlane = 800.0f; // cascade splits here were tested with this depth range
 	const float referenceSplitClamp = std::min(1.0f, referenceFarPlane / farPlane); // if far plane is greater than reference, do not increase cascade sizes further
-	const float splits[] = {
-		referenceSplitClamp * 1.0f,		// far plane
-		referenceSplitClamp * 0.1f,		// mid-far split
-		referenceSplitClamp * 0.01f,	// near-mid split
+	const float splits[CASCADE_COUNT + 1] = {
 		referenceSplitClamp * 0.0f,		// near plane
+		referenceSplitClamp * 0.01f,	// near-mid split
+		referenceSplitClamp * 0.1f,		// mid-far split
+		referenceSplitClamp * 1.0f,		// far plane
 	};
 
 	// Unproject main frustum corners into world space (notice the reversed Z projection!):
@@ -1208,11 +1209,11 @@ inline void CreateDirLightShadowCams(const LightComponent& light, const CameraCo
 	};
 
 	// Compute shadow cameras:
-	for (int i = 0; i < 3; ++i)
+	for (int cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 	{
 		// Compute cascade sub-frustum in light-view-space from the main frustum corners:
-		const float split_near = splits[i];
-		const float split_far = splits[i + 1];
+		const float split_near = splits[cascade];
+		const float split_far = splits[cascade + 1];
 		const XMVECTOR corners[] =
 		{
 			XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_near), lightView),
@@ -1260,12 +1261,12 @@ inline void CreateDirLightShadowCams(const LightComponent& light, const CameraCo
 		_max.z = std::max(_max.z, farPlane * 0.5f);
 
 		// Compute bounding box used for culling, conservatively transformed by the light transform:
-		shcams[i].boundingbox = AABB(_min, _max).get(XMMatrixInverse(nullptr, lightView));
+		shcams[cascade].boundingbox = AABB(_min, _max).get(XMMatrixInverse(nullptr, lightView));
 
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
-		XMStoreFloat4x4(&shcams[i].View, lightView);
-		XMStoreFloat4x4(&shcams[i].Projection, lightProjection);
+		XMStoreFloat4x4(&shcams[cascade].View, lightView);
+		XMStoreFloat4x4(&shcams[cascade].Projection, lightProjection);
 	}
 
 }
@@ -3756,8 +3757,8 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 				}
 				std::sort(lightSortingHashes, lightSortingHashes + lightCount, std::less<uint32_t>());
 
-				int shadowCounter_2D = 0;
-				int shadowCounter_Cube = 0;
+				uint32_t shadowCounter_2D = 0;
+				uint32_t shadowCounter_Cube = 0;
 				for (size_t i = 0; i < lightCount; ++i)
 				{
 					const uint32_t lightIndex = culling.culledLights[lightSortingHashes[i] & 0x0000FFFF];
@@ -3772,10 +3773,10 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 						switch (light.GetType())
 						{
 						case LightComponent::DIRECTIONAL:
-							if ((shadowCounter_2D + 2) < SHADOWCOUNT_2D)
+							if ((shadowCounter_2D + CASCADE_COUNT - 1) < SHADOWCOUNT_2D)
 							{
 								light.shadowMap_index = shadowCounter_2D;
-								shadowCounter_2D += 3;
+								shadowCounter_2D += CASCADE_COUNT;
 							}
 							break;
 						case LightComponent::SPOT:
@@ -4028,7 +4029,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 				if (shadow)
 				{
-					SHCAM shcams[3];
+					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, GetCamera(), shcams);
 					matrixArray[matrixCounter++] = shcams[0].getVP();
 					matrixArray[matrixCounter++] = shcams[1].getVP();
@@ -4961,8 +4962,8 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
 
-		int shadowCounter_2D = 0;
-		int shadowCounter_Cube = 0;
+		uint32_t shadowCounter_2D = 0;
+		uint32_t shadowCounter_Cube = 0;
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
 			switch (type)
@@ -5014,14 +5015,14 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 				{
 				case LightComponent::DIRECTIONAL:
 				{
-					if ((shadowCounter_2D + 2) >= SHADOWCOUNT_2D || light.shadowMap_index < 0)
+					if ((shadowCounter_2D + CASCADE_COUNT - 1) >= SHADOWCOUNT_2D || light.shadowMap_index < 0)
 						break;
-					shadowCounter_2D += 3; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
+					shadowCounter_2D += CASCADE_COUNT; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
 
-					SHCAM shcams[3];
+					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, camera, shcams);
 
-					for (uint32_t cascade = 0; cascade < 3; ++cascade)
+					for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 					{
 						RenderQueue renderQueue;
 						bool transparentShadowsRequested = false;
@@ -6254,8 +6255,8 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
 
-		const LayerComponent& layer = *scene.layers.GetComponent(entity);
-		const uint32_t layerMask = layer.GetLayerMask();
+		const LayerComponent* probe_layer = scene.layers.GetComponent(entity);
+		const uint32_t layerMask = probe_layer == nullptr ?  ~0 : probe_layer->GetLayerMask();
 
 		SPHERE culler = SPHERE(probe.position, zFarP);
 
@@ -6269,14 +6270,16 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				const LayerComponent* layer = scene.layers.GetComponent(cullable_entity);
 				if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
 				{
-					const ObjectComponent& object = scene.objects[i];
-					if (object.IsRenderable())
-					{
-						RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
-						size_t meshIndex = scene.meshes.GetIndex(object.meshID);
-						batch->Create(meshIndex, i, 0);
-						renderQueue.add(batch);
-					}
+					continue;
+				}
+
+				const ObjectComponent& object = scene.objects[i];
+				if (object.IsRenderable())
+				{
+					RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
+					batch->Create(meshIndex, i, 0);
+					renderQueue.add(batch);
 				}
 			}
 		}
@@ -8021,6 +8024,7 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_Gamma = GetGamma();
 	cb.g_xFrame_SunColor = scene.weather.sunColor;
 	cb.g_xFrame_SunDirection = scene.weather.sunDirection;
+	cb.g_xFrame_ShadowCascadeCount = CASCADE_COUNT;
 	cb.g_xFrame_Ambient = scene.weather.ambient;
 	cb.g_xFrame_Cloudiness = scene.weather.cloudiness;
 	cb.g_xFrame_CloudScale = scene.weather.cloudScale;

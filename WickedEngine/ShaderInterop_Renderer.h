@@ -117,7 +117,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_Gamma;
 	float3		g_xFrame_SunColor;
 
-	float3		g_xFrame_SunDirection; float pad0_WorldCB;
+	float3		g_xFrame_SunDirection;
+	uint		g_xFrame_ShadowCascadeCount;
 
 	float3		g_xFrame_Horizon;
 	uint		g_xFrame_ConstantOne;						// Just a constant 1 value as uint (can be used to force disable loop unrolling)

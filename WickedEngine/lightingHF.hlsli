@@ -102,46 +102,39 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 		[branch]
 		if (light.IsCastingShadow())
 		{
-			// calculate shadow map texcoords (no need to divide by .w because orthographic projection):
-			float3 ShPos[3];
-			ShPos[0] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]).xyz;
-			ShPos[1] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 1]).xyz;
-			ShPos[2] = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 2]).xyz;
-			float3 ShTex[3];
-			ShTex[0] = ShPos[0] * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-			ShTex[1] = ShPos[1] * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-			ShTex[2] = ShPos[2] * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-
-			// determine the main shadow cascade:
-			int cascade = -1;
-			[unroll]
-			for (uint i = 0; i < 3; ++i)
+			// Loop through cascades from closest (smallest) to farest (biggest)
+			[loop]
+			for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
 			{
-				cascade = is_saturated(ShTex[i]) ? i : cascade;
-			}
+				// Project into shadow map space (no need to divide by .w because ortho projection!):
+				float3 ShPos = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz;
+				float3 ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
-			// if we are within any cascade, sample shadow maps:
-			[branch]
-			if (cascade >= 0)
-			{
-				// main shadow cascade sampling:
-				const float3 shadow_main = shadowCascade(ShPos[cascade], ShTex[cascade].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
-
-				// fallback shadow cascade sampling (far cascade has no fallback, so in that case, do not blend):
+				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
 				[branch]
-				if (cascade > 0)
+				if (is_saturated(ShTex))
 				{
-					const float3 cascadeRange = saturate(abs(ShPos[cascade]));
-					const float fade = pow(max(cascadeRange.x, max(cascadeRange.y, cascadeRange.z)), 8);
+					const float3 shadow_main = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+					const float3 cascade_edgefactor = saturate(saturate(abs(ShPos)) - 0.8f) * 5.0f; // fade will be on edge and inwards 20%
+					const float cascade_fade = max(cascade_edgefactor.x, max(cascade_edgefactor.y, cascade_edgefactor.z));
 
-					cascade -= 1;
-					const float3 shadow_fallback = shadowCascade(ShPos[cascade], ShTex[cascade].xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
+					[branch]
+					if (cascade_fade > 0 && cascade < g_xFrame_ShadowCascadeCount - 1)
+					{
+						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
+						cascade += 1;
+						ShPos = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz;
+						ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+						const float3 shadow_fallback = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
 
-					sh *= lerp(shadow_main, shadow_fallback, fade);
-				}
-				else
-				{
-					sh *= shadow_main;
+						sh *= lerp(shadow_main, shadow_fallback, cascade_fade);
+					}
+					else
+					{
+						sh *= shadow_main;
+					}
+					break;
 				}
 			}
 
