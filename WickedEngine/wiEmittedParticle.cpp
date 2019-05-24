@@ -306,9 +306,9 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xSPH_h2 = SPH_h * SPH_h;
 		cb.xSPH_h3 = cb.xSPH_h2 * SPH_h;
 		const float h6 = cb.xSPH_h2 * cb.xSPH_h2 * cb.xSPH_h2;
-		const float h9 = cb.xSPH_h3 * cb.xSPH_h3;
+		const float h9 = h6 * cb.xSPH_h3;
 		cb.xSPH_poly6_constant = (315.0f / (64.0f * XM_PI * h9));
-		cb.xSPH_spiky_constant = (-45 / (XM_PI * h6));
+		cb.xSPH_spiky_constant = (-45.0f / (XM_PI * h6));
 		cb.xSPH_K = SPH_K;
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;

@@ -102,7 +102,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 							const float r2 = dot(diff, diff); // distance squared
 							const float r = sqrt(r2);
 
-							if (r < h)
+							if (r > 0 && r < h) // avoid division by zero!
 							{
 								const float3 velocityB = particleBuffer[particleIndexB].velocity.xyz;
 								const float densityB = densityBuffer[particleIndexB];
@@ -170,7 +170,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 				float r2 = dot(diff, diff); // distance squared
 				float r = sqrt(r2);
 
-				if (r < h)
+				if (r > 0 && r < h) // avoid division by zero!
 				{
 					float3 velocityB = velocities_pressures[i].xyz;
 					float densityB = positions_densities[i].w;
