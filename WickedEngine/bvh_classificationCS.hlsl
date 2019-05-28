@@ -20,7 +20,7 @@ TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND5);
 RWSTRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, 0);
 RWRAWBUFFER(clusterCounterBuffer, 1);
 RWSTRUCTUREDBUFFER(clusterIndexBuffer, uint, 2);
-RWSTRUCTUREDBUFFER(clusterMortonBuffer, uint, 3);
+RWSTRUCTUREDBUFFER(clusterMortonBuffer, float, 3); // morton buffer is float because sorting is written for floats!
 RWSTRUCTUREDBUFFER(clusterOffsetBuffer, uint2, 4); // offset, count
 RWSTRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, 5);
 
@@ -217,7 +217,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
 		float3 remappedCenter = (centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
 
-		clusterMortonBuffer[clusterID] = morton3D(remappedCenter);
+		clusterMortonBuffer[clusterID] = float(morton3D(remappedCenter));
 
 		clusterOffsetBuffer[clusterID] = uint2(globalTriangleID, 1);
 
@@ -243,7 +243,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
 		float3 remappedCenter = (centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
 
-		clusterMortonBuffer[clusterID] = morton3D(remappedCenter);
+		clusterMortonBuffer[clusterID] = float(morton3D(remappedCenter));
 
 		clusterOffsetBuffer[clusterID] = uint2(globalTriangleID, ClusterTriangleCount[bucket]);
 

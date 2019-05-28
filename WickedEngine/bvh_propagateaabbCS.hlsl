@@ -16,7 +16,7 @@ STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND3);
 RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
 
-[numthreads(BVH_PROPAGATEAABB_GROUPSIZE, 1, 1)]
+[numthreads(BVH_CLUSTERPROCESSOR_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const uint clusterCount = clusterCounterBuffer.Load(0);

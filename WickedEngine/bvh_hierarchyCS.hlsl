@@ -13,7 +13,7 @@
 // and k-d Trees"
 
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(clusterMortonBuffer, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(clusterMortonBuffer, float, TEXSLOT_ONDEMAND1); // morton buffer is float because sorting is written for floats!
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
@@ -31,8 +31,8 @@ int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 	}
 	else
 	{
-		uint mortonCodeA = clusterMortonBuffer[indexA];
-		uint mortonCodeB = clusterMortonBuffer[indexB];
+		uint mortonCodeA = uint(clusterMortonBuffer[indexA]);
+		uint mortonCodeB = uint(clusterMortonBuffer[indexB]);
 		if (mortonCodeA != mortonCodeB)
 		{
 			return CountLeadingZeroes(mortonCodeA ^ mortonCodeB);

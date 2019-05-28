@@ -8,12 +8,12 @@
 
 RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(clusterMortonBuffer, uint, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(clusterMortonBuffer, float, TEXSLOT_ONDEMAND2); // morton buffer is float because sorting is written for floats!
 STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND3);
 STRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND5);
 
-RWSTRUCTUREDBUFFER(clusterSortedMortonBuffer, uint, 0);
+RWSTRUCTUREDBUFFER(clusterSortedMortonBuffer, float, 0); // morton buffer is float because sorting is written for floats!
 RWSTRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, 1);
 
 [numthreads(BVH_CLUSTERPROCESSOR_GROUPSIZE, 1, 1)]
