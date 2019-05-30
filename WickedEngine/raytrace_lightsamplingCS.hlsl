@@ -34,7 +34,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		float3 finalResult = 0;
 
-		BVHMeshTriangle tri = triangleBuffer[ray.primitiveID];
+		Primitive_Triangle tri = Primitive_UnpackTriangle(primitiveBuffer[ray.primitiveID]);
 
 		float u = ray.bary.x;
 		float v = ray.bary.y;
@@ -90,9 +90,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			float3 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_normalMap * material.normalMapAtlasMulAdd.xy + material.normalMapAtlasMulAdd.zw, 0).rgb;
 			normalMap = normalMap.rgb * 2 - 1;
 			normalMap.g *= material.normalMapFlip;
-			const float4 T = float4(f16tof32(tri.tangent.x), f16tof32(tri.tangent.x >> 16), f16tof32(tri.tangent.y), f16tof32(tri.tangent.y >> 16));
-			const float3 B = normalize(cross(T.xyz, N) * T.w);
-			const float3x3 TBN = float3x3(T.xyz, B, N);
+			const float3x3 TBN = float3x3(tri.tangent, tri.binormal, N);
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 

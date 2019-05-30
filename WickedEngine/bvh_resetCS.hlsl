@@ -3,16 +3,12 @@
 
 // This shader resets the BVH structure
 
-RWRAWBUFFER(clusterCounterBuffer, 0);
-RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 1);
-RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 2);
+RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
+RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 1);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	// Initialize cluster array to empty:
-	clusterCounterBuffer.Store(0, 0);
-
 	// Initialize root as leaf node (safety):
 	bvhNodeBuffer[0].ParentIndex = 0;
 	bvhNodeBuffer[0].LeftChildIndex = 0;

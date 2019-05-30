@@ -2,37 +2,37 @@
 #include "ShaderInterop_BVH.h"
 
 // This shader will traverse the BVH from bottom to up, and propagate AABBs from leaves to internal nodes
-//	Cluster nodes are already computed, which correspond directly to BVH leaf node AABBs
-//	Each thread starts at a cluster (leaf)
+//	Leaf nodes (primitives) are already computed, which correspond directly to BVH leaf node AABBs
+//	Each thread starts at a primitive (leaf)
 //	Each thread goes to the parent node, but only if both children are complete, else terminate (bvhFlagBuffer tracks this with atomic operations)
 //	Parent node will merge child AABBs and store
 //	Loop until we reach the root...
 
-RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(clusterAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND2);
+RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
+STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(primitiveAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND3);
 
 RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
 
-[numthreads(BVH_CLUSTERPROCESSOR_GROUPSIZE, 1, 1)]
+[numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint clusterCount = clusterCounterBuffer.Load(0);
+	const uint primitiveCount = primitiveCounterBuffer.Load(0);
 
-	if (DTid.x < clusterCount)
+	if (DTid.x < primitiveCount)
 	{
-		const uint leafNodeOffset = clusterCount - 1;
-		const uint clusterIndex = clusterIndexBuffer[DTid.x];
+		const uint leafNodeOffset = primitiveCount - 1;
+		const uint primitiveID = primitiveIDBuffer[DTid.x];
 		uint nodeIndex = leafNodeOffset + DTid.x;
 
 		// First, we read the current (leaf) node:
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
-		// Leaf node will receive the corresponding cluster AABB:
-		BVHAABB clusterAABB = clusterAABBBuffer[clusterIndex];
-		bvhAABBBuffer[nodeIndex] = clusterAABB;
+		// Leaf node will receive the corresponding primitive AABB:
+		BVHAABB primitiveAABB = primitiveAABBBuffer[primitiveID];
+		bvhAABBBuffer[nodeIndex] = primitiveAABB;
 
 		// Propagate until we reach root node:
 		do

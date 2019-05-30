@@ -9,13 +9,11 @@
 
 STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
 TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(triangleBuffer, BVHMeshTriangle, TEXSLOT_ONDEMAND2);
-RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(clusterIndexBuffer, uint, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(clusterOffsetBuffer, uint2, TEXSLOT_ONDEMAND5);
-STRUCTUREDBUFFER(clusterConeBuffer, ClusterCone, TEXSLOT_ONDEMAND6);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND7);
-STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND8);
+STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND2);
+RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
+STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND6);
 
 
 inline RayHit TraceScene(Ray ray)
@@ -28,8 +26,8 @@ inline RayHit TraceScene(Ray ray)
 	uint stack[RAYTRACE_STACKSIZE];
 	uint stackpos = 0;
 
-	const uint clusterCount = clusterCounterBuffer.Load(0);
-	const uint leafNodeOffset = clusterCount - 1;
+	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
 	stack[stackpos] = 0;
@@ -53,36 +51,12 @@ inline RayHit TraceScene(Ray ray)
 		if (IntersectBox(ray, box))
 		{
 			//if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
-			if (nodeIndex >= clusterCount - 1)
+			if (nodeIndex >= primitiveCount - 1)
 			{
 				// Leaf node
-				const uint nodeToClusterID = nodeIndex - leafNodeOffset;
-				const uint clusterIndex = clusterIndexBuffer[nodeToClusterID];
-				bool cullCluster = false;
-
-				//// Compute per cluster visibility:
-				//const ClusterCone cone = clusterConeBuffer[clusterIndex];
-				//if (cone.valid)
-				//{
-				//	const float3 testVec = normalize(ray.origin - cone.position);
-				//	if (dot(testVec, cone.direction) > cone.angleCos)
-				//	{
-				//		cullCluster = true;
-				//	}
-				//}
-
-				if (!cullCluster)
-				{
-					const uint2 cluster = clusterOffsetBuffer[clusterIndex];
-					const uint triangleOffset = cluster.x;
-					const uint triangleCount = cluster.y;
-
-					for (uint tri = 0; tri < triangleCount; ++tri)
-					{
-						const uint primitiveID = triangleOffset + tri;
-						IntersectTriangle(ray, bestHit, triangleBuffer[primitiveID], primitiveID);
-					}
-				}
+				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
+				const uint primitiveID = primitiveIDBuffer[nodeToPrimitiveID];
+				IntersectTriangle(ray, bestHit, primitiveBuffer[primitiveID], primitiveID);
 			}
 			else
 			{
@@ -121,8 +95,8 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	uint stack[RAYTRACE_STACKSIZE];
 	uint stackpos = 0;
 
-	const uint clusterCount = clusterCounterBuffer.Load(0);
-	const uint leafNodeOffset = clusterCount - 1;
+	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
 	stack[stackpos] = 0;
@@ -146,39 +120,16 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 		if (IntersectBox(ray, box))
 		{
 			//if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
-			if (nodeIndex >= clusterCount - 1)
+			if (nodeIndex >= primitiveCount - 1)
 			{
 				// Leaf node
-				const uint nodeToClusterID = nodeIndex - leafNodeOffset;
-				const uint clusterIndex = clusterIndexBuffer[nodeToClusterID];
-				bool cullCluster = false;
-
-				//// Compute per cluster visibility:
-				//const ClusterCone cone = clusterConeBuffer[clusterIndex];
-				//if (cone.valid)
-				//{
-				//	const float3 testVec = normalize(ray.origin - cone.position);
-				//	if (dot(testVec, cone.direction) > cone.angleCos)
-				//	{
-				//		cullCluster = true;
-				//	}
-				//}
-
-				if (!cullCluster)
+				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
+				const uint primitiveID = primitiveIDBuffer[nodeToPrimitiveID];
+				
+				if (IntersectTriangleANY(ray, maxDistance, primitiveBuffer[primitiveID]))
 				{
-					const uint2 cluster = clusterOffsetBuffer[clusterIndex];
-					const uint triangleOffset = cluster.x;
-					const uint triangleCount = cluster.y;
-
-					for (uint tri = 0; tri < triangleCount; ++tri)
-					{
-						const uint primitiveID = triangleOffset + tri;
-						if (IntersectTriangleANY(ray, maxDistance, triangleBuffer[primitiveID]))
-						{
-							shadow = true;
-							break;
-						}
-					}
+					shadow = true;
+					break;
 				}
 			}
 			else
@@ -218,8 +169,8 @@ inline uint TraceBVH(Ray ray)
 	uint stack[RAYTRACE_STACKSIZE];
 	uint stackpos = 0;
 
-	const uint clusterCount = clusterCounterBuffer.Load(0);
-	const uint leafNodeOffset = clusterCount - 1;
+	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
 	stack[stackpos] = 0;
@@ -244,7 +195,7 @@ inline uint TraceBVH(Ray ray)
 		{
 			hit_counter++;
 
-			if (nodeIndex >= clusterCount - 1)
+			if (nodeIndex >= primitiveCount - 1)
 			{
 				// Leaf node
 			}
@@ -283,7 +234,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		BVHMeshTriangle tri = triangleBuffer[hit.primitiveID];
+		Primitive_Triangle tri = Primitive_UnpackTriangle(primitiveBuffer[hit.primitiveID]);
 
 		float u = hit.bary.x;
 		float v = hit.bary.y;
@@ -350,9 +301,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 			normalMap = normalMap.rgb * 2 - 1;
 			normalMap.g *= material.normalMapFlip;
 			const float3 N = hit.N;
-			const float4 T = float4(f16tof32(tri.tangent.x), f16tof32(tri.tangent.x >> 16), f16tof32(tri.tangent.y), f16tof32(tri.tangent.y >> 16));
-			const float3 B = normalize(cross(T.xyz, N) * T.w);
-			const float3x3 TBN = float3x3(T.xyz, B, N);
+			const float3x3 TBN = float3x3(tri.tangent, tri.binormal, N);
 			hit.N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 

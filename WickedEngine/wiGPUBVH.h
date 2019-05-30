@@ -18,16 +18,13 @@ private:
 	wiGraphics::GPUBuffer bvhNodeBuffer;
 	wiGraphics::GPUBuffer bvhAABBBuffer;
 	wiGraphics::GPUBuffer bvhFlagBuffer;
-	wiGraphics::GPUBuffer triangleBuffer;
-	wiGraphics::GPUBuffer clusterCounterBuffer;
-	wiGraphics::GPUBuffer clusterIndexBuffer;
-	wiGraphics::GPUBuffer clusterMortonBuffer;
-	wiGraphics::GPUBuffer clusterSortedMortonBuffer;
-	wiGraphics::GPUBuffer clusterOffsetBuffer;
-	wiGraphics::GPUBuffer clusterAABBBuffer;
-	wiGraphics::GPUBuffer clusterConeBuffer;
-	uint32_t maxTriangleCount = 0;
-	uint32_t maxClusterCount = 0;
+	wiGraphics::GPUBuffer primitiveBuffer;
+	wiGraphics::GPUBuffer primitiveCounterBuffer;
+	wiGraphics::GPUBuffer primitiveIDBuffer;
+	wiGraphics::GPUBuffer primitiveMortonBuffer;
+	wiGraphics::GPUBuffer primitiveSortedMortonBuffer;
+	wiGraphics::GPUBuffer primitiveAABBBuffer;
+	uint32_t maxPrimitiveCount = 0;
 
 	// Scene material resources:
 	wiGraphics::GPUBuffer globalMaterialBuffer;

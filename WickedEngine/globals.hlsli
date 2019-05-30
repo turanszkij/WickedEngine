@@ -252,4 +252,57 @@ float4 SampleTextureCatmullRom(in Texture2D<float4> tex, in float2 uv, in float 
 	return result;
 }
 
+inline uint pack_unitvector(in float3 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5f + 0.5f) * 255.0f) << 0;
+	retVal |= (uint)((value.y * 0.5f + 0.5f) * 255.0f) << 8;
+	retVal |= (uint)((value.z * 0.5f + 0.5f) * 255.0f) << 16;
+	return retVal;
+}
+inline float3 unpack_unitvector(in uint value)
+{
+	float3 retVal;
+	retVal.x = (float)((value >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	retVal.y = (float)((value >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	retVal.z = (float)((value >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
+	return retVal;
+}
+
+inline uint pack_rgba(in float4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)(value.x * 255.0f) << 0;
+	retVal |= (uint)(value.y * 255.0f) << 8;
+	retVal |= (uint)(value.z * 255.0f) << 16;
+	retVal |= (uint)(value.w * 255.0f) << 24;
+	return retVal;
+}
+inline float4 unpack_rgba(in uint value)
+{
+	float4 retVal;
+	retVal.x = (float)((value >> 0) & 0x000000FF) / 255.0f;
+	retVal.y = (float)((value >> 8) & 0x000000FF) / 255.0f;
+	retVal.z = (float)((value >> 16) & 0x000000FF) / 255.0f;
+	retVal.w = (float)((value >> 24) & 0x000000FF) / 255.0f;
+	return retVal;
+}
+
+inline uint2 pack_half4(in float4 value)
+{
+	uint2 retVal = 0;
+	retVal.x = f32tof16(value.x) | (f32tof16(value.y) << 16);
+	retVal.y = f32tof16(value.z) | (f32tof16(value.w) << 16);
+	return retVal;
+}
+inline float4 unpack_half4(in uint2 value)
+{
+	float4 retVal;
+	retVal.x = f16tof32(value.x);
+	retVal.y = f16tof32(value.x >> 16);
+	retVal.z = f16tof32(value.y);
+	retVal.w = f16tof32(value.y >> 16);
+	return retVal;
+}
+
 #endif // _SHADER_GLOBALS_

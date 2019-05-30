@@ -153,8 +153,44 @@ inline RayHit CreateRayHit()
 //}
 
 
+struct Primitive_Triangle
+{
+	float3 v0, v1, v2;	// positions
+	float3 n0, n1, n2;	// normals
+	float4 u0, u1, u2;	// uv sets
+	float4 c0, c1, c2;	// vertex colors
+	float3 tangent;
+	float3 binormal;
+	uint materialIndex;
+};
+inline Primitive_Triangle Primitive_UnpackTriangle(in BVHPrimitive prim)
+{
+	Primitive_Triangle tri;
 
-inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHMeshTriangle tri, uint primitiveID)
+	tri.v0 = prim.v0;
+	tri.v1 = prim.v1;
+	tri.v2 = prim.v2;
+	tri.materialIndex = prim.materialIndex;
+
+	tri.n0 = unpack_unitvector(prim.n0);
+	tri.n1 = unpack_unitvector(prim.n1);
+	tri.n2 = unpack_unitvector(prim.n2);
+
+	tri.tangent = unpack_unitvector(prim.tangent);
+	tri.binormal = unpack_unitvector(prim.binormal);
+
+	tri.u0 = unpack_half4(prim.u0);
+	tri.u1 = unpack_half4(prim.u1);
+	tri.u2 = unpack_half4(prim.u2);
+
+	tri.c0 = unpack_rgba(prim.c0);
+	tri.c1 = unpack_rgba(prim.c1);
+	tri.c2 = unpack_rgba(prim.c2);
+
+	return tri;
+}
+
+inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHPrimitive tri, uint primitiveID)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -163,11 +199,11 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHMeshTriang
 #ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
-	if (det < EPSILON)
+	if (det < 0.000001f)
 		return;
 #else 
 	// ray and triangle are parallel if det is close to 0
-	if (abs(det) < EPSILON)
+	if (abs(det) < 0.000001f)
 		return;
 #endif 
 	float invDet = 1 / det;
@@ -190,16 +226,10 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHMeshTriang
 		bestHit.position = ray.origin + t * ray.direction;
 		bestHit.primitiveID = primitiveID;
 		bestHit.bary = float2(u, v);
-
-		//float w = 1 - u - v;
-		//bestHit.normal = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
-		//bestHit.texCoords = tri.t0 * w + tri.t1 * u + tri.t2 * v;
-		//
-		//bestHit.materialIndex = tri.materialIndex;
 	}
 }
 
-inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHMeshTriangle tri)
+inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimitive tri)
 {
 	float3 v0v1 = tri.v1 - tri.v0;
 	float3 v0v2 = tri.v2 - tri.v0;
@@ -208,11 +238,11 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHMeshTri
 #ifdef RAY_BACKFACE_CULLING 
 	// if the determinant is negative the triangle is backfacing
 	// if the determinant is close to 0, the ray misses the triangle
-	if (det < EPSILON)
+	if (det < 0.000001f)
 		return false;
 #else 
 	// ray and triangle are parallel if det is close to 0
-	if (abs(det) < EPSILON)
+	if (abs(det) < 0.000001f)
 		return false;
 #endif 
 	float invDet = 1 / det;

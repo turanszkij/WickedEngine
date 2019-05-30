@@ -1,19 +1,19 @@
 #include "globals.hlsli"
 #include "ShaderInterop_BVH.h"
 
-// This shader will construct the BVH from sorted cluster morton codes.
+// This shader will construct the BVH from sorted primitive morton codes.
 //	Output is a list of continuous BVH tree nodes in memory: [parentIndex, leftChildNodeIndex, rightChildNodeIndex]. Additionally, we will reset the BVH Flag Buffer (used for AABB propagation step)
 //	The output node is a leaf node if: leftChildNodeIndex == rightChildNodeIndex == 0
 //	Else the output node is an intermediate node
 //	Also, we know that intermediate nodes start at arrayIndex == 0 (starting with root node)
-//	Also, we know that leaf nodes will start at arrayIndex == clusterCount -1 (and they will correspond to a single cluster, which is indexable by clusterIndexBuffer later)
+//	Also, we know that leaf nodes will start at arrayIndex == primitiveCount -1 (and they will correspond to a single primitive, which is indexable by primitiveIndexBuffer later)
 
 // Using the Karras's 2012 parallel BVH construction algorithm outlined 
 // in "Maximizing Parallelism in the Construction of BVHs, Octrees,
 // and k-d Trees"
 
-RAWBUFFER(clusterCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(clusterMortonBuffer, float, TEXSLOT_ONDEMAND1); // morton buffer is float because sorting is written for floats!
+RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
+STRUCTUREDBUFFER(primitiveSortedMortonBuffer, uint, TEXSLOT_ONDEMAND1);
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
@@ -31,8 +31,8 @@ int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 	}
 	else
 	{
-		uint mortonCodeA = uint(clusterMortonBuffer[indexA]);
-		uint mortonCodeB = uint(clusterMortonBuffer[indexB]);
+		uint mortonCodeA = primitiveSortedMortonBuffer[indexA];
+		uint mortonCodeB = primitiveSortedMortonBuffer[indexB];
 		if (mortonCodeA != mortonCodeB)
 		{
 			return CountLeadingZeroes(mortonCodeA ^ mortonCodeB);
@@ -95,22 +95,22 @@ int FindSplit(int first, uint last, uint elementCount)
 
 
 
-[numthreads(BVH_HIERARCHY_GROUPSIZE, 1, 1)]
+[numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint idx = DTid.x;
-	const uint clusterCount = clusterCounterBuffer.Load(0);
+	const uint primitiveCount = primitiveCounterBuffer.Load(0);
 
-	if (idx < clusterCount - 1)
+	if (idx < primitiveCount - 1)
 	{
-		uint2 range = DetermineRange(idx, clusterCount);
+		uint2 range = DetermineRange(idx, primitiveCount);
 		uint first = range.x;
 		uint last = range.y;
 
-		uint split = FindSplit(first, last, clusterCount);
+		uint split = FindSplit(first, last, primitiveCount);
 
 		uint internalNodeOffset = 0;
-		uint leafNodeOffset = clusterCount - 1;
+		uint leafNodeOffset = primitiveCount - 1;
 		uint childAIndex;
 		if (split == first)
 			childAIndex = leafNodeOffset + split;
