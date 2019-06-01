@@ -9,10 +9,11 @@
 
 STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
 TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND2);
-RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
+RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, TEXSLOT_ONDEMAND5);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to INFINITE_RAYHIT
@@ -193,7 +194,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		Primitive_Triangle tri = Primitive_UnpackTriangle(primitiveBuffer[hit.primitiveID]);
+		TriangleData tri = TriangleData_Unpack(primitiveDataBuffer[hit.primitiveID]);
 
 		float u = hit.bary.x;
 		float v = hit.bary.y;

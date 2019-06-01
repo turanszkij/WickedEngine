@@ -153,7 +153,7 @@ inline RayHit CreateRayHit()
 //}
 
 
-struct Primitive_Triangle
+struct TriangleData
 {
 	float3 v0, v1, v2;	// positions
 	float3 n0, n1, n2;	// normals
@@ -163,29 +163,26 @@ struct Primitive_Triangle
 	float3 binormal;
 	uint materialIndex;
 };
-inline Primitive_Triangle Primitive_UnpackTriangle(in BVHPrimitive prim)
+inline TriangleData TriangleData_Unpack(in BVHPrimitiveData primdata)
 {
-	Primitive_Triangle tri;
+	TriangleData tri;
 
-	tri.v0 = prim.v0;
-	tri.v1 = prim.v1;
-	tri.v2 = prim.v2;
-	tri.materialIndex = prim.materialIndex;
+	tri.n0 = unpack_unitvector(primdata.n0);
+	tri.n1 = unpack_unitvector(primdata.n1);
+	tri.n2 = unpack_unitvector(primdata.n2);
 
-	tri.n0 = unpack_unitvector(prim.n0);
-	tri.n1 = unpack_unitvector(prim.n1);
-	tri.n2 = unpack_unitvector(prim.n2);
+	tri.u0 = unpack_half4(primdata.u0);
+	tri.u1 = unpack_half4(primdata.u1);
+	tri.u2 = unpack_half4(primdata.u2);
 
-	tri.tangent = unpack_unitvector(prim.tangent);
-	tri.binormal = unpack_unitvector(prim.binormal);
+	tri.c0 = unpack_rgba(primdata.c0);
+	tri.c1 = unpack_rgba(primdata.c1);
+	tri.c2 = unpack_rgba(primdata.c2);
 
-	tri.u0 = unpack_half4(prim.u0);
-	tri.u1 = unpack_half4(prim.u1);
-	tri.u2 = unpack_half4(prim.u2);
+	tri.tangent = unpack_unitvector(primdata.tangent);
+	tri.binormal = unpack_unitvector(primdata.binormal);
 
-	tri.c0 = unpack_rgba(prim.c0);
-	tri.c1 = unpack_rgba(prim.c1);
-	tri.c2 = unpack_rgba(prim.c2);
+	tri.materialIndex = primdata.materialIndex;
 
 	return tri;
 }

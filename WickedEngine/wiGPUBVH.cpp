@@ -348,6 +348,17 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		device->SetName(&bvhFlagBuffer, "BVHFlagBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHPrimitive);
 		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
 		desc.CPUAccessFlags = 0;
@@ -359,15 +370,15 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
+		desc.StructureByteStride = sizeof(BVHPrimitiveData);
 		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, &primitiveDataBuffer);
 		assert(SUCCEEDED(hr));
-		device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
+		device->SetName(&primitiveDataBuffer, "primitiveDataBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
@@ -413,6 +424,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		GPUResource* uavs[] = {
 			&primitiveIDBuffer,
 			&primitiveBuffer,
+			&primitiveDataBuffer,
 			&primitiveMortonBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
@@ -633,9 +645,10 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 	const GPUResource* res[] = {
 		&globalMaterialBuffer,
 		(globalMaterialAtlas.IsValid() ? &globalMaterialAtlas : wiTextureHelper::getWhite()),
-		&primitiveBuffer,
 		&primitiveCounterBuffer,
 		&primitiveIDBuffer,
+		&primitiveBuffer,
+		&primitiveDataBuffer,
 		&bvhNodeBuffer,
 	};
 	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);

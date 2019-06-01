@@ -16,7 +16,8 @@ TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND5);
 
 RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 0);
 RWSTRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, 1);
-RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 2); // morton buffer is float because sorting is written for floats!
+RWSTRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, 2);
+RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 3); // morton buffer is float because sorting is written for floats!
 
 
 // Expands a 10-bit integer into 30 bits
@@ -79,9 +80,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		const uint materialIndex = xTraceBVHMaterialOffset + subsetIndex;
 		TracedRenderingMaterial material = materialBuffer[materialIndex];
 
-		float3 pos0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
-		float3 pos1 = mul(WORLD, float4(pos_nor1.xyz, 1)).xyz;
-		float3 pos2 = mul(WORLD, float4(pos_nor2.xyz, 1)).xyz;
+		BVHPrimitive prim;
+		prim.v0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
+		prim.v1 = mul(WORLD, float4(pos_nor1.xyz, 1)).xyz;
+		prim.v2 = mul(WORLD, float4(pos_nor2.xyz, 1)).xyz;
 		nor0 = normalize(mul((float3x3)WORLD, nor0));
 		nor1 = normalize(mul((float3x3)WORLD, nor1));
 		nor2 = normalize(mul((float3x3)WORLD, nor2));
@@ -89,7 +91,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float4 u1 = float4(meshVertexBuffer_UV0[i1] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i1]);
 		float4 u2 = float4(meshVertexBuffer_UV0[i2] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i2]);
 
-		float4 color = xTraceBVHInstanceColor * material.baseColor;
+		const float4 color = xTraceBVHInstanceColor * material.baseColor;
 		float4 c0 = color;
 		float4 c1 = color;
 		float4 c2 = color;
@@ -108,22 +110,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			const float3 facenormal = normalize(nor0 + nor1 + nor2);
 
-			float x1 = pos1.x - pos0.x;
-			float x2 = pos2.x - pos0.x;
-			float y1 = pos1.y - pos0.y;
-			float y2 = pos2.y - pos0.y;
-			float z1 = pos1.z - pos0.z;
-			float z2 = pos2.z - pos0.z;
+			const float x1 = prim.v1.x - prim.v0.x;
+			const float x2 = prim.v2.x - prim.v0.x;
+			const float y1 = prim.v1.y - prim.v0.y;
+			const float y2 = prim.v2.y - prim.v0.y;
+			const float z1 = prim.v1.z - prim.v0.z;
+			const float z2 = prim.v2.z - prim.v0.z;
 
-			float s1 = u1.x - u0.x;
-			float s2 = u2.x - u0.x;
-			float t1 = u1.y - u0.y;
-			float t2 = u2.y - u0.y;
+			const float s1 = u1.x - u0.x;
+			const float s2 = u2.x - u0.x;
+			const float t1 = u1.y - u0.y;
+			const float t2 = u2.y - u0.y;
 
-			float r = 1.0f / (s1 * t2 - s2 * t1);
-			float3 sdir = float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+			const float r = 1.0f / (s1 * t2 - s2 * t1);
+			const float3 sdir = float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
 				(t2 * z1 - t1 * z2) * r);
-			float3 tdir = float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+			const float3 tdir = float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
 				(s1 * z2 - s2 * z1) * r);
 
 			tangent.xyz = normalize(sdir - facenormal * dot(facenormal, sdir));
@@ -132,26 +134,25 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			binormal = normalize(cross(tangent.xyz, facenormal) * tangent.w);
 		}
 
-		// Pack primitive to store:
-		BVHPrimitive prim = (BVHPrimitive)0;
-		prim.v0 = pos0;
-		prim.v1 = pos1;
-		prim.v2 = pos2;
-		prim.n0 = pack_unitvector(nor0);
-		prim.n1 = pack_unitvector(nor1);
-		prim.n2 = pack_unitvector(nor2);
-		prim.u0 = pack_half4(u0);
-		prim.u1 = pack_half4(u1);
-		prim.u2 = pack_half4(u2);
-		prim.c0 = pack_rgba(c0);
-		prim.c1 = pack_rgba(c1);
-		prim.c2 = pack_rgba(c2);
-		prim.tangent = pack_unitvector(tangent.xyz);
-		prim.binormal = pack_unitvector(binormal);
-		prim.materialIndex = materialIndex;
+		// Pack primitive data:
+		BVHPrimitiveData primdata;
+		primdata.userdata = 0;
+		primdata.n0 = pack_unitvector(nor0);
+		primdata.n1 = pack_unitvector(nor1);
+		primdata.n2 = pack_unitvector(nor2);
+		primdata.u0 = pack_half4(u0);
+		primdata.u1 = pack_half4(u1);
+		primdata.u2 = pack_half4(u2);
+		primdata.c0 = pack_rgba(c0);
+		primdata.c1 = pack_rgba(c1);
+		primdata.c2 = pack_rgba(c2);
+		primdata.tangent = pack_unitvector(tangent.xyz);
+		primdata.binormal = pack_unitvector(binormal);
+		primdata.materialIndex = materialIndex;
 
-		// Store packed primitive:
+		// Store primitive:
 		primitiveBuffer[primitiveID] = prim;
+		primitiveDataBuffer[primitiveID] = primdata;
 
 		primitiveIDBuffer[primitiveID] = primitiveID; // will be sorted by morton so we need this!
 

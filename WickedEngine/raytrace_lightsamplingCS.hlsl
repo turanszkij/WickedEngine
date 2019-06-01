@@ -34,7 +34,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		float3 finalResult = 0;
 
-		Primitive_Triangle tri = Primitive_UnpackTriangle(primitiveBuffer[ray.primitiveID]);
+		TriangleData tri = TriangleData_Unpack(primitiveDataBuffer[ray.primitiveID]);
 
 		float u = ray.bary.x;
 		float v = ray.bary.y;

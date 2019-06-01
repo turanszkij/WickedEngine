@@ -14,15 +14,18 @@ CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 	uint xTraceBVHMeshVertexPOSStride;
 };
 
+
 struct BVHPrimitive
 {
 	float3 v0;
-	uint n0;
-
 	float3 v1;
-	uint n1;
-
 	float3 v2;
+};
+struct BVHPrimitiveData
+{
+	uint userdata;
+	uint n0;
+	uint n1;
 	uint n2;
 
 	uint2 u0;
