@@ -194,7 +194,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		TriangleData tri = TriangleData_Unpack(primitiveDataBuffer[hit.primitiveID]);
+		TriangleData tri = TriangleData_Unpack(primitiveBuffer[hit.primitiveID], primitiveDataBuffer[hit.primitiveID]);
 
 		float u = hit.bary.x;
 		float v = hit.bary.y;

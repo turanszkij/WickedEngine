@@ -155,7 +155,6 @@ inline RayHit CreateRayHit()
 
 struct TriangleData
 {
-	float3 v0, v1, v2;	// positions
 	float3 n0, n1, n2;	// normals
 	float4 u0, u1, u2;	// uv sets
 	float4 c0, c1, c2;	// vertex colors
@@ -163,13 +162,13 @@ struct TriangleData
 	float3 binormal;
 	uint materialIndex;
 };
-inline TriangleData TriangleData_Unpack(in BVHPrimitiveData primdata)
+inline TriangleData TriangleData_Unpack(in BVHPrimitive prim, in BVHPrimitiveData primdata)
 {
 	TriangleData tri;
 
-	tri.n0 = unpack_unitvector(primdata.n0);
-	tri.n1 = unpack_unitvector(primdata.n1);
-	tri.n2 = unpack_unitvector(primdata.n2);
+	tri.n0 = unpack_unitvector(prim.n0);
+	tri.n1 = unpack_unitvector(prim.n1);
+	tri.n2 = unpack_unitvector(prim.n2);
 
 	tri.u0 = unpack_half4(primdata.u0);
 	tri.u1 = unpack_half4(primdata.u1);

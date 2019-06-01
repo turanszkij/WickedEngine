@@ -17,17 +17,12 @@ CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 
 struct BVHPrimitive
 {
-	float3 v0;
-	float3 v1;
-	float3 v2;
+	float3 v0; uint n0;
+	float3 v1; uint n1;
+	float3 v2; uint n2;
 };
 struct BVHPrimitiveData
 {
-	uint userdata;
-	uint n0;
-	uint n1;
-	uint n2;
-
 	uint2 u0;
 	uint2 u1;
 

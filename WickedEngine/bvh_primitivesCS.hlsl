@@ -134,12 +134,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			binormal = normalize(cross(tangent.xyz, facenormal) * tangent.w);
 		}
 
-		// Pack primitive data:
+		// Pack primitive:
+		prim.n0 = pack_unitvector(nor0);
+		prim.n1 = pack_unitvector(nor1);
+		prim.n2 = pack_unitvector(nor2);
+
 		BVHPrimitiveData primdata;
-		primdata.userdata = 0;
-		primdata.n0 = pack_unitvector(nor0);
-		primdata.n1 = pack_unitvector(nor1);
-		primdata.n2 = pack_unitvector(nor2);
 		primdata.u0 = pack_half4(u0);
 		primdata.u1 = pack_half4(u1);
 		primdata.u2 = pack_half4(u2);
