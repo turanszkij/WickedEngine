@@ -267,6 +267,27 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimiti
 }
 
 
+inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_distance)
+{
+	float t[6];
+	t[0] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;
+	t[1] = (box.max.x - ray.origin.x) * ray.direction_inverse.x;
+	t[2] = (box.min.y - ray.origin.y) * ray.direction_inverse.y;
+	t[3] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
+	t[4] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
+	t[5] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
+	const float tmin  = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
+	const float tmax  = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
+
+	if (tmax < 0 || tmin > tmax || tmin > primitive_best_distance) // this also checks if a better primitive was already hit or not and skips if yes
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
 inline bool IntersectNode(in Ray ray, in BVHNode box)
 {
 	//if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
@@ -281,8 +302,8 @@ inline bool IntersectNode(in Ray ray, in BVHNode box)
 	t[3] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
 	t[4] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
 	t[5] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
-	const float tmin  = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
-	const float tmax  = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
+	const float tmin = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
+	const float tmax = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
 
 	return (tmax < 0 || tmin > tmax) ? false : true;
 }

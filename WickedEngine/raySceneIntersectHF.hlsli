@@ -37,7 +37,7 @@ inline RayHit TraceScene(Ray ray)
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
 
-		if (IntersectNode(ray, node))
+		if (IntersectNode(ray, node, bestHit.distance))
 		{
 			if (nodeIndex >= leafNodeOffset)
 			{
