@@ -5,8 +5,9 @@
 #include "tracedRenderingHF.hlsli"
 #include "raySceneIntersectHF.hlsli"
 
-RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
-STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_UNIQUE1);
+RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND7);
+STRUCTUREDBUFFER(rayIndexBuffer_READ, uint, TEXSLOT_ONDEMAND8);
+STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWTEXTURE2D(resultTexture, float4, 0);
 
@@ -20,7 +21,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	if (DTid.x < counterBuffer_READ.Load(0))
 	{
 		// Load the current ray:
-		LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
+		LoadRay(rayBuffer_READ[rayIndexBuffer_READ[DTid.x]], ray, pixelID);
 
 		// Compute real pixel coords from flattened:
 		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());

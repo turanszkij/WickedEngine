@@ -5,12 +5,15 @@
 #include "tracedRenderingHF.hlsli"
 #include "raySceneIntersectHF.hlsli"
 
-RAWBUFFER(counterBuffer_READ, TEXSLOT_UNIQUE0);
-STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_UNIQUE1);
+RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND7);
+STRUCTUREDBUFFER(rayIndexBuffer_READ, uint, TEXSLOT_ONDEMAND8);
+STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
-RWSTRUCTUREDBUFFER(rayBuffer_WRITE, TracedRenderingStoredRay, 1);
-RWTEXTURE2D(resultTexture, float4, 2);
+RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 1);
+RWSTRUCTUREDBUFFER(raySortBuffer_WRITE, float, 2);
+RWSTRUCTUREDBUFFER(rayBuffer_WRITE, TracedRenderingStoredRay, 3);
+RWTEXTURE2D(resultTexture, float4, 4);
 
 // This enables reduced atomics into global memory
 #define ADVANCED_ALLOCATION
@@ -51,7 +54,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 	if (DTid.x < counterBuffer_READ.Load(0))
 	{
 		// Load the current ray:
-		LoadRay(rayBuffer_READ[DTid.x], ray, pixelID);
+		LoadRay(rayBuffer_READ[rayIndexBuffer_READ[DTid.x]], ray, pixelID);
 
 		// Compute real pixel coords from flattened:
 		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
@@ -71,9 +74,11 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		if (any(ray.energy))
 		{
 			// Naive strategy to allocate active rays. Global memory atomics will be performed for every thread:
-			uint prev;
-			counterBuffer_WRITE.InterlockedAdd(0, 1, prev);
-			rayBuffer_WRITE[prev] = CreateStoredRay(ray, pixelID);
+			uint dest;
+			counterBuffer_WRITE.InterlockedAdd(0, 1, dest);
+			rayIndexBuffer_WRITE[dest] = dest;
+			raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
+			rayBuffer_WRITE[dest] = CreateStoredRay(ray, pixelID);
 		}
 #endif // ADVANCED_ALLOCATION
 
@@ -128,7 +133,10 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 			activePrefixSum += countbits(GroupActiveRayMask[i] & prefixMask);
 		}
 
-		rayBuffer_WRITE[GroupRayWriteOffset + activePrefixSum - 1] = CreateStoredRay(ray, pixelID); // -1 because activePrefixSum includes current thread, but arrays start from 0!
+		const uint dest = GroupRayWriteOffset + activePrefixSum - 1;
+		rayIndexBuffer_WRITE[dest] = dest;
+		raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
+		rayBuffer_WRITE[dest] = CreateStoredRay(ray, pixelID); // -1 because activePrefixSum includes current thread, but arrays start from 0!
 	}
 #endif // ADVANCED_ALLOCATION
 }

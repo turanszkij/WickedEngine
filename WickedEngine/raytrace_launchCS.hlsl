@@ -2,7 +2,9 @@
 #include "ShaderInterop_TracedRendering.h"
 #include "tracedRenderingHF.hlsli"
 
-RWSTRUCTUREDBUFFER(rayBuffer, TracedRenderingStoredRay, 0);
+RWSTRUCTUREDBUFFER(rayIndexBuffer, uint, 0);
+RWSTRUCTUREDBUFFER(raySortBuffer, float, 1);
+RWSTRUCTUREDBUFFER(rayBuffer, TracedRenderingStoredRay, 2);
 
 [numthreads(TRACEDRENDERING_LAUNCH_BLOCKSIZE, TRACEDRENDERING_LAUNCH_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
@@ -19,6 +21,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		Ray ray = CreateCameraRay(uv);
 
 		// The launch writes each ray to the pixel location:
+		rayIndexBuffer[pixelID] = pixelID;
+		raySortBuffer[pixelID] = CreateRaySortCode(ray);
 		rayBuffer[pixelID] = CreateStoredRay(ray, pixelID);
 	}
 }

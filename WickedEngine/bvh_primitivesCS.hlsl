@@ -20,31 +20,6 @@ RWSTRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, 2);
 RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 3); // morton buffer is float because sorting is written for floats!
 
 
-// Expands a 10-bit integer into 30 bits
-// by inserting 2 zeros after each bit.
-inline uint expandBits(uint v)
-{
-	v = (v * 0x00010001u) & 0xFF0000FFu;
-	v = (v * 0x00000101u) & 0x0F00F00Fu;
-	v = (v * 0x00000011u) & 0xC30C30C3u;
-	v = (v * 0x00000005u) & 0x49249249u;
-	return v;
-}
-
-// Calculates a 30-bit Morton code for the
-// given 3D point located within the unit cube [0,1].
-inline uint morton3D(in float3 pos)
-{
-	pos.x = min(max(pos.x * 1024.0f, 0.0f), 1023.0f);
-	pos.y = min(max(pos.y * 1024.0f, 0.0f), 1023.0f);
-	pos.z = min(max(pos.z * 1024.0f, 0.0f), 1023.0f);
-	uint xx = expandBits((uint)pos.x);
-	uint yy = expandBits((uint)pos.y);
-	uint zz = expandBits((uint)pos.z);
-	return xx * 4 + yy * 2 + zz;
-}
-
-
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
@@ -161,8 +136,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float3 minAABB = min(prim.v0, min(prim.v1, prim.v2));
 		float3 maxAABB = max(prim.v0, max(prim.v1, prim.v2));
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
-		float3 remappedCenter = (centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
-		const uint mortoncode = morton3D(remappedCenter);
+		const uint mortoncode = morton3D((centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse);
 		primitiveMortonBuffer[primitiveID] = (float)mortoncode; // convert to float before sorting
 	}
 }

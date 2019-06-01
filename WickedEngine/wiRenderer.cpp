@@ -7271,14 +7271,38 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 	uint _height = GetInternalResolution().y;
 
 	// Ray storage buffer:
+	static GPUBuffer rayIndexBuffer[2];
+	static GPUBuffer raySortBuffer;
 	static GPUBuffer rayBuffer[2];
 	static uint RayCountPrev = 0;
 	const uint _raycount = _width * _height;
 
 	if (RayCountPrev != _raycount)
 	{
+		RayCountPrev = _raycount;
+
 		GPUBufferDesc desc;
 		HRESULT hr;
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * _raycount;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[0]);
+		assert(SUCCEEDED(hr));
+		device->SetName(&rayIndexBuffer[0], "raytrace_rayIndexBuffer[0]");
+		hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
+		assert(SUCCEEDED(hr));
+		device->SetName(&rayIndexBuffer[1], "raytrace_rayIndexBuffer[1]");
+
+		desc.StructureByteStride = sizeof(float); // sorting needs float now
+		desc.ByteWidth = desc.StructureByteStride * _raycount;
+		hr = device->CreateBuffer(&desc, nullptr, &raySortBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(&raySortBuffer, "raytrace_raySortBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
@@ -7293,8 +7317,6 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
 		assert(SUCCEEDED(hr));
 		device->SetName(&rayBuffer[1], "raytrace_rayBuffer[1]");
-
-		RayCountPrev = _raycount;
 	}
 
 	// Misc buffers:
@@ -7370,6 +7392,8 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 		GPUResource* uavs[] = {
+			&rayIndexBuffer[0],
+			&raySortBuffer,
 			&rayBuffer[0],
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
@@ -7424,12 +7448,17 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 		if (bounce > 0)
 		{
+			// 2.) Sort primary rays based on direction, to achieve more coherency:
+			device->EventBegin("Ray Sorting", threadID);
+			wiGPUSortLib::Sort(_raycount, raySortBuffer, counterBuffer[__readBufferID], 0, rayIndexBuffer[__readBufferID], threadID);
+			device->EventEnd(threadID);
+
 			if (bounce == 1)
 			{
 				wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
 			}
 
-			// 2.) Light sampling (any hit) <- only after first bounce has occured
+			// 3.) Light sampling (any hit) <- only after first bounce has occured
 			device->EventBegin("Light Sampling Rays", threadID);
 			{
 				// Indirect dispatch on active rays:
@@ -7437,9 +7466,10 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 				const GPUResource* res[] = {
 					&counterBuffer[__readBufferID],
+					&rayIndexBuffer[__readBufferID],
 					&rayBuffer[__readBufferID],
 				};
-				device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), threadID);
 				const GPUResource* uavs[] = {
 					result,
 				};
@@ -7463,7 +7493,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 			wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
 		}
 
-		// 3.) Compute Primary Trace (closest hit)
+		// 4.) Compute Primary Trace (closest hit)
 		device->EventBegin("Primary Rays Bounce", threadID);
 		{
 			// Indirect dispatch on active rays:
@@ -7471,11 +7501,14 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 			const GPUResource* res[] = {
 				&counterBuffer[__readBufferID],
+				&rayIndexBuffer[__readBufferID],
 				&rayBuffer[__readBufferID],
 			};
-			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), threadID);
 			const GPUResource* uavs[] = {
 				&counterBuffer[__writeBufferID],
+				&rayIndexBuffer[__writeBufferID],
+				&raySortBuffer,
 				&rayBuffer[__writeBufferID],
 				result,
 			};
