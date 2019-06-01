@@ -347,7 +347,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * (maxPrimitiveCount - 1); // only for internal nodes
+		desc.ByteWidth = desc.StructureByteStride * (((maxPrimitiveCount - 1) + 31) / 32); // bitfield for internal nodes
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;

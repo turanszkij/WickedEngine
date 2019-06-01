@@ -55,10 +55,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		const uint materialIndex = xTraceBVHMaterialOffset + subsetIndex;
 		TracedRenderingMaterial material = materialBuffer[materialIndex];
 
-		BVHPrimitive prim;
-		prim.v0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
-		prim.v1 = mul(WORLD, float4(pos_nor1.xyz, 1)).xyz;
-		prim.v2 = mul(WORLD, float4(pos_nor2.xyz, 1)).xyz;
+		float3 v0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
+		float3 v1 = mul(WORLD, float4(pos_nor1.xyz, 1)).xyz;
+		float3 v2 = mul(WORLD, float4(pos_nor2.xyz, 1)).xyz;
 		nor0 = normalize(mul((float3x3)WORLD, nor0));
 		nor1 = normalize(mul((float3x3)WORLD, nor1));
 		nor2 = normalize(mul((float3x3)WORLD, nor2));
@@ -85,12 +84,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			const float3 facenormal = normalize(nor0 + nor1 + nor2);
 
-			const float x1 = prim.v1.x - prim.v0.x;
-			const float x2 = prim.v2.x - prim.v0.x;
-			const float y1 = prim.v1.y - prim.v0.y;
-			const float y2 = prim.v2.y - prim.v0.y;
-			const float z1 = prim.v1.z - prim.v0.z;
-			const float z2 = prim.v2.z - prim.v0.z;
+			const float x1 = v1.x - v0.x;
+			const float x2 = v2.x - v0.x;
+			const float y1 = v1.y - v0.y;
+			const float y2 = v2.y - v0.y;
+			const float z1 = v1.z - v0.z;
+			const float z2 = v2.z - v0.z;
 
 			const float s1 = u1.x - u0.x;
 			const float s2 = u2.x - u0.x;
@@ -110,6 +109,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 
 		// Pack primitive:
+		BVHPrimitive prim;
+		prim.x0 = v0.x;
+		prim.y0 = v0.y;
+		prim.z0 = v0.z;
+		prim.x1 = v1.x;
+		prim.y1 = v1.y;
+		prim.z1 = v1.z;
+		prim.x2 = v2.x;
+		prim.y2 = v2.y;
+		prim.z2 = v2.z;
 		prim.n0 = pack_unitvector(nor0);
 		prim.n1 = pack_unitvector(nor1);
 		prim.n2 = pack_unitvector(nor2);
@@ -133,8 +142,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 
 		// Compute triangle morton code:
-		float3 minAABB = min(prim.v0, min(prim.v1, prim.v2));
-		float3 maxAABB = max(prim.v0, max(prim.v1, prim.v2));
+		float3 minAABB = min(v0, min(v1, v2));
+		float3 maxAABB = max(v0, max(v1, v2));
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
 		const uint mortoncode = morton3D((centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse);
 		primitiveMortonBuffer[primitiveID] = (float)mortoncode; // convert to float before sorting

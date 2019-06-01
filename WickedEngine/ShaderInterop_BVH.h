@@ -17,9 +17,25 @@ CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 
 struct BVHPrimitive
 {
-	float3 v0; uint n0;
-	float3 v1; uint n1;
-	float3 v2; uint n2;
+	float x0;
+	float y0;
+	float z0;
+	float x1;
+
+	float y1;
+	float z1;
+	float x2;
+	float y2;
+
+	// This layout is good because if we only want to load normals, then the first 8 floats can be skipped
+	float z2;
+	uint n0;
+	uint n1;
+	uint n2;
+
+	float3 v0() { return float3(x0, y0, z0); }
+	float3 v1() { return float3(x1, y1, z1); }
+	float3 v2() { return float3(x2, y2, z2); }
 };
 struct BVHPrimitiveData
 {

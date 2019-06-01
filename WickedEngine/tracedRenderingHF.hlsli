@@ -210,8 +210,8 @@ inline TriangleData TriangleData_Unpack(in BVHPrimitive prim, in BVHPrimitiveDat
 
 inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHPrimitive tri, uint primitiveID)
 {
-	float3 v0v1 = tri.v1 - tri.v0;
-	float3 v0v2 = tri.v2 - tri.v0;
+	float3 v0v1 = tri.v1() - tri.v0();
+	float3 v0v2 = tri.v2() - tri.v0();
 	float3 pvec = cross(ray.direction, v0v2);
 	float det = dot(v0v1, pvec);
 #ifdef RAY_BACKFACE_CULLING 
@@ -226,7 +226,7 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHPrimitive 
 #endif 
 	float invDet = 1 / det;
 
-	float3 tvec = ray.origin - tri.v0;
+	float3 tvec = ray.origin - tri.v0();
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0 || u > 1)
 		return;
@@ -250,8 +250,8 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHPrimitive 
 
 inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimitive tri)
 {
-	float3 v0v1 = tri.v1 - tri.v0;
-	float3 v0v2 = tri.v2 - tri.v0;
+	float3 v0v1 = tri.v1() - tri.v0();
+	float3 v0v2 = tri.v2() - tri.v0();
 	float3 pvec = cross(ray.direction, v0v2);
 	float det = dot(v0v1, pvec);
 #ifdef RAY_BACKFACE_CULLING 
@@ -266,7 +266,7 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimiti
 #endif 
 	float invDet = 1 / det;
 
-	float3 tvec = ray.origin - tri.v0;
+	float3 tvec = ray.origin - tri.v0();
 	float u = dot(tvec, pvec) * invDet;
 	if (u < 0 || u > 1)
 		return false;

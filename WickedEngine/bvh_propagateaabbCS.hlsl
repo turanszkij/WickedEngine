@@ -28,8 +28,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		// Leaf node will receive the corresponding primitive AABB:
 		BVHPrimitive prim = primitiveBuffer[primitiveID];
-		bvhNodeBuffer[nodeIndex].min = min(prim.v0, min(prim.v1, prim.v2));
-		bvhNodeBuffer[nodeIndex].max = max(prim.v0, max(prim.v1, prim.v2));
+		bvhNodeBuffer[nodeIndex].min = min(prim.v0(), min(prim.v1(), prim.v2()));
+		bvhNodeBuffer[nodeIndex].max = max(prim.v0(), max(prim.v1(), prim.v2()));
 		
 
 		// Propagate until we reach root node:
@@ -39,11 +39,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			nodeIndex = bvhParentBuffer[nodeIndex];
 
 			// Atomic flag to only allow one thread to write into parent. The other thread is discarded.
-			//	If the previous value was 0, that means it's the first child to arrive here, this will be discarded, because maybe the second child is not yet computed its AABB.
+			//	The flag buffer is a compacted bitmask where each bit represents one internal node's propagation status
+			//	If the previous bucket bit was 0, that means it's the first child to arrive here, this will be discarded, because maybe the second child is not yet computed its AABB.
 			//	Else, this is the second child to arrive, we can continue to parent, because there was already a child that arrived here and been discarded.
-			uint flag;
-			InterlockedAdd(bvhFlagBuffer[nodeIndex], 1, flag);
-			if (flag != 1)
+			const uint flag_bucket_index = nodeIndex / 32;
+			const uint flag_bucket_bit = 1 << (nodeIndex % 32);
+			uint flag_bucket_prev;
+			InterlockedOr(bvhFlagBuffer[flag_bucket_index], flag_bucket_bit, flag_bucket_prev);
+			if (!(flag_bucket_prev & flag_bucket_bit))
 			{
 				return;
 			}
