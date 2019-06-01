@@ -10,6 +10,7 @@
 RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(bvhParentBuffer, uint, TEXSLOT_ONDEMAND3);
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
@@ -35,7 +36,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		do
 		{
 			// Move up in the tree:
-			nodeIndex = bvhNodeBuffer[nodeIndex].ParentIndex;
+			nodeIndex = bvhParentBuffer[nodeIndex];
 
 			// Atomic flag to only allow one thread to write into parent. The other thread is discarded.
 			//	If the previous value was 0, that means it's the first child to arrive here, this will be discarded, because maybe the second child is not yet computed its AABB.

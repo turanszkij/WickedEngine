@@ -44,7 +44,8 @@ inline RayHit TraceScene(Ray ray)
 				// Leaf node
 				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
 				const uint primitiveID = primitiveIDBuffer[nodeToPrimitiveID];
-				IntersectTriangle(ray, bestHit, primitiveBuffer[primitiveID], primitiveID);
+				const BVHPrimitive prim = primitiveBuffer[primitiveID];
+				IntersectTriangle(ray, bestHit, prim, primitiveID);
 			}
 			else
 			{
@@ -99,8 +100,9 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 				// Leaf node
 				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
 				const uint primitiveID = primitiveIDBuffer[nodeToPrimitiveID];
-				
-				if (IntersectTriangleANY(ray, maxDistance, primitiveBuffer[primitiveID]))
+				const BVHPrimitive prim = primitiveBuffer[primitiveID];
+
+				if (IntersectTriangleANY(ray, maxDistance, prim))
 				{
 					shadow = true;
 					break;
@@ -194,7 +196,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
-		TriangleData tri = TriangleData_Unpack(primitiveBuffer[hit.primitiveID], primitiveDataBuffer[hit.primitiveID]);
+		TriangleData tri = TriangleData_Unpack(hit.prim, primitiveDataBuffer[hit.primitiveID]);
 
 		float u = hit.bary.x;
 		float v = hit.bary.y;

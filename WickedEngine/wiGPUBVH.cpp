@@ -20,9 +20,7 @@ using namespace wiECS;
 
 enum CSTYPES_BVH
 {
-	CSTYPE_BVH_RESET,
 	CSTYPE_BVH_PRIMITIVES,
-	CSTYPE_BVH_MORTONORDERCOPY,
 	CSTYPE_BVH_HIERARCHY,
 	CSTYPE_BVH_PROPAGATEAABB,
 	CSTYPE_BVH_COUNT
@@ -338,6 +336,17 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
+		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount * 2;
+		desc.CPUAccessFlags = 0;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Usage = USAGE_DEFAULT;
+		hr = device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
+		assert(SUCCEEDED(hr));
+		device->SetName(&bvhParentBuffer, "BVHParentBuffer");
+
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * (maxPrimitiveCount - 1); // only for internal nodes
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -390,29 +399,12 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		hr = device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
 		device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
 		assert(SUCCEEDED(hr));
-		desc.StructureByteStride = sizeof(uint);
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveSortedMortonBuffer);
-		assert(SUCCEEDED(hr));
-		device->SetName(&primitiveSortedMortonBuffer, "primitiveSortedMortonBuffer");
 	}
 
 
 	wiProfiler::BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
 
 	UpdateGlobalMaterialResources(scene, threadID);
-
-	device->EventBegin("BVH - Reset", threadID);
-	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_RESET], threadID);
-
-		GPUResource* uavs[] = {
-			&bvhNodeBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-		device->Dispatch(1, 1, 1, threadID);
-	}
-	device->EventEnd(threadID);
 
 
 	uint32_t triangleCount = 0;
@@ -483,11 +475,13 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 	const UINT threadgroup_count = (triangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE;
 
-	device->EventBegin("BVH - Primitive Processor", threadID);
+	device->EventBegin("BVH - Build Hierarchy", threadID);
 	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_MORTONORDERCOPY], threadID);
+		device->BindComputePSO(&CPSO[CSTYPE_BVH_HIERARCHY], threadID);
 		GPUResource* uavs[] = {
-			&primitiveSortedMortonBuffer,
+			&bvhNodeBuffer,
+			&bvhParentBuffer,
+			&bvhFlagBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -495,28 +489,6 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveMortonBuffer,
-		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-		device->Dispatch(threadgroup_count, 1, 1, threadID);
-
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	}
-	device->EventEnd(threadID);
-
-	device->EventBegin("BVH - Build Hierarchy", threadID);
-	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_HIERARCHY], threadID);
-		GPUResource* uavs[] = {
-			&bvhNodeBuffer,
-			&bvhFlagBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-		GPUResource* res[] = {
-			&primitiveCounterBuffer,
-			&primitiveSortedMortonBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
@@ -540,6 +512,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveBuffer,
+			&bvhParentBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
@@ -660,9 +633,7 @@ void wiGPUBVH::LoadShaders()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	string SHADERPATH = wiRenderer::GetShaderPath();
 
-	computeShaders[CSTYPE_BVH_RESET] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_PRIMITIVES] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_primitivesCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_MORTONORDERCOPY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_mortonordercopyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
 

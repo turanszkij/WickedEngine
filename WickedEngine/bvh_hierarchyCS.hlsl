@@ -13,10 +13,12 @@
 // and k-d Trees"
 
 RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(primitiveSortedMortonBuffer, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(primitiveMortonBuffer, float, TEXSLOT_ONDEMAND2); // float because it was sorted
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
-RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
+RWSTRUCTUREDBUFFER(bvhParentBuffer, uint, 1);
+RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 2);
 
 int CountLeadingZeroes(uint num)
 {
@@ -31,8 +33,8 @@ int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 	}
 	else
 	{
-		uint mortonCodeA = primitiveSortedMortonBuffer[indexA];
-		uint mortonCodeB = primitiveSortedMortonBuffer[indexB];
+		uint mortonCodeA = (float)primitiveMortonBuffer[primitiveIDBuffer[indexA]];
+		uint mortonCodeB = (float)primitiveMortonBuffer[primitiveIDBuffer[indexB]];
 		if (mortonCodeA != mortonCodeB)
 		{
 			return CountLeadingZeroes(mortonCodeA ^ mortonCodeB);
@@ -127,8 +129,8 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		bvhNodeBuffer[idx].LeftChildIndex = childAIndex;
 		bvhNodeBuffer[idx].RightChildIndex = childBIndex;
 		// write to children:
-		bvhNodeBuffer[childAIndex].ParentIndex = idx;
-		bvhNodeBuffer[childBIndex].ParentIndex = idx;
+		bvhParentBuffer[childAIndex] = idx;
+		bvhParentBuffer[childBIndex] = idx;
 
 		// Reset bvh node flag (only internal nodes):
 		bvhFlagBuffer[idx] = 0;

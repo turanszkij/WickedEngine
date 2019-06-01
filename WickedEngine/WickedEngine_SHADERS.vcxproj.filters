@@ -714,9 +714,6 @@
     <FxCompile Include="bvh_propagateaabbCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="bvh_resetCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="raytrace_lightsamplingCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -857,9 +854,6 @@
     </FxCompile>
     <FxCompile Include="impostorPS_wire.hlsl">
       <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="bvh_mortonordercopyCS.hlsl">
-      <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="bvh_primitivesCS.hlsl">
       <Filter>CS</Filter>

@@ -100,6 +100,7 @@ struct RayHit
 	float2 bary;
 
 	// these will only be filled when bestHit is determined to avoid recomputing them for every intersection:
+	BVHPrimitive prim;
 	float3 N;
 	float4 uvsets;
 	uint materialIndex;
@@ -114,6 +115,7 @@ inline RayHit CreateRayHit()
 	hit.primitiveID = 0xFFFFFFFF;
 	hit.bary = 0;
 
+	hit.prim = (BVHPrimitive)0;
 	hit.N = 0;
 	hit.uvsets = 0;
 	hit.materialIndex = 0;
@@ -218,6 +220,7 @@ inline void IntersectTriangle(in Ray ray, inout RayHit bestHit, in BVHPrimitive 
 
 	if (t > 0 && t < bestHit.distance)
 	{
+		bestHit.prim = tri;
 		bestHit.distance = t;
 		bestHit.position = ray.origin + t * ray.direction;
 		bestHit.primitiveID = primitiveID;

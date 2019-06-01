@@ -39,9 +39,8 @@ struct BVHPrimitiveData
 struct BVHNode
 {
 	float3 min;
-	uint ParentIndex;
-	float3 max;
 	uint LeftChildIndex;
+	float3 max;
 	uint RightChildIndex;
 };
 
