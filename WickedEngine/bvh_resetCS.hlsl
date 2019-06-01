@@ -4,7 +4,6 @@
 // This shader resets the BVH structure
 
 RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
-RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 1);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
@@ -15,6 +14,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	bvhNodeBuffer[0].RightChildIndex = 0;
 
 	// Write root level AABB:
-	bvhAABBBuffer[0].min = g_xFrame_WorldBoundsMin;
-	bvhAABBBuffer[0].max = g_xFrame_WorldBoundsMax;
+	bvhNodeBuffer[0].min = g_xFrame_WorldBoundsMin;
+	bvhNodeBuffer[0].max = g_xFrame_WorldBoundsMax;
 }

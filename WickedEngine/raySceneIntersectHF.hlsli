@@ -13,14 +13,12 @@ STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND2);
 RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND3);
 STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND4);
 STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
-STRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND6);
 
 
+// Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to INFINITE_RAYHIT
 inline RayHit TraceScene(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
-
-	// Using BVH acceleration structure:
 
 	// Emulated stack for tree traversal:
 	uint stack[RAYTRACE_STACKSIZE];
@@ -30,28 +28,17 @@ inline RayHit TraceScene(Ray ray)
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
-	stack[stackpos] = 0;
-	stackpos++;
+	stack[stackpos++] = 0;
 
-	uint exit_condition = 0;
 	do {
-#ifdef RAYTRACE_EXIT
-		if (exit_condition > RAYTRACE_EXIT)
-			break;
-		exit_condition++;
-#endif // RAYTRACE_EXIT
-
 		// pop untraversed node
-		stackpos--;
-		const uint nodeIndex = stack[stackpos];
+		const uint nodeIndex = stack[--stackpos];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
-		BVHAABB box = bvhAABBBuffer[nodeIndex];
 
-		if (IntersectBox(ray, box))
+		if (IntersectNode(ray, node))
 		{
-			//if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
-			if (nodeIndex >= primitiveCount - 1)
+			if (nodeIndex >= leafNodeOffset)
 			{
 				// Leaf node
 				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
@@ -64,11 +51,9 @@ inline RayHit TraceScene(Ray ray)
 				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
-					stack[stackpos] = node.LeftChildIndex;
-					stackpos++;
+					stack[stackpos++] = node.LeftChildIndex;
 					// push right child
-					stack[stackpos] = node.RightChildIndex;
-					stackpos++;
+					stack[stackpos++] = node.RightChildIndex;
 				}
 				else
 				{
@@ -85,11 +70,10 @@ inline RayHit TraceScene(Ray ray)
 	return bestHit;
 }
 
+// Returns true immediately if any primitives were hit, flase if nothing was hit (useful for opaque shadows):
 inline bool TraceSceneANY(Ray ray, float maxDistance)
 {
 	bool shadow = false;
-
-	// Using BVH acceleration structure:
 
 	// Emulated stack for tree traversal:
 	uint stack[RAYTRACE_STACKSIZE];
@@ -99,28 +83,17 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
-	stack[stackpos] = 0;
-	stackpos++;
+	stack[stackpos++] = 0;
 
-	uint exit_condition = 0;
 	do {
-#ifdef RAYTRACE_EXIT
-		if (exit_condition > RAYTRACE_EXIT)
-			break;
-		exit_condition++;
-#endif // RAYTRACE_EXIT
-
 		// pop untraversed node
-		stackpos--;
-		const uint nodeIndex = stack[stackpos];
+		const uint nodeIndex = stack[--stackpos];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
-		BVHAABB box = bvhAABBBuffer[nodeIndex];
 
-		if (IntersectBox(ray, box))
+		if (IntersectNode(ray, node))
 		{
-			//if (node.LeftChildIndex == 0 && node.RightChildIndex == 0)
-			if (nodeIndex >= primitiveCount - 1)
+			if (nodeIndex >= leafNodeOffset)
 			{
 				// Leaf node
 				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
@@ -138,11 +111,9 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
-					stack[stackpos] = node.LeftChildIndex;
-					stackpos++;
+					stack[stackpos++] = node.LeftChildIndex;
 					// push right child
-					stack[stackpos] = node.RightChildIndex;
-					stackpos++;
+					stack[stackpos++] = node.RightChildIndex;
 				}
 				else
 				{
@@ -158,7 +129,7 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 	return shadow;
 }
 
-// Returns number of BVH nodes that were hit:
+// Returns number of BVH nodes that were hit (useful for debug):
 //	returns 0xFFFFFFFF when there was a stack overflow
 //	returns (0xFFFFFFFF - 1) when the exit condition was reached
 inline uint TraceBVH(Ray ray)
@@ -173,29 +144,19 @@ inline uint TraceBVH(Ray ray)
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
-	stack[stackpos] = 0;
-	stackpos++;
+	stack[stackpos++] = 0;
 
-	uint exit_condition = 0;
 	do {
-#ifdef RAYTRACE_EXIT
-		if (exit_condition > RAYTRACE_EXIT)
-			return (0xFFFFFFFF - 1);
-		exit_condition++;
-#endif // RAYTRACE_EXIT
-
 		// pop untraversed node
-		stackpos--;
-		const uint nodeIndex = stack[stackpos];
+		const uint nodeIndex = stack[--stackpos];
 
 		BVHNode node = bvhNodeBuffer[nodeIndex];
-		BVHAABB box = bvhAABBBuffer[nodeIndex];
 
-		if (IntersectBox(ray, box))
+		if (IntersectNode(ray, node))
 		{
 			hit_counter++;
 
-			if (nodeIndex >= primitiveCount - 1)
+			if (nodeIndex >= leafNodeOffset)
 			{
 				// Leaf node
 			}
@@ -205,11 +166,9 @@ inline uint TraceBVH(Ray ray)
 				if (stackpos < RAYTRACE_STACKSIZE - 1)
 				{
 					// push left child
-					stack[stackpos] = node.LeftChildIndex;
-					stackpos++;
+					stack[stackpos++] = node.LeftChildIndex;
 					// push right child
-					stack[stackpos] = node.RightChildIndex;
-					stackpos++;
+					stack[stackpos++] = node.RightChildIndex;
 				}
 				else
 				{
@@ -308,14 +267,14 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 
 
 		// Calculate chances of reflection types:
-		float refractChance = 1 - baseColor.a;
+		const float refractChance = 1 - baseColor.a;
 
 		// Roulette-select the ray's path
 		float roulette = rand(seed, pixel);
 		if (roulette < refractChance)
 		{
 			// Refraction
-			float3 R = refract(ray.direction, hit.N, 1 - material.refractionIndex);
+			const float3 R = refract(ray.direction, hit.N, 1 - material.refractionIndex);
 			ray.direction = lerp(R, SampleHemisphere(R, seed, pixel), roughness);
 			ray.energy *= lerp(baseColor.rgb, 1, refractChance);
 
@@ -325,20 +284,16 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		else
 		{
 			// Calculate chances of reflection types:
-			float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
-			float3 f0 = ComputeF0(baseColor, reflectance, metalness);
-			float3 F = F_Fresnel(f0, saturate(dot(-ray.direction, hit.N)));
-			float specChance = dot(F, 0.33);
-			float diffChance = dot(albedo, 0.33);
-			float inv = rcp(specChance + diffChance);
-			specChance *= inv;
-			diffChance *= inv;
+			const float3 albedo = ComputeAlbedo(baseColor, reflectance, metalness);
+			const float3 f0 = ComputeF0(baseColor, reflectance, metalness);
+			const float3 F = F_Fresnel(f0, saturate(dot(-ray.direction, hit.N)));
+			const float specChance = dot(F, 0.333f);
 
 			roulette = rand(seed, pixel);
 			if (roulette < specChance)
 			{
 				// Specular reflection
-				float3 R = reflect(ray.direction, hit.N);
+				const float3 R = reflect(ray.direction, hit.N);
 				ray.direction = lerp(R, SampleHemisphere(R, seed, pixel), roughness);
 				ray.energy *= F / specChance;
 			}
@@ -346,7 +301,7 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 			{
 				// Diffuse reflection
 				ray.direction = SampleHemisphere(hit.N, seed, pixel);
-				ray.energy *= albedo / diffChance;
+				ray.energy *= albedo / (1 - specChance);
 			}
 
 			// Ray reflects from surface, so push UP along normal to avoid self-intersection:

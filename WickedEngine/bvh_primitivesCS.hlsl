@@ -14,10 +14,9 @@ TYPEDBUFFER(meshVertexBuffer_UV0, float2, TEXSLOT_ONDEMAND3);
 TYPEDBUFFER(meshVertexBuffer_UV1, float2, TEXSLOT_ONDEMAND4);
 TYPEDBUFFER(meshVertexBuffer_COL, float4, TEXSLOT_ONDEMAND5);
 
-RWSTRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, 0);
-RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 1);
+RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 0);
+RWSTRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, 1);
 RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 2); // morton buffer is float because sorting is written for floats!
-RWSTRUCTUREDBUFFER(primitiveAABBBuffer, BVHAABB, 3);
 
 
 // Expands a 10-bit integer into 30 bits
@@ -121,14 +120,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			float t1 = u1.y - u0.y;
 			float t2 = u2.y - u0.y;
 
-			float r = 1.0F / (s1 * t2 - s2 * t1);
+			float r = 1.0f / (s1 * t2 - s2 * t1);
 			float3 sdir = float3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
 				(t2 * z1 - t1 * z2) * r);
 			float3 tdir = float3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
 				(s1 * z2 - s2 * z1) * r);
 
 			tangent.xyz = normalize(sdir - facenormal * dot(facenormal, sdir));
-			tangent.w = (dot(cross(facenormal, tangent.xyz), tdir) < 0.0f) ? -1.0f : 1.0f;
+			tangent.w = (dot(cross(tangent.xyz, facenormal), tdir) < 0.0f) ? -1.0f : 1.0f;
 
 			binormal = normalize(cross(tangent.xyz, facenormal) * tangent.w);
 		}
@@ -154,18 +153,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// Store packed primitive:
 		primitiveBuffer[primitiveID] = prim;
 
-		// Compute triangle AABB:
-		float3 minAABB = min(prim.v0, min(prim.v1, prim.v2));
-		float3 maxAABB = max(prim.v0, max(prim.v1, prim.v2));
-
 		primitiveIDBuffer[primitiveID] = primitiveID; // will be sorted by morton so we need this!
 
+
+		// Compute triangle morton code:
+		float3 minAABB = min(prim.v0, min(prim.v1, prim.v2));
+		float3 maxAABB = max(prim.v0, max(prim.v1, prim.v2));
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
 		float3 remappedCenter = (centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse;
-
-		primitiveMortonBuffer[primitiveID] = float(morton3D(remappedCenter));
-
-		primitiveAABBBuffer[primitiveID].min = minAABB;
-		primitiveAABBBuffer[primitiveID].max = maxAABB;
+		const uint mortoncode = morton3D(remappedCenter);
+		primitiveMortonBuffer[primitiveID] = (float)mortoncode; // convert to float before sorting
 	}
 }

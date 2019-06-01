@@ -38,15 +38,11 @@ struct BVHPrimitive
 	uint materialIndex;
 };
 
-struct BVHAABB
-{
-	float3 min;
-	float3 max;
-};
-
 struct BVHNode
 {
+	float3 min;
 	uint ParentIndex;
+	float3 max;
 	uint LeftChildIndex;
 	uint RightChildIndex;
 };

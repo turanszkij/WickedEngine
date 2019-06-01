@@ -14,7 +14,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	uint rayCount = counterBuffer_READ.Load(0);
 
 	// Convert raycount to dispatch thread group count:
-	uint groupCount = ceil((float)rayCount / (float)TRACEDRENDERING_TRACE_GROUPSIZE);
+	uint groupCount = (rayCount + TRACEDRENDERING_TRACE_GROUPSIZE - 1) / TRACEDRENDERING_TRACE_GROUPSIZE;
 
 	// write the indirect dispatch arguments:
 	indirectBuffer.Store3(0, uint3(groupCount, 1, 1));

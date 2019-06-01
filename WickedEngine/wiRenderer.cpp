@@ -7271,19 +7271,14 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 	uint _height = GetInternalResolution().y;
 
 	// Ray storage buffer:
-	static GPUBuffer* rayBuffer[2] = {};
+	static GPUBuffer rayBuffer[2];
 	static uint RayCountPrev = 0;
 	const uint _raycount = _width * _height;
 
-	if (RayCountPrev != _raycount || rayBuffer[0] == nullptr || rayBuffer[1] == nullptr)
+	if (RayCountPrev != _raycount)
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
-
-		SAFE_DELETE(rayBuffer[0]);
-		SAFE_DELETE(rayBuffer[1]);
-		rayBuffer[0] = new GPUBuffer;
-		rayBuffer[1] = new GPUBuffer;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
@@ -7292,24 +7287,26 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[0]);
-		hr = device->CreateBuffer(&desc, nullptr, rayBuffer[1]);
+		hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
 		assert(SUCCEEDED(hr));
+		device->SetName(&rayBuffer[0], "raytrace_rayBuffer[0]");
+		hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
+		assert(SUCCEEDED(hr));
+		device->SetName(&rayBuffer[1], "raytrace_rayBuffer[1]");
 
 		RayCountPrev = _raycount;
 	}
 
 	// Misc buffers:
-	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
-	static GPUBuffer* counterBuffer[2] = {}; // Active ray counter
+	static bool initialized = false;
+	static GPUBuffer indirectBuffer; // GPU job kicks
+	static GPUBuffer counterBuffer[2]; // Active ray counter
 
-	if (indirectBuffer == nullptr || counterBuffer == nullptr)
+	if (!initialized)
 	{
+		initialized = true;
 		GPUBufferDesc desc;
 		HRESULT hr;
-
-		SAFE_DELETE(indirectBuffer);
-		indirectBuffer = new GPUBuffer;
 
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(IndirectDispatchArgs);
@@ -7318,14 +7315,9 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
+		hr = device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		assert(SUCCEEDED(hr));
-
-
-		SAFE_DELETE(counterBuffer[0]);
-		SAFE_DELETE(counterBuffer[1]);
-		counterBuffer[0] = new GPUBuffer;
-		counterBuffer[1] = new GPUBuffer;
+		device->SetName(&indirectBuffer, "raytrace_indirectBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
@@ -7334,9 +7326,12 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[0]);
-		hr = device->CreateBuffer(&desc, nullptr, counterBuffer[1]);
+		hr = device->CreateBuffer(&desc, nullptr, &counterBuffer[0]);
 		assert(SUCCEEDED(hr));
+		device->SetName(&counterBuffer[0], "raytrace_counterBuffer[0]");
+		hr = device->CreateBuffer(&desc, nullptr, &counterBuffer[1]);
+		assert(SUCCEEDED(hr));
+		device->SetName(&counterBuffer[1], "raytrace_counterBuffer[1]");
 	}
 
 	// Begin raytrace
@@ -7375,7 +7370,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 
 		GPUResource* uavs[] = {
-			rayBuffer[0],
+			&rayBuffer[0],
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -7385,7 +7380,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
 
 		// just write initial ray count:
-		device->UpdateBuffer(counterBuffer[0], &_raycount, threadID);
+		device->UpdateBuffer(&counterBuffer[0], &_raycount, threadID);
 	}
 	device->EventEnd(threadID);
 
@@ -7411,12 +7406,12 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
 
 			GPUResource* res[] = {
-				counterBuffer[__readBufferID],
+				&counterBuffer[__readBufferID],
 			};
 			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
 			GPUResource* uavs[] = {
-				counterBuffer[__writeBufferID],
-				indirectBuffer,
+				&counterBuffer[__writeBufferID],
+				&indirectBuffer,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -7441,8 +7436,8 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 				device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
 
 				const GPUResource* res[] = {
-					counterBuffer[__readBufferID],
-					rayBuffer[__readBufferID],
+					&counterBuffer[__readBufferID],
+					&rayBuffer[__readBufferID],
 				};
 				device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
 				const GPUResource* uavs[] = {
@@ -7450,7 +7445,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 				};
 				device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
-				device->DispatchIndirect(indirectBuffer, 0, threadID);
+				device->DispatchIndirect(&indirectBuffer, 0, threadID);
 
 				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 				device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
@@ -7475,18 +7470,18 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
 
 			const GPUResource* res[] = {
-				counterBuffer[__readBufferID],
-				rayBuffer[__readBufferID],
+				&counterBuffer[__readBufferID],
+				&rayBuffer[__readBufferID],
 			};
 			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
 			const GPUResource* uavs[] = {
-				counterBuffer[__writeBufferID],
-				rayBuffer[__writeBufferID],
+				&counterBuffer[__writeBufferID],
+				&rayBuffer[__writeBufferID],
 				result,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
-			device->DispatchIndirect(indirectBuffer, 0, threadID);
+			device->DispatchIndirect(&indirectBuffer, 0, threadID);
 
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);

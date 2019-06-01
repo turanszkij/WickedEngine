@@ -2,18 +2,16 @@
 #include "ShaderInterop_BVH.h"
 
 // This shader will traverse the BVH from bottom to up, and propagate AABBs from leaves to internal nodes
-//	Leaf nodes (primitives) are already computed, which correspond directly to BVH leaf node AABBs
-//	Each thread starts at a primitive (leaf)
+//	Each thread starts at a primitive (leaf) and computes primitive AABB
 //	Each thread goes to the parent node, but only if both children are complete, else terminate (bvhFlagBuffer tracks this with atomic operations)
 //	Parent node will merge child AABBs and store
 //	Loop until we reach the root...
 
 RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(primitiveAABBBuffer, BVHAABB, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND2);
 
-RWSTRUCTUREDBUFFER(bvhAABBBuffer, BVHAABB, 0);
+RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
 
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
@@ -27,18 +25,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const uint primitiveID = primitiveIDBuffer[DTid.x];
 		uint nodeIndex = leafNodeOffset + DTid.x;
 
-		// First, we read the current (leaf) node:
-		BVHNode node = bvhNodeBuffer[nodeIndex];
-
 		// Leaf node will receive the corresponding primitive AABB:
-		BVHAABB primitiveAABB = primitiveAABBBuffer[primitiveID];
-		bvhAABBBuffer[nodeIndex] = primitiveAABB;
+		BVHPrimitive prim = primitiveBuffer[primitiveID];
+		bvhNodeBuffer[nodeIndex].min = min(prim.v0, min(prim.v1, prim.v2));
+		bvhNodeBuffer[nodeIndex].max = max(prim.v0, max(prim.v1, prim.v2));
+		
 
 		// Propagate until we reach root node:
 		do
 		{
 			// Move up in the tree:
-			nodeIndex = node.ParentIndex;
+			nodeIndex = bvhNodeBuffer[nodeIndex].ParentIndex;
 
 			// Atomic flag to only allow one thread to write into parent. The other thread is discarded.
 			//	If the previous value was 0, that means it's the first child to arrive here, this will be discarded, because maybe the second child is not yet computed its AABB.
@@ -50,20 +47,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				return;
 			}
 
-			// Arrived at parent node:
-			node = bvhNodeBuffer[nodeIndex];
-
-			// Load up its two children's AABBs
-			BVHAABB leftAABB = bvhAABBBuffer[node.LeftChildIndex];
-			BVHAABB rightAABB = bvhAABBBuffer[node.RightChildIndex];
+			// Arrived at parent node, load up its two children's AABBs
+			const uint left_child = bvhNodeBuffer[nodeIndex].LeftChildIndex;
+			const uint right_child = bvhNodeBuffer[nodeIndex].RightChildIndex;
+			const float3 left_min = bvhNodeBuffer[left_child].min;
+			const float3 left_max = bvhNodeBuffer[left_child].max;
+			const float3 right_min = bvhNodeBuffer[right_child].min;
+			const float3 right_max = bvhNodeBuffer[right_child].max;
 
 			// Merge the child AABBs:
-			BVHAABB mergedAABB;
-			mergedAABB.min = min(leftAABB.min, rightAABB.min);
-			mergedAABB.max = max(leftAABB.max, rightAABB.max);
-
-			// Write the merged AABB to this node:
-			bvhAABBBuffer[nodeIndex] = mergedAABB;
+			bvhNodeBuffer[nodeIndex].min = min(left_min, right_min);
+			bvhNodeBuffer[nodeIndex].max = max(left_max, right_max);
 
 		} while (nodeIndex != 0);
 	}

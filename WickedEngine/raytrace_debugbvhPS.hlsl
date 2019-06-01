@@ -1,4 +1,3 @@
-#define RAYTRACE_EXIT 256
 #include "globals.hlsli"
 #include "ShaderInterop_TracedRendering.h"
 #include "ShaderInterop_BVH.h"
@@ -14,10 +13,6 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_Target
 	if (hitCount == 0xFFFFFFFF)
 	{
 		return float4(1, 0, 1, 1); // error: stack overflow (purple)
-	}
-	if (hitCount == (0xFFFFFFFF - 1))
-	{
-		return float4(1, 1, 1, 1); // error: exit condition reached (white)
 	}
 
 	const float3 mapTex[] = {

@@ -268,12 +268,12 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimiti
 }
 
 
-inline bool IntersectBox(in Ray ray, in BVHAABB box)
+inline bool IntersectNode(in Ray ray, in BVHNode box)
 {
-	if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
-		ray.origin.y >= box.min.y && ray.origin.y <= box.max.y &&
-		ray.origin.z >= box.min.z && ray.origin.z <= box.max.z)
-		return true;
+	//if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
+	//	ray.origin.y >= box.min.y && ray.origin.y <= box.max.y &&
+	//	ray.origin.z >= box.min.z && ray.origin.z <= box.max.z)
+	//	return true;
 
 	float t[6];
 	t[0] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;

@@ -16,14 +16,12 @@ class wiGPUBVH
 private:
 	// Scene BVH intersection resources:
 	wiGraphics::GPUBuffer bvhNodeBuffer;
-	wiGraphics::GPUBuffer bvhAABBBuffer;
 	wiGraphics::GPUBuffer bvhFlagBuffer;
 	wiGraphics::GPUBuffer primitiveBuffer;
 	wiGraphics::GPUBuffer primitiveCounterBuffer;
 	wiGraphics::GPUBuffer primitiveIDBuffer;
 	wiGraphics::GPUBuffer primitiveMortonBuffer;
 	wiGraphics::GPUBuffer primitiveSortedMortonBuffer;
-	wiGraphics::GPUBuffer primitiveAABBBuffer;
 	uint32_t maxPrimitiveCount = 0;
 
 	// Scene material resources:

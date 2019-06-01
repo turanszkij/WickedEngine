@@ -22,7 +22,6 @@ enum CSTYPES_BVH
 {
 	CSTYPE_BVH_RESET,
 	CSTYPE_BVH_PRIMITIVES,
-	CSTYPE_BVH_KICKJOBS,
 	CSTYPE_BVH_MORTONORDERCOPY,
 	CSTYPE_BVH_HIERARCHY,
 	CSTYPE_BVH_PROPAGATEAABB,
@@ -338,17 +337,6 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(BVHAABB);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount * 2;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &bvhAABBBuffer);
-		assert(SUCCEEDED(hr));
-		device->SetName(&bvhAABBBuffer, "BVHAABBBuffer");
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * (maxPrimitiveCount - 1); // only for internal nodes
 		desc.CPUAccessFlags = 0;
@@ -395,37 +383,6 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		hr = device->CreateBuffer(&desc, nullptr, &primitiveSortedMortonBuffer);
 		assert(SUCCEEDED(hr));
 		device->SetName(&primitiveSortedMortonBuffer, "primitiveSortedMortonBuffer");
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(BVHAABB);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &primitiveAABBBuffer);
-		assert(SUCCEEDED(hr));
-		device->SetName(&primitiveAABBBuffer, "primitiveAABBBuffer");
-	}
-
-	static GPUBuffer* indirectBuffer = nullptr; // GPU job kicks
-	if (indirectBuffer == nullptr)
-	{
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		SAFE_DELETE(indirectBuffer);
-		indirectBuffer = new GPUBuffer;
-
-		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(IndirectDispatchArgs) * 2;
-		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, indirectBuffer);
-		assert(SUCCEEDED(hr));
 	}
 
 
@@ -439,7 +396,6 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 		GPUResource* uavs[] = {
 			&bvhNodeBuffer,
-			&bvhAABBBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -455,10 +411,9 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	{
 		device->BindComputePSO(&CPSO[CSTYPE_BVH_PRIMITIVES], threadID);
 		GPUResource* uavs[] = {
-			&primitiveBuffer,
 			&primitiveIDBuffer,
+			&primitiveBuffer,
 			&primitiveMortonBuffer,
-			&primitiveAABBBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
 
@@ -494,7 +449,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-				device->Dispatch((UINT)ceilf((float)cb.xTraceBVHMeshTriangleCount / (float)BVH_BUILDER_GROUPSIZE), 1, 1, threadID);
+				device->Dispatch((cb.xTraceBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, threadID);
 
 				for (auto& subset : mesh.subsets)
 				{
@@ -514,25 +469,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	wiGPUSortLib::Sort(triangleCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, threadID);
 	device->EventEnd(threadID);
 
-	device->EventBegin("BVH - Kick Jobs", threadID);
-	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_KICKJOBS], threadID);
-		GPUResource* uavs[] = {
-			indirectBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-		GPUResource* res[] = {
-			&primitiveCounterBuffer,
-		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-
-		device->Dispatch(1, 1, 1, threadID);
-
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	}
-	device->EventEnd(threadID);
+	const UINT threadgroup_count = (triangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE;
 
 	device->EventBegin("BVH - Primitive Processor", threadID);
 	{
@@ -549,8 +486,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, 0, threadID);
-
+		device->Dispatch(threadgroup_count, 1, 1, threadID);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
@@ -572,8 +508,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, 0, threadID);
-
+		device->Dispatch(threadgroup_count, 1, 1, threadID);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
@@ -584,7 +519,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	{
 		device->BindComputePSO(&CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
 		GPUResource* uavs[] = {
-			&bvhAABBBuffer,
+			&bvhNodeBuffer,
 			&bvhFlagBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
@@ -592,13 +527,11 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		GPUResource* res[] = {
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
-			&primitiveAABBBuffer,
-			&bvhNodeBuffer,
+			&primitiveBuffer,
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 
-		device->DispatchIndirect(indirectBuffer, 0, threadID);
-
+		device->Dispatch(threadgroup_count, 1, 1, threadID);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
@@ -704,7 +637,6 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 		&primitiveCounterBuffer,
 		&primitiveIDBuffer,
 		&bvhNodeBuffer,
-		&bvhAABBBuffer,
 	};
 	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
 }
@@ -717,7 +649,6 @@ void wiGPUBVH::LoadShaders()
 
 	computeShaders[CSTYPE_BVH_RESET] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_resetCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_PRIMITIVES] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_primitivesCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_BVH_KICKJOBS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_MORTONORDERCOPY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_mortonordercopyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));

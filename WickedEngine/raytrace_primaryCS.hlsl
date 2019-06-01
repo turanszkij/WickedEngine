@@ -31,14 +31,14 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 	const bool isBucketUpdateThread = groupIndex < GroupActiveRayMaskBucketCount;
 
 	// Preinitialize group shared memory:
+	if (isGlobalUpdateThread)
+	{
+		GroupRayCount = 0; 
+		GroupRayWriteOffset = 0;
+	}
 	if (isBucketUpdateThread)
 	{
 		GroupActiveRayMask[groupIndex] = 0;
-
-		if (isGlobalUpdateThread)
-		{
-			GroupRayCount = 0;
-		}
 	}
 	GroupMemoryBarrierWithGroupSync();
 #endif // ADVANCED_ALLOCATION
@@ -128,7 +128,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 			activePrefixSum += countbits(GroupActiveRayMask[i] & prefixMask);
 		}
 
-		rayBuffer_WRITE[GroupRayWriteOffset + activePrefixSum] = CreateStoredRay(ray, pixelID);
+		rayBuffer_WRITE[GroupRayWriteOffset + activePrefixSum - 1] = CreateStoredRay(ray, pixelID); // -1 because activePrefixSum includes current thread, but arrays start from 0!
 	}
 #endif // ADVANCED_ALLOCATION
 }
