@@ -112,7 +112,7 @@ bool debugLightCulling = false;
 bool occlusionCulling = false;
 bool temporalAA = false;
 bool temporalAADEBUG = false;
-uint32_t lightmapBakeBounceCount = 4;
+uint32_t raytraceBounceCount = 2;
 bool raytraceDebugVisualizer = false;
 Entity cameraTransform = INVALID_ENTITY;
 
@@ -7413,10 +7413,10 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 	// Set up tracing resources:
 	sceneBVH.Bind(CS, threadID);
 
-	for (int bounce = 0; bounce < 8; ++bounce)
+	for (uint32_t bounce = 0; bounce < raytraceBounceCount + 1; ++bounce) // first contact + indirect bounces
 	{
-		const int __readBufferID = bounce % 2;
-		const int __writeBufferID = (bounce + 1) % 2;
+		uint32_t __readBufferID = bounce % 2;
+		uint32_t __writeBufferID = (bounce + 1) % 2;
 
 		cb.xTraceRandomSeed = renderTime + (float)bounce;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
@@ -7446,57 +7446,18 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		}
 		device->EventEnd(threadID);
 
-		if (bounce > 0)
+		// 1.) Compute Primary Trace (closest hit)
 		{
-			// 2.) Sort primary rays based on direction, to achieve more coherency:
-			device->EventBegin("Ray Sorting", threadID);
-			wiGPUSortLib::Sort(_raycount, raySortBuffer, counterBuffer[__readBufferID], 0, rayIndexBuffer[__readBufferID], threadID);
-			device->EventEnd(threadID);
-
-			if (bounce == 1)
+			device->EventBegin("Primary Rays", threadID);
+			if (bounce == 0)
 			{
-				wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+				wiProfiler::BeginRange("RayTrace - First Contact", wiProfiler::DOMAIN_GPU, threadID);
+			}
+			else if (bounce == 1)
+			{
+				wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
 			}
 
-			// 3.) Light sampling (any hit) <- only after first bounce has occured
-			device->EventBegin("Light Sampling Rays", threadID);
-			{
-				// Indirect dispatch on active rays:
-				device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
-
-				const GPUResource* res[] = {
-					&counterBuffer[__readBufferID],
-					&rayIndexBuffer[__readBufferID],
-					&rayBuffer[__readBufferID],
-				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), threadID);
-				const GPUResource* uavs[] = {
-					result,
-				};
-				device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-
-				device->DispatchIndirect(&indirectBuffer, 0, threadID);
-
-				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-				device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-			}
-			device->EventEnd(threadID);
-
-			if (bounce == 1)
-			{
-				wiProfiler::EndRange(threadID); // RayTrace - First Light Sampling
-			}
-		}
-
-		if (bounce == 0)
-		{
-			wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
-		}
-
-		// 4.) Compute Primary Trace (closest hit)
-		device->EventBegin("Primary Rays Bounce", threadID);
-		{
-			// Indirect dispatch on active rays:
 			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
 
 			const GPUResource* res[] = {
@@ -7518,12 +7479,54 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+
+			if (bounce == 0 || bounce == 1)
+			{
+				wiProfiler::EndRange(threadID); // RayTrace - First Bounce
+			}
+			device->EventEnd(threadID);
 		}
+
+		// Primary trace has written new alive ray buffer, so light sampling will use that:
+		std::swap(__readBufferID, __writeBufferID);
+
+		// 2.) Sort rays to achieve more coherency:
+		device->EventBegin("Ray Sorting", threadID);
+		wiGPUSortLib::Sort(_raycount, raySortBuffer, counterBuffer[__readBufferID], 0, rayIndexBuffer[__readBufferID], threadID);
 		device->EventEnd(threadID);
 
-		if (bounce == 0)
+
+		// 3.) Light sampling (any hit) <- only after first bounce has occured
 		{
-			wiProfiler::EndRange(threadID); // RayTrace - First Bounce
+			device->EventBegin("Light Sampling Rays", threadID);
+			if (bounce == 1)
+			{
+				wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+			}
+
+			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
+
+			const GPUResource* res[] = {
+				&counterBuffer[__readBufferID],
+				&rayIndexBuffer[__readBufferID],
+				&rayBuffer[__readBufferID],
+			};
+			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), threadID);
+			const GPUResource* uavs[] = {
+				result,
+			};
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+
+			device->DispatchIndirect(&indirectBuffer, 0, threadID);
+
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+
+			if (bounce == 1)
+			{
+				wiProfiler::EndRange(threadID); // RayTrace - First Light Sampling
+			}
+			device->EventEnd(threadID);
 		}
 
 	}
@@ -7925,7 +7928,7 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 	cb.xTraceRandomSeed = renderTime; // random seed
 	cb.xTraceUserData = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
-	cb.xTraceUserData2.x = lightmapBakeBounceCount;
+	cb.xTraceUserData2.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
 	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
 	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
@@ -7934,7 +7937,7 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	device->BindGraphicsPSO(&PSO_renderlightmap_direct, threadID);
 	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
 
-	if (lightmapBakeBounceCount > 0)
+	if (raytraceBounceCount > 0)
 	{
 		// Render indirect lighting part:
 		device->BindGraphicsPSO(&PSO_renderlightmap_indirect, threadID);
@@ -8465,13 +8468,13 @@ void SetOceanEnabled(bool enabled)
 }
 bool GetOceanEnabled() { return ocean != nullptr; }
 void InvalidateBVH() { scene_bvh_invalid = true; }
-void SetLightmapBakeBounceCount(uint32_t bounces)
+void SetRaytraceBounceCount(uint32_t bounces)
 {
-	lightmapBakeBounceCount = bounces;
+	raytraceBounceCount = bounces;
 }
-uint32_t GetLightmapBakeBounceCount()
+uint32_t GetRaytraceBounceCount()
 {
-	return lightmapBakeBounceCount;
+	return raytraceBounceCount;
 }
 void SetRaytraceDebugBVHVisualizerEnabled(bool value)
 {

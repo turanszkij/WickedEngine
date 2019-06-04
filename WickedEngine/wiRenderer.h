@@ -288,8 +288,8 @@ namespace wiRenderer
 	void SetOceanEnabled(bool enabled);
 	bool GetOceanEnabled();
 	void InvalidateBVH(); // invalidates scene bvh so if something wants to use it, it will recompute and validate it
-	void SetLightmapBakeBounceCount(uint32_t bounces);
-	uint32_t GetLightmapBakeBounceCount();
+	void SetRaytraceBounceCount(uint32_t bounces);
+	uint32_t GetRaytraceBounceCount();
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);
 	bool GetRaytraceDebugBVHVisualizerEnabled();
 

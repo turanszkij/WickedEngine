@@ -15,7 +15,7 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	wiRenderer::SetToDrawDebugCameras(true);
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
-	rendererWindow->SetSize(XMFLOAT2(640, 780));
+	rendererWindow->SetSize(XMFLOAT2(640, 790));
 	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
@@ -397,15 +397,15 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	});
 	rendererWindow->AddWidget(mipLodBiasSlider);
 
-	lightmapBakeBounceCountSlider = new wiSlider(0, 10, 1, 10, "Lightmap Bounces: ");
-	lightmapBakeBounceCountSlider->SetTooltip("How many indirect light bounces to compute when baking lightmaps.");
-	lightmapBakeBounceCountSlider->SetSize(XMFLOAT2(100, 30));
-	lightmapBakeBounceCountSlider->SetPos(XMFLOAT2(x, y += 30));
-	lightmapBakeBounceCountSlider->SetValue((float)wiRenderer::GetLightmapBakeBounceCount());
-	lightmapBakeBounceCountSlider->OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetLightmapBakeBounceCount((uint32_t)args.iValue);
+	raytraceBounceCountSlider = new wiSlider(0, 10, 1, 10, "Raytrace Bounces: ");
+	raytraceBounceCountSlider->SetTooltip("How many indirect light bounces to compute when doing ray tracing.");
+	raytraceBounceCountSlider->SetSize(XMFLOAT2(100, 30));
+	raytraceBounceCountSlider->SetPos(XMFLOAT2(x, y += 30));
+	raytraceBounceCountSlider->SetValue((float)wiRenderer::GetRaytraceBounceCount());
+	raytraceBounceCountSlider->OnSlide([&](wiEventArgs args) {
+		wiRenderer::SetRaytraceBounceCount((uint32_t)args.iValue);
 	});
-	rendererWindow->AddWidget(lightmapBakeBounceCountSlider);
+	rendererWindow->AddWidget(raytraceBounceCountSlider);
 
 
 
