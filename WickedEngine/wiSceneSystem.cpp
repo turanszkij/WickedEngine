@@ -996,46 +996,47 @@ namespace wiSceneSystem
 		UpdateCamera();
 	}
 
-
 	void Scene::Update(float dt)
 	{
-		RunPreviousFrameTransformUpdateSystem(transforms, prev_transforms);
+		wiJobSystem::context ctx;
 
-		RunAnimationUpdateSystem(animations, transforms, dt);
+		RunPreviousFrameTransformUpdateSystem(ctx, transforms, prev_transforms);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
+		RunAnimationUpdateSystem(ctx, animations, transforms, dt);
 
-		RunTransformUpdateSystem(transforms);
+		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, weather, armatures, transforms, meshes, objects, rigidbodies, softbodies, dt);
 
-		wiJobSystem::Wait(); // dependecies
+		RunTransformUpdateSystem(ctx, transforms);
 
-		RunHierarchyUpdateSystem(hierarchy, transforms, layers);
+		wiJobSystem::Wait(ctx); // dependecies
 
-		RunArmatureUpdateSystem(transforms, armatures);
+		RunHierarchyUpdateSystem(ctx, hierarchy, transforms, layers);
 
-		RunMaterialUpdateSystem(materials, dt);
+		RunArmatureUpdateSystem(ctx, transforms, armatures);
 
-		RunImpostorUpdateSystem(impostors);
+		RunMaterialUpdateSystem(ctx, materials, dt);
 
-		wiJobSystem::Wait(); // dependecies
+		RunImpostorUpdateSystem(ctx, impostors);
 
-		RunObjectUpdateSystem(prev_transforms, transforms, meshes, materials, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
+		wiJobSystem::Wait(ctx); // dependecies
 
-		RunCameraUpdateSystem(transforms, cameras);
+		RunObjectUpdateSystem(ctx, prev_transforms, transforms, meshes, materials, objects, aabb_objects, impostors, softbodies, bounds, waterPlane);
 
-		RunDecalUpdateSystem(transforms, materials, aabb_decals, decals);
+		RunCameraUpdateSystem(ctx, transforms, cameras);
 
-		RunProbeUpdateSystem(transforms, aabb_probes, probes);
+		RunDecalUpdateSystem(ctx, transforms, materials, aabb_decals, decals);
 
-		RunForceUpdateSystem(transforms, forces);
+		RunProbeUpdateSystem(ctx, transforms, aabb_probes, probes);
 
-		RunLightUpdateSystem(transforms, aabb_lights, lights);
+		RunForceUpdateSystem(ctx, transforms, forces);
 
-		RunParticleUpdateSystem(transforms, meshes, emitters, hairs, dt);
+		RunLightUpdateSystem(ctx, transforms, aabb_lights, lights);
 
-		wiJobSystem::Wait(); // dependecies
+		RunParticleUpdateSystem(ctx, transforms, meshes, emitters, hairs, dt);
 
-		RunWeatherUpdateSystem(weathers, lights, weather);
+		wiJobSystem::Wait(ctx); // dependecies
+
+		RunWeatherUpdateSystem(ctx, weathers, lights, weather);
 	}
 	void Scene::Clear()
 	{
@@ -1481,11 +1482,12 @@ namespace wiSceneSystem
 	const uint32_t small_subtask_groupsize = 1024;
 
 	void RunPreviousFrameTransformUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<PreviousFrameTransformComponent>& prev_transforms
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			PreviousFrameTransformComponent& prev_transform = prev_transforms[args.jobIndex];
 			Entity entity = prev_transforms.GetEntity(args.jobIndex);
@@ -1495,6 +1497,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunAnimationUpdateSystem(
+		wiJobSystem::context& ctx,
 		ComponentManager<AnimationComponent>& animations,
 		ComponentManager<TransformComponent>& transforms,
 		float dt
@@ -1617,15 +1620,18 @@ namespace wiSceneSystem
 			}
 		}
 	}
-	void RunTransformUpdateSystem(ComponentManager<TransformComponent>& transforms)
+	void RunTransformUpdateSystem(
+		wiJobSystem::context& ctx, 
+		ComponentManager<TransformComponent>& transforms)
 	{
-		wiJobSystem::Dispatch((uint32_t)transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)transforms.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			TransformComponent& transform = transforms[args.jobIndex];
 			transform.UpdateTransform();
 		});
 	}
 	void RunHierarchyUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<HierarchyComponent>& hierarchy,
 		ComponentManager<TransformComponent>& transforms,
 		ComponentManager<LayerComponent>& layers
@@ -1656,11 +1662,12 @@ namespace wiSceneSystem
 		}
 	}
 	void RunArmatureUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<ArmatureComponent>& armatures
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)armatures.GetCount(), 1, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
 			Entity entity = armatures.GetEntity(args.jobIndex);
@@ -1697,9 +1704,11 @@ namespace wiSceneSystem
 
 		});
 	}
-	void RunMaterialUpdateSystem(ComponentManager<MaterialComponent>& materials, float dt)
+	void RunMaterialUpdateSystem(
+		wiJobSystem::context& ctx, 
+		ComponentManager<MaterialComponent>& materials, float dt)
 	{
-		wiJobSystem::Dispatch((uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)materials.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			MaterialComponent& material = materials[args.jobIndex];
 
@@ -1720,9 +1729,11 @@ namespace wiSceneSystem
 			}
 		});
 	}
-	void RunImpostorUpdateSystem(ComponentManager<ImpostorComponent>& impostors)
+	void RunImpostorUpdateSystem(
+		wiJobSystem::context& ctx, 
+		ComponentManager<ImpostorComponent>& impostors)
 	{
-		wiJobSystem::Dispatch((uint32_t)impostors.GetCount(), 1, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
 			impostor.aabb = AABB();
@@ -1730,6 +1741,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunObjectUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MeshComponent>& meshes,
@@ -1747,7 +1759,7 @@ namespace wiSceneSystem
 		sceneBounds = AABB();
 
 		// Instead of Dispatching, this will be one big job, because there is contention for several resources (sceneBounds, waterPlane, impostors)
-		wiJobSystem::Execute([&] {
+		wiJobSystem::Execute(ctx, [&] {
 
 			for (size_t i = 0; i < objects.GetCount(); ++i)
 			{
@@ -1868,11 +1880,12 @@ namespace wiSceneSystem
 		});
 	}
 	void RunCameraUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<CameraComponent>& cameras
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)cameras.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)cameras.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			CameraComponent& camera = cameras[args.jobIndex];
 			Entity entity = cameras.GetEntity(args.jobIndex);
@@ -1885,6 +1898,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunDecalUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MaterialComponent>& materials,
 		ComponentManager<AABB>& aabb_decals,
@@ -1893,7 +1907,7 @@ namespace wiSceneSystem
 	{
 		assert(decals.GetCount() == aabb_decals.GetCount());
 
-		wiJobSystem::Dispatch((uint32_t)decals.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)decals.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			DecalComponent& decal = decals[args.jobIndex];
 			Entity entity = decals.GetEntity(args.jobIndex);
@@ -1924,6 +1938,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunProbeUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<AABB>& aabb_probes,
 		ComponentManager<EnvironmentProbeComponent>& probes
@@ -1931,7 +1946,7 @@ namespace wiSceneSystem
 	{
 		assert(probes.GetCount() == aabb_probes.GetCount());
 
-		wiJobSystem::Dispatch((uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			EnvironmentProbeComponent& probe = probes[args.jobIndex];
 			Entity entity = probes.GetEntity(args.jobIndex);
@@ -1954,11 +1969,12 @@ namespace wiSceneSystem
 		});
 	}
 	void RunForceUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<ForceFieldComponent>& forces
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)forces.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)forces.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			ForceFieldComponent& force = forces[args.jobIndex];
 			Entity entity = forces.GetEntity(args.jobIndex);
@@ -1975,6 +1991,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunLightUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		ComponentManager<AABB>& aabb_lights,
 		ComponentManager<LightComponent>& lights
@@ -1982,7 +1999,7 @@ namespace wiSceneSystem
 	{
 		assert(lights.GetCount() == aabb_lights.GetCount());
 
-		wiJobSystem::Dispatch((uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			LightComponent& light = lights[args.jobIndex];
 			Entity entity = lights.GetEntity(args.jobIndex);
@@ -2025,6 +2042,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunParticleUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
 		const ComponentManager<MeshComponent>& meshes,
 		ComponentManager<wiEmittedParticle>& emitters,
@@ -2032,7 +2050,7 @@ namespace wiSceneSystem
 		float dt
 	)
 	{
-		wiJobSystem::Dispatch((uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
@@ -2040,7 +2058,7 @@ namespace wiSceneSystem
 			emitter.UpdateCPU(transform, dt);
 		});
 
-		wiJobSystem::Dispatch((uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
 			Entity entity = hairs.GetEntity(args.jobIndex);
@@ -2059,6 +2077,7 @@ namespace wiSceneSystem
 		});
 	}
 	void RunWeatherUpdateSystem(
+		wiJobSystem::context& ctx,
 		const ComponentManager<WeatherComponent>& weathers,
 		const ComponentManager<LightComponent>& lights,
 		WeatherComponent& weather)

@@ -1,10 +1,9 @@
 #pragma once
 #include "RenderPath2D.h"
 #include "wiColor.h"
+#include "wiJobSystem.h"
 
-#include <thread>
 #include <functional>
-#include <atomic>
 
 class MainComponent;
 
@@ -12,30 +11,11 @@ class LoadingScreen :
 	public RenderPath2D
 {
 private:
-	struct LoaderTask
-	{
-		std::function<void()> functionBody;
-		std::atomic_bool active;
-
-		LoaderTask(std::function<void()> functionBody) :functionBody(functionBody)
-		{
-			active.store(false);
-		}
-		LoaderTask(const LoaderTask& l)
-		{
-			functionBody = l.functionBody;
-			active.store(l.active.load());
-		}
-	};
-	std::vector<LoaderTask> loaders;
-	void doLoadingTasks();
-
-	void waitForFinish();
+	wiJobSystem::context ctx_main;
+	wiJobSystem::context ctx_finish;
+	std::vector<std::function<void()>> tasks;
 	std::function<void()> finish;
-	std::thread worker;
 public:
-	LoadingScreen();
-	virtual ~LoadingScreen();
 
 	//Add a loading task which should be executed
 	//use std::bind( YourFunctionPointer )

@@ -198,6 +198,9 @@ void TestsRenderer::RunJobSystemTest()
 {
 	wiTimer timer;
 
+	// This is created to be able to wait on the workload independently from other workload:
+	wiJobSystem::context ctx;
+
 	// This will simulate going over a big dataset first in a simple loop, then with the Job System and compare timings
 	uint32_t itemCount = 1000000;
 	std::stringstream ss("");
@@ -221,11 +224,11 @@ void TestsRenderer::RunJobSystemTest()
 	// Execute test
 	{
 		timer.record();
-		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
-		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
-		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
-		wiJobSystem::Execute([]{ wiHelper::Spin(100); });
-		wiJobSystem::Wait();
+		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, []{ wiHelper::Spin(100); });
+		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
 		ss << "wiJobSystem::Execute() took " << time << " milliseconds" << std::endl;
 	}
@@ -249,10 +252,10 @@ void TestsRenderer::RunJobSystemTest()
 	{
 		std::vector<wiSceneSystem::CameraComponent> dataSet(itemCount);
 		timer.record();
-		wiJobSystem::Dispatch(itemCount, 1000, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobDispatchArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();
 		});
-		wiJobSystem::Wait();
+		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
 		ss << "wiJobSystem::Dispatch() took " << time << " milliseconds" << std::endl;
 	}

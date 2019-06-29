@@ -3,34 +3,16 @@
 
 using namespace std;
 
-LoadingScreen::LoadingScreen() : RenderPath2D()
-{
-	loaders.clear();
-	finish = nullptr;
-}
-
-
-LoadingScreen::~LoadingScreen()
-{
-}
-
 bool LoadingScreen::isActive()
 {
-	for (LoaderTask& x : loaders)
-	{
-		if (x.active.load())
-		{
-			return true;
-		}
-	}
-	return false;
+	return wiJobSystem::IsBusy(ctx_main) || wiJobSystem::IsBusy(ctx_finish);
 }
 
 void LoadingScreen::addLoadingFunction(function<void()> loadingFunction)
 {
 	if (loadingFunction != nullptr)
 	{
-		loaders.push_back(LoaderTask(loadingFunction));
+		tasks.push_back(loadingFunction);
 	}
 }
 
@@ -50,48 +32,6 @@ void LoadingScreen::onFinished(function<void()> finishFunction)
 		finish = finishFunction;
 }
 
-void LoadingScreen::waitForFinish()
-{
-	worker.join();
-	if (finish != nullptr)
-		finish();
-}
-
-void LoadingScreen::doLoadingTasks()
-{
-	std::vector<thread> loaderThreads(0);
-
-	for (LoaderTask& x : loaders)
-	{
-		x.active.store(true);
-		loaderThreads.push_back(thread(x.functionBody));
-	}
-
-	int i = 0;
-	for (thread& x : loaderThreads)
-	{
-		x.join();
-		loaders[i].active.store(false);
-		i++;
-	}
-}
-
-int LoadingScreen::getPercentageComplete()
-{
-	const int numberOfLoaders = (int)loaders.size();
-	int completed = 0;
-
-	for (LoaderTask& x : loaders)
-	{
-		if (!x.active.load())
-		{
-			completed++;
-		}
-	}
-
-	return (int)(((float)completed / (float)numberOfLoaders)*100.f);
-}
-
 void LoadingScreen::Unload()
 {
 	RenderPath2D::Unload();
@@ -99,15 +39,21 @@ void LoadingScreen::Unload()
 
 void LoadingScreen::Start()
 {
-	worker = thread(&LoadingScreen::doLoadingTasks, this);
-	thread(&LoadingScreen::waitForFinish, this).detach();
+	for (auto& x : tasks)
+	{
+		wiJobSystem::Execute(ctx_main, x);
+	}
+	wiJobSystem::Execute(ctx_finish, [this] {
+		wiJobSystem::Wait(ctx_main);
+		finish();
+	});
 
 	RenderPath2D::Start();
 }
 
 void LoadingScreen::Stop()
 {
-	loaders.clear();
+	tasks.clear();
 	finish = nullptr;
 
 	RenderPath2D::Stop();

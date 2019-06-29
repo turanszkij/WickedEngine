@@ -5,6 +5,7 @@
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "ShaderInterop_Renderer.h"
+#include "wiJobSystem.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
@@ -1058,27 +1059,41 @@ namespace wiSceneSystem
 	};
 
 	void RunPreviousFrameTransformUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms
 	);
 	void RunAnimationUpdateSystem(
+		wiJobSystem::context& ctx,
 		wiECS::ComponentManager<AnimationComponent>& animations,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		float dt
 	);
-	void RunTransformUpdateSystem(wiECS::ComponentManager<TransformComponent>& transforms);
+	void RunTransformUpdateSystem(
+		wiJobSystem::context& ctx, 
+		wiECS::ComponentManager<TransformComponent>& transforms
+	);
 	void RunHierarchyUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<HierarchyComponent>& hierarchy,
 		wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<LayerComponent>& layers
 	);
 	void RunArmatureUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<ArmatureComponent>& armatures
 	);
-	void RunMaterialUpdateSystem(wiECS::ComponentManager<MaterialComponent>& materials, float dt);
-	void RunImpostorUpdateSystem(wiECS::ComponentManager<ImpostorComponent>& impostors);
+	void RunMaterialUpdateSystem(
+		wiJobSystem::context& ctx, 
+		wiECS::ComponentManager<MaterialComponent>& materials, float dt
+	);
+	void RunImpostorUpdateSystem(
+		wiJobSystem::context& ctx, 
+		wiECS::ComponentManager<ImpostorComponent>& impostors
+	);
 	void RunObjectUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		const wiECS::ComponentManager<MeshComponent>& meshes,
@@ -1091,30 +1106,36 @@ namespace wiSceneSystem
 		XMFLOAT4& waterPlane
 	);
 	void RunCameraUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<CameraComponent>& cameras
 	);
 	void RunDecalUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		const wiECS::ComponentManager<MaterialComponent>& materials,
 		wiECS::ComponentManager<AABB>& aabb_decals,
 		wiECS::ComponentManager<DecalComponent>& decals
 	);
 	void RunProbeUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<AABB>& aabb_probes,
 		wiECS::ComponentManager<EnvironmentProbeComponent>& probes
 	);
 	void RunForceUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<ForceFieldComponent>& forces
 	);
 	void RunLightUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		wiECS::ComponentManager<AABB>& aabb_lights,
 		wiECS::ComponentManager<LightComponent>& lights
 	);
 	void RunParticleUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
 		const wiECS::ComponentManager<MeshComponent>& meshes,
 		wiECS::ComponentManager<wiEmittedParticle>& emitters,
@@ -1122,6 +1143,7 @@ namespace wiSceneSystem
 		float dt
 	);
 	void RunWeatherUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<WeatherComponent>& weathers,
 		const wiECS::ComponentManager<LightComponent>& lights,
 		WeatherComponent& weather

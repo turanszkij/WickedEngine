@@ -1,6 +1,7 @@
 #pragma once
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
+#include "wiJobSystem.h"
 
 namespace wiPhysicsEngine
 {
@@ -11,6 +12,7 @@ namespace wiPhysicsEngine
 	void SetEnabled(bool value);
 
 	void RunPhysicsUpdateSystem(
+		wiJobSystem::context& ctx,
 		const wiSceneSystem::WeatherComponent& weather,
 		const wiECS::ComponentManager<wiSceneSystem::ArmatureComponent>& armatures,
 		wiECS::ComponentManager<wiSceneSystem::TransformComponent>& transforms,

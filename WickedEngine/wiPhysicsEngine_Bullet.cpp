@@ -298,6 +298,7 @@ namespace wiPhysicsEngine
 	}
 
 	void RunPhysicsUpdateSystem(
+		wiJobSystem::context& ctx,
 		const WeatherComponent& weather,
 		const ComponentManager<ArmatureComponent>& armatures,
 		ComponentManager<TransformComponent>& transforms,
@@ -318,7 +319,7 @@ namespace wiPhysicsEngine
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
-		wiJobSystem::Dispatch((uint32_t)rigidbodies.GetCount(), 256, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)rigidbodies.GetCount(), 256, [&](wiJobDispatchArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = rigidbodies[args.jobIndex];
 			Entity entity = rigidbodies.GetEntity(args.jobIndex);
@@ -368,7 +369,7 @@ namespace wiPhysicsEngine
 		});
 
 		// System will register softbodies to meshes and update physics engine state:
-		wiJobSystem::Dispatch((uint32_t)softbodies.GetCount(), 1, [&](wiJobDispatchArgs args) {
+		wiJobSystem::Dispatch(ctx, (uint32_t)softbodies.GetCount(), 1, [&](wiJobDispatchArgs args) {
 
 			SoftBodyPhysicsComponent& physicscomponent = softbodies[args.jobIndex];
 			Entity entity = softbodies.GetEntity(args.jobIndex);
@@ -411,7 +412,7 @@ namespace wiPhysicsEngine
 			}
 		});
 
-		wiJobSystem::Wait();
+		wiJobSystem::Wait(ctx);
 
 		// Perform internal simulation step:
 		dynamicsWorld->stepSimulation(dt, 10);
