@@ -33,12 +33,6 @@ namespace wiJobSystem
 		}
 		return false;
 	}
-	// This little function will not let the system to be deadlocked while the issuing thread is waiting for something
-	inline void poll()
-	{
-		wakeCondition.notify_one(); // wake one worker thread
-		std::this_thread::yield(); // allow this thread to be rescheduled
-	}
 
 	void Initialize()
 	{
@@ -105,9 +99,10 @@ namespace wiJobSystem
 		ctx.counter.fetch_add(1);
 
 		// Try to push a new job until it is pushed successfully:
-		while (!jobPool.push_back({ job, &ctx })) { poll(); }
+		while (!jobPool.push_back({ job, &ctx })) { wakeCondition.notify_all(); }
 
-		wakeCondition.notify_one(); // wake one thread
+		// Wake any one thread that might be sleeping:
+		wakeCondition.notify_one();
 	}
 
 	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(wiJobDispatchArgs)>& job)
@@ -144,12 +139,11 @@ namespace wiJobSystem
 			};
 
 			// Try to push a new job until it is pushed successfully:
-			while (!jobPool.push_back({ jobGroup, &ctx })) { poll(); }
-
-			wakeCondition.notify_one(); // wake one thread
+			while (!jobPool.push_back({ jobGroup, &ctx })) { wakeCondition.notify_all(); }
 		}
 
-
+		// Wake any threads that might be sleeping:
+		wakeCondition.notify_all();
 	}
 
 	bool IsBusy(const context& ctx)
@@ -160,7 +154,10 @@ namespace wiJobSystem
 
 	void Wait(const context& ctx)
 	{
+		// Wake any threads that might be sleeping:
+		wakeCondition.notify_all();
+
 		// Waiting will also put the current thread to good use by working on an other job if it can:
-		while (IsBusy(ctx)) { work(); poll(); }
+		while (IsBusy(ctx)) { work(); }
 	}
 }
