@@ -2116,6 +2116,7 @@ void LoadShaders()
 
 	domainShaders[DSTYPE_OBJECT] = static_cast<const DomainShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectDS.cso", wiResourceManager::DOMAINSHADER));
 
+	wiJobSystem::context ctx;
 
 	// default objectshaders:
 	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
@@ -2134,187 +2135,189 @@ void LoadShaders()
 							{
 								for (int pom = 0; pom < OBJECTRENDERING_POM_COUNT; ++pom)
 								{
-									const bool transparency = blendMode != BLENDMODE_OPAQUE;
-									VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-									VLTYPES realVL = GetVLTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-									HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
-									DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
-									GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
-									PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
+									wiJobSystem::Execute(ctx, [device, renderPass, blendMode, doublesided, tessellation, alphatest, normalmap, planarreflection,pom] {
+										const bool transparency = blendMode != BLENDMODE_OPAQUE;
+										VSTYPES realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+										VLTYPES realVL = GetVLTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
+										HSTYPES realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation);
+										DSTYPES realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation);
+										GSTYPES realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest);
+										PSTYPES realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, normalmap, planarreflection, pom);
 
-									if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
-									{
-										continue;
-									}
-
-									GraphicsPSODesc desc;
-									desc.vs = vertexShaders[realVS];
-									desc.il = &vertexLayouts[realVL];
-									desc.hs = hullShaders[realHS];
-									desc.ds = domainShaders[realDS];
-									desc.gs = geometryShaders[realGS];
-									desc.ps = pixelShaders[realPS];
-
-									switch (blendMode)
-									{
-									case BLENDMODE_OPAQUE:
-										desc.bs = &blendStates[BSTYPE_OPAQUE];
-										break;
-									case BLENDMODE_ALPHA:
-										desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-										break;
-									case BLENDMODE_ADDITIVE:
-										desc.bs = &blendStates[BSTYPE_ADDITIVE];
-										break;
-									case BLENDMODE_PREMULTIPLIED:
-										desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-										break;
-									default:
-										assert(0);
-										break;
-									}
-
-									switch (renderPass)
-									{
-									case RENDERPASS_DEPTHONLY:
-									case RENDERPASS_SHADOW:
-									case RENDERPASS_SHADOWCUBE:
-										desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
-										break;
-									default:
-										break;
-									}
-
-									switch (renderPass)
-									{
-									case RENDERPASS_SHADOW:
-									case RENDERPASS_SHADOWCUBE:
-										desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
-										break;
-									case RENDERPASS_TILEDFORWARD:
-										if (blendMode == BLENDMODE_ADDITIVE)
+										if (tessellation && (realHS == HSTYPE_NULL || realDS == DSTYPE_NULL))
 										{
-											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+											return; // if no job, this must be continue!!
 										}
-										else
-										{
-											desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
-										}
-										break;
-									case RENDERPASS_ENVMAPCAPTURE:
-										desc.dss = &depthStencils[DSSTYPE_ENVMAP];
-										break;
-									case RENDERPASS_VOXELIZE:
-										desc.dss = &depthStencils[DSSTYPE_XRAY];
-										break;
-									default:
-										if (blendMode == BLENDMODE_ADDITIVE)
-										{
-											desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-										}
-										else
-										{
-											desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-										}
-										break;
-									}
 
-									switch (renderPass)
-									{
-									case RENDERPASS_SHADOW:
-									case RENDERPASS_SHADOWCUBE:
-										desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
-										break;
-									case RENDERPASS_VOXELIZE:
-										desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-										break;
-									default:
-										desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
-										break;
-									}
+										GraphicsPSODesc desc;
+										desc.vs = vertexShaders[realVS];
+										desc.il = &vertexLayouts[realVL];
+										desc.hs = hullShaders[realHS];
+										desc.ds = domainShaders[realDS];
+										desc.gs = geometryShaders[realGS];
+										desc.ps = pixelShaders[realPS];
 
-									switch (renderPass)
-									{
-									case RENDERPASS_TEXTURE:
-										desc.numRTs = 1;
-										desc.RTFormats[0] = RTFormat_hdr;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case RENDERPASS_DEFERRED:
-										desc.numRTs = 5;
-										desc.RTFormats[0] = RTFormat_gbuffer_0;
-										desc.RTFormats[1] = RTFormat_gbuffer_1;
-										desc.RTFormats[2] = RTFormat_gbuffer_2;
-										desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
-										desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case RENDERPASS_FORWARD:
-										if (transparency)
+										switch (blendMode)
 										{
+										case BLENDMODE_OPAQUE:
+											desc.bs = &blendStates[BSTYPE_OPAQUE];
+											break;
+										case BLENDMODE_ALPHA:
+											desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+											break;
+										case BLENDMODE_ADDITIVE:
+											desc.bs = &blendStates[BSTYPE_ADDITIVE];
+											break;
+										case BLENDMODE_PREMULTIPLIED:
+											desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+											break;
+										default:
+											assert(0);
+											break;
+										}
+
+										switch (renderPass)
+										{
+										case RENDERPASS_DEPTHONLY:
+										case RENDERPASS_SHADOW:
+										case RENDERPASS_SHADOWCUBE:
+											desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOWMAP : BSTYPE_COLORWRITEDISABLE];
+											break;
+										default:
+											break;
+										}
+
+										switch (renderPass)
+										{
+										case RENDERPASS_SHADOW:
+										case RENDERPASS_SHADOWCUBE:
+											desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
+											break;
+										case RENDERPASS_TILEDFORWARD:
+											if (blendMode == BLENDMODE_ADDITIVE)
+											{
+												desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+											}
+											else
+											{
+												desc.dss = &depthStencils[transparency ? DSSTYPE_DEFAULT : DSSTYPE_DEPTHREADEQUAL];
+											}
+											break;
+										case RENDERPASS_ENVMAPCAPTURE:
+											desc.dss = &depthStencils[DSSTYPE_ENVMAP];
+											break;
+										case RENDERPASS_VOXELIZE:
+											desc.dss = &depthStencils[DSSTYPE_XRAY];
+											break;
+										default:
+											if (blendMode == BLENDMODE_ADDITIVE)
+											{
+												desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
+											}
+											else
+											{
+												desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+											}
+											break;
+										}
+
+										switch (renderPass)
+										{
+										case RENDERPASS_SHADOW:
+										case RENDERPASS_SHADOWCUBE:
+											desc.rs = &rasterizers[doublesided ? RSTYPE_SHADOW_DOUBLESIDED : RSTYPE_SHADOW];
+											break;
+										case RENDERPASS_VOXELIZE:
+											desc.rs = &rasterizers[RSTYPE_VOXELIZE];
+											break;
+										default:
+											desc.rs = &rasterizers[doublesided ? RSTYPE_DOUBLESIDED : RSTYPE_FRONT];
+											break;
+										}
+
+										switch (renderPass)
+										{
+										case RENDERPASS_TEXTURE:
 											desc.numRTs = 1;
-										}
-										else
-										{
-											desc.numRTs = 2;
-										}
-										desc.RTFormats[0] = RTFormat_hdr;
-										desc.RTFormats[1] = RTFormat_gbuffer_1;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case RENDERPASS_TILEDFORWARD:
-										if (transparency)
-										{
-											desc.numRTs = 1;
-										}
-										else
-										{
-											desc.numRTs = 2;
-										}
-										desc.RTFormats[0] = RTFormat_hdr;
-										desc.RTFormats[1] = RTFormat_gbuffer_1;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case RENDERPASS_DEPTHONLY:
-										desc.numRTs = 0;
-										desc.DSFormat = DSFormat_full;
-										break;
-									case RENDERPASS_ENVMAPCAPTURE:
-										desc.numRTs = 1;
-										desc.RTFormats[0] = RTFormat_envprobe;
-										desc.DSFormat = DSFormat_small;
-										break;
-									case RENDERPASS_SHADOW:
-										if (transparency)
-										{
-											desc.numRTs = 1;
-											desc.RTFormats[0] = RTFormat_ldr;
-										}
-										else
-										{
+											desc.RTFormats[0] = RTFormat_hdr;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case RENDERPASS_DEFERRED:
+											desc.numRTs = 5;
+											desc.RTFormats[0] = RTFormat_gbuffer_0;
+											desc.RTFormats[1] = RTFormat_gbuffer_1;
+											desc.RTFormats[2] = RTFormat_gbuffer_2;
+											desc.RTFormats[3] = RTFormat_deferred_lightbuffer;
+											desc.RTFormats[4] = RTFormat_deferred_lightbuffer;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case RENDERPASS_FORWARD:
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
+											desc.RTFormats[0] = RTFormat_hdr;
+											desc.RTFormats[1] = RTFormat_gbuffer_1;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case RENDERPASS_TILEDFORWARD:
+											if (transparency)
+											{
+												desc.numRTs = 1;
+											}
+											else
+											{
+												desc.numRTs = 2;
+											}
+											desc.RTFormats[0] = RTFormat_hdr;
+											desc.RTFormats[1] = RTFormat_gbuffer_1;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case RENDERPASS_DEPTHONLY:
 											desc.numRTs = 0;
+											desc.DSFormat = DSFormat_full;
+											break;
+										case RENDERPASS_ENVMAPCAPTURE:
+											desc.numRTs = 1;
+											desc.RTFormats[0] = RTFormat_envprobe;
+											desc.DSFormat = DSFormat_small;
+											break;
+										case RENDERPASS_SHADOW:
+											if (transparency)
+											{
+												desc.numRTs = 1;
+												desc.RTFormats[0] = RTFormat_ldr;
+											}
+											else
+											{
+												desc.numRTs = 0;
+											}
+											desc.DSFormat = DSFormat_small;
+											break;
+										case RENDERPASS_SHADOWCUBE:
+											desc.numRTs = 0;
+											desc.DSFormat = DSFormat_small;
+											break;
+										case RENDERPASS_VOXELIZE:
+											desc.numRTs = 0;
+											break;
 										}
-										desc.DSFormat = DSFormat_small;
-										break;
-									case RENDERPASS_SHADOWCUBE:
-										desc.numRTs = 0;
-										desc.DSFormat = DSFormat_small;
-										break;
-									case RENDERPASS_VOXELIZE:
-										desc.numRTs = 0;
-										break;
-									}
 
-									if (tessellation)
-									{
-										desc.pt = PATCHLIST;
-									}
-									else
-									{
-										desc.pt = TRIANGLELIST;
-									}
+										if (tessellation)
+										{
+											desc.pt = PATCHLIST;
+										}
+										else
+										{
+											desc.pt = TRIANGLELIST;
+										}
 
-									device->CreateGraphicsPSO(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
+										device->CreateGraphicsPSO(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
+									});
 								}
 							}
 						}
@@ -2328,7 +2331,7 @@ void LoadShaders()
 	customShaders.clear();
 
 	// Hologram sample shader will be registered as custom shader:
-	{
+	wiJobSystem::Execute(ctx, [device] {
 		VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
 		VLTYPES realVL = GetVLTYPE(RENDERPASS_FORWARD, false, false, true);
 
@@ -2353,10 +2356,10 @@ void LoadShaders()
 		customShader.passes[RENDERPASS_FORWARD].pso = &PSO_object_hologram;
 		customShader.passes[RENDERPASS_TILEDFORWARD].pso = &PSO_object_hologram;
 		RegisterCustomShader(customShader);
-	}
+	});
 
 
-	{
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_WATER];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
@@ -2381,8 +2384,8 @@ void LoadShaders()
 		desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
 
 		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
 		desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
@@ -2396,8 +2399,8 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_full;
 
 		device->CreateGraphicsPSO(&desc, &PSO_object_wire);
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_DECAL];
 		desc.ps = pixelShaders[PSTYPE_DECAL];
@@ -2411,8 +2414,8 @@ void LoadShaders()
 		//desc.RTFormats[1] = RTFormat_gbuffer_1;
 
 		device->CreateGraphicsPSO(&desc, &PSO_decal);
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_CUBE];
 		desc.rs = &rasterizers[RSTYPE_OCCLUDEE];
@@ -2423,26 +2426,25 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_small;
 
 		device->CreateGraphicsPSO(&desc, &PSO_occlusionquery);
-	}
-	for (int renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
-	{
+	});
+	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [device](wiJobDispatchArgs args) {
 		const bool impostorRequest =
-			renderPass != RENDERPASS_VOXELIZE &&
-			renderPass != RENDERPASS_SHADOW &&
-			renderPass != RENDERPASS_SHADOWCUBE &&
-			renderPass != RENDERPASS_ENVMAPCAPTURE;
+			args.jobIndex != RENDERPASS_VOXELIZE &&
+			args.jobIndex != RENDERPASS_SHADOW &&
+			args.jobIndex != RENDERPASS_SHADOWCUBE &&
+			args.jobIndex != RENDERPASS_ENVMAPCAPTURE;
 		if (!impostorRequest)
 		{
-			continue;
+			return; // if no job, this must be continue!!
 		}
 
 		GraphicsPSODesc desc;
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED]; // well, we don't need double sided impostors, but might be helpful if something breaks
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.dss = &depthStencils[renderPass == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
+		desc.dss = &depthStencils[args.jobIndex == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
 		desc.il = nullptr;
 
-		switch (renderPass)
+		switch (args.jobIndex)
 		{
 		case RENDERPASS_DEFERRED:
 			desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
@@ -2479,9 +2481,9 @@ void LoadShaders()
 		}
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_impostor[renderPass]);
-	}
-	{
+		device->CreateGraphicsPSO(&desc, &PSO_impostor[args.jobIndex]);
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 		desc.ps = pixelShaders[PSTYPE_IMPOSTOR_WIRE];
@@ -2495,8 +2497,8 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_full;
 
 		device->CreateGraphicsPSO(&desc, &PSO_impostor_wire);
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
 		desc.rs = &rasterizers[RSTYPE_FRONT];
@@ -2516,10 +2518,9 @@ void LoadShaders()
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
 		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_surface);
-	}
+	});
 
-	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
-	{
+	wiJobSystem::Dispatch(ctx, LightComponent::LIGHTTYPE_COUNT, 1, [device](wiJobDispatchArgs args) {
 		GraphicsPSODesc desc;
 
 		// deferred lights:
@@ -2528,7 +2529,7 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_BACK];
 		desc.bs = &blendStates[BSTYPE_DEFERREDLIGHT];
 
-		switch (type)
+		switch (args.jobIndex)
 		{
 		case LightComponent::DIRECTIONAL:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
@@ -2572,18 +2573,18 @@ void LoadShaders()
 		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_deferredlight[type]);
+		device->CreateGraphicsPSO(&desc, &PSO_deferredlight[args.jobIndex]);
 
 
 
 		// light visualizers:
-		if (type != LightComponent::DIRECTIONAL)
+		if (args.jobIndex != LightComponent::DIRECTIONAL)
 		{
 
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.ps = pixelShaders[PSTYPE_LIGHTVISUALIZER];
 
-			switch (type)
+			switch (args.jobIndex)
 			{
 			case LightComponent::POINT:
 				desc.bs = &blendStates[BSTYPE_ADDITIVE];
@@ -2621,18 +2622,18 @@ void LoadShaders()
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = DSFormat_full;
 
-			device->CreateGraphicsPSO(&desc, &PSO_lightvisualizer[type]);
+			device->CreateGraphicsPSO(&desc, &PSO_lightvisualizer[args.jobIndex]);
 		}
 
 
 		// volumetric lights:
-		if (type <= LightComponent::SPOT)
+		if (args.jobIndex <= LightComponent::SPOT)
 		{
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.rs = &rasterizers[RSTYPE_BACK];
 
-			switch (type)
+			switch (args.jobIndex)
 			{
 			case LightComponent::DIRECTIONAL:
 				desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
@@ -2652,12 +2653,12 @@ void LoadShaders()
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = FORMAT_UNKNOWN;
 
-			device->CreateGraphicsPSO(&desc, &PSO_volumetriclight[type]);
+			device->CreateGraphicsPSO(&desc, &PSO_volumetriclight[args.jobIndex]);
 		}
 
 
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 		desc.ps = pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
@@ -2671,8 +2672,8 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_full;
 
 		device->CreateGraphicsPSO(&desc, &PSO_enviromentallight);
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
@@ -2686,8 +2687,8 @@ void LoadShaders()
 		desc.DSFormat = FORMAT_UNKNOWN;
 
 		device->CreateGraphicsPSO(&desc, &PSO_renderlightmap_indirect);
-	}
-	{
+	});
+	wiJobSystem::Execute(ctx, [device] {
 		GraphicsPSODesc desc;
 		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
@@ -2701,14 +2702,13 @@ void LoadShaders()
 		desc.DSFormat = FORMAT_UNKNOWN;
 
 		device->CreateGraphicsPSO(&desc, &PSO_renderlightmap_direct);
-	}
-	for (int type = 0; type < SKYRENDERING_COUNT; ++type)
-	{
+	});
+	wiJobSystem::Dispatch(ctx, SKYRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
 		GraphicsPSODesc desc;
 		desc.rs = &rasterizers[RSTYPE_SKY];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 
-		switch (type)
+		switch (args.jobIndex)
 		{
 		case SKYRENDERING_STATIC:
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -2756,17 +2756,16 @@ void LoadShaders()
 			break;
 		}
 
-		device->CreateGraphicsPSO(&desc, &PSO_sky[type]);
-	}
-	for (int debug = 0; debug < DEBUGRENDERING_COUNT; ++debug)
-	{
+		device->CreateGraphicsPSO(&desc, &PSO_sky[args.jobIndex]);
+	});
+	wiJobSystem::Dispatch(ctx, DEBUGRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
 		GraphicsPSODesc desc;
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		switch (debug)
+		switch (args.jobIndex)
 		{
 		case DEBUGRENDERING_ENVPROBE:
 			desc.vs = vertexShaders[VSTYPE_SPHERE];
@@ -2848,9 +2847,9 @@ void LoadShaders()
 			break;
 		}
 
-		HRESULT hr = device->CreateGraphicsPSO(&desc, &PSO_debug[debug]);
+		HRESULT hr = device->CreateGraphicsPSO(&desc, &PSO_debug[args.jobIndex]);
 		assert(SUCCEEDED(hr));
-	}
+	});
 
 
 	for (int i = 0; i < TILEDLIGHTING_TYPE_COUNT; ++i)
@@ -2859,36 +2858,39 @@ void LoadShaders()
 		{
 			for (int k = 0; k < TILEDLIGHTING_DEBUG_COUNT; ++k)
 			{
-				string name = "lightCullingCS";
-				if (i == TILEDLIGHTING_TYPE_DEFERRED)
-				{
-					name += "_DEFERRED";
-				}
-				if (j == TILEDLIGHTING_CULLING_ADVANCED)
-				{
-					name += "_ADVANCED";
-				}
-				if (k == TILEDLIGHTING_DEBUG_ENABLED)
-				{
-					name += "_DEBUG";
-				}
-				name += ".cso";
+				wiJobSystem::Execute(ctx, [device, i, j, k] {
+					string name = "lightCullingCS";
+					if (i == TILEDLIGHTING_TYPE_DEFERRED)
+					{
+						name += "_DEFERRED";
+					}
+					if (j == TILEDLIGHTING_CULLING_ADVANCED)
+					{
+						name += "_ADVANCED";
+					}
+					if (k == TILEDLIGHTING_DEBUG_ENABLED)
+					{
+						name += "_DEBUG";
+					}
+					name += ".cso";
 
-				ComputePSODesc desc;
-				desc.cs = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
-				
-				device->CreateComputePSO(&desc, &CPSO_tiledlighting[i][j][k]);
+					ComputePSODesc desc;
+					desc.cs = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
+
+					device->CreateComputePSO(&desc, &CPSO_tiledlighting[i][j][k]);
+				});
 			}
 		}
 	}
 
-	for (int i = 0; i < CSTYPE_LAST; ++i)
-	{
+	wiJobSystem::Dispatch(ctx, CSTYPE_LAST, 1, [device](wiJobDispatchArgs args) {
 		ComputePSODesc desc;
-		desc.cs = computeShaders[i];
-		device->CreateComputePSO(&desc, &CPSO[i]);
-	}
+		desc.cs = computeShaders[args.jobIndex];
+		device->CreateComputePSO(&desc, &CPSO[args.jobIndex]);
+	});
 
+
+	wiJobSystem::Wait(ctx);
 
 }
 void LoadBuffers()
@@ -3495,6 +3497,8 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	scene.Update(deltaTime);
 
+	wiJobSystem::context ctx;
+
 	// Because main camera is not part of the scene, update it if it is attached to an entity here:
 	if (cameraTransform != INVALID_ENTITY)
 	{
@@ -3508,7 +3512,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	}
 
 	// See which materials will need to update their GPU render data:
-	wiJobSystem::Execute([&] {
+	wiJobSystem::Execute(ctx, [&] {
 		pendingMaterialUpdates.clear();
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
@@ -3536,7 +3540,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// Need to swap prev and current vertex buffers for any dynamic meshes BEFORE render threads are kicked 
 	//	and also create skinning bone buffers:
-	wiJobSystem::Execute([&] {
+	wiJobSystem::Execute(ctx, [&] {
 		for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 		{
 			MeshComponent& mesh = scene.meshes[i];
@@ -3587,7 +3591,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
-		wiJobSystem::Execute([&] {
+		wiJobSystem::Execute(ctx, [&] {
 			// We don't update it if the scene is empty, this even makes it easier to debug
 			const float f = 0.05f / voxelSceneData.voxelsize;
 			XMFLOAT3 center = XMFLOAT3(floorf(GetCamera().Eye.x * f) / f, floorf(GetCamera().Eye.y * f) / f, floorf(GetCamera().Eye.z * f) / f);
@@ -3620,7 +3624,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			}
 
 			// Cull objects for each camera:
-			wiJobSystem::Execute([&] {
+			wiJobSystem::Execute(ctx, [&] {
 				for (size_t i = 0; i < scene.aabb_objects.GetCount(); ++i)
 				{
 					Entity entity = scene.aabb_objects.GetEntity(i);
@@ -3652,7 +3656,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 			// the following cullings will be only for the main camera:
 			if (camera == &GetCamera())
 			{
-				wiJobSystem::Execute([&] {
+				wiJobSystem::Execute(ctx, [&] {
 					// Cull decals:
 					for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
 					{
@@ -3672,7 +3676,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					}
 				});
 
-				wiJobSystem::Execute([&] {
+				wiJobSystem::Execute(ctx, [&] {
 					// Cull probes:
 					for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
 					{
@@ -3692,7 +3696,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					}
 				});
 
-				wiJobSystem::Execute([&] {
+				wiJobSystem::Execute(ctx, [&] {
 					// Cull lights:
 					for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
 					{
@@ -3712,7 +3716,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					}
 				});
 
-				wiJobSystem::Execute([&] {
+				wiJobSystem::Execute(ctx, [&] {
 					// Cull emitters:
 					for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 					{
@@ -3726,7 +3730,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					}
 				});
 
-				wiJobSystem::Execute([&] {
+				wiJobSystem::Execute(ctx, [&] {
 					// Cull hairs:
 					for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 					{
@@ -3740,7 +3744,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 					}
 				});
 
-				wiJobSystem::Wait();
+				wiJobSystem::Wait(ctx);
 
 				// Sort lights based on distance so that closer lights will receive shadow map priority:
 				const size_t lightCount = culling.culledLights.size();
@@ -3848,7 +3852,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	ManageEnvProbes();
 	ManageWaterRipples();
 
-	wiJobSystem::Wait();
+	wiJobSystem::Wait(ctx);
 }
 void UpdateRenderData(GRAPHICSTHREAD threadID)
 {

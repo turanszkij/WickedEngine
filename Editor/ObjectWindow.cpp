@@ -488,6 +488,8 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 		}
 
+		wiJobSystem::context ctx;
+
 		for (auto& it : gen_meshes)
 		{
 			MeshComponent& mesh = *it.first;
@@ -503,12 +505,12 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 			}
 			else if (gen_type == UV_GEN_GENERATE_ATLAS)
 			{
-				wiJobSystem::Execute([&] {
+				wiJobSystem::Execute(ctx, [&] {
 					it.second = GenerateMeshAtlas(mesh, (uint32_t)lightmapResolutionSlider->GetValue());
 				});
 			}
 		}
-		wiJobSystem::Wait();
+		wiJobSystem::Wait(ctx);
 
 		for (auto& x : gen_objects)
 		{
