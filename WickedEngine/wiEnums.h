@@ -1,15 +1,17 @@
 #pragma once
 
 // Use GRAPHICSTHREAD_IMMEDIATE from the main thread and when drawing to backbuffer
-// Use the others from other threads in conjunction with GraphicsDevice::FinishCommandList and ExecuteCommandLists
+// Use the others from other threads in conjunction with GraphicsDevice::BeginCommandList and ExecuteCommandLists
 enum GRAPHICSTHREAD
 {
 	GRAPHICSTHREAD_IMMEDIATE,
-	GRAPHICSTHREAD_SHADOWS,
-	GRAPHICSTHREAD_REFLECTIONS,
-	GRAPHICSTHREAD_SCENE,
-	GRAPHICSTHREAD_MISC1,
-	GRAPHICSTHREAD_MISC2,
+	GRAPHICSTHREAD_1,
+	GRAPHICSTHREAD_2,
+	GRAPHICSTHREAD_3,
+	GRAPHICSTHREAD_4,
+	GRAPHICSTHREAD_5,
+	GRAPHICSTHREAD_6,
+	GRAPHICSTHREAD_7,
 	GRAPHICSTHREAD_COUNT
 };
 

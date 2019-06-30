@@ -22,7 +22,6 @@ namespace wiGraphics
 		FORMAT BACKBUFFER_FORMAT = FORMAT_R10G10B10A2_UNORM;
 		static const UINT BACKBUFFER_COUNT = 2;
 		bool TESSELLATION = false;
-		bool MULTITHREADED_RENDERING = false;
 		bool CONSERVATIVE_RASTERIZATION = false;
 		bool RASTERIZER_ORDERED_VIEWS = false;
 		bool UNORDEREDACCESSTEXTURE_LOAD_EXT = false;
@@ -74,9 +73,7 @@ namespace wiGraphics
 		virtual void PresentBegin() = 0;
 		virtual void PresentEnd() = 0;
 
-		virtual void CreateCommandLists() = 0;
-		virtual void ExecuteCommandLists() = 0;
-		virtual void FinishCommandList(GRAPHICSTHREAD thread) = 0;
+		virtual GRAPHICSTHREAD BeginCommandList() = 0;
 
 		virtual void WaitForGPU() = 0;
 

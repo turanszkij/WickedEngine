@@ -479,7 +479,6 @@ void AttachCamera(wiECS::Entity entity)
 
 void Initialize()
 {
-	GetDevice()->CreateCommandLists();
 	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
 	{
 		frameAllocators[i].reserve(4 * 1024 * 1024);
@@ -3859,6 +3858,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
+	BindCommonResources(threadID);
+
 	// Process deferred MIP generation:
 	deferredMIPGenLock.lock();
 	for (auto& it : deferredMIPGens)
@@ -4119,7 +4120,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	}
 
 	UpdateFrameCB(threadID);
-	BindCommonResources(threadID);
 
 	GetPrevCamera() = GetCamera();
 
@@ -4285,7 +4285,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 
 		float cloudPhase = renderTime * scene.weather.cloudSpeed;
-		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, GRAPHICSTHREAD_IMMEDIATE);
+		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, threadID);
 	}
 
 	if (enviroMap != nullptr)
@@ -4943,6 +4943,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		device->EventBegin("ShadowMap Render", threadID);
 		auto range = wiProfiler::BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
+		BindCommonResources(threadID);
 		BindConstantBuffers(VS, threadID);
 		BindConstantBuffers(PS, threadID);
 

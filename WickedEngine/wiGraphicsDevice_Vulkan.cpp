@@ -1570,6 +1570,54 @@ namespace wiGraphics
 
 	// Engine functions
 	VkCommandBuffer GraphicsDevice_Vulkan::GetDirectCommandList(GRAPHICSTHREAD threadID) { return GetFrameResources().commandBuffers[threadID]; }
+	void GraphicsDevice_Vulkan::ResetCommandList(GRAPHICSTHREAD threadID)
+	{
+		VkResult res;
+		res = vkResetCommandPool(device, GetFrameResources().commandPools[threadID], 0);
+		assert(res == VK_SUCCESS);
+
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+		beginInfo.pInheritanceInfo = nullptr; // Optional
+
+		res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[threadID], &beginInfo);
+		assert(res == VK_SUCCESS);
+
+		VkViewport viewports[6];
+		for (UINT i = 0; i < ARRAYSIZE(viewports); ++i)
+		{
+			viewports[i].x = 0;
+			viewports[i].y = 0;
+			viewports[i].width = static_cast<float>(SCREENWIDTH);
+			viewports[i].height = static_cast<float>(SCREENHEIGHT);
+			viewports[i].minDepth = 0;
+			viewports[i].maxDepth = 1;
+		}
+		vkCmdSetViewport(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(viewports), viewports);
+
+		VkRect2D scissors[8];
+		for (int i = 0; i < ARRAYSIZE(scissors); ++i)
+		{
+			scissors[i].offset.x = 0;
+			scissors[i].offset.y = 0;
+			scissors[i].extent.width = 65535;
+			scissors[i].extent.height = 65535;
+		}
+		vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
+
+		float blendConstants[] = { 1,1,1,1 };
+		vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
+
+
+		// reset descriptor allocators:
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->reset();
+
+		// reset immediate resource allocators:
+		GetFrameResources().resourceBuffer[threadID]->clear();
+
+		renderPass[threadID].reset();
+	}
 
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
@@ -2138,39 +2186,39 @@ namespace wiGraphics
 					}
 				}
 
-				// Create command buffers:
+				// Create immediate command buffer:
 				{
 					QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
-					for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
-					{
-						VkCommandPoolCreateInfo poolInfo = {};
-						poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-						poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-						poolInfo.flags = 0; // Optional
+					GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
 
-						if (vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[threadID]) != VK_SUCCESS) {
-							throw std::runtime_error("failed to create command pool!");
-						}
+					VkCommandPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+					poolInfo.flags = 0; // Optional
 
-						VkCommandBufferAllocateInfo commandBufferInfo = {};
-						commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-						commandBufferInfo.commandBufferCount = 1;
-						commandBufferInfo.commandPool = frame.commandPools[threadID];
-						commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-						if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[threadID]) != VK_SUCCESS) {
-							throw std::runtime_error("failed to create command buffers!");
-						}
-
-						VkCommandBufferBeginInfo beginInfo = {};
-						beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-						beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-						beginInfo.pInheritanceInfo = nullptr; // Optional
-
-						VkResult res = vkBeginCommandBuffer(frame.commandBuffers[threadID], &beginInfo);
-						assert(res == VK_SUCCESS);
+					if (vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[threadID]) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create command pool!");
 					}
+
+					VkCommandBufferAllocateInfo commandBufferInfo = {};
+					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					commandBufferInfo.commandBufferCount = 1;
+					commandBufferInfo.commandPool = frame.commandPools[threadID];
+					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+					if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[threadID]) != VK_SUCCESS) {
+						throw std::runtime_error("failed to create command buffers!");
+					}
+
+					VkCommandBufferBeginInfo beginInfo = {};
+					beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+					beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+					beginInfo.pInheritanceInfo = nullptr; // Optional
+
+					VkResult res = vkBeginCommandBuffer(frame.commandBuffers[threadID], &beginInfo);
+					assert(res == VK_SUCCESS);
+
 				}
 
 
@@ -2352,35 +2400,7 @@ namespace wiGraphics
 			}
 		}
 
-
-		// Initiate first commands:
-		for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
-		{
-			VkViewport viewports[6];
-			for (UINT i = 0; i < ARRAYSIZE(viewports); ++i)
-			{
-				viewports[i].x = 0;
-				viewports[i].y = 0;
-				viewports[i].width = static_cast<float>(SCREENWIDTH);
-				viewports[i].height = static_cast<float>(SCREENHEIGHT);
-				viewports[i].minDepth = 0;
-				viewports[i].maxDepth = 1;
-			}
-			vkCmdSetViewport(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(viewports), viewports);
-
-			VkRect2D scissors[8];
-			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
-			{
-				scissors[i].offset.x = 0;
-				scissors[i].offset.y = 0;
-				scissors[i].extent.width = 65535;
-				scissors[i].extent.height = 65535;
-			}
-			vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
-
-			float blendConstants[] = { 1,1,1,1 };
-			vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
-		}
+		ResetCommandList(GRAPHICSTHREAD_IMMEDIATE);
 
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
 	}
@@ -4249,6 +4269,41 @@ namespace wiGraphics
 		}
 		copyQueueLock.unlock();
 
+		// Execute deferred command lists:
+		{
+			VkCommandBuffer cmdLists[GRAPHICSTHREAD_COUNT];
+			GRAPHICSTHREAD threadIDs[GRAPHICSTHREAD_COUNT];
+			uint32_t counter = 0;
+
+			GRAPHICSTHREAD threadID;
+			while (active_commandlists.pop_front(threadID))
+			{
+				if (vkEndCommandBuffer(GetDirectCommandList((GRAPHICSTHREAD)threadID)) != VK_SUCCESS) {
+					throw std::runtime_error("failed to record command buffer!");
+				}
+
+				cmdLists[counter] = GetDirectCommandList((GRAPHICSTHREAD)threadID);
+				threadIDs[counter] = threadID;
+				counter++;
+
+				free_commandlists.push_back(threadID);
+			}
+
+			VkSubmitInfo submitInfo = {};
+			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			submitInfo.waitSemaphoreCount = 0;
+			submitInfo.pWaitSemaphores = nullptr;
+			submitInfo.pWaitDstStageMask = nullptr;
+			submitInfo.commandBufferCount = counter;
+			submitInfo.pCommandBuffers = cmdLists;
+			submitInfo.signalSemaphoreCount = 0;
+			submitInfo.pSignalSemaphores = nullptr;
+
+			if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+				throw std::runtime_error("failed to submit draw command buffer!");
+			}
+		}
 
 
 		renderPass[GRAPHICSTHREAD_IMMEDIATE].disable(GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE));
@@ -4392,90 +4447,58 @@ namespace wiGraphics
 			res = vkResetFences(device, 1, &GetFrameResources().frameFence);
 			assert(res == VK_SUCCESS);
 		}
-		
-		for (int threadID = 0; threadID < GRAPHICSTHREAD_IMMEDIATE + 1; ++threadID) // todo: all command lists
-		{
-			res = vkResetCommandPool(device, GetFrameResources().commandPools[threadID], 0);
-			assert(res == VK_SUCCESS);
 
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-			beginInfo.pInheritanceInfo = nullptr; // Optional
-
-			res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[threadID], &beginInfo);
-			assert(res == VK_SUCCESS);
-
-			VkViewport viewports[6];
-			for (UINT i = 0; i < ARRAYSIZE(viewports); ++i)
-			{
-				viewports[i].x = 0;
-				viewports[i].y = 0;
-				viewports[i].width = static_cast<float>(SCREENWIDTH);
-				viewports[i].height = static_cast<float>(SCREENHEIGHT);
-				viewports[i].minDepth = 0;
-				viewports[i].maxDepth = 1;
-			}
-			vkCmdSetViewport(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(viewports), viewports);
-
-			VkRect2D scissors[8];
-			for (int i = 0; i < ARRAYSIZE(scissors); ++i)
-			{
-				scissors[i].offset.x = 0;
-				scissors[i].offset.y = 0;
-				scissors[i].extent.width = 65535;
-				scissors[i].extent.height = 65535;
-			}
-			vkCmdSetScissor(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), 0, ARRAYSIZE(scissors), scissors);
-
-			float blendConstants[] = { 1,1,1,1 };
-			vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
-
-
-			// reset descriptor allocators:
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset();
-
-			// reset immediate resource allocators:
-			GetFrameResources().resourceBuffer[threadID]->clear();
-
-			renderPass[threadID].reset();
-		}
+		ResetCommandList(GRAPHICSTHREAD_IMMEDIATE);
 
 		RESOLUTIONCHANGED = false;
 	}
 
-	void GraphicsDevice_Vulkan::CreateCommandLists()
+	GRAPHICSTHREAD GraphicsDevice_Vulkan::BeginCommandList()
 	{
+		GRAPHICSTHREAD threadID;
+		if (!free_commandlists.pop_front(threadID))
+		{
+			// need to create one more command list:
+			threadID = (GRAPHICSTHREAD)commandlist_count.fetch_add(1);
 
-	}
-	void GraphicsDevice_Vulkan::ExecuteCommandLists()
-	{
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
-		VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = GRAPHICSTHREAD_COUNT - 1;
-		submitInfo.pCommandBuffers = &GetFrameResources().commandBuffers[GRAPHICSTHREAD_IMMEDIATE + 1];
+			for (auto& frame : frames)
+			{
+				VkCommandPoolCreateInfo poolInfo = {};
+				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+				poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+				poolInfo.flags = 0; // Optional
 
-		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+				if (vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[threadID]) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create command pool!");
+				}
 
-		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-			throw std::runtime_error("failed to submit draw command buffer!");
+				VkCommandBufferAllocateInfo commandBufferInfo = {};
+				commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+				commandBufferInfo.commandBufferCount = 1;
+				commandBufferInfo.commandPool = frame.commandPools[threadID];
+				commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+				if (vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[threadID]) != VK_SUCCESS) {
+					throw std::runtime_error("failed to create command buffers!");
+				}
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				VkResult res = vkBeginCommandBuffer(frame.commandBuffers[threadID], &beginInfo);
+				assert(res == VK_SUCCESS);
+			}
 		}
-	}
-	void GraphicsDevice_Vulkan::FinishCommandList(GRAPHICSTHREAD threadID)
-	{
-		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-			return;
-		if (vkEndCommandBuffer(GetDirectCommandList(threadID)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to record command buffer!");
-		}
+
+		ResetCommandList(threadID);
+
+
+		active_commandlists.push_back(threadID);
+		return threadID;
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU()

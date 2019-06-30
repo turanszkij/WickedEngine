@@ -4,9 +4,12 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
+#include "wiContainers.h"
 
 #include <d3d11_3.h>
 #include <DXGI1_3.h>
+
+#include <atomic>
 
 namespace wiGraphics
 {
@@ -58,6 +61,10 @@ namespace wiGraphics
 		void commit_allocations(GRAPHICSTHREAD threadID);
 
 		void CreateBackBufferResources();
+
+		std::atomic<uint8_t> commandlist_count = 1; // first is always immediate command list
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> free_commandlists;
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> active_commandlists;
 
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -111,9 +118,7 @@ namespace wiGraphics
 
 		void WaitForGPU() override;
 
-		void CreateCommandLists() override;
-		void ExecuteCommandLists() override;
-		void FinishCommandList(GRAPHICSTHREAD thread) override;
+		virtual GRAPHICSTHREAD BeginCommandList() override;
 
 		void SetResolution(int width, int height) override;
 

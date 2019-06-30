@@ -5,6 +5,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 #include "wiSpinLock.h"
+#include "wiContainers.h"
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice_SharedInternals.h"
@@ -20,6 +21,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <atomic>
 
 namespace wiGraphics
 {
@@ -196,6 +198,11 @@ namespace wiGraphics
 		UploadBuffer* bufferUploader;
 		UploadBuffer* textureUploader;
 
+		void ResetCommandList(GRAPHICSTHREAD threadID);
+
+		std::atomic<uint8_t> commandlist_count = 1; // first is always immediate command list
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> free_commandlists;
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> active_commandlists;
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -246,9 +253,7 @@ namespace wiGraphics
 		void PresentBegin() override;
 		void PresentEnd() override;
 
-		void CreateCommandLists() override;
-		void ExecuteCommandLists() override;
-		void FinishCommandList(GRAPHICSTHREAD thread) override;
+		virtual GRAPHICSTHREAD BeginCommandList() override;
 
 		void WaitForGPU() override;
 

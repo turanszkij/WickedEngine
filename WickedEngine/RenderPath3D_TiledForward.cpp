@@ -19,13 +19,20 @@ void RenderPath3D_TiledForward::Render() const
 
 	wiJobSystem::context ctx;
 
-	wiJobSystem::Execute(ctx, [this, device] { RenderFrameSetUp(GRAPHICSTHREAD_SHADOWS); device->FinishCommandList(GRAPHICSTHREAD_SHADOWS); });
-	wiJobSystem::Execute(ctx, [this, device] { RenderShadows(GRAPHICSTHREAD_REFLECTIONS); device->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS); });
-	wiJobSystem::Execute(ctx, [this, device] { RenderReflections(GRAPHICSTHREAD_SCENE); device->FinishCommandList(GRAPHICSTHREAD_SCENE); });
+	wiJobSystem::Execute(ctx, [this, device] { 
+		RenderFrameSetUp(device->BeginCommandList()); 
+	});
+	wiJobSystem::Execute(ctx, [this, device] { 
+		RenderShadows(device->BeginCommandList()); 
+	});
+	wiJobSystem::Execute(ctx, [this, device] { 
+		RenderReflections(device->BeginCommandList()); 
+	});
 
 	// Main scene:
-	wiJobSystem::Execute(ctx, [&] {
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_MISC1;
+	wiJobSystem::Execute(ctx, [&] 
+	{
+		GRAPHICSTHREAD threadID = device->BeginCommandList();
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -67,6 +74,12 @@ void RenderPath3D_TiledForward::Render() const
 		RenderLinearDepth(threadID);
 
 		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
+	}
+	);
+
+	wiJobSystem::Execute(ctx, [&] 
+	{
+		GRAPHICSTHREAD threadID = device->BeginCommandList();
 
 		wiRenderer::ComputeTiledLightCulling(threadID);
 
@@ -110,44 +123,45 @@ void RenderPath3D_TiledForward::Render() const
 		RenderSSAO(threadID);
 
 		RenderSSR(*scene_read[0], threadID);
+	}
+	);
 
-		device->FinishCommandList(threadID);
-	});
+	wiJobSystem::Execute(ctx, [&] 
+	{
+		GRAPHICSTHREAD threadID = device->BeginCommandList();
 
-	wiJobSystem::Execute(ctx, [&] {
-		DownsampleDepthBuffer(GRAPHICSTHREAD_MISC2);
+		wiRenderer::BindCommonResources(threadID);
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_MISC2);
+		DownsampleDepthBuffer(threadID);
 
-		RenderOutline(rtMain[0], GRAPHICSTHREAD_MISC2);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-		RenderLightShafts(GRAPHICSTHREAD_MISC2);
+		RenderOutline(rtMain[0], threadID);
 
-		RenderVolumetrics(GRAPHICSTHREAD_MISC2);
+		RenderLightShafts(threadID);
 
-		RenderParticles(false, GRAPHICSTHREAD_MISC2);
+		RenderVolumetrics(threadID);
 
-		RenderRefractionSource(*scene_read[0], GRAPHICSTHREAD_MISC2);
+		RenderParticles(false, threadID);
 
-		RenderTransparents(rtMain[0], RENDERPASS_TILEDFORWARD, GRAPHICSTHREAD_MISC2);
+		RenderRefractionSource(*scene_read[0], threadID);
+
+		RenderTransparents(rtMain[0], RENDERPASS_TILEDFORWARD, threadID);
 
 		if (getMSAASampleCount() > 1)
 		{
-			device->MSAAResolve(scene_read[0], &rtMain[0], GRAPHICSTHREAD_MISC2);
+			device->MSAAResolve(scene_read[0], &rtMain[0], threadID);
 		}
 
-		TemporalAAResolve(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_MISC2);
+		TemporalAAResolve(*scene_read[0], *scene_read[1], threadID);
 
-		RenderBloom(*scene_read[0], GRAPHICSTHREAD_MISC2);
+		RenderBloom(*scene_read[0], threadID);
 
-		RenderPostprocessChain(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_MISC2);
-
-		device->FinishCommandList(GRAPHICSTHREAD_MISC2);
-	});
+		RenderPostprocessChain(*scene_read[0], *scene_read[1], threadID);
+	}
+	);
 
 	wiJobSystem::Wait(ctx);
-
-	device->ExecuteCommandLists();
 
 	RenderPath2D::Render();
 }

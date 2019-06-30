@@ -1538,6 +1538,41 @@ namespace wiGraphics
 
 	// Engine functions
 	ID3D12GraphicsCommandList* GraphicsDevice_DX12::GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
+	void GraphicsDevice_DX12::ResetCommandList(GRAPHICSTHREAD threadID)
+	{
+		// Start the command list in a default state:
+
+		HRESULT hr = GetFrameResources().commandAllocators[threadID]->Reset();
+		assert(SUCCEEDED(hr));
+		hr = static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID])->Reset(GetFrameResources().commandAllocators[threadID], nullptr);
+		assert(SUCCEEDED(hr));
+
+
+		ID3D12DescriptorHeap* heaps[] = {
+			GetFrameResources().ResourceDescriptorsGPU[threadID]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[threadID]->heap_GPU
+		};
+		GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
+
+		GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetGraphicsRootSignature(graphicsRootSig);
+		GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetComputeRootSignature(computeRootSig);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
+			nullSampler,nullCBV,nullSRV,nullUAV
+		};
+		GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
+		GetFrameResources().resourceBuffer[threadID]->clear();
+
+		D3D12_RECT pRects[8];
+		for (UINT i = 0; i < 8; ++i)
+		{
+			pRects[i].bottom = INT32_MAX;
+			pRects[i].left = INT32_MIN;
+			pRects[i].right = INT32_MAX;
+			pRects[i].top = INT32_MIN;
+		}
+		GetDirectCommandList((GRAPHICSTHREAD)threadID)->RSSetScissorRects(8, pRects);
+	}
 
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
@@ -1699,16 +1734,13 @@ namespace wiGraphics
 			frames[fr].backBufferRTV.ptr = RTAllocator->allocate(); 
 			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, frames[fr].backBufferRTV);
 
-			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
-			{
-				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[i]);
-				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[i], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[i]);
-				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[i])->Close();
+			hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[GRAPHICSTHREAD_IMMEDIATE]);
+			hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[GRAPHICSTHREAD_IMMEDIATE]);
+			hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[GRAPHICSTHREAD_IMMEDIATE])->Close();
 
-				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
-				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
-			}
+			frames[fr].ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+			frames[fr].SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+			frames[fr].resourceBuffer[GRAPHICSTHREAD_IMMEDIATE] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
 		}
 
 
@@ -1734,7 +1766,6 @@ namespace wiGraphics
 
 		// Query features:
 
-		MULTITHREADED_RENDERING = true;
 		TESSELLATION = true;
 
 		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
@@ -1951,36 +1982,7 @@ namespace wiGraphics
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawIndexedInstancedIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
 
-
-		// Set the starting device state:
-
-		hr = GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE]->Reset();
-		hr = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Reset(GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr);
-
-		ID3D12DescriptorHeap* heaps[] = {
-			GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU
-		};
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
-
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetGraphicsRootSignature(graphicsRootSig);
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetComputeRootSignature(computeRootSig);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-			nullSampler,nullCBV,nullSRV,nullUAV
-		};
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
-
-
-		D3D12_RECT pRects[8];
-		for (UINT i = 0; i < 8; ++i)
-		{
-			pRects[i].bottom = INT32_MAX;
-			pRects[i].left = INT32_MIN;
-			pRects[i].right = INT32_MAX;
-			pRects[i].top = INT32_MIN;
-		}
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->RSSetScissorRects(8, pRects);
+		ResetCommandList(GRAPHICSTHREAD_IMMEDIATE);
 
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
@@ -3361,6 +3363,28 @@ namespace wiGraphics
 		}
 		copyQueueLock.unlock();
 
+		// Execute deferred command lists:
+		{
+			ID3D12CommandList* cmdLists[GRAPHICSTHREAD_COUNT];
+			GRAPHICSTHREAD threadIDs[GRAPHICSTHREAD_COUNT];
+			uint32_t counter = 0;
+
+			GRAPHICSTHREAD threadID;
+			while (active_commandlists.pop_front(threadID))
+			{
+				HRESULT hr = GetDirectCommandList((GRAPHICSTHREAD)threadID)->Close();
+				assert(SUCCEEDED(hr));
+
+				cmdLists[counter] = GetDirectCommandList((GRAPHICSTHREAD)threadID);
+				threadIDs[counter] = threadID;
+				counter++;
+
+				free_commandlists.push_back(threadID);
+			}
+
+			directQueue->ExecuteCommandLists(counter, cmdLists);
+		}
+
 
 		BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
 
@@ -3434,63 +3458,39 @@ namespace wiGraphics
 			WaitForSingleObject(frameFenceEvent, INFINITE);
 		}
 
-
-
-		for (int threadID = 0; threadID < GRAPHICSTHREAD_IMMEDIATE + 1; ++threadID) // todo: all command lists
-		{
-			// Reset (re-use) the memory associated command allocator.
-			HRESULT hr = result = GetFrameResources().commandAllocators[threadID]->Reset();
-			assert(SUCCEEDED(hr));
-			// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-			hr = static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID])->Reset(GetFrameResources().commandAllocators[threadID], nullptr);
-			assert(SUCCEEDED(hr));
-
-
-			ID3D12DescriptorHeap* heaps[] = {
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[threadID]->heap_GPU
-			};
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
-
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetGraphicsRootSignature(graphicsRootSig);
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetComputeRootSignature(computeRootSig);
-
-			D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-				nullSampler,nullCBV,nullSRV,nullUAV
-			};
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
-			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
-			GetFrameResources().resourceBuffer[threadID]->clear();
-
-			D3D12_RECT pRects[8];
-			for (UINT i = 0; i < 8; ++i)
-			{
-				pRects[i].bottom = INT32_MAX;
-				pRects[i].left = INT32_MIN;
-				pRects[i].right = INT32_MAX;
-				pRects[i].top = INT32_MIN;
-			}
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->RSSetScissorRects(8, pRects);
-		}
+		ResetCommandList(GRAPHICSTHREAD_IMMEDIATE);
 
 		memset(prev_pt, 0, sizeof(prev_pt));
 
 		RESOLUTIONCHANGED = false;
 	}
 
-	void GraphicsDevice_DX12::CreateCommandLists()
+	GRAPHICSTHREAD GraphicsDevice_DX12::BeginCommandList()
 	{
+		GRAPHICSTHREAD threadID;
+		if (!free_commandlists.pop_front(threadID))
+		{
+			// need to create one more command list:
+			threadID = (GRAPHICSTHREAD)commandlist_count.fetch_add(1);
 
-	}
-	void GraphicsDevice_DX12::ExecuteCommandLists()
-	{
-		directQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &GetFrameResources().commandLists[1]);
-	}
-	void GraphicsDevice_DX12::FinishCommandList(GRAPHICSTHREAD threadID)
-	{
-		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-			return;
-		HRESULT hr = GetDirectCommandList(threadID)->Close();
-		assert(SUCCEEDED(hr));
+			HRESULT hr;
+			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			{
+				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[threadID]);
+				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[threadID], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[threadID]);
+				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[threadID])->Close();
+
+				frames[fr].ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+				frames[fr].SamplerDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+				frames[fr].resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
+			}
+		}
+
+		ResetCommandList(threadID);
+
+
+		active_commandlists.push_back(threadID);
+		return threadID;
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()

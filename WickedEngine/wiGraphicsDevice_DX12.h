@@ -5,9 +5,12 @@
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
 #include "wiSpinLock.h"
+#include "wiContainers.h"
 
 #include <dxgi1_4.h>
 #include <d3d12.h>
+
+#include <atomic>
 
 namespace wiGraphics
 {
@@ -136,6 +139,12 @@ namespace wiGraphics
 
 		PRIMITIVETOPOLOGY prev_pt[GRAPHICSTHREAD_COUNT] = {};
 
+		void ResetCommandList(GRAPHICSTHREAD threadID);
+
+		std::atomic<uint8_t> commandlist_count = 1; // first is always immediate command list
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> free_commandlists;
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> active_commandlists;
+
 	public:
 		GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
 		virtual ~GraphicsDevice_DX12();
@@ -185,9 +194,7 @@ namespace wiGraphics
 		void PresentBegin() override;
 		void PresentEnd() override;
 
-		void CreateCommandLists() override;
-		void ExecuteCommandLists() override;
-		void FinishCommandList(GRAPHICSTHREAD thread) override;
+		virtual GRAPHICSTHREAD BeginCommandList() override;
 
 		void WaitForGPU() override;
 

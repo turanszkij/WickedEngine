@@ -3058,6 +3058,22 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const std::string& nam
 
 void GraphicsDevice_DX11::PresentBegin()
 {
+	// Execute deferred command lists:
+	{
+		GRAPHICSTHREAD threadID;
+		while (active_commandlists.pop_front(threadID))
+		{
+			deviceContexts[threadID]->FinishCommandList(false, &commandLists[threadID]);
+			deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ExecuteCommandList(commandLists[threadID], false);
+			commandLists[threadID]->Release();
+			commandLists[threadID] = nullptr;
+			deviceContexts[threadID]->ClearState();
+			BindGraphicsPSO(nullptr, (GRAPHICSTHREAD)threadID);
+
+			free_commandlists.push_back(threadID);
+		}
+	}
+
 	ViewPort viewPort;
 	viewPort.Width = (FLOAT)SCREENWIDTH;
 	viewPort.Height = (FLOAT)SCREENHEIGHT;
@@ -3117,52 +3133,29 @@ void GraphicsDevice_DX11::PresentEnd()
 	RESOLUTIONCHANGED = false;
 }
 
-void GraphicsDevice_DX11::CreateCommandLists()
+
+GRAPHICSTHREAD GraphicsDevice_DX11::BeginCommandList()
 {
-	//D3D11_FEATURE_DATA_THREADING threadingFeature;
-	//device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingFeature, sizeof(threadingFeature));
-	//if (threadingFeature.DriverConcurrentCreates && threadingFeature.DriverCommandLists)
+	GRAPHICSTHREAD threadID;
+	if (!free_commandlists.pop_front(threadID))
 	{
-		for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
-		{
-			if (i == (int)GRAPHICSTHREAD_IMMEDIATE)
-				continue;
+		// need to create one more command list:
+		threadID = (GRAPHICSTHREAD)commandlist_count.fetch_add(1);
 
-			HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[i]);
+		HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[threadID]);
+		assert(SUCCEEDED(hr));
 
-			if (!SUCCEEDED(hr))
-			{
-				return;
-			}
+		hr = deviceContexts[threadID]->QueryInterface(__uuidof(userDefinedAnnotations[threadID]),
+			reinterpret_cast<void**>(&userDefinedAnnotations[threadID]));
+		assert(SUCCEEDED(hr));
 
-			hr = deviceContexts[i]->QueryInterface(__uuidof(userDefinedAnnotations[i]),
-				reinterpret_cast<void**>(&userDefinedAnnotations[i]));
-
-			hr = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[i].buffer);
-			SetName(&frame_allocators[i].buffer, "frame_allocator[deferred]");
-		}
+		hr = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[threadID].buffer);
+		assert(SUCCEEDED(hr));
+		SetName(&frame_allocators[threadID].buffer, "frame_allocator[deferred]");
 	}
-	MULTITHREADED_RENDERING = true;
-}
-void GraphicsDevice_DX11::ExecuteCommandLists()
-{
-	for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
-	{
-		if (i != GRAPHICSTHREAD_IMMEDIATE && commandLists[i] != nullptr)
-		{
-			deviceContexts[GRAPHICSTHREAD_IMMEDIATE]->ExecuteCommandList(commandLists[i], true);
-			commandLists[i]->Release();
-			commandLists[i] = nullptr;
-			deviceContexts[i]->ClearState();
-			BindGraphicsPSO(nullptr, (GRAPHICSTHREAD)i);
-		}
-	}
-}
-void GraphicsDevice_DX11::FinishCommandList(GRAPHICSTHREAD thread)
-{
-	if (thread == GRAPHICSTHREAD_IMMEDIATE)
-		return;
-	deviceContexts[thread]->FinishCommandList(true, &commandLists[thread]);
+
+	active_commandlists.push_back(threadID);
+	return threadID;
 }
 
 void GraphicsDevice_DX11::WaitForGPU()
