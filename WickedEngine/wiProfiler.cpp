@@ -8,6 +8,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <stack>
+#include <mutex>
 
 using namespace std;
 using namespace wiGraphics;
@@ -16,23 +17,23 @@ namespace wiProfiler
 {
 	bool ENABLED = false;
 	bool initialized = false;
+	std::mutex lock;
 
 	struct Range
 	{
-		PROFILER_DOMAIN domain;
+		PROFILER_DOMAIN domain = DOMAIN_CPU;
 		std::string name;
-		float time;
+		float time = 0;
+		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
 
 		wiTimer cpuBegin, cpuEnd;
 
 		wiRenderer::GPUQueryRing<4> gpuBegin;
 		wiRenderer::GPUQueryRing<4> gpuEnd;
 
-		Range() :time(0), domain(DOMAIN_CPU) {}
-		~Range() {}
+		bool active = false;
 	};
-	std::unordered_map<std::string, Range*> ranges;
-	std::stack<std::string> rangeStack;
+	std::unordered_map<size_t, Range*> ranges;
 	wiRenderer::GPUQueryRing<4> disjoint;
 
 	void BeginFrame()
@@ -67,13 +68,13 @@ namespace wiProfiler
 			while (!wiRenderer::GetDevice()->QueryRead(disjoint_query, &disjoint_result));
 		}
 
-		assert(rangeStack.empty() && "There was a range which was not ended!");
-
 		if (disjoint_result.result_disjoint == FALSE)
 		{
 			for (auto& x : ranges)
 			{
 				auto& range = x.second;
+
+				assert(range->active == false && "There was a range that was not ended!");
 
 				range->time = 0;
 				switch (range->domain)
@@ -102,15 +103,18 @@ namespace wiProfiler
 		}
 	}
 
-	void BeginRange(const std::string& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID)
+	range_id BeginRange(const wiHashString& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID)
 	{
 		if (!ENABLED || !initialized)
-			return;
+			return 0;
 
-		if (ranges.find(name) == ranges.end())
+		range_id id = name.GetHash();
+
+		lock.lock();
+		if (ranges.find(id) == ranges.end())
 		{
 			Range* range = new Range;
-			range->name = name;
+			range->name = name.GetString();
 			range->domain = domain;
 			range->time = 0;
 
@@ -134,32 +138,35 @@ namespace wiProfiler
 			}
 
 
-			ranges.insert(make_pair(name, range));
+			ranges.insert(make_pair(id, range));
 		}
 
 		switch (domain)
 		{
 		case wiProfiler::DOMAIN_CPU:
-			ranges[name]->cpuBegin.record();
+			ranges[id]->cpuBegin.record();
 			break;
 		case wiProfiler::DOMAIN_GPU:
-			wiRenderer::GetDevice()->QueryEnd(ranges[name]->gpuBegin.Get_GPU(), threadID);
+			ranges[id]->threadID = threadID;
+			wiRenderer::GetDevice()->QueryEnd(ranges[id]->gpuBegin.Get_GPU(), threadID);
 			break;
 		default:
 			assert(0);
 			break;
 		}
 
-		rangeStack.push(name);
+		lock.unlock();
+
+		return id;
 	}
-	void EndRange(GRAPHICSTHREAD threadID)
+	void EndRange(range_id id)
 	{
-		if (!ENABLED || !initialized || rangeStack.empty())
+		if (!ENABLED || !initialized)
 			return;
 
-		const std::string& top = rangeStack.top();
+		lock.lock();
 
-		auto& it = ranges.find(top);
+		auto& it = ranges.find(id);
 		if (it != ranges.end())
 		{
 			switch (it->second->domain)
@@ -168,7 +175,7 @@ namespace wiProfiler
 				it->second->cpuEnd.record();
 				break;
 			case wiProfiler::DOMAIN_GPU:
-				wiRenderer::GetDevice()->QueryEnd(it->second->gpuEnd.Get_GPU(), threadID);
+				wiRenderer::GetDevice()->QueryEnd(it->second->gpuEnd.Get_GPU(), it->second->threadID);
 				break;
 			default:
 				assert(0);
@@ -180,7 +187,7 @@ namespace wiProfiler
 			assert(0);
 		}
 
-		rangeStack.pop();
+		lock.unlock();
 	}
 
 	void DrawData(int x, int y, GRAPHICSTHREAD threadID)
@@ -198,7 +205,7 @@ namespace wiProfiler
 			{
 				if (x.second->domain == domain)
 				{
-					ss << x.first << ": " << fixed << x.second->time << " ms" << endl;
+					ss << x.second->name << ": " << fixed << x.second->time << " ms" << endl;
 				}
 			}
 			ss << endl;

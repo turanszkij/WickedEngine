@@ -71,7 +71,7 @@ void RenderPath3D_Forward::Render() const
 
 		// Opaque Scene:
 		{
-			wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 			const Texture2D* rts[] = {
 				&rtMain[0],
@@ -96,7 +96,7 @@ void RenderPath3D_Forward::Render() const
 
 			device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-			wiProfiler::EndRange(threadID); // Opaque Scene
+			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
 		if (getMSAASampleCount() > 1)

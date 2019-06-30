@@ -17,13 +17,15 @@ void RenderPath3D_TiledForward::Render() const
 		scene_read[1] = &rtMain_resolved[1];
 	}
 
-	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
-	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
-	RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+	wiJobSystem::context ctx;
+
+	wiJobSystem::Execute(ctx, [this, device] { RenderFrameSetUp(GRAPHICSTHREAD_SHADOWS); device->FinishCommandList(GRAPHICSTHREAD_SHADOWS); });
+	wiJobSystem::Execute(ctx, [this, device] { RenderShadows(GRAPHICSTHREAD_REFLECTIONS); device->FinishCommandList(GRAPHICSTHREAD_REFLECTIONS); });
+	wiJobSystem::Execute(ctx, [this, device] { RenderReflections(GRAPHICSTHREAD_SCENE); device->FinishCommandList(GRAPHICSTHREAD_SCENE); });
 
 	// Main scene:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+	wiJobSystem::Execute(ctx, [&] {
+		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_MISC1;
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -32,7 +34,7 @@ void RenderPath3D_TiledForward::Render() const
 
 		// depth prepass
 		{
-			wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRange("Z-Prepass", wiProfiler::DOMAIN_GPU, threadID);
 
 			device->BindRenderTargets(0, nullptr, &depthBuffer, threadID);
 			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
@@ -46,7 +48,7 @@ void RenderPath3D_TiledForward::Render() const
 
 			device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-			wiProfiler::EndRange(threadID);
+			wiProfiler::EndRange(range);
 		}
 
 		if (getMSAASampleCount() > 1)
@@ -72,7 +74,7 @@ void RenderPath3D_TiledForward::Render() const
 
 		// Opaque scene:
 		{
-			wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 			const Texture2D* rts[] = {
 				&rtMain[0],
@@ -95,7 +97,7 @@ void RenderPath3D_TiledForward::Render() const
 
 			device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
-			wiProfiler::EndRange(threadID); // Opaque Scene
+			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
 		if (getMSAASampleCount() > 1)
@@ -108,34 +110,44 @@ void RenderPath3D_TiledForward::Render() const
 		RenderSSAO(threadID);
 
 		RenderSSR(*scene_read[0], threadID);
-	}
 
-	DownsampleDepthBuffer(GRAPHICSTHREAD_IMMEDIATE);
+		device->FinishCommandList(threadID);
+	});
 
-	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_IMMEDIATE);
+	wiJobSystem::Execute(ctx, [&] {
+		DownsampleDepthBuffer(GRAPHICSTHREAD_MISC2);
 
-	RenderOutline(rtMain[0], GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_MISC2);
 
-	RenderLightShafts(GRAPHICSTHREAD_IMMEDIATE);
+		RenderOutline(rtMain[0], GRAPHICSTHREAD_MISC2);
 
-	RenderVolumetrics(GRAPHICSTHREAD_IMMEDIATE);
+		RenderLightShafts(GRAPHICSTHREAD_MISC2);
 
-	RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
+		RenderVolumetrics(GRAPHICSTHREAD_MISC2);
 
-	RenderRefractionSource(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
+		RenderParticles(false, GRAPHICSTHREAD_MISC2);
 
-	RenderTransparents(rtMain[0], RENDERPASS_TILEDFORWARD, GRAPHICSTHREAD_IMMEDIATE);
+		RenderRefractionSource(*scene_read[0], GRAPHICSTHREAD_MISC2);
 
-	if (getMSAASampleCount() > 1)
-	{
-		device->MSAAResolve(scene_read[0], &rtMain[0], GRAPHICSTHREAD_IMMEDIATE);
-	}
+		RenderTransparents(rtMain[0], RENDERPASS_TILEDFORWARD, GRAPHICSTHREAD_MISC2);
 
-	TemporalAAResolve(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
+		if (getMSAASampleCount() > 1)
+		{
+			device->MSAAResolve(scene_read[0], &rtMain[0], GRAPHICSTHREAD_MISC2);
+		}
 
-	RenderBloom(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
+		TemporalAAResolve(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_MISC2);
 
-	RenderPostprocessChain(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
+		RenderBloom(*scene_read[0], GRAPHICSTHREAD_MISC2);
+
+		RenderPostprocessChain(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_MISC2);
+
+		device->FinishCommandList(GRAPHICSTHREAD_MISC2);
+	});
+
+	wiJobSystem::Wait(ctx);
+
+	device->ExecuteCommandLists();
 
 	RenderPath2D::Render();
 }

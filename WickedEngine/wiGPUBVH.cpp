@@ -402,7 +402,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	}
 
 
-	wiProfiler::BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
 
 	UpdateGlobalMaterialResources(scene, threadID);
 
@@ -609,7 +609,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 #endif // BVH_VALIDATE
 
 
-	wiProfiler::EndRange(threadID); // BVH rebuild
+	wiProfiler::EndRange(range); // BVH rebuild
 }
 void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 {

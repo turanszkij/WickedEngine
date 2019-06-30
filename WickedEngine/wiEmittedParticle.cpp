@@ -357,7 +357,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 		if (IsSPHEnabled())
 		{
-			wiProfiler::BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
 
 			// Smooth Particle Hydrodynamics:
 			device->EventBegin("SPH - Simulation", threadID);
@@ -456,7 +456,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 			device->EventEnd(threadID);
 
-			wiProfiler::EndRange(threadID);
+			wiProfiler::EndRange(range);
 		}
 
 		device->EventBegin("Simulate", threadID);

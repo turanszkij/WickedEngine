@@ -314,7 +314,9 @@ namespace wiPhysicsEngine
 			return;
 		}
 
-		wiProfiler::BeginRange("Physics", wiProfiler::DOMAIN_CPU);
+		wiJobSystem::Wait(ctx);
+
+		auto range = wiProfiler::BeginRange("Physics", wiProfiler::DOMAIN_CPU);
 
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 
@@ -499,6 +501,6 @@ namespace wiPhysicsEngine
 			}
 		}
 
-		wiProfiler::EndRange(); // Physics
+		wiProfiler::EndRange(range); // Physics
 	}
 }

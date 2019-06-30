@@ -119,7 +119,7 @@ void MainComponent::Run()
 	}
 
 	wiProfiler::BeginFrame();
-	wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
+	auto range = wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
@@ -133,7 +133,7 @@ void MainComponent::Run()
 		fadeManager.Update(dt);
 
 		// Fixed time update:
-		wiProfiler::BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
+		auto range = wiProfiler::BeginRange("Fixed Update", wiProfiler::DOMAIN_CPU);
 		{
 			if (frameskip)
 			{
@@ -156,18 +156,18 @@ void MainComponent::Run()
 				FixedUpdate();
 			}
 		}
-		wiProfiler::EndRange(); // Fixed Update
+		wiProfiler::EndRange(range); // Fixed Update
 
 		// Variable-timed update:
-		wiProfiler::BeginRange("Update", wiProfiler::DOMAIN_CPU);
+		range = wiProfiler::BeginRange("Update", wiProfiler::DOMAIN_CPU);
 		Update(dt);
-		wiProfiler::EndRange(); // Update
+		wiProfiler::EndRange(range); // Update
 
 		wiInputManager::Update();
 
-		wiProfiler::BeginRange("Render", wiProfiler::DOMAIN_CPU);
+		range = wiProfiler::BeginRange("Render", wiProfiler::DOMAIN_CPU);
 		Render();
-		wiProfiler::EndRange(); // Render
+		wiProfiler::EndRange(range); // Render
 	}
 	else
 	{
@@ -175,13 +175,13 @@ void MainComponent::Run()
 		deltaTimeAccumulator = 0;
 	}
 
-	wiProfiler::EndRange(); // CPU Frame
+	wiProfiler::EndRange(range); // CPU Frame
 
-	wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
+	range = wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
 	wiRenderer::GetDevice()->PresentBegin();
 	Compose();
 	wiRenderer::GetDevice()->PresentEnd();
-	wiProfiler::EndRange(); // Compose
+	wiProfiler::EndRange(range); // Compose
 
 	wiRenderer::EndFrame();
 
@@ -220,12 +220,12 @@ void MainComponent::Render()
 {
 	wiLua::GetGlobal()->Render();
 
-	wiProfiler::BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
+	auto range = wiProfiler::BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Render();
 	}
-	wiProfiler::EndRange(GRAPHICSTHREAD_IMMEDIATE); // GPU Frame
+	wiProfiler::EndRange(range); // GPU Frame
 }
 
 void MainComponent::Compose()

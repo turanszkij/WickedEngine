@@ -3610,7 +3610,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
-	wiProfiler::BeginRange("Frustum Culling", wiProfiler::DOMAIN_CPU);
+	auto range = wiProfiler::BeginRange("Frustum Culling", wiProfiler::DOMAIN_CPU);
 	{
 		for (auto& x : frameCullings)
 		{
@@ -3811,7 +3811,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 		}
 	}
-	wiProfiler::EndRange(); // Frustum Culling
+	wiProfiler::EndRange(range); // Frustum Culling
 
 	// Ocean will override any current reflectors
 	waterPlane = scene.waterPlane;
@@ -4116,15 +4116,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		// Temporary array for GPU entities can be freed now:
 		frameAllocators[threadID].free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
 		frameAllocators[threadID].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
-
-		// Bind the GPU entity array for all shaders that need it here:
-		GPUResource* resources[] = {
-			&resourceBuffers[RBTYPE_ENTITYARRAY],
-			&resourceBuffers[RBTYPE_MATRIXARRAY],
-		};
-		device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-		device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-		device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 	}
 
 	UpdateFrameCB(threadID);
@@ -4132,7 +4123,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	GetPrevCamera() = GetCamera();
 
-	wiProfiler::BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
 	device->EventBegin("Skinning", threadID);
 	{
 		bool streamOutSetUp = false;
@@ -4204,7 +4195,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 	}
 	device->EventEnd(threadID);
-	wiProfiler::EndRange(threadID); // skinning
+	wiProfiler::EndRange(range); // skinning
 
 	// Update soft body vertex buffers:
 	for (size_t i = 0; i < scene.softbodies.GetCount(); ++i)
@@ -4318,7 +4309,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&GetCamera());
 
-	wiProfiler::BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
 
 	int queryID = 0;
 
@@ -4384,7 +4375,7 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 		device->EventEnd(threadID);
 	}
 
-	wiProfiler::EndRange(threadID); // Occlusion Culling Render
+	wiProfiler::EndRange(range); // Occlusion Culling Render
 }
 void OcclusionCulling_Read()
 {
@@ -4393,7 +4384,7 @@ void OcclusionCulling_Read()
 		return;
 	}
 
-	wiProfiler::BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
+	auto range = wiProfiler::BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
 
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&GetCamera());
@@ -4444,7 +4435,7 @@ void OcclusionCulling_Read()
 		device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
-	wiProfiler::EndRange(); // Occlusion Culling Read
+	wiProfiler::EndRange(range); // Occlusion Culling Read
 }
 void EndFrame()
 {
@@ -4538,7 +4529,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	const Scene& scene = GetScene();
 
 	device->EventBegin("Light Render", threadID);
-	wiProfiler::BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
@@ -4611,7 +4602,7 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	}
 
-	wiProfiler::EndRange(threadID);
+	wiProfiler::EndRange(range);
 	device->EventEnd(threadID);
 }
 void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
@@ -4950,7 +4941,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 	if (!culling.culledLights.empty())
 	{
 		device->EventBegin("ShadowMap Render", threadID);
-		wiProfiler::BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
+		auto range = wiProfiler::BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 		BindConstantBuffers(VS, threadID);
 		BindConstantBuffers(PS, threadID);
@@ -5234,7 +5225,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 		device->BindRenderTargets(0, nullptr, nullptr, threadID);
 
 
-		wiProfiler::EndRange(); // Shadow Rendering
+		wiProfiler::EndRange(range); // Shadow Rendering
 		device->EventEnd(threadID);
 	}
 }
@@ -5247,6 +5238,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 	device->EventBegin("DrawScene", threadID);
 
+	BindCommonResources(threadID);
 	BindShadowmaps(PS, threadID);
 	BindConstantBuffers(VS, threadID);
 	BindConstantBuffers(PS, threadID);
@@ -5329,6 +5321,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 	device->EventBegin("DrawScene_Transparent", threadID);
 
+	BindCommonResources(threadID);
 	BindShadowmaps(PS, threadID);
 	BindConstantBuffers(VS, threadID);
 	BindConstantBuffers(PS, threadID);
@@ -5403,6 +5396,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 	device->EventBegin("DrawDebugWorld", threadID);
 
+	BindCommonResources(threadID);
 	BindConstantBuffers(VS, threadID);
 	BindConstantBuffers(PS, threadID);
 
@@ -6576,7 +6570,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Voxel Radiance", threadID);
-	wiProfiler::BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
 
 	const Scene& scene = GetScene();
 
@@ -6724,7 +6718,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 	device->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
 	device->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
 
-	wiProfiler::EndRange(threadID);
+	wiProfiler::EndRange(range);
 	device->EventEnd(threadID);
 }
 
@@ -6740,7 +6734,7 @@ inline XMUINT3 GetEntityCullingTileCount()
 void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuffer_diffuse, const Texture2D* lightbuffer_specular)
 {
 	const bool deferred = lightbuffer_diffuse != nullptr && lightbuffer_specular != nullptr;
-	wiProfiler::BeginRange("Entity Culling", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("Entity Culling", wiProfiler::DOMAIN_GPU, threadID);
 	GraphicsDevice* device = GetDevice();
 
 	int _width = GetInternalResolution().x;
@@ -6910,7 +6904,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		device->EventEnd(threadID);
 	}
 
-	wiProfiler::EndRange(threadID);
+	wiProfiler::EndRange(range);
 }
 
 
@@ -7362,7 +7356,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 	// Begin raytrace
 
-	wiProfiler::BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
 	TracedRenderingCB cb;
@@ -7453,13 +7447,15 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		// 1.) Compute Primary Trace (closest hit)
 		{
 			device->EventBegin("Primary Rays", threadID);
+
+			wiProfiler::range_id range;
 			if (bounce == 0)
 			{
-				wiProfiler::BeginRange("RayTrace - First Contact", wiProfiler::DOMAIN_GPU, threadID);
+				range = wiProfiler::BeginRange("RayTrace - First Contact", wiProfiler::DOMAIN_GPU, threadID);
 			}
 			else if (bounce == 1)
 			{
-				wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
+				range = wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
 			}
 
 			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
@@ -7486,7 +7482,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 			if (bounce == 0 || bounce == 1)
 			{
-				wiProfiler::EndRange(threadID); // RayTrace - First Bounce
+				wiProfiler::EndRange(range); // RayTrace - First Bounce
 			}
 			device->EventEnd(threadID);
 		}
@@ -7503,9 +7499,11 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		// 3.) Light sampling (any hit) <- only after first bounce has occured
 		{
 			device->EventBegin("Light Sampling Rays", threadID);
+
+			wiProfiler::range_id range;
 			if (bounce == 1)
 			{
-				wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+				range = wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
 			}
 
 			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
@@ -7528,14 +7526,14 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 			if (bounce == 1)
 			{
-				wiProfiler::EndRange(threadID); // RayTrace - First Light Sampling
+				wiProfiler::EndRange(range); // RayTrace - First Light Sampling
 			}
 			device->EventEnd(threadID);
 		}
 
 	}
 
-	wiProfiler::EndRange(threadID); // RayTrace - ALL
+	wiProfiler::EndRange(range); // RayTrace - ALL
 
 
 
@@ -7959,7 +7957,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 
 	if (!lightmapsToRefresh.empty())
 	{
-		wiProfiler::BeginRange("Lightmap Processing", wiProfiler::DOMAIN_GPU, threadID);
+		auto range = wiProfiler::BeginRange("Lightmap Processing", wiProfiler::DOMAIN_GPU, threadID);
 
 		// Update GPU scene and BVH data:
 		{
@@ -8012,7 +8010,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 
 		}
 
-		wiProfiler::EndRange(threadID);
+		wiProfiler::EndRange(range);
 	}
 
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
@@ -8043,6 +8041,15 @@ void BindCommonResources(GRAPHICSTHREAD threadID)
 		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
 		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
 	}
+
+	// Bind the GPU entity array for all shaders that need it here:
+	GPUResource* resources[] = {
+		&resourceBuffers[RBTYPE_ENTITYARRAY],
+		&resourceBuffers[RBTYPE_MATRIXARRAY],
+	};
+	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
 }
 
 void UpdateFrameCB(GRAPHICSTHREAD threadID)

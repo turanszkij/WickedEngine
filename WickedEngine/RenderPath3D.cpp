@@ -270,7 +270,7 @@ void RenderPath3D::RenderFrameSetUp(GRAPHICSTHREAD threadID) const
 }
 void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
 {
-	wiProfiler::BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
 
 	if (wiRenderer::IsRequestedReflectionRendering())
 	{
@@ -309,7 +309,7 @@ void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
 		}
 	}
 
-	wiProfiler::EndRange(); // Reflection Rendering
+	wiProfiler::EndRange(range); // Reflection Rendering
 }
 void RenderPath3D::RenderShadows(GRAPHICSTHREAD threadID) const
 {
@@ -641,14 +641,14 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 
 	// Transparent scene
 	{
-		wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
+		auto range = wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, threadID);
 		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, threadID);
 		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, getHairParticlesEnabled(), true);
 
-		wiProfiler::EndRange(threadID); // Transparent Scene
+		wiProfiler::EndRange(range); // Transparent Scene
 	}
 
 	wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), threadID);
@@ -689,7 +689,7 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 
 
 
-	RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
+	RenderParticles(true, threadID);
 }
 void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const
 {
@@ -701,7 +701,7 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 		wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, GRAPHICSTHREAD_IMMEDIATE);
 
 		device->EventBegin("Temporal AA Resolve", threadID);
-		wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+		auto range = wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
 		fx.enableHDR();
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		int current = device->GetFrameCount() % 2;
@@ -738,7 +738,7 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 			fx.disableFullScreen();
 		}
 		fx.disableHDR();
-		wiProfiler::EndRange(threadID);
+		wiProfiler::EndRange(range);
 		device->EventEnd(threadID);
 	}
 }

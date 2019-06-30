@@ -104,7 +104,7 @@ void RenderPath3D_PathTracing::Render() const
 		}
 		else
 		{
-			wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
 
 			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -132,7 +132,7 @@ void RenderPath3D_PathTracing::Render() const
 
 			wiImage::Draw(&traceResult, fx, threadID);
 
-			wiProfiler::EndRange(threadID); // Traced Scene
+			wiProfiler::EndRange(range); // Traced Scene
 		}
 	}
 
