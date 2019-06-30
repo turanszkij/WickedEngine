@@ -10,6 +10,9 @@ using namespace wiGraphics;
 void RenderPath3D_TiledForward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiJobSystem::context& ctx = device->GetJobContext();
+	GRAPHICSTHREAD threadID;
+
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };
 	if (getMSAASampleCount() > 1)
 	{
@@ -17,22 +20,16 @@ void RenderPath3D_TiledForward::Render() const
 		scene_read[1] = &rtMain_resolved[1];
 	}
 
-	wiJobSystem::context ctx;
-
-	wiJobSystem::Execute(ctx, [this, device] { 
-		RenderFrameSetUp(device->BeginCommandList()); 
-	});
-	wiJobSystem::Execute(ctx, [this, device] { 
-		RenderShadows(device->BeginCommandList()); 
-	});
-	wiJobSystem::Execute(ctx, [this, device] { 
-		RenderReflections(device->BeginCommandList()); 
-	});
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderFrameSetUp(threadID); });
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderShadows(threadID); });
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderReflections(threadID); });
 
 	// Main scene:
-	wiJobSystem::Execute(ctx, [&] 
-	{
-		GRAPHICSTHREAD threadID = device->BeginCommandList();
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID] {
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -74,12 +71,10 @@ void RenderPath3D_TiledForward::Render() const
 		RenderLinearDepth(threadID);
 
 		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
-	}
-	);
+	});
 
-	wiJobSystem::Execute(ctx, [&] 
-	{
-		GRAPHICSTHREAD threadID = device->BeginCommandList();
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
 
 		wiRenderer::ComputeTiledLightCulling(threadID);
 
@@ -123,12 +118,10 @@ void RenderPath3D_TiledForward::Render() const
 		RenderSSAO(threadID);
 
 		RenderSSR(*scene_read[0], threadID);
-	}
-	);
+	});
 
-	wiJobSystem::Execute(ctx, [&] 
-	{
-		GRAPHICSTHREAD threadID = device->BeginCommandList();
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
 
 		wiRenderer::BindCommonResources(threadID);
 
@@ -158,10 +151,7 @@ void RenderPath3D_TiledForward::Render() const
 		RenderBloom(*scene_read[0], threadID);
 
 		RenderPostprocessChain(*scene_read[0], *scene_read[1], threadID);
-	}
-	);
-
-	wiJobSystem::Wait(ctx);
+	});
 
 	RenderPath2D::Render();
 }

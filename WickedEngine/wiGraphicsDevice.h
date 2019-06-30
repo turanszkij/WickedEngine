@@ -2,13 +2,27 @@
 #define _GRAPHICSDEVICE_H_
 
 #include "CommonInclude.h"
-#include "wiEnums.h"
 #include "wiGraphicsDescriptors.h"
 #include "wiGraphicsResource.h"
+#include "wiJobSystem.h"
+
+enum GRAPHICSTHREAD
+{
+	GRAPHICSTHREAD_0,
+	GRAPHICSTHREAD_1,
+	GRAPHICSTHREAD_2,
+	GRAPHICSTHREAD_3,
+	GRAPHICSTHREAD_4,
+	GRAPHICSTHREAD_5,
+	GRAPHICSTHREAD_6,
+	GRAPHICSTHREAD_7,
+	GRAPHICSTHREAD_8,
+	GRAPHICSTHREAD_9,
+	GRAPHICSTHREAD_COUNT
+};
 
 namespace wiGraphics
 {
-
 	class GraphicsDevice
 	{
 	protected:
@@ -25,6 +39,7 @@ namespace wiGraphics
 		bool CONSERVATIVE_RASTERIZATION = false;
 		bool RASTERIZER_ORDERED_VIEWS = false;
 		bool UNORDEREDACCESSTEXTURE_LOAD_EXT = false;
+		wiJobSystem::context jobsystem_ctx;
 
 	public:
 
@@ -68,10 +83,12 @@ namespace wiGraphics
 		virtual void DestroyGraphicsPSO(GraphicsPSO* pso) = 0;
 		virtual void DestroyComputePSO(ComputePSO* pso) = 0;
 
+		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
+
 		virtual void SetName(GPUResource* pResource, const std::string& name) = 0;
 
-		virtual void PresentBegin() = 0;
-		virtual void PresentEnd() = 0;
+		virtual void PresentBegin(GRAPHICSTHREAD threadID) = 0;
+		virtual void PresentEnd(GRAPHICSTHREAD threadID) = 0;
 
 		virtual GRAPHICSTHREAD BeginCommandList() = 0;
 
@@ -113,6 +130,8 @@ namespace wiGraphics
 
 		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
 
+		inline wiJobSystem::context& GetJobContext() { return jobsystem_ctx; }
+
 
 		///////////////Thread-sensitive////////////////////////
 
@@ -147,7 +166,6 @@ namespace wiGraphics
 		virtual void CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID) = 0;
 		virtual void MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) = 0;
 		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) = 0;
-		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryBegin(const GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual void QueryEnd(const GPUQuery *query, GRAPHICSTHREAD threadID) = 0;
 		virtual bool QueryRead(const GPUQuery *query, GPUQueryResult* result) = 0;

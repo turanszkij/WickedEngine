@@ -109,16 +109,19 @@ void MainComponent::Run()
 		Initialize();
 		initialized = true;
 	}
+
+	GRAPHICSTHREAD threadID = wiRenderer::GetDevice()->BeginCommandList();
+
 	if (!wiInitializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
-		wiRenderer::GetDevice()->PresentBegin();
-		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(GRAPHICSTHREAD_IMMEDIATE);
-		wiRenderer::GetDevice()->PresentEnd();
+		wiRenderer::GetDevice()->PresentBegin(threadID);
+		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(threadID);
+		wiRenderer::GetDevice()->PresentEnd(threadID);
 		return;
 	}
 
-	wiProfiler::BeginFrame();
+	wiProfiler::BeginFrame(threadID);
 	auto range = wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
@@ -178,9 +181,10 @@ void MainComponent::Run()
 	wiProfiler::EndRange(range); // CPU Frame
 
 	range = wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
-	wiRenderer::GetDevice()->PresentBegin();
-	Compose();
-	wiRenderer::GetDevice()->PresentEnd();
+	wiRenderer::GetDevice()->PresentBegin(threadID);
+	Compose(threadID);
+	wiProfiler::EndFrame(threadID);
+	wiRenderer::GetDevice()->PresentEnd(threadID);
 	wiProfiler::EndRange(range); // Compose
 
 	wiRenderer::EndFrame();
@@ -191,7 +195,6 @@ void MainComponent::Run()
 		startupScriptProcessed = true;
 	}
 
-	wiProfiler::EndFrame();
 }
 
 void MainComponent::Update(float dt)
@@ -220,19 +223,17 @@ void MainComponent::Render()
 {
 	wiLua::GetGlobal()->Render();
 
-	auto range = wiProfiler::BeginRange("GPU Frame", wiProfiler::DOMAIN_GPU, GRAPHICSTHREAD_IMMEDIATE);
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Render();
 	}
-	wiProfiler::EndRange(range); // GPU Frame
 }
 
-void MainComponent::Compose()
+void MainComponent::Compose(GRAPHICSTHREAD threadID)
 {
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Compose();
+		GetActivePath()->Compose(threadID);
 	}
 
 	if (fadeManager.IsActive())
@@ -242,7 +243,7 @@ void MainComponent::Compose()
 		fx.siz.x = (float)wiRenderer::GetDevice()->GetScreenWidth();
 		fx.siz.y = (float)wiRenderer::GetDevice()->GetScreenHeight();
 		fx.opacity = fadeManager.opacity;
-		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, threadID);
 	}
 
 	// Draw the information display
@@ -294,12 +295,12 @@ void MainComponent::Compose()
 			}
 		}
 		ss.precision(2);
-		wiFont(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(GRAPHICSTHREAD_IMMEDIATE);
+		wiFont(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0, wiColor(255,255,255,255), wiColor(0,0,0,255))).Draw(threadID);
 	}
 
-	wiProfiler::DrawData(4, 120, GRAPHICSTHREAD_IMMEDIATE);
+	wiProfiler::DrawData(4, 120, threadID);
 
-	wiBackLog::Draw();
+	wiBackLog::Draw(threadID);
 }
 
 #ifndef WINSTORE_SUPPORT

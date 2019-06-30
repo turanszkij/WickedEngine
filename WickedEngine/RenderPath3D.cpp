@@ -229,7 +229,7 @@ void RenderPath3D::Update(float dt)
 	wiRenderer::UpdatePerFrameData(dt, getLayerMask());
 }
 
-void RenderPath3D::Compose() const
+void RenderPath3D::Compose(GRAPHICSTHREAD threadID) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -238,16 +238,16 @@ void RenderPath3D::Compose() const
 	fx.quality = QUALITY_LINEAR;
 	fx.enableFullScreen();
 
-	device->EventBegin("Composition", GRAPHICSTHREAD_IMMEDIATE);
-	wiImage::Draw(GetLastPostprocessRT(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	device->EventBegin("Composition", threadID);
+	wiImage::Draw(GetLastPostprocessRT(), fx, threadID);
+	device->EventEnd(threadID);
 
 	if (wiRenderer::GetDebugLightCulling())
 	{
-		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), threadID);
 	}
 
-	RenderPath2D::Compose();
+	RenderPath2D::Compose(threadID);
 }
 
 void RenderPath3D::RenderFrameSetUp(GRAPHICSTHREAD threadID) const
@@ -698,7 +698,7 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, threadID);
 
 		device->EventBegin("Temporal AA Resolve", threadID);
 		auto range = wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
@@ -816,7 +816,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		if (getMotionBlurEnabled())
 		{
-			wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, threadID);
 
 			device->EventBegin("Motion Blur", threadID);
 
@@ -941,7 +941,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		if (getSharpenFilterEnabled())
 		{
-			device->EventBegin("Sharpen Filter", GRAPHICSTHREAD_IMMEDIATE);
+			device->EventBegin("Sharpen Filter", threadID);
 
 			const Texture2D* rts[] = { rt_write };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
@@ -965,7 +965,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		if (getColorGradingEnabled())
 		{
-			device->EventBegin("Color Grading", GRAPHICSTHREAD_IMMEDIATE);
+			device->EventBegin("Color Grading", threadID);
 
 			const Texture2D* rts[] = { rt_write };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
@@ -995,7 +995,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		if (getFXAAEnabled())
 		{
-			device->EventBegin("FXAA", GRAPHICSTHREAD_IMMEDIATE);
+			device->EventBegin("FXAA", threadID);
 
 			const Texture2D* rts[] = { rt_write };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);

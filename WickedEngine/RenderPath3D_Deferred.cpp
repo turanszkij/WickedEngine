@@ -71,14 +71,20 @@ void RenderPath3D_Deferred::ResizeBuffers()
 
 void RenderPath3D_Deferred::Render() const
 {
-	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
-	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
-	RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiJobSystem::context& ctx = device->GetJobContext();
+	GRAPHICSTHREAD threadID;
+
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderFrameSetUp(threadID); });
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderShadows(threadID); });
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderReflections(threadID); });
 
 	// Main scene:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
-		GraphicsDevice* device = wiRenderer::GetDevice();
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID] {
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -149,31 +155,38 @@ void RenderPath3D_Deferred::Render() const
 		RenderDeferredComposition(threadID);
 
 		RenderSSR(rtDeferred, threadID);
-	}
+	});
 
-	DownsampleDepthBuffer(GRAPHICSTHREAD_IMMEDIATE);
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID] {
 
-	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::BindCommonResources(threadID);
 
-	RenderOutline(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+		DownsampleDepthBuffer(threadID);
 
-	RenderLightShafts(GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	RenderVolumetrics(GRAPHICSTHREAD_IMMEDIATE);
+		RenderOutline(rtDeferred, threadID);
 
-	RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
+		RenderLightShafts(threadID);
 
-	RenderRefractionSource(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+		RenderVolumetrics(threadID);
 
-	RenderTransparents(rtDeferred, RENDERPASS_FORWARD, GRAPHICSTHREAD_IMMEDIATE);
+		RenderParticles(false, threadID);
 
-	RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
+		RenderRefractionSource(rtDeferred, threadID);
 
-	TemporalAAResolve(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+		RenderTransparents(rtDeferred, RENDERPASS_FORWARD, threadID);
 
-	RenderBloom(rtDeferred, GRAPHICSTHREAD_IMMEDIATE);
+		RenderParticles(true, threadID);
 
-	RenderPostprocessChain(rtDeferred, rtGBuffer[1], GRAPHICSTHREAD_IMMEDIATE);
+		TemporalAAResolve(rtDeferred, rtGBuffer[1], threadID);
+
+		RenderBloom(rtDeferred, threadID);
+
+		RenderPostprocessChain(rtDeferred, rtGBuffer[1], threadID);
+
+	});
 
 	RenderPath2D::Render();
 }

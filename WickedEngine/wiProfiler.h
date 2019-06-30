@@ -1,5 +1,5 @@
 #pragma once
-#include "wiEnums.h"
+#include "wiGraphicsDevice.h"
 #include "wiHashString.h"
 
 #include <string>
@@ -15,13 +15,14 @@ namespace wiProfiler
 	typedef size_t range_id;
 
 	// Begin collecting profiling data for the current frame
-	void BeginFrame();
+	void BeginFrame(GRAPHICSTHREAD threadID);
 
 	// Finalize collecting profiling data for the current frame
-	void EndFrame();
+	void EndFrame(GRAPHICSTHREAD threadID);
 
 	// Start a profiling range
-	range_id BeginRange(const wiHashString& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	//	If this is a GPU profiling range, you must provide a correct GRAPHICSTHREAD as last parameter!
+	range_id BeginRange(const wiHashString& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_COUNT);
 
 	// End a profiling range
 	void EndRange(range_id id);

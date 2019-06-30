@@ -59,7 +59,7 @@ public:
 	//  RenderPath::Render is also called from here for the active component
 	virtual void Render();
 	// This is where the application will render to the screen (backbuffer)
-	virtual void Compose();
+	virtual void Compose(GRAPHICSTHREAD threadID);
 
 #ifndef WINSTORE_SUPPORT
 	// You need to call this before calling Run() or Initialize() if you want to render to a Win32 window handle

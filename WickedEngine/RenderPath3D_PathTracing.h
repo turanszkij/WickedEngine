@@ -19,5 +19,5 @@ public:
 
 	void Update(float dt) override;
 	void Render() const override;
-	void Compose() const override;
+	void Compose(GRAPHICSTHREAD threadID) const override;
 };

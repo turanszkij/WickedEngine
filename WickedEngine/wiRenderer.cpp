@@ -4391,8 +4391,6 @@ void OcclusionCulling_Read()
 
 	if (!culling.culledObjects.empty())
 	{
-		device->EventBegin("Occlusion Culling Read", GRAPHICSTHREAD_IMMEDIATE);
-
 		Scene& scene = GetScene();
 
 		for (uint32_t instanceIndex : culling.culledObjects)
@@ -4431,8 +4429,6 @@ void OcclusionCulling_Read()
 				// leave this frame as occluded
 			}
 		}
-
-		device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
 	}
 
 	wiProfiler::EndRange(range); // Occlusion Culling Read

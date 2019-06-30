@@ -1,20 +1,5 @@
 #pragma once
 
-// Use GRAPHICSTHREAD_IMMEDIATE from the main thread and when drawing to backbuffer
-// Use the others from other threads in conjunction with GraphicsDevice::BeginCommandList and ExecuteCommandLists
-enum GRAPHICSTHREAD
-{
-	GRAPHICSTHREAD_IMMEDIATE,
-	GRAPHICSTHREAD_1,
-	GRAPHICSTHREAD_2,
-	GRAPHICSTHREAD_3,
-	GRAPHICSTHREAD_4,
-	GRAPHICSTHREAD_5,
-	GRAPHICSTHREAD_6,
-	GRAPHICSTHREAD_7,
-	GRAPHICSTHREAD_COUNT
-};
-
 // Common blendmodes used across multiple systems
 enum BLENDMODE
 {

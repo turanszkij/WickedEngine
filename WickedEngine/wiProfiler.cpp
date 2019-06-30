@@ -24,7 +24,7 @@ namespace wiProfiler
 		PROFILER_DOMAIN domain = DOMAIN_CPU;
 		std::string name;
 		float time = 0;
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_COUNT;
 
 		wiTimer cpuBegin, cpuEnd;
 
@@ -36,7 +36,7 @@ namespace wiProfiler
 	std::unordered_map<size_t, Range*> ranges;
 	wiRenderer::GPUQueryRing<4> disjoint;
 
-	void BeginFrame()
+	void BeginFrame(GRAPHICSTHREAD threadID)
 	{
 		if (!ENABLED)
 			return;
@@ -52,14 +52,14 @@ namespace wiProfiler
 			disjoint.Create(wiRenderer::GetDevice(), &desc);
 		}
 
-		wiRenderer::GetDevice()->QueryBegin(disjoint.Get_GPU(), GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->QueryBegin(disjoint.Get_GPU(), threadID);
 	}
-	void EndFrame()
+	void EndFrame(GRAPHICSTHREAD threadID)
 	{
 		if (!ENABLED || !initialized)
 			return;
 
-		wiRenderer::GetDevice()->QueryEnd(disjoint.Get_GPU(), GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->QueryEnd(disjoint.Get_GPU(), threadID);
 
 		GPUQueryResult disjoint_result;
 		GPUQuery* disjoint_query = disjoint.Get_CPU();

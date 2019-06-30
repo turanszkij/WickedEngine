@@ -112,6 +112,7 @@ void RenderPath2D::FixedUpdate()
 void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
+	GRAPHICSTHREAD threadID = device->BeginCommandList();
 
 	const Texture2D* dsv = GetDepthStencil();
 
@@ -120,101 +121,101 @@ void RenderPath2D::Render() const
 	if (GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
 	{
 		const Texture2D* rts[] = { &rtStenciled };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, GRAPHICSTHREAD_IMMEDIATE);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, threadID);
 
 		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
+		device->ClearRenderTarget(rts[0], clear, threadID);
 
 		ViewPort vp;
 		vp.Width = (float)rtStenciled.GetDesc().Width;
 		vp.Height = (float)rtStenciled.GetDesc().Height;
-		device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
+		device->BindViewports(1, &vp, threadID);
 
-		wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", threadID);
 		for (auto& x : layers)
 		{
 			for (auto& y : x.items)
 			{
 				if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
 				{
-					y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+					y.sprite->Draw(threadID);
 				}
 			}
 		}
-		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->EventEnd(threadID);
 
 		dsv = nullptr;
 	}
 
 
 	const Texture2D* rts[] = { &rtFinal };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, GRAPHICSTHREAD_IMMEDIATE);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, threadID);
 
 	float clear[] = { 0,0,0,0 };
-	device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
+	device->ClearRenderTarget(rts[0], clear, threadID);
 
 	ViewPort vp;
 	vp.Width = (float)rtFinal.GetDesc().Width;
 	vp.Height = (float)rtFinal.GetDesc().Height;
-	device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
+	device->BindViewports(1, &vp, threadID);
 
 	if (GetDepthStencil() != nullptr)
 	{
 		if (wiRenderer::GetResolutionScale() != 1.0f)
 		{
-			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", threadID);
 			wiImageParams fx;
 			fx.enableFullScreen();
-			wiImage::Draw(&rtStenciled, fx, GRAPHICSTHREAD_IMMEDIATE);
-			wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+			wiImage::Draw(&rtStenciled, fx, threadID);
+			wiRenderer::GetDevice()->EventEnd(threadID);
 		}
 		else
 		{
-			wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", threadID);
 			for (auto& x : layers)
 			{
 				for (auto& y : x.items)
 				{
 					if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
 					{
-						y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+						y.sprite->Draw(threadID);
 					}
 				}
 			}
-			wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventEnd(threadID);
 		}
 	}
 
-	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->EventBegin("Sprite Layers", threadID);
 	for (auto& x : layers)
 	{
 		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr && y.sprite->params.stencilComp == STENCILMODE_DISABLED)
 			{
-				y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+				y.sprite->Draw(threadID);
 			}
 			if (y.font != nullptr)
 			{
-				y.font->Draw(GRAPHICSTHREAD_IMMEDIATE);
+				y.font->Draw(threadID);
 			}
 		}
 	}
-	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->EventEnd(threadID);
 
-	GetGUI().Render();
+	GetGUI().Render(threadID);
 
 	RenderPath::Render();
 }
-void RenderPath2D::Compose() const
+void RenderPath2D::Compose(GRAPHICSTHREAD threadID) const
 {
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 
-	wiImage::Draw(&rtFinal, fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtFinal, fx, threadID);
 
-	RenderPath::Compose();
+	RenderPath::Compose(threadID);
 }
 
 

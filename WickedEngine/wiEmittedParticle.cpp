@@ -249,7 +249,7 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 
 	if (IsDebug())
 	{
-		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData);
 	}
 }
 void wiEmittedParticle::Burst(int num)

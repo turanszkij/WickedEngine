@@ -189,6 +189,6 @@ public:
 
 	void Update(float dt) override;
 	void Render() const override = 0;
-	void Compose() const override;
+	void Compose(GRAPHICSTHREAD threadID) const override;
 };
 

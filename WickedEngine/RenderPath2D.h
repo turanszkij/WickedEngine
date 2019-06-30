@@ -50,7 +50,7 @@ public:
 	void Update(float dt) override;
 	void FixedUpdate() override;
 	void Render() const override;
-	void Compose() const override;
+	void Compose(GRAPHICSTHREAD threadID) const override;
 
 	const wiGraphics::Texture2D& GetRenderResult() const { return rtFinal; }
 	virtual const wiGraphics::Texture2D* GetDepthStencil() const { return nullptr; }

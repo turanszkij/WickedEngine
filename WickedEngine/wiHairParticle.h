@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
+#include "wiEnums.h"
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
 #include "wiIntersect.h"

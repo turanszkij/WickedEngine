@@ -18,14 +18,6 @@ public:
 	virtual int GetContent(lua_State* L);
 
 	virtual int Initialize(lua_State* L);
-	virtual int Load(lua_State* L);
-	virtual int Unload(lua_State* L);
-	virtual int Start(lua_State* L);
-	virtual int Stop(lua_State* L);
-	virtual int FixedUpdate(lua_State* L);
-	virtual int Update(lua_State* L);
-	virtual int Render(lua_State* L);
-	virtual int Compose(lua_State* L);
 
 	virtual int OnStart(lua_State* L);
 	virtual int OnStop(lua_State* L);

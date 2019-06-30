@@ -72,21 +72,27 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 void RenderPath3D_PathTracing::Render() const
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiJobSystem::context& ctx = device->GetJobContext();
+	GRAPHICSTHREAD threadID;
+
 	// Setup:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] {
+
 		wiRenderer::UpdateRenderData(threadID);
 
 		if (sam == 0)
 		{
 			wiRenderer::BuildSceneBVH(threadID);
 		}
-	}
+	});
 
 	// Main scene:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
-		GraphicsDevice* device = wiRenderer::GetDevice();
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID] {
+
+		wiRenderer::BindCommonResources(threadID);
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
 		{
@@ -134,16 +140,16 @@ void RenderPath3D_PathTracing::Render() const
 
 			wiProfiler::EndRange(range); // Traced Scene
 		}
-	}
+	});
 
 	RenderPath2D::Render();
 }
 
-void RenderPath3D_PathTracing::Compose() const
+void RenderPath3D_PathTracing::Compose(GRAPHICSTHREAD threadID) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("RenderPath3D_PathTracing::Compose", GRAPHICSTHREAD_IMMEDIATE);
+	device->EventBegin("RenderPath3D_PathTracing::Compose", threadID);
 
 
 	wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
@@ -153,10 +159,10 @@ void RenderPath3D_PathTracing::Compose() const
 	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
 	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	
-	wiImage::Draw(&rtAccumulation, fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtAccumulation, fx, threadID);
 
 
-	device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	device->EventEnd(threadID);
 
-	RenderPath2D::Compose();
+	RenderPath2D::Compose(threadID);
 }

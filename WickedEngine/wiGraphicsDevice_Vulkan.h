@@ -198,11 +198,9 @@ namespace wiGraphics
 		UploadBuffer* bufferUploader;
 		UploadBuffer* textureUploader;
 
-		void ResetCommandList(GRAPHICSTHREAD threadID);
-
-		std::atomic<uint8_t> commandlist_count = 1; // first is always immediate command list
-		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> free_commandlists;
-		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, 8> active_commandlists;
+		std::atomic<uint8_t> commandlist_count = 0;
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, GRAPHICSTHREAD_COUNT> free_commandlists;
+		wiContainers::ThreadSafeRingBuffer<GRAPHICSTHREAD, GRAPHICSTHREAD_COUNT> active_commandlists;
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -248,10 +246,12 @@ namespace wiGraphics
 		void DestroyGraphicsPSO(GraphicsPSO* pso) override;
 		void DestroyComputePSO(ComputePSO* pso) override;
 
+		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
+
 		void SetName(GPUResource* pResource, const std::string& name) override;
 
-		void PresentBegin() override;
-		void PresentEnd() override;
+		void PresentBegin(GRAPHICSTHREAD threadID) override;
+		void PresentEnd(GRAPHICSTHREAD threadID) override;
 
 		virtual GRAPHICSTHREAD BeginCommandList() override;
 
@@ -294,7 +294,6 @@ namespace wiGraphics
 		void CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID) override;
 		void MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) override;
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) override;
-		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) override;
 		void QueryBegin(const GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		void QueryEnd(const GPUQuery *query, GRAPHICSTHREAD threadID) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;

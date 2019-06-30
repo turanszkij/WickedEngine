@@ -49,6 +49,9 @@ void RenderPath3D_Forward::ResizeBuffers()
 void RenderPath3D_Forward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiJobSystem::context& ctx = device->GetJobContext();
+	GRAPHICSTHREAD threadID;
+
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };
 	if (getMSAASampleCount() > 1)
 	{
@@ -56,13 +59,16 @@ void RenderPath3D_Forward::Render() const
 		scene_read[1] = &rtMain_resolved[1];
 	}
 
-	RenderFrameSetUp(GRAPHICSTHREAD_IMMEDIATE);
-	RenderShadows(GRAPHICSTHREAD_IMMEDIATE);
-	RenderReflections(GRAPHICSTHREAD_IMMEDIATE);
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderFrameSetUp(threadID); });
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderShadows(threadID); });
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, threadID] { RenderReflections(threadID); });
 
 	// Main scene:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
 
 		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
@@ -123,36 +129,43 @@ void RenderPath3D_Forward::Render() const
 		RenderSSAO(threadID);
 
 		RenderSSR(*scene_read[0], threadID);
-	}
+	});
 
-	DownsampleDepthBuffer(GRAPHICSTHREAD_IMMEDIATE);
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
 
-	wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::BindCommonResources(threadID);
 
-	RenderOutline(rtMain[0], GRAPHICSTHREAD_IMMEDIATE);
+		DownsampleDepthBuffer(threadID);
 
-	RenderLightShafts(GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
 
-	RenderVolumetrics(GRAPHICSTHREAD_IMMEDIATE);
+		RenderOutline(rtMain[0], threadID);
 
-	RenderParticles(false, GRAPHICSTHREAD_IMMEDIATE);
+		RenderLightShafts(threadID);
 
-	RenderRefractionSource(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
+		RenderVolumetrics(threadID);
 
-	RenderTransparents(rtMain[0], RENDERPASS_FORWARD, GRAPHICSTHREAD_IMMEDIATE);
+		RenderParticles(false, threadID);
 
-	if (getMSAASampleCount() > 1)
-	{
-		device->MSAAResolve(scene_read[0], &rtMain[0], GRAPHICSTHREAD_IMMEDIATE);
-	}
+		RenderRefractionSource(*scene_read[0], threadID);
 
-	RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
+		RenderTransparents(rtMain[0], RENDERPASS_FORWARD, threadID);
 
-	TemporalAAResolve(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
+		if (getMSAASampleCount() > 1)
+		{
+			device->MSAAResolve(scene_read[0], &rtMain[0], threadID);
+		}
 
-	RenderBloom(*scene_read[0], GRAPHICSTHREAD_IMMEDIATE);
+		RenderParticles(true, threadID);
 
-	RenderPostprocessChain(*scene_read[0], *scene_read[1], GRAPHICSTHREAD_IMMEDIATE);
+		TemporalAAResolve(*scene_read[0], *scene_read[1], threadID);
+
+		RenderBloom(*scene_read[0], threadID);
+
+		RenderPostprocessChain(*scene_read[0], *scene_read[1], threadID);
+
+	});
 
 	RenderPath2D::Render();
 }
