@@ -715,8 +715,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
-    <None Include="$(MSBuildThisFileDirectory)..\CODE_OF_CONDUCT.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\WickedEngine-Documentation.md" />
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />

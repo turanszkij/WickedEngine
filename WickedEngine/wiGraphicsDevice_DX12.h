@@ -11,6 +11,7 @@
 #include <d3d12.h>
 
 #include <atomic>
+#include <mutex>
 
 namespace wiGraphics
 {
@@ -108,7 +109,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		ID3D12GraphicsCommandList* GetDirectCommandList(GRAPHICSTHREAD threadID);
+		inline ID3D12GraphicsCommandList* GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
 
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSampler = {};

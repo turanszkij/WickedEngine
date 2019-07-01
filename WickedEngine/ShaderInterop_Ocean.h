@@ -15,7 +15,6 @@ CBUFFER(Ocean_Simulation_ImmutableCB, CBSLOT_OTHER_OCEAN_SIMULATION_IMMUTABLE)
 
 	uint g_DtxAddressOffset;
 	uint g_DtyAddressOffset;
-	uint2 Ocean_Simulation_ImmutableCB_padding;
 };
 
 CBUFFER(Ocean_Simulation_PerFrameCB, CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME)

@@ -175,7 +175,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		VkCommandBuffer GetDirectCommandList(GRAPHICSTHREAD threadID);
+		inline VkCommandBuffer GetDirectCommandList(GRAPHICSTHREAD threadID) { return GetFrameResources().commandBuffers[threadID]; }
 
 
 		struct UploadBuffer

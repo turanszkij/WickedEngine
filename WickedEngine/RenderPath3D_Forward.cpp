@@ -49,7 +49,7 @@ void RenderPath3D_Forward::ResizeBuffers()
 void RenderPath3D_Forward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	wiJobSystem::context& ctx = device->GetJobContext();
+	wiJobSystem::context ctx;
 	GRAPHICSTHREAD threadID;
 
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };
@@ -123,18 +123,17 @@ void RenderPath3D_Forward::Render() const
 		wiRenderer::BindGBufferTextures(scene_read[0], scene_read[1], nullptr, threadID);
 
 		RenderLinearDepth(threadID);
-
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
-
-		RenderSSAO(threadID);
-
-		RenderSSR(*scene_read[0], threadID);
 	});
 
 	threadID = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
 
 		wiRenderer::BindCommonResources(threadID);
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
+
+		RenderSSAO(threadID);
+
+		RenderSSR(*scene_read[0], threadID);
 
 		DownsampleDepthBuffer(threadID);
 
@@ -168,4 +167,6 @@ void RenderPath3D_Forward::Render() const
 	});
 
 	RenderPath2D::Render();
+
+	wiJobSystem::Wait(ctx);
 }

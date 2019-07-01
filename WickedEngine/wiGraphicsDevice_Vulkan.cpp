@@ -1569,8 +1569,6 @@ namespace wiGraphics
 
 
 	// Engine functions
-	VkCommandBuffer GraphicsDevice_Vulkan::GetDirectCommandList(GRAPHICSTHREAD threadID) { return GetFrameResources().commandBuffers[threadID]; }
-
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
 		DEBUGDEVICE = debuglayer;
@@ -2088,22 +2086,21 @@ namespace wiGraphics
 
 		// Create frame resources:
 		{
-			int i = 0;
-			for(auto& frame : frames)
+			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				// Fence:
 				{
 					VkFenceCreateInfo fenceInfo = {};
 					fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 					//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-					vkCreateFence(device, &fenceInfo, nullptr, &frame.frameFence);
+					vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].frameFence);
 				}
 
 				// Create swap chain render targets:
 				{
 					VkImageViewCreateInfo createInfo = {};
 					createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-					createInfo.image = swapChainImages[i];
+					createInfo.image = swapChainImages[fr];
 					createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 					createInfo.format = swapChainImageFormat;
 					createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -2116,12 +2113,12 @@ namespace wiGraphics
 					createInfo.subresourceRange.baseArrayLayer = 0;
 					createInfo.subresourceRange.layerCount = 1;
 
-					if (vkCreateImageView(device, &createInfo, nullptr, &frame.swapChainImageView) != VK_SUCCESS) {
+					if (vkCreateImageView(device, &createInfo, nullptr, &frames[fr].swapChainImageView) != VK_SUCCESS) {
 						throw std::runtime_error("failed to create image views!");
 					}
 
 					VkImageView attachments[] = {
-						frame.swapChainImageView
+						frames[fr].swapChainImageView
 					};
 
 					VkFramebufferCreateInfo framebufferInfo = {};
@@ -2133,20 +2130,10 @@ namespace wiGraphics
 					framebufferInfo.height = swapChainExtent.height;
 					framebufferInfo.layers = 1;
 
-					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frame.swapChainFramebuffer) != VK_SUCCESS) {
+					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &frames[fr].swapChainFramebuffer) != VK_SUCCESS) {
 						throw std::runtime_error("failed to create framebuffer!");
 					}
 				}
-
-
-				// Create immediate resource allocators:
-				for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
-				{
-					frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
-				}
-
-
-				i++;
 			}
 		}
 
@@ -2305,16 +2292,6 @@ namespace wiGraphics
 
 			VkResult res = vkCreateSampler(device, &createInfo, nullptr, &nullSampler);
 			assert(res == VK_SUCCESS);
-		}
-
-
-		// Preinitialize staging descriptor tables:
-		for (auto& frame : frames)
-		{
-			for (int threadID = 0; threadID < GRAPHICSTHREAD_COUNT; ++threadID)
-			{
-				frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
-			}
 		}
 
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
@@ -2637,10 +2614,6 @@ namespace wiGraphics
 		if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-		}
-		if (pTexture2D->desc.ArraySize > 1)
-		{
-			imageInfo.flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT_KHR;
 		}
 
 		VkResult res;
@@ -4179,8 +4152,6 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::PresentEnd(GRAPHICSTHREAD threadID)
 	{
-		wiJobSystem::Wait(jobsystem_ctx);
-
 		VkResult res;
 
 		uint64_t currentframe = GetFrameCount() % BACKBUFFER_COUNT;
@@ -4192,10 +4163,6 @@ namespace wiGraphics
 
 		// ...end presentation render pass
 		renderPass[threadID].disable(GetDirectCommandList(threadID));
-
-		if (vkEndCommandBuffer(GetDirectCommandList(threadID)) != VK_SUCCESS) {
-			throw std::runtime_error("failed to record command buffer!");
-		}
 
 
 		// Sync up copy queue:
@@ -4213,8 +4180,6 @@ namespace wiGraphics
 			if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
 				throw std::runtime_error("failed to submit copy command buffer!");
 			}
-
-			VkResult res;
 
 			//vkQueueWaitIdle(copyQueue);
 
@@ -4349,16 +4314,10 @@ namespace wiGraphics
 					throw std::runtime_error("failed to create command buffers!");
 				}
 
-				VkCommandBufferBeginInfo beginInfo = {};
-				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-				beginInfo.pInheritanceInfo = nullptr; // Optional
-
-				VkResult res = vkBeginCommandBuffer(frame.commandBuffers[threadID], &beginInfo);
-				assert(res == VK_SUCCESS);
+				frame.resourceBuffer[threadID] = new FrameResources::ResourceFrameAllocator(physicalDevice, device, 4 * 1024 * 1024);
+				frame.ResourceDescriptorsGPU[threadID] = new FrameResources::DescriptorTableFrameAllocator(this, 1024);
 			}
 		}
-
 
 		VkResult res;
 		res = vkResetCommandPool(device, GetFrameResources().commandPools[threadID], 0);
@@ -4396,7 +4355,6 @@ namespace wiGraphics
 
 		float blendConstants[] = { 1,1,1,1 };
 		vkCmdSetBlendConstants(GetDirectCommandList(static_cast<GRAPHICSTHREAD>(threadID)), blendConstants);
-
 
 		// reset descriptor allocators:
 		GetFrameResources().ResourceDescriptorsGPU[threadID]->reset();

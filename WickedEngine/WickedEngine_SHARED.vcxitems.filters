@@ -1942,8 +1942,6 @@
       <Filter>Documentation</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)..\appveyor.yml" />
-    <None Include="$(MSBuildThisFileDirectory)..\CODE_OF_CONDUCT.md" />
-    <None Include="$(MSBuildThisFileDirectory)..\CONTRIBUTING.md" />
     <None Include="$(MSBuildThisFileDirectory)..\LICENSE.md" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\camera_animation_clamped.lua">
       <Filter>scripts</Filter>

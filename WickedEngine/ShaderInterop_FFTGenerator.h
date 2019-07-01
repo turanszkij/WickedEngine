@@ -10,7 +10,6 @@ CBUFFER(FFTGeneratorCB, CBSLOT_OTHER_FFTGENERATOR)
 	uint pstride;
 
 	float phase_base;
-	float3 FFTGeneratorCB_padding;
 };
 
 #endif // _SHADERINTEROP_FFTGENERATOR_H_

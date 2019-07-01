@@ -502,9 +502,9 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 	{
 #ifdef DEBUG_SORTING
 		vector<uint32_t> before(MAX_PARTICLES);
-		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), before.data(), threadID);
+		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), before.data());
 
-		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, threadID);
+		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData);
 		uint32_t particleCount = debugData.aliveCount_afterSimulation;
 #endif // DEBUG_SORTING
 
@@ -514,10 +514,10 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 #ifdef DEBUG_SORTING
 		vector<uint32_t> after(MAX_PARTICLES);
-		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), after.data(), threadID);
+		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), after.data());
 
 		vector<float> distances(MAX_PARTICLES);
-		device->DownloadResource(distanceBuffer.get(), debugDataReadbackDistanceBuffer.get(), distances.data(), threadID);
+		device->DownloadResource(distanceBuffer.get(), debugDataReadbackDistanceBuffer.get(), distances.data());
 
 		if (particleCount > 1)
 		{

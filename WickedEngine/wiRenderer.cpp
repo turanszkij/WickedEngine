@@ -1349,6 +1349,19 @@ void BindShadowmaps(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
 		device->BindResource(stage, &shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
 	}
 }
+void BindEnvironmentTextures(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->BindResource(stage, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+	device->BindResource(stage, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
+	device->BindResource(stage, textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+
+	if (enviroMap != nullptr)
+	{
+		device->BindResource(stage, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+	}
+}
 
 void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false)
 {
@@ -4288,12 +4301,6 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, threadID);
 	}
 
-	if (enviroMap != nullptr)
-	{
-		device->BindResource(CS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
-		device->BindResource(PS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
-	}
-
 	RefreshDecalAtlas(threadID);
 	RefreshLightmapAtlas(threadID);
 	RefreshEnvProbes(threadID);
@@ -4527,6 +4534,9 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	device->EventBegin("Light Render", threadID);
 	auto range = wiProfiler::BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
 
+	BindShadowmaps(PS, threadID);
+	BindEnvironmentTextures(PS, threadID);
+
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
 		device->BindGraphicsPSO(&PSO_enviromentallight, threadID);
@@ -4729,6 +4739,8 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Volumetric Light Render", threadID);
+
+		BindShadowmaps(PS, threadID);
 
 		const Scene& scene = GetScene();
 
@@ -5237,12 +5249,19 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 
 	BindCommonResources(threadID);
 	BindShadowmaps(PS, threadID);
+	BindEnvironmentTextures(PS, threadID);
 	BindConstantBuffers(VS, threadID);
 	BindConstantBuffers(PS, threadID);
+
+	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
 		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, threadID);
+		if (decalAtlas.IsValid())
+		{
+			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
+		}
 	}
 
 	if (grass)
@@ -5320,12 +5339,19 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 	BindCommonResources(threadID);
 	BindShadowmaps(PS, threadID);
+	BindEnvironmentTextures(PS, threadID);
 	BindConstantBuffers(VS, threadID);
 	BindConstantBuffers(PS, threadID);
+
+	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
 		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, threadID);
+		if (decalAtlas.IsValid())
+		{
+			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
+		}
 	}
 
 	if (ocean != nullptr)
@@ -5836,6 +5862,8 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_VOXEL], threadID);
 
+		device->BindResource(VS, textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection()));
@@ -5991,6 +6019,7 @@ void DrawSky(GRAPHICSTHREAD threadID)
 	if (enviroMap != nullptr)
 	{
 		device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_STATIC], threadID);
+		device->BindResource(PS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
 	}
 	else
 	{
@@ -6354,9 +6383,6 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 
 	}
 
-	device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
-	device->BindResource(CS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
-
 	device->EventEnd(threadID); // EnvironmentProbe Refresh
 }
 
@@ -6708,13 +6734,6 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		}
 	}
 
-	if (voxelHelper)
-	{
-		device->BindResource(VS, result, TEXSLOT_VOXELRADIANCE, threadID);
-	}
-	device->BindResource(PS, result, TEXSLOT_VOXELRADIANCE, threadID);
-	device->BindResource(CS, result, TEXSLOT_VOXELRADIANCE, threadID);
-
 	wiProfiler::EndRange(range);
 	device->EventEnd(threadID);
 }
@@ -6784,6 +6803,8 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], "EntityTiles_Opaque");
 		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
 	}
+
+	BindCommonResources(threadID);
 
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
@@ -6880,6 +6901,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
 
 			BindShadowmaps(CS, threadID);
+			BindEnvironmentTextures(CS, threadID);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
@@ -7408,6 +7430,11 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 	// Set up tracing resources:
 	sceneBVH.Bind(CS, threadID);
 
+	if (enviroMap != nullptr)
+	{
+		device->BindResource(CS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+	}
+
 	for (uint32_t bounce = 0; bounce < raytraceBounceCount + 1; ++bounce) // first contact + indirect bounces
 	{
 		uint32_t __readBufferID = bounce % 2;
@@ -7699,11 +7726,6 @@ void RefreshDecalAtlas(GRAPHICSTHREAD threadID)
 				}
 			}
 		}
-	}
-
-	if (decalAtlas.IsValid())
-	{
-		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
 	}
 }
 
@@ -8009,8 +8031,6 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 
 		wiProfiler::EndRange(range);
 	}
-
-	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
 }
 
 const Texture2D* GetGlobalLightmap()
@@ -8035,8 +8055,7 @@ void BindCommonResources(GRAPHICSTHREAD threadID)
 			device->BindSampler(stage, &samplers[i], i, threadID);
 		}
 
-		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-		device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+		BindConstantBuffers(stage, threadID);
 	}
 
 	// Bind the GPU entity array for all shaders that need it here:

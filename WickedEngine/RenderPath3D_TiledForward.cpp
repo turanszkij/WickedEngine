@@ -10,7 +10,7 @@ using namespace wiGraphics;
 void RenderPath3D_TiledForward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	wiJobSystem::context& ctx = device->GetJobContext();
+	wiJobSystem::context ctx;
 	GRAPHICSTHREAD threadID;
 
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };
@@ -69,12 +69,12 @@ void RenderPath3D_TiledForward::Render() const
 		}
 
 		RenderLinearDepth(threadID);
-
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
 	});
 
 	threadID = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
+
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
 
 		wiRenderer::ComputeTiledLightCulling(threadID);
 
@@ -107,6 +107,14 @@ void RenderPath3D_TiledForward::Render() const
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
+	});
+
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
+
+		wiRenderer::BindCommonResources(threadID);
+
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
 
 		if (getMSAASampleCount() > 1)
 		{
@@ -118,12 +126,6 @@ void RenderPath3D_TiledForward::Render() const
 		RenderSSAO(threadID);
 
 		RenderSSR(*scene_read[0], threadID);
-	});
-
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
-
-		wiRenderer::BindCommonResources(threadID);
 
 		DownsampleDepthBuffer(threadID);
 
@@ -154,4 +156,6 @@ void RenderPath3D_TiledForward::Render() const
 	});
 
 	RenderPath2D::Render();
+
+	wiJobSystem::Wait(ctx);
 }

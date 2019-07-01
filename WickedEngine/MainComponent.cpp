@@ -109,19 +109,17 @@ void MainComponent::Run()
 		Initialize();
 		initialized = true;
 	}
-
-	GRAPHICSTHREAD threadID = wiRenderer::GetDevice()->BeginCommandList();
-
 	if (!wiInitializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
+		GRAPHICSTHREAD threadID = wiRenderer::GetDevice()->BeginCommandList();
 		wiRenderer::GetDevice()->PresentBegin(threadID);
 		wiFont(wiBackLog::getText(), wiFontParams(4, 4, infoDisplay.size)).Draw(threadID);
 		wiRenderer::GetDevice()->PresentEnd(threadID);
 		return;
 	}
 
-	wiProfiler::BeginFrame(threadID);
+	//wiProfiler::BeginFrame(threadID);
 	auto range = wiProfiler::BeginRange("CPU Frame", wiProfiler::DOMAIN_CPU);
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
@@ -180,12 +178,15 @@ void MainComponent::Run()
 
 	wiProfiler::EndRange(range); // CPU Frame
 
-	range = wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
+	GRAPHICSTHREAD threadID = wiRenderer::GetDevice()->BeginCommandList();
 	wiRenderer::GetDevice()->PresentBegin(threadID);
-	Compose(threadID);
-	wiProfiler::EndFrame(threadID);
+	{
+		range = wiProfiler::BeginRange("Compose", wiProfiler::DOMAIN_CPU);
+		Compose(threadID);
+		wiProfiler::EndRange(range); // Compose
+		wiProfiler::EndFrame(threadID);
+	}
 	wiRenderer::GetDevice()->PresentEnd(threadID);
-	wiProfiler::EndRange(range); // Compose
 
 	wiRenderer::EndFrame();
 
@@ -194,7 +195,6 @@ void MainComponent::Run()
 		wiLua::GetGlobal()->RunFile("startup.lua");
 		startupScriptProcessed = true;
 	}
-
 }
 
 void MainComponent::Update(float dt)

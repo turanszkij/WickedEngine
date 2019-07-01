@@ -12,7 +12,7 @@ using namespace wiGraphics;
 void RenderPath3D_TiledDeferred::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	wiJobSystem::context& ctx = device->GetJobContext();
+	wiJobSystem::context ctx;
 	GRAPHICSTHREAD threadID;
 
 	threadID = device->BeginCommandList();
@@ -62,9 +62,12 @@ void RenderPath3D_TiledDeferred::Render() const
 		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
 
 		RenderLinearDepth(threadID);
+	});
 
-		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	threadID = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, threadID] {
 
+		wiRenderer::BindCommonResources(threadID);
 		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
 
 		RenderDecals(threadID);
@@ -83,12 +86,6 @@ void RenderPath3D_TiledDeferred::Render() const
 		RenderDeferredComposition(threadID);
 
 		RenderSSR(rtDeferred, threadID);
-	});
-
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID] {
-
-		wiRenderer::BindCommonResources(threadID);
 
 		DownsampleDepthBuffer(threadID);
 
@@ -117,4 +114,6 @@ void RenderPath3D_TiledDeferred::Render() const
 	});
 
 	RenderPath2D::Render();
+
+	wiJobSystem::Wait(ctx);
 }

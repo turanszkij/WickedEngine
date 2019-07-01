@@ -4,19 +4,19 @@
 
 struct ShaderEntityType
 {
-	uint params;
 	float3 positionVS;
-	float range;
+	uint params;
 	float3 directionVS;
+	float range;
 	float3 positionWS;
 	float energy;
-	uint color;
 	float3 directionWS;
+	uint color;
+	float4 texMulAdd;
 	float coneAngleCos;
 	float shadowKernel;
 	float shadowBias;
 	uint userdata;
-	float4 texMulAdd;
 
 	inline uint GetType()
 	{
@@ -114,8 +114,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float2		g_xFrame_InternalResolution;
 	float2		g_xFrame_InternalResolution_Inverse;
 
-	float		g_xFrame_Gamma;
 	float3		g_xFrame_SunColor;
+	float		g_xFrame_Gamma;
 
 	float3		g_xFrame_SunDirection;
 	uint		g_xFrame_ShadowCascadeCount;
@@ -142,11 +142,11 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_VoxelRadianceNumCones_Inverse;		// 1.0 / number of diffuse cones to trace
 	float		g_xFrame_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
 
-	uint		g_xFrame_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
 	float3		g_xFrame_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
+	uint		g_xFrame_VoxelRadianceReflectionsEnabled;	// are voxel gi reflections enabled or not
 
-	uint		g_xFrame_AdvancedRefractions;
 	uint3		g_xFrame_EntityCullingTileCount;
+	uint		g_xFrame_AdvancedRefractions;
 
 	uint		g_xFrame_TransparentShadowsEnabled;
 	int			g_xFrame_GlobalEnvProbeIndex;
@@ -218,8 +218,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 CBUFFER(APICB, CBSLOT_API)
 {
 	float4		g_xClipPlane;
-	float		g_xAlphaRef;
 	float3		g_xPadding0_APICB;
+	float		g_xAlphaRef;
 };
 
 
@@ -284,10 +284,10 @@ CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 CBUFFER(DecalCB, CBSLOT_RENDERER_DECAL)
 {
 	float4x4 xDecalVP;
-	int hasTexNor;
 	float3 eye;
-	float opacity;
+	int hasTexNor;
 	float3 front;
+	float opacity;
 };
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)

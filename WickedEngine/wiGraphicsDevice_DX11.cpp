@@ -3123,8 +3123,6 @@ void GraphicsDevice_DX11::PresentBegin(GRAPHICSTHREAD threadID)
 }
 void GraphicsDevice_DX11::PresentEnd(GRAPHICSTHREAD threadID)
 {
-	wiJobSystem::Wait(GetJobContext());
-
 	// Execute deferred command lists:
 	{
 		GRAPHICSTHREAD threadID;

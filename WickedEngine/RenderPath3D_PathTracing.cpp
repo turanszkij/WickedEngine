@@ -73,7 +73,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 void RenderPath3D_PathTracing::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	wiJobSystem::context& ctx = device->GetJobContext();
+	wiJobSystem::context ctx;
 	GRAPHICSTHREAD threadID;
 
 	// Setup:
@@ -143,6 +143,8 @@ void RenderPath3D_PathTracing::Render() const
 	});
 
 	RenderPath2D::Render();
+
+	wiJobSystem::Wait(ctx);
 }
 
 void RenderPath3D_PathTracing::Compose(GRAPHICSTHREAD threadID) const
@@ -151,6 +153,7 @@ void RenderPath3D_PathTracing::Compose(GRAPHICSTHREAD threadID) const
 
 	device->EventBegin("RenderPath3D_PathTracing::Compose", threadID);
 
+	wiRenderer::BindCommonResources(threadID);
 
 	wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;

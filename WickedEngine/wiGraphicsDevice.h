@@ -4,7 +4,6 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDescriptors.h"
 #include "wiGraphicsResource.h"
-#include "wiJobSystem.h"
 
 enum GRAPHICSTHREAD
 {
@@ -39,7 +38,6 @@ namespace wiGraphics
 		bool CONSERVATIVE_RASTERIZATION = false;
 		bool RASTERIZER_ORDERED_VIEWS = false;
 		bool UNORDEREDACCESSTEXTURE_LOAD_EXT = false;
-		wiJobSystem::context jobsystem_ctx;
 
 	public:
 
@@ -129,8 +127,6 @@ namespace wiGraphics
 		inline static UINT GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
 		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
-
-		inline wiJobSystem::context& GetJobContext() { return jobsystem_ctx; }
 
 
 		///////////////Thread-sensitive////////////////////////

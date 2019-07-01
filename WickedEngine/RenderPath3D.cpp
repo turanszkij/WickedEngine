@@ -775,6 +775,8 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, GRAPHICSTHREAD th
 		wiRenderer::GenerateMipChain(&rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
 		// add to the scene
 		{
+			fx.enableHDR();
+
 			const Texture2D* rts[] = { &srcdstSceneRT };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
 
