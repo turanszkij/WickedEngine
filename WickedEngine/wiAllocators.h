@@ -11,6 +11,11 @@ namespace wiAllocators
 	{
 	public:
 
+		inline size_t get_capacity() const
+		{
+			return capacity;
+		}
+
 		inline void reserve(size_t newCapacity)
 		{
 			capacity = newCapacity;

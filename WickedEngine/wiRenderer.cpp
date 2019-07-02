@@ -65,7 +65,24 @@ Sampler					customsamplers[SSTYPE_LAST];
 
 string SHADERPATH = "shaders/";
 
-LinearAllocator frameAllocators[COMMANDLIST_COUNT];
+LinearAllocator updateFrameAllocator; // can be used by an update thread
+LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
+inline LinearAllocator& GetUpdateFrameAllocator()
+{
+	if (updateFrameAllocator.get_capacity() == 0)
+	{
+		updateFrameAllocator.reserve(4 * 1024 * 1024);
+	}
+	return updateFrameAllocator;
+}
+inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
+{
+	if (renderFrameAllocators[cmd].get_capacity() == 0)
+	{
+		renderFrameAllocators[cmd].reserve(4 * 1024 * 1024);
+	}
+	return renderFrameAllocators[cmd];
+}
 
 float GAMMA = 2.2f;
 uint32_t SHADOWRES_2D = 1024;
@@ -479,11 +496,6 @@ void AttachCamera(wiECS::Entity entity)
 
 void Initialize()
 {
-	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
-	{
-		frameAllocators[i].reserve(4 * 1024 * 1024);
-	}
-
 	GetCamera().CreatePerspective((float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.1f, 800);
 
 	frameCullings.insert(make_pair(&GetCamera(), FrameCulling()));
@@ -1437,7 +1449,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			{
 				prevMeshIndex = meshIndex;
 				instancedBatchCount++;
-				InstancedBatch* instancedBatch = (InstancedBatch*)frameAllocators[cmd].allocate(sizeof(InstancedBatch));
+				InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
 				instancedBatch->dataOffset = instances.offset + batchID * instanceDataSize;
@@ -1743,7 +1755,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 		ResetAlphaRef(cmd);
 
-		frameAllocators[cmd].free(sizeof(InstancedBatch) * instancedBatchCount);
+		GetRenderFrameAllocator(cmd).free(sizeof(InstancedBatch) * instancedBatchCount);
 
 		device->EventEnd(cmd);
 	}
@@ -3751,7 +3763,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 				// Sort lights based on distance so that closer lights will receive shadow map priority:
 				const size_t lightCount = culling.culledLights.size();
 				assert(lightCount < 0x0000FFFF); // watch out for sorting hash truncation!
-				uint32_t* lightSortingHashes = (uint32_t*)frameAllocators[0].allocate(sizeof(uint32_t) * lightCount);
+				uint32_t* lightSortingHashes = (uint32_t*)GetUpdateFrameAllocator().allocate(sizeof(uint32_t) * lightCount);
 				for (size_t i = 0; i < lightCount; ++i)
 				{
 					const uint32_t lightIndex = culling.culledLights[i];
@@ -3910,8 +3922,8 @@ void UpdateRenderData(CommandList cmd)
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
-		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[cmd].allocate(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
-		XMMATRIX* matrixArray = (XMMATRIX*)frameAllocators[cmd].allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
+		ShaderEntityType* entityArray = (ShaderEntityType*)GetRenderFrameAllocator(cmd).allocate(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
+		XMMATRIX* matrixArray = (XMMATRIX*)GetRenderFrameAllocator(cmd).allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
 		const XMMATRIX viewMatrix = GetCamera().GetView();
 
@@ -4118,8 +4130,8 @@ void UpdateRenderData(CommandList cmd)
 		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, cmd, sizeof(XMMATRIX)*matrixCounter);
 
 		// Temporary array for GPU entities can be freed now:
-		frameAllocators[cmd].free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
-		frameAllocators[cmd].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
+		GetRenderFrameAllocator(cmd).free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
+		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
 	UpdateFrameCB(cmd);
@@ -4208,7 +4220,7 @@ void UpdateRenderData(CommandList cmd)
 
 		// Copy new simulation data to vertex buffer
 		const size_t vb_size = sizeof(MeshComponent::Vertex_POS) * mesh.vertex_positions.size();
-		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)frameAllocators[cmd].allocate(vb_size);
+		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)GetRenderFrameAllocator(cmd).allocate(vb_size);
 
 		if (mesh.vertex_normals.empty())
 		{
@@ -4227,7 +4239,7 @@ void UpdateRenderData(CommandList cmd)
 
 		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, cmd, (UINT)vb_size);
 
-		frameAllocators[cmd].free(vb_size);
+		GetRenderFrameAllocator(cmd).free(vb_size);
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -4434,9 +4446,10 @@ void EndFrame()
 {
 	OcclusionCulling_Read();
 
+	updateFrameAllocator.reset();
 	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
 	{
-		frameAllocators[i].reset();
+		renderFrameAllocators[i].reset();
 	}
 }
 
@@ -4482,7 +4495,7 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, CommandLi
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
-	uint32_t* emitterSortingHashes = (uint32_t*)frameAllocators[cmd].allocate(sizeof(uint32_t) * emitterCount);
+	uint32_t* emitterSortingHashes = (uint32_t*)GetRenderFrameAllocator(cmd).allocate(sizeof(uint32_t) * emitterCount);
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = culling.culledEmitters[i];
@@ -4511,7 +4524,7 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, CommandLi
 		}
 	}
 
-	frameAllocators[cmd].free(sizeof(uint32_t) * emitterCount);
+	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
 }
 void DrawLights(const CameraComponent& camera, CommandList cmd)
@@ -4956,8 +4969,6 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 
 		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
-		uint32_t shadowCounter_2D = 0;
-		uint32_t shadowCounter_Cube = 0;
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
 			switch (type)
@@ -5000,7 +5011,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 			for (uint32_t lightIndex : culling.culledLights)
 			{
 				const LightComponent& light = scene.lights[lightIndex];
-				if (light.GetType() != type || !light.IsCastingShadow() || light.IsStatic())
+				if (light.shadowMap_index < 0 || light.GetType() != type || !light.IsCastingShadow() || light.IsStatic())
 				{
 					continue;
 				}
@@ -5009,10 +5020,6 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 				{
 				case LightComponent::DIRECTIONAL:
 				{
-					if ((shadowCounter_2D + CASCADE_COUNT - 1) >= SHADOWCOUNT_2D || light.shadowMap_index < 0)
-						break;
-					shadowCounter_2D += CASCADE_COUNT; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
-
 					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, camera, shcams);
 
@@ -5035,7 +5042,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 										continue;
 									}
 
-									RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+									RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 									size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 									batch->Create(meshIndex, i, 0);
 									renderQueue.add(batch);
@@ -5071,7 +5078,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 								device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, cmd, light.shadowMap_index + cascade);
 								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 							}
-							frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+							GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
 
 					}
@@ -5079,10 +5086,6 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 				break;
 				case LightComponent::SPOT:
 				{
-					if (shadowCounter_2D >= SHADOWCOUNT_2D || light.shadowMap_index < 0)
-						break;
-					shadowCounter_2D++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
-
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
 
@@ -5103,7 +5106,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 									continue;
 								}
 
-								RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
 								renderQueue.add(batch);
@@ -5139,7 +5142,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 							device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, cmd, light.shadowMap_index);
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
-						frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
 
 				}
@@ -5150,10 +5153,6 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 				case LightComponent::RECTANGLE:
 				case LightComponent::TUBE:
 				{
-					if (shadowCounter_Cube >= SHADOWCOUNT_CUBE || light.shadowMap_index < 0)
-						break;
-					shadowCounter_Cube++; // shadow indices are already complete so a shadow slot is consumed here even if no rendering actually happens!
-
 					SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
 
 					RenderQueue renderQueue;
@@ -5172,7 +5171,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 									continue;
 								}
 
-								RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
 								renderQueue.add(batch);
@@ -5211,7 +5210,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 
 						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd);
 
-						frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
 
 				}
@@ -5301,7 +5300,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 			{
 				continue;
 			}
-			RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 			batch->Create(meshIndex, instanceIndex, distance);
 			renderQueue.add(batch);
@@ -5312,7 +5311,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
 		RenderMeshes(renderQueue, renderPass, RENDERTYPE_OPAQUE, cmd, tessellation);
 
-		frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
 	device->EventEnd(cmd);
@@ -5385,7 +5384,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 		{
-			RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.center));
 			renderQueue.add(batch);
@@ -5396,7 +5395,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
 		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false);
 
-		frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
 	device->EventEnd(cmd);
@@ -6290,7 +6289,7 @@ void RefreshEnvProbes(CommandList cmd)
 				const ObjectComponent& object = scene.objects[i];
 				if (object.IsRenderable())
 				{
-					RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+					RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 					batch->Create(meshIndex, i, 0);
 					renderQueue.add(batch);
@@ -6307,7 +6306,7 @@ void RefreshEnvProbes(CommandList cmd)
 
 			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, cmd);
 
-			frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+			GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
 
 		// sky
@@ -6646,7 +6645,7 @@ void VoxelRadiance(CommandList cmd)
 			const ObjectComponent& object = scene.objects[i];
 			if (object.IsRenderable())
 			{
-				RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
+				RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 				size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 				batch->Create(meshIndex, i, 0);
 				renderQueue.add(batch);
@@ -6673,7 +6672,7 @@ void VoxelRadiance(CommandList cmd)
 		BindConstantBuffers(PS, cmd);
 
 		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
-		frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
+		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", cmd);
