@@ -5,8 +5,8 @@
 
 CBUFFER(SortConstants, CBSLOT_OTHER_GPUSORTLIB)
 {
-	uint counterReadOffset;
 	int3 job_params;
+	uint counterReadOffset;
 };
 
 #define __ReadSortElementCount__ counterBuffer.Load(counterReadOffset);

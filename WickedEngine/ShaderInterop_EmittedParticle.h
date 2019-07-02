@@ -11,9 +11,9 @@ struct Particle
 	float rotationalVelocity;
 	float3 velocity;
 	float maxLife;
+	float2 sizeBeginEnd;
 	float life;
 	uint color_mirror;
-	float2 sizeBeginEnd;
 };
 
 struct ParticleCounters

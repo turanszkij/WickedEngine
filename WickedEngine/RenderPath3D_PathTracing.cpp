@@ -72,43 +72,49 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 void RenderPath3D_PathTracing::Render() const
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiJobSystem::context ctx;
+	CommandList cmd;
+
 	// Setup:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
-		wiRenderer::UpdateRenderData(threadID);
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] {
+
+		wiRenderer::UpdateRenderData(cmd);
 
 		if (sam == 0)
 		{
-			wiRenderer::BuildSceneBVH(threadID);
+			wiRenderer::BuildSceneBVH(cmd);
 		}
-	}
+	});
 
 	// Main scene:
-	{
-		GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE;
-		GraphicsDevice* device = wiRenderer::GetDevice();
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
+
+		wiRenderer::BindCommonResources(cmd);
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
 		{
 			const Texture2D* rts[] = { &rtAccumulation };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 			float clear[] = { 0,0,0,1 };
-			device->ClearRenderTarget(rts[0], clear, threadID);
+			device->ClearRenderTarget(rts[0], clear, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawTracedSceneBVH(threadID);
+			wiRenderer::DrawTracedSceneBVH(cmd);
 		}
 		else
 		{
-			wiProfiler::BeginRange("Traced Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
 
-			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-			wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), &traceResult, threadID);
+			wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), &traceResult, cmd);
 
 
 
@@ -123,28 +129,31 @@ void RenderPath3D_PathTracing::Render() const
 
 
 			const Texture2D* rts[] = { &rtAccumulation };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			wiImage::Draw(&traceResult, fx, threadID);
+			wiImage::Draw(&traceResult, fx, cmd);
 
-			wiProfiler::EndRange(threadID); // Traced Scene
+			wiProfiler::EndRange(range); // Traced Scene
 		}
-	}
+	});
 
 	RenderPath2D::Render();
+
+	wiJobSystem::Wait(ctx);
 }
 
-void RenderPath3D_PathTracing::Compose() const
+void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("RenderPath3D_PathTracing::Compose", GRAPHICSTHREAD_IMMEDIATE);
+	device->EventBegin("RenderPath3D_PathTracing::Compose", cmd);
 
+	wiRenderer::BindCommonResources(cmd);
 
 	wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
 	fx.blendFlag = BLENDMODE_OPAQUE;
@@ -153,10 +162,10 @@ void RenderPath3D_PathTracing::Compose() const
 	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
 	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	
-	wiImage::Draw(&rtAccumulation, fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtAccumulation, fx, cmd);
 
 
-	device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	device->EventEnd(cmd);
 
-	RenderPath2D::Compose();
+	RenderPath2D::Compose(cmd);
 }

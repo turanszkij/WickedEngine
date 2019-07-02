@@ -54,8 +54,8 @@ public:
 	void Restart();
 
 	// Must have a transform and material component, but mesh is optional
-	void UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID) const;
-	void Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID) const;
+	void UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, wiGraphics::CommandList cmd) const;
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
 
 	ParticleCounters GetDebugData() { return debugData; }
 

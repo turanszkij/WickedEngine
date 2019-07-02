@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
+#include "wiEnums.h"
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
 #include "wiIntersect.h"
@@ -19,8 +20,8 @@ private:
 public:
 
 	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
-	void UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID) const;
-	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, GRAPHICSTHREAD threadID) const;
+	void UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
+	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, wiGraphics::CommandList cmd) const;
 
 	enum FLAGS
 	{

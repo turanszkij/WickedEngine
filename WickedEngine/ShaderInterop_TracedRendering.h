@@ -22,7 +22,8 @@ struct TracedRenderingStoredRay
 	uint pixelID;
 	uint3 direction_energy;
 	uint primitiveID;
-	uint bary;
+	float2 bary;
+	uint2 userdata; // vulkan complains about 16-byte padding here so might as well add userdata here and not pack barycentric coords
 };
 
 struct TracedRenderingMaterial

@@ -40,21 +40,8 @@ static BlendState			blendStates[BLENDMODE_COUNT];
 static RasterizerState		rasterizerState;
 static RasterizerState		wireFrameRS;
 static DepthStencilState	depthStencilState;
-static GraphicsPSO			PSO[BLENDMODE_COUNT][wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
-static GraphicsPSO			PSO_wire;
-static ComputePSO			CPSO_kickoffUpdate;
-static ComputePSO			CPSO_finishUpdate;
-static ComputePSO			CPSO_emit;
-static ComputePSO			CPSO_emit_FROMMESH;
-static ComputePSO			CPSO_sphpartition;
-static ComputePSO			CPSO_sphpartitionoffsets;
-static ComputePSO			CPSO_sphpartitionoffsetsreset;
-static ComputePSO			CPSO_sphdensity;
-static ComputePSO			CPSO_sphforce;
-static ComputePSO			CPSO_simulate;
-static ComputePSO			CPSO_simulate_SORTING;
-static ComputePSO			CPSO_simulate_DEPTHCOLLISIONS;
-static ComputePSO			CPSO_simulate_SORTING_DEPTHCOLLISIONS;
+static PipelineState		PSO[BLENDMODE_COUNT][wiEmittedParticle::PARTICLESHADERTYPE_COUNT];
+static PipelineState		PSO_wire;
 
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
@@ -249,7 +236,7 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 
 	if (IsDebug())
 	{
-		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData);
 	}
 }
 void wiEmittedParticle::Burst(int num)
@@ -266,7 +253,7 @@ void wiEmittedParticle::Restart()
 }
 
 //#define DEBUG_SORTING // slow but great for debug!!
-void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, GRAPHICSTHREAD threadID) const
+void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, CommandList cmd) const
 {
 	if (particleBuffer == nullptr)
 	{
@@ -277,7 +264,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 
 	if (!IsPaused())
 	{
-		device->EventBegin("UpdateEmittedParticles", threadID);
+		device->EventBegin("UpdateEmittedParticles", cmd);
 
 		EmittedParticleCB cb;
 		cb.xEmitterWorld = transform.world;
@@ -314,8 +301,8 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xSPH_e = SPH_e;
 		cb.xSPH_ENABLED = IsSPHEnabled() ? 1 : 0;
 
-		device->UpdateBuffer(constantBuffer.get(), &cb, threadID);
-		device->BindConstantBuffer(CS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
+		device->UpdateBuffer(constantBuffer.get(), &cb, cmd);
+		device->BindConstantBuffer(CS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
 		GPUResource* uavs[] = {
 			particleBuffer.get(),
@@ -326,95 +313,95 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			indirectBuffers.get(),
 			distanceBuffer.get(),
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		GPUResource* resources[] = {
 			mesh == nullptr ? nullptr : mesh->indexBuffer.get(),
 			mesh == nullptr ? nullptr : (mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get()),
 		};
-		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), cmd);
 
 		GPUResource* indres[] = {
 			indirectBuffers.get()
 		};
-		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, threadID);
+		device->TransitionBarrier(indres, 1, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS, cmd);
 
 		// kick off updating, set up state
-		device->EventBegin("KickOff Update", threadID);
-		device->BindComputePSO(&CPSO_kickoffUpdate, threadID);
-		device->Dispatch(1, 1, 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->EventEnd(threadID);
+		device->EventBegin("KickOff Update", cmd);
+		device->BindComputeShader(kickoffUpdateCS, cmd);
+		device->Dispatch(1, 1, 1, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->EventEnd(cmd);
 
-		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, threadID);
+		device->TransitionBarrier(indres, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
 
 		// emit the required amount if there are free slots in dead list
-		device->EventBegin("Emit", threadID);
-		device->BindComputePSO(mesh == nullptr ? &CPSO_emit : &CPSO_emit_FROMMESH, threadID);
-		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->EventEnd(threadID);
+		device->EventBegin("Emit", cmd);
+		device->BindComputeShader(mesh == nullptr ? emitCS : emitCS_FROMMESH, cmd);
+		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHEMIT, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->EventEnd(cmd);
 
 		if (IsSPHEnabled())
 		{
-			wiProfiler::BeginRange("SPH - Simulation", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRangeGPU("SPH - Simulation", cmd);
 
 			// Smooth Particle Hydrodynamics:
-			device->EventBegin("SPH - Simulation", threadID);
+			device->EventBegin("SPH - Simulation", cmd);
 
 #ifdef SPH_USE_ACCELERATION_GRID
 			// 1.) Assign particles into partitioning grid:
-			device->EventBegin("Partitioning", threadID);
-			device->BindComputePSO(&CPSO_sphpartition, threadID);
-			device->UnbindUAVs(0, 8, threadID);
+			device->EventBegin("Partitioning", cmd);
+			device->BindComputeShader(sphpartitionCS, cmd);
+			device->UnbindUAVs(0, 8, cmd);
 			GPUResource* res_partition[] = {
 				aliveList[0].get(), // CURRENT alivelist
 				counterBuffer.get(),
 				particleBuffer.get(),
 			};
-			device->BindResources(CS, res_partition, 0, ARRAYSIZE(res_partition), threadID);
+			device->BindResources(CS, res_partition, 0, ARRAYSIZE(res_partition), cmd);
 			GPUResource* uav_partition[] = {
 				sphPartitionCellIndices.get(),
 			};
-			device->BindUAVs(CS, uav_partition, 0, ARRAYSIZE(uav_partition), threadID);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), threadID);
-			device->EventEnd(threadID);
+			device->BindUAVs(CS, uav_partition, 0, ARRAYSIZE(uav_partition), cmd);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->UAVBarrier(uav_partition, ARRAYSIZE(uav_partition), cmd);
+			device->EventEnd(cmd);
 
 			// 2.) Sort particle index list based on partition grid cell index:
-			wiGPUSortLib::Sort(MAX_PARTICLES, *sphPartitionCellIndices.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT, *aliveList[0].get(), threadID);
+			wiGPUSortLib::Sort(MAX_PARTICLES, *sphPartitionCellIndices.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT, *aliveList[0].get(), cmd);
 
 			// 3.) Reset grid cell offset buffer with invalid offsets (max uint):
-			device->EventBegin("PartitionOffsetsReset", threadID);
-			device->BindComputePSO(&CPSO_sphpartitionoffsetsreset, threadID);
-			device->UnbindUAVs(0, 8, threadID);
+			device->EventBegin("PartitionOffsetsReset", cmd);
+			device->BindComputeShader(sphpartitionoffsetsresetCS, cmd);
+			device->UnbindUAVs(0, 8, cmd);
 			GPUResource* uav_partitionoffsets[] = {
 				sphPartitionCellOffsets.get(),
 			};
-			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), threadID);
-			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, threadID);
-			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
-			device->EventEnd(threadID);
+			device->BindUAVs(CS, uav_partitionoffsets, 0, ARRAYSIZE(uav_partitionoffsets), cmd);
+			device->Dispatch((UINT)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, cmd);
+			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), cmd);
+			device->EventEnd(cmd);
 
 			// 4.) Assemble grid cell offsets from the sorted particle index list <--> grid cell index list connection:
-			device->EventBegin("PartitionOffsets", threadID);
-			device->BindComputePSO(&CPSO_sphpartitionoffsets, threadID);
+			device->EventBegin("PartitionOffsets", cmd);
+			device->BindComputeShader(sphpartitionoffsetsCS, cmd);
 			GPUResource* res_partitionoffsets[] = {
 				aliveList[0].get(), // CURRENT alivelist
 				counterBuffer.get(),
 				sphPartitionCellIndices.get(),
 			};
-			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), threadID);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), threadID);
-			device->EventEnd(threadID);
+			device->BindResources(CS, res_partitionoffsets, 0, ARRAYSIZE(res_partitionoffsets), cmd);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->UAVBarrier(uav_partitionoffsets, ARRAYSIZE(uav_partitionoffsets), cmd);
+			device->EventEnd(cmd);
 
 #endif // SPH_USE_ACCELERATION_GRID
 
 			// 5.) Compute particle density field:
-			device->EventBegin("Density Evaluation", threadID);
-			device->BindComputePSO(&CPSO_sphdensity, threadID);
-			device->UnbindUAVs(0, 8, threadID);
+			device->EventBegin("Density Evaluation", cmd);
+			device->BindComputeShader(sphdensityCS, cmd);
+			device->UnbindUAVs(0, 8, cmd);
 			GPUResource* res_density[] = {
 				aliveList[0].get(), // CURRENT alivelist
 				counterBuffer.get(),
@@ -422,19 +409,19 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 				sphPartitionCellIndices.get(),
 				sphPartitionCellOffsets.get(),
 			};
-			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), threadID);
+			device->BindResources(CS, res_density, 0, ARRAYSIZE(res_density), cmd);
 			GPUResource* uav_density[] = {
 				densityBuffer.get()
 			};
-			device->BindUAVs(CS, uav_density, 0, ARRAYSIZE(uav_density), threadID);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), threadID);
-			device->EventEnd(threadID);
+			device->BindUAVs(CS, uav_density, 0, ARRAYSIZE(uav_density), cmd);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->UAVBarrier(uav_density, ARRAYSIZE(uav_density), cmd);
+			device->EventEnd(cmd);
 
 			// 6.) Compute particle pressure forces:
-			device->EventBegin("Force Evaluation", threadID);
-			device->BindComputePSO(&CPSO_sphforce, threadID);
-			device->UnbindUAVs(0, 8, threadID);
+			device->EventBegin("Force Evaluation", cmd);
+			device->BindComputeShader(sphforceCS, cmd);
+			device->UnbindUAVs(0, 8, cmd);
 			GPUResource* res_force[] = {
 				aliveList[0].get(), // CURRENT alivelist
 				counterBuffer.get(),
@@ -442,59 +429,59 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 				sphPartitionCellIndices.get(),
 				sphPartitionCellOffsets.get(),
 			};
-			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), threadID);
+			device->BindResources(CS, res_force, 0, ARRAYSIZE(res_force), cmd);
 			GPUResource* uav_force[] = {
 				particleBuffer.get(),
 			};
-			device->BindUAVs(CS, uav_force, 0, ARRAYSIZE(uav_force), threadID);
-			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), threadID);
-			device->EventEnd(threadID);
+			device->BindUAVs(CS, uav_force, 0, ARRAYSIZE(uav_force), cmd);
+			device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+			device->UAVBarrier(uav_force, ARRAYSIZE(uav_force), cmd);
+			device->EventEnd(cmd);
 
-			device->UnbindResources(0, 3, threadID);
-			device->UnbindUAVs(0, 8, threadID);
+			device->UnbindResources(0, 3, cmd);
+			device->UnbindUAVs(0, 8, cmd);
 
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 
-			wiProfiler::EndRange(threadID);
+			wiProfiler::EndRange(range);
 		}
 
-		device->EventBegin("Simulate", threadID);
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
-		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+		device->EventBegin("Simulate", cmd);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+		device->BindResources(CS, resources, TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), cmd);
 
 		// update CURRENT alive list, write NEW alive list
 		if (IsSorted())
 		{
 			if (IsDepthCollisionEnabled())
 			{
-				device->BindComputePSO(&CPSO_simulate_SORTING_DEPTHCOLLISIONS, threadID);
+				device->BindComputeShader(simulateCS_SORTING_DEPTHCOLLISIONS, cmd);
 			}
 			else
 			{
-				device->BindComputePSO(&CPSO_simulate_SORTING, threadID);
+				device->BindComputeShader(simulateCS_SORTING, cmd);
 			}
 		}
 		else
 		{
 			if (IsDepthCollisionEnabled())
 			{
-				device->BindComputePSO(&CPSO_simulate_DEPTHCOLLISIONS, threadID);
+				device->BindComputeShader(simulateCS_DEPTHCOLLISIONS, cmd);
 			}
 			else
 			{
-				device->BindComputePSO(&CPSO_simulate, threadID);
+				device->BindComputeShader(simulateCS, cmd);
 			}
 		}
-		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->EventEnd(threadID);
+		device->DispatchIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->EventEnd(cmd);
 
 
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(resources), cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 
 	}
 
@@ -502,22 +489,22 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 	{
 #ifdef DEBUG_SORTING
 		vector<uint32_t> before(MAX_PARTICLES);
-		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), before.data(), threadID);
+		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), before.data());
 
-		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData, threadID);
+		device->DownloadResource(counterBuffer.get(), debugDataReadbackBuffer.get(), &debugData);
 		uint32_t particleCount = debugData.aliveCount_afterSimulation;
 #endif // DEBUG_SORTING
 
 
-		wiGPUSortLib::Sort(MAX_PARTICLES, *distanceBuffer.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, *aliveList[1].get(), threadID);
+		wiGPUSortLib::Sort(MAX_PARTICLES, *distanceBuffer.get(), *counterBuffer.get(), PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, *aliveList[1].get(), cmd);
 
 
 #ifdef DEBUG_SORTING
 		vector<uint32_t> after(MAX_PARTICLES);
-		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), after.data(), threadID);
+		device->DownloadResource(aliveList[1].get(), debugDataReadbackIndexBuffer.get(), after.data());
 
 		vector<float> distances(MAX_PARTICLES);
-		device->DownloadResource(distanceBuffer.get(), debugDataReadbackDistanceBuffer.get(), distances.data(), threadID);
+		device->DownloadResource(distanceBuffer.get(), debugDataReadbackDistanceBuffer.get(), distances.data());
 
 		if (particleCount > 1)
 		{
@@ -560,7 +547,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 			// Also we can reupload CPU sorted particles to verify:
 			if (!valid)
 			{
-				device->UpdateBuffer(aliveList[1].get(), before.data(), threadID);
+				device->UpdateBuffer(aliveList[1].get(), before.data(), cmd);
 			}
 		}
 #endif // DEBUG_SORTING
@@ -569,58 +556,58 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 	if (!IsPaused())
 	{
 		// finish updating, update draw argument buffer:
-		device->EventBegin("FinishUpdate", threadID);
-		device->BindComputePSO(&CPSO_finishUpdate, threadID);
+		device->EventBegin("FinishUpdate", cmd);
+		device->BindComputeShader(finishUpdateCS, cmd);
 
 		GPUResource* res[] = {
 			counterBuffer.get(),
 		};
-		device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
+		device->BindResources(CS, res, 0, ARRAYSIZE(res), cmd);
 
 		GPUResource* uavs[] = {
 			indirectBuffers.get(),
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-		device->Dispatch(1, 1, 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->Dispatch(1, 1, 1, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-		device->UnbindResources(0, ARRAYSIZE(res), threadID);
-		device->EventEnd(threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+		device->UnbindResources(0, ARRAYSIZE(res), cmd);
+		device->EventEnd(cmd);
 	}
 }
 
 
-void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, GRAPHICSTHREAD threadID) const
+void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("EmittedParticle", threadID);
+	device->EventBegin("EmittedParticle", cmd);
 
 	if (wiRenderer::IsWireRender())
 	{
-		device->BindGraphicsPSO(&PSO_wire, threadID);
+		device->BindPipelineState(&PSO_wire, cmd);
 	}
 	else
 	{
 		const BLENDMODE blendMode = material.GetBlendMode();
-		device->BindGraphicsPSO(&PSO[blendMode][shaderType], threadID);
-		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, threadID);
+		device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
+		device->BindResource(PS, material.GetBaseColorMap(), TEXSLOT_ONDEMAND0, cmd);
 	}
 
-	device->BindConstantBuffer(VS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
-	device->BindConstantBuffer(PS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), threadID);
+	device->BindConstantBuffer(VS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
+	device->BindConstantBuffer(PS, constantBuffer.get(), CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
 	GPUResource* res[] = {
 		particleBuffer.get(),
 		aliveList[1].get() // NEW aliveList
 	};
-	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
-	device->BindResources(VS, res, 0, ARRAYSIZE(res), threadID);
+	device->TransitionBarrier(res, ARRAYSIZE(res), RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, cmd);
+	device->BindResources(VS, res, 0, ARRAYSIZE(res), cmd);
 
-	device->DrawInstancedIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, threadID);
+	device->DrawInstancedIndirect(indirectBuffers.get(), ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 
@@ -654,7 +641,7 @@ void wiEmittedParticle::LoadShaders()
 
 	for (int i = 0; i < BLENDMODE_COUNT; ++i)
 	{
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShader;
 		desc.bs = &blendStates[i];
 		desc.rs = &rasterizerState;
@@ -663,15 +650,15 @@ void wiEmittedParticle::LoadShaders()
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 
 		desc.ps = pixelShader[SOFT];
-		device->CreateGraphicsPSO(&desc, &PSO[i][SOFT]);
+		device->CreatePipelineState(&desc, &PSO[i][SOFT]);
 		desc.ps = pixelShader[SOFT_DISTORTION];
-		device->CreateGraphicsPSO(&desc, &PSO[i][SOFT_DISTORTION]);
+		device->CreatePipelineState(&desc, &PSO[i][SOFT_DISTORTION]);
 		desc.ps = pixelShader[SIMPLEST];
-		device->CreateGraphicsPSO(&desc, &PSO[i][SIMPLEST]);
+		device->CreatePipelineState(&desc, &PSO[i][SIMPLEST]);
 	}
 
 	{
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShader;
 		desc.ps = pixelShader[SIMPLEST];
 		desc.bs = &blendStates[BLENDMODE_ALPHA];
@@ -680,50 +667,7 @@ void wiEmittedParticle::LoadShaders()
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 
-		device->CreateGraphicsPSO(&desc, &PSO_wire);
-	}
-
-	{
-		ComputePSODesc desc;
-
-		desc.cs = kickoffUpdateCS;
-		device->CreateComputePSO(&desc, &CPSO_kickoffUpdate);
-
-		desc.cs = finishUpdateCS;
-		device->CreateComputePSO(&desc, &CPSO_finishUpdate);
-
-		desc.cs = emitCS;
-		device->CreateComputePSO(&desc, &CPSO_emit);
-
-		desc.cs = emitCS_FROMMESH;
-		device->CreateComputePSO(&desc, &CPSO_emit_FROMMESH);
-
-		desc.cs = sphpartitionCS;
-		device->CreateComputePSO(&desc, &CPSO_sphpartition);
-
-		desc.cs = sphpartitionoffsetsCS;
-		device->CreateComputePSO(&desc, &CPSO_sphpartitionoffsets);
-
-		desc.cs = sphpartitionoffsetsresetCS;
-		device->CreateComputePSO(&desc, &CPSO_sphpartitionoffsetsreset);
-
-		desc.cs = sphdensityCS;
-		device->CreateComputePSO(&desc, &CPSO_sphdensity);
-
-		desc.cs = sphforceCS;
-		device->CreateComputePSO(&desc, &CPSO_sphforce);
-
-		desc.cs = simulateCS;
-		device->CreateComputePSO(&desc, &CPSO_simulate);
-
-		desc.cs = simulateCS_SORTING;
-		device->CreateComputePSO(&desc, &CPSO_simulate_SORTING);
-
-		desc.cs = simulateCS_DEPTHCOLLISIONS;
-		device->CreateComputePSO(&desc, &CPSO_simulate_DEPTHCOLLISIONS);
-
-		desc.cs = simulateCS_SORTING_DEPTHCOLLISIONS;
-		device->CreateComputePSO(&desc, &CPSO_simulate_SORTING_DEPTHCOLLISIONS);
+		device->CreatePipelineState(&desc, &PSO_wire);
 	}
 
 }

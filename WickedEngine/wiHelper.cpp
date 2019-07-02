@@ -112,7 +112,7 @@ namespace wiHelper
 		HRESULT hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
 		assert(SUCCEEDED(hr));
 
-		bool download_success = device->DownloadResource(&texture, &stagingTex, data.data(), GRAPHICSTHREAD_IMMEDIATE);
+		bool download_success = device->DownloadResource(&texture, &stagingTex, data.data());
 		assert(download_success);
 
 		return saveTextureToFile(data, desc, fileName);

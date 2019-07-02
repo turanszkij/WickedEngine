@@ -23,9 +23,9 @@ public:
 
 	virtual void FixedUpdate(float speed);
 	virtual void Update(float dt);
-	void Draw(const wiGraphics::Texture2D* refracRes, GRAPHICSTHREAD threadID) const;
-	void Draw(GRAPHICSTHREAD threadID) const;
-	void DrawNormal(GRAPHICSTHREAD threadID) const;
+	void Draw(const wiGraphics::Texture2D* refracRes, wiGraphics::CommandList cmd) const;
+	void Draw(wiGraphics::CommandList cmd) const;
+	void DrawNormal(wiGraphics::CommandList cmd) const;
 
 	std::string name;
 

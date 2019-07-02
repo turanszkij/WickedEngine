@@ -112,6 +112,7 @@ void RenderPath2D::FixedUpdate()
 void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
+	CommandList cmd = device->BeginCommandList();
 
 	const Texture2D* dsv = GetDepthStencil();
 
@@ -120,101 +121,101 @@ void RenderPath2D::Render() const
 	if (GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
 	{
 		const Texture2D* rts[] = { &rtStenciled };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, GRAPHICSTHREAD_IMMEDIATE);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, cmd);
 
 		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
+		device->ClearRenderTarget(rts[0], clear, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rtStenciled.GetDesc().Width;
 		vp.Height = (float)rtStenciled.GetDesc().Height;
-		device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
+		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", cmd);
 		for (auto& x : layers)
 		{
 			for (auto& y : x.items)
 			{
 				if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
 				{
-					y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+					y.sprite->Draw(cmd);
 				}
 			}
 		}
-		wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::GetDevice()->EventEnd(cmd);
 
 		dsv = nullptr;
 	}
 
 
 	const Texture2D* rts[] = { &rtFinal };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, GRAPHICSTHREAD_IMMEDIATE);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, cmd);
 
 	float clear[] = { 0,0,0,0 };
-	device->ClearRenderTarget(rts[0], clear, GRAPHICSTHREAD_IMMEDIATE);
+	device->ClearRenderTarget(rts[0], clear, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rtFinal.GetDesc().Width;
 	vp.Height = (float)rtFinal.GetDesc().Height;
-	device->BindViewports(1, &vp, GRAPHICSTHREAD_IMMEDIATE);
+	device->BindViewports(1, &vp, cmd);
 
 	if (GetDepthStencil() != nullptr)
 	{
 		if (wiRenderer::GetResolutionScale() != 1.0f)
 		{
-			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", cmd);
 			wiImageParams fx;
 			fx.enableFullScreen();
-			wiImage::Draw(&rtStenciled, fx, GRAPHICSTHREAD_IMMEDIATE);
-			wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+			wiImage::Draw(&rtStenciled, fx, cmd);
+			wiRenderer::GetDevice()->EventEnd(cmd);
 		}
 		else
 		{
-			wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", cmd);
 			for (auto& x : layers)
 			{
 				for (auto& y : x.items)
 				{
 					if (y.sprite != nullptr && y.sprite->params.stencilComp != STENCILMODE_DISABLED)
 					{
-						y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+						y.sprite->Draw(cmd);
 					}
 				}
 			}
-			wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::GetDevice()->EventEnd(cmd);
 		}
 	}
 
-	wiRenderer::GetDevice()->EventBegin("Sprite Layers", GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->EventBegin("Sprite Layers", cmd);
 	for (auto& x : layers)
 	{
 		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr && y.sprite->params.stencilComp == STENCILMODE_DISABLED)
 			{
-				y.sprite->Draw(GRAPHICSTHREAD_IMMEDIATE);
+				y.sprite->Draw(cmd);
 			}
 			if (y.font != nullptr)
 			{
-				y.font->Draw(GRAPHICSTHREAD_IMMEDIATE);
+				y.font->Draw(cmd);
 			}
 		}
 	}
-	wiRenderer::GetDevice()->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	wiRenderer::GetDevice()->EventEnd(cmd);
 
-	GetGUI().Render();
+	GetGUI().Render(cmd);
 
 	RenderPath::Render();
 }
-void RenderPath2D::Compose() const
+void RenderPath2D::Compose(CommandList cmd) const
 {
 	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 
-	wiImage::Draw(&rtFinal, fx, GRAPHICSTHREAD_IMMEDIATE);
+	wiImage::Draw(&rtFinal, fx, cmd);
 
-	RenderPath::Compose();
+	RenderPath::Compose(cmd);
 }
 
 

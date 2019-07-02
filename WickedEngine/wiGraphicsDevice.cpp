@@ -10,7 +10,7 @@ bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
 		return TESSELLATION;
 		break;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_MULTITHREADED_RENDERING:
-		return MULTITHREADED_RENDERING;
+		return true;
 		break;
 	case wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
 		return CONSERVATIVE_RASTERIZATION;

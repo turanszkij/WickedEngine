@@ -72,7 +72,7 @@ public:
 	void FixedUpdate() override;
 	void Update(float dt) override;
 	void Render() const override;
-	void Compose() const override;
+	void Compose(wiGraphics::CommandList cmd) const override;
 	void Unload() override;
 
 

@@ -487,7 +487,7 @@ namespace wiGraphics
 		UINT64	result_timestamp_frequency = 0;
 		BOOL	result_disjoint = FALSE;
 	};
-	struct GraphicsPSODesc
+	struct PipelineStateDesc
 	{
 		const VertexShader*			vs = nullptr;
 		const PixelShader*			ps = nullptr;
@@ -504,10 +504,6 @@ namespace wiGraphics
 		FORMAT						DSFormat = FORMAT_UNKNOWN;
 		SampleDesc					sampleDesc; 
 		UINT						sampleMask = 0xFFFFFFFF;
-	};
-	struct ComputePSODesc
-	{
-		const ComputeShader*	cs = nullptr;
 	};
 	struct IndirectDrawArgsInstanced
 	{

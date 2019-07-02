@@ -872,7 +872,7 @@ namespace wiSceneSystem
 		hr = device->CreateTexture2D(&staging_desc, nullptr, &stagingTex);
 		assert(SUCCEEDED(hr));
 
-		bool download_success = device->DownloadResource(lightmap.get(), &stagingTex, lightmapTextureData.data(), GRAPHICSTHREAD_IMMEDIATE);
+		bool download_success = device->DownloadResource(lightmap.get(), &stagingTex, lightmapTextureData.data());
 		assert(download_success);
 	}
 	FORMAT ObjectComponent::GetLightmapFormat()

@@ -8,14 +8,6 @@ const char RenderPath_BindLua::className[] = "RenderPath";
 Luna<RenderPath_BindLua>::FunctionType RenderPath_BindLua::methods[] = {
 	lunamethod(RenderPath_BindLua, GetContent),
 	lunamethod(RenderPath_BindLua, Initialize),
-	lunamethod(RenderPath_BindLua, Load),
-	lunamethod(RenderPath_BindLua, Unload),
-	lunamethod(RenderPath_BindLua, Start),
-	lunamethod(RenderPath_BindLua, Stop),
-	lunamethod(RenderPath_BindLua, FixedUpdate),
-	lunamethod(RenderPath_BindLua, Update),
-	lunamethod(RenderPath_BindLua, Render),
-	lunamethod(RenderPath_BindLua, Compose),
 	lunamethod(RenderPath_BindLua, OnStart),
 	lunamethod(RenderPath_BindLua, OnStop),
 	lunamethod(RenderPath_BindLua, GetLayerMask),
@@ -59,99 +51,6 @@ int RenderPath_BindLua::Initialize(lua_State* L)
 		return 0;
 	}
 	component->Initialize();
-	return 0;
-}
-
-int RenderPath_BindLua::Load(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Load() component is null!");
-		return 0;
-	}
-	component->Load();
-	return 0;
-}
-
-int RenderPath_BindLua::Unload(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Unload() component is null!");
-		return 0;
-	}
-	component->Unload();
-	return 0;
-}
-
-int RenderPath_BindLua::Start(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Start() component is null!");
-		return 0;
-	}
-	component->Start();
-	return 0;
-}
-
-int RenderPath_BindLua::Stop(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Stop() component is null!");
-		return 0;
-	}
-	component->Stop();
-	return 0;
-}
-
-int RenderPath_BindLua::FixedUpdate(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "FixedUpdate() component is null!");
-		return 0;
-	}
-	component->FixedUpdate();
-	return 0;
-}
-
-int RenderPath_BindLua::Update(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Update(opt float dt = 0) component is null!");
-		return 0;
-	}
-	float dt = 0.f;
-	if (wiLua::SGetArgCount(L) > 0)
-	{
-		dt = wiLua::SGetFloat(L, 1);
-	}
-	component->Update(dt);
-	return 0;
-}
-
-int RenderPath_BindLua::Render(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Render() component is null!");
-		return 0;
-	}
-	component->Render();
-	return 0;
-}
-
-int RenderPath_BindLua::Compose(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "Compose() component is null!");
-		return 0;
-	}
-	component->Compose();
 	return 0;
 }
 

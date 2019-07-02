@@ -54,7 +54,7 @@ public:
 	wiFont(const std::string& text = "", wiFontParams params = wiFontParams(), int style = 0);
 	wiFont(const std::wstring& text, wiFontParams params = wiFontParams(), int style = 0);
 	
-	void Draw(GRAPHICSTHREAD threadID) const;
+	void Draw(wiGraphics::CommandList cmd) const;
 
 	int textWidth() const;
 	int textHeight() const;

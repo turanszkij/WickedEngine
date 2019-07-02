@@ -14,9 +14,9 @@ protected:
 
 	void ResizeBuffers() override;
 
-	virtual void RenderSSS(GRAPHICSTHREAD threadID) const;
-	virtual void RenderDecals(GRAPHICSTHREAD threadID) const;
-	virtual void RenderDeferredComposition(GRAPHICSTHREAD threadID) const;
+	virtual void RenderSSS(wiGraphics::CommandList cmd) const;
+	virtual void RenderDecals(wiGraphics::CommandList cmd) const;
+	virtual void RenderDeferredComposition(wiGraphics::CommandList cmd) const;
 
 public:
 	void setMSAASampleCount(UINT value) override { /*disable MSAA for deferred*/ }

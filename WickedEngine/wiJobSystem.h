@@ -18,7 +18,7 @@ namespace wiJobSystem
 	// Defines a state of execution, can be waited on
 	struct context
 	{
-		std::atomic<uint32_t> counter = 0;
+		std::atomic<uint32_t> counter{ 0 };
 	};
 
 	// Add a job to execute asynchronously. Any idle thread will execute this job.

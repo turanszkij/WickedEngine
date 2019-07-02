@@ -2,6 +2,7 @@
 #define _WI_ALLOCATORS_H_
 
 #include <cstdint>
+#include <memory>
 
 namespace wiAllocators
 {
@@ -9,19 +10,16 @@ namespace wiAllocators
 	class LinearAllocator
 	{
 	public:
-		~LinearAllocator()
+
+		inline size_t get_capacity() const
 		{
-			delete[] buffer;
+			return capacity;
 		}
 
 		inline void reserve(size_t newCapacity)
 		{
-			if (capacity > 0)
-			{
-				delete[] buffer;
-			}
 			capacity = newCapacity;
-			buffer = new uint8_t[capacity];
+			buffer = std::make_unique<uint8_t[]>(capacity);
 		}
 
 		inline uint8_t* allocate(size_t size)
@@ -47,7 +45,7 @@ namespace wiAllocators
 		}
 
 	private:
-		uint8_t* buffer = nullptr;
+		std::unique_ptr<uint8_t[]> buffer;
 		size_t capacity = 0;
 		size_t offset = 0;
 	};

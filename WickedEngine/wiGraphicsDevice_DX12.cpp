@@ -1346,7 +1346,7 @@ namespace wiGraphics
 
 		}
 	}
-	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, wiCPUHandle descriptor, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
+	void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::update(SHADERSTAGE stage, UINT offset, wiCPUHandle descriptor, ID3D12Device* device)
 	{
 		if (descriptor == WI_NULL_HANDLE)
 		{
@@ -1537,8 +1537,6 @@ namespace wiGraphics
 	}
 
 	// Engine functions
-	ID3D12GraphicsCommandList* GraphicsDevice_DX12::GetDirectCommandList(GRAPHICSTHREAD threadID) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID]); }
-
 	GraphicsDevice_DX12::GraphicsDevice_DX12(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
 		DEBUGDEVICE = debuglayer;
@@ -1698,17 +1696,6 @@ namespace wiGraphics
 			hr = swapChain->GetBuffer(fr, __uuidof(ID3D12Resource), (void**)&frames[fr].backBuffer);
 			frames[fr].backBufferRTV.ptr = RTAllocator->allocate(); 
 			device->CreateRenderTargetView(frames[fr].backBuffer, nullptr, frames[fr].backBufferRTV);
-
-			for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
-			{
-				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[i]);
-				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[i], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[i]);
-				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[i])->Close();
-
-				frames[fr].ResourceDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
-				frames[fr].SamplerDescriptorsGPU[i] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
-				frames[fr].resourceBuffer[i] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
-			}
 		}
 
 
@@ -1734,7 +1721,6 @@ namespace wiGraphics
 
 		// Query features:
 
-		MULTITHREADED_RENDERING = true;
 		TESSELLATION = true;
 
 		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
@@ -1951,37 +1937,6 @@ namespace wiGraphics
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, __uuidof(ID3D12CommandSignature), (void**)&drawIndexedInstancedIndirectCommandSignature);
 		assert(SUCCEEDED(hr));
 
-
-		// Set the starting device state:
-
-		hr = GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE]->Reset();
-		hr = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Reset(GetFrameResources().commandAllocators[GRAPHICSTHREAD_IMMEDIATE], nullptr);
-
-		ID3D12DescriptorHeap* heaps[] = {
-			GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->heap_GPU
-		};
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
-
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetGraphicsRootSignature(graphicsRootSig);
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->SetComputeRootSignature(computeRootSig);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-			nullSampler,nullCBV,nullSRV,nullUAV
-		};
-		GetFrameResources().ResourceDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
-		GetFrameResources().SamplerDescriptorsGPU[GRAPHICSTHREAD_IMMEDIATE]->reset(device, nullDescriptors);
-
-
-		D3D12_RECT pRects[8];
-		for (UINT i = 0; i < 8; ++i)
-		{
-			pRects[i].bottom = INT32_MAX;
-			pRects[i].left = INT32_MIN;
-			pRects[i].right = INT32_MAX;
-			pRects[i].top = INT32_MIN;
-		}
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->RSSetScissorRects(8, pRects);
-
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
@@ -1994,7 +1949,7 @@ namespace wiGraphics
 		{
 			SAFE_RELEASE(frames[fr].backBuffer);
 
-			for (int i = 0; i < GRAPHICSTHREAD_COUNT; i++)
+			for (int i = 0; i < COMMANDLIST_COUNT; i++)
 			{
 				SAFE_RELEASE(frames[fr].commandLists[i]);
 				SAFE_RELEASE(frames[fr].commandAllocators[i]);
@@ -2962,7 +2917,15 @@ namespace wiGraphics
 		memcpy(pComputeShader->code.data, pShaderBytecode, BytecodeLength);
 		pComputeShader->code.size = BytecodeLength;
 
-		return (pComputeShader->code.data != nullptr && pComputeShader->code.size > 0 ? S_OK : E_FAIL);
+		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
+		desc.CS.pShaderBytecode = pComputeShader->code.data;
+		desc.CS.BytecodeLength = pComputeShader->code.size;
+		desc.pRootSignature = computeRootSig;
+
+		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pComputeShader->resource);
+		assert(SUCCEEDED(hr));
+
+		return hr;
 	}
 	HRESULT GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc *pBlendStateDesc, BlendState *pBlendState)
 	{
@@ -3027,9 +2990,9 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso)
+	HRESULT GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
 	{
-		DestroyGraphicsPSO(pso);
+		DestroyPipelineState(pso);
 		pso->Register(this);
 
 		pso->desc = *pDesc;
@@ -3170,28 +3133,6 @@ namespace wiGraphics
 
 		return hr;
 	}
-	HRESULT GraphicsDevice_DX12::CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso)
-	{
-		DestroyComputePSO(pso);
-		pso->Register(this);
-
-		pso->desc = *pDesc;
-
-		D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
-
-		if (pDesc->cs != nullptr)
-		{
-			desc.CS.pShaderBytecode = pDesc->cs->code.data;
-			desc.CS.BytecodeLength = pDesc->cs->code.size;
-		}
-
-		desc.pRootSignature = computeRootSig;
-
-		HRESULT hr = device->CreateComputePipelineState(&desc, __uuidof(ID3D12PipelineState), (void**)&pso->pipeline);
-		assert(SUCCEEDED(hr));
-
-		return hr;
-	}
 
 
 	void GraphicsDevice_DX12::DestroyResource(GPUResource* pResource)
@@ -3309,15 +3250,7 @@ namespace wiGraphics
 	{
 
 	}
-	void GraphicsDevice_DX12::DestroyGraphicsPSO(GraphicsPSO* pso)
-	{
-		if (pso->pipeline != WI_NULL_HANDLE)
-		{
-			((ID3D12PipelineState*)pso->pipeline)->Release();
-			pso->pipeline = WI_NULL_HANDLE;
-		}
-	}
-	void GraphicsDevice_DX12::DestroyComputePSO(ComputePSO* pso)
+	void GraphicsDevice_DX12::DestroyPipelineState(PipelineState* pso)
 	{
 		if (pso->pipeline != WI_NULL_HANDLE)
 		{
@@ -3326,6 +3259,10 @@ namespace wiGraphics
 		}
 	}
 
+	bool GraphicsDevice_DX12::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
+	{
+		return false;
+	}
 
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const std::string& name)
 	{
@@ -3333,8 +3270,53 @@ namespace wiGraphics
 	}
 
 
-	void GraphicsDevice_DX12::PresentBegin()
+	void GraphicsDevice_DX12::PresentBegin(CommandList cmd)
 	{
+		BindViewports(1, &viewPort, cmd);
+
+
+		// Record commands in the command list now.
+		// Start by setting the resource barrier.
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.Transition.pResource = GetFrameResources().backBuffer;
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
+
+
+		// Set the back buffer as the render target.
+		GetDirectCommandList(cmd)->OMSetRenderTargets(1, &GetFrameResources().backBufferRTV, FALSE, NULL);
+
+
+		// Then set the color to clear the window to.
+		float color[4];
+		color[0] = 0.0;
+		color[1] = 0.0;
+		color[2] = 0.0;
+		color[3] = 1.0;
+		GetDirectCommandList(cmd)->ClearRenderTargetView(GetFrameResources().backBufferRTV, color, 0, NULL);
+
+
+	}
+	void GraphicsDevice_DX12::PresentEnd(CommandList cmd)
+	{
+		HRESULT result;
+
+		// Indicate that the back buffer will now be used to present.
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		barrier.Transition.pResource = GetFrameResources().backBuffer;
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
+
+
+
 		// Sync up copy queue:
 		copyQueueLock.lock();
 		{
@@ -3361,55 +3343,27 @@ namespace wiGraphics
 		}
 		copyQueueLock.unlock();
 
+		// Execute deferred command lists:
+		{
+			ID3D12CommandList* cmdLists[COMMANDLIST_COUNT];
+			CommandList cmds[COMMANDLIST_COUNT];
+			uint32_t counter = 0;
 
-		BindViewports(1, &viewPort, GRAPHICSTHREAD_IMMEDIATE);
+			CommandList cmd;
+			while (active_commandlists.pop_front(cmd))
+			{
+				HRESULT hr = GetDirectCommandList(cmd)->Close();
+				assert(SUCCEEDED(hr));
 
+				cmdLists[counter] = GetDirectCommandList(cmd);
+				cmds[counter] = cmd;
+				counter++;
 
-		// Record commands in the command list now.
-		// Start by setting the resource barrier.
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = GetFrameResources().backBuffer;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ResourceBarrier(1, &barrier);
+				free_commandlists.push_back(cmd);
+			}
 
-
-		// Set the back buffer as the render target.
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->OMSetRenderTargets(1, &GetFrameResources().backBufferRTV, FALSE, NULL);
-
-
-		// Then set the color to clear the window to.
-		float color[4];
-		color[0] = 0.0;
-		color[1] = 0.0;
-		color[2] = 0.0;
-		color[3] = 1.0;
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ClearRenderTargetView(GetFrameResources().backBufferRTV, color, 0, NULL);
-
-
-	}
-	void GraphicsDevice_DX12::PresentEnd()
-	{
-		HRESULT result;
-
-		// Indicate that the back buffer will now be used to present.
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = GetFrameResources().backBuffer;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->ResourceBarrier(1, &barrier);
-
-		// Close the list of commands.
-		result = GetDirectCommandList(GRAPHICSTHREAD_IMMEDIATE)->Close();
-
-		// Execute the list of commands.
-		directQueue->ExecuteCommandLists(1, GetFrameResources().commandLists);
+			directQueue->ExecuteCommandLists(counter, cmdLists);
+		}
 
 
 		swapChain->Present(VSYNC, 0);
@@ -3434,63 +3388,70 @@ namespace wiGraphics
 			WaitForSingleObject(frameFenceEvent, INFINITE);
 		}
 
-
-
-		for (int threadID = 0; threadID < GRAPHICSTHREAD_IMMEDIATE + 1; ++threadID) // todo: all command lists
-		{
-			// Reset (re-use) the memory associated command allocator.
-			HRESULT hr = result = GetFrameResources().commandAllocators[threadID]->Reset();
-			assert(SUCCEEDED(hr));
-			// Reset the command list, use empty pipeline state for now since there are no shaders and we are just clearing the screen.
-			hr = static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[threadID])->Reset(GetFrameResources().commandAllocators[threadID], nullptr);
-			assert(SUCCEEDED(hr));
-
-
-			ID3D12DescriptorHeap* heaps[] = {
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[threadID]->heap_GPU
-			};
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
-
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetGraphicsRootSignature(graphicsRootSig);
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->SetComputeRootSignature(computeRootSig);
-
-			D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-				nullSampler,nullCBV,nullSRV,nullUAV
-			};
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->reset(device, nullDescriptors);
-			GetFrameResources().SamplerDescriptorsGPU[threadID]->reset(device, nullDescriptors);
-			GetFrameResources().resourceBuffer[threadID]->clear();
-
-			D3D12_RECT pRects[8];
-			for (UINT i = 0; i < 8; ++i)
-			{
-				pRects[i].bottom = INT32_MAX;
-				pRects[i].left = INT32_MIN;
-				pRects[i].right = INT32_MAX;
-				pRects[i].top = INT32_MIN;
-			}
-			GetDirectCommandList((GRAPHICSTHREAD)threadID)->RSSetScissorRects(8, pRects);
-		}
-
 		memset(prev_pt, 0, sizeof(prev_pt));
 
 		RESOLUTIONCHANGED = false;
 	}
 
-	void GraphicsDevice_DX12::CreateCommandLists()
+	CommandList GraphicsDevice_DX12::BeginCommandList()
 	{
+		CommandList cmd;
+		if (!free_commandlists.pop_front(cmd))
+		{
+			// need to create one more command list:
+			cmd = (CommandList)commandlist_count.fetch_add(1);
+			assert(cmd < COMMANDLIST_COUNT);
 
-	}
-	void GraphicsDevice_DX12::ExecuteCommandLists()
-	{
-		directQueue->ExecuteCommandLists(GRAPHICSTHREAD_COUNT - 1, &GetFrameResources().commandLists[1]);
-	}
-	void GraphicsDevice_DX12::FinishCommandList(GRAPHICSTHREAD threadID)
-	{
-		if (threadID == GRAPHICSTHREAD_IMMEDIATE)
-			return;
-		HRESULT hr = GetDirectCommandList(threadID)->Close();
+			HRESULT hr;
+			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			{
+				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[cmd]);
+				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[cmd]);
+				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[cmd])->Close();
+
+				frames[fr].ResourceDescriptorsGPU[cmd] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+				frames[fr].SamplerDescriptorsGPU[cmd] = new FrameResources::DescriptorTableFrameAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 16);
+				frames[fr].resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
+			}
+		}
+
+
+		// Start the command list in a default state:
+
+		HRESULT hr = GetFrameResources().commandAllocators[cmd]->Reset();
 		assert(SUCCEEDED(hr));
+		hr = static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[cmd])->Reset(GetFrameResources().commandAllocators[cmd], nullptr);
+		assert(SUCCEEDED(hr));
+
+
+		ID3D12DescriptorHeap* heaps[] = {
+			GetFrameResources().ResourceDescriptorsGPU[cmd]->heap_GPU, GetFrameResources().SamplerDescriptorsGPU[cmd]->heap_GPU
+		};
+		GetDirectCommandList((CommandList)cmd)->SetDescriptorHeaps(ARRAYSIZE(heaps), heaps);
+
+		GetDirectCommandList((CommandList)cmd)->SetGraphicsRootSignature(graphicsRootSig);
+		GetDirectCommandList((CommandList)cmd)->SetComputeRootSignature(computeRootSig);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
+			nullSampler,nullCBV,nullSRV,nullUAV
+		};
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->reset(device, nullDescriptors);
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->reset(device, nullDescriptors);
+		GetFrameResources().resourceBuffer[cmd]->clear();
+
+		D3D12_RECT pRects[8];
+		for (UINT i = 0; i < 8; ++i)
+		{
+			pRects[i].bottom = INT32_MAX;
+			pRects[i].left = INT32_MIN;
+			pRects[i].right = INT32_MAX;
+			pRects[i].top = INT32_MIN;
+		}
+		GetDirectCommandList((CommandList)cmd)->RSSetScissorRects(8, pRects);
+
+
+		active_commandlists.push_back(cmd);
+		return cmd;
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()
@@ -3503,7 +3464,7 @@ namespace wiGraphics
 	}
 
 
-	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) {
+	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
 		assert(numRects <= 8);
 		D3D12_RECT pRects[8];
@@ -3513,9 +3474,9 @@ namespace wiGraphics
 			pRects[i].right = rects[i].right;
 			pRects[i].top = rects[i].top;
 		}
-		GetDirectCommandList(threadID)->RSSetScissorRects(numRects, pRects);
+		GetDirectCommandList(cmd)->RSSetScissorRects(numRects, pRects);
 	}
-	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd)
 	{
 		assert(NumViewports <= 6);
 		D3D12_VIEWPORT d3dViewPorts[6];
@@ -3528,9 +3489,9 @@ namespace wiGraphics
 			d3dViewPorts[i].MinDepth = pViewports[i].MinDepth;
 			d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
 		}
-		GetDirectCommandList(threadID)->RSSetViewports(NumViewports, d3dViewPorts);
+		GetDirectCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindRenderTargets(const UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindRenderTargets(const UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int arrayIndex)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptors[8] = {};
 		for (UINT i = 0; i < NumViews; ++i)
@@ -3563,23 +3524,23 @@ namespace wiGraphics
 			}
 		}
 
-		GetDirectCommandList(threadID)->OMSetRenderTargets(NumViews, descriptors, FALSE, DSV);
+		GetDirectCommandList(cmd)->OMSetRenderTargets(NumViews, descriptors, FALSE, DSV);
 	}
-	void GraphicsDevice_DX12::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int arrayIndex)
 	{
 		if (pTexture != nullptr)
 		{
 			if (arrayIndex < 0)
 			{
-				GetDirectCommandList(threadID)->ClearRenderTargetView(ToNativeHandle(pTexture->RTV), ColorRGBA, 0, nullptr);
+				GetDirectCommandList(cmd)->ClearRenderTargetView(ToNativeHandle(pTexture->RTV), ColorRGBA, 0, nullptr);
 			}
 			else
 			{
-				GetDirectCommandList(threadID)->ClearRenderTargetView(ToNativeHandle(pTexture->additionalRTVs[arrayIndex]), ColorRGBA, 0, nullptr);
+				GetDirectCommandList(cmd)->ClearRenderTargetView(ToNativeHandle(pTexture->additionalRTVs[arrayIndex]), ColorRGBA, 0, nullptr);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex)
 	{
 		if (pTexture != nullptr)
 		{
@@ -3591,15 +3552,15 @@ namespace wiGraphics
 
 			if (arrayIndex < 0)
 			{
-				GetDirectCommandList(threadID)->ClearDepthStencilView(ToNativeHandle(pTexture->DSV), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(cmd)->ClearDepthStencilView(ToNativeHandle(pTexture->DSV), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 			else
 			{
-				GetDirectCommandList(threadID)->ClearDepthStencilView(ToNativeHandle(pTexture->additionalDSVs[arrayIndex]), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(cmd)->ClearDepthStencilView(ToNativeHandle(pTexture->additionalDSVs[arrayIndex]), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 
@@ -3609,29 +3570,29 @@ namespace wiGraphics
 			{
 				if (resource->SRV != WI_NULL_HANDLE)
 				{
-					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
-						resource->SRV, device, GetDirectCommandList(threadID));
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
+						resource->SRV, device);
 				}
 			}
 			else
 			{
 				assert(resource->additionalSRVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
-					resource->additionalSRVs[arrayIndex], device, GetDirectCommandList(threadID));
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot,
+					resource->additionalSRVs[arrayIndex], device);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
 			for (UINT i = 0; i < count; ++i)
 			{
-				BindResource(stage, resources[i], slot + i, threadID, -1);
+				BindResource(stage, resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, GRAPHICSTHREAD threadID, int arrayIndex)
+	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 
@@ -3641,71 +3602,71 @@ namespace wiGraphics
 			{
 				if (resource->UAV != WI_NULL_HANDLE)
 				{
-					GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
-						resource->UAV, device, GetDirectCommandList(threadID));
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
+						resource->UAV, device);
 				}
 			}
 			else
 			{
 				assert(resource->additionalUAVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
-					resource->additionalUAVs[arrayIndex], device, GetDirectCommandList(threadID));
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->update(stage, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot,
+					resource->additionalUAVs[arrayIndex], device);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
 			for (UINT i = 0; i < count; ++i)
 			{
-				BindUAV(stage, resources[i], slot + i, threadID, -1);
+				BindUAV(stage, resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::UnbindResources(UINT slot, UINT num, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::UnbindResources(UINT slot, UINT num, CommandList cmd)
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
 			for (UINT i = 0; i < num; ++i)
 			{
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
-					nullSRV.ptr, device, GetDirectCommandList(threadID));
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->update((SHADERSTAGE)stage, GPU_RESOURCE_HEAP_CBV_COUNT + slot + i,
+					nullSRV.ptr, device);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::UnbindUAVs(UINT slot, UINT num, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::UnbindUAVs(UINT slot, UINT num, CommandList cmd)
 	{
 		for (int stage = 0; stage < SHADERSTAGE_COUNT; ++stage)
 		{
 			for (UINT i = 0; i < num; ++i)
 			{
-				GetFrameResources().ResourceDescriptorsGPU[threadID]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i,
-					nullUAV.ptr, device, GetDirectCommandList(threadID));
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->update(CS, GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot + i,
+					nullUAV.ptr, device);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, CommandList cmd)
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
 
 		if (sampler != nullptr && sampler->resource != WI_NULL_HANDLE)
 		{
-			GetFrameResources().SamplerDescriptorsGPU[threadID]->update(stage, slot,
-				sampler->resource, device, GetDirectCommandList(threadID));
+			GetFrameResources().SamplerDescriptorsGPU[cmd]->update(stage, slot,
+				sampler->resource, device);
 		}
 	}
-	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, CommandList cmd)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 
 		if (buffer != nullptr && buffer->CBV != WI_NULL_HANDLE)
 		{
-			GetFrameResources().ResourceDescriptorsGPU[threadID]->update(stage, slot,
-				buffer->CBV, device, GetDirectCommandList(threadID));
+			GetFrameResources().ResourceDescriptorsGPU[cmd]->update(stage, slot,
+				buffer->CBV, device);
 		}
 	}
-	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd)
 	{
 		assert(count <= 8);
 		D3D12_VERTEX_BUFFER_VIEW res[8] = { 0 };
@@ -3723,9 +3684,9 @@ namespace wiGraphics
 				res[i].StrideInBytes = strides[i];
 			}
 		}
-		GetDirectCommandList(threadID)->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
+		GetDirectCommandList(cmd)->IASetVertexBuffers(static_cast<UINT>(slot), static_cast<UINT>(count), res);
 	}
-	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, CommandList cmd)
 	{
 		D3D12_INDEX_BUFFER_VIEW res = {};
 		if (indexBuffer != nullptr)
@@ -3734,24 +3695,24 @@ namespace wiGraphics
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
 			res.SizeInBytes = indexBuffer->desc.ByteWidth;
 		}
-		GetDirectCommandList(threadID)->IASetIndexBuffer(&res);
+		GetDirectCommandList(cmd)->IASetIndexBuffer(&res);
 	}
-	void GraphicsDevice_DX12::BindStencilRef(UINT value, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindStencilRef(UINT value, CommandList cmd)
 	{
-		GetDirectCommandList(threadID)->OMSetStencilRef(value);
+		GetDirectCommandList(cmd)->OMSetStencilRef(value);
 	}
-	void GraphicsDevice_DX12::BindBlendFactor(float r, float g, float b, float a, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
 	{
 		const float blendFactor[4] = { r, g, b, a };
-		GetDirectCommandList(threadID)->OMSetBlendFactor(blendFactor);
+		GetDirectCommandList(cmd)->OMSetBlendFactor(blendFactor);
 	}
-	void GraphicsDevice_DX12::BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
-		GetDirectCommandList(threadID)->SetPipelineState((ID3D12PipelineState*)pso->pipeline);
+		GetDirectCommandList(cmd)->SetPipelineState((ID3D12PipelineState*)pso->pipeline);
 
-		if (prev_pt[threadID] != pso->desc.pt)
+		if (prev_pt[cmd] != pso->desc.pt)
 		{
-			prev_pt[threadID] = pso->desc.pt;
+			prev_pt[cmd] = pso->desc.pt;
 
 			D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 			switch (pso->desc.pt)
@@ -3774,64 +3735,64 @@ namespace wiGraphics
 			default:
 				break;
 			};
-			GetDirectCommandList(threadID)->IASetPrimitiveTopology(d3dType);
+			GetDirectCommandList(cmd)->IASetPrimitiveTopology(d3dType);
 		}
 	}
-	void GraphicsDevice_DX12::BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::BindComputeShader(const ComputeShader* cs, CommandList cmd)
 	{
-		GetDirectCommandList(threadID)->SetPipelineState((ID3D12PipelineState*)pso->pipeline);
+		GetDirectCommandList(cmd)->SetPipelineState((ID3D12PipelineState*)cs->resource);
 	}
-	void GraphicsDevice_DX12::Draw(UINT vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
 	}
-	void GraphicsDevice_DX12::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
-	void GraphicsDevice_DX12::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_DX12::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
-	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
-		GetFrameResources().ResourceDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetFrameResources().SamplerDescriptorsGPU[threadID]->validate(device, GetDirectCommandList(threadID));
-		GetDirectCommandList(threadID)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
+		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetFrameResources().SamplerDescriptorsGPU[cmd]->validate(device, GetDirectCommandList(cmd));
+		GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, (ID3D12Resource*)args->resource, args_offset, nullptr, 0);
 	}
-	void GraphicsDevice_DX12::CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd)
 	{
-		GetDirectCommandList(threadID)->CopyResource((ID3D12Resource*)pDst->resource, (ID3D12Resource*)pSrc->resource);
+		GetDirectCommandList(cmd)->CopyResource((ID3D12Resource*)pDst->resource, (ID3D12Resource*)pSrc->resource);
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -3840,9 +3801,9 @@ namespace wiGraphics
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
+		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 	}
-	void GraphicsDevice_DX12::CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, CommandList cmd)
 	{
 		D3D12_RESOURCE_DESC dst_desc = ((ID3D12Resource*)pDst->resource)->GetDesc();
 		D3D12_RESOURCE_DESC src_desc = ((ID3D12Resource*)pSrc->resource)->GetDesc();
@@ -3858,7 +3819,7 @@ namespace wiGraphics
 		src.SubresourceIndex = D3D12CalcSubresource(srcMip, 0, 0, src_desc.MipLevels, src_desc.DepthOrArraySize);
 
 
-		GetDirectCommandList(threadID)->CopyTextureRegion(&dst, dstX, dstY, 0, &src, nullptr);
+		GetDirectCommandList(cmd)->CopyTextureRegion(&dst, dstX, dstY, 0, &src, nullptr);
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -3867,12 +3828,12 @@ namespace wiGraphics
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
+		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 	}
-	void GraphicsDevice_DX12::MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_DX12::UpdateBuffer(const GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize)
+	void GraphicsDevice_DX12::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 	{
 		// This will fully update the buffer on the GPU timeline
 		//	But on the CPU side we need to keep the in flight data versioned, and we use the temporary buffer for that
@@ -3908,30 +3869,26 @@ namespace wiGraphics
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
+		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 
-		uint8_t* dest = GetFrameResources().resourceBuffer[threadID]->allocate(dataSize, alignment);
+		uint8_t* dest = GetFrameResources().resourceBuffer[cmd]->allocate(dataSize, alignment);
 		memcpy(dest, data, dataSize);
-		GetDirectCommandList(threadID)->CopyBufferRegion(
+		GetDirectCommandList(cmd)->CopyBufferRegion(
 			(ID3D12Resource*)buffer->resource, 0,
-			(ID3D12Resource*)GetFrameResources().resourceBuffer[threadID]->buffer.resource, GetFrameResources().resourceBuffer[threadID]->calculateOffset(dest),
+			(ID3D12Resource*)GetFrameResources().resourceBuffer[cmd]->buffer.resource, GetFrameResources().resourceBuffer[cmd]->calculateOffset(dest),
 			dataSize
 		);
 
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-		GetDirectCommandList(threadID)->ResourceBarrier(1, &barrier);
+		GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 
 	}
-	bool GraphicsDevice_DX12::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID)
-	{
-		return false;
-	}
 
-	void GraphicsDevice_DX12::QueryBegin(const GPUQuery *query, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::QueryBegin(const GPUQuery *query, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_DX12::QueryEnd(const GPUQuery *query, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::QueryEnd(const GPUQuery *query, CommandList cmd)
 	{
 	}
 	bool GraphicsDevice_DX12::QueryRead(const GPUQuery* query, GPUQueryResult* result)
@@ -3939,7 +3896,7 @@ namespace wiGraphics
 		return true;
 	}
 
-	void GraphicsDevice_DX12::UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd)
 	{
 		D3D12_RESOURCE_BARRIER barriers[8];
 		for (UINT i = 0; i < NumBarriers; ++i)
@@ -3948,9 +3905,9 @@ namespace wiGraphics
 			barriers[i].Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			barriers[i].UAV.pResource = (uavs == nullptr ? nullptr : (ID3D12Resource*)uavs[i]->resource);
 		}
-		GetDirectCommandList(threadID)->ResourceBarrier(NumBarriers, barriers);
+		GetDirectCommandList(cmd)->ResourceBarrier(NumBarriers, barriers);
 	}
-	void GraphicsDevice_DX12::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
@@ -3964,16 +3921,16 @@ namespace wiGraphics
 				barriers[i].Transition.StateAfter = _ConvertResourceStates(stateAfter);
 				barriers[i].Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			}
-			GetDirectCommandList(threadID)->ResourceBarrier(NumBarriers, barriers);
+			GetDirectCommandList(cmd)->ResourceBarrier(NumBarriers, barriers);
 		}
 	}
 
-	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID)
+	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, CommandList cmd)
 	{
 		// This case allocates a CPU write access and GPU read access memory from the temporary buffer
 		// The application can write into this, but better to not read from it
 
-		FrameResources::ResourceFrameAllocator& allocator = *GetFrameResources().resourceBuffer[threadID];
+		FrameResources::ResourceFrameAllocator& allocator = *GetFrameResources().resourceBuffer[cmd];
 		GPUAllocation result;
 
 		if (dataSize == 0)
@@ -3991,13 +3948,13 @@ namespace wiGraphics
 		return result;
 	}
 
-	void GraphicsDevice_DX12::EventBegin(const std::string& name, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::EventBegin(const std::string& name, CommandList cmd)
 	{
 	}
-	void GraphicsDevice_DX12::EventEnd(GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::EventEnd(CommandList cmd)
 	{
 	}
-	void GraphicsDevice_DX12::SetMarker(const std::string& name, GRAPHICSTHREAD threadID)
+	void GraphicsDevice_DX12::SetMarker(const std::string& name, CommandList cmd)
 	{
 	}
 

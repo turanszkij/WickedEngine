@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiEnums.h"
+#include "wiGraphicsDevice.h"
 #include "wiSceneSystem.h"
 
 #include <list>
@@ -15,17 +15,16 @@ class wiGUI : public wiSceneSystem::TransformComponent
 private:
 	std::list<wiWidget*> widgets;
 	wiWidget* activeWidget;
-	GRAPHICSTHREAD threadID;
 	bool focus;
 	bool visible;
 
 	XMFLOAT2 pointerpos;
 public:
-	wiGUI(GRAPHICSTHREAD threadID = GRAPHICSTHREAD_IMMEDIATE);
+	wiGUI();
 	~wiGUI();
 
 	void Update(float dt);
-	void Render() const;
+	void Render(wiGraphics::CommandList cmd) const;
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
@@ -43,9 +42,7 @@ public:
 	void SetVisible(bool value) { visible = value; }
 	bool IsVisible() { return visible; }
 
-	GRAPHICSTHREAD GetGraphicsThread() const { return threadID; }
-
-	void ResetScissor() const;
+	void ResetScissor(wiGraphics::CommandList cmd) const;
 
 
 	const XMFLOAT2& GetPointerPos() const

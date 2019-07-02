@@ -79,7 +79,7 @@ namespace wiBackLog
 			scroll -= 2;
 		}
 	}
-	void Draw() 
+	void Draw(CommandList cmd)
 	{
 		if (state != DISABLED) 
 		{
@@ -94,12 +94,12 @@ namespace wiBackLog
 			wiImageParams fx = wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
 			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
-			wiImage::Draw(backgroundTex.get(), fx, GRAPHICSTHREAD_IMMEDIATE);
+			wiImage::Draw(backgroundTex.get(), fx, cmd);
 			font.SetText(getText());
 			font.params.posX = 50;
 			font.params.posY = (int)pos + (int)scroll;
-			font.Draw(GRAPHICSTHREAD_IMMEDIATE);
-			wiFont(inputArea.str().c_str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(GRAPHICSTHREAD_IMMEDIATE);
+			font.Draw(cmd);
+			wiFont(inputArea.str().c_str(), wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM)).Draw(cmd);
 		}
 	}
 

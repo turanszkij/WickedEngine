@@ -69,27 +69,27 @@ void wiSprite::CleanUp()
 	normalPointer = nullptr;
 }
 
-void wiSprite::Draw(const Texture2D* refracRes, GRAPHICSTHREAD threadID) const
+void wiSprite::Draw(const Texture2D* refracRes, CommandList cmd) const
 {
 	if(params.opacity>0 && ((params.blendFlag==BLENDMODE_ADDITIVE && params.fade<1) || params.blendFlag!=BLENDMODE_ADDITIVE) )
 	{
 		wiImageParams fx = params;
 		fx.setRefractionSource(refracRes);
-		wiImage::Draw(texturePointer,fx,threadID);
+		wiImage::Draw(texturePointer,fx,cmd);
 	}
 }
-void wiSprite::Draw(GRAPHICSTHREAD threadID) const
+void wiSprite::Draw(CommandList cmd) const
 {
-	wiSprite::Draw(nullptr, threadID);
+	wiSprite::Draw(nullptr, cmd);
 }
-void wiSprite::DrawNormal(GRAPHICSTHREAD threadID) const
+void wiSprite::DrawNormal(CommandList cmd) const
 {
 	if(normalPointer && params.opacity>0 && ((params.blendFlag==BLENDMODE_ADDITIVE && params.fade<1) || params.blendFlag!=BLENDMODE_ADDITIVE))
 	{
 		wiImageParams effectsMod(params);
 		effectsMod.blendFlag=BLENDMODE_ADDITIVE;
 		effectsMod.enableExtractNormalMap();
-		wiImage::Draw(normalPointer,effectsMod,threadID);
+		wiImage::Draw(normalPointer,effectsMod,cmd);
 	}
 }
 

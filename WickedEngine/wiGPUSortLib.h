@@ -18,7 +18,7 @@ namespace wiGPUSortLib
 		const wiGraphics::GPUBuffer& counterBuffer_read, 
 		UINT counterReadOffset, 
 		const wiGraphics::GPUBuffer& indexBuffer_write,
-		GRAPHICSTHREAD threadID
+		wiGraphics::CommandList cmd
 	);
 
 	void Initialize();

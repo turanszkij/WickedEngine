@@ -4,9 +4,12 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
+#include "wiContainers.h"
 
 #include <d3d11_3.h>
 #include <DXGI1_3.h>
+
+#include <atomic>
 
 namespace wiGraphics
 {
@@ -20,32 +23,33 @@ namespace wiGraphics
 		IDXGISwapChain1*			swapChain = nullptr;
 		ID3D11RenderTargetView*		renderTargetView = nullptr;
 		ID3D11Texture2D*			backBuffer = nullptr;
-		ID3D11DeviceContext*		deviceContexts[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11CommandList*			commandLists[GRAPHICSTHREAD_COUNT] = {};
-		ID3DUserDefinedAnnotation*	userDefinedAnnotations[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11DeviceContext*		immediateContext = nullptr;
+		ID3D11DeviceContext*		deviceContexts[COMMANDLIST_COUNT] = {};
+		ID3D11CommandList*			commandLists[COMMANDLIST_COUNT] = {};
+		ID3DUserDefinedAnnotation*	userDefinedAnnotations[COMMANDLIST_COUNT] = {};
 
-		UINT		stencilRef[GRAPHICSTHREAD_COUNT];
-		XMFLOAT4	blendFactor[GRAPHICSTHREAD_COUNT];
+		UINT		stencilRef[COMMANDLIST_COUNT];
+		XMFLOAT4	blendFactor[COMMANDLIST_COUNT];
 
-		ID3D11VertexShader* prev_vs[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11PixelShader* prev_ps[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11HullShader* prev_hs[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11DomainShader* prev_ds[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11GeometryShader* prev_gs[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11ComputeShader* prev_cs[GRAPHICSTHREAD_COUNT] = {};
-		XMFLOAT4 prev_blendfactor[GRAPHICSTHREAD_COUNT] = {};
-		UINT prev_samplemask[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11BlendState* prev_bs[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11RasterizerState* prev_rs[GRAPHICSTHREAD_COUNT] = {};
-		UINT prev_stencilRef[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11DepthStencilState* prev_dss[GRAPHICSTHREAD_COUNT] = {};
-		ID3D11InputLayout* prev_il[GRAPHICSTHREAD_COUNT] = {};
-		PRIMITIVETOPOLOGY prev_pt[GRAPHICSTHREAD_COUNT] = {};
+		ID3D11VertexShader* prev_vs[COMMANDLIST_COUNT] = {};
+		ID3D11PixelShader* prev_ps[COMMANDLIST_COUNT] = {};
+		ID3D11HullShader* prev_hs[COMMANDLIST_COUNT] = {};
+		ID3D11DomainShader* prev_ds[COMMANDLIST_COUNT] = {};
+		ID3D11GeometryShader* prev_gs[COMMANDLIST_COUNT] = {};
+		ID3D11ComputeShader* prev_cs[COMMANDLIST_COUNT] = {};
+		XMFLOAT4 prev_blendfactor[COMMANDLIST_COUNT] = {};
+		UINT prev_samplemask[COMMANDLIST_COUNT] = {};
+		ID3D11BlendState* prev_bs[COMMANDLIST_COUNT] = {};
+		ID3D11RasterizerState* prev_rs[COMMANDLIST_COUNT] = {};
+		UINT prev_stencilRef[COMMANDLIST_COUNT] = {};
+		ID3D11DepthStencilState* prev_dss[COMMANDLIST_COUNT] = {};
+		ID3D11InputLayout* prev_il[COMMANDLIST_COUNT] = {};
+		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
-		ID3D11UnorderedAccessView* raster_uavs[GRAPHICSTHREAD_COUNT][8] = {};
-		uint8_t raster_uavs_slot[GRAPHICSTHREAD_COUNT] = {};
-		uint8_t raster_uavs_count[GRAPHICSTHREAD_COUNT] = {};
-		void validate_raster_uavs(GRAPHICSTHREAD threadID);
+		ID3D11UnorderedAccessView* raster_uavs[COMMANDLIST_COUNT][8] = {};
+		uint8_t raster_uavs_slot[COMMANDLIST_COUNT] = {};
+		uint8_t raster_uavs_count[COMMANDLIST_COUNT] = {};
+		void validate_raster_uavs(CommandList cmd);
 
 		struct GPUAllocator
 		{
@@ -53,11 +57,14 @@ namespace wiGraphics
 			size_t byteOffset = 0;
 			uint64_t residentFrame = 0;
 			bool dirty = false;
-		} frame_allocators[GRAPHICSTHREAD_COUNT];
-		GPUBufferDesc frameAllocatorDesc;
-		void commit_allocations(GRAPHICSTHREAD threadID);
+		} frame_allocators[COMMANDLIST_COUNT];
+		void commit_allocations(CommandList cmd);
 
 		void CreateBackBufferResources();
+
+		std::atomic<uint8_t> commandlist_count{ 0 };
+		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
+		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
 
 	public:
 		GraphicsDevice_DX11(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);
@@ -79,8 +86,7 @@ namespace wiGraphics
 		HRESULT CreateRasterizerState(const RasterizerStateDesc *pRasterizerStateDesc, RasterizerState *pRasterizerState) override;
 		HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
-		HRESULT CreateGraphicsPSO(const GraphicsPSODesc* pDesc, GraphicsPSO* pso) override;
-		HRESULT CreateComputePSO(const ComputePSODesc* pDesc, ComputePSO* pso) override;
+		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 
 
 		void DestroyResource(GPUResource* pResource) override;
@@ -100,20 +106,18 @@ namespace wiGraphics
 		void DestroyRasterizerState(RasterizerState *pRasterizerState) override;
 		void DestroySamplerState(Sampler *pSamplerState) override;
 		void DestroyQuery(GPUQuery *pQuery) override;
-		void DestroyGraphicsPSO(GraphicsPSO* pso) override;
-		void DestroyComputePSO(ComputePSO* pso) override;
+		void DestroyPipelineState(PipelineState* pso) override;
 
+		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
 		void SetName(GPUResource* pResource, const std::string& name) override;
 
-		void PresentBegin() override;
-		void PresentEnd() override;
+		void PresentBegin(CommandList cmd) override;
+		void PresentEnd(CommandList cmd) override;
 
 		void WaitForGPU() override;
 
-		void CreateCommandLists() override;
-		void ExecuteCommandLists() override;
-		void FinishCommandList(GRAPHICSTHREAD thread) override;
+		virtual CommandList BeginCommandList() override;
 
 		void SetResolution(int width, int height) override;
 
@@ -121,49 +125,48 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
-		void BindScissorRects(UINT numRects, const Rect* rects, GRAPHICSTHREAD threadID) override;
-		void BindViewports(UINT NumViewports, const ViewPort *pViewports, GRAPHICSTHREAD threadID) override;
-		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID) override;
-		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, GRAPHICSTHREAD threadID, int arrayIndex = -1) override;
-		void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, GRAPHICSTHREAD threadID) override;
-		void UnbindResources(UINT slot, UINT num, GRAPHICSTHREAD threadID) override;
-		void UnbindUAVs(UINT slot, UINT num, GRAPHICSTHREAD threadID) override;
-		void BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, GRAPHICSTHREAD threadID) override;
-		void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, GRAPHICSTHREAD threadID) override;
-		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, GRAPHICSTHREAD threadID) override;
-		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, GRAPHICSTHREAD threadID) override;
-		void BindStencilRef(UINT value, GRAPHICSTHREAD threadID) override;
-		void BindBlendFactor(float r, float g, float b, float a, GRAPHICSTHREAD threadID) override;
-		void BindGraphicsPSO(const GraphicsPSO* pso, GRAPHICSTHREAD threadID) override;
-		void BindComputePSO(const ComputePSO* pso, GRAPHICSTHREAD threadID) override;
-		void Draw(UINT vertexCount, UINT startVertexLocation, GRAPHICSTHREAD threadID) override;
-		void DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, GRAPHICSTHREAD threadID) override;
-		void DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) override;
-		void DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, GRAPHICSTHREAD threadID) override;
-		void DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) override;
-		void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) override;
-		void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, GRAPHICSTHREAD threadID) override;
-		void DispatchIndirect(const GPUBuffer* args, UINT args_offset, GRAPHICSTHREAD threadID) override;
-		void CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) override;
-		void CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, GRAPHICSTHREAD threadID) override;
-		void MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, GRAPHICSTHREAD threadID) override;
-		void UpdateBuffer(const GPUBuffer* buffer, const void* data, GRAPHICSTHREAD threadID, int dataSize = -1) override;
-		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest, GRAPHICSTHREAD threadID) override;
-		void QueryBegin(const GPUQuery *query, GRAPHICSTHREAD threadID) override;
-		void QueryEnd(const GPUQuery *query, GRAPHICSTHREAD threadID) override;
+		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
+		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
+		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int arrayIndex = -1) override;
+		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int arrayIndex = -1) override;
+		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex = -1) override;
+		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex = -1) override;
+		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
+		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex = -1) override;
+		void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
+		void UnbindResources(UINT slot, UINT num, CommandList cmd) override;
+		void UnbindUAVs(UINT slot, UINT num, CommandList cmd) override;
+		void BindSampler(SHADERSTAGE stage, const Sampler* sampler, UINT slot, CommandList cmd) override;
+		void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, UINT slot, CommandList cmd) override;
+		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, UINT slot, UINT count, const UINT* strides, const UINT* offsets, CommandList cmd) override;
+		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, UINT offset, CommandList cmd) override;
+		void BindStencilRef(UINT value, CommandList cmd) override;
+		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
+		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
+		void BindComputeShader(const ComputeShader* cs, CommandList cmd) override;
+		void Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd) override;
+		void DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd) override;
+		void DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd) override;
+		void DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd) override;
+		void DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
+		void DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
+		void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd) override;
+		void DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd) override;
+		void CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd) override;
+		void CopyTexture2D_Region(const Texture2D* pDst, UINT dstMip, UINT dstX, UINT dstY, const Texture2D* pSrc, UINT srcMip, CommandList cmd) override;
+		void MSAAResolve(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd) override;
+		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
+		void QueryBegin(const GPUQuery *query, CommandList cmd) override;
+		void QueryEnd(const GPUQuery *query, CommandList cmd) override;
 		bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
-		void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, GRAPHICSTHREAD threadID) override {};
-		void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, GRAPHICSTHREAD threadID) override {};
+		void UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd) override {};
+		void TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd) override {};
 
-		GPUAllocation AllocateGPU(size_t dataSize, GRAPHICSTHREAD threadID) override;
+		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
-		void EventBegin(const std::string& name, GRAPHICSTHREAD threadID) override;
-		void EventEnd(GRAPHICSTHREAD threadID) override;
-		void SetMarker(const std::string& name, GRAPHICSTHREAD threadID) override;
+		void EventBegin(const std::string& name, CommandList cmd) override;
+		void EventEnd(CommandList cmd) override;
+		void SetMarker(const std::string& name, CommandList cmd) override;
 
 	private:
 		HRESULT CreateShaderResourceView(Texture1D* pTexture);

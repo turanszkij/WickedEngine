@@ -40,7 +40,7 @@ namespace wiFont_Internal
 	VertexLayout		vertexLayout;
 	const VertexShader	*vertexShader = nullptr;
 	const PixelShader	*pixelShader = nullptr;
-	GraphicsPSO			PSO;
+	PipelineState			PSO;
 
 	atomic_bool initialized = false;
 
@@ -312,7 +312,7 @@ void wiFont::LoadShaders()
 	pixelShader = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "fontPS.cso", wiResourceManager::PIXELSHADER));
 
 
-	GraphicsPSODesc desc;
+	PipelineStateDesc desc;
 	desc.vs = vertexShader;
 	desc.ps = pixelShader;
 	desc.il = &vertexLayout;
@@ -321,7 +321,7 @@ void wiFont::LoadShaders()
 	desc.dss = &depthStencilState;
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
-	wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO);
+	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
 
 void UpdatePendingGlyphs()
@@ -453,7 +453,7 @@ int wiFont::AddFontStyle(const string& fontName)
 }
 
 
-void wiFont::Draw(GRAPHICSTHREAD threadID) const
+void wiFont::Draw(CommandList cmd) const
 {
 	if (!initialized.load() || text.length() <= 0)
 	{
@@ -475,7 +475,7 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text.length() * 4, threadID);
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text.length() * 4, cmd);
 	if (!mem.IsValid())
 	{
 		return;
@@ -483,14 +483,14 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 	volatile FontVertex* textBuffer = (volatile FontVertex*)mem.data;
 	const int quadCount = WriteVertices(textBuffer, text, newProps, style);
 
-	device->EventBegin("Font", threadID);
+	device->EventBegin("Font", cmd);
 
-	device->BindGraphicsPSO(&PSO, threadID);
+	device->BindPipelineState(&PSO, cmd);
 
-	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
-	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), threadID);
-	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, threadID);
-	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, threadID);
+	device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+	device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+	device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
+	device->BindSampler(PS, &sampler, SSLOT_ONDEMAND1, cmd);
 
 	const GPUBuffer* vbs[] = {
 		mem.buffer,
@@ -501,10 +501,10 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 	const UINT offsets[] = {
 		mem.offset,
 	};
-	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 
 	assert(text.length() * 4 < 65536 && "The index buffer currently only supports so many characters!");
-	device->BindIndexBuffer(&indexBuffer, INDEXFORMAT_16BIT, 0, threadID);
+	device->BindIndexBuffer(&indexBuffer, INDEXFORMAT_16BIT, 0, cmd);
 
 	FontCB cb;
 
@@ -516,9 +516,9 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 			* device->GetScreenProjection()
 		));
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
-		device->UpdateBuffer(&constantBuffer, &cb, threadID);
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-		device->DrawIndexed(quadCount * 6, 0, 0, threadID);
+		device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 	}
 
 	// font base render:
@@ -527,11 +527,11 @@ void wiFont::Draw(GRAPHICSTHREAD threadID) const
 		* device->GetScreenProjection()
 	));
 	cb.g_xFont_Color = newProps.color.toFloat4();
-	device->UpdateBuffer(&constantBuffer, &cb, threadID);
+	device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-	device->DrawIndexed(quadCount * 6, 0, 0, threadID);
+	device->DrawIndexed(quadCount * 6, 0, 0, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 
 	UpdatePendingGlyphs();
 }

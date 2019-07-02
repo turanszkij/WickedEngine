@@ -229,7 +229,7 @@ void RenderPath3D::Update(float dt)
 	wiRenderer::UpdatePerFrameData(dt, getLayerMask());
 }
 
-void RenderPath3D::Compose() const
+void RenderPath3D::Compose(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -238,57 +238,57 @@ void RenderPath3D::Compose() const
 	fx.quality = QUALITY_LINEAR;
 	fx.enableFullScreen();
 
-	device->EventBegin("Composition", GRAPHICSTHREAD_IMMEDIATE);
-	wiImage::Draw(GetLastPostprocessRT(), fx, GRAPHICSTHREAD_IMMEDIATE);
-	device->EventEnd(GRAPHICSTHREAD_IMMEDIATE);
+	device->EventBegin("Composition", cmd);
+	wiImage::Draw(GetLastPostprocessRT(), fx, cmd);
+	device->EventEnd(cmd);
 
 	if (wiRenderer::GetDebugLightCulling())
 	{
-		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), GRAPHICSTHREAD_IMMEDIATE);
+		wiImage::Draw((Texture2D*)wiRenderer::GetTexture(TEXTYPE_2D_DEBUGUAV), wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), cmd);
 	}
 
-	RenderPath2D::Compose();
+	RenderPath2D::Compose(cmd);
 }
 
-void RenderPath3D::RenderFrameSetUp(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, threadID);
-	wiRenderer::UpdateRenderData(threadID);
+	device->BindResource(CS, &depthBuffer_Copy, TEXSLOT_DEPTH, cmd);
+	wiRenderer::UpdateRenderData(cmd);
 	
 	ViewPort viewPort;
 	viewPort.Width = (float)smallDepth.GetDesc().Width;
 	viewPort.Height = (float)smallDepth.GetDesc().Height;
-	device->BindViewports(1, &viewPort, threadID);
-	device->BindRenderTargets(0, nullptr, &smallDepth, threadID);
+	device->BindViewports(1, &viewPort, cmd);
+	device->BindRenderTargets(0, nullptr, &smallDepth, cmd);
 
 	const GPUResource* dsv[] = { &smallDepth };
-	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, threadID);
+	device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, cmd);
 
-	wiRenderer::OcclusionCulling_Render(threadID);
+	wiRenderer::OcclusionCulling_Render(cmd);
 }
-void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderReflections(CommandList cmd) const
 {
-	wiProfiler::BeginRange("Reflection rendering", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRangeGPU("Reflection rendering", cmd);
 
 	if (wiRenderer::IsRequestedReflectionRendering())
 	{
-		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetRefCamera(), cmd);
 
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
 			const Texture2D* rts[] = { &rtReflection };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer_reflection, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer_reflection, cmd);
 			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[0], clear, threadID);
-			device->ClearDepthStencil(&depthBuffer_reflection, CLEAR_DEPTH, 0, 0, threadID);
+			device->ClearRenderTarget(rts[0], clear, cmd);
+			device->ClearDepthStencil(&depthBuffer_reflection, CLEAR_DEPTH, 0, 0, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			// reverse clipping if underwater
 			XMFLOAT4 water = wiRenderer::GetWaterPlane();
@@ -300,159 +300,159 @@ void RenderPath3D::RenderReflections(GRAPHICSTHREAD threadID) const
 				water.z *= -1;
 			}
 
-			wiRenderer::SetClipPlane(water, threadID);
+			wiRenderer::SetClipPlane(water, cmd);
 
-			wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, threadID, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
-			wiRenderer::DrawSky(threadID);
+			wiRenderer::DrawScene(wiRenderer::GetRefCamera(), false, cmd, RENDERPASS_TEXTURE, getHairParticlesReflectionEnabled(), false);
+			wiRenderer::DrawSky(cmd);
 
-			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), threadID);
+			wiRenderer::SetClipPlane(XMFLOAT4(0, 0, 0, 0), cmd);
 		}
 	}
 
-	wiProfiler::EndRange(); // Reflection Rendering
+	wiProfiler::EndRange(range); // Reflection Rendering
 }
-void RenderPath3D::RenderShadows(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderShadows(CommandList cmd) const
 {
 	if (getShadowsEnabled())
 	{
-		wiRenderer::DrawForShadowMap(wiRenderer::GetCamera(), threadID, getLayerMask());
+		wiRenderer::DrawForShadowMap(wiRenderer::GetCamera(), cmd, getLayerMask());
 	}
 
-	wiRenderer::VoxelRadiance(threadID);
+	wiRenderer::VoxelRadiance(cmd);
 }
 
-void RenderPath3D::RenderLinearDepth(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderLinearDepth(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	const Texture2D* rts[] = { &rtLinearDepth };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rts[0]->GetDesc().Width;
 	vp.Height = (float)rts[0]->GetDesc().Height;
-	device->BindViewports(1, &vp, threadID);
+	device->BindViewports(1, &vp, cmd);
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.sampleFlag = SAMPLEMODE_CLAMP;
 	fx.quality = QUALITY_NEAREST;
 	fx.process.setLinDepth();
-	wiImage::Draw(&depthBuffer_Copy, fx, threadID);
+	wiImage::Draw(&depthBuffer_Copy, fx, cmd);
 	fx.process.clear();
 
-	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 }
-void RenderPath3D::RenderSSAO(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderSSAO(CommandList cmd) const
 {
 	if (getSSAOEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, threadID);
-		device->EventBegin("SSAO", threadID);
+		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
+		device->EventBegin("SSAO", cmd);
 		{
 			const Texture2D* rts[] = { &rtSSAO[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
 			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_LINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
-			wiImage::Draw(nullptr, fx, threadID);
+			wiImage::Draw(nullptr, fx, cmd);
 			fx.process.clear();
 		}
 		{
 			const Texture2D* rts[] = { &rtSSAO[1] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setBlur(XMFLOAT2(getSSAOBlur(), 0));
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(&rtSSAO[0], fx, threadID);
+			wiImage::Draw(&rtSSAO[0], fx, cmd);
 		}
 		{
 			const Texture2D* rts[] = { &rtSSAO[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setBlur(XMFLOAT2(0, getSSAOBlur()));
 			fx.blendFlag = BLENDMODE_OPAQUE;
-			wiImage::Draw(&rtSSAO[1], fx, threadID);
+			wiImage::Draw(&rtSSAO[1], fx, cmd);
 			fx.process.clear();
 		}
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderSSR(const Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderSSR(const Texture2D& srcSceneRT, CommandList cmd) const
 {
 	if (getSSREnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, threadID);
-		device->EventBegin("SSR", threadID);
+		device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
+		device->EventBegin("SSR", cmd);
 		{
 			const Texture2D* rts[] = { &rtSSR };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.clear();
 			fx.disableFullScreen();
 			fx.process.setSSR();
 			fx.setMaskMap(nullptr);
-			wiImage::Draw(&srcSceneRT, fx, threadID);
+			wiImage::Draw(&srcSceneRT, fx, cmd);
 			fx.process.clear();
 		}
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::DownsampleDepthBuffer(GRAPHICSTHREAD threadID) const
+void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.enableHDR();
 
-	device->EventBegin("Downsample Depth Buffer", threadID);
+	device->EventBegin("Downsample Depth Buffer", cmd);
 	{
 		// Downsample the depth buffer for the occlusion culling phase...
 		ViewPort viewPort;
 		viewPort.Width = (float)smallDepth.GetDesc().Width;
 		viewPort.Height = (float)smallDepth.GetDesc().Height;
-		device->BindViewports(1, &viewPort, threadID);
-		device->BindRenderTargets(0, nullptr, &smallDepth, threadID);
+		device->BindViewports(1, &viewPort, cmd);
+		device->BindRenderTargets(0, nullptr, &smallDepth, cmd);
 		// This depth buffer is not cleared because we don't have to (we overwrite it anyway because depthfunc is ALWAYS)
 
 		const GPUResource* dsv[] = { &smallDepth };
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
 
 		fx.process.setDepthBufferDownsampling();
-		wiImage::Draw(&depthBuffer_Copy, fx, threadID);
+		wiImage::Draw(&depthBuffer_Copy, fx, cmd);
 		fx.process.clear();
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void RenderPath3D::RenderOutline(const Texture2D& dstSceneRT, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderOutline(const Texture2D& dstSceneRT, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -461,23 +461,23 @@ void RenderPath3D::RenderOutline(const Texture2D& dstSceneRT, GRAPHICSTHREAD thr
 
 	if (getOutlineEnabled())
 	{
-		device->EventBegin("Outline", threadID);
+		device->EventBegin("Outline", cmd);
 
 		const Texture2D* rts[] = { &dstSceneRT };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;
 		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		device->BindViewports(1, &vp, cmd);
 
 		fx.process.setOutline(getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
-		wiImage::Draw(nullptr, fx, threadID);
+		wiImage::Draw(nullptr, fx, cmd);
 		fx.process.clear();
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderLightShafts(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderLightShafts(CommandList cmd) const
 {
 	XMVECTOR sunDirection = XMLoadFloat3(&wiSceneSystem::GetScene().weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
@@ -487,42 +487,42 @@ void RenderPath3D::RenderLightShafts(GRAPHICSTHREAD threadID) const
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 		fx.enableHDR();
 
-		device->EventBegin("Light Shafts", threadID);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+		device->EventBegin("Light Shafts", cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
 
 		// Render sun stencil cutout:
 		{
 			const Texture2D* rts[] = { &rtSun[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[0], clear, threadID);
+			device->ClearRenderTarget(rts[0], clear, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawSun(threadID);
+			wiRenderer::DrawSun(cmd);
 		}
 
 		const Texture2D* sunSource = &rtSun[0];
 		if (getMSAASampleCount() > 1)
 		{
-			device->MSAAResolve(&rtSun_resolved, sunSource, threadID);
+			device->MSAAResolve(&rtSun_resolved, sunSource, cmd);
 			sunSource = &rtSun_resolved;
 		}
 
 		// Radial blur on the sun:
 		{
 			const Texture2D* rts[] = { &rtSun[1] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[0], clear, threadID);
+			device->ClearRenderTarget(rts[0], clear, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			wiImageParams fxs = fx;
 			fxs.blendFlag = BLENDMODE_OPAQUE;
@@ -533,79 +533,79 @@ void RenderPath3D::RenderLightShafts(GRAPHICSTHREAD threadID) const
 				XMFLOAT2 sun;
 				XMStoreFloat2(&sun, sunPos);
 				fxs.process.setLightShaftCenter(sun);
-				wiImage::Draw(sunSource, fxs, threadID);
+				wiImage::Draw(sunSource, fxs, cmd);
 			}
 		}
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderVolumetrics(GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 {
 	if (getVolumeLightsEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		const Texture2D* rts[] = { &rtVolumetricLights };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, threadID);
+		device->ClearRenderTarget(rts[0], clear, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;
 		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), threadID);
+		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), cmd);
 	}
 }
-void RenderPath3D::RenderParticles(bool isDistrortionPass, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) const
 {
 	if (getEmittedParticlesEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		const Texture2D* rts[] = { &rtParticle };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, threadID);
+		device->ClearRenderTarget(rts[0], clear, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;
 		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), isDistrortionPass, threadID);
+		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), isDistrortionPass, cmd);
 	}
 }
-void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.enableHDR();
 
-	device->EventBegin("Refraction Source", threadID);
+	device->EventBegin("Refraction Source", cmd);
 
 	const Texture2D* rts[] = { &rtSceneCopy };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rts[0]->GetDesc().Width;
 	vp.Height = (float)rts[0]->GetDesc().Height;
-	device->BindViewports(1, &vp, threadID);
+	device->BindViewports(1, &vp, cmd);
 
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_NEAREST;
 	fx.enableFullScreen();
-	wiImage::Draw(&srcSceneRT, fx, threadID);
+	wiImage::Draw(&srcSceneRT, fx, cmd);
 
 	if (wiRenderer::GetAdvancedRefractionsEnabled())
 	{
-		wiRenderer::GenerateMipChain(&rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
+		wiRenderer::GenerateMipChain(&rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS renderPass, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS renderPass, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -613,143 +613,143 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 	{
 		// todo: refactor water ripples and avoid clear if there is none!
 		const Texture2D* rts[] = { &rtWaterRipple };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, threadID);
+		device->ClearRenderTarget(rts[0], clear, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;
 		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawWaterRipples(threadID);
+		wiRenderer::DrawWaterRipples(cmd);
 	}
 
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 	fx.enableHDR();
 
-	device->UnbindResources(TEXSLOT_GBUFFER0, 1, threadID);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, threadID);
+	device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
 
 	const Texture2D* rts[] = { &dstSceneRT };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rts[0]->GetDesc().Width;
 	vp.Height = (float)rts[0]->GetDesc().Height;
-	device->BindViewports(1, &vp, threadID);
+	device->BindViewports(1, &vp, cmd);
 
 	// Transparent scene
 	{
-		wiProfiler::BeginRange("Transparent Scene", wiProfiler::DOMAIN_GPU, threadID);
+		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
 
-		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
-		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, threadID);
-		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, threadID);
-		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, threadID, getHairParticlesEnabled(), true);
+		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
+		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
+		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, cmd, getHairParticlesEnabled(), true);
 
-		wiProfiler::EndRange(threadID); // Transparent Scene
+		wiProfiler::EndRange(range); // Transparent Scene
 	}
 
-	wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), threadID);
+	wiRenderer::DrawLightVisualizers(wiRenderer::GetCamera(), cmd);
 
 	fx.enableFullScreen();
 
 	if (getEmittedParticlesEnabled())
 	{
-		device->EventBegin("Contribute Emitters", threadID);
+		device->EventBegin("Contribute Emitters", cmd);
 		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-		wiImage::Draw(&rtParticle, fx, threadID);
-		device->EventEnd(threadID);
+		wiImage::Draw(&rtParticle, fx, cmd);
+		device->EventEnd(cmd);
 	}
 
 	if (getVolumeLightsEnabled())
 	{
-		device->EventBegin("Contribute Volumetric Lights", threadID);
-		wiImage::Draw(&rtVolumetricLights, fx, threadID);
-		device->EventEnd(threadID);
+		device->EventBegin("Contribute Volumetric Lights", cmd);
+		wiImage::Draw(&rtVolumetricLights, fx, cmd);
+		device->EventEnd(cmd);
 	}
 
 	if (getLightShaftsEnabled())
 	{
-		device->EventBegin("Contribute LightShafts", threadID);
+		device->EventBegin("Contribute LightShafts", cmd);
 		fx.blendFlag = BLENDMODE_ADDITIVE;
-		wiImage::Draw(&rtSun[1], fx, threadID);
-		device->EventEnd(threadID);
+		wiImage::Draw(&rtSun[1], fx, cmd);
+		device->EventEnd(cmd);
 	}
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(wiRenderer::GetCamera(), threadID);
+		wiRenderer::DrawLensFlares(wiRenderer::GetCamera(), cmd);
 	}
 
-	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), threadID);
+	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 
 
-	RenderParticles(true, GRAPHICSTHREAD_IMMEDIATE);
+	RenderParticles(true, cmd);
 }
-void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const
+void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Texture2D& srcGbuffer1, CommandList cmd) const
 {
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, GRAPHICSTHREAD_IMMEDIATE);
+		wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, cmd);
 
-		device->EventBegin("Temporal AA Resolve", threadID);
-		wiProfiler::BeginRange("Temporal AA Resolve", wiProfiler::DOMAIN_GPU, threadID);
+		device->EventBegin("Temporal AA Resolve", cmd);
+		auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", cmd);
 		fx.enableHDR();
 		fx.blendFlag = BLENDMODE_OPAQUE;
 		int current = device->GetFrameCount() % 2;
 		int history = 1 - current;
 		{
 			const Texture2D* rts[] = { &rtTemporalAA[current] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.disableFullScreen();
 			fx.process.setTemporalAAResolve();
 			fx.setMaskMap(&rtTemporalAA[history]);
-			wiImage::Draw(&srcdstSceneRT, fx, threadID);
+			wiImage::Draw(&srcdstSceneRT, fx, cmd);
 			fx.process.clear();
 		}
-		device->UnbindResources(TEXSLOT_GBUFFER0, 1, threadID);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		{
 			const Texture2D* rts[] = { &srcdstSceneRT };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.enableFullScreen();
 			fx.quality = QUALITY_NEAREST;
-			wiImage::Draw(&rtTemporalAA[current], fx, threadID);
+			wiImage::Draw(&rtTemporalAA[current], fx, cmd);
 			fx.disableFullScreen();
 		}
 		fx.disableHDR();
-		wiProfiler::EndRange(threadID);
-		device->EventEnd(threadID);
+		wiProfiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) const
 {
 	if (getBloomEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		device->EventBegin("Bloom", threadID);
+		device->EventBegin("Bloom", cmd);
 		fx.setMaskMap(nullptr);
 		fx.process.clear();
 		fx.disableFullScreen();
@@ -759,29 +759,31 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, GRAPHICSTHREAD th
 		// separate bright parts
 		{
 			const Texture2D* rts[] = { &rtBloom };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setBloom(getBloomThreshold());
-			wiImage::Draw(&srcdstSceneRT, fx, threadID);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			wiImage::Draw(&srcdstSceneRT, fx, cmd);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 		fx.process.clear();
 
-		wiRenderer::GenerateMipChain(&rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, threadID);
+		wiRenderer::GenerateMipChain(&rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
 		// add to the scene
 		{
+			fx.enableHDR();
+
 			const Texture2D* rts[] = { &srcdstSceneRT };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			// not full screen effect, because we draw specific mip levels, so some setup is required
 			XMFLOAT2 siz = fx.siz;
@@ -790,19 +792,19 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, GRAPHICSTHREAD th
 			//fx.quality = QUALITY_BICUBIC;
 			fx.process.clear();
 			fx.mipLevel = 1.5f;
-			wiImage::Draw(&rtBloom, fx, threadID);
+			wiImage::Draw(&rtBloom, fx, cmd);
 			fx.mipLevel = 3.5f;
-			wiImage::Draw(&rtBloom, fx, threadID);
+			wiImage::Draw(&rtBloom, fx, cmd);
 			fx.mipLevel = 5.5f;
-			wiImage::Draw(&rtBloom, fx, threadID);
+			wiImage::Draw(&rtBloom, fx, cmd);
 			fx.quality = QUALITY_LINEAR;
 			fx.siz = siz;
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const
+void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Texture2D& srcGbuffer1, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
@@ -816,84 +818,84 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		if (getMotionBlurEnabled())
 		{
-			wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, GRAPHICSTHREAD_IMMEDIATE);
+			wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, cmd);
 
-			device->EventBegin("Motion Blur", threadID);
+			device->EventBegin("Motion Blur", cmd);
 
 			const Texture2D* rts[] = { rt_write };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setMotionBlur();
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.disableFullScreen();
-			wiImage::Draw(rt_read, fx, threadID);
+			wiImage::Draw(rt_read, fx, cmd);
 			fx.process.clear();
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 
 			SwapPtr(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getDepthOfFieldEnabled())
 		{
-			device->EventBegin("Depth Of Field", threadID);
+			device->EventBegin("Depth Of Field", cmd);
 			// downsample + blur
 			{
 				const Texture2D* rts[] = { &rtDof[0] };
-				device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+				device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 				ViewPort vp;
 				vp.Width = (float)rts[0]->GetDesc().Width;
 				vp.Height = (float)rts[0]->GetDesc().Height;
-				device->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, cmd);
 
 				fx.process.setBlur(XMFLOAT2(getDepthOfFieldStrength(), 0), fx.isHDREnabled());
-				wiImage::Draw(rt_read, fx, threadID);
+				wiImage::Draw(rt_read, fx, cmd);
 
-				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			}
 
 			{
 				const Texture2D* rts[] = { &rtDof[1] };
-				device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+				device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 				ViewPort vp;
 				vp.Width = (float)rts[0]->GetDesc().Width;
 				vp.Height = (float)rts[0]->GetDesc().Height;
-				device->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, cmd);
 
 				fx.process.setBlur(XMFLOAT2(0, getDepthOfFieldStrength()), fx.isHDREnabled());
-				wiImage::Draw(&rtDof[0], fx, threadID);
+				wiImage::Draw(&rtDof[0], fx, cmd);
 				fx.process.clear();
 
-				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			}
 
 			// depth of field compose pass
 			{
 				const Texture2D* rts[] = { rt_write };
-				device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+				device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 				ViewPort vp;
 				vp.Width = (float)rts[0]->GetDesc().Width;
 				vp.Height = (float)rts[0]->GetDesc().Height;
-				device->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, cmd);
 
 				fx.process.setDOF(getDepthOfFieldFocus());
 				fx.setMaskMap(&rtDof[1]);
-				wiImage::Draw(rt_read, fx, threadID);
+				wiImage::Draw(rt_read, fx, cmd);
 				fx.setMaskMap(nullptr);
 				fx.process.clear();
 
 				SwapPtr(rt_read, rt_write);
-				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			}
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 		}
 
 		fx.disableHDR();
@@ -903,36 +905,36 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 	{
 		rt_write = &rtPostprocess_LDR[0];
 
-		device->EventBegin("Tone Mapping", threadID);
+		device->EventBegin("Tone Mapping", cmd);
 		fx.disableHDR();
 		fx.blendFlag = BLENDMODE_OPAQUE;
 
 		const Texture2D* rts[] = { rt_write };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rts[0]->GetDesc().Width;
 		vp.Height = (float)rts[0]->GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		device->BindViewports(1, &vp, cmd);
 
 		fx.process.setToneMap(getExposure());
 		fx.setDistortionMap(&rtParticle);
 		if (getEyeAdaptionEnabled())
 		{
-			fx.setMaskMap(wiRenderer::ComputeLuminance(&srcSceneRT, threadID));
+			fx.setMaskMap(wiRenderer::ComputeLuminance(&srcSceneRT, cmd));
 		}
 		else
 		{
 			fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 		}
 
-		wiImage::Draw(rt_read, fx, threadID);
+		wiImage::Draw(rt_read, fx, cmd);
 		fx.process.clear();
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 
 		rt_read = rt_write;
 		rt_write = &rtPostprocess_LDR[1];
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 	}
 
 	// 3.) LDR post process chain
@@ -941,39 +943,39 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		if (getSharpenFilterEnabled())
 		{
-			device->EventBegin("Sharpen Filter", GRAPHICSTHREAD_IMMEDIATE);
+			device->EventBegin("Sharpen Filter", cmd);
 
 			const Texture2D* rts[] = { rt_write };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.blendFlag = BLENDMODE_OPAQUE;
 			fx.process.setSharpen(getSharpenFilterAmount());
-			wiImage::Draw(rt_read, fx, threadID);
+			wiImage::Draw(rt_read, fx, cmd);
 			fx.process.clear();
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 
 			SwapPtr(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getColorGradingEnabled())
 		{
-			device->EventBegin("Color Grading", GRAPHICSTHREAD_IMMEDIATE);
+			device->EventBegin("Color Grading", cmd);
 
 			const Texture2D* rts[] = { rt_write };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			if (colorGradingTex != nullptr)
 			{
@@ -985,33 +987,33 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 				fx.process.setColorGrade();
 				fx.setMaskMap(wiTextureHelper::getColorGradeDefault());
 			}
-			wiImage::Draw(rt_read, fx, threadID);
+			wiImage::Draw(rt_read, fx, cmd);
 
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 
 			SwapPtr(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getFXAAEnabled())
 		{
-			device->EventBegin("FXAA", GRAPHICSTHREAD_IMMEDIATE);
+			device->EventBegin("FXAA", cmd);
 
 			const Texture2D* rts[] = { rt_write };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setFXAA();
-			wiImage::Draw(rt_read, fx, threadID);
+			wiImage::Draw(rt_read, fx, cmd);
 
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 
 			SwapPtr(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 	}
 }
