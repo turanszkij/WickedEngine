@@ -64,7 +64,7 @@ namespace wiInputManager
 		short deviceIndex;
 	};
 	std::vector<Controller> controllers;
-	std::atomic_bool initialized = false;
+	std::atomic_bool initialized{ false };
 
 	void Initialize()
 	{

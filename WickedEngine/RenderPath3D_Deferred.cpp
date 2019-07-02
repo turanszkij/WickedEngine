@@ -73,26 +73,26 @@ void RenderPath3D_Deferred::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
-	GRAPHICSTHREAD threadID;
+	CommandList cmd;
 
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderFrameSetUp(threadID); });
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderShadows(threadID); });
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderReflections(threadID); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderFrameSetUp(cmd); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderShadows(cmd); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderReflections(cmd); });
 
 	// Main scene:
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID] {
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
 		const GPUResource* dsv[] = { &depthBuffer };
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
 
 		{
-			auto range = wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 			const Texture2D* rts[] = {
 				&rtGBuffer[0],
@@ -101,38 +101,38 @@ void RenderPath3D_Deferred::Render() const
 				&lightbuffer_diffuse,
 				&lightbuffer_specular,
 			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[1], clear, threadID);
-			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
+			device->ClearRenderTarget(rts[1], clear, cmd);
+			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, cmd);
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, threadID);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
+			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
-		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, threadID);
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, cmd);
+		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 
-		RenderLinearDepth(threadID);
+		RenderLinearDepth(cmd);
 	});
 
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID] {
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
-		wiRenderer::BindCommonResources(threadID);
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
+		wiRenderer::BindCommonResources(cmd);
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
 
-		RenderDecals(threadID);
+		RenderDecals(cmd);
 
-		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], threadID);
+		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], cmd);
 
 		// Deferred lights:
 		{
@@ -140,50 +140,50 @@ void RenderPath3D_Deferred::Render() const
 				&lightbuffer_diffuse,
 				&lightbuffer_specular,
 			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, threadID);
-			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, threadID);
-			wiRenderer::DrawLights(wiRenderer::GetCamera(), threadID);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+			wiRenderer::DrawLights(wiRenderer::GetCamera(), cmd);
 		}
 
-		RenderSSAO(threadID);
+		RenderSSAO(cmd);
 
-		RenderSSS(threadID);
+		RenderSSS(cmd);
 
-		RenderDeferredComposition(threadID);
+		RenderDeferredComposition(cmd);
 
-		RenderSSR(rtDeferred, threadID);
+		RenderSSR(rtDeferred, cmd);
 
-		wiRenderer::BindCommonResources(threadID);
+		wiRenderer::BindCommonResources(cmd);
 
-		DownsampleDepthBuffer(threadID);
+		DownsampleDepthBuffer(cmd);
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		RenderOutline(rtDeferred, threadID);
+		RenderOutline(rtDeferred, cmd);
 
-		RenderLightShafts(threadID);
+		RenderLightShafts(cmd);
 
-		RenderVolumetrics(threadID);
+		RenderVolumetrics(cmd);
 
-		RenderParticles(false, threadID);
+		RenderParticles(false, cmd);
 
-		RenderRefractionSource(rtDeferred, threadID);
+		RenderRefractionSource(rtDeferred, cmd);
 
-		RenderTransparents(rtDeferred, RENDERPASS_FORWARD, threadID);
+		RenderTransparents(rtDeferred, RENDERPASS_FORWARD, cmd);
 
-		RenderParticles(true, threadID);
+		RenderParticles(true, cmd);
 
-		TemporalAAResolve(rtDeferred, rtGBuffer[1], threadID);
+		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
 
-		RenderBloom(rtDeferred, threadID);
+		RenderBloom(rtDeferred, cmd);
 
-		RenderPostprocessChain(rtDeferred, rtGBuffer[1], threadID);
+		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
 	});
 
@@ -192,23 +192,23 @@ void RenderPath3D_Deferred::Render() const
 	wiJobSystem::Wait(ctx);
 }
 
-void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
+void RenderPath3D_Deferred::RenderSSS(CommandList cmd) const
 {
 	if (getSSSEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
-		device->EventBegin("SSS", threadID);
+		device->EventBegin("SSS", cmd);
 
 		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(&rtSSS[0], clear, threadID);
-		device->ClearRenderTarget(&rtSSS[1], clear, threadID);
+		device->ClearRenderTarget(&rtSSS[0], clear, cmd);
+		device->ClearRenderTarget(&rtSSS[1], clear, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rtSSS[0].GetDesc().Width;
 		vp.Height = (float)rtSSS[0].GetDesc().Height;
-		device->BindViewports(1, &vp, threadID);
+		device->BindViewports(1, &vp, cmd);
 
 		fx.stencilRef = STENCILREF_SKIN;
 		fx.stencilComp = STENCILMODE_EQUAL;
@@ -217,10 +217,10 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
 		static int sssPassCount = 6;
 		for (int i = 0; i < sssPassCount; ++i)
 		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 			const Texture2D* rts[] = { &rtSSS[i % 2] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 
 			XMFLOAT2 dir = XMFLOAT2(0, 0);
 			static float stren = 0.018f;
@@ -235,19 +235,19 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
 			fx.process.setSSSS(dir);
 			if (i == 0)
 			{
-				wiImage::Draw(&lightbuffer_diffuse, fx, threadID);
+				wiImage::Draw(&lightbuffer_diffuse, fx, cmd);
 			}
 			else
 			{
-				wiImage::Draw(&rtSSS[(i + 1) % 2], fx, threadID);
+				wiImage::Draw(&rtSSS[(i + 1) % 2], fx, cmd);
 			}
 		}
 		fx.process.clear();
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		{
 			const Texture2D* rts[] = { &rtSSS[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
-			device->ClearRenderTarget(rts[0], clear, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
+			device->ClearRenderTarget(rts[0], clear, cmd);
 
 			fx.setMaskMap(nullptr);
 			fx.quality = QUALITY_NEAREST;
@@ -257,46 +257,46 @@ void RenderPath3D_Deferred::RenderSSS(GRAPHICSTHREAD threadID) const
 			fx.stencilComp = STENCILMODE_NOT;
 			fx.enableFullScreen();
 			fx.enableHDR();
-			wiImage::Draw(&lightbuffer_diffuse, fx, threadID);
+			wiImage::Draw(&lightbuffer_diffuse, fx, cmd);
 			fx.stencilRef = STENCILREF_SKIN;
 			fx.stencilComp = STENCILMODE_EQUAL;
-			wiImage::Draw(&rtSSS[1], fx, threadID);
+			wiImage::Draw(&rtSSS[1], fx, cmd);
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
-void RenderPath3D_Deferred::RenderDecals(GRAPHICSTHREAD threadID) const
+void RenderPath3D_Deferred::RenderDecals(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	const Texture2D* rts[] = { &rtGBuffer[0] };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, threadID);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rts[0]->GetDesc().Width;
 	vp.Height = (float)rts[0]->GetDesc().Height;
-	device->BindViewports(1, &vp, threadID);
+	device->BindViewports(1, &vp, cmd);
 
-	wiRenderer::DrawDecals(wiRenderer::GetCamera(), threadID);
+	wiRenderer::DrawDecals(wiRenderer::GetCamera(), cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 }
-void RenderPath3D_Deferred::RenderDeferredComposition(GRAPHICSTHREAD threadID) const
+void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	const Texture2D* rts[] = { &rtDeferred };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+	device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rts[0]->GetDesc().Width;
 	vp.Height = (float)rts[0]->GetDesc().Height;
-	device->BindViewports(1, &vp, threadID);
+	device->BindViewports(1, &vp, cmd);
 
 	wiImage::DrawDeferred((getSSSEnabled() ? &rtSSS[0] : &lightbuffer_diffuse),
 		&lightbuffer_specular
 		, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite()
-		, threadID, STENCILREF_DEFAULT);
-	wiRenderer::DrawSky(threadID);
+		, cmd, STENCILREF_DEFAULT);
+	wiRenderer::DrawSky(cmd);
 }

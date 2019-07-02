@@ -316,7 +316,7 @@ namespace wiPhysicsEngine
 
 		wiJobSystem::Wait(ctx);
 
-		auto range = wiProfiler::BeginRange("Physics", wiProfiler::DOMAIN_CPU);
+		auto range = wiProfiler::BeginRangeCPU("Physics");
 
 		btVector3 wind = btVector3(weather.windDirection.x, weather.windDirection.y, weather.windDirection.z);
 

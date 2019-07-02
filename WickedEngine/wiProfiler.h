@@ -6,29 +6,25 @@
 
 namespace wiProfiler
 {
-	enum PROFILER_DOMAIN
-	{
-		DOMAIN_CPU,
-		DOMAIN_GPU,
-		DOMAIN_COUNT
-	};
 	typedef size_t range_id;
 
 	// Begin collecting profiling data for the current frame
-	void BeginFrame(GRAPHICSTHREAD threadID);
+	void BeginFrame();
 
 	// Finalize collecting profiling data for the current frame
-	void EndFrame(GRAPHICSTHREAD threadID);
+	void EndFrame(wiGraphics::CommandList cmd);
 
-	// Start a profiling range
-	//	If this is a GPU profiling range, you must provide a correct GRAPHICSTHREAD as last parameter!
-	range_id BeginRange(const wiHashString& name, PROFILER_DOMAIN domain, GRAPHICSTHREAD threadID = GRAPHICSTHREAD_COUNT);
+	// Start a CPU profiling range
+	range_id BeginRangeCPU(const wiHashString& name);
+
+	// Start a GPU profiling range
+	range_id BeginRangeGPU(const wiHashString& name, wiGraphics::CommandList cmd);
 
 	// End a profiling range
 	void EndRange(range_id id);
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
-	void DrawData(int x, int y, GRAPHICSTHREAD threadID);
+	void DrawData(int x, int y, wiGraphics::CommandList cmd);
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);

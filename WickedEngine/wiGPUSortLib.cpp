@@ -13,10 +13,6 @@ namespace wiGPUSortLib
 	static const ComputeShader* sortCS = nullptr;
 	static const ComputeShader* sortInnerCS = nullptr;
 	static const ComputeShader* sortStepCS = nullptr;
-	static ComputePSO CPSO_kickoffSort;
-	static ComputePSO CPSO_sort;
-	static ComputePSO CPSO_sortInner;
-	static ComputePSO CPSO_sortStep;
 
 	void Initialize()
 	{
@@ -48,22 +44,6 @@ namespace wiGPUSortLib
 		sortInnerCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "gpusortlib_sortInnerCS.cso", wiResourceManager::COMPUTESHADER));
 		sortStepCS = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "gpusortlib_sortStepCS.cso", wiResourceManager::COMPUTESHADER));
 
-
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		ComputePSODesc desc;
-
-		desc.cs = kickoffSortCS;
-		device->CreateComputePSO(&desc, &CPSO_kickoffSort);
-
-		desc.cs = sortCS;
-		device->CreateComputePSO(&desc, &CPSO_sort);
-
-		desc.cs = sortInnerCS;
-		device->CreateComputePSO(&desc, &CPSO_sortInner);
-
-		desc.cs = sortStepCS;
-		device->CreateComputePSO(&desc, &CPSO_sortStep);
 	}
 
 	void CleanUp()
@@ -77,7 +57,7 @@ namespace wiGPUSortLib
 		const GPUBuffer& counterBuffer_read, 
 		UINT counterReadOffset, 
 		const GPUBuffer& indexBuffer_write,
-		GRAPHICSTHREAD threadID)
+		CommandList cmd)
 	{
 		static bool init = false;
 		if (!init)
@@ -89,47 +69,47 @@ namespace wiGPUSortLib
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		device->EventBegin("GPUSortLib", threadID);
+		device->EventBegin("GPUSortLib", cmd);
 
 
 		SortConstants sc;
 		sc.counterReadOffset = counterReadOffset;
-		device->UpdateBuffer(&sortCB, &sc, threadID);
-		device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), threadID);
+		device->UpdateBuffer(&sortCB, &sc, cmd);
+		device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), cmd);
 
-		device->UnbindUAVs(0, 8, threadID);
+		device->UnbindUAVs(0, 8, cmd);
 
 		// initialize sorting arguments:
 		{
-			device->BindComputePSO(&CPSO_kickoffSort, threadID);
+			device->BindComputeShader(kickoffSortCS, cmd);
 
 			const GPUResource* res[] = {
 				&counterBuffer_read,
 			};
-			device->BindResources(CS, res, 0, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, 0, ARRAYSIZE(res), cmd);
 
 			const GPUResource* uavs[] = {
 				&indirectBuffer,
 			};
-			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-			device->Dispatch(1, 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->Dispatch(1, 1, 1, cmd);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
-			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 		}
 
 
 		const GPUResource* uavs[] = {
 			&indexBuffer_write,
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		const GPUResource* resources[] = {
 			&counterBuffer_read,
 			&comparisonBuffer_read,
 		};
-		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), threadID);
+		device->BindResources(CS, resources, 0, ARRAYSIZE(resources), cmd);
 
 		// initial sorting:
 		bool bDone = true;
@@ -149,9 +129,9 @@ namespace wiGPUSortLib
 			}
 
 			// sort all buffers of size 512 (and presort bigger ones)
-			device->BindComputePSO(&CPSO_sort, threadID);
-			device->DispatchIndirect(&indirectBuffer, 0, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->BindComputeShader(sortCS, cmd);
+			device->DispatchIndirect(&indirectBuffer, 0, cmd);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		}
 
 		int presorted = 512;
@@ -160,7 +140,7 @@ namespace wiGPUSortLib
 			// Incremental sorting:
 
 			bDone = true;
-			device->BindComputePSO(&CPSO_sortStep, threadID);
+			device->BindComputeShader(sortStepCS, cmd);
 
 			// prepare thread group description data
 			uint32_t numThreadGroups = 0;
@@ -193,25 +173,25 @@ namespace wiGPUSortLib
 				}
 				sc.counterReadOffset = counterReadOffset;
 
-				device->UpdateBuffer(&sortCB, &sc, threadID);
-				device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), threadID);
+				device->UpdateBuffer(&sortCB, &sc, cmd);
+				device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), cmd);
 
-				device->Dispatch(numThreadGroups, 1, 1, threadID);
-				device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+				device->Dispatch(numThreadGroups, 1, 1, cmd);
+				device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 			}
 
-			device->BindComputePSO(&CPSO_sortInner, threadID);
-			device->Dispatch(numThreadGroups, 1, 1, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->BindComputeShader(sortInnerCS, cmd);
+			device->Dispatch(numThreadGroups, 1, 1, cmd);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
 			presorted *= 2;
 		}
 
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-		device->UnbindResources(0, ARRAYSIZE(resources), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+		device->UnbindResources(0, ARRAYSIZE(resources), cmd);
 
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 }

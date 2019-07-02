@@ -58,8 +58,8 @@ public:
 	// This is where application-wide rendering happens to offscreen buffers. 
 	//  RenderPath::Render is also called from here for the active component
 	virtual void Render();
-	// This is where the application will render to the screen (backbuffer)
-	virtual void Compose(GRAPHICSTHREAD threadID);
+	// This is where the application will render to the screen (backbuffer). It must render to the provided command list.
+	virtual void Compose(wiGraphics::CommandList cmd);
 
 #ifndef WINSTORE_SUPPORT
 	// You need to call this before calling Run() or Initialize() if you want to render to a Win32 window handle

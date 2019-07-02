@@ -17,23 +17,23 @@ namespace wiLensFlare
 	static RasterizerState rasterizerState;
 	static DepthStencilState depthStencilState;
 	static BlendState blendState;
-	static GraphicsPSO	PSO;
+	static PipelineState	PSO;
 
-	void Draw(GRAPHICSTHREAD threadID, const XMVECTOR& lightPos, const std::vector<const Texture2D*>& rims) {
+	void Draw(CommandList cmd, const XMVECTOR& lightPos, const std::vector<const Texture2D*>& rims) {
 
 		if (!rims.empty())
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			device->EventBegin("LensFlare", threadID);
+			device->EventBegin("LensFlare", cmd);
 
-			device->BindGraphicsPSO(&PSO, threadID);
+			device->BindPipelineState(&PSO, cmd);
 
 			LensFlareCB cb;
 			XMStoreFloat4(&cb.xSunPos, lightPos / XMVectorSet((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 1, 1));
 			cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
 
-			device->UpdateBuffer(&constantBuffer, &cb, threadID);
-			device->BindConstantBuffer(GS, &constantBuffer, CB_GETBINDSLOT(LensFlareCB), threadID);
+			device->UpdateBuffer(&constantBuffer, &cb, cmd);
+			device->BindConstantBuffer(GS, &constantBuffer, CB_GETBINDSLOT(LensFlareCB), cmd);
 
 
 			int i = 0;
@@ -41,19 +41,19 @@ namespace wiLensFlare
 			{
 				if (x != nullptr)
 				{
-					device->BindResource(PS, x, TEXSLOT_ONDEMAND0 + i, threadID);
-					device->BindResource(GS, x, TEXSLOT_ONDEMAND0 + i, threadID);
+					device->BindResource(PS, x, TEXSLOT_ONDEMAND0 + i, cmd);
+					device->BindResource(GS, x, TEXSLOT_ONDEMAND0 + i, cmd);
 					i++;
 				}
 			}
 
-			device->BindSampler(GS, &samplercmp, SSLOT_ONDEMAND0, threadID);
+			device->BindSampler(GS, &samplercmp, SSLOT_ONDEMAND0, cmd);
 
 
-			device->Draw(i, 0, threadID);
+			device->Draw(i, 0, cmd);
 
 
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 		}
 	}
 
@@ -70,7 +70,7 @@ namespace wiLensFlare
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShader;
 		desc.ps = pixelShader;
 		desc.gs = geometryShader;
@@ -80,7 +80,7 @@ namespace wiLensFlare
 		desc.pt = POINTLIST;
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-		device->CreateGraphicsPSO(&desc, &PSO);
+		device->CreatePipelineState(&desc, &PSO);
 	}
 	void Initialize() 
 	{

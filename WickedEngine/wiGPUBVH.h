@@ -31,11 +31,11 @@ private:
 	std::vector<TracedRenderingMaterial> materialArray;
 	std::unordered_map<const wiGraphics::Texture2D*, wiRectPacker::rect_xywh> storedTextures;
 	std::unordered_set<const wiGraphics::Texture2D*> sceneTextures;
-	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, GRAPHICSTHREAD threadID);
+	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
 
 public:
-	void Build(const wiSceneSystem::Scene& scene, GRAPHICSTHREAD threadID);
-	void Bind(wiGraphics::SHADERSTAGE stage, GRAPHICSTHREAD threadID) const;
+	void Build(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
+	void Bind(wiGraphics::SHADERSTAGE stage, wiGraphics::CommandList cmd) const;
 
 	static void LoadShaders();
 

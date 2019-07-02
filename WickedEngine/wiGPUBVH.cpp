@@ -26,12 +26,11 @@ enum CSTYPES_BVH
 	CSTYPE_BVH_COUNT
 };
 static const ComputeShader* computeShaders[CSTYPE_BVH_COUNT] = {};
-static ComputePSO CPSO[CSTYPE_BVH_COUNT];
 
 static GPUBuffer constantBuffer;
 
 
-void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD threadID)
+void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -117,7 +116,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 
 			for (auto& it : storedTextures)
 			{
-				wiRenderer::CopyTexture2D(&globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, threadID, wiRenderer::BORDEREXPAND_WRAP);
+				wiRenderer::CopyTexture2D(&globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
 			}
 		}
 		else
@@ -268,11 +267,11 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, GRAPHICSTHREAD 
 		hr = device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
 		assert(SUCCEEDED(hr));
 	}
-	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), threadID, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
+	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
 
 }
 
-void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
+void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -402,24 +401,24 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	}
 
 
-	auto range = wiProfiler::BeginRange("BVH Rebuild", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRangeGPU("BVH Rebuild", cmd);
 
-	UpdateGlobalMaterialResources(scene, threadID);
+	UpdateGlobalMaterialResources(scene, cmd);
 
 
 	uint32_t triangleCount = 0;
 	uint32_t materialCount = 0;
 
-	device->EventBegin("BVH - Primitive Builder", threadID);
+	device->EventBegin("BVH - Primitive Builder", cmd);
 	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_PRIMITIVES], threadID);
+		device->BindComputeShader(computeShaders[CSTYPE_BVH_PRIMITIVES], cmd);
 		GPUResource* uavs[] = {
 			&primitiveIDBuffer,
 			&primitiveBuffer,
 			&primitiveDataBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
@@ -437,11 +436,11 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 				cb.xTraceBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
 				cb.xTraceBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
 
-				device->UpdateBuffer(&constantBuffer, &cb, threadID);
+				device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
 				triangleCount += cb.xTraceBVHMeshTriangleCount;
 
-				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), threadID);
+				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), cmd);
 
 				GPUResource* res[] = {
 					&globalMaterialBuffer,
@@ -451,9 +450,9 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 					mesh.vertexBuffer_UV1.get(),
 					mesh.vertexBuffer_COL.get(),
 				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-				device->Dispatch((cb.xTraceBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, threadID);
+				device->Dispatch((cb.xTraceBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
 				for (auto& subset : mesh.subsets)
 				{
@@ -462,51 +461,51 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 			}
 		}
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
-	device->UpdateBuffer(&primitiveCounterBuffer, &triangleCount, threadID);
-	device->EventEnd(threadID);
+	device->UpdateBuffer(&primitiveCounterBuffer, &triangleCount, cmd);
+	device->EventEnd(cmd);
 
 
-	device->EventBegin("BVH - Sort Primitive Mortons", threadID);
-	wiGPUSortLib::Sort(triangleCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, threadID);
-	device->EventEnd(threadID);
+	device->EventBegin("BVH - Sort Primitive Mortons", cmd);
+	wiGPUSortLib::Sort(triangleCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, cmd);
+	device->EventEnd(cmd);
 
 	const UINT threadgroup_count = (triangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE;
 
-	device->EventBegin("BVH - Build Hierarchy", threadID);
+	device->EventBegin("BVH - Build Hierarchy", cmd);
 	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_HIERARCHY], threadID);
+		device->BindComputeShader(computeShaders[CSTYPE_BVH_HIERARCHY], cmd);
 		GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhParentBuffer,
 			&bvhFlagBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		GPUResource* res[] = {
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-		device->Dispatch(threadgroup_count, 1, 1, threadID);
+		device->Dispatch(threadgroup_count, 1, 1, cmd);
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 
-	device->EventBegin("BVH - Propagate AABB", threadID);
+	device->EventBegin("BVH - Propagate AABB", cmd);
 	{
-		device->BindComputePSO(&CPSO[CSTYPE_BVH_PROPAGATEAABB], threadID);
+		device->BindComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
 		GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhFlagBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		GPUResource* res[] = {
 			&primitiveCounterBuffer,
@@ -514,14 +513,14 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 			&primitiveBuffer,
 			&bvhParentBuffer,
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-		device->Dispatch(threadgroup_count, 1, 1, threadID);
+		device->Dispatch(threadgroup_count, 1, 1, cmd);
 
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 
 #ifdef BVH_VALIDATE
 
@@ -537,7 +536,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 	GPUBuffer readback_primitiveCounterBuffer;
 	device->CreateBuffer(&readback_desc, nullptr, &readback_primitiveCounterBuffer);
 	uint primitiveCount;
-	download_success = device->DownloadResource(&primitiveCounterBuffer, &readback_primitiveCounterBuffer, &primitiveCount, threadID);
+	download_success = device->DownloadResource(&primitiveCounterBuffer, &readback_primitiveCounterBuffer, &primitiveCount, cmd);
 	assert(download_success);
 
 	if (primitiveCount > 0)
@@ -553,7 +552,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		GPUBuffer readback_nodeBuffer;
 		device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
 		vector<BVHNode> nodes(readback_desc.ByteWidth / sizeof(BVHNode));
-		download_success = device->DownloadResource(&bvhNodeBuffer, &readback_nodeBuffer, nodes.data(), threadID);
+		download_success = device->DownloadResource(&bvhNodeBuffer, &readback_nodeBuffer, nodes.data(), cmd);
 		assert(download_success);
 		set<uint> visitedLeafs;
 		vector<uint> stack;
@@ -594,7 +593,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 		GPUBuffer readback_flagBuffer;
 		device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
 		vector<uint> flags(readback_desc.ByteWidth / sizeof(uint));
-		download_success = device->DownloadResource(&bvhFlagBuffer, &readback_flagBuffer, flags.data(), threadID);
+		download_success = device->DownloadResource(&bvhFlagBuffer, &readback_flagBuffer, flags.data(), cmd);
 		assert(download_success);
 		for (auto& x : flags)
 		{
@@ -611,7 +610,7 @@ void wiGPUBVH::Build(const Scene& scene, GRAPHICSTHREAD threadID)
 
 	wiProfiler::EndRange(range); // BVH rebuild
 }
-void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
+void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -624,24 +623,15 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, GRAPHICSTHREAD threadID) const
 		&primitiveDataBuffer,
 		&bvhNodeBuffer,
 	};
-	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 }
 
 
 void wiGPUBVH::LoadShaders()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
 	string SHADERPATH = wiRenderer::GetShaderPath();
 
 	computeShaders[CSTYPE_BVH_PRIMITIVES] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_primitivesCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_HIERARCHY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_hierarchyCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_BVH_PROPAGATEAABB] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bvh_propagateaabbCS.cso", wiResourceManager::COMPUTESHADER));
-
-
-	for (int i = 0; i < CSTYPE_BVH_COUNT; ++i)
-	{
-		ComputePSODesc desc;
-		desc.cs = computeShaders[i];
-		device->CreateComputePSO(&desc, &CPSO[i]);
-	}
 }

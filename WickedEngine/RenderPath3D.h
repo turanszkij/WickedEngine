@@ -84,23 +84,23 @@ protected:
 
 	void ResizeBuffers() override;
 
-	virtual void RenderFrameSetUp(GRAPHICSTHREAD threadID) const;
-	virtual void RenderReflections(GRAPHICSTHREAD threadID) const;
-	virtual void RenderShadows(GRAPHICSTHREAD threadID) const;
+	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
+	virtual void RenderReflections(wiGraphics::CommandList cmd) const;
+	virtual void RenderShadows(wiGraphics::CommandList cmd) const;
 
-	virtual void RenderLinearDepth(GRAPHICSTHREAD threadID) const;
-	virtual void RenderSSAO(GRAPHICSTHREAD threadID) const;
-	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void DownsampleDepthBuffer(GRAPHICSTHREAD threadID) const;
-	virtual void RenderOutline(const wiGraphics::Texture2D& dstSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void RenderLightShafts(GRAPHICSTHREAD threadID) const;
-	virtual void RenderVolumetrics(GRAPHICSTHREAD threadID) const;
-	virtual void RenderParticles(bool isDistrortionPass, GRAPHICSTHREAD threadID) const;
-	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void RenderTransparents(const wiGraphics::Texture2D& dstSceneRT, RENDERPASS renderPass, GRAPHICSTHREAD threadID) const;
-	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
-	virtual void RenderBloom(const wiGraphics::Texture2D& srcdstSceneRT, GRAPHICSTHREAD threadID) const;
-	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, GRAPHICSTHREAD threadID) const;
+	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
+	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
+	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
+	virtual void RenderOutline(const wiGraphics::Texture2D& dstSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
+	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
+	virtual void RenderParticles(bool isDistrortionPass, wiGraphics::CommandList cmd) const;
+	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderTransparents(const wiGraphics::Texture2D& dstSceneRT, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
+	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
+	virtual void RenderBloom(const wiGraphics::Texture2D& srcdstSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	
 public:
 	const wiGraphics::Texture2D* GetDepthStencil() const override { return &depthBuffer; }
@@ -189,6 +189,6 @@ public:
 
 	void Update(float dt) override;
 	void Render() const override = 0;
-	void Compose(GRAPHICSTHREAD threadID) const override;
+	void Compose(wiGraphics::CommandList cmd) const override;
 };
 

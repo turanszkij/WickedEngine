@@ -50,7 +50,7 @@ void RenderPath3D_Forward::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
-	GRAPHICSTHREAD threadID;
+	CommandList cmd;
 
 	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };
 	if (getMSAASampleCount() > 1)
@@ -59,110 +59,110 @@ void RenderPath3D_Forward::Render() const
 		scene_read[1] = &rtMain_resolved[1];
 	}
 
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderFrameSetUp(threadID); });
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderShadows(threadID); });
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderReflections(threadID); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderFrameSetUp(cmd); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderShadows(cmd); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderReflections(cmd); });
 
 	// Main scene:
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd, scene_read] {
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
 		const GPUResource* dsv[] = { &depthBuffer };
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
 
 		// Opaque Scene:
 		{
-			auto range = wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 			const Texture2D* rts[] = {
 				&rtMain[0],
 				&rtMain[1],
 			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[1], clear, threadID);
-			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
+			device->ClearRenderTarget(rts[1], clear, cmd);
+			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, threadID);
-			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, threadID);
+			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_FORWARD, getHairParticlesEnabled(), true);
-			wiRenderer::DrawSky(threadID);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_FORWARD, getHairParticlesEnabled(), true);
+			wiRenderer::DrawSky(cmd);
 
-			device->BindRenderTargets(0, nullptr, nullptr, threadID);
+			device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
 		if (getMSAASampleCount() > 1)
 		{
-			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, threadID);
-			wiRenderer::ResolveMSAADepthBuffer(&depthBuffer_Copy, &depthBuffer, threadID);
-			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, cmd);
+			wiRenderer::ResolveMSAADepthBuffer(&depthBuffer_Copy, &depthBuffer, cmd);
+			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 
-			device->MSAAResolve(scene_read[0], &rtMain[0], threadID);
-			device->MSAAResolve(scene_read[1], &rtMain[1], threadID);
+			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
+			device->MSAAResolve(scene_read[1], &rtMain[1], cmd);
 		}
 		else
 		{
-			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
-			device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, threadID);
-			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, cmd);
+			device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
+			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 		}
-		wiRenderer::BindGBufferTextures(scene_read[0], scene_read[1], nullptr, threadID);
+		wiRenderer::BindGBufferTextures(scene_read[0], scene_read[1], nullptr, cmd);
 
-		RenderLinearDepth(threadID);
+		RenderLinearDepth(cmd);
 	});
 
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID, scene_read] {
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd, scene_read] {
 
-		wiRenderer::BindCommonResources(threadID);
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
+		wiRenderer::BindCommonResources(cmd);
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
 
-		RenderSSAO(threadID);
+		RenderSSAO(cmd);
 
-		RenderSSR(*scene_read[0], threadID);
+		RenderSSR(*scene_read[0], cmd);
 
-		DownsampleDepthBuffer(threadID);
+		DownsampleDepthBuffer(cmd);
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		RenderOutline(rtMain[0], threadID);
+		RenderOutline(rtMain[0], cmd);
 
-		RenderLightShafts(threadID);
+		RenderLightShafts(cmd);
 
-		RenderVolumetrics(threadID);
+		RenderVolumetrics(cmd);
 
-		RenderParticles(false, threadID);
+		RenderParticles(false, cmd);
 
-		RenderRefractionSource(*scene_read[0], threadID);
+		RenderRefractionSource(*scene_read[0], cmd);
 
-		RenderTransparents(rtMain[0], RENDERPASS_FORWARD, threadID);
+		RenderTransparents(rtMain[0], RENDERPASS_FORWARD, cmd);
 
 		if (getMSAASampleCount() > 1)
 		{
-			device->MSAAResolve(scene_read[0], &rtMain[0], threadID);
+			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
 		}
 
-		RenderParticles(true, threadID);
+		RenderParticles(true, cmd);
 
-		TemporalAAResolve(*scene_read[0], *scene_read[1], threadID);
+		TemporalAAResolve(*scene_read[0], *scene_read[1], cmd);
 
-		RenderBloom(*scene_read[0], threadID);
+		RenderBloom(*scene_read[0], cmd);
 
-		RenderPostprocessChain(*scene_read[0], *scene_read[1], threadID);
+		RenderPostprocessChain(*scene_read[0], *scene_read[1], cmd);
 
 	});
 

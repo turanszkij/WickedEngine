@@ -45,7 +45,7 @@ void fft_512x512_c2c(
 	const wiGraphics::GPUResource& pUAV_Dst,
 	const wiGraphics::GPUResource& pSRV_Dst,
 	const wiGraphics::GPUResource& pSRV_Src, 
-	GRAPHICSTHREAD threadID);
+	wiGraphics::CommandList cmd);
 
 
 #endif // _FFT_GENERATOR_H_

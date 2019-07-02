@@ -65,7 +65,7 @@ Sampler					customsamplers[SSTYPE_LAST];
 
 string SHADERPATH = "shaders/";
 
-LinearAllocator frameAllocators[GRAPHICSTHREAD_COUNT];
+LinearAllocator frameAllocators[COMMANDLIST_COUNT];
 
 float GAMMA = 2.2f;
 uint32_t SHADOWRES_2D = 1024;
@@ -479,7 +479,7 @@ void AttachCamera(wiECS::Entity entity)
 
 void Initialize()
 {
-	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
 	{
 		frameAllocators[i].reserve(4 * 1024 * 1024);
 	}
@@ -576,10 +576,10 @@ enum OBJECTRENDERING_POM
 	OBJECTRENDERING_POM_ENABLED,
 	OBJECTRENDERING_POM_COUNT
 };
-GraphicsPSO PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
-GraphicsPSO PSO_object_water[RENDERPASS_COUNT];
-GraphicsPSO PSO_object_wire;
-inline const GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
+PipelineState PSO_object[RENDERPASS_COUNT][BLENDMODE_COUNT][OBJECTRENDERING_DOUBLESIDED_COUNT][OBJECTRENDERING_TESSELLATION_COUNT][OBJECTRENDERING_ALPHATEST_COUNT][OBJECTRENDERING_NORMALMAP_COUNT][OBJECTRENDERING_PLANARREFLECTION_COUNT][OBJECTRENDERING_POM_COUNT];
+PipelineState PSO_object_water[RENDERPASS_COUNT];
+PipelineState PSO_object_wire;
+inline const PipelineState* GetObjectPSO(RENDERPASS renderPass, bool doublesided, bool tessellation, const MaterialComponent& material, bool forceAlphaTestForDithering)
 {
 	if (IsWireRender())
 	{
@@ -605,12 +605,12 @@ inline const GraphicsPSO* GetObjectPSO(RENDERPASS renderPass, bool doublesided, 
 	const bool pom = material.parallaxOcclusionMapping > 0;
 	const BLENDMODE blendMode = material.GetBlendMode();
 
-	const GraphicsPSO& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom];
+	const PipelineState& pso = PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom];
 	assert(pso.IsValid());
 	return &pso;
 }
 
-GraphicsPSO PSO_object_hologram;
+PipelineState PSO_object_hologram;
 std::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
@@ -622,7 +622,7 @@ const std::vector<CustomShader>& GetCustomShaders()
 {
 	return customShaders;
 }
-inline const GraphicsPSO* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
+inline const PipelineState* GetCustomShaderPSO(RENDERPASS renderPass, uint32_t renderTypeFlags, int customShaderID)
 {
 	if (customShaderID >= 0 && customShaderID < (int)customShaders.size())
 	{
@@ -1069,14 +1069,14 @@ PSTYPES GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, bool 
 	return realPS;
 }
 
-GraphicsPSO PSO_decal;
-GraphicsPSO PSO_occlusionquery;
-GraphicsPSO PSO_impostor[RENDERPASS_COUNT];
-GraphicsPSO PSO_impostor_wire;
-GraphicsPSO PSO_captureimpostor_albedo;
-GraphicsPSO PSO_captureimpostor_normal;
-GraphicsPSO PSO_captureimpostor_surface;
-inline const GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
+PipelineState PSO_decal;
+PipelineState PSO_occlusionquery;
+PipelineState PSO_impostor[RENDERPASS_COUNT];
+PipelineState PSO_impostor_wire;
+PipelineState PSO_captureimpostor_albedo;
+PipelineState PSO_captureimpostor_normal;
+PipelineState PSO_captureimpostor_surface;
+inline const PipelineState* GetImpostorPSO(RENDERPASS renderPass)
 {
 	if (IsWireRender())
 	{
@@ -1094,13 +1094,13 @@ inline const GraphicsPSO* GetImpostorPSO(RENDERPASS renderPass)
 	return &PSO_impostor[renderPass];
 }
 
-GraphicsPSO PSO_deferredlight[LightComponent::LIGHTTYPE_COUNT];
-GraphicsPSO PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
-GraphicsPSO PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
-GraphicsPSO PSO_enviromentallight;
+PipelineState PSO_deferredlight[LightComponent::LIGHTTYPE_COUNT];
+PipelineState PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
+PipelineState PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
+PipelineState PSO_enviromentallight;
 
-GraphicsPSO PSO_renderlightmap_indirect;
-GraphicsPSO PSO_renderlightmap_direct;
+PipelineState PSO_renderlightmap_indirect;
+PipelineState PSO_renderlightmap_direct;
 
 enum SKYRENDERING
 {
@@ -1111,7 +1111,7 @@ enum SKYRENDERING
 	SKYRENDERING_ENVMAPCAPTURE_DYNAMIC,
 	SKYRENDERING_COUNT
 };
-GraphicsPSO PSO_sky[SKYRENDERING_COUNT];
+PipelineState PSO_sky[SKYRENDERING_COUNT];
 
 enum DEBUGRENDERING
 {
@@ -1126,7 +1126,7 @@ enum DEBUGRENDERING
 	DEBUGRENDERING_RAYTRACE_BVH,
 	DEBUGRENDERING_COUNT
 };
-GraphicsPSO PSO_debug[DEBUGRENDERING_COUNT];
+PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
 enum TILEDLIGHTING_TYPE
 {
@@ -1146,8 +1146,7 @@ enum TILEDLIGHTING_DEBUG
 	TILEDLIGHTING_DEBUG_ENABLED,
 	TILEDLIGHTING_DEBUG_COUNT
 };
-ComputePSO CPSO_tiledlighting[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT];
-ComputePSO CPSO[CSTYPE_LAST];
+const ComputeShader* tiledLightingCS[TILEDLIGHTING_TYPE_COUNT][TILEDLIGHTING_CULLING_COUNT][TILEDLIGHTING_DEBUG_COUNT] = {};
 
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -1330,52 +1329,52 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const FrameCulling& culling, const A
 	return cb;
 }
 
-void BindConstantBuffers(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
+void BindConstantBuffers(SHADERSTAGE stage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), threadID);
-	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), threadID);
-	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), threadID);
+	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), cmd);
+	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), cmd);
+	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_API], CB_GETBINDSLOT(APICB), cmd);
 }
-void BindShadowmaps(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
+void BindShadowmaps(SHADERSTAGE stage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindResource(stage, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, threadID);
-	device->BindResource(stage, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, threadID);
+	device->BindResource(stage, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
+	device->BindResource(stage, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
 	if (GetTransparentShadowsEnabled())
 	{
-		device->BindResource(stage, &shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, threadID);
+		device->BindResource(stage, &shadowMapArray_Transparent, TEXSLOT_SHADOWARRAY_TRANSPARENT, cmd);
 	}
 }
-void BindEnvironmentTextures(SHADERSTAGE stage, GRAPHICSTHREAD threadID)
+void BindEnvironmentTextures(SHADERSTAGE stage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindResource(stage, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
-	device->BindResource(stage, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, threadID);
-	device->BindResource(stage, textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+	device->BindResource(stage, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(stage, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(stage, textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
 
 	if (enviroMap != nullptr)
 	{
-		device->BindResource(stage, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+		device->BindResource(stage, enviroMap, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 }
 
-void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT renderTypeFlags, GRAPHICSTHREAD threadID, bool tessellation = false)
+void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT renderTypeFlags, CommandList cmd, bool tessellation = false)
 {
 	if (!renderQueue.empty())
 	{
 		GraphicsDevice* device = GetDevice();
 		const Scene& scene = GetScene();
 
-		device->EventBegin("RenderMeshes", threadID);
+		device->EventBegin("RenderMeshes", cmd);
 
 		tessellation = tessellation && device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 		if (tessellation)
 		{
-			BindConstantBuffers(DS, threadID);
+			BindConstantBuffers(DS, cmd);
 		}
 
 		struct InstBuf
@@ -1410,7 +1409,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const UINT instanceDataSize = advancedVBRequest ? sizeof(InstBuf) : sizeof(Instance);
 		const size_t alloc_size = renderQueue.batchCount * instanceDataSize;
-		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, threadID);
+		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 		// Purpose of InstancedBatch:
 		//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
@@ -1438,7 +1437,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			{
 				prevMeshIndex = meshIndex;
 				instancedBatchCount++;
-				InstancedBatch* instancedBatch = (InstancedBatch*)frameAllocators[threadID].allocate(sizeof(InstancedBatch));
+				InstancedBatch* instancedBatch = (InstancedBatch*)frameAllocators[cmd].allocate(sizeof(InstancedBatch));
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
 				instancedBatch->dataOffset = instances.offset + batchID * instanceDataSize;
@@ -1509,8 +1508,8 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			{
 				TessellationCB tessCB;
 				tessCB.g_f4TessFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, threadID);
-				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
+				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
 			}
 
 			if (forwardLightmaskRequest)
@@ -1518,11 +1517,11 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				const CameraComponent* camera = renderQueue.camera == nullptr ? &GetCamera() : renderQueue.camera;
 				const FrameCulling& culling = frameCullings.at(camera);
 				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, instancedBatch.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 			}
 
-			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
 
 			enum class BOUNDVERTEXBUFFERTYPE
 			{
@@ -1541,7 +1540,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				}
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-				const GraphicsPSO* pso = nullptr;
+				const PipelineState* pso = nullptr;
 				if (material.IsCustomShader())
 				{
 					pso = GetCustomShaderPSO(renderPass, renderTypeFlags, material.GetCustomShaderID());
@@ -1636,7 +1635,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							0,
 							instancedBatch.dataOffset
 						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 					}
 					break;
 					case BOUNDVERTEXBUFFERTYPE::POSITION_TEXCOORD:
@@ -1659,7 +1658,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							0,
 							instancedBatch.dataOffset
 						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 					}
 					break;
 					case BOUNDVERTEXBUFFERTYPE::EVERYTHING:
@@ -1691,7 +1690,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 							0,
 							instancedBatch.dataOffset
 						};
-						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+						device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 					}
 					break;
 					default:
@@ -1701,20 +1700,20 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 				}
 				boundVBType_Prev = boundVBType;
 
-				SetAlphaRef(material.alphaRef, threadID);
+				SetAlphaRef(material.alphaRef, cmd);
 
-				device->BindStencilRef(material.GetStencilRef(), threadID);
-				device->BindGraphicsPSO(pso, threadID);
+				device->BindStencilRef(material.GetStencilRef(), cmd);
+				device->BindPipelineState(pso, cmd);
 
-				device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+				device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
 
 				if (easyTextureBind)
 				{
 					const GPUResource* res[] = {
 						material.GetBaseColorMap(),
 					};
-					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 				}
 				else
 				{
@@ -1726,7 +1725,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 						material.GetEmissiveMap(),
 						material.GetOcclusionMap(),
 					};
-					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 				}
 
 				if (tessellatorRequested)
@@ -1734,32 +1733,32 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 					const GPUResource* res[] = {
 						material.GetDisplacementMap(),
 					};
-					device->BindResources(DS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-					device->BindConstantBuffer(DS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+					device->BindResources(DS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+					device->BindConstantBuffer(DS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
 				}
 
-				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, threadID);
+				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 			}
 		}
 
-		ResetAlphaRef(threadID);
+		ResetAlphaRef(cmd);
 
-		frameAllocators[threadID].free(sizeof(InstancedBatch) * instancedBatchCount);
+		frameAllocators[cmd].free(sizeof(InstancedBatch) * instancedBatchCount);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
 
-void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID)
+void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, CommandList cmd)
 {
 	const Scene& scene = GetScene();
-	const GraphicsPSO* impostorRequest = GetImpostorPSO(renderPass);
+	const PipelineState* impostorRequest = GetImpostorPSO(renderPass);
 
 	if (scene.impostors.GetCount() > 0 && impostorRequest != nullptr)
 	{
 		GraphicsDevice* device = GetDevice();
 
-		device->EventBegin("RenderImpostors", threadID);
+		device->EventBegin("RenderImpostors", cmd);
 
 		UINT instanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
@@ -1779,7 +1778,7 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPH
 		// Pre-allocate space for all the instances in GPU-buffer:
 		const UINT instanceDataSize = sizeof(Instance);
 		const size_t alloc_size = instanceCount * instanceDataSize;
-		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, threadID);
+		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 		UINT drawableInstanceCount = 0;
 		for (size_t impostorID = 0; impostorID < scene.impostors.GetCount(); ++impostorID)
@@ -1808,21 +1807,21 @@ void RenderImpostors(const CameraComponent& camera, RENDERPASS renderPass, GRAPH
 			}
 		}
 
-		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
-		device->BindGraphicsPSO(impostorRequest, threadID);
-		SetAlphaRef(0.75f, threadID);
+		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
+		device->BindPipelineState(impostorRequest, cmd);
+		SetAlphaRef(0.75f, cmd);
 
 		MiscCB cb;
 		cb.g_xColor.x = (float)instances.offset;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND0, threadID);
-		device->BindResource(PS, textures[TEXTYPE_2D_IMPOSTORARRAY], TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(PS, textures[TEXTYPE_2D_IMPOSTORARRAY], TEXSLOT_ONDEMAND0, cmd);
 
-		device->Draw(drawableInstanceCount * 6, 0, threadID);
+		device->Draw(drawableInstanceCount * 6, 0, cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
 
@@ -2161,7 +2160,7 @@ void LoadShaders()
 											return; // if no job, this must be continue!!
 										}
 
-										GraphicsPSODesc desc;
+										PipelineStateDesc desc;
 										desc.vs = vertexShaders[realVS];
 										desc.il = &vertexLayouts[realVL];
 										desc.hs = hullShaders[realHS];
@@ -2328,7 +2327,7 @@ void LoadShaders()
 											desc.pt = TRIANGLELIST;
 										}
 
-										device->CreateGraphicsPSO(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
+										device->CreatePipelineState(&desc, &PSO_object[renderPass][blendMode][doublesided][tessellation][alphatest][normalmap][planarreflection][pom]);
 									});
 								}
 							}
@@ -2347,7 +2346,7 @@ void LoadShaders()
 		VSTYPES realVS = GetVSTYPE(RENDERPASS_FORWARD, false, false, true);
 		VLTYPES realVL = GetVLTYPE(RENDERPASS_FORWARD, false, false, true);
 
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[realVS];
 		desc.il = &vertexLayouts[realVL];
 		desc.ps = pixelShaders[PSTYPE_OBJECT_HOLOGRAM];
@@ -2361,7 +2360,7 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_object_hologram);
+		device->CreatePipelineState(&desc, &PSO_object_hologram);
 
 		CustomShader customShader;
 		customShader.name = "Hologram";
@@ -2372,7 +2371,7 @@ void LoadShaders()
 
 
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_WATER];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -2384,10 +2383,10 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_full;
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_FORWARD_WATER];
-		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
+		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_FORWARD]);
 
 		desc.ps = pixelShaders[PSTYPE_OBJECT_TILEDFORWARD_WATER];
-		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_TILEDFORWARD]);
+		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_TILEDFORWARD]);
 
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.rs = &rasterizers[RSTYPE_SHADOW];
@@ -2395,10 +2394,10 @@ void LoadShaders()
 		desc.vs = vertexShaders[VSTYPE_SHADOW_TRANSPARENT];
 		desc.ps = pixelShaders[PSTYPE_SHADOW_WATER];
 
-		device->CreateGraphicsPSO(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
+		device->CreatePipelineState(&desc, &PSO_object_water[RENDERPASS_SHADOW]);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_OBJECT_SIMPLE];
 		desc.ps = pixelShaders[PSTYPE_OBJECT_SIMPLEST];
 		desc.rs = &rasterizers[RSTYPE_WIRE];
@@ -2410,10 +2409,10 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_object_wire);
+		device->CreatePipelineState(&desc, &PSO_object_wire);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_DECAL];
 		desc.ps = pixelShaders[PSTYPE_DECAL];
 		desc.rs = &rasterizers[RSTYPE_FRONT];
@@ -2425,10 +2424,10 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_gbuffer_0;
 		//desc.RTFormats[1] = RTFormat_gbuffer_1;
 
-		device->CreateGraphicsPSO(&desc, &PSO_decal);
+		device->CreatePipelineState(&desc, &PSO_decal);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_CUBE];
 		desc.rs = &rasterizers[RSTYPE_OCCLUDEE];
 		desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
@@ -2437,7 +2436,7 @@ void LoadShaders()
 
 		desc.DSFormat = DSFormat_small;
 
-		device->CreateGraphicsPSO(&desc, &PSO_occlusionquery);
+		device->CreatePipelineState(&desc, &PSO_occlusionquery);
 	});
 	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [device](wiJobDispatchArgs args) {
 		const bool impostorRequest =
@@ -2450,7 +2449,7 @@ void LoadShaders()
 			return; // if no job, this must be continue!!
 		}
 
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED]; // well, we don't need double sided impostors, but might be helpful if something breaks
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[args.jobIndex == RENDERPASS_TILEDFORWARD ? DSSTYPE_DEPTHREADEQUAL : DSSTYPE_DEFAULT];
@@ -2493,10 +2492,10 @@ void LoadShaders()
 		}
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_impostor[args.jobIndex]);
+		device->CreatePipelineState(&desc, &PSO_impostor[args.jobIndex]);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_IMPOSTOR];
 		desc.ps = pixelShaders[PSTYPE_IMPOSTOR_WIRE];
 		desc.rs = &rasterizers[RSTYPE_WIRE];
@@ -2508,10 +2507,10 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_hdr;
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_impostor_wire);
+		device->CreatePipelineState(&desc, &PSO_impostor_wire);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_OBJECT_COMMON];
 		desc.rs = &rasterizers[RSTYPE_FRONT];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -2523,17 +2522,17 @@ void LoadShaders()
 		desc.DSFormat = DSFormat_small;
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
-		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_albedo);
+		device->CreatePipelineState(&desc, &PSO_captureimpostor_albedo);
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_NORMAL];
-		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_normal);
+		device->CreatePipelineState(&desc, &PSO_captureimpostor_normal);
 
 		desc.ps = pixelShaders[PSTYPE_CAPTUREIMPOSTOR_SURFACE];
-		device->CreateGraphicsPSO(&desc, &PSO_captureimpostor_surface);
+		device->CreatePipelineState(&desc, &PSO_captureimpostor_surface);
 	});
 
 	wiJobSystem::Dispatch(ctx, LightComponent::LIGHTTYPE_COUNT, 1, [device](wiJobDispatchArgs args) {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 
 		// deferred lights:
 
@@ -2585,7 +2584,7 @@ void LoadShaders()
 		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_deferredlight[args.jobIndex]);
+		device->CreatePipelineState(&desc, &PSO_deferredlight[args.jobIndex]);
 
 
 
@@ -2634,7 +2633,7 @@ void LoadShaders()
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = DSFormat_full;
 
-			device->CreateGraphicsPSO(&desc, &PSO_lightvisualizer[args.jobIndex]);
+			device->CreatePipelineState(&desc, &PSO_lightvisualizer[args.jobIndex]);
 		}
 
 
@@ -2665,13 +2664,13 @@ void LoadShaders()
 			desc.RTFormats[0] = RTFormat_hdr;
 			desc.DSFormat = FORMAT_UNKNOWN;
 
-			device->CreateGraphicsPSO(&desc, &PSO_volumetriclight[args.jobIndex]);
+			device->CreatePipelineState(&desc, &PSO_volumetriclight[args.jobIndex]);
 		}
 
 
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 		desc.ps = pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
 		desc.rs = &rasterizers[RSTYPE_BACK];
@@ -2683,10 +2682,10 @@ void LoadShaders()
 		desc.RTFormats[1] = RTFormat_deferred_lightbuffer;
 		desc.DSFormat = DSFormat_full;
 
-		device->CreateGraphicsPSO(&desc, &PSO_enviromentallight);
+		device->CreatePipelineState(&desc, &PSO_enviromentallight);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT];
@@ -2698,10 +2697,10 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
-		device->CreateGraphicsPSO(&desc, &PSO_renderlightmap_indirect);
+		device->CreatePipelineState(&desc, &PSO_renderlightmap_indirect);
 	});
 	wiJobSystem::Execute(ctx, [device] {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
 		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT];
@@ -2713,10 +2712,10 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
-		device->CreateGraphicsPSO(&desc, &PSO_renderlightmap_direct);
+		device->CreatePipelineState(&desc, &PSO_renderlightmap_direct);
 	});
 	wiJobSystem::Dispatch(ctx, SKYRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_SKY];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 
@@ -2768,10 +2767,10 @@ void LoadShaders()
 			break;
 		}
 
-		device->CreateGraphicsPSO(&desc, &PSO_sky[args.jobIndex]);
+		device->CreatePipelineState(&desc, &PSO_sky[args.jobIndex]);
 	});
 	wiJobSystem::Dispatch(ctx, DEBUGRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 
 		desc.numRTs = 1;
 		desc.RTFormats[0] = RTFormat_hdr;
@@ -2859,7 +2858,7 @@ void LoadShaders()
 			break;
 		}
 
-		HRESULT hr = device->CreateGraphicsPSO(&desc, &PSO_debug[args.jobIndex]);
+		HRESULT hr = device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		assert(SUCCEEDED(hr));
 	});
 
@@ -2886,20 +2885,11 @@ void LoadShaders()
 					}
 					name += ".cso";
 
-					ComputePSODesc desc;
-					desc.cs = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
-
-					device->CreateComputePSO(&desc, &CPSO_tiledlighting[i][j][k]);
+					tiledLightingCS[i][j][k] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + name, wiResourceManager::COMPUTESHADER));
 				});
 			}
 		}
 	}
-
-	wiJobSystem::Dispatch(ctx, CSTYPE_LAST, 1, [device](wiJobDispatchArgs args) {
-		ComputePSODesc desc;
-		desc.cs = computeShaders[args.jobIndex];
-		device->CreateComputePSO(&desc, &CPSO[args.jobIndex]);
-	});
 
 
 	wiJobSystem::Wait(ctx);
@@ -3622,7 +3612,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	// Perform culling and obtain closest reflector:
 	requestReflectionRendering = false;
-	auto range = wiProfiler::BeginRange("Frustum Culling", wiProfiler::DOMAIN_CPU);
+	auto range = wiProfiler::BeginRangeCPU("Frustum Culling");
 	{
 		for (auto& x : frameCullings)
 		{
@@ -3866,18 +3856,18 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 
 	wiJobSystem::Wait(ctx);
 }
-void UpdateRenderData(GRAPHICSTHREAD threadID)
+void UpdateRenderData(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
-	BindCommonResources(threadID);
+	BindCommonResources(cmd);
 
 	// Process deferred MIP generation:
 	deferredMIPGenLock.lock();
 	for (auto& it : deferredMIPGens)
 	{
-		GenerateMipChain(it, MIPGENFILTER_LINEAR, threadID);
+		GenerateMipChain(it, MIPGENFILTER_LINEAR, cmd);
 	}
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -3911,7 +3901,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		materialGPUData.g_xMat_occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
 		materialGPUData.g_xMat_occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;
 
-		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, threadID);
+		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, cmd);
 	}
 
 
@@ -3920,8 +3910,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
-		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[threadID].allocate(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
-		XMMATRIX* matrixArray = (XMMATRIX*)frameAllocators[threadID].allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
+		ShaderEntityType* entityArray = (ShaderEntityType*)frameAllocators[cmd].allocate(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
+		XMMATRIX* matrixArray = (XMMATRIX*)frameAllocators[cmd].allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 
 		const XMMATRIX viewMatrix = GetCamera().GetView();
 
@@ -4124,20 +4114,20 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		entityArrayCount_ForceFields = entityCounter - entityArrayOffset_ForceFields;
 
 		// Issue GPU entity array update:
-		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, threadID, sizeof(ShaderEntityType)*entityCounter);
-		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, threadID, sizeof(XMMATRIX)*matrixCounter);
+		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, cmd, sizeof(ShaderEntityType)*entityCounter);
+		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, cmd, sizeof(XMMATRIX)*matrixCounter);
 
 		// Temporary array for GPU entities can be freed now:
-		frameAllocators[threadID].free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
-		frameAllocators[threadID].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
+		frameAllocators[cmd].free(sizeof(ShaderEntityType)*SHADER_ENTITY_COUNT);
+		frameAllocators[cmd].free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
-	UpdateFrameCB(threadID);
+	UpdateFrameCB(cmd);
 
 	GetPrevCamera() = GetCamera();
 
-	auto range = wiProfiler::BeginRange("Skinning", wiProfiler::DOMAIN_GPU, threadID);
-	device->EventBegin("Skinning", threadID);
+	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
+	device->EventBegin("Skinning", cmd);
 	{
 		bool streamOutSetUp = false;
 		CSTYPES lastCS = CSTYPE_SKINNING_LDS;
@@ -4160,8 +4150,8 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 					const UINT strides[] = {
 						0,0,0,0,0,0,0,0
 					};
-					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-					device->BindComputePSO(&CPSO[CSTYPE_SKINNING_LDS], threadID);
+					device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+					device->BindComputeShader(computeShaders[CSTYPE_SKINNING_LDS], cmd);
 				}
 
 				CSTYPES targetCS = CSTYPE_SKINNING_LDS;
@@ -4175,12 +4165,12 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				if (targetCS != lastCS)
 				{
 					lastCS = targetCS;
-					device->BindComputePSO(&CPSO[targetCS], threadID);
+					device->BindComputeShader(computeShaders[targetCS], cmd);
 				}
 
 				// Upload bones for skinning to shader
-				device->UpdateBuffer(armature.boneBuffer.get(), armature.boneData.data(), threadID, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
-				device->BindResource(CS, armature.boneBuffer.get(), SKINNINGSLOT_IN_BONEBUFFER, threadID);
+				device->UpdateBuffer(armature.boneBuffer.get(), armature.boneData.data(), cmd, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
+				device->BindResource(CS, armature.boneBuffer.get(), SKINNINGSLOT_IN_BONEBUFFER, cmd);
 
 				// Do the skinning
 				GPUResource* vbs[] = {
@@ -4191,23 +4181,23 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 					mesh.streamoutBuffer_POS.get(),
 				};
 
-				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), threadID);
-				device->BindUAVs(CS, so, 0, ARRAYSIZE(so), threadID);
+				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), cmd);
+				device->BindUAVs(CS, so, 0, ARRAYSIZE(so), cmd);
 
-				device->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, threadID);
-				device->UAVBarrier(so, ARRAYSIZE(so), threadID); // todo: defer, to gain from async compute
+				device->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, cmd);
+				device->UAVBarrier(so, ARRAYSIZE(so), cmd); // todo: defer, to gain from async compute
 			}
 
 		}
 
 		if (streamOutSetUp)
 		{
-			device->UnbindUAVs(0, 2, threadID);
-			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, threadID);
+			device->UnbindUAVs(0, 2, cmd);
+			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, cmd);
 		}
 
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 	wiProfiler::EndRange(range); // skinning
 
 	// Update soft body vertex buffers:
@@ -4218,7 +4208,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 
 		// Copy new simulation data to vertex buffer
 		const size_t vb_size = sizeof(MeshComponent::Vertex_POS) * mesh.vertex_positions.size();
-		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)frameAllocators[threadID].allocate(vb_size);
+		MeshComponent::Vertex_POS* vb = (MeshComponent::Vertex_POS*)frameAllocators[cmd].allocate(vb_size);
 
 		if (mesh.vertex_normals.empty())
 		{
@@ -4235,9 +4225,9 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 			}
 		}
 
-		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, threadID, (UINT)vb_size);
+		device->UpdateBuffer(mesh.vertexBuffer_POS.get(), vb, cmd, (UINT)vb_size);
 
-		frameAllocators[threadID].free(vb_size);
+		frameAllocators[cmd].free(vb_size);
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -4249,7 +4239,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		const MaterialComponent& material = *scene.materials.GetComponent(entity);
 		const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);
 
-		emitter.UpdateGPU(transform, material, mesh, threadID);
+		emitter.UpdateGPU(transform, material, mesh, cmd);
 	}
 
 	// Hair particle systems GPU simulation:
@@ -4266,7 +4256,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 				Entity entity = scene.hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *scene.materials.GetComponent(entity);
 
-				hair.UpdateGPU(*mesh, material, threadID);
+				hair.UpdateGPU(*mesh, material, cmd);
 			}
 		}
 	}
@@ -4274,7 +4264,7 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 	// Compute water simulation:
 	if (ocean != nullptr)
 	{
-		ocean->UpdateDisplacementMap(scene.weather, renderTime, threadID);
+		ocean->UpdateDisplacementMap(scene.weather, renderTime, cmd);
 	}
 
 	// Generate cloud layer:
@@ -4298,15 +4288,15 @@ void UpdateRenderData(GRAPHICSTHREAD threadID)
 		}
 
 		float cloudPhase = renderTime * scene.weather.cloudSpeed;
-		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, threadID);
+		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, cmd);
 	}
 
-	RefreshDecalAtlas(threadID);
-	RefreshLightmapAtlas(threadID);
-	RefreshEnvProbes(threadID);
-	RefreshImpostors(threadID);
+	RefreshDecalAtlas(cmd);
+	RefreshLightmapAtlas(cmd);
+	RefreshEnvProbes(cmd);
+	RefreshImpostors(cmd);
 }
-void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
+void OcclusionCulling_Render(CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -4316,15 +4306,15 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&GetCamera());
 
-	auto range = wiProfiler::BeginRange("Occlusion Culling Render", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRangeGPU("Occlusion Culling Render", cmd);
 
 	int queryID = 0;
 
 	if (!culling.culledObjects.empty())
 	{
-		device->EventBegin("Occlusion Culling Render", threadID);
+		device->EventBegin("Occlusion Culling Render", cmd);
 
-		device->BindGraphicsPSO(&PSO_occlusionquery, threadID);
+		device->BindPipelineState(&PSO_occlusionquery, cmd);
 
 		// TODO: This is not const, so not thread safe!
 		Scene& scene = GetScene();
@@ -4369,17 +4359,17 @@ void OcclusionCulling_Render(GRAPHICSTHREAD threadID)
 
 				// previous frame view*projection because these are drawn against the previous depth buffer:
 				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*GetPrevCamera().GetViewProjection())); // todo: obb
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, threadID);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 				// render bounding box to later read the occlusion status
-				device->QueryBegin(query, threadID);
-				device->Draw(14, 0, threadID);
-				device->QueryEnd(query, threadID);
+				device->QueryBegin(query, cmd);
+				device->Draw(14, 0, cmd);
+				device->QueryEnd(query, cmd);
 			}
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	wiProfiler::EndRange(range); // Occlusion Culling Render
@@ -4391,7 +4381,7 @@ void OcclusionCulling_Read()
 		return;
 	}
 
-	auto range = wiProfiler::BeginRange("Occlusion Culling Read", wiProfiler::DOMAIN_CPU);
+	auto range = wiProfiler::BeginRangeCPU("Occlusion Culling Read");
 
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&GetCamera());
@@ -4444,7 +4434,7 @@ void EndFrame()
 {
 	OcclusionCulling_Read();
 
-	for (int i = 0; i < GRAPHICSTHREAD_COUNT; ++i)
+	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
 	{
 		frameAllocators[i].reset();
 	}
@@ -4473,18 +4463,18 @@ void ManageWaterRipples(){
 		)
 		waterRipples.pop_front();
 }
-void DrawWaterRipples(GRAPHICSTHREAD threadID)
+void DrawWaterRipples(CommandList cmd)
 {
-	GetDevice()->EventBegin("Water Ripples", threadID);
+	GetDevice()->EventBegin("Water Ripples", cmd);
 	for(wiSprite* i:waterRipples){
-		i->DrawNormal(threadID);
+		i->DrawNormal(cmd);
 	}
-	GetDevice()->EventEnd(threadID);
+	GetDevice()->EventEnd(cmd);
 }
 
 
 
-void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICSTHREAD threadID)
+void DrawSoftParticles(const CameraComponent& camera, bool distortion, CommandList cmd)
 {
 	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings.at(&camera);
@@ -4492,7 +4482,7 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
-	uint32_t* emitterSortingHashes = (uint32_t*)frameAllocators[threadID].allocate(sizeof(uint32_t) * emitterCount);
+	uint32_t* emitterSortingHashes = (uint32_t*)frameAllocators[cmd].allocate(sizeof(uint32_t) * emitterCount);
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = culling.culledEmitters[i];
@@ -4513,39 +4503,39 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, GRAPHICST
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
 		{
-			emitter.Draw(camera, material, threadID);
+			emitter.Draw(camera, material, cmd);
 		}
 		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
 		{
-			emitter.Draw(camera, material, threadID);
+			emitter.Draw(camera, material, cmd);
 		}
 	}
 
-	frameAllocators[threadID].free(sizeof(uint32_t) * emitterCount);
+	frameAllocators[cmd].free(sizeof(uint32_t) * emitterCount);
 
 }
-void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawLights(const CameraComponent& camera, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&camera);
 
 	const Scene& scene = GetScene();
 
-	device->EventBegin("Light Render", threadID);
-	auto range = wiProfiler::BeginRange("Light Render", wiProfiler::DOMAIN_GPU, threadID);
+	device->EventBegin("Light Render", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Light Render", cmd);
 
-	BindShadowmaps(PS, threadID);
-	BindEnvironmentTextures(PS, threadID);
+	BindShadowmaps(PS, cmd);
+	BindEnvironmentTextures(PS, cmd);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
-		device->BindGraphicsPSO(&PSO_enviromentallight, threadID);
-		device->Draw(3, 0, threadID); // full screen triangle
+		device->BindPipelineState(&PSO_enviromentallight, cmd);
+		device->Draw(3, 0, cmd); // full screen triangle
 	}
 
 	for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 	{
-		device->BindGraphicsPSO(&PSO_deferredlight[type], threadID);
+		device->BindPipelineState(&PSO_deferredlight[type], cmd);
 
 		for (size_t i = 0; i < culling.culledLights.size(); ++i)
 		{
@@ -4564,11 +4554,11 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				{
 					MiscCB miscCb;
 					miscCb.g_xColor.x =  float(entityArrayOffset_Lights + i);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-					device->Draw(3, 0, threadID); // full screen triangle
+					device->Draw(3, 0, cmd); // full screen triangle
 				}
 				break;
 			case LightComponent::POINT:
@@ -4577,11 +4567,11 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 					float sca = light.GetRange() + 1;
 					XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-					device->Draw(240, 0, threadID); // icosphere
+					device->Draw(240, 0, cmd); // icosphere
 				}
 				break;
 			case LightComponent::SPOT:
@@ -4595,11 +4585,11 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 						camera.GetViewProjection()
 					));
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-					device->Draw(192, 0, threadID); // cone
+					device->Draw(192, 0, cmd); // cone
 				}
 				break;
 			}
@@ -4609,9 +4599,9 @@ void DrawLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	}
 
 	wiProfiler::EndRange(range);
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawLightVisualizers(const CameraComponent& camera, CommandList cmd)
 {
 	const FrameCulling& culling = frameCullings.at(&camera);
 
@@ -4620,17 +4610,17 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 		GraphicsDevice* device = GetDevice();
 		const Scene& scene = GetScene();
 
-		device->EventBegin("Light Visualizer Render", threadID);
+		device->EventBegin("Light Visualizer Render", cmd);
 
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), threadID);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&camera.rotationMatrix);
 
 
 		for (int type = LightComponent::POINT; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			device->BindGraphicsPSO(&PSO_lightvisualizer[type], threadID);
+			device->BindPipelineState(&PSO_lightvisualizer[type], cmd);
 
 			for (uint32_t lightIndex : culling.culledLights)
 			{
@@ -4652,9 +4642,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						));
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
 
-						device->Draw(108, 0, threadID); // circle
+						device->Draw(108, 0, cmd); // circle
 					}
 					else if (type == LightComponent::SPOT)
 					{
@@ -4666,9 +4656,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						));
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
 
-						device->Draw(192, 0, threadID); // cone
+						device->Draw(192, 0, cmd); // cone
 					}
 					else if (type == LightComponent::SPHERE)
 					{
@@ -4679,9 +4669,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
 
-						device->Draw(2880, 0, threadID); // uv-sphere
+						device->Draw(2880, 0, cmd); // uv-sphere
 					}
 					else if (type == LightComponent::DISC)
 					{
@@ -4692,9 +4682,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
 
-						device->Draw(108, 0, threadID); // circle
+						device->Draw(108, 0, cmd); // circle
 					}
 					else if (type == LightComponent::RECTANGLE)
 					{
@@ -4705,9 +4695,9 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
 
-						device->Draw(6, 0, threadID); // quad
+						device->Draw(6, 0, cmd); // quad
 					}
 					else if (type == LightComponent::TUBE)
 					{
@@ -4718,42 +4708,42 @@ void DrawLightVisualizers(const CameraComponent& camera, GRAPHICSTHREAD threadID
 							camera.GetViewProjection()
 						));
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
 
-						device->Draw(384, 0, threadID); // cylinder
+						device->Draw(384, 0, cmd); // cylinder
 					}
 				}
 			}
 
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 
 	}
 }
-void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawVolumeLights(const CameraComponent& camera, CommandList cmd)
 {
 	const FrameCulling& culling = frameCullings.at(&camera);
 
 	if (!culling.culledLights.empty())
 	{
 		GraphicsDevice* device = GetDevice();
-		device->EventBegin("Volumetric Light Render", threadID);
+		device->EventBegin("Volumetric Light Render", cmd);
 
-		BindShadowmaps(PS, threadID);
+		BindShadowmaps(PS, cmd);
 
 		const Scene& scene = GetScene();
 
 		for (int type = 0; type < LightComponent::LIGHTTYPE_COUNT; ++type)
 		{
-			const GraphicsPSO& pso = PSO_volumetriclight[type];
+			const PipelineState& pso = PSO_volumetriclight[type];
 
 			if (!pso.IsValid())
 			{
 				continue;
 			}
 
-			device->BindGraphicsPSO(&pso, threadID);
+			device->BindPipelineState(&pso, cmd);
 
 			for (size_t i = 0; i < culling.culledLights.size(); ++i)
 			{
@@ -4772,11 +4762,11 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-						device->Draw(3, 0, threadID); // full screen triangle
+						device->Draw(3, 0, cmd); // full screen triangle
 					}
 					break;
 					case LightComponent::POINT:
@@ -4785,11 +4775,11 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 						miscCb.g_xColor.x = float(entityArrayOffset_Lights + i);
 						float sca = light.GetRange() + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixTranspose(XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * camera.GetViewProjection()));
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-						device->Draw(240, 0, threadID); // icosphere
+						device->Draw(240, 0, cmd); // icosphere
 					}
 					break;
 					case LightComponent::SPOT:
@@ -4803,11 +4793,11 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							camera.GetViewProjection()
 						));
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-						device->Draw(192, 0, threadID); // cone
+						device->Draw(192, 0, cmd); // cone
 					}
 					break;
 					}
@@ -4817,12 +4807,12 @@ void DrawVolumeLights(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 
 }
-void DrawLensFlares(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawLensFlares(const CameraComponent& camera, CommandList cmd)
 {
 	if (IsWireRender())
 		return;
@@ -4856,7 +4846,7 @@ void DrawLensFlares(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			{
 				// Get the screen position of the flare:
 				XMVECTOR flarePos = XMVector3Project(POS, 0.f, 0.f, (float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.0f, 1.0f, camera.GetProjection(), camera.GetView(), XMMatrixIdentity());
-				wiLensFlare::Draw(threadID, flarePos, light.lensFlareRimTextures);
+				wiLensFlare::Draw(cmd, flarePos, light.lensFlareRimTextures);
 			}
 
 		}
@@ -4938,7 +4928,7 @@ void SetShadowPropsCube(int resolution, int count)
 	}
 
 }
-void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, uint32_t layerMask)
+void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t layerMask)
 {
 	if (IsWireRender())
 		return;
@@ -4948,12 +4938,12 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 	if (!culling.culledLights.empty())
 	{
-		device->EventBegin("ShadowMap Render", threadID);
-		auto range = wiProfiler::BeginRange("Shadow Rendering", wiProfiler::DOMAIN_GPU, threadID);
+		device->EventBegin("ShadowMap Render", cmd);
+		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", cmd);
 
-		BindCommonResources(threadID);
-		BindConstantBuffers(VS, threadID);
-		BindConstantBuffers(PS, threadID);
+		BindCommonResources(cmd);
+		BindConstantBuffers(VS, cmd);
+		BindConstantBuffers(PS, cmd);
 
 
 		ViewPort vp;
@@ -4964,7 +4954,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 		const Scene& scene = GetScene();
 
-		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, threadID);
+		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
 		uint32_t shadowCounter_2D = 0;
 		uint32_t shadowCounter_Cube = 0;
@@ -4981,7 +4971,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 				vp.Height = (float)SHADOWRES_2D;
 				vp.MinDepth = 0.0f;
 				vp.MaxDepth = 1.0f;
-				device->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, cmd);
 				break;
 			}
 			break;
@@ -4997,9 +4987,9 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 				vp.Height = (float)SHADOWRES_CUBE;
 				vp.MinDepth = 0.0f;
 				vp.MaxDepth = 1.0f;
-				device->BindViewports(1, &vp, threadID);
+				device->BindViewports(1, &vp, cmd);
 
-				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
 				break;
 			}
 			break;
@@ -5045,7 +5035,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 										continue;
 									}
 
-									RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+									RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 									size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 									batch->Create(meshIndex, i, 0);
 									renderQueue.add(batch);
@@ -5061,16 +5051,16 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						{
 							CameraCB cb;
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
-							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-							device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index + cascade);
+							device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, cmd, light.shadowMap_index + cascade);
 
 							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-							device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index + cascade);
+							device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, cmd, light.shadowMap_index + cascade);
 
 							// render opaque shadowmap:
-							device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, threadID);
+							device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, cmd, light.shadowMap_index + cascade);
+							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
@@ -5078,10 +5068,10 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 								const Texture2D* rts[] = {
 									&shadowMapArray_Transparent
 								};
-								device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, threadID, light.shadowMap_index + cascade);
-								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+								device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, cmd, light.shadowMap_index + cascade);
+								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 							}
-							frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+							frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
 
 					}
@@ -5113,7 +5103,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 									continue;
 								}
 
-								RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+								RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
 								renderQueue.add(batch);
@@ -5129,16 +5119,16 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					{
 						CameraCB cb;
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
-						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-						device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, cmd, light.shadowMap_index);
 
 						// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-						device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, threadID, light.shadowMap_index);
+						device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, cmd, light.shadowMap_index);
 
 						// render opaque shadowmap:
-						device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, threadID, light.shadowMap_index);
-						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, threadID);
+						device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, cmd, light.shadowMap_index);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
@@ -5146,10 +5136,10 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 							const Texture2D* rts[] = {
 								&shadowMapArray_Transparent
 							};
-							device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, threadID, light.shadowMap_index);
-							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID);
+							device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, cmd, light.shadowMap_index);
+							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
-						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+						frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
 
 				}
@@ -5182,7 +5172,7 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 									continue;
 								}
 
-								RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+								RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 								size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 								batch->Create(meshIndex, i, 0);
 								renderQueue.add(batch);
@@ -5191,14 +5181,14 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 					}
 					if (!renderQueue.empty())
 					{
-						device->BindRenderTargets(0, nullptr, &shadowMapArray_Cube, threadID, light.shadowMap_index);
-						device->ClearDepthStencil(&shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, threadID, light.shadowMap_index);
+						device->BindRenderTargets(0, nullptr, &shadowMapArray_Cube, cmd, light.shadowMap_index);
+						device->ClearDepthStencil(&shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, cmd, light.shadowMap_index);
 
 						MiscCB miscCb;
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, threadID);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
+						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 						const float zNearP = 0.1f;
 						const float zFarP = std::max(1.0f, light.GetRange());
@@ -5217,11 +5207,11 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 						{
 							XMStoreFloat4x4(&cb.xCubeShadowVP[shcam], cameras[shcam].getVP());
 						}
-						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
+						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
 
-						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, threadID);
+						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd);
 
-						frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+						frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
 
 				}
@@ -5231,36 +5221,36 @@ void DrawForShadowMap(const CameraComponent& camera, GRAPHICSTHREAD threadID, ui
 
 		}
 
-		device->BindRenderTargets(0, nullptr, nullptr, threadID);
+		device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 
 		wiProfiler::EndRange(range); // Shadow Rendering
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
 
-void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD threadID, RENDERPASS renderPass, bool grass, bool occlusionCulling)
+void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd, RENDERPASS renderPass, bool grass, bool occlusionCulling)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings.at(&camera);
 
-	device->EventBegin("DrawScene", threadID);
+	device->EventBegin("DrawScene", cmd);
 
-	BindCommonResources(threadID);
-	BindShadowmaps(PS, threadID);
-	BindEnvironmentTextures(PS, threadID);
-	BindConstantBuffers(VS, threadID);
-	BindConstantBuffers(PS, threadID);
+	BindCommonResources(cmd);
+	BindShadowmaps(PS, cmd);
+	BindEnvironmentTextures(PS, cmd);
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
 
-	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
+	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, threadID);
+		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
 		if (decalAtlas.IsValid())
 		{
-			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
+			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
 		}
 	}
 
@@ -5269,7 +5259,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 		if (GetAlphaCompositionEnabled())
 		{
 			// cut off most transparent areas
-			SetAlphaRef(0.25f, threadID);
+			SetAlphaRef(0.25f, cmd);
 		}
 
 		for (uint32_t hairIndex : culling.culledHairs)
@@ -5284,16 +5274,16 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 				if (renderPass == RENDERPASS_FORWARD)
 				{
 					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 				}
 
-				hair.Draw(camera, material, renderPass, false, threadID);
+				hair.Draw(camera, material, renderPass, false, cmd);
 			}
 		}
 	}
 
-	RenderImpostors(camera, renderPass, threadID);
+	RenderImpostors(camera, renderPass, cmd);
 
 	RenderQueue renderQueue;
 	renderQueue.camera = &camera;
@@ -5311,7 +5301,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 			{
 				continue;
 			}
-			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+			RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 			batch->Create(meshIndex, instanceIndex, distance);
 			renderQueue.add(batch);
@@ -5320,43 +5310,43 @@ void DrawScene(const CameraComponent& camera, bool tessellation, GRAPHICSTHREAD 
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
-		RenderMeshes(renderQueue, renderPass, RENDERTYPE_OPAQUE, threadID, tessellation);
+		RenderMeshes(renderQueue, renderPass, RENDERTYPE_OPAQUE, cmd, tessellation);
 
-		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+		frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 
 }
 
-void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass, GRAPHICSTHREAD threadID, bool grass, bool occlusionCulling)
+void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings.at(&camera);
 
-	device->EventBegin("DrawScene_Transparent", threadID);
+	device->EventBegin("DrawScene_Transparent", cmd);
 
-	BindCommonResources(threadID);
-	BindShadowmaps(PS, threadID);
-	BindEnvironmentTextures(PS, threadID);
-	BindConstantBuffers(VS, threadID);
-	BindConstantBuffers(PS, threadID);
+	BindCommonResources(cmd);
+	BindShadowmaps(PS, cmd);
+	BindEnvironmentTextures(PS, cmd);
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
 
-	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, threadID);
+	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
-		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, threadID);
+		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
 		if (decalAtlas.IsValid())
 		{
-			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, threadID);
+			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
 		}
 	}
 
 	if (ocean != nullptr)
 	{
-		ocean->Render(camera, scene.weather, renderTime, threadID);
+		ocean->Render(camera, scene.weather, renderTime, cmd);
 	}
 
 	if (grass && GetAlphaCompositionEnabled())
@@ -5375,11 +5365,11 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 				if (renderPass == RENDERPASS_FORWARD)
 				{
 					ForwardEntityMaskCB cb = ForwardEntityCullingCPU(culling, hair.aabb, renderPass);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, threadID);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), threadID);
+					device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 				}
 
-				hair.Draw(camera, material, renderPass, true, threadID);
+				hair.Draw(camera, material, renderPass, true, cmd);
 			}
 		}
 	}
@@ -5395,7 +5385,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 
 		if (object.IsRenderable() && object.GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 		{
-			RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+			RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 			size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 			batch->Create(meshIndex, instanceIndex, wiMath::DistanceEstimated(camera.Eye, object.center));
 			renderQueue.add(batch);
@@ -5404,31 +5394,31 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
-		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, threadID, false);
+		RenderMeshes(renderQueue, renderPass, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false);
 
-		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+		frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
-void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
-	device->EventBegin("DrawDebugWorld", threadID);
+	device->EventBegin("DrawDebugWorld", cmd);
 
-	BindCommonResources(threadID);
-	BindConstantBuffers(VS, threadID);
-	BindConstantBuffers(PS, threadID);
+	BindCommonResources(cmd);
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
 
 	if (debugPartitionTree)
 	{
 		// Actually, there is no SPTree any more, so this will just render all aabbs...
-		device->EventBegin("DebugPartitionTree", threadID);
+		device->EventBegin("DebugPartitionTree", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5436,8 +5426,8 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 
@@ -5448,11 +5438,11 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(1, 0, 0, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
 		for (size_t i = 0; i < scene.aabb_lights.GetCount(); ++i)
@@ -5462,11 +5452,11 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(1, 1, 0, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
 		for (size_t i = 0; i < scene.aabb_decals.GetCount(); ++i)
@@ -5476,11 +5466,11 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(1, 0, 1, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
 		for (size_t i = 0; i < scene.aabb_probes.GetCount(); ++i)
@@ -5490,28 +5480,28 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(aabb.getAsBoxMatrix()*camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(0, 1, 1, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (debugBoneLines)
 	{
-		device->EventBegin("DebugBoneLines", threadID);
+		device->EventBegin("DebugBoneLines", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_LINES], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
@@ -5526,7 +5516,7 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			{
 				XMFLOAT4 a, colorA, b, colorB;
 			};
-			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * armature.boneCollection.size(), threadID);
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * armature.boneCollection.size(), cmd);
 
 			int j = 0;
 			for (Entity entity : armature.boneCollection)
@@ -5564,33 +5554,33 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			const UINT offsets[] = {
 				mem.offset,
 			};
-			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 
-			device->Draw(2 * j, 0, threadID);
+			device->Draw(2 * j, 0, cmd);
 
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (!renderableLines.empty())
 	{
-		device->EventBegin("DebugLines", threadID);
+		device->EventBegin("DebugLines", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_LINES], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
 			XMFLOAT4 a, colorA, b, colorB;
 		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderableLines.size(), threadID);
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderableLines.size(), cmd);
 
 		int i = 0;
 		for (auto& line : renderableLines)
@@ -5613,34 +5603,34 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT offsets[] = {
 			mem.offset,
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 
-		device->Draw(2 * i, 0, threadID);
+		device->Draw(2 * i, 0, cmd);
 
 		renderableLines.clear();
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (!renderablePoints.empty())
 	{
-		device->EventBegin("DebugPoints", threadID);
+		device->EventBegin("DebugPoints", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_LINES], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetProjection())); // only projection, we will expand in view space on CPU below to be camera facing!
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		// Will generate 2 line segments for each point forming a cross section:
 		struct LineSegment
 		{
 			XMFLOAT4 a, colorA, b, colorB;
 		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderablePoints.size() * 2, threadID);
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(LineSegment) * renderablePoints.size() * 2, cmd);
 
 		XMMATRIX V = camera.GetView();
 
@@ -5678,20 +5668,20 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT offsets[] = {
 			mem.offset,
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 
-		device->Draw(2 * i, 0, threadID);
+		device->Draw(2 * i, 0, cmd);
 
 		renderablePoints.clear();
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (!renderableBoxes.empty())
 	{
-		device->EventBegin("DebugBoxes", threadID);
+		device->EventBegin("DebugBoxes", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5699,8 +5689,8 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 
@@ -5709,24 +5699,24 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&x.first)*camera.GetViewProjection()));
 			sb.g_xColor = x.second;
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 		renderableBoxes.clear();
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 
 	if (debugEnvProbes)
 	{
-		device->EventBegin("Debug EnvProbes", threadID);
+		device->EventBegin("Debug EnvProbes", cmd);
 		// Envmap spheres:
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_ENVPROBE], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_ENVPROBE], cmd);
 
 		MiscCB sb;
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
@@ -5734,26 +5724,26 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			const EnvironmentProbeComponent& probe = scene.probes[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position))));
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (probe.textureIndex < 0)
 			{
-				device->BindResource(PS, wiTextureHelper::getBlackCubeMap(), TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(PS, wiTextureHelper::getBlackCubeMap(), TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
-				device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, threadID, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + probe.textureIndex);
+				device->BindResource(PS, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, cmd, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + probe.textureIndex);
 			}
 
-			device->Draw(2880, 0, threadID); // uv-sphere
+			device->Draw(2880, 0, cmd); // uv-sphere
 		}
 
 
 		// Local proxy boxes:
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5761,8 +5751,8 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
 
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
@@ -5779,22 +5769,22 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
 			sb.g_xColor = float4(0, 1, 1, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 
 	if (gridHelper)
 	{
-		device->EventBegin("GridHelper", threadID);
+		device->EventBegin("GridHelper", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_GRID], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_GRID], cmd);
 
 		static float col = 0.7f;
 		static UINT gridVertexCount = 0;
@@ -5840,9 +5830,9 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		GPUBuffer* vbs[] = {
 			grid,
@@ -5850,38 +5840,38 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->Draw(gridVertexCount, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->Draw(gridVertexCount, 0, cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (voxelHelper && textures[TEXTYPE_3D_VOXELRADIANCE] != nullptr)
 	{
-		device->EventBegin("Debug Voxels", threadID);
+		device->EventBegin("Debug Voxels", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_VOXEL], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-		device->BindResource(VS, textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, threadID);
+		device->BindResource(VS, textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
 
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection()));
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, threadID);
+		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (debugEmitters)
 	{
-		device->EventBegin("DebugEmitters", threadID);
+		device->EventBegin("DebugEmitters", cmd);
 
 		MiscCB sb;
 		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
@@ -5893,48 +5883,48 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(XMLoadFloat4x4(&transform.world)*camera.GetViewProjection()));
 			sb.g_xColor = float4(0, 1, 0, 1);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (mesh == nullptr)
 			{
 				// No mesh, just draw a box:
-				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
+				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 				GPUBuffer* vbs[] = {
 					wiCube::GetVertexBuffer(),
 				};
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
-				device->DrawIndexed(24, 0, 0, threadID);
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+				device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
+				device->DrawIndexed(24, 0, 0, cmd);
 			}
 			else
 			{
 				// Draw mesh wireframe:
-				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_EMITTER], threadID);
+				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_EMITTER], cmd);
 				GPUBuffer* vbs[] = {
 					mesh->streamoutBuffer_POS != nullptr ? mesh->streamoutBuffer_POS.get() : mesh->vertexBuffer_POS.get(),
 				};
 				const UINT strides[] = {
 					sizeof(MeshComponent::Vertex_POS),
 				};
-				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, threadID);
+				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+				device->BindIndexBuffer(mesh->indexBuffer.get(), mesh->GetIndexFormat(), 0, cmd);
 
-				device->DrawIndexed((UINT)mesh->indices.size(), 0, 0, threadID);
+				device->DrawIndexed((UINT)mesh->indices.size(), 0, 0, cmd);
 			}
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 
 	if (debugForceFields)
 	{
-		device->EventBegin("DebugForceFields", threadID);
+		device->EventBegin("DebugForceFields", cmd);
 
 		MiscCB sb;
 		for (size_t i = 0; i < scene.forces.GetCount(); ++i)
@@ -5943,34 +5933,34 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(camera.GetViewProjection()));
 			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			switch (force.type)
 			{
 			case ENTITY_TYPE_FORCEFIELD_POINT:
-				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], threadID);
-				device->Draw(2880, 0, threadID); // uv-sphere
+				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_FORCEFIELD_POINT], cmd);
+				device->Draw(2880, 0, cmd); // uv-sphere
 				break;
 			case ENTITY_TYPE_FORCEFIELD_PLANE:
-				device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], threadID);
-				device->Draw(14, 0, threadID); // box
+				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_FORCEFIELD_PLANE], cmd);
+				device->Draw(14, 0, cmd); // box
 				break;
 			}
 
 			++i;
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 
 	if (debugCameras)
 	{
-		device->EventBegin("DebugCameras", threadID);
+		device->EventBegin("DebugCameras", cmd);
 
-		device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_CUBE], threadID);
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
 		GPUBuffer* vbs[] = {
 			wiCube::GetVertexBuffer(),
@@ -5978,8 +5968,8 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
@@ -5991,82 +5981,82 @@ void DrawDebugWorld(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(cam.GetInvView()*camera.GetViewProjection()));
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, threadID);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
+			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, threadID);
+			device->DrawIndexed(24, 0, 0, cmd);
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		DrawTracedSceneBVH(threadID);
+		DrawTracedSceneBVH(cmd);
 	}
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
-void DrawSky(GRAPHICSTHREAD threadID)
+void DrawSky(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
-	device->EventBegin("DrawSky", threadID);
+	device->EventBegin("DrawSky", cmd);
 	
 	if (enviroMap != nullptr)
 	{
-		device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_STATIC], threadID);
-		device->BindResource(PS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
+		device->BindResource(PS, enviroMap, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_DYNAMIC], threadID);
+		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
 		if (scene.weather.cloudiness > 0)
 		{
-			device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+			device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, cmd);
 		}
 		else
 		{
-			device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
+			device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, cmd);
 		}
 	}
 
-	BindConstantBuffers(VS, threadID);
-	BindConstantBuffers(PS, threadID);
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
 
-	device->Draw(240, 0, threadID); // icosphere
+	device->Draw(240, 0, cmd); // icosphere
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void DrawSun(GRAPHICSTHREAD threadID)
+void DrawSun(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("DrawSun", threadID);
+	device->EventBegin("DrawSun", cmd);
 
-	device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_SUN], threadID);
+	device->BindPipelineState(&PSO_sky[SKYRENDERING_SUN], cmd);
 
 	if (enviroMap != nullptr)
 	{
-		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, cmd);
 	}
 	else
 	{
-		device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, cmd);
 	}
 
-	BindConstantBuffers(VS, threadID);
-	BindConstantBuffers(PS, threadID);
+	BindConstantBuffers(VS, cmd);
+	BindConstantBuffers(PS, cmd);
 
-	device->Draw(240, 0, threadID);
+	device->Draw(240, 0, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
-void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void DrawDecals(const CameraComponent& camera, CommandList cmd)
 {
 	const FrameCulling& culling = frameCullings.at(&camera);
 
@@ -6074,15 +6064,15 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	{
 		GraphicsDevice* device = GetDevice();
 
-		device->EventBegin("Decals", threadID);
+		device->EventBegin("Decals", cmd);
 
 		const Scene& scene = GetScene();
 
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),threadID);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_DECAL], CB_GETBINDSLOT(DecalCB),cmd);
 
-		device->BindStencilRef(STENCILREF_DEFAULT, threadID);
+		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 
-		device->BindGraphicsPSO(&PSO_decal, threadID);
+		device->BindPipelineState(&PSO_decal, cmd);
 
 		for (size_t decalIndex : culling.culledDecals) 
 		{
@@ -6092,15 +6082,15 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 			if ((decal.texture != nullptr || decal.normal != nullptr) && camera.frustum.CheckBox(aabb)) 
 			{
 
-				device->BindResource(PS, decal.texture, TEXSLOT_ONDEMAND0, threadID);
-				device->BindResource(PS, decal.normal, TEXSLOT_ONDEMAND1, threadID);
+				device->BindResource(PS, decal.texture, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(PS, decal.normal, TEXSLOT_ONDEMAND1, cmd);
 
 				XMMATRIX decalWorld = XMLoadFloat4x4(&decal.world);
 
 				MiscCB dcbvs;
 				XMStoreFloat4x4(&dcbvs.g_xTransform, XMMatrixTranspose(decalWorld*camera.GetViewProjection()));
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &dcbvs, threadID);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &dcbvs, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 				DecalCB dcbps;
 				XMStoreFloat4x4(&dcbps.xDecalVP, XMMatrixTranspose(XMMatrixInverse(nullptr, decalWorld))); // todo: cache the inverse!
@@ -6112,15 +6102,15 @@ void DrawDecals(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 				XMStoreFloat3(&dcbps.eye, camera.GetEye());
 				dcbps.opacity = decal.GetOpacity();
 				dcbps.front = decal.front;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_DECAL], &dcbps, threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_DECAL], &dcbps, cmd);
 
-				device->Draw(14, 0, threadID);
+				device->Draw(14, 0, cmd);
 
 			}
 
 		}
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
 
@@ -6181,12 +6171,12 @@ void ManageEnvProbes()
 		probesToRefresh.push_back((uint32_t)probeIndex);
 	}
 }
-void RefreshEnvProbes(GRAPHICSTHREAD threadID)
+void RefreshEnvProbes(CommandList cmd)
 {
 	const Scene& scene = GetScene();
 
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("EnvironmentProbe Refresh", threadID);
+	device->EventBegin("EnvironmentProbe Refresh", cmd);
 
 	static const UINT envmapRes = 128;
 	static const UINT envmapMIPs = 8;
@@ -6239,7 +6229,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 	VP.TopLeftY = 0;
 	VP.MinDepth = 0.0f;
 	VP.MaxDepth = 1.0f;
-	device->BindViewports(1, &VP, threadID);
+	device->BindViewports(1, &VP, cmd);
 
 	const float zNearP = GetCamera().zNearP;
 	const float zFarP = GetCamera().zFarP;
@@ -6250,10 +6240,10 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 		Entity entity = scene.probes.GetEntity(probeIndex);
 
-		device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer.get(), threadID, probe.textureIndex);
+		device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer.get(), cmd, probe.textureIndex);
 		const float clearColor[4] = { 0,0,0,1 };
-		device->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, threadID, probe.textureIndex);
-		device->ClearDepthStencil(envrenderingDepthBuffer.get(), CLEAR_DEPTH, 0.0f, 0, threadID);
+		device->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, cmd, probe.textureIndex);
+		device->ClearDepthStencil(envrenderingDepthBuffer.get(), CLEAR_DEPTH, 0.0f, 0, cmd);
 
 		const XMVECTOR probePos = XMLoadFloat3(&probe.position);
 		const SHCAM cameras[] = {
@@ -6271,13 +6261,13 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			XMStoreFloat4x4(&cb.xCubeShadowVP[i], cameras[i].getVP());
 		}
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, threadID);
-		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
+		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 
 		CameraCB camcb;
 		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
 
 		const LayerComponent* probe_layer = scene.layers.GetComponent(entity);
 		const uint32_t layerMask = probe_layer == nullptr ?  ~0 : probe_layer->GetLayerMask();
@@ -6300,7 +6290,7 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				const ObjectComponent& object = scene.objects[i];
 				if (object.IsRenderable())
 				{
-					RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+					RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 					size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 					batch->Create(meshIndex, i, 0);
 					renderQueue.add(batch);
@@ -6308,54 +6298,54 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 			}
 		}
 
-		BindConstantBuffers(VS, threadID);
-		BindConstantBuffers(PS, threadID);
+		BindConstantBuffers(VS, cmd);
+		BindConstantBuffers(PS, cmd);
 
 		if (!renderQueue.empty())
 		{
-			BindShadowmaps(PS, threadID);
+			BindShadowmaps(PS, cmd);
 
-			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, threadID);
+			RenderMeshes(renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT, cmd);
 
-			frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+			frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 		}
 
 		// sky
 		{
 			if (enviroMap != nullptr)
 			{
-				device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], threadID);
-				device->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, threadID);
+				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
+				device->BindResource(PS, enviroMap, TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
-				device->BindGraphicsPSO(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], threadID);
-				device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, threadID);
+				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], cmd);
+				device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, cmd);
 			}
 
-			device->Draw(240, 0, threadID);
+			device->Draw(240, 0, cmd);
 		}
 
-		device->BindRenderTargets(0, nullptr, nullptr, threadID);
-		GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, threadID, probe.textureIndex);
+		device->BindRenderTargets(0, nullptr, nullptr, cmd);
+		GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
 		//	and we generatethe filtered MIPs from bottom to top.
-		device->EventBegin("FilterEnvMap", threadID);
+		device->EventBegin("FilterEnvMap", cmd);
 		{
 			Texture* texture = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY];
 			TextureDesc desc = texture->GetDesc();
 			int arrayIndex = probe.textureIndex;
 
-			device->BindComputePSO(&CPSO[CSTYPE_FILTERENVMAP], threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_FILTERENVMAP], cmd);
 
 			desc.Width = 1;
 			desc.Height = 1;
 			for (UINT i = desc.MipLevels - 1; i > 0; --i)
 			{
-				device->BindUAV(CS, texture, 0, threadID, i);
-				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, std::max(0, (int)i - 2));
+				device->BindUAV(CS, texture, 0, cmd, i);
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -6363,27 +6353,27 @@ void RefreshEnvProbes(GRAPHICSTHREAD threadID)
 				cb.filterArrayIndex = arrayIndex;
 				cb.filterRoughness = (float)i / (float)desc.MipLevels;
 				cb.filterRayCount = 128;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], &cb, threadID);
-				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], &cb, cmd);
+				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), cmd);
 
 				device->Dispatch(
 					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
-					threadID);
+					cmd);
 
-				device->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				device->UAVBarrier((GPUResource**)&texture, 1, cmd);
 
 				desc.Width *= 2;
 				desc.Height *= 2;
 			}
-			device->UnbindUAVs(0, 1, threadID);
+			device->UnbindUAVs(0, 1, cmd);
 		}
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 
 	}
 
-	device->EventEnd(threadID); // EnvironmentProbe Refresh
+	device->EventEnd(cmd); // EnvironmentProbe Refresh
 }
 
 static const UINT maxImpostorCount = 8;
@@ -6406,17 +6396,17 @@ void ManageImpostors()
 		impostorsToRefresh.push_back((uint32_t)impostorIndex);
 	}
 }
-void RefreshImpostors(GRAPHICSTHREAD threadID)
+void RefreshImpostors(CommandList cmd)
 {
 	const Scene& scene = GetScene();
 
 	if (!impostorsToRefresh.empty())
 	{
 		GraphicsDevice* device = GetDevice();
-		device->EventBegin("Impostor Refresh", threadID);
+		device->EventBegin("Impostor Refresh", cmd);
 
-		BindConstantBuffers(VS, threadID);
-		BindConstantBuffers(PS, threadID);
+		BindConstantBuffers(VS, cmd);
+		BindConstantBuffers(PS, cmd);
 
 		static const UINT textureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
 		static const UINT textureDim = 128;
@@ -6456,7 +6446,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 			InstancePrev instancePrev;
 			InstanceAtlas instanceAtlas;
 		};
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstBuf), threadID);
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstBuf), cmd);
 		volatile InstBuf* buff = (volatile InstBuf*)mem.data;
 		buff->instance.Create(IDENTITYMATRIX);
 		buff->instancePrev.Create(IDENTITYMATRIX);
@@ -6499,32 +6489,32 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 				0,
 				mem.offset
 			};
-			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
+			device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
 
-			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+			device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
 
 			for (int prop = 0; prop < 3; ++prop)
 			{
 				switch (prop)
 				{
 				case 0:
-					device->BindGraphicsPSO(&PSO_captureimpostor_albedo, threadID);
+					device->BindPipelineState(&PSO_captureimpostor_albedo, cmd);
 					break;
 				case 1:
-					device->BindGraphicsPSO(&PSO_captureimpostor_normal, threadID);
+					device->BindPipelineState(&PSO_captureimpostor_normal, cmd);
 					break;
 				case 2:
-					device->BindGraphicsPSO(&PSO_captureimpostor_surface, threadID);
+					device->BindPipelineState(&PSO_captureimpostor_surface, cmd);
 					break;
 				}
 
 				for (size_t i = 0; i < impostorCaptureAngles; ++i)
 				{
 					int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-					device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY], &depthStencil, threadID, textureIndex);
+					device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY], &depthStencil, cmd, textureIndex);
 					const float clearColor[4] = { 0,0,0,0 };
-					device->ClearRenderTarget(textures[TEXTYPE_2D_IMPOSTORARRAY], clearColor, threadID, textureIndex);
-					device->ClearDepthStencil(&depthStencil, CLEAR_DEPTH, 0.0f, 0, threadID);
+					device->ClearRenderTarget(textures[TEXTYPE_2D_IMPOSTORARRAY], clearColor, cmd, textureIndex);
+					device->ClearDepthStencil(&depthStencil, CLEAR_DEPTH, 0.0f, 0, cmd);
 
 					ViewPort viewPort;
 					viewPort.Height = (float)textureDim;
@@ -6533,7 +6523,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 					viewPort.TopLeftY = 0;
 					viewPort.MinDepth = 0;
 					viewPort.MaxDepth = 1;
-					device->BindViewports(1, &viewPort, threadID);
+					device->BindViewports(1, &viewPort, cmd);
 
 
 					CameraComponent impostorcamera;
@@ -6549,7 +6539,7 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 					camera_transform.UpdateTransform();
 					impostorcamera.TransformCamera(camera_transform);
 					impostorcamera.UpdateCamera();
-					UpdateCameraCB(impostorcamera, threadID);
+					UpdateCameraCB(impostorcamera, cmd);
 
 					for (auto& subset : mesh.subsets)
 					{
@@ -6559,17 +6549,17 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 						}
 						const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-						device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
-						device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), threadID);
+						device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
+						device->BindConstantBuffer(PS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
 
 						const GPUResource* res[] = {
 							material.GetBaseColorMap(),
 							material.GetNormalMap(),
 							material.GetSurfaceMap(),
 						};
-						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-						device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, threadID);
+						device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 					}
 
 				}
@@ -6577,13 +6567,13 @@ void RefreshImpostors(GRAPHICSTHREAD threadID)
 
 		}
 
-		UpdateCameraCB(GetCamera(), threadID);
+		UpdateCameraCB(GetCamera(), cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 }
 
-void VoxelRadiance(GRAPHICSTHREAD threadID)
+void VoxelRadiance(CommandList cmd)
 {
 	if (!GetVoxelRadianceEnabled())
 	{
@@ -6592,8 +6582,8 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("Voxel Radiance", threadID);
-	auto range = wiProfiler::BeginRange("Voxel Radiance", wiProfiler::DOMAIN_GPU, threadID);
+	device->EventBegin("Voxel Radiance", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Voxel Radiance", cmd);
 
 	const Scene& scene = GetScene();
 
@@ -6656,7 +6646,7 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 			const ObjectComponent& object = scene.objects[i];
 			if (object.IsRenderable())
 			{
-				RenderBatch* batch = (RenderBatch*)frameAllocators[threadID].allocate(sizeof(RenderBatch));
+				RenderBatch* batch = (RenderBatch*)frameAllocators[cmd].allocate(sizeof(RenderBatch));
 				size_t meshIndex = scene.meshes.GetIndex(object.meshID);
 				batch->Create(meshIndex, i, 0);
 				renderQueue.add(batch);
@@ -6673,69 +6663,69 @@ void VoxelRadiance(GRAPHICSTHREAD threadID)
 		VP.Height = (float)voxelSceneData.res;
 		VP.MinDepth = 0.0f;
 		VP.MaxDepth = 1.0f;
-		device->BindViewports(1, &VP, threadID);
+		device->BindViewports(1, &VP, cmd);
 
 		GPUResource* UAVs[] = { &resourceBuffers[RBTYPE_VOXELSCENE] };
-		device->BindUAVs(PS, UAVs, 0, 1, threadID);
+		device->BindUAVs(PS, UAVs, 0, 1, cmd);
 
-		BindShadowmaps(PS, threadID);
-		BindConstantBuffers(VS, threadID);
-		BindConstantBuffers(PS, threadID);
+		BindShadowmaps(PS, cmd);
+		BindConstantBuffers(VS, cmd);
+		BindConstantBuffers(PS, cmd);
 
-		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, threadID);
-		frameAllocators[threadID].free(sizeof(RenderBatch) * renderQueue.batchCount);
+		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
+		frameAllocators[cmd].free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
-		device->EventBegin("Voxel Scene Copy - Clear", threadID);
-		device->BindRenderTargets(0, nullptr, nullptr, threadID);
-		device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, threadID);
+		device->EventBegin("Voxel Scene Copy - Clear", cmd);
+		device->BindRenderTargets(0, nullptr, nullptr, cmd);
+		device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, cmd);
 
 		if (device->CheckCapability(GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_UNORDEREDACCESSTEXTURE_LOAD_FORMAT_EXT))
 		{
-			device->BindComputePSO(&CPSO[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR_TEMPORALSMOOTHING], cmd);
 		}
 		else
 		{
-			device->BindComputePSO(&CPSO[CSTYPE_VOXELSCENECOPYCLEAR], threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_VOXELSCENECOPYCLEAR], cmd);
 		}
-		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
-		device->EventEnd(threadID);
+		device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
+		device->EventEnd(cmd);
 
 		if (voxelSceneData.secondaryBounceEnabled)
 		{
-			device->EventBegin("Voxel Radiance Secondary Bounce", threadID);
-			device->UnbindUAVs(1, 1, threadID);
+			device->EventBegin("Voxel Radiance Secondary Bounce", cmd);
+			device->UnbindUAVs(1, 1, cmd);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
-			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, threadID);
-			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, threadID);
-			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, threadID);
-			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, threadID);
-			device->BindComputePSO(&CPSO[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], threadID);
-			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, threadID);
-			device->EventEnd(threadID);
+			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
+			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
+			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
+			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], cmd);
+			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 64), 1, 1, cmd);
+			device->EventEnd(cmd);
 
-			device->EventBegin("Voxel Scene Clear Normals", threadID);
-			device->UnbindResources(1, 1, threadID);
-			device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, threadID);
-			device->BindComputePSO(&CPSO[CSTYPE_VOXELCLEARONLYNORMAL], threadID);
-			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, threadID);
-			device->EventEnd(threadID);
+			device->EventBegin("Voxel Scene Clear Normals", cmd);
+			device->UnbindResources(1, 1, cmd);
+			device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_VOXELCLEARONLYNORMAL], cmd);
+			device->Dispatch((UINT)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
+			device->EventEnd(cmd);
 
 			result = (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
 
-		device->UnbindUAVs(0, 2, threadID);
+		device->UnbindUAVs(0, 2, cmd);
 
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
 		{
-			GenerateMipChain(result, MIPGENFILTER_LINEAR, threadID);
+			GenerateMipChain(result, MIPGENFILTER_LINEAR, cmd);
 		}
 	}
 
 	wiProfiler::EndRange(range);
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 
@@ -6747,10 +6737,10 @@ inline XMUINT3 GetEntityCullingTileCount()
 		(GetInternalResolution().y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
 		1);
 }
-void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuffer_diffuse, const Texture2D* lightbuffer_specular)
+void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diffuse, const Texture2D* lightbuffer_specular)
 {
 	const bool deferred = lightbuffer_diffuse != nullptr && lightbuffer_specular != nullptr;
-	auto range = wiProfiler::BeginRange("Entity Culling", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 	GraphicsDevice* device = GetDevice();
 
 	int _width = GetInternalResolution().x;
@@ -6804,7 +6794,7 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		device->SetName(&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], "EntityTiles_Transparent");
 	}
 
-	BindCommonResources(threadID);
+	BindCommonResources(cmd);
 
 	// calculate the per-tile frustums once:
 	static bool frustumsComplete = false;
@@ -6820,8 +6810,8 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 
 		GPUResource* uavs[] = { frustumBuffer };
 
-		device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), threadID);
-		device->BindComputePSO(&CPSO[CSTYPE_TILEFRUSTUMS], threadID);
+		device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), cmd);
+		device->BindComputeShader(computeShaders[CSTYPE_TILEFRUSTUMS], cmd);
 
 		DispatchParamsCB dispatchParams;
 		dispatchParams.xDispatchParams_numThreads.x = tileCount.x;
@@ -6830,12 +6820,12 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		dispatchParams.xDispatchParams_numThreadGroups.x = (UINT)ceilf(dispatchParams.xDispatchParams_numThreads.x / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.xDispatchParams_numThreadGroups.y = (UINT)ceilf(dispatchParams.xDispatchParams_numThreads.y / (float)TILED_CULLING_BLOCKSIZE);
 		dispatchParams.xDispatchParams_numThreadGroups.z = 1;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
 
-		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
-		device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
+		device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	}
 
 	if (textures[TEXTYPE_2D_DEBUGUAV] == nullptr || _resolutionChanged)
@@ -6861,17 +6851,17 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 
 	// Perform the culling
 	{
-		device->EventBegin("Entity Culling", threadID);
+		device->EventBegin("Entity Culling", cmd);
 
-		device->UnbindResources(SBSLOT_ENTITYTILES, 1, threadID);
+		device->UnbindResources(SBSLOT_ENTITYTILES, 1, cmd);
 
-		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, threadID);
+		device->BindResource(CS, frustumBuffer, SBSLOT_TILEFRUSTUMS, cmd);
 
-		device->BindComputePSO(&CPSO_tiledlighting[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], threadID);
+		device->BindComputeShader(tiledLightingCS[deferred][GetAdvancedLightCulling()][GetDebugLightCulling()], cmd);
 
 		if (GetDebugLightCulling())
 		{
-			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, threadID);
+			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, cmd);
 		}
 
 
@@ -6886,10 +6876,10 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 		dispatchParams.xDispatchParams_numThreads.y = dispatchParams.xDispatchParams_numThreadGroups.y * TILED_CULLING_BLOCKSIZE;
 		dispatchParams.xDispatchParams_numThreads.z = 1;
 		dispatchParams.xDispatchParams_value0 = (UINT)(frameCulling.culledLights.size() + frameCulling.culledEnvProbes.size() + frameCulling.culledDecals.size());
-		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, threadID);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
 
-		BindConstantBuffers(CS, threadID);
+		BindConstantBuffers(CS, cmd);
 
 		if (deferred)
 		{
@@ -6898,13 +6888,13 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
 				lightbuffer_specular,
 			};
-			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), cmd);
 
-			BindShadowmaps(CS, threadID);
-			BindEnvironmentTextures(CS, threadID);
+			BindShadowmaps(CS, cmd);
+			BindEnvironmentTextures(CS, cmd);
 
-			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		}
 		else
 		{
@@ -6912,45 +6902,45 @@ void ComputeTiledLightCulling(GRAPHICSTHREAD threadID, const Texture2D* lightbuf
 				&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
 				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
 			};
-			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYTILES_OPAQUE, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYTILES_OPAQUE, ARRAYSIZE(uavs), cmd);
 
-			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, threadID);
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		}
 
-		device->UnbindUAVs(0, 8, threadID); // this unbinds pretty much every uav
+		device->UnbindUAVs(0, 8, cmd); // this unbinds pretty much every uav
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	wiProfiler::EndRange(range);
 }
 
 
-void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, GRAPHICSTHREAD threadID)
+void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("Resolve MSAA DepthBuffer", threadID);
+	device->EventBegin("Resolve MSAA DepthBuffer", cmd);
 
-	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
-	device->BindUAV(CS, dst, 0, threadID);
+	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindUAV(CS, dst, 0, cmd);
 
 	TextureDesc desc = src->GetDesc();
 
-	device->BindComputePSO(&CPSO[CSTYPE_RESOLVEMSAADEPTHSTENCIL], threadID);
-	device->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, threadID);
+	device->BindComputeShader(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], cmd);
+	device->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, cmd);
 
 
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+	device->UnbindUAVs(0, 1, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void GenerateMipChain(const Texture1D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
+void GenerateMipChain(const Texture1D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	assert(0 && "Not implemented!");
 }
-void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
+void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture->GetDesc();
@@ -6964,7 +6954,7 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 
 	bool hdr = !device->IsFormatUnorm(desc.Format);
 
-	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 	{
@@ -6977,19 +6967,19 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			switch (filter)
 			{
 			case MIPGENFILTER_POINT:
-				device->EventBegin("GenerateMipChain CubeArray - PointFilter", threadID);
-				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_LINEAR:
-				device->EventBegin("GenerateMipChain CubeArray - LinearFilter", threadID);
-				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_LINEAR_MAXIMUM:
-				device->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", threadID);
-				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
+				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			default:
 				assert(0);
@@ -6998,8 +6988,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 
 			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 			{
-				device->BindUAV(CS, texture, 0, threadID, i + 1);
-				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+				device->BindUAV(CS, texture, 0, cmd, i + 1);
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7007,16 +6997,16 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 				cb.outputResolution.x = desc.Width;
 				cb.outputResolution.y = desc.Height;
 				cb.arrayIndex = arrayIndex;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
+				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 				device->Dispatch(
 					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
-					threadID);
+					cmd);
 
-				device->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				device->UAVBarrier((GPUResource**)&texture, 1, cmd);
 			}
 		}
 		else
@@ -7025,19 +7015,19 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			switch (filter)
 			{
 			case MIPGENFILTER_POINT:
-				device->EventBegin("GenerateMipChain Cube - PointFilter", threadID);
-				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
+				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_LINEAR:
-				device->EventBegin("GenerateMipChain Cube - LinearFilter", threadID);
-				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
+				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_LINEAR_MAXIMUM:
-				device->EventBegin("GenerateMipChain Cube - LinearMaxFilter", threadID);
-				device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], threadID);
-				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+				device->EventBegin("GenerateMipChain Cube - LinearMaxFilter", cmd);
+				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
+				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			default:
 				assert(0); // not implemented
@@ -7046,8 +7036,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 
 			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 			{
-				device->BindUAV(CS, texture, 0, threadID, i + 1);
-				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+				device->BindUAV(CS, texture, 0, cmd, i + 1);
+				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7055,16 +7045,16 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 				cb.outputResolution.x = desc.Width;
 				cb.outputResolution.y = desc.Height;
 				cb.arrayIndex = 0;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
+				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 				device->Dispatch(
 					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 					6,
-					threadID);
+					cmd);
 
-				device->UAVBarrier((GPUResource**)&texture, 1, threadID);
+				device->UAVBarrier((GPUResource**)&texture, 1, cmd);
 			}
 		}
 
@@ -7075,27 +7065,27 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 		switch (filter)
 		{
 		case MIPGENFILTER_POINT:
-			device->EventBegin("GenerateMipChain 2D - PointFilter", threadID);
-			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
+			device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		case MIPGENFILTER_LINEAR:
-			device->EventBegin("GenerateMipChain 2D - LinearFilter", threadID);
-			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
+			device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		case MIPGENFILTER_LINEAR_MAXIMUM:
-			device->EventBegin("GenerateMipChain 2D - LinearMaxFilter", threadID);
-			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], threadID);
-			device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+			device->EventBegin("GenerateMipChain 2D - LinearMaxFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
+			device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		case MIPGENFILTER_GAUSSIAN:
-			device->EventBegin("GenerateMipChain 2D - GaussianFilter", threadID);
-			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], threadID);
+			device->EventBegin("GenerateMipChain 2D - GaussianFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_GAUSSIAN], cmd);
 			break;
 		case MIPGENFILTER_BICUBIC:
-			device->EventBegin("GenerateMipChain 2D - BicubicFilter", threadID);
-			device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], threadID);
+			device->EventBegin("GenerateMipChain 2D - BicubicFilter", cmd);
+			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_BICUBIC : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_BICUBIC], cmd);
 			break;
 		default:
 			assert(0);
@@ -7104,8 +7094,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 
 		for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 		{
-			device->BindUAV(CS, texture, 0, threadID, i + 1);
-			device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+			device->BindUAV(CS, texture, 0, cmd, i + 1);
+			device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7113,25 +7103,25 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, GRAPHICSTHR
 			cb.outputResolution.x = desc.Width;
 			cb.outputResolution.y = desc.Height;
 			cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
+			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 			device->Dispatch(
 				std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 				std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
 				1,
-				threadID);
+				cmd);
 
-			device->UAVBarrier((GPUResource**)&texture, 1, threadID);
+			device->UAVBarrier((GPUResource**)&texture, 1, cmd);
 		}
 	}
 
-	device->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+	device->UnbindUAVs(0, 1, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHREAD threadID, int arrayIndex)
+void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	GraphicsDevice* device = GetDevice();
 	TextureDesc desc = texture->GetDesc();
@@ -7144,28 +7134,28 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 
 	bool hdr = !device->IsFormatUnorm(desc.Format);
 
-	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	switch (filter)
 	{
 	case MIPGENFILTER_POINT:
-		device->EventBegin("GenerateMipChain 3D - PointFilter", threadID);
-		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
+		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
+		device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 		break;
 	case MIPGENFILTER_LINEAR:
-		device->EventBegin("GenerateMipChain 3D - LinearFilter", threadID);
-		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
+		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
+		device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 		break;
 	case MIPGENFILTER_LINEAR_MAXIMUM:
-		device->EventBegin("GenerateMipChain 3D - LinearMaxFilter", threadID);
-		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], threadID);
-		device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, threadID);
+		device->EventBegin("GenerateMipChain 3D - LinearMaxFilter", cmd);
+		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
+		device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 		break;
 	case MIPGENFILTER_GAUSSIAN:
-		device->EventBegin("GenerateMipChain 3D - GaussianFilter", threadID);
-		device->BindComputePSO(&CPSO[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], threadID);
+		device->EventBegin("GenerateMipChain 3D - GaussianFilter", cmd);
+		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_GAUSSIAN : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_GAUSSIAN], cmd);
 		break;
 	default:
 		assert(0); // not implemented
@@ -7174,8 +7164,8 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
-		device->BindUAV(CS, texture, 0, threadID, i + 1);
-		device->BindResource(CS, texture, TEXSLOT_UNIQUE0, threadID, i);
+		device->BindUAV(CS, texture, 0, cmd, i + 1);
+		device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
 		desc.Width = std::max(1u, desc.Width / 2);
 		desc.Height = std::max(1u, desc.Height / 2);
 		desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7185,23 +7175,23 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, GRAPHICSTHR
 		cb.outputResolution.y = desc.Height;
 		cb.outputResolution.z = desc.Depth;
 		cb.arrayIndex = arrayIndex >= 0 ? (uint)arrayIndex : 0;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, threadID);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 		device->Dispatch(
 			std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
 			std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
 			std::max(1u, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			threadID);
+			cmd);
 	}
 
-	device->UnbindResources(TEXSLOT_UNIQUE0, 1, threadID);
-	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+	device->UnbindUAVs(0, 1, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
-void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture2D* src, UINT SrcMIP, GRAPHICSTHREAD threadID, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture2D* src, UINT SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -7217,26 +7207,26 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 	{
 		if (hdr)
 		{
-			device->EventBegin("CopyTexture2D_FLOAT4", threadID);
-			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4], threadID);
+			device->EventBegin("CopyTexture2D_FLOAT4", cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4], cmd);
 		}
 		else
 		{
-			device->EventBegin("CopyTexture2D_UNORM4", threadID);
-			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_UNORM4], threadID);
+			device->EventBegin("CopyTexture2D_UNORM4", cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4], cmd);
 		}
 	}
 	else
 	{
 		if (hdr)
 		{
-			device->EventBegin("CopyTexture2D_BORDEREXPAND_FLOAT4", threadID);
-			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], threadID);
+			device->EventBegin("CopyTexture2D_BORDEREXPAND_FLOAT4", cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], cmd);
 		}
 		else
 		{
-			device->EventBegin("CopyTexture2D_BORDEREXPAND_UNORM4", threadID);
-			device->BindComputePSO(&CPSO[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], threadID);
+			device->EventBegin("CopyTexture2D_BORDEREXPAND_UNORM4", cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], cmd);
 		}
 	}
 
@@ -7247,42 +7237,42 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 	cb.xCopySrcSize.y = desc_src.Height >> SrcMIP;
 	cb.xCopySrcMIP = SrcMIP;
 	cb.xCopyBorderExpandStyle = (uint)borderExpand;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], &cb, threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], &cb, cmd);
 
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), threadID);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), cmd);
 
-	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, cmd);
 
 	if (DstMIP > 0)
 	{
 		assert(desc_dst.MipLevels > DstMIP);
-		device->BindUAV(CS, dst, 0, threadID, DstMIP);
+		device->BindUAV(CS, dst, 0, cmd, DstMIP);
 	}
 	else
 	{
-		device->BindUAV(CS, dst, 0, threadID);
+		device->BindUAV(CS, dst, 0, cmd);
 	}
 
-	device->Dispatch((UINT)ceilf((float)cb.xCopySrcSize.x / 8.0f), (UINT)ceilf((float)cb.xCopySrcSize.y / 8.0f), 1, threadID);
+	device->Dispatch((UINT)ceilf((float)cb.xCopySrcSize.x / 8.0f), (UINT)ceilf((float)cb.xCopySrcSize.y / 8.0f), 1, cmd);
 
-	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindUAVs(0, 1, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 
-void BuildSceneBVH(GRAPHICSTHREAD threadID)
+void BuildSceneBVH(CommandList cmd)
 {
 	const Scene& scene = GetScene();
 
-	sceneBVH.Build(scene, threadID);
+	sceneBVH.Build(scene, cmd);
 }
-void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRAPHICSTHREAD threadID)
+void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
-	device->EventBegin("DrawTracedScene", threadID);
+	device->EventBegin("DrawTracedScene", cmd);
 
 	uint _width = GetInternalResolution().x;
 	uint _height = GetInternalResolution().y;
@@ -7375,64 +7365,64 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 	// Begin raytrace
 
-	auto range = wiProfiler::BeginRange("RayTrace - ALL", wiProfiler::DOMAIN_GPU, threadID);
+	auto range = wiProfiler::BeginRangeGPU("RayTrace - ALL", cmd);
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
 	TracedRenderingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceRandomSeed = renderTime;
 
-	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 
-	device->EventBegin("Clear", threadID);
+	device->EventBegin("Clear", cmd);
 	{
-		device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_CLEAR], threadID);
+		device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_CLEAR], cmd);
 
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
 
 		const GPUResource* uavs[] = {
 			result,
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 
-	device->EventBegin("Launch Rays", threadID);
+	device->EventBegin("Launch Rays", cmd);
 	{
-		device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LAUNCH], threadID);
+		device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_LAUNCH], cmd);
 
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
 
 		GPUResource* uavs[] = {
 			&rayIndexBuffer[0],
 			&raySortBuffer,
 			&rayBuffer[0],
 		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, threadID);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
+		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 		// just write initial ray count:
-		device->UpdateBuffer(&counterBuffer[0], &_raycount, threadID);
+		device->UpdateBuffer(&counterBuffer[0], &_raycount, cmd);
 	}
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 
 
 
 	// Set up tracing resources:
-	sceneBVH.Bind(CS, threadID);
+	sceneBVH.Bind(CS, cmd);
 
 	if (enviroMap != nullptr)
 	{
-		device->BindResource(CS, enviroMap, TEXSLOT_GLOBALENVMAP, threadID);
+		device->BindResource(CS, enviroMap, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
 	for (uint32_t bounce = 0; bounce < raytraceBounceCount + 1; ++bounce) // first contact + indirect bounces
@@ -7441,55 +7431,55 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 		uint32_t __writeBufferID = (bounce + 1) % 2;
 
 		cb.xTraceRandomSeed = renderTime + (float)bounce;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
 
 
 		// 1.) Kick off raytracing jobs for this bounce
-		device->EventBegin("Kick Raytrace Jobs", threadID);
+		device->EventBegin("Kick Raytrace Jobs", cmd);
 		{
 			// Prepare indirect dispatch based on counter buffer value:
-			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_KICKJOBS], threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_KICKJOBS], cmd);
 
 			GPUResource* res[] = {
 				&counterBuffer[__readBufferID],
 			};
-			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), cmd);
 			GPUResource* uavs[] = {
 				&counterBuffer[__writeBufferID],
 				&indirectBuffer,
 			};
-			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-			device->Dispatch(1, 1, 1, threadID);
+			device->Dispatch(1, 1, 1, cmd);
 
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 		}
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 
 		// 1.) Compute Primary Trace (closest hit)
 		{
-			device->EventBegin("Primary Rays", threadID);
+			device->EventBegin("Primary Rays", cmd);
 
 			wiProfiler::range_id range;
 			if (bounce == 0)
 			{
-				range = wiProfiler::BeginRange("RayTrace - First Contact", wiProfiler::DOMAIN_GPU, threadID);
+				range = wiProfiler::BeginRangeGPU("RayTrace - First Contact", cmd);
 			}
 			else if (bounce == 1)
 			{
-				range = wiProfiler::BeginRange("RayTrace - First Bounce", wiProfiler::DOMAIN_GPU, threadID);
+				range = wiProfiler::BeginRangeGPU("RayTrace - First Bounce", cmd);
 			}
 
-			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_PRIMARY], threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_PRIMARY], cmd);
 
 			const GPUResource* res[] = {
 				&counterBuffer[__readBufferID],
 				&rayIndexBuffer[__readBufferID],
 				&rayBuffer[__readBufferID],
 			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
 			const GPUResource* uavs[] = {
 				&counterBuffer[__writeBufferID],
 				&rayIndexBuffer[__writeBufferID],
@@ -7497,62 +7487,62 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 				&rayBuffer[__writeBufferID],
 				result,
 			};
-			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-			device->DispatchIndirect(&indirectBuffer, 0, threadID);
+			device->DispatchIndirect(&indirectBuffer, 0, cmd);
 
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 			if (bounce == 0 || bounce == 1)
 			{
 				wiProfiler::EndRange(range); // RayTrace - First Bounce
 			}
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 		}
 
 		// Primary trace has written new alive ray buffer, so light sampling will use that:
 		std::swap(__readBufferID, __writeBufferID);
 
 		// 2.) Sort rays to achieve more coherency:
-		device->EventBegin("Ray Sorting", threadID);
-		wiGPUSortLib::Sort(_raycount, raySortBuffer, counterBuffer[__readBufferID], 0, rayIndexBuffer[__readBufferID], threadID);
-		device->EventEnd(threadID);
+		device->EventBegin("Ray Sorting", cmd);
+		wiGPUSortLib::Sort(_raycount, raySortBuffer, counterBuffer[__readBufferID], 0, rayIndexBuffer[__readBufferID], cmd);
+		device->EventEnd(cmd);
 
 
 		// 3.) Light sampling (any hit) <- only after first bounce has occured
 		{
-			device->EventBegin("Light Sampling Rays", threadID);
+			device->EventBegin("Light Sampling Rays", cmd);
 
 			wiProfiler::range_id range;
 			if (bounce == 1)
 			{
-				range = wiProfiler::BeginRange("RayTrace - First Light Sampling", wiProfiler::DOMAIN_GPU, threadID);
+				range = wiProfiler::BeginRangeGPU("RayTrace - First Light Sampling", cmd);
 			}
 
-			device->BindComputePSO(&CPSO[CSTYPE_RAYTRACE_LIGHTSAMPLING], threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING], cmd);
 
 			const GPUResource* res[] = {
 				&counterBuffer[__readBufferID],
 				&rayIndexBuffer[__readBufferID],
 				&rayBuffer[__readBufferID],
 			};
-			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), threadID);
+			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
 			const GPUResource* uavs[] = {
 				result,
 			};
-			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-			device->DispatchIndirect(&indirectBuffer, 0, threadID);
+			device->DispatchIndirect(&indirectBuffer, 0, cmd);
 
-			device->UAVBarrier(uavs, ARRAYSIZE(uavs), threadID);
-			device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
 			if (bounce == 1)
 			{
 				wiProfiler::EndRange(range); // RayTrace - First Light Sampling
 			}
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 		}
 
 	}
@@ -7562,31 +7552,31 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, GRA
 
 
 
-	device->EventEnd(threadID); // DrawTracedScene
+	device->EventEnd(cmd); // DrawTracedScene
 }
-void DrawTracedSceneBVH(GRAPHICSTHREAD threadID)
+void DrawTracedSceneBVH(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("DebugRaytraceBVH", threadID);
-	device->BindGraphicsPSO(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], threadID);
-	sceneBVH.Bind(PS, threadID);
-	device->Draw(3, 0, threadID);
-	device->EventEnd(threadID);
+	device->EventBegin("DebugRaytraceBVH", cmd);
+	device->BindPipelineState(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], cmd);
+	sceneBVH.Bind(PS, cmd);
+	device->Draw(3, 0, cmd);
+	device->EventEnd(cmd);
 }
 
-void GenerateClouds(const Texture2D* dst, UINT refinementCount, float randomness, GRAPHICSTHREAD threadID)
+void GenerateClouds(const Texture2D* dst, UINT refinementCount, float randomness, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("Cloud Generator", threadID);
+	device->EventBegin("Cloud Generator", cmd);
 
 	TextureDesc src_desc = wiTextureHelper::getRandom64x64()->GetDesc();
 
 	TextureDesc dst_desc = dst->GetDesc();
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
-	device->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, threadID);
-	device->BindUAV(CS, dst, 0, threadID);
+	device->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, cmd);
+	device->BindUAV(CS, dst, 0, cmd);
 
 	CloudGeneratorCB cb;
 	cb.xNoiseTexDim = XMFLOAT2((float)src_desc.Width, (float)src_desc.Height);
@@ -7599,17 +7589,17 @@ void GenerateClouds(const Texture2D* dst, UINT refinementCount, float randomness
 	{
 		cb.xRefinementCount = refinementCount;
 	}
-	device->UpdateBuffer(&constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, threadID);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), cmd);
 
-	device->BindComputePSO(&CPSO[CSTYPE_CLOUDGENERATOR], threadID);
-	device->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, threadID);
+	device->BindComputeShader(computeShaders[CSTYPE_CLOUDGENERATOR], cmd);
+	device->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, cmd);
 
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
-	device->UnbindUAVs(0, 1, threadID);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+	device->UnbindUAVs(0, 1, cmd);
 
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 bool repackAtlas_Decal = false;
@@ -7706,7 +7696,7 @@ void ManageDecalAtlas()
 
 	}
 }
-void RefreshDecalAtlas(GRAPHICSTHREAD threadID)
+void RefreshDecalAtlas(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -7722,7 +7712,7 @@ void RefreshDecalAtlas(GRAPHICSTHREAD threadID)
 			{
 				if (mip < it.first->GetDesc().MipLevels)
 				{
-					CopyTexture2D(&decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, threadID, BORDEREXPAND_CLAMP);
+					CopyTexture2D(&decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, cmd, BORDEREXPAND_CLAMP);
 				}
 			}
 		}
@@ -7887,12 +7877,12 @@ void ManageLightmapAtlas()
 		}
 	}
 }
-void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID)
+void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
-	device->EventBegin("RenderObjectLightMap", threadID);
+	device->EventBegin("RenderObjectLightMap", cmd);
 
 	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 	assert(!mesh.vertex_atlas.empty());
@@ -7901,25 +7891,25 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	const TextureDesc& desc = object.lightmap->GetDesc();
 
 	const Texture2D* rts[] = { object.lightmap.get() };
-	device->BindRenderTargets(1, rts, nullptr, threadID);
+	device->BindRenderTargets(1, rts, nullptr, cmd);
 
 	const uint32_t lightmapIterationCount = std::max(1u, object.lightmapIterationCount) - 1; // ManageLightMapAtlas incremented before refresh
 
 	if (lightmapIterationCount == 0)
 	{
 		float clearColor[4] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clearColor, threadID);
+		device->ClearRenderTarget(rts[0], clearColor, cmd);
 	}
 
 	ViewPort vp;
 	vp.Width = (float)desc.Width;
 	vp.Height = (float)desc.Height;
-	device->BindViewports(1, &vp, threadID);
+	device->BindViewports(1, &vp, cmd);
 
 	const TransformComponent& transform = scene.transforms[object.transform_index];
 
 	// Note: using InstancePrev, because we just need the matrix, nothing else here...
-	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstancePrev), threadID);
+	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(InstancePrev), cmd);
 	volatile InstancePrev* instance = (volatile InstancePrev*)mem.data;
 	instance->Create(transform.world);
 
@@ -7938,8 +7928,8 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 		0,
 		mem.offset,
 	};
-	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, threadID);
-	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, threadID);
+	device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, offsets, cmd);
+	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
 
 	TracedRenderingCB cb;
 	XMFLOAT4 halton = wiMath::GetHaltonSequence(lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
@@ -7950,42 +7940,42 @@ void RenderObjectLightMap(const ObjectComponent& object, GRAPHICSTHREAD threadID
 	cb.xTraceRandomSeed = renderTime; // random seed
 	cb.xTraceUserData = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData2.x = raytraceBounceCount;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, threadID);
-	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
-	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), threadID);
+	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
+	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
+	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
 
 	// Render direct lighting part:
-	device->BindGraphicsPSO(&PSO_renderlightmap_direct, threadID);
-	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
+	device->BindPipelineState(&PSO_renderlightmap_direct, cmd);
+	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
 
 	if (raytraceBounceCount > 0)
 	{
 		// Render indirect lighting part:
-		device->BindGraphicsPSO(&PSO_renderlightmap_indirect, threadID);
-		device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, threadID);
+		device->BindPipelineState(&PSO_renderlightmap_indirect, cmd);
+		device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
 	}
 
-	device->BindRenderTargets(0, nullptr, nullptr, threadID);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
-void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
+void RefreshLightmapAtlas(CommandList cmd)
 {
 	const Scene& scene = GetScene();
 	GraphicsDevice* device = GetDevice();
 
 	if (!lightmapsToRefresh.empty())
 	{
-		auto range = wiProfiler::BeginRange("Lightmap Processing", wiProfiler::DOMAIN_GPU, threadID);
+		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
 
 		// Update GPU scene and BVH data:
 		{
 			if (scene_bvh_invalid)
 			{
 				scene_bvh_invalid = false;
-				BuildSceneBVH(threadID);
+				BuildSceneBVH(cmd);
 			}
-			sceneBVH.Bind(PS, threadID);
+			sceneBVH.Bind(PS, cmd);
 		}
 
 		// Render lightmaps for each object:
@@ -7995,13 +7985,13 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 
 			if (object.IsLightmapRenderRequested())
 			{
-				RenderObjectLightMap(object, threadID);
+				RenderObjectLightMap(object, cmd);
 			}
 		}
 
 		if (!packedLightmaps.empty())
 		{
-			device->EventBegin("PackGlobalLightmap", threadID);
+			device->EventBegin("PackGlobalLightmap", cmd);
 			if (repackAtlas_Lightmap)
 			{
 				// If atlas was repacked, we copy every object lightmap:
@@ -8011,7 +8001,7 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 					if (object.lightmap != nullptr)
 					{
 						const auto& rec = packedLightmaps.at(object.lightmap.get());
-						CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
+						CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, cmd);
 					}
 				}
 			}
@@ -8022,10 +8012,10 @@ void RefreshLightmapAtlas(GRAPHICSTHREAD threadID)
 				{
 					const ObjectComponent& object = scene.objects[objectIndex];
 					const auto& rec = packedLightmaps.at(object.lightmap.get());
-					CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, threadID);
+					CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, cmd);
 				}
 			}
-			device->EventEnd(threadID);
+			device->EventEnd(cmd);
 
 		}
 
@@ -8042,7 +8032,7 @@ const Texture2D* GetGlobalLightmap()
 	return wiTextureHelper::getTransparent();
 }
 
-void BindCommonResources(GRAPHICSTHREAD threadID)
+void BindCommonResources(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -8052,10 +8042,10 @@ void BindCommonResources(GRAPHICSTHREAD threadID)
 
 		for (int i = 0; i < SSLOT_COUNT; ++i)
 		{
-			device->BindSampler(stage, &samplers[i], i, threadID);
+			device->BindSampler(stage, &samplers[i], i, cmd);
 		}
 
-		BindConstantBuffers(stage, threadID);
+		BindConstantBuffers(stage, cmd);
 	}
 
 	// Bind the GPU entity array for all shaders that need it here:
@@ -8063,12 +8053,12 @@ void BindCommonResources(GRAPHICSTHREAD threadID)
 		&resourceBuffers[RBTYPE_ENTITYARRAY],
 		&resourceBuffers[RBTYPE_MATRIXARRAY],
 	};
-	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
-	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), threadID);
+	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), cmd);
+	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), cmd);
+	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, ARRAYSIZE(resources), cmd);
 }
 
-void UpdateFrameCB(GRAPHICSTHREAD threadID)
+void UpdateFrameCB(CommandList cmd)
 {
 	const Scene& scene = GetScene();
 
@@ -8205,9 +8195,9 @@ void UpdateFrameCB(GRAPHICSTHREAD threadID)
 	cb.g_xFrame_WorldBoundsExtents_Inverse.y = 1.0f / cb.g_xFrame_WorldBoundsExtents.y;
 	cb.g_xFrame_WorldBoundsExtents_Inverse.z = 1.0f / cb.g_xFrame_WorldBoundsExtents.z;
 
-	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, threadID);
+	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &cb, cmd);
 }
-void UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
+void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 {
 	CameraCB cb;
 
@@ -8216,52 +8206,52 @@ void UpdateCameraCB(const CameraComponent& camera, GRAPHICSTHREAD threadID)
 	XMStoreFloat4x4(&cb.g_xCamera_Proj, XMMatrixTranspose(camera.GetProjection()));
 	cb.g_xCamera_CamPos = camera.Eye;
 
-	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, threadID);
+	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 }
 
-APICB apiCB[GRAPHICSTHREAD_COUNT];
-void SetClipPlane(const XMFLOAT4& clipPlane, GRAPHICSTHREAD threadID)
+APICB apiCB[COMMANDLIST_COUNT];
+void SetClipPlane(const XMFLOAT4& clipPlane, CommandList cmd)
 {
-	apiCB[threadID].g_xClipPlane = clipPlane;
-	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
+	apiCB[cmd].g_xClipPlane = clipPlane;
+	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
 }
-void SetAlphaRef(float alphaRef, GRAPHICSTHREAD threadID)
+void SetAlphaRef(float alphaRef, CommandList cmd)
 {
-	if (alphaRef != apiCB[threadID].g_xAlphaRef)
+	if (alphaRef != apiCB[cmd].g_xAlphaRef)
 	{
-		apiCB[threadID].g_xAlphaRef = alphaRef;
-		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[threadID], threadID);
+		apiCB[cmd].g_xAlphaRef = alphaRef;
+		GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_API], &apiCB[cmd], cmd);
 	}
 }
-void BindGBufferTextures(const Texture2D* slot0, const Texture2D* slot1, const Texture2D* slot2, GRAPHICSTHREAD threadID)
+void BindGBufferTextures(const Texture2D* slot0, const Texture2D* slot1, const Texture2D* slot2, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindResource(PS, slot0, TEXSLOT_GBUFFER0, threadID);
-	device->BindResource(PS, slot1, TEXSLOT_GBUFFER1, threadID);
-	device->BindResource(PS, slot2, TEXSLOT_GBUFFER2, threadID);
+	device->BindResource(PS, slot0, TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(PS, slot1, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(PS, slot2, TEXSLOT_GBUFFER2, cmd);
 
-	device->BindResource(CS, slot0, TEXSLOT_GBUFFER0, threadID);
-	device->BindResource(CS, slot1, TEXSLOT_GBUFFER1, threadID);
-	device->BindResource(CS, slot2, TEXSLOT_GBUFFER2, threadID);
+	device->BindResource(CS, slot0, TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, slot1, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, slot2, TEXSLOT_GBUFFER2, cmd);
 }
-void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, GRAPHICSTHREAD threadID)
+void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindResource(PS, depth, TEXSLOT_DEPTH, threadID);
-	device->BindResource(VS, depth, TEXSLOT_DEPTH, threadID);
-	device->BindResource(GS, depth, TEXSLOT_DEPTH, threadID);
-	device->BindResource(CS, depth, TEXSLOT_DEPTH, threadID);
+	device->BindResource(PS, depth, TEXSLOT_DEPTH, cmd);
+	device->BindResource(VS, depth, TEXSLOT_DEPTH, cmd);
+	device->BindResource(GS, depth, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, depth, TEXSLOT_DEPTH, cmd);
 
-	device->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	device->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	device->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
-	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, threadID);
+	device->BindResource(PS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(VS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(GS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
 }
 
 
-const Texture2D* ComputeLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD threadID)
+const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -8304,37 +8294,37 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, GRAPHICSTHREAD t
 	}
 	if (luminance_map != nullptr)
 	{
-		device->EventBegin("Compute Luminance", threadID);
+		device->EventBegin("Compute Luminance", cmd);
 
 		// Pass 1 : Create luminance map from scene tex
 		TextureDesc luminance_map_desc = luminance_map->GetDesc();
-		device->BindComputePSO(&CPSO[CSTYPE_LUMINANCE_PASS1], threadID);
-		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, threadID);
-		device->BindUAV(CS, luminance_map.get(), 0, threadID);
-		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, threadID);
+		device->BindComputeShader(computeShaders[CSTYPE_LUMINANCE_PASS1], cmd);
+		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, cmd);
+		device->BindUAV(CS, luminance_map.get(), 0, cmd);
+		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, cmd);
 
 		// Pass 2 : Reduce for average luminance until we got an 1x1 texture
 		TextureDesc luminance_avg_desc;
 		for (size_t i = 0; i < luminance_avg.size(); ++i)
 		{
 			luminance_avg_desc = luminance_avg[i]->GetDesc();
-			device->BindComputePSO(&CPSO[CSTYPE_LUMINANCE_PASS2], threadID);
-			device->BindUAV(CS, luminance_avg[i], 0, threadID);
+			device->BindComputeShader(computeShaders[CSTYPE_LUMINANCE_PASS2], cmd);
+			device->BindUAV(CS, luminance_avg[i], 0, cmd);
 			if (i > 0)
 			{
-				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
-				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, threadID);
+				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, cmd);
 			}
-			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, threadID);
+			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, cmd);
 		}
 
 
-		device->UnbindUAVs(0, 1, threadID);
+		device->UnbindUAVs(0, 1, cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 
 		return luminance_avg.back();
 	}

@@ -9,8 +9,8 @@ using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiSceneSystem;
 
-GraphicsPSO* pso_solidpart = nullptr;
-GraphicsPSO* pso_wirepart = nullptr;
+PipelineState pso_solidpart;
+PipelineState pso_wirepart;
 std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Axis;
 std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Plane;
 std::unique_ptr<wiGraphics::GPUBuffer> vertexBuffer_Origin;
@@ -22,11 +22,8 @@ void Translator::LoadShaders()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	SAFE_DELETE(pso_solidpart);
-	SAFE_DELETE(pso_wirepart);
-
 	{
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 
 		desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
 		desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
@@ -36,12 +33,11 @@ void Translator::LoadShaders()
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
 		desc.pt = TRIANGLELIST;
 
-		pso_solidpart = new GraphicsPSO;
-		device->CreateGraphicsPSO(&desc, pso_solidpart);
+		device->CreatePipelineState(&desc, &pso_solidpart);
 	}
 
 	{
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 
 		desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
 		desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
@@ -51,8 +47,7 @@ void Translator::LoadShaders()
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.pt = LINELIST;
 
-		pso_wirepart = new GraphicsPSO;
-		device->CreateGraphicsPSO(&desc, pso_wirepart);
+		device->CreatePipelineState(&desc, &pso_wirepart);
 	}
 }
 
@@ -431,7 +426,7 @@ void Translator::Update()
 
 	prevPointer = pointer;
 }
-void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) const
+void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 {
 	Scene& scene = wiSceneSystem::GetScene();
 
@@ -451,7 +446,7 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) co
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("Editor - Translator", threadID);
+	device->EventBegin("Editor - Translator", cmd);
 
 	XMMATRIX VP = camera.GetViewProjection();
 
@@ -464,95 +459,95 @@ void Translator::Draw(const CameraComponent& camera, GRAPHICSTHREAD threadID) co
 
 	// Planes:
 	{
-		device->BindGraphicsPSO(pso_solidpart, threadID);
+		device->BindPipelineState(&pso_solidpart, cmd);
 		const GPUBuffer* vbs[] = {
 			vertexBuffer_Plane.get(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
 	}
 
 	// xy
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->Draw(vertexCount_Plane, 0, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount_Plane, 0, cmd);
 
 	// xz
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->Draw(vertexCount_Plane, 0, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount_Plane, 0, cmd);
 
 	// yz
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.2f, 0.2f, 0, 0.2f);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->Draw(vertexCount_Plane, 0, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount_Plane, 0, cmd);
 
 	// Lines:
 	{
-		device->BindGraphicsPSO(pso_wirepart, threadID);
+		device->BindPipelineState(&pso_wirepart, cmd);
 		const GPUBuffer* vbs[] = {
 			vertexBuffer_Axis.get(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
 	}
 
 	// x
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->Draw(vertexCount_Axis, 0, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// y
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->Draw(vertexCount_Axis, 0, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// z
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-	device->Draw(vertexCount_Axis, 0, threadID);
+	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// Origin:
 	{
-		device->BindGraphicsPSO(pso_solidpart, threadID);
+		device->BindPipelineState(&pso_solidpart, cmd);
 		const GPUBuffer* vbs[] = {
 			vertexBuffer_Origin.get(),
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
+		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranspose(mat));
 		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, threadID);
-		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-		device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), threadID);
-		device->Draw(vertexCount_Origin, 0, threadID);
+		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
+		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+		device->Draw(vertexCount_Origin, 0, cmd);
 	}
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 bool Translator::IsDragStarted()

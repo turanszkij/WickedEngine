@@ -10,7 +10,7 @@ namespace wiBackLog
 	void Toggle();
 	void Scroll(int direction);
 	void Update();
-	void Draw(GRAPHICSTHREAD threadID);
+	void Draw(wiGraphics::CommandList cmd);
 
 	std::string getText();
 	void clear();

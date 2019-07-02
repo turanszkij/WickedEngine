@@ -1483,9 +1483,9 @@ void EditorComponent::Render() const
 	__super::Render();
 
 }
-void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
+void EditorComponent::Compose(CommandList cmd) const
 {
-	renderPath->Compose(threadID);
+	renderPath->Compose(cmd);
 
 	if (cinemaModeCheckBox->GetCheck())
 	{
@@ -1529,16 +1529,16 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			switch (light.GetType())
 			{
 			case LightComponent::POINT:
-				wiImage::Draw(&pointLightTex, fx, threadID);
+				wiImage::Draw(&pointLightTex, fx, cmd);
 				break;
 			case LightComponent::SPOT:
-				wiImage::Draw(&spotLightTex, fx, threadID);
+				wiImage::Draw(&spotLightTex, fx, cmd);
 				break;
 			case LightComponent::DIRECTIONAL:
-				wiImage::Draw(&dirLightTex, fx, threadID);
+				wiImage::Draw(&dirLightTex, fx, cmd);
 				break;
 			default:
-				wiImage::Draw(&areaLightTex, fx, threadID);
+				wiImage::Draw(&areaLightTex, fx, cmd);
 				break;
 			}
 		}
@@ -1575,7 +1575,7 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			}
 
 
-			wiImage::Draw(&decalTex, fx, threadID);
+			wiImage::Draw(&decalTex, fx, cmd);
 
 		}
 	}
@@ -1610,7 +1610,7 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			}
 
 
-			wiImage::Draw(&forceFieldTex, fx, threadID);
+			wiImage::Draw(&forceFieldTex, fx, cmd);
 		}
 	}
 
@@ -1645,7 +1645,7 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			}
 
 
-			wiImage::Draw(&cameraTex, fx, threadID);
+			wiImage::Draw(&cameraTex, fx, cmd);
 		}
 	}
 
@@ -1679,7 +1679,7 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			}
 
 
-			wiImage::Draw(&armatureTex, fx, threadID);
+			wiImage::Draw(&armatureTex, fx, cmd);
 		}
 	}
 
@@ -1713,7 +1713,7 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			}
 
 
-			wiImage::Draw(&emitterTex, fx, threadID);
+			wiImage::Draw(&emitterTex, fx, cmd);
 		}
 	}
 
@@ -1747,17 +1747,17 @@ void EditorComponent::Compose(GRAPHICSTHREAD threadID) const
 			}
 
 
-			wiImage::Draw(&hairTex, fx, threadID);
+			wiImage::Draw(&hairTex, fx, cmd);
 		}
 	}
 
 
 	if (!selected.empty() && translator.enabled)
 	{
-		translator.Draw(camera, threadID);
+		translator.Draw(camera, cmd);
 	}
 
-	__super::Compose(threadID);
+	__super::Compose(cmd);
 }
 void EditorComponent::Unload()
 {

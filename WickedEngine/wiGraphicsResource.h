@@ -216,23 +216,14 @@ namespace wiGraphics
 	};
 
 
-	struct GraphicsPSO : public GraphicsDeviceChild
+	struct PipelineState : public GraphicsDeviceChild
 	{
 		wiCPUHandle	pipeline = WI_NULL_HANDLE;
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 
-		const GraphicsPSODesc& GetDesc() const { return desc; }
+		const PipelineStateDesc& GetDesc() const { return desc; }
 
-		~GraphicsPSO();
-	};
-	struct ComputePSO : public GraphicsDeviceChild
-	{
-		wiCPUHandle	pipeline = WI_NULL_HANDLE;
-		ComputePSODesc desc;
-
-		const ComputePSODesc& GetDesc() const { return desc; }
-
-		~ComputePSO();
+		~PipelineState();
 	};
 
 }

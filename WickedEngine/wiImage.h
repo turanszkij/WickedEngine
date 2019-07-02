@@ -7,13 +7,13 @@ struct wiImageParams;
 
 namespace wiImage
 {
-	void Draw(const wiGraphics::Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID);
+	void Draw(const wiGraphics::Texture2D* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
 
 	void DrawDeferred(
 		const wiGraphics::Texture2D* lightmap_diffuse, 
 		const wiGraphics::Texture2D* lightmap_specular,
 		const wiGraphics::Texture2D* ao, 
-		GRAPHICSTHREAD threadID, 
+		wiGraphics::CommandList cmd,
 		int stencilref = 0);
 
 	void LoadShaders();

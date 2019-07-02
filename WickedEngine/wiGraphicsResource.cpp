@@ -161,19 +161,11 @@ namespace wiGraphics
 	}
 
 
-	GraphicsPSO::~GraphicsPSO()
+	PipelineState::~PipelineState()
 	{
 		if (device != nullptr)
 		{
-			device->DestroyGraphicsPSO(this);
-		}
-	}
-
-	ComputePSO::~ComputePSO()
-	{
-		if (device != nullptr)
-		{
-			device->DestroyComputePSO(this);
+			device->DestroyPipelineState(this);
 		}
 	}
 }

@@ -14,8 +14,8 @@ public:
 	wiOcean(const wiSceneSystem::WeatherComponent& weather);
 	~wiOcean();
 
-	void UpdateDisplacementMap(const wiSceneSystem::WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const;
-	void Render(const wiSceneSystem::CameraComponent& camera, const wiSceneSystem::WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const;
+	void UpdateDisplacementMap(const wiSceneSystem::WeatherComponent& weather, float time, wiGraphics::CommandList cmd) const;
+	void Render(const wiSceneSystem::CameraComponent& camera, const wiSceneSystem::WeatherComponent& weather, float time, wiGraphics::CommandList cmd) const;
 
 	const wiGraphics::Texture2D* getDisplacementMap() const;
 	const wiGraphics::Texture2D* getGradientMap() const;

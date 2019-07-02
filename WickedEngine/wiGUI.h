@@ -24,7 +24,7 @@ public:
 	~wiGUI();
 
 	void Update(float dt);
-	void Render(GRAPHICSTHREAD threadID) const;
+	void Render(wiGraphics::CommandList cmd) const;
 
 	void AddWidget(wiWidget* widget);
 	void RemoveWidget(wiWidget* widget);
@@ -42,7 +42,7 @@ public:
 	void SetVisible(bool value) { visible = value; }
 	bool IsVisible() { return visible; }
 
-	void ResetScissor(GRAPHICSTHREAD threadID) const;
+	void ResetScissor(wiGraphics::CommandList cmd) const;
 
 
 	const XMFLOAT2& GetPointerPos() const

@@ -85,8 +85,8 @@ public:
 	void SetTextShadowColor(const wiColor& value) { textShadowColor = value; }
 
 	virtual void Update(wiGUI* gui, float dt);
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const = 0;
-	void RenderTooltip(const wiGUI* gui, GRAPHICSTHREAD threadID) const;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const = 0;
+	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
 
 	XMFLOAT3 translation;
 	XMFLOAT3 scale;
@@ -116,7 +116,7 @@ public:
 	virtual ~wiButton();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 	void OnDragStart(std::function<void(wiEventArgs args)> func);
@@ -133,7 +133,7 @@ public:
 	virtual ~wiLabel();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 };
 
 // Text input box
@@ -158,7 +158,7 @@ public:
 	static void DeleteFromInput();
 
 	virtual void Update(wiGUI* gui, float dt) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
 };
@@ -186,7 +186,7 @@ public:
 	void SetRange(float start, float end);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnSlide(std::function<void(wiEventArgs args)> func);
 };
@@ -205,7 +205,7 @@ public:
 	bool GetCheck() const;
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 };
@@ -249,7 +249,7 @@ public:
 	std::string GetItemText(int index);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
@@ -275,7 +275,7 @@ public:
 	void RemoveWidgets(bool alsoDelete = false);
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	virtual void SetVisible(bool value) override;
 	virtual void SetEnabled(bool value) override;
@@ -300,7 +300,7 @@ public:
 	virtual ~wiColorPicker();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
-	virtual void Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const override;
+	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
 	const XMFLOAT4& GetPickColor() const;
 	void SetPickColor(const XMFLOAT4& value);

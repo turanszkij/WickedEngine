@@ -69,9 +69,9 @@ namespace wiJobSystem
 			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
 			assert(affinity_result > 0);
 
-			//// Increase thread priority:
-			//BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
-			//assert(priority_result != 0);
+			// Increase thread priority:
+			BOOL priority_result = SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
+			assert(priority_result != 0);
 
 			// Name the thread:
 			std::wstringstream wss;

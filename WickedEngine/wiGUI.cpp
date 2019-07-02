@@ -5,6 +5,7 @@
 #include "wiInputManager.h"
 
 using namespace std;
+using namespace wiGraphics;
 
 wiGUI::wiGUI() : activeWidget(nullptr), focus(false), visible(true), pointerpos(XMFLOAT2(0,0))
 {
@@ -64,45 +65,45 @@ void wiGUI::Update(float dt)
 	}
 }
 
-void wiGUI::Render(GRAPHICSTHREAD threadID) const
+void wiGUI::Render(CommandList cmd) const
 {
 	if (!visible)
 	{
 		return;
 	}
 
-	wiRenderer::GetDevice()->EventBegin("GUI", threadID);
+	wiRenderer::GetDevice()->EventBegin("GUI", cmd);
 	for (auto&x : widgets)
 	{
 		if (x->parent == this && x != activeWidget)
 		{
 			// the contained child widgets will be rendered by the containers
-			x->Render(this, threadID);
+			x->Render(this, cmd);
 		}
 	}
 	if (activeWidget != nullptr)
 	{
 		// render the active widget on top of everything
-		activeWidget->Render(this, threadID);
+		activeWidget->Render(this, cmd);
 	}
 
 	for (auto&x : widgets)
 	{
-		x->RenderTooltip(this, threadID);
+		x->RenderTooltip(this, cmd);
 	}
 
-	ResetScissor(threadID);
-	wiRenderer::GetDevice()->EventEnd(threadID);
+	ResetScissor(cmd);
+	wiRenderer::GetDevice()->EventEnd(cmd);
 }
 
-void wiGUI::ResetScissor(GRAPHICSTHREAD threadID) const
+void wiGUI::ResetScissor(CommandList cmd) const
 {
 	wiGraphics::Rect scissor[1];
 	scissor[0].bottom = (LONG)(wiRenderer::GetDevice()->GetScreenHeight());
 	scissor[0].left = (LONG)(0);
 	scissor[0].right = (LONG)(wiRenderer::GetDevice()->GetScreenWidth());
 	scissor[0].top = (LONG)(0);
-	wiRenderer::GetDevice()->BindScissorRects(1, scissor, threadID);
+	wiRenderer::GetDevice()->BindScissorRects(1, scissor, cmd);
 }
 
 void wiGUI::AddWidget(wiWidget* widget)

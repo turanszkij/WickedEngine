@@ -51,14 +51,14 @@ namespace wiImage
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT];
 	BlendState				blendStateDisableColor;
 	DepthStencilState		depthStencilStateDepthWrite;
-	GraphicsPSO				imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT][IMAGE_SAMPLING_COUNT];
-	GraphicsPSO				postprocessPSO[wiImageParams::PostProcess::POSTPROCESS_COUNT];
-	GraphicsPSO				deferredPSO;
+	PipelineState				imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT][IMAGE_SAMPLING_COUNT];
+	PipelineState				postprocessPSO[wiImageParams::PostProcess::POSTPROCESS_COUNT];
+	PipelineState				deferredPSO;
 
-	std::atomic_bool initialized = false;
+	std::atomic_bool initialized{ false };
 
 
-	void Draw(const Texture2D* texture, const wiImageParams& params, GRAPHICSTHREAD threadID)
+	void Draw(const Texture2D* texture, const wiImageParams& params, CommandList cmd)
 	{
 		if (!initialized.load())
 		{
@@ -66,49 +66,49 @@ namespace wiImage
 		}
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->EventBegin("Image", threadID);
+		device->EventBegin("Image", cmd);
 
 		bool fullScreenEffect = false;
 
-		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, threadID);
+		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, cmd);
 
-		device->BindStencilRef(params.stencilRef, threadID);
+		device->BindStencilRef(params.stencilRef, cmd);
 
 		IMAGE_SAMPLING sampling_type = params.quality == QUALITY_BICUBIC ? IMAGE_SAMPLING_BICUBIC : IMAGE_SAMPLING_SIMPLE;
 
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_MIRROR), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_MIRROR), SSLOT_ONDEMAND0, cmd);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_WRAP), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_WRAP), SSLOT_ONDEMAND0, cmd);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_CLAMP), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_POINT_CLAMP), SSLOT_ONDEMAND0, cmd);
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR), SSLOT_ONDEMAND0, cmd);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_WRAP), SSLOT_ONDEMAND0, cmd);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP), SSLOT_ONDEMAND0, cmd);
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_MIRROR), SSLOT_ONDEMAND0, cmd);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_WRAP), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_WRAP), SSLOT_ONDEMAND0, cmd);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP), SSLOT_ONDEMAND0, threadID);
+				device->BindSampler(PS, wiRenderer::GetSampler(SSLOT_ANISO_CLAMP), SSLOT_ONDEMAND0, cmd);
 		}
 
 		if (params.isFullScreenEnabled())
 		{
-			device->BindGraphicsPSO(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], threadID);
-			device->Draw(3, 0, threadID);
-			device->EventEnd(threadID);
+			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], cmd);
+			device->Draw(3, 0, cmd);
+			device->EventEnd(cmd);
 			return;
 		}
 
@@ -210,7 +210,7 @@ namespace wiImage
 			cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
 			cb.xMipLevel = params.mipLevel;
 
-			device->UpdateBuffer(&constantBuffer, &cb, threadID);
+			device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
 			// Determine relevant image rendering pixel shader:
 			IMAGE_SHADER targetShader;
@@ -244,10 +244,10 @@ namespace wiImage
 				}
 			}
 
-			device->BindGraphicsPSO(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], threadID);
+			device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], cmd);
 
-			device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
-			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), threadID);
+			device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 
 			fullScreenEffect = false;
 		}
@@ -255,7 +255,7 @@ namespace wiImage
 		{
 			fullScreenEffect = true;
 
-			device->BindGraphicsPSO(&postprocessPSO[params.process.type], threadID);
+			device->BindPipelineState(&postprocessPSO[params.process.type], cmd);
 
 			PostProcessCB prcb;
 
@@ -266,7 +266,7 @@ namespace wiImage
 				prcb.xPPParams0.x = params.process.params.blur.x / params.siz.x;
 				prcb.xPPParams0.y = params.process.params.blur.y / params.siz.y;
 				prcb.xPPParams0.z = params.mipLevel;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::LIGHTSHAFT:
 				prcb.xPPParams0.x = 0.65f;	// density
@@ -275,7 +275,7 @@ namespace wiImage
 				prcb.xPPParams0.w = 0.2f;	// exposure
 				prcb.xPPParams1.x = params.process.params.sun.x;
 				prcb.xPPParams1.y = params.process.params.sun.y;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::OUTLINE:
 				prcb.xPPParams0.x = params.process.params.outline.threshold;
@@ -283,29 +283,29 @@ namespace wiImage
 				prcb.xPPParams1.x = params.process.params.outline.colorR;
 				prcb.xPPParams1.y = params.process.params.outline.colorG;
 				prcb.xPPParams1.z = params.process.params.outline.colorB;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::DEPTHOFFIELD:
 				prcb.xPPParams0.z = params.process.params.dofFocus;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::MOTIONBLUR:
 				break;
 			case wiImageParams::PostProcess::BLOOMSEPARATE:
 				prcb.xPPParams0.x = params.process.params.bloomThreshold;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::FXAA:
 				break;
 			case wiImageParams::PostProcess::SSAO:
 				prcb.xPPParams0.x = params.process.params.ssao.range;
 				prcb.xPPParams0.y = (float)params.process.params.ssao.sampleCount;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::SSSS:
 				prcb.xPPParams0.x = params.process.params.ssss.x;
 				prcb.xPPParams0.y = params.process.params.ssss.y;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::SSR:
 				break;
@@ -313,7 +313,7 @@ namespace wiImage
 				break;
 			case wiImageParams::PostProcess::TONEMAP:
 				prcb.xPPParams0.x = params.process.params.exposure;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::REPROJECTDEPTHBUFFER:
 				break;
@@ -323,7 +323,7 @@ namespace wiImage
 				break;
 			case wiImageParams::PostProcess::SHARPEN:
 				prcb.xPPParams0.x = params.process.params.sharpen;
-				device->UpdateBuffer(&processCb, &prcb, threadID);
+				device->UpdateBuffer(&processCb, &prcb, cmd);
 				break;
 			case wiImageParams::PostProcess::LINEARDEPTH:
 				break;
@@ -332,7 +332,7 @@ namespace wiImage
 				break;
 			}
 
-			device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), threadID);
+			device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		}
 
@@ -341,18 +341,18 @@ namespace wiImage
 			params.distortionMap,
 			params.refractionSource,
 		};
-		device->BindResources(PS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), threadID);
+		device->BindResources(PS, res, TEXSLOT_ONDEMAND1, ARRAYSIZE(res), cmd);
 
-		device->Draw((fullScreenEffect ? 3 : 4), 0, threadID);
+		device->Draw((fullScreenEffect ? 3 : 4), 0, cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 	void DrawDeferred(
 		const Texture2D* lightmap_diffuse, 
 		const Texture2D* lightmap_specular, 
 		const Texture2D* ao,
-		GRAPHICSTHREAD threadID, int stencilRef)
+		CommandList cmd, int stencilRef)
 	{
 		if (!initialized.load())
 		{
@@ -361,19 +361,19 @@ namespace wiImage
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		device->EventBegin("DeferredComposition", threadID);
+		device->EventBegin("DeferredComposition", cmd);
 
-		device->BindStencilRef(stencilRef, threadID);
+		device->BindStencilRef(stencilRef, cmd);
 
-		device->BindResource(PS, lightmap_diffuse, TEXSLOT_ONDEMAND0, threadID);
-		device->BindResource(PS, lightmap_specular, TEXSLOT_ONDEMAND1, threadID);
-		device->BindResource(PS, ao, TEXSLOT_ONDEMAND2, threadID);
+		device->BindResource(PS, lightmap_diffuse, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(PS, lightmap_specular, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(PS, ao, TEXSLOT_ONDEMAND2, cmd);
 
-		device->BindGraphicsPSO(&deferredPSO, threadID);
+		device->BindPipelineState(&deferredPSO, cmd);
 
-		device->Draw(3, 0, threadID);
+		device->Draw(3, 0, cmd);
 
-		device->EventEnd(threadID);
+		device->EventEnd(cmd);
 	}
 
 
@@ -424,7 +424,7 @@ namespace wiImage
 
 		for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
 		{
-			GraphicsPSODesc desc;
+			PipelineStateDesc desc;
 			desc.vs = vertexShader;
 			if (i == IMAGE_SHADER_FULLSCREEN)
 			{
@@ -456,10 +456,10 @@ namespace wiImage
 						desc.numRTs = 1;
 
 						desc.RTFormats[0] = device->GetBackBufferFormat();
-						device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][0][l]);
+						device->CreatePipelineState(&desc, &imagePSO[i][j][k][0][l]);
 
 						desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-						device->CreateGraphicsPSO(&desc, &imagePSO[i][j][k][1][l]);
+						device->CreatePipelineState(&desc, &imagePSO[i][j][k][1][l]);
 
 					}
 				}
@@ -468,7 +468,7 @@ namespace wiImage
 
 		for (int i = 0; i < wiImageParams::PostProcess::POSTPROCESS_COUNT; ++i)
 		{
-			GraphicsPSODesc desc;
+			PipelineStateDesc desc;
 			desc.vs = screenVS;
 			desc.ps = postprocessPS[i];
 			desc.bs = &blendStates[BLENDMODE_OPAQUE];
@@ -526,10 +526,10 @@ namespace wiImage
 				desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 			}
 
-			device->CreateGraphicsPSO(&desc, &postprocessPSO[i]);
+			device->CreatePipelineState(&desc, &postprocessPSO[i]);
 		}
 
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = screenVS;
 		desc.ps = deferredPS;
 		desc.bs = &blendStates[BLENDMODE_OPAQUE];
@@ -539,7 +539,7 @@ namespace wiImage
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 		desc.DSFormat = wiRenderer::DSFormat_full;
 		desc.pt = TRIANGLELIST;
-		device->CreateGraphicsPSO(&desc, &deferredPSO);
+		device->CreatePipelineState(&desc, &deferredPSO);
 
 
 	}

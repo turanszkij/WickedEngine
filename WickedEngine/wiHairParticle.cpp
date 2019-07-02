@@ -25,9 +25,8 @@ static const ComputeShader *cs_simulate = nullptr;
 static DepthStencilState dss_default, dss_equal, dss_rejectopaque_keeptransparent;
 static RasterizerState rs, ncrs, wirers;
 static BlendState bs[2]; 
-static GraphicsPSO PSO[RENDERPASS_COUNT][2];
-static GraphicsPSO PSO_wire;
-static ComputePSO CPSO_simulate;
+static PipelineState PSO[RENDERPASS_COUNT][2];
+static PipelineState PSO_wire;
 
 void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt)
 {
@@ -82,7 +81,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	}
 
 }
-void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, GRAPHICSTHREAD threadID) const
+void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
 {
 	if (strandCount == 0 || particleBuffer == nullptr)
 	{
@@ -90,9 +89,9 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("HairParticle - UpdateRenderData", threadID);
+	device->EventBegin("HairParticle - UpdateRenderData", cmd);
 
-	device->BindComputePSO(&CPSO_simulate, threadID);
+	device->BindComputeShader(cs_simulate, cmd);
 
 	HairParticleCB hcb;
 	hcb.xWorld = world;
@@ -110,31 +109,31 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 	// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
 	hcb.xHairNumDispatchGroups = (uint)ceilf((float)strandCount / (float)THREADCOUNT_SIMULATEHAIR);
-	device->UpdateBuffer(cb.get(), &hcb, threadID);
+	device->UpdateBuffer(cb.get(), &hcb, cmd);
 
-	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), threadID);
+	device->BindConstantBuffer(CS, cb.get(), CB_GETBINDSLOT(HairParticleCB), cmd);
 
 	GPUResource* uavs[] = {
 		particleBuffer.get(),
 		simulationBuffer.get()
 	};
-	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), threadID);
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 	GPUResource* res[] = {
 		mesh.indexBuffer.get(),
 		mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get()
 	};
-	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-	device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, threadID);
+	device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 
-	device->UnbindUAVs(0, ARRAYSIZE(uavs), threadID);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
-void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, GRAPHICSTHREAD threadID) const
+void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, CommandList cmd) const
 {
 	if (strandCount == 0 || cb == nullptr)
 	{
@@ -142,9 +141,9 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("HairParticle - Draw", threadID);
+	device->EventBegin("HairParticle - Draw", cmd);
 
-	device->BindStencilRef(STENCILREF_DEFAULT, threadID);
+	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 
 	if (wiRenderer::IsWireRender())
 	{
@@ -152,27 +151,27 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 		{
 			return;
 		}
-		device->BindGraphicsPSO(&PSO_wire, threadID);
-		device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, threadID);
+		device->BindPipelineState(&PSO_wire, cmd);
+		device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO[renderPass][transparent], threadID);
+		device->BindPipelineState(&PSO[renderPass][transparent], cmd);
 
 		const GPUResource* res[] = {
 			material.GetBaseColorMap()
 		};
-		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
-		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), threadID);
+		device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+		device->BindResources(VS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 	}
 
-	device->BindConstantBuffer(VS, cb.get(), CB_GETBINDSLOT(HairParticleCB), threadID);
+	device->BindConstantBuffer(VS, cb.get(), CB_GETBINDSLOT(HairParticleCB), cmd);
 
-	device->BindResource(VS, particleBuffer.get(), 0, threadID);
+	device->BindResource(VS, particleBuffer.get(), 0, cmd);
 
-	device->Draw(strandCount * 12 * std::max(segmentCount, 1u), 0, threadID);
+	device->Draw(strandCount * 12 * std::max(segmentCount, 1u), 0, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 
@@ -233,7 +232,7 @@ void wiHairParticle::LoadShaders()
 				continue;
 			}
 
-			GraphicsPSODesc desc;
+			PipelineStateDesc desc;
 			desc.vs = vs;
 			desc.ps = ps[i];
 			desc.bs = &bs[j];
@@ -274,14 +273,14 @@ void wiHairParticle::LoadShaders()
 				desc.numRTs = 1;
 			}
 
-			device->CreateGraphicsPSO(&desc, &PSO[i][j]);
+			device->CreatePipelineState(&desc, &PSO[i][j]);
 		}
 	}
 
 	ps_simplest = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticlePS_simplest.cso", wiResourceManager::PIXELSHADER));
 
 	{
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = vs;
 		desc.ps = ps_simplest;
 		desc.bs = &bs[0];
@@ -290,16 +289,11 @@ void wiHairParticle::LoadShaders()
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 		desc.DSFormat = wiRenderer::DSFormat_full;
-		device->CreateGraphicsPSO(&desc, &PSO_wire);
+		device->CreatePipelineState(&desc, &PSO_wire);
 	}
 
 	cs_simulate = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
 
-	{
-		ComputePSODesc desc;
-		desc.cs = cs_simulate;
-		device->CreateComputePSO(&desc, &CPSO_simulate);
-	}
 }
 void wiHairParticle::CleanUp()
 {

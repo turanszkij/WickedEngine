@@ -18,7 +18,7 @@ using namespace wiGraphics;
 using namespace wiSceneSystem;
 
 
-static wiGraphics::GraphicsPSO PSO_colorpicker;
+static wiGraphics::PipelineState PSO_colorpicker;
 
 
 wiWidget::wiWidget() : TransformComponent()
@@ -86,7 +86,7 @@ void wiWidget::Detach()
 	this->parent = nullptr;
 	ApplyTransform();
 }
-void wiWidget::RenderTooltip(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 {
 	if (!IsEnabled() || !IsVisible())
 	{
@@ -97,7 +97,7 @@ void wiWidget::RenderTooltip(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	if (tooltipTimer > 25)
 	{
-		gui->ResetScissor(threadID);
+		gui->ResetScissor(cmd);
 
 		XMFLOAT2 tooltipPos = XMFLOAT2(gui->pointerpos.x, gui->pointerpos.y);
 		if (tooltipPos.y > wiRenderer::GetDevice()->GetScreenHeight()*0.8f)
@@ -126,15 +126,15 @@ void wiWidget::RenderTooltip(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 		static const float _border = 2;
 		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
 		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
-		wiImage::Draw(wiTextureHelper::getColor(wiColor(255, 234, 165)), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), threadID);
+		wiImage::Draw(wiTextureHelper::getColor(wiColor(255, 234, 165)), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), cmd);
 		tooltipFont.SetText(tooltip);
-		tooltipFont.Draw(threadID);
+		tooltipFont.Draw(cmd);
 		if (!scriptTip.empty())
 		{
 			tooltipFont.SetText(scriptTip);
 			tooltipFont.params.posY += (int)(fontHeight / 2);
 			tooltipFont.params.color = wiColor(25, 25, 25, 110);
-			tooltipFont.Draw(threadID);
+			tooltipFont.Draw(cmd);
 		}
 	}
 }
@@ -255,7 +255,7 @@ void wiWidget::SetScissorRect(const wiGraphics::Rect& rect)
 }
 void wiWidget::LoadShaders()
 {
-	GraphicsPSODesc desc;
+	PipelineStateDesc desc;
 	desc.vs = wiRenderer::GetVertexShader(VSTYPE_LINE);
 	desc.ps = wiRenderer::GetPixelShader(PSTYPE_LINE);
 	desc.il = wiRenderer::GetVertexLayout(VLTYPE_LINE);
@@ -265,7 +265,7 @@ void wiWidget::LoadShaders()
 	desc.numRTs = 1;
 	desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 	desc.pt = TRIANGLESTRIP;
-	HRESULT hr = wiRenderer::GetDevice()->CreateGraphicsPSO(&desc, &PSO_colorpicker);
+	HRESULT hr = wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colorpicker);
 	assert(SUCCEEDED(hr));
 }
 
@@ -378,7 +378,7 @@ void wiButton::Update(wiGUI* gui, float dt)
 	prevPos.x = pointerHitbox.pos.x;
 	prevPos.y = pointerHitbox.pos.y;
 }
-void wiButton::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiButton::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -389,15 +389,15 @@ void wiButton::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	wiColor color = GetColor();
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), threadID);
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
 
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 	wiFont(text, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 }
 void wiButton::OnClick(function<void(wiEventArgs args)> func)
@@ -444,7 +444,7 @@ void wiLabel::Update(wiGUI* gui, float dt)
 		return;
 	}
 }
-void wiLabel::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -455,15 +455,15 @@ void wiLabel::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	wiColor color = GetColor();
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), threadID);
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
 
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 	wiFont(text, wiFontParams((int)translation.x + 2, (int)translation.y + 2, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 }
 
@@ -595,7 +595,7 @@ void wiTextInputField::Update(wiGUI* gui, float dt)
 
 	}
 }
-void wiTextInputField::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -606,14 +606,14 @@ void wiTextInputField::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	wiColor color = GetColor();
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), threadID);
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
 
 
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 
 	string activeText = text;
 	if (state == ACTIVE)
@@ -625,7 +625,7 @@ void wiTextInputField::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 		activeText = value;
 	}
 	wiFont(activeText, wiFontParams((int)(translation.x + 2), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 }
 void wiTextInputField::OnInputAccepted(function<void(wiEventArgs args)> func)
@@ -783,7 +783,7 @@ void wiSlider::Update(wiGUI* gui, float dt)
 
 	valueInputField->SetValue(value);
 }
-void wiSlider::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -796,23 +796,23 @@ void wiSlider::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	float headWidth = scale.x*0.05f;
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	// trail
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), threadID);
+		, wiImageParams(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), cmd);
 	// head
 	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), threadID);
+		, wiImageParams(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), cmd);
 
 	if (parent != gui)
 	{
-		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 	}
 	// text
 	wiFont(text, wiFontParams((int)(translation.x - headWidth * 0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 	//// value
 	//stringstream ss("");
@@ -822,7 +822,7 @@ void wiSlider::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 
 
-	valueInputField->Render(gui, threadID);
+	valueInputField->Render(gui, cmd);
 }
 void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 {
@@ -918,7 +918,7 @@ void wiCheckBox::Update(wiGUI* gui, float dt)
 	}
 
 }
-void wiCheckBox::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiCheckBox::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -929,26 +929,26 @@ void wiCheckBox::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	wiColor color = GetColor();
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	// control
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), threadID);
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
 
 	// check
 	if (GetCheck())
 	{
 		wiImage::Draw(wiTextureHelper::getColor(wiColor::lerp(color, wiColor::White(), 0.8f))
 			, wiImageParams(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
-			, threadID);
+			, cmd);
 	}
 
 	if (parent != gui)
 	{
-		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 	}
 	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 }
 void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
@@ -1109,7 +1109,7 @@ void wiComboBox::Update(wiGUI* gui, float dt)
 	}
 
 }
-void wiComboBox::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -1124,35 +1124,35 @@ void wiComboBox::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 		color = colors[FOCUS];
 	}
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	// control-base
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), threadID);
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
 	// control-arrow
 	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y), threadID);
+		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y), cmd);
 	wiFont("V", wiFontParams((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 
 	if (parent != gui)
 	{
-		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+		wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 	}
 	wiFont(text, wiFontParams((int)(translation.x), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_RIGHT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 	if (selected >= 0)
 	{
 		wiFont(items[selected], wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-			textColor, textShadowColor)).Draw(threadID);
+			textColor, textShadowColor)).Draw(cmd);
 	}
 
 	// drop-down
 	if (state == ACTIVE)
 	{
-		gui->ResetScissor(threadID);
+		gui->ResetScissor(cmd);
 
 		// control-list
 		int i = 0;
@@ -1177,9 +1177,9 @@ void wiComboBox::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 				}
 			}
 			wiImage::Draw(wiTextureHelper::getColor(col)
-				, wiImageParams(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), threadID);
+				, wiImageParams(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), cmd);
 			wiFont(x, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
-				textColor, textShadowColor)).Draw(threadID);
+				textColor, textShadowColor)).Draw(cmd);
 			i++;
 		}
 	}
@@ -1433,7 +1433,7 @@ void wiWindow::Update(wiGUI* gui, float dt)
 		return;
 	}
 }
-void wiWindow::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -1444,13 +1444,13 @@ void wiWindow::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	wiColor color = GetColor();
 
-	gui->ResetScissor(threadID);
+	gui->ResetScissor(cmd);
 
 	// body
 	if (!IsMinimized())
 	{
 		wiImage::Draw(wiTextureHelper::getColor(color)
-			, wiImageParams(translation.x, translation.y, scale.x, scale.y), threadID);
+			, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
 	}
 
 	for (auto& x : childrenWidgets)
@@ -1458,13 +1458,13 @@ void wiWindow::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 		if (x != gui->GetActiveWidget())
 		{
 			// the gui will render the active on on top of everything!
-			x->Render(gui, threadID);
+			x->Render(gui, cmd);
 		}
 	}
 
-	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, threadID);
+	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
 	wiFont(text, wiFontParams((int)(translation.x + resizeDragger_UpperLeft->scale.x + 2), (int)(translation.y + resizeDragger_UpperLeft->scale.y * 0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_CENTER, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 }
 void wiWindow::SetVisible(bool value)
@@ -1649,9 +1649,9 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		onColorChanged(args);
 	}
 }
-void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
+void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 {
-	wiWindow::Render(gui, threadID);
+	wiWindow::Render(gui, cmd);
 
 
 	if (!IsVisible() || IsMinimized())
@@ -1775,8 +1775,8 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 
 	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
 
-	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, threadID);
-	wiRenderer::GetDevice()->BindGraphicsPSO(&PSO_colorpicker, threadID);
+	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+	wiRenderer::GetDevice()->BindPipelineState(&PSO_colorpicker, cmd);
 
 	MiscCB cb;
 
@@ -1785,7 +1785,7 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 		if (vb_saturation.IsValid() && !vertices_saturation.empty())
 		{
 			vertices_saturation[0].col = hue_color;
-			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), threadID, vb_saturation.GetDesc().ByteWidth);
+			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), cmd, vb_saturation.GetDesc().ByteWidth);
 		}
 
 		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
@@ -1794,15 +1794,15 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 			__cam
 		));
 		cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
 			&vb_saturation,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->Draw(vb_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// render hue circle
@@ -1812,15 +1812,15 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 			__cam
 		));
 		cb.g_xColor = float4(1, 1, 1, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// render hue picker
@@ -1830,15 +1830,15 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 			__cam
 		));
 		cb.g_xColor = float4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// render saturation picker
@@ -1848,15 +1848,15 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 			__cam
 		));
 		cb.g_xColor = float4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->Draw(vb_picker.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// render preview
@@ -1866,15 +1866,15 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 			__cam
 		));
 		cb.g_xColor = GetPickColor();
-		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, threadID);
+		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
 			&vb_preview,
 		};
 		const UINT strides[] = {
 			sizeof(Vertex),
 		};
-		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, threadID);
-		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), 0, threadID);
+		wiRenderer::GetDevice()->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
+		wiRenderer::GetDevice()->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
 	}
 
 	// RGB values:
@@ -1883,7 +1883,7 @@ void wiColorPicker::Render(const wiGUI* gui, GRAPHICSTHREAD threadID) const
 	_rgb << "G: " << (int)(final_color.y * 255) << endl;
 	_rgb << "B: " << (int)(final_color.z * 255) << endl;
 	wiFont(_rgb.str(), wiFontParams((int)(translation.x + 200), (int)(translation.y + 200), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
-		textColor, textShadowColor)).Draw(threadID);
+		textColor, textShadowColor)).Draw(cmd);
 
 }
 const XMFLOAT4& wiColorPicker::GetPickColor() const

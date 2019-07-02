@@ -26,10 +26,7 @@ namespace wiOcean_Internal
 	DepthStencilState	depthStencilState;
 	BlendState			blendState;
 
-	GraphicsPSO PSO, PSO_wire;
-	ComputePSO CPSO_updateSpectrum;
-	ComputePSO CPSO_updateDisplacementMap;
-	ComputePSO CPSO_updateGradientFolding;
+	PipelineState PSO, PSO_wire;
 
 	CSFFT512x512_Plan m_fft_plan;
 }
@@ -240,102 +237,102 @@ void wiOcean::initHeightMap(const WeatherComponent& weather, XMFLOAT2* out_h0, f
 	}
 }
 
-void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const
+void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time, CommandList cmd) const
 {
 	auto& params = weather.oceanParameters;
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("Ocean Simulation", threadID);
+	device->EventBegin("Ocean Simulation", cmd);
 
 	// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 
-	device->BindComputePSO(&CPSO_updateSpectrum, threadID);
+	device->BindComputeShader(m_pUpdateSpectrumCS, cmd);
 
 	// Buffers
 	const GPUResource* cs0_srvs[2] = { 
 		&m_pBuffer_Float2_H0, 
 		&m_pBuffer_Float_Omega
 	};
-	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), threadID);
+	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, ARRAYSIZE(cs0_srvs), cmd);
 
 	const GPUResource* cs0_uavs[1] = { &m_pBuffer_Float2_Ht };
-	device->BindUAVs(CS, cs0_uavs, 0, ARRAYSIZE(cs0_uavs), threadID);
+	device->BindUAVs(CS, cs0_uavs, 0, ARRAYSIZE(cs0_uavs), cmd);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
 	perFrameData.g_Time = time * params.time_scale;
 	perFrameData.g_ChoppyScale = params.choppy_scale;
 	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
-	device->UpdateBuffer(&m_pPerFrameCB, &perFrameData, threadID);
+	device->UpdateBuffer(&m_pPerFrameCB, &perFrameData, cmd);
 
-	device->BindConstantBuffer(CS, &m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
-	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
+	device->BindConstantBuffer(CS, &m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 	// Run the CS
 	UINT group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	UINT group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
-	device->Dispatch(group_count_x, group_count_y, 1, threadID);
-	device->UAVBarrier(cs0_uavs, ARRAYSIZE(cs0_uavs), threadID);
+	device->Dispatch(group_count_x, group_count_y, 1, cmd);
+	device->UAVBarrier(cs0_uavs, ARRAYSIZE(cs0_uavs), cmd);
 
-	device->UnbindUAVs(0, 1, threadID);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 2, threadID);
+	device->UnbindUAVs(0, 1, cmd);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 2, cmd);
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
-	fft_512x512_c2c(m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht, threadID);
+	fft_512x512_c2c(m_fft_plan, m_pBuffer_Float_Dxyz, m_pBuffer_Float_Dxyz, m_pBuffer_Float2_Ht, cmd);
 
 
 
-	device->BindConstantBuffer(CS, &m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), threadID);
-	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), threadID);
+	device->BindConstantBuffer(CS, &m_pImmutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(CS, &m_pPerFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 
 	// Update displacement map:
-	device->BindComputePSO(&CPSO_updateDisplacementMap, threadID);
+	device->BindComputeShader(m_pUpdateDisplacementMapCS, cmd);
 	const GPUResource* cs_uavs[] = { &m_pDisplacementMap };
-	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
+	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
 	const GPUResource* cs_srvs[1] = { &m_pBuffer_Float_Dxyz };
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
-	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
+	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
+	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), cmd);
 
 	// Update gradient map:
-	device->BindComputePSO(&CPSO_updateGradientFolding, threadID);
+	device->BindComputeShader(m_pUpdateGradientFoldingCS, cmd);
 	cs_uavs[0] = { &m_pGradientMap };
-	device->BindUAVs(CS, cs_uavs, 0, 1, threadID);
+	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
 	cs_srvs[0] = &m_pDisplacementMap;
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, threadID);
-	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, threadID);
-	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), threadID);
+	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
+	device->UAVBarrier(cs_uavs, ARRAYSIZE(cs_uavs), cmd);
 
 	// Unbind
-	device->UnbindUAVs(0, 1, threadID);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, threadID);
+	device->UnbindUAVs(0, 1, cmd);
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 
-	wiRenderer::GenerateMipChain(&m_pGradientMap, wiRenderer::MIPGENFILTER_LINEAR, threadID);
+	wiRenderer::GenerateMipChain(&m_pGradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 
-void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, float time, GRAPHICSTHREAD threadID) const
+void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, float time, CommandList cmd) const
 {
 	auto& params = weather.oceanParameters;
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->EventBegin("Ocean Rendering", threadID);
+	device->EventBegin("Ocean Rendering", cmd);
 
 	bool wire = wiRenderer::IsWireRender();
 
 	if (wire)
 	{
-		device->BindGraphicsPSO(&PSO_wire, threadID);
+		device->BindPipelineState(&PSO_wire, cmd);
 	}
 	else
 	{
-		device->BindGraphicsPSO(&PSO, threadID);
+		device->BindPipelineState(&PSO, cmd);
 	}
 
 
@@ -350,17 +347,17 @@ void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weat
 	cb.xOceanWaterHeight = params.waterHeight;
 	cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
 
-	device->UpdateBuffer(&g_pShadingCB, &cb, threadID);
+	device->UpdateBuffer(&g_pShadingCB, &cb, cmd);
 
-	device->BindConstantBuffer(VS, &g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
-	device->BindConstantBuffer(PS, &g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), threadID);
+	device->BindConstantBuffer(VS, &g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	device->BindConstantBuffer(PS, &g_pShadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
-	device->BindResource(VS, &m_pDisplacementMap, TEXSLOT_ONDEMAND0, threadID);
-	device->BindResource(PS, &m_pGradientMap, TEXSLOT_ONDEMAND0, threadID);
+	device->BindResource(VS, &m_pDisplacementMap, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(PS, &m_pGradientMap, TEXSLOT_ONDEMAND0, cmd);
 
-	device->Draw(dim.x*dim.y*6, 0, threadID);
+	device->Draw(dim.x*dim.y*6, 0, cmd);
 
-	device->EventEnd(threadID);
+	device->EventEnd(cmd);
 }
 
 
@@ -383,7 +380,7 @@ void wiOcean::LoadShaders()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	{
-		GraphicsPSODesc desc;
+		PipelineStateDesc desc;
 		desc.vs = g_pOceanSurfVS;
 		desc.ps = g_pOceanSurfPS;
 		desc.bs = &blendState;
@@ -392,21 +389,11 @@ void wiOcean::LoadShaders()
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
 		desc.DSFormat = wiRenderer::DSFormat_full;
-		device->CreateGraphicsPSO(&desc, &PSO);
+		device->CreatePipelineState(&desc, &PSO);
 
 		desc.ps = g_pWireframePS;
 		desc.rs = &wireRS;
-		device->CreateGraphicsPSO(&desc, &PSO_wire);
-	}
-
-	{
-		ComputePSODesc desc;
-		desc.cs = m_pUpdateSpectrumCS;
-		device->CreateComputePSO(&desc, &CPSO_updateSpectrum);
-		desc.cs = m_pUpdateDisplacementMapCS;
-		device->CreateComputePSO(&desc, &CPSO_updateDisplacementMap);
-		desc.cs = m_pUpdateGradientFoldingCS;
-		device->CreateComputePSO(&desc, &CPSO_updateGradientFolding);
+		device->CreatePipelineState(&desc, &PSO_wire);
 	}
 }
 

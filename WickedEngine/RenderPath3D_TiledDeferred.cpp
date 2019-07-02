@@ -13,26 +13,26 @@ void RenderPath3D_TiledDeferred::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
-	GRAPHICSTHREAD threadID;
+	CommandList cmd;
 
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderFrameSetUp(threadID); });
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderShadows(threadID); });
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, threadID] { RenderReflections(threadID); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderFrameSetUp(cmd); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderShadows(cmd); });
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, cmd] { RenderReflections(cmd); });
 
 	// Main scene:
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID] {
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
 		const GPUResource* dsv[] = { &depthBuffer };
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_DEPTH_WRITE, cmd);
 
 		{
-			auto range = wiProfiler::BeginRange("Opaque Scene", wiProfiler::DOMAIN_GPU, threadID);
+			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 			const Texture2D* rts[] = {
 				&rtGBuffer[0],
@@ -41,75 +41,75 @@ void RenderPath3D_TiledDeferred::Render() const
 				&lightbuffer_diffuse,
 				&lightbuffer_specular,
 			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, threadID);
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(&rtGBuffer[1], clear, threadID);
-			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, threadID);
+			device->ClearRenderTarget(&rtGBuffer[1], clear, cmd);
+			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, cmd);
 			ViewPort vp;
 			vp.Width = (float)rts[0]->GetDesc().Width;
 			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, threadID);
+			device->BindViewports(1, &vp, cmd);
 
-			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, threadID);
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, threadID);
-			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), threadID, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
+			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, threadID);
-		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, threadID);
-		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, threadID);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_COPY_SOURCE, cmd);
+		device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
+		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 
-		RenderLinearDepth(threadID);
+		RenderLinearDepth(cmd);
 	});
 
-	threadID = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, threadID] {
+	cmd = device->BeginCommandList();
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
-		wiRenderer::BindCommonResources(threadID);
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, threadID);
+		wiRenderer::BindCommonResources(cmd);
+		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
 
-		RenderDecals(threadID);
+		RenderDecals(cmd);
 
-		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], threadID);
+		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], cmd);
 
-		device->BindResource(CS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, threadID);
-		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, threadID);
+		device->BindResource(CS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
+		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
-		wiRenderer::ComputeTiledLightCulling(threadID, &lightbuffer_diffuse, &lightbuffer_specular);
+		wiRenderer::ComputeTiledLightCulling(cmd, &lightbuffer_diffuse, &lightbuffer_specular);
 
-		RenderSSAO(threadID);
+		RenderSSAO(cmd);
 
-		RenderSSS(threadID);
+		RenderSSS(cmd);
 
-		RenderDeferredComposition(threadID);
+		RenderDeferredComposition(cmd);
 
-		RenderSSR(rtDeferred, threadID);
+		RenderSSR(rtDeferred, cmd);
 
-		DownsampleDepthBuffer(threadID);
+		DownsampleDepthBuffer(cmd);
 
-		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), threadID);
+		wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-		RenderOutline(rtDeferred, threadID);
+		RenderOutline(rtDeferred, cmd);
 
-		RenderLightShafts(threadID);
+		RenderLightShafts(cmd);
 
-		RenderVolumetrics(threadID);
+		RenderVolumetrics(cmd);
 
-		RenderParticles(false, threadID);
+		RenderParticles(false, cmd);
 
-		RenderRefractionSource(rtDeferred, threadID);
+		RenderRefractionSource(rtDeferred, cmd);
 
-		RenderTransparents(rtDeferred, RENDERPASS_TILEDFORWARD, threadID);
+		RenderTransparents(rtDeferred, RENDERPASS_TILEDFORWARD, cmd);
 
-		RenderParticles(true, threadID);
+		RenderParticles(true, cmd);
 
-		TemporalAAResolve(rtDeferred, rtGBuffer[1], threadID);
+		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
 
-		RenderBloom(rtDeferred, threadID);
+		RenderBloom(rtDeferred, cmd);
 
-		RenderPostprocessChain(rtDeferred, rtGBuffer[1], threadID);
+		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 
 	});
 
