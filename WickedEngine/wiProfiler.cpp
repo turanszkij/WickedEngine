@@ -83,8 +83,6 @@ namespace wiProfiler
 			{
 				auto& range = x.second;
 
-				assert(range->active == false && "There was a range that was not ended!");
-
 				range->time = 0;
 				if (range->IsCPURange())
 				{
