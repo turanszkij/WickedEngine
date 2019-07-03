@@ -955,7 +955,7 @@ namespace wiSceneSystem
 		XMStoreFloat4x4(&Projection, _P);
 		XMStoreFloat4x4(&InvProjection, XMMatrixInverse(nullptr, _P));
 
-		frustum.Create(Projection, View, zFarP);
+		frustum.Create(_VP);
 	}
 	void CameraComponent::TransformCamera(const TransformComponent& transform)
 	{
@@ -1787,7 +1787,7 @@ namespace wiSceneSystem
 					if (mesh != nullptr)
 					{
 						XMMATRIX W = XMLoadFloat4x4(&transform.world);
-						aabb = mesh->aabb.get(W);
+						aabb = mesh->aabb.transform(W);
 
 						// This is instance bounding box matrix:
 						XMFLOAT4X4 meshMatrix;
@@ -1928,7 +1928,7 @@ namespace wiSceneSystem
 
 			AABB& aabb = aabb_decals[args.jobIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-			aabb = aabb.get(transform.world);
+			aabb = aabb.transform(transform.world);
 
 			const MaterialComponent& material = *materials.GetComponent(entity);
 			decal.color = material.baseColor;
@@ -1965,7 +1965,7 @@ namespace wiSceneSystem
 
 			AABB& aabb = aabb_probes[args.jobIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
-			aabb = aabb.get(transform.world);
+			aabb = aabb.transform(transform.world);
 		});
 	}
 	void RunForceUpdateSystem(

@@ -23,8 +23,8 @@ struct AABB
 
 	AABB(const XMFLOAT3& _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX)) : _min(_min), _max(_max) {}
 	void createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth);
-	AABB get(const XMMATRIX& mat) const;
-	AABB get(const XMFLOAT4X4& mat) const;
+	AABB transform(const XMMATRIX& mat) const;
+	AABB transform(const XMFLOAT4X4& mat) const;
 	XMFLOAT3 getCenter() const;
 	XMFLOAT3 getHalfWidth() const;
 	XMMATRIX getAsBoxMatrix() const;
@@ -86,11 +86,9 @@ struct RAY
 class Frustum
 {
 private:
-	XMFLOAT4 m_planesNorm[6];
-	XMFLOAT4 m_planes[6];
-	XMFLOAT4X4 view;
+	XMFLOAT4 planes[6];
 public:
-	void Create(XMFLOAT4X4 projectionMatrix, const XMFLOAT4X4& viewMatrix, float farPlane);
+	void Create(const XMMATRIX& viewProjection);
 
 	bool CheckPoint(const XMFLOAT3&) const;
 	bool CheckSphere(const XMFLOAT3&, float) const;
@@ -103,13 +101,12 @@ public:
 	};
 	BoxFrustumIntersect CheckBox(const AABB& box) const;
 
+	const XMFLOAT4& getNearPlane() const;
+	const XMFLOAT4& getFarPlane() const;
 	const XMFLOAT4& getLeftPlane() const;
 	const XMFLOAT4& getRightPlane() const;
 	const XMFLOAT4& getTopPlane() const;
 	const XMFLOAT4& getBottomPlane() const;
-	const XMFLOAT4& getFarPlane() const;
-	const XMFLOAT4& getNearPlane() const;
-	XMFLOAT3 getCamPos() const;
 };
 
 

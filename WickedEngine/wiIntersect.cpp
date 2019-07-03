@@ -7,7 +7,7 @@ void AABB::createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth
 	_min = XMFLOAT3(center.x - halfwidth.x, center.y - halfwidth.y, center.z - halfwidth.z);
 	_max = XMFLOAT3(center.x + halfwidth.x, center.y + halfwidth.y, center.z + halfwidth.z);
 }
-AABB AABB::get(const XMMATRIX& mat) const 
+AABB AABB::transform(const XMMATRIX& mat) const 
 {
 	XMFLOAT3 corners[8];
 	for (int i = 0; i < 8; ++i)
@@ -32,9 +32,9 @@ AABB AABB::get(const XMMATRIX& mat) const
 
 	return AABB(min, max);
 }
-AABB AABB::get(const XMFLOAT4X4& mat) const 
+AABB AABB::transform(const XMFLOAT4X4& mat) const 
 {
-	return get(XMLoadFloat4x4(&mat));
+	return transform(XMLoadFloat4x4(&mat));
 }
 XMFLOAT3 AABB::getCenter() const 
 {
@@ -213,62 +213,28 @@ bool RAY::intersects(const SPHERE& b) const {
 
 
 
-void Frustum::Create(XMFLOAT4X4 projectionMatrix, const XMFLOAT4X4& viewMatrix, float farPlane)
+void Frustum::Create(const XMMATRIX& viewProjection)
 {
-	view = viewMatrix;
+	// We are interested in columns of the matrix, so transpose because we can access only rows:
+	const XMMATRIX mat = XMMatrixTranspose(viewProjection);
 
-	// Calculate the minimum Z distance in the frustum.
-	float zMinimum = -projectionMatrix._43 / projectionMatrix._33;
-	float r = farPlane / (farPlane - zMinimum);
-	projectionMatrix._33 = r;
-	projectionMatrix._43 = -r * zMinimum;
+	// Near plane:
+	XMStoreFloat4(&planes[0], XMPlaneNormalize(mat.r[2]));
 
-	// Create the frustum matrix from the view matrix and updated projection matrix.
-	XMFLOAT4X4 matrix;
-	XMStoreFloat4x4(&matrix, XMMatrixMultiply(XMLoadFloat4x4(&viewMatrix), XMLoadFloat4x4(&projectionMatrix)));
+	// Far plane:
+	XMStoreFloat4(&planes[1], XMPlaneNormalize(mat.r[3] - mat.r[2]));
 
-	// Calculate near plane of frustum.
-	m_planes[0].x = matrix._14 + matrix._13;
-	m_planes[0].y = matrix._24 + matrix._23;
-	m_planes[0].z = matrix._34 + matrix._33;
-	m_planes[0].w = matrix._44 + matrix._43;
-	XMStoreFloat4(&m_planesNorm[0], XMPlaneNormalize(XMLoadFloat4(&m_planes[0])));
+	// Left plane:
+	XMStoreFloat4(&planes[2], XMPlaneNormalize(mat.r[3] + mat.r[0]));
 
-	// Calculate far plane of frustum.
-	m_planes[1].x = matrix._14 - matrix._13;
-	m_planes[1].y = matrix._24 - matrix._23;
-	m_planes[1].z = matrix._34 - matrix._33;
-	m_planes[1].w = matrix._44 - matrix._43;
-	XMStoreFloat4(&m_planesNorm[1], XMPlaneNormalize(XMLoadFloat4(&m_planes[1])));
+	// Right plane:
+	XMStoreFloat4(&planes[3], XMPlaneNormalize(mat.r[3] - mat.r[0]));
 
-	// Calculate left plane of frustum.
-	m_planes[2].x = matrix._14 + matrix._11;
-	m_planes[2].y = matrix._24 + matrix._21;
-	m_planes[2].z = matrix._34 + matrix._31;
-	m_planes[2].w = matrix._44 + matrix._41;
-	XMStoreFloat4(&m_planesNorm[2], XMPlaneNormalize(XMLoadFloat4(&m_planes[2])));
+	// Top plane:
+	XMStoreFloat4(&planes[4], XMPlaneNormalize(mat.r[3] - mat.r[1]));
 
-	// Calculate right plane of frustum.
-	m_planes[3].x = matrix._14 - matrix._11;
-	m_planes[3].y = matrix._24 - matrix._21;
-	m_planes[3].z = matrix._34 - matrix._31;
-	m_planes[3].w = matrix._44 - matrix._41;
-	XMStoreFloat4(&m_planesNorm[3], XMPlaneNormalize(XMLoadFloat4(&m_planes[3])));
-
-	// Calculate top plane of frustum.
-	m_planes[4].x = matrix._14 - matrix._12;
-	m_planes[4].y = matrix._24 - matrix._22;
-	m_planes[4].z = matrix._34 - matrix._32;
-	m_planes[4].w = matrix._44 - matrix._42;
-	XMStoreFloat4(&m_planesNorm[4], XMPlaneNormalize(XMLoadFloat4(&m_planes[4])));
-
-	// Calculate bottom plane of frustum.
-	m_planes[5].x = matrix._14 + matrix._12;
-	m_planes[5].y = matrix._24 + matrix._22;
-	m_planes[5].z = matrix._34 + matrix._32;
-	m_planes[5].w = matrix._44 + matrix._42;
-	XMStoreFloat4(&m_planesNorm[5], XMPlaneNormalize(XMLoadFloat4(&m_planes[5])));
-
+	// Bottom plane:
+	XMStoreFloat4(&planes[5], XMPlaneNormalize(mat.r[3] + mat.r[1]));
 }
 
 bool Frustum::CheckPoint(const XMFLOAT3& point) const
@@ -276,7 +242,7 @@ bool Frustum::CheckPoint(const XMFLOAT3& point) const
 	XMVECTOR p = XMLoadFloat3(&point);
 	for (short i = 0; i < 6; i++)
 	{
-		if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[i]), p)) < 0.0f)
+		if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[i]), p)) < 0.0f)
 		{
 			return false;
 		}
@@ -290,7 +256,7 @@ bool Frustum::CheckSphere(const XMFLOAT3& center, float radius) const
 	XMVECTOR c = XMLoadFloat3(&center);
 	for (i = 0; i < 6; i++)
 	{
-		if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[i]), c)) < -radius)
+		if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[i]), c)) < -radius)
 		{
 			return false;
 		}
@@ -309,7 +275,7 @@ Frustum::BoxFrustumIntersect Frustum::CheckBox(const AABB& box) const
 
 		for (int i = 0; i < 8; ++i)
 		{
-			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&m_planesNorm[p]), XMLoadFloat3(&box.corner(i)))) < 0.0f)
+			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), XMLoadFloat3(&box.corner(i)))) < 0.0f)
 			{
 				iPtIn = 0;
 				--iInCount;
@@ -324,16 +290,12 @@ Frustum::BoxFrustumIntersect Frustum::CheckBox(const AABB& box) const
 	return(BOX_FRUSTUM_INTERSECTS);
 }
 
-const XMFLOAT4& Frustum::getLeftPlane() const { return m_planesNorm[2]; }
-const XMFLOAT4& Frustum::getRightPlane() const { return m_planesNorm[3]; }
-const XMFLOAT4& Frustum::getTopPlane() const { return m_planesNorm[4]; }
-const XMFLOAT4& Frustum::getBottomPlane() const { return m_planesNorm[5]; }
-const XMFLOAT4& Frustum::getFarPlane() const { return m_planesNorm[1]; }
-const XMFLOAT4& Frustum::getNearPlane() const { return m_planesNorm[0]; }
-XMFLOAT3 Frustum::getCamPos() const
-{
-	return XMFLOAT3(-view._41, -view._42, -view._43);
-}
+const XMFLOAT4& Frustum::getNearPlane() const { return planes[0]; }
+const XMFLOAT4& Frustum::getFarPlane() const { return planes[1]; }
+const XMFLOAT4& Frustum::getLeftPlane() const { return planes[2]; }
+const XMFLOAT4& Frustum::getRightPlane() const { return planes[3]; }
+const XMFLOAT4& Frustum::getTopPlane() const { return planes[4]; }
+const XMFLOAT4& Frustum::getBottomPlane() const { return planes[5]; }
 
 
 

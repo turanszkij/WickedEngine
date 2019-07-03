@@ -17,7 +17,7 @@ namespace wiJobSystem
 	};
 
 	uint32_t numThreads = 0;
-	wiContainers::ThreadSafeRingBuffer<Job, 256> jobPool;
+	wiContainers::ThreadSafeRingBuffer<Job, 256> jobQueue;
 	std::condition_variable wakeCondition;
 	std::mutex wakeMutex;
 
@@ -25,7 +25,7 @@ namespace wiJobSystem
 	inline bool work()
 	{
 		Job job;
-		if (jobPool.pop_front(job))
+		if (jobQueue.pop_front(job))
 		{
 			job.task(); // execute job
 			job.ctx->counter.fetch_sub(1);
@@ -64,7 +64,7 @@ namespace wiJobSystem
 			// Do Windows-specific thread setup:
 			HANDLE handle = (HANDLE)worker.native_handle();
 
-			// Put each thread on to dedicated core
+			// Put each thread on to dedicated core:
 			DWORD_PTR affinityMask = 1ull << threadID; 
 			DWORD_PTR affinity_result = SetThreadAffinityMask(handle, affinityMask);
 			assert(affinity_result > 0);
@@ -99,7 +99,7 @@ namespace wiJobSystem
 		ctx.counter.fetch_add(1);
 
 		// Try to push a new job until it is pushed successfully:
-		while (!jobPool.push_back({ job, &ctx })) { wakeCondition.notify_all(); }
+		while (!jobQueue.push_back({ job, &ctx })) { wakeCondition.notify_all(); }
 
 		// Wake any one thread that might be sleeping:
 		wakeCondition.notify_one();
@@ -139,7 +139,7 @@ namespace wiJobSystem
 			};
 
 			// Try to push a new job until it is pushed successfully:
-			while (!jobPool.push_back({ jobGroup, &ctx })) { wakeCondition.notify_all(); }
+			while (!jobQueue.push_back({ jobGroup, &ctx })) { wakeCondition.notify_all(); }
 		}
 
 		// Wake any threads that might be sleeping:

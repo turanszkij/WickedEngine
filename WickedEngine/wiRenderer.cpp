@@ -1175,9 +1175,12 @@ struct SHCAM
 		const XMMATRIX rot = XMMatrixRotationQuaternion(rotation);
 		const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), rot);
 		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
-		XMStoreFloat4x4(&View, XMMatrixLookToLH(eyePos, to, up));
-		XMStoreFloat4x4(&Projection, XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane));
-		frustum.Create(Projection, View, farPlane);
+		const XMMATRIX V = XMMatrixLookToLH(eyePos, to, up);
+		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
+		const XMMATRIX VP = XMMatrixMultiply(V, P);
+		XMStoreFloat4x4(&View, V);
+		XMStoreFloat4x4(&Projection, P);
+		frustum.Create(VP);
 	};
 	XMMATRIX getVP() const {
 		return XMMatrixTranspose(XMLoadFloat4x4(&View)*XMLoadFloat4x4(&Projection));
@@ -1271,7 +1274,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, const CameraCo
 		_max.z = std::max(_max.z, farPlane * 0.5f);
 
 		// Compute bounding box used for culling, conservatively transformed by the light transform:
-		shcams[cascade].boundingbox = AABB(_min, _max).get(XMMatrixInverse(nullptr, lightView));
+		shcams[cascade].boundingbox = AABB(_min, _max).transform(XMMatrixInverse(nullptr, lightView));
 
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
@@ -3855,16 +3858,25 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 	GetRefCamera() = GetCamera();
 	GetRefCamera().Reflect(waterPlane);
 
-	for (auto& x : waterRipples)
-	{
-		x->Update(dt * 60);
-	}
-
-	ManageDecalAtlas();
-	ManageLightmapAtlas();
-	ManageImpostors();
-	ManageEnvProbes();
-	ManageWaterRipples();
+	wiJobSystem::Execute(ctx, [&] {
+		ManageDecalAtlas();
+	});
+	wiJobSystem::Execute(ctx, [&] {
+		ManageLightmapAtlas();
+	});
+	wiJobSystem::Execute(ctx, [&] {
+		ManageImpostors();
+	});
+	wiJobSystem::Execute(ctx, [&] {
+		ManageEnvProbes();
+	});
+	wiJobSystem::Execute(ctx, [&] {
+		for (auto& x : waterRipples)
+		{
+			x->Update(dt * 60);
+		}
+		ManageWaterRipples();
+	});
 
 	wiJobSystem::Wait(ctx);
 }
@@ -5243,14 +5255,14 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 	BindConstantBuffers(PS, cmd);
 
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+	if (decalAtlas.IsValid())
+	{
+		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+	}
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
 		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE], SBSLOT_ENTITYTILES, cmd);
-		if (decalAtlas.IsValid())
-		{
-			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
-		}
 	}
 
 	if (grass)
@@ -5333,14 +5345,14 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 	BindConstantBuffers(PS, cmd);
 
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+	if (decalAtlas.IsValid())
+	{
+		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+	}
 
 	if (renderPass == RENDERPASS_TILEDFORWARD)
 	{
 		device->BindResource(PS, &resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT], SBSLOT_ENTITYTILES, cmd);
-		if (decalAtlas.IsValid())
-		{
-			device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
-		}
 	}
 
 	if (ocean != nullptr)
@@ -8161,7 +8173,7 @@ void UpdateFrameCB(CommandList cmd)
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_View, XMMatrixTranspose(camera.GetView()));
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_Proj, XMMatrixTranspose(camera.GetProjection()));
 	cb.g_xFrame_MainCamera_CamPos = camera.Eye;
-	cb.g_xFrame_MainCamera_DistanceFromOrigin, XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.g_xFrame_MainCamera_CamPos)));
+	cb.g_xFrame_MainCamera_DistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.g_xFrame_MainCamera_CamPos)));
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevV, XMMatrixTranspose(prevCam.GetView()));
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevP, XMMatrixTranspose(prevCam.GetProjection()));
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevVP, XMMatrixTranspose(prevCam.GetViewProjection()));
