@@ -3,8 +3,6 @@
 
 #include "wiSpinLock.h"
 
-#include <mutex>
-
 namespace wiContainers
 {
 	// Fixed size very simple thread safe ring buffer
@@ -51,8 +49,7 @@ namespace wiContainers
 		T data[capacity];
 		size_t head = 0;
 		size_t tail = 0;
-		//wiSpinLock lock;
-		std::mutex lock; // this just works better than spinlock here (on windows)
+		wiSpinLock lock;
 	};
 }
 

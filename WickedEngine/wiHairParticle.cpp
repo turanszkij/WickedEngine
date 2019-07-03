@@ -44,7 +44,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	_min.z -= length;
 
 	aabb = AABB(_min, _max);
-	aabb = aabb.get(world);
+	aabb = aabb.transform(world);
 
 	if (dt > 0)
 	{
