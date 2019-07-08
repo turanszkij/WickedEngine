@@ -26,11 +26,12 @@
 [dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20Win32
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
-
-Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
-The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code will not contain any parts with other licensing. The code is hosted on GitHub: https://github.com/turanszkij/WickedEngine For any questions, please open an issue there.
-
+<br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
+
+Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, share, sell or do anything with it or parts of it. Mentions are appreciated, but not required. <br/>
+This project is hosted on GitHub. For any questions, please open an issue at: https://github.com/turanszkij/WickedEngine<br/>
+Because everything is rapidly changing, the documentation is sparse at the moment.
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -38,57 +39,15 @@ The full source code is provided with the MIT license, which means, anyone is fr
 [Devblog](https://turanszkij.wordpress.com/)<br/>
 [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
-To test the engine, this solution contains several projects which you can build out of the box with Visual Studio 2017. There shall be no external dependencies. You can now also [download the latest Editor build!][do]
-- You can run the "Editor" or the "Tests" project to check out features and play around in a 3D environment, load models, scripts, etc. 
-- You can find a "Template_Windows" project which is a minimal set up to get the engine up and running in a clean Windows 10 application.
-- Be sure to build in "Release" mode for optimal performance. Debugging support will be reduced.
-- Be sure to set an appropriate startup project such as the "Editor" or "Tests" for example.
-- There are multiple sample models in the "models" folder. You can load any of them inside the Editor.
-- There are multiple sample LUA scripts in the "scripts" folder. You can load any of them inside the Editor, but please check how to use them first by reading the first few lines of the scripts.
-- Please open an Issue here on GitHub if you encounter any difficulties.
+You can download the engine by using Git and cloning the repository, or downloading it as zip, which will give you the full C++ source code that you must build for yourself. Building is simply pressing F5 in Visual Studio. You can also choose to download a pre-built version of the Editor or Tests applications, which will allow you to load content and write LUA scripts out of the box. <br/>
 
-![Emitter](https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif)
-
-The default renderer is DirectX 11. The DirectX 12 renderer is now available (experimental). Vulkan renderer is now available (experimental).
-You can specify command line arguments for each application to switch between render devices or other settings. Currently the list of options:
-<table>
-  <tr>
-    <th>Argument</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>dx12</td>
-    <td>Create DirectX 12 rendering device (Windows 10 required)</td>
-  </tr>
-  <tr>
-    <td>vulkan</td>
-    <td>Create Vulkan rendering device*. (Only if engine was built with Vulkan SDK installed)</td>
-  </tr>
-  <tr>
-    <td>debugdevice</td>
-    <td>Create rendering device with debug layer enabled for validation. Performance will be degraded.</td>
-  </tr>
-  <tr>
-    <td>hlsl6</td>
-    <td>Reroute shader loading path to use shader model 6 shaders** (DirectX 12 only)</td>
-  </tr>
-</table>
-
-<img align="left" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
-
-* *Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
-Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
-is automatic if you start the application with Vulkan support.
-This feature is experimental, not tested thoroughly yet.
-
-* **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the python script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
-This feature is experimental, not tested thoroughly yet.
+![Emitter](https://turanszkij.files.wordpress.com/2019/02/emitterskinned2.gif) ![Drone](https://turanszkij.files.wordpress.com/2018/11/drone_anim.gif) <br/>
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif"/>
 
 ### Platforms:
 - Windows PC Desktop (x86, x64)
-- Universal Windows (PC, Phone, XBOX One)
+- Universal Windows (x86, x64, ARM, Phone, XBOX One)
 
 ### Requirements:
 
@@ -101,14 +60,9 @@ This feature is experimental, not tested thoroughly yet.
 
 ### Getting started: 
 
-The interface is designed to be somewhat similar to the XNA framework, with overridable Load, Update, Render methods, switchable rendering components, content managers. 
-However, it makes use of the C++ programming language instead of C#, which enables lower level and more performant code in the hand of experienced developers. On the other hand, the developer can also make use of the 
-popular Lua scripting language for faster iteration times and more flexible code structure.
-
 Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
 For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
 Then set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
@@ -117,13 +71,16 @@ Then set the following dependencies to this library in Visual Studio this way in
 	- Directory of your built .lib file (For example ./x64/Release)
 4. Also be sure to compile with a non-DLL runtime library for Release builds:
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
+5. If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 	
-When your project settings are set up, time to #include "WickedEngine.h" in your source. I recommend to include this
-in the precompiled header file. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. If you are having difficulties, there are some projects that  you can compare against, such as the Editor, Tests or Template projects.
+When your project settings are set up, time to #include "WickedEngine.h" in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. If you are having difficulties, there are some projects that  you can compare against, such as the Editor, Tests or Template projects.
 Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
 
 Initialization example (C++):
-```
+
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/05/sphinit.gif"/>
+
+```cpp
 // Include engine headers:
 #include "WickedEngine.h"
 
@@ -140,7 +97,7 @@ while(true) {
 ```
 
 Some basic usage examples (C++):
-```
+```cpp
 RenderPath3D_Deferred myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). This is a 3D, Deferred path for example, but there are others
 main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
@@ -174,7 +131,7 @@ if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if 
 
 Some scripting examples (LUA): <br/>
 (You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)
-```
+```lua
 -- Set a rendering path for the application main component
 path = RenderPath3D_Deferred;
 main.SetActivePath(path);    -- "main" is created automatically
@@ -217,8 +174,6 @@ end
 
 For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project.
 
-If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
-
 ### Scripting API:
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
@@ -232,7 +187,46 @@ The Editor supports the importing of some common model formats (the list will po
 The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
 The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found [here][ba].
 
-### Take a look at some screenshots:
+### Graphics API:
+
+The default renderer is DirectX 11. There is also a DirectX12 renderer (experimental) and Vulkan renderer (experiemntal).
+You can specify command line arguments to switch between render devices or other settings. Currently the list of options:
+<table>
+  <tr>
+    <th>Argument</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>dx12</td>
+    <td>Create DirectX 12 rendering device (Windows 10 required)</td>
+  </tr>
+  <tr>
+    <td>vulkan</td>
+    <td>Create Vulkan rendering device*. (Only if engine was built with Vulkan SDK installed)</td>
+  </tr>
+  <tr>
+    <td>debugdevice</td>
+    <td>Create rendering device with debug layer enabled for validation. Performance will be degraded.</td>
+  </tr>
+  <tr>
+    <td>hlsl6</td>
+    <td>Reroute shader loading path to use shader model 6 shaders** (DirectX 12 only)</td>
+  </tr>
+</table>
+
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/soft.gif"/>
+
+* *Before enabling the Vulkan API, you must first also compile SPIR-V shaders. This step is not yet included in the standard build process. First, run the "generate_shader_buildtask_spirv.py"
+Python script which will generate the SPIR-V shader building program "build_SPIRV.bat". Run "build_SPIRV.bat" to build all HLSL shaders as SPIR-V bytecode format for Vulkan. Shader loading after this 
+is automatic if you start the application with Vulkan support.
+This feature is experimental, not tested thoroughly yet.
+
+* **To load HLSL 6 shaders, replicate the exact steps as with SPIR-V above(*), but the python script you should run is called "generate_shader_buildtask_hlsl6.py" which will generate "build_HLSL6.bat". 
+This feature is experimental, not tested thoroughly yet.
+
+<br/>
+
+### Finally, take a look at some screenshots:
 
 Sponza scene with voxel GI enabled:
 ![Sponza](https://turanszkij.files.wordpress.com/2018/12/sponza.png)
