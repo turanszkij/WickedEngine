@@ -6,27 +6,29 @@
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
             alt="follow on Twitter"></a><br/>
-[![DownloadEditor][s4]][do] [![DownloadTests][s5]][dt] 
+[![DownloadEditor][s4]][do] [![DownloadEditor32][s5]][do32] <br/>
+[![DownloadTests][s6]][dt] [![DownloadTests32][s7]][dt32] <br/>
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
 [s3]: https://img.shields.io/badge/License-MIT-yellow.svg
-[s4]: https://img.shields.io/badge/download%20build-editor-blue.svg
-[s5]: https://img.shields.io/badge/download%20build-tests-blue.svg
+[s4]: https://img.shields.io/badge/download%20build-editor%20(64bit)-blue.svg
+[s5]: https://img.shields.io/badge/download%20build-editor%20(32bit)-blue.svg
+[s6]: https://img.shields.io/badge/download%20build-tests%20(64bit)-blue.svg
+[s7]: https://img.shields.io/badge/download%20build-tests%20(32bit)-blue.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
 [do]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master
+[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor_32bit.zip?branch=master
 [dt]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master
+[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests_32bit.zip?branch=master
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
 
 Wicked Engine is an open-source game engine written in C++. The main focus is to be easy to set up and use, light weight, high performance, and graphically advanced.
 The full source code is provided with the MIT license, which means, anyone is free to use it for anything without additional considerations. The code will not contain any parts with other licensing. The code is hosted on GitHub: https://github.com/turanszkij/WickedEngine For any questions, please open an issue there.
-
-From version <b>0.21.0</b> onwards, the engine was changed to use Entity-Component System and the old Object-Oriented system was dropped. <b>It is not backwards-compatible</b>, so assets/scripts made with the old system are unfortunately not usable.
-You can find a snapshot of the old Object-Oriented codebase (0.20.6) [here][ba], but it will not be updated anymore.
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
 
@@ -146,6 +148,10 @@ wiSceneSystem::LoadModel("myModel.wiscene"); // Simply load a model into the cur
 wiSceneSystem::GetScene(); // Get the current global scene
 wiRenderer::ClearWorld(); // Delete every model, etc. from the current global scene
 
+Scene scene2; // create a separate scene
+wiSceneSystem::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
+wiSceneSystem::GetScene().Merge(scene2); // Combine separate scene with global scene
+
 myGame.setSSAOEnabled(true); // You can enable post process effects this way...
 
 RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
@@ -173,8 +179,15 @@ Some scripting examples (LUA): <br/>
 path = RenderPath3D_Deferred;
 main.SetActivePath(path);    -- "main" is created automatically
 
--- Load a model entity:
+-- Load a model entity into the global scene:
 entity = LoadModel("myModel.wiscene");
+
+-- Load a model entity into a separate scene:
+scene2 = Scene()
+entity2 = LoadModel(scene2, "myModel2.wiscene");
+
+-- Combine the separate scene with the global scene:
+scene.Merge(scene2);
 
 -- Get the current global scene:
 scene = GetScene();
@@ -200,24 +213,11 @@ if(input.press(VK_LEFT)) then
    sound.Play(); -- this will play the sound if you press the left arrow on the keyboard
 end
 ```
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
 
 For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project.
 
 If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
-
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
-
-### Contents:
-
-- ./Documentation/						- Documentation files
-- ./logo/								- Logo artwork images
-- ./models/								- Sample model files
-- ./scripts/							- Sample LUA script files
-- ./WickedEngine/						- Wicked Engine Library project
-- ./Editor/								- Editor project
-- ./Tests/								- Testing framework project
-- ./Template_Windows					- Template project for Windows applications
-- ./WickedEngine.sln 					- Visual Studio Solution
 
 ### Scripting API:
 
@@ -230,7 +230,7 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 The Editor supports the importing of some common model formats (the list will potentially grow): <b>OBJ</b>, <b>GLTF 2.0</b> <br/>
 The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
-The old Blender exporter script is now not supported! (from version 0.21.0)
+The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found [here][ba].
 
 ### Take a look at some screenshots:
 
@@ -259,16 +259,22 @@ Bloom and post processing:
 ![Bloom](https://turanszkij.files.wordpress.com/2019/01/bloom.png)
 
 Bistro scene from Amazon Lumberyard (from <a href="http://casual-effects.com/data/index.html">Morgan McGuire's graphics archive</a>):
-![Bloom](https://turanszkij.files.wordpress.com/2019/01/bistro_out_0.png)
+![Bistro_out](https://turanszkij.files.wordpress.com/2019/01/bistro_out_0.png)
 
 Bistro scene from the inside:
-![Bloom](https://turanszkij.files.wordpress.com/2019/01/bistro_in_2.png)
+![Bistro_in](https://turanszkij.files.wordpress.com/2019/01/bistro_in_2.png)
 
 Parallax occlusion mapping:
-![Bloom](https://turanszkij.files.wordpress.com/2019/01/pom.png)
+![ParallxOcclusionMapping](https://turanszkij.files.wordpress.com/2019/01/pom.png)
 
 Large scale particle simulation on the GPU:
-![Bloom](https://turanszkij.files.wordpress.com/2019/01/gpuparticles3.png)
+![ParticleSimulation](https://turanszkij.files.wordpress.com/2019/01/gpuparticles3.png)
 
 Tiled light culling in the Bistro:
-![Bloom](https://turanszkij.files.wordpress.com/2019/02/bistro_heatmap-1.png)
+![TiledLightCulling](https://turanszkij.files.wordpress.com/2019/02/bistro_heatmap-1.png)
+
+Physically based rendering test:
+![PBRTest](https://turanszkij.files.wordpress.com/2019/03/roughness.png)
+
+GPU-based BVH builder:
+![GPU_BVH](https://turanszkij.files.wordpress.com/2019/07/bvh_livingroom.png)
