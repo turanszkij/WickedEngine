@@ -20,10 +20,10 @@
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
-[do]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master
-[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor_32bit.zip?branch=master
-[dt]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master
-[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests_32bit.zip?branch=master
+[do]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor_x64.zip?branch=master
+[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor_Win32.zip?branch=master
+[dt]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests_x64.zip?branch=master
+[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests_Win32.zip?branch=master
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
 
