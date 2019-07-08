@@ -18,8 +18,8 @@ after_build:
   - cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Tests\Tests.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
   
 artifacts:
-- path: WickedEngineEditor_%PLATFORM%.zip
-  name: Editor_%PLATFORM%
-- path: WickedEngineTests_%PLATFORM%.zip
-  name: Tests_%PLATFORM%
+- path: WickedEngineEditor.zip
+  name: Editor
+- path: WickedEngineTests.zip
+  name: Tests
 
