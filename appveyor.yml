@@ -1,5 +1,6 @@
-# 64-bit build:
 version: '{build}'
+
+# 64-bit build:
 branches:
   only:
   - master
@@ -22,7 +23,6 @@ artifacts:
   
 
 # 32-bit build:
-version: '{build}'
 branches:
   only:
   - master
