@@ -5,7 +5,7 @@
 [![Build status][s1]][av] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
-            alt="follow on Twitter"></a><br/>
+            alt="follow on Twitter"></a><br/><br/>
 [![DownloadEditor][s4]][do] [![DownloadEditor32][s5]][do32] <br/>
 [![DownloadTests][s6]][dt] [![DownloadTests32][s7]][dt32] <br/>
 
