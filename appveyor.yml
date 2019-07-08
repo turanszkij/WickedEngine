@@ -1,44 +1,46 @@
 version: '{build}'
 
 # 64-bit build:
-branches:
-  only:
-  - master
-image: Visual Studio 2017
-configuration: Release
-platform: x64
-build:
-  parallel: true
-  verbosity: minimal
-after_build:
-- cmd: move %APPVEYOR_BUILD_FOLDER%\x64\Release\Editor.exe %APPVEYOR_BUILD_FOLDER%\Editor
-- cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Editor\Editor.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua
-- cmd: move %APPVEYOR_BUILD_FOLDER%\x64\Release\Tests.exe %APPVEYOR_BUILD_FOLDER%\Tests
-- cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Tests\Tests.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
-artifacts:
-- path: WickedEngineEditor.zip
-  name: Editor
-- path: WickedEngineTests.zip
-  name: Tests
+-
+  branches:
+    only:
+    - master
+  image: Visual Studio 2017
+  configuration: Release
+  platform: x64
+  build:
+    parallel: true
+    verbosity: minimal
+  after_build:
+  - cmd: move %APPVEYOR_BUILD_FOLDER%\x64\Release\Editor.exe %APPVEYOR_BUILD_FOLDER%\Editor
+  - cmd: 7z a WickedEngineEditor.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Editor\Editor.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua
+  - cmd: move %APPVEYOR_BUILD_FOLDER%\x64\Release\Tests.exe %APPVEYOR_BUILD_FOLDER%\Tests
+  - cmd: 7z a WickedEngineTests.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Tests\Tests.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
+  artifacts:
+  - path: WickedEngineEditor.zip
+    name: Editor
+  - path: WickedEngineTests.zip
+    name: Tests
   
 
 # 32-bit build:
-branches:
-  only:
-  - master
-image: Visual Studio 2017
-configuration: Release
-platform: Win32
-build:
-  parallel: true
-  verbosity: minimal
-after_build:
-- cmd: move %APPVEYOR_BUILD_FOLDER%\Win32\Release\Editor.exe %APPVEYOR_BUILD_FOLDER%\Editor_32bit
-- cmd: 7z a WickedEngineEditor_32bit.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Editor_32bit\Editor.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua
-- cmd: move %APPVEYOR_BUILD_FOLDER%\Win32\Release\Tests.exe %APPVEYOR_BUILD_FOLDER%\Tests_32bit
-- cmd: 7z a WickedEngineTests_32bit.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Tests_32bit\Tests.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
-artifacts:
-- path: WickedEngineEditor_32bit.zip
-  name: Editor_32bit
-- path: WickedEngineTests_32bit.zip
-  name: Tests_32bit
+-
+  branches:
+    only:
+    - master
+  image: Visual Studio 2017
+  configuration: Release
+  platform: Win32
+  build:
+    parallel: true
+    verbosity: minimal
+  after_build:
+  - cmd: move %APPVEYOR_BUILD_FOLDER%\Win32\Release\Editor.exe %APPVEYOR_BUILD_FOLDER%\Editor_32bit
+  - cmd: 7z a WickedEngineEditor_32bit.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Editor_32bit\Editor.exe Editor\images\ Editor\sound\ Editor\*.ini Editor\*.ico Editor\*.lua
+  - cmd: move %APPVEYOR_BUILD_FOLDER%\Win32\Release\Tests.exe %APPVEYOR_BUILD_FOLDER%\Tests_32bit
+  - cmd: 7z a WickedEngineTests_32bit.zip WickedEngine\shaders\ WickedEngine\fonts\ images\ models\ scripts\ shadercompilers\ Documentation\ *.py *.txt *.md Tests_32bit\Tests.exe Tests\images\ Tests\sound\ Tests\*.ini Tests\*.ico Tests\*.lua Tests\*.ttf
+  artifacts:
+  - path: WickedEngineEditor_32bit.zip
+    name: Editor_32bit
+  - path: WickedEngineTests_32bit.zip
+    name: Tests_32bit
