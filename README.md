@@ -28,7 +28,6 @@
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
-
 Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, share, sell or do anything with it or parts of it. Mentions are appreciated, but not required. <br/>
 This project is hosted on GitHub. For any questions, please open an issue at: https://github.com/turanszkij/WickedEngine<br/>
 Because everything is rapidly changing, the documentation is sparse at the moment.
