@@ -1,7 +1,6 @@
-version: '{build}'
-
 # 64-bit build:
 -
+  version: '{build}'
   branches:
     only:
     - master
@@ -25,6 +24,7 @@ version: '{build}'
 
 # 32-bit build:
 -
+  version: '{build}'
   branches:
     only:
     - master
