@@ -248,7 +248,15 @@ void MainComponent::Compose(CommandList cmd)
 		stringstream ss("");
 		if (infoDisplay.watermark)
 		{
-			ss << string("Wicked Engine ") + wiVersion::GetVersionString() + " ";
+			ss << "Wicked Engine " << wiVersion::GetVersionString() << " ";
+
+#if defined(_ARM)
+			ss << "[ARM]";
+#elif defined(_WIN64)
+			ss << "[64-bit]";
+#elif defined(_WIN32)
+			ss << "[32-bit]";
+#endif
 
 			if (dynamic_cast<GraphicsDevice_DX11*>(wiRenderer::GetDevice()))
 			{
