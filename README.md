@@ -5,25 +5,25 @@
 [![Build status][s1]][av] [![License: MIT][s3]][li] [![Join the chat at https://gitter.im/WickedEngine/Lobby][s2]][gi]
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
-            alt="follow on Twitter"></a><br/><br/>
-[![DownloadEditor][s4]][do] [![DownloadEditor32][s5]][do32] <br/>
-[![DownloadTests][s6]][dt] [![DownloadTests32][s7]][dt32] <br/>
+            alt="follow on Twitter"></a><br/>
+[![DownloadEditor][s4]][do64] [![DownloadEditor32][s5]][do32]
+[![DownloadTests][s6]][dt64] [![DownloadTests32][s7]][dt32] <br/>
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
 [s3]: https://img.shields.io/badge/License-MIT-yellow.svg
-[s4]: https://img.shields.io/badge/download%20build-editor%20(64bit)-blue.svg
-[s5]: https://img.shields.io/badge/download%20build-editor%20(32bit)-blue.svg
-[s6]: https://img.shields.io/badge/download%20build-tests%20(64bit)-blue.svg
-[s7]: https://img.shields.io/badge/download%20build-tests%20(32bit)-blue.svg
+[s4]: https://img.shields.io/badge/download%20editor-64bit-blue.svg
+[s5]: https://img.shields.io/badge/download%20editor-32bit-blue.svg
+[s6]: https://img.shields.io/badge/download%20tests-64bit-blue.svg
+[s7]: https://img.shields.io/badge/download%20tests-32bit-blue.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [gi]: https://gitter.im/WickedEngine/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 [li]: https://opensource.org/licenses/MIT
-[do]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor_x64.zip?branch=master
-[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor_Win32.zip?branch=master
-[dt]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests_x64.zip?branch=master
-[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests_Win32.zip?branch=master
+[do64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master&job=Platform%3A%20x64
+[do32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineEditor.zip?branch=master&job=Platform%3A%20Win32
+[dt64]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20x64
+[dt32]: https://ci.appveyor.com/api/projects/turanszkij/wickedengine/artifacts/WickedEngineTests.zip?branch=master&job=Platform%3A%20Win32
 [ba]: https://github.com/turanszkij/WickedEngine/tree/old-system-backup
 
 
