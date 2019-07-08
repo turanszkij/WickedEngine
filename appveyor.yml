@@ -6,7 +6,7 @@ image: Visual Studio 2017
 configuration: Release
 platform:
 - x64
-- x86
+- Win32
 build:
   parallel: true
   verbosity: minimal
