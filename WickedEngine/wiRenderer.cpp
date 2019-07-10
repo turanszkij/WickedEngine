@@ -6776,15 +6776,13 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 
 		frustumBuffer = new GPUBuffer;
 
-		UINT _stride = sizeof(XMFLOAT4) * 4;
-
 		GPUBufferDesc bd;
-		bd.ByteWidth = _stride * tileCount.x * tileCount.y; // storing 4 planes for every tile
+		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
+		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
-		bd.StructureByteStride = _stride;
 		device->CreateBuffer(&bd, nullptr, frustumBuffer);
 
 		device->SetName(frustumBuffer, "FrustumBuffer");
@@ -6876,7 +6874,7 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 		}
 
 
-		const FrameCulling& frameCulling = frameCullings[&GetCamera()];
+		const FrameCulling& frameCulling = frameCullings.at(&GetCamera());
 
 
 		DispatchParamsCB dispatchParams;
