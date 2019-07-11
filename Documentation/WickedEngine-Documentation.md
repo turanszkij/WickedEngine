@@ -52,15 +52,17 @@ You can find out more about the Entity-Component system and other engine-level s
 - wiSceneSystem
 	- This contains Scene, a class that is responsible of holding and managing everything in the world
 	- There are also all of the Component types, like TransformComponent, MeshComponent, etc.
+	- There are a number of systems here that can operate on collections of components
 
 - wiJobSystem
 	- Manages the execution of concurrent tasks
-	- Execute() function will schedule a task for execution on a separate thread
-	- Dispatch() function will schedule a task for execution on multiple parallel threads
-	- Wait() function will block until all jobs have finished. All scheduling operations are put on hold too
+	- context type defines a single workload that can be synchronized
+	- Execute() function will schedule a task for execution on a separate thread for a given workload
+	- Dispatch() function will schedule a task for execution on multiple parallel threads for a given workload
+	- Wait() function will block until all jobs have finished for a given workload. The current thread starts working on any work left to be finished.
 
 - wiInitializer
-	- Initializes all engine systems
+	- Initializes all engine systems either in a blocking or an asynchronous way
 
 - wiWindowRegistration
 	- This is a platform specific utility to manage the native display window
@@ -85,14 +87,14 @@ You can find the Graphics related classes un der ENGINE/Graphics filter in the s
 	- This can render fonts to the screen
 
 - wiGraphicsDevice
-	- This is the low-level rendering interface. It must implement either DirectX1, DirectX12 or Vulkan (at the moment)
+	- This is the interface for the graphics API abstraction. It is higher level than a graphics API, but these are the lowest level of rendering commands the engine offers.
 	- See wiGraphicsDevice_DX11 for DirectX11 rendering interface
-	- See wiGraphicsDevice_DX12 for DirectX12 rendering interface
-	- See wiGraphicsDevice_Vulkan for Vulkan rendering interface
+	- See wiGraphicsDevice_DX12 for DirectX12 rendering interface (experiemntal)
+	- See wiGraphicsDevice_Vulkan for Vulkan rendering interface (experimental)
 
 - There are many other classes that you can find here, such as wiEmittedParticle, to render emitter components. 
 
-You can see a quickstart guide on the following picture regarding the most common rendering resources:
+The following quick reference shows an overview of common resource formats and spaces:
 
 ![InformationSheet](information_sheet.png)
 
@@ -100,7 +102,7 @@ You can see a quickstart guide on the following picture regarding the most commo
 A collection of engine-level helper classes
 
 - wiArchive
-	- This is used for serializing binary data
+	- This is used for serializing binary data to disk or memory
 - wiHelper
 	- Many helper utility functions, like screenshot, readfile, messagebox, splitpath, sleep, etc...
 - wiMath
