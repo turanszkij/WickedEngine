@@ -14,7 +14,8 @@ outputdir = "spirv"
 ## First, set error log output:
 file.write("2>build_SPIRV_errors.log cls \n")
 
-## Then, ensure that we have the optuput directory:
+## Then, ensure that we have the output directory:
+file.write("mkdir WickedEngine\shaders \n")
 file.write("cd WickedEngine\shaders \n")
 file.write("mkdir " + outputdir + "\n")
 file.write("cd .. \n")
