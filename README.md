@@ -11,7 +11,7 @@
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://badges.gitter.im/WickedEngine/Lobby.svg
-[s3]: https://img.shields.io/badge/License-MIT-yellow.svg
+[s3]: https://img.shields.io/badge/License-MIT-orange.svg
 [s4]: https://img.shields.io/badge/download%20editor-64bit-blue.svg
 [s5]: https://img.shields.io/badge/download%20editor-32bit-blue.svg
 [s6]: https://img.shields.io/badge/download%20tests-64bit-blue.svg
@@ -28,9 +28,9 @@
 
 <br/>
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/gltfanim.gif"/>
-Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, share, sell or do anything with it or parts of it. Mentions are appreciated, but not required. <br/>
+Wicked Engine is an open-source game engine written in C++. It is easy to use, high performance and feature rich. There are no external dependencies, but some free libraries are included as part of the source code. The MIT license means that anyone is free to download, modify, share or do anything with it. <br/>
 This project is hosted on GitHub. For any questions, please open an issue at: https://github.com/turanszkij/WickedEngine<br/>
-Because everything is rapidly changing, the documentation is sparse at the moment.
+Because everything is changing rapidly, the documentation is sparse at the moment. <br/>
 
 [Documentation](Documentation/WickedEngine-Documentation.md)<br/>
 [Scripting API Documentation](Documentation/ScriptingAPI-Documentation.md)<br/>
@@ -51,13 +51,12 @@ You can download the engine by using Git and cloning the repository, or download
 ### Requirements:
 
 - Windows 10
-- DirectX 11 compatible GPU
 - Visual Studio 2017
 - Windows 10 SDK
 
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/trace.gif"/>
-
 ### Getting started: 
+
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/trace.gif"/>
 
 Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
 For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
@@ -73,7 +72,7 @@ Then set the following dependencies to this library in Visual Studio this way in
 5. If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 	
 When your project settings are set up, time to #include "WickedEngine.h" in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. If you are having difficulties, there are some projects that  you can compare against, such as the Editor, Tests or Template projects.
-Once the build is succesful, you can start using the engine. Here is some basic sample code, just to get an idea:
+Once the build is succesful, you can start using the engine.
 
 Initialization example (C++):
 
@@ -128,8 +127,7 @@ if (wiInputManager::press(VK_SPACE)) { soundEffect.Stop(); } // You can check if
 if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
 
-Some scripting examples (LUA): <br/>
-(You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)
+Some scripting examples (LUA):
 ```lua
 -- Set a rendering path for the application main component
 path = RenderPath3D_Deferred;
@@ -169,11 +167,13 @@ if(input.press(VK_LEFT)) then
    sound.Play(); -- this will play the sound if you press the left arrow on the keyboard
 end
 ```
-<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
+<i>(You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)</i>
 
-For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project.
+For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project. There are also sample models and scripts included with Wicked Engine in the models and scripts folders. Check them out to learn about more features.
 
 ### Scripting API:
+
+<img align="right" src="https://turanszkij.files.wordpress.com/2018/11/hairparticle2.gif"/>
 
 You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
 contain a scripting input method toggled by the "Home" key. A blue screen will be presented where the user can type in LUA commands. It is very minimal in regards to input methods.
@@ -182,9 +182,14 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 ### Model import/export:
 
-The Editor supports the importing of some common model formats (the list will potentially grow): <b>OBJ</b>, <b>GLTF 2.0</b> <br/>
-The Engine itself can open the serialized model format (<b>WISCENE</b>) only. The preferred workflow is to import models into the editor, and save them out to <b>WISCENE</b>, then any WickedEngine application can open them.<br/>
-The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found [here][ba].
+The native model format is the <b>WISCENE</b> format. Any application using Wicked Engine can open this format efficiently.
+
+In addition, the Editor supports the importing of some common model formats (the list will potentially grow): 
+- <b>OBJ</b>
+- <b>GLTF 2.0</b>
+
+The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
+<i>(The old Blender exporter script is now not supported! (from version 0.21.0), because the engine was redesigned with Entity-Component System at its core. The old object oriented version can be found [here][ba].)</i>
 
 ### Graphics API:
 
