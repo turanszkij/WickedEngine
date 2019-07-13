@@ -3,6 +3,7 @@
 #include "wiHelper.h"
 #include "ShaderInterop_Vulkan.h"
 #include "wiBackLog.h"
+#include "wiVersion.h"
 
 #include <sstream>
 #include <vector>
@@ -18,6 +19,12 @@
 namespace wiGraphics
 {
 
+	template <class T>
+	inline void hash_combine(std::size_t& seed, const T& v)
+	{
+		std::hash<T> hasher;
+		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+	}
 
 
 	// Converters:
@@ -578,7 +585,8 @@ namespace wiGraphics
 
 	// Swapchain helpers:
 	const std::vector<const char*> deviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
 	};
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
 		uint32_t extensionCount;
@@ -1345,17 +1353,18 @@ namespace wiGraphics
 			return;
 		}
 
-		uint64_t requestRTHash = 0;
+		size_t requestRTHash = 0;
 
 		if (!overrideRenderPass && !overrideFramebuffer)
 		{
-			requestRTHash = (uint64_t)pDesc->DSFormat;
+			hash_combine(requestRTHash, pDesc->DSFormat);
 			for (UINT i = 0; i < pDesc->numRTs; ++i)
 			{
-				requestRTHash = (requestRTHash ^ ((uint64_t)pDesc->RTFormats[i] << 1)) >> 1; // primary hash based on PSO formats description
-				requestRTHash = (requestRTHash ^ ((uint64_t)attachments[i] << 1)) >> 1; // setrendertarget <-> PSO layout might mismatch so we HAVE to also include this in the hash :(
+				hash_combine(requestRTHash, pDesc->RTFormats[i]); // primary hash based on PSO formats description
+				hash_combine(requestRTHash, attachments[i]); // setrendertarget <-> PSO layout might mismatch so we HAVE to also include this in the hash
 			}
-			requestRTHash = requestRTHash ^ 73856093 * attachmentsExtents.width ^ 19349663 * attachmentsExtents.height; // also hash based on render area extent. Maybe not necessary but keep it for safety now...
+			hash_combine(requestRTHash, attachmentsExtents.width);
+			hash_combine(requestRTHash, attachmentsExtents.height);
 		}
 		else
 		{
@@ -1490,6 +1499,7 @@ namespace wiGraphics
 					{
 						continue;
 					}
+					remainingClearRequests = true;
 
 					for (UINT j = 0; j < attachmentCount; ++j)
 					{
@@ -1522,11 +1532,10 @@ namespace wiGraphics
 								clearRequests[i].attachment = VK_NULL_HANDLE;
 							}
 
-							continue;
+							remainingClearRequests = false;
+							break;
 						}
 					}
-
-					remainingClearRequests = true;
 				}
 				if (realClearCount > 0)
 				{
@@ -1573,8 +1582,8 @@ namespace wiGraphics
 		appInfo.pApplicationName = "Wicked Engine Application";
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "Wicked Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		appInfo.engineVersion = VK_MAKE_VERSION(wiVersion::GetMajor(), wiVersion::GetMinor(), wiVersion::GetRevision());
+		appInfo.apiVersion = VK_API_VERSION_1_1;
 
 		// Enumerate available extensions:
 		uint32_t extensionCount = 0;
@@ -2028,7 +2037,7 @@ namespace wiGraphics
 			VkAttachmentDescription colorAttachment = {};
 			colorAttachment.format = swapChainImageFormat;
 			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -2583,6 +2592,10 @@ namespace wiGraphics
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
+		if (pTexture2D->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+		}
 		if (pTexture2D->desc.BindFlags & BIND_RENDER_TARGET)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -2676,7 +2689,7 @@ namespace wiGraphics
 						};
 
 						width = std::max(1u, width / 2);
-						height /= std::max(1u, height / 2);
+						height = std::max(1u, height / 2);
 
 						copyRegions.push_back(copyRegion);
 					}
@@ -2696,8 +2709,8 @@ namespace wiGraphics
 				barrier.subresourceRange.layerCount = pDesc->ArraySize;
 				barrier.subresourceRange.baseMipLevel = 0;
 				barrier.subresourceRange.levelCount = pDesc->MipLevels;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				//barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				//barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -2716,8 +2729,8 @@ namespace wiGraphics
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				//barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				//barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -3068,6 +3081,71 @@ namespace wiGraphics
 
 		if (pTexture2D->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
+			UINT arraySize = pTexture2D->desc.ArraySize;
+			UINT sampleCount = pTexture2D->desc.SampleDesc.Count;
+			bool multisampled = sampleCount > 1;
+
+			VkImageViewCreateInfo uav_desc = {};
+			uav_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			uav_desc.flags = 0;
+			uav_desc.image = (VkImage)pTexture2D->resource;
+			uav_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+			uav_desc.format = _ConvertFormat(pTexture2D->desc.Format);
+
+
+			if (arraySize > 1)
+			{
+				uav_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				uav_desc.subresourceRange.baseArrayLayer = 0;
+				uav_desc.subresourceRange.layerCount = arraySize;
+				uav_desc.subresourceRange.levelCount = 1;
+
+				if (pTexture2D->independentUAVMIPs)
+				{
+					// Create subresource SRVs:
+					UINT miplevels = pTexture2D->desc.MipLevels;
+					for (UINT i = 0; i < miplevels; ++i)
+					{
+						uav_desc.subresourceRange.baseMipLevel = i;
+
+						pTexture2D->additionalUAVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &uav_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalUAVs.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+			}
+			else
+			{
+				uav_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				uav_desc.subresourceRange.baseArrayLayer = 0;
+				uav_desc.subresourceRange.layerCount = 1;
+				uav_desc.subresourceRange.levelCount = 1;
+
+				if (pTexture2D->independentUAVMIPs)
+				{
+					// Create subresource SRVs:
+					UINT miplevels = pTexture2D->desc.MipLevels;
+					for (UINT i = 0; i < miplevels; ++i)
+					{
+						uav_desc.subresourceRange.baseMipLevel = i;
+
+						pTexture2D->additionalUAVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &uav_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalUAVs.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+			}
+
+			// Create full-resource UAV:
+			uav_desc.subresourceRange.baseArrayLayer = 0;
+			uav_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
+			uav_desc.subresourceRange.baseMipLevel = 0;
+			uav_desc.subresourceRange.levelCount = pTexture2D->desc.MipLevels;
+
+			res = vkCreateImageView(device, &uav_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->UAV));
+			hr = res == VK_SUCCESS;
+			assert(SUCCEEDED(hr));
 		}
 
 
@@ -3706,7 +3784,7 @@ namespace wiGraphics
 		// Rasterizer:
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable = VK_FALSE;
+		rasterizer.depthClampEnable = VK_TRUE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
@@ -3717,11 +3795,15 @@ namespace wiGraphics
 		rasterizer.depthBiasClamp = 0.0f;
 		rasterizer.depthBiasSlopeFactor = 0.0f;
 
+		// depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
+		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
+		depthclip.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
+		depthclip.depthClipEnable = VK_TRUE;
+		rasterizer.pNext = &depthclip;
+
 		if (pDesc->rs != nullptr)
 		{
 			const RasterizerStateDesc& desc = pDesc->rs->desc;
-
-			rasterizer.depthClampEnable = desc.DepthClipEnable;
 
 			switch (desc.FillMode)
 			{
@@ -3754,6 +3836,8 @@ namespace wiGraphics
 			rasterizer.depthBiasClamp = desc.DepthBiasClamp;
 			rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
 
+			// depth clip is extension in Vulkan 1.1:
+			depthclip.depthClipEnable = desc.DepthClipEnable ? VK_TRUE : VK_FALSE;
 		}
 
 		pipelineInfo.pRasterizationState = &rasterizer;
@@ -4185,6 +4269,8 @@ namespace wiGraphics
 			CommandList cmd;
 			while (active_commandlists.pop_front(cmd))
 			{
+				renderPass[cmd].disable(GetDirectCommandList(cmd));
+
 				if (vkEndCommandBuffer(GetDirectCommandList(cmd)) != VK_SUCCESS) {
 					throw std::runtime_error("failed to record command buffer!");
 				}
@@ -4564,7 +4650,7 @@ namespace wiGraphics
 					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
 					descriptorWrite.dstBinding = binding;
 					descriptorWrite.dstArrayElement = 0;
-					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 					descriptorWrite.descriptorCount = 1;
 					descriptorWrite.pBufferInfo = nullptr;
 					descriptorWrite.pImageInfo = &imageInfo;
@@ -4627,7 +4713,7 @@ namespace wiGraphics
 						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
 						descriptorWrite.dstBinding = binding;
 						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
 						descriptorWrite.descriptorCount = 1;
 						descriptorWrite.pBufferInfo = nullptr;
 						descriptorWrite.pImageInfo = nullptr;
@@ -4977,6 +5063,63 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::UAVBarrier(const GPUResource *const* uavs, UINT NumBarriers, CommandList cmd)
 	{
+		for (UINT i = 0; i < NumBarriers; ++i)
+		{
+			const GPUResource* uav = uavs[i];
+
+			if (uav->IsTexture())
+			{
+				const TextureDesc& desc = ((const Texture*)uav)->GetDesc();
+
+				VkImageMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				barrier.image = (VkImage)uav->resource;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				barrier.srcQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				barrier.subresourceRange.baseArrayLayer = 0;
+				barrier.subresourceRange.layerCount = desc.ArraySize;
+				barrier.subresourceRange.baseMipLevel = 0;
+				barrier.subresourceRange.levelCount = desc.MipLevels;
+				//barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				//barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
+			}
+			else
+			{
+				VkBufferMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+				barrier.pNext = nullptr;
+				barrier.buffer = (VkBuffer)uav->resource;
+				barrier.size = ((const GPUBuffer*)uav)->GetDesc().ByteWidth;
+				barrier.offset = 0;
+				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				barrier.srcQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+
+				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+					0,
+					0, nullptr,
+					1, &barrier,
+					0, nullptr
+				);
+			}
+		}
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd)
 	{
