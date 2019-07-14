@@ -22,6 +22,7 @@
 #include <vector>
 #include <unordered_map>
 #include <atomic>
+#include <mutex>
 
 namespace wiGraphics
 {
@@ -58,7 +59,7 @@ namespace wiGraphics
 		VkCommandPool copyCommandPool;
 		VkCommandBuffer copyCommandBuffer;
 		VkFence copyFence;
-		wiSpinLock copyQueueLock;
+		std::mutex copyQueueLock;
 
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;

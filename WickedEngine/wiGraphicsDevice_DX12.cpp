@@ -3228,7 +3228,11 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_DX12::DestroyComputeShader(ComputeShader *pComputeShader)
 	{
-
+		if (pComputeShader->resource != WI_NULL_HANDLE)
+		{
+			((ID3D12PipelineState*)pComputeShader->resource)->Release();
+			pComputeShader->resource = WI_NULL_HANDLE;
+		}
 	}
 	void GraphicsDevice_DX12::DestroyBlendState(BlendState *pBlendState)
 	{

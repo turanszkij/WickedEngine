@@ -2585,7 +2585,7 @@ namespace wiGraphics
 		imageInfo.arrayLayers = pTexture2D->desc.ArraySize;
 		imageInfo.mipLevels = pTexture2D->desc.MipLevels;
 		imageInfo.samples = static_cast<VkSampleCountFlagBits>(pTexture2D->desc.SampleDesc.Count);
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // or preinitialized?
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
 		if (pTexture2D->desc.BindFlags & BIND_SHADER_RESOURCE)
@@ -2702,15 +2702,13 @@ namespace wiGraphics
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.copyFamily;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
 				barrier.subresourceRange.layerCount = pDesc->ArraySize;
 				barrier.subresourceRange.baseMipLevel = 0;
 				barrier.subresourceRange.levelCount = pDesc->MipLevels;
-				//barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				//barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -2729,8 +2727,8 @@ namespace wiGraphics
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				//barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				//barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -4128,7 +4126,8 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DestroyComputeShader(ComputeShader *pComputeShader)
 	{
-
+		vkDestroyPipeline(device, (VkPipeline)pComputeShader->resource, nullptr);
+		pComputeShader->resource = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_Vulkan::DestroyBlendState(BlendState *pBlendState)
 	{
@@ -4460,7 +4459,15 @@ namespace wiGraphics
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
+			if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs.empty())
+			{
+				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
+			}
+			else
+			{
+				assert(ppRenderTargets[i]->additionalRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->additionalRTVs[arrayIndex];
+			}
 
 			renderPass[cmd].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
 			renderPass[cmd].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
@@ -4470,7 +4477,15 @@ namespace wiGraphics
 
 		if (depthStencilTexture != nullptr)
 		{
-			renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
+			if (arrayIndex < 0 || depthStencilTexture->additionalDSVs.empty())
+			{
+				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
+			}
+			else
+			{
+				assert(depthStencilTexture->additionalDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
+				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->additionalDSVs[arrayIndex];
+			}
 			renderPass[cmd].attachmentCount++;
 
 			renderPass[cmd].attachmentsExtents.width = depthStencilTexture->desc.Width;
@@ -4896,19 +4911,19 @@ namespace wiGraphics
 		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(GetDirectCommandList(cmd));
 		vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 
-		VkMemoryBarrier barrier;
-		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-		barrier.pNext = nullptr;
-		barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+		//VkMemoryBarrier barrier;
+		//barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		//barrier.pNext = nullptr;
+		//barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+		//barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
-		vkCmdPipelineBarrier(GetDirectCommandList(cmd), 
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-			0, 
-			1, &barrier, 
-			0, nullptr, 
-			0, nullptr);
+		//vkCmdPipelineBarrier(GetDirectCommandList(cmd), 
+		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+		//	0, 
+		//	1, &barrier, 
+		//	0, nullptr, 
+		//	0, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
@@ -5076,21 +5091,19 @@ namespace wiGraphics
 				barrier.image = (VkImage)uav->resource;
 				barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-				barrier.srcQueueFamilyIndex = queueIndices.graphicsFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseArrayLayer = 0;
 				barrier.subresourceRange.layerCount = desc.ArraySize;
 				barrier.subresourceRange.baseMipLevel = 0;
 				barrier.subresourceRange.levelCount = desc.MipLevels;
-				//barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				//barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					0,
 					0, nullptr,
 					0, nullptr,
@@ -5107,12 +5120,12 @@ namespace wiGraphics
 				barrier.offset = 0;
 				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-				barrier.srcQueueFamilyIndex = queueIndices.graphicsFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
+				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					0,
 					0, nullptr,
 					1, &barrier,
