@@ -193,7 +193,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 
 ### Graphics API:
 
-The default renderer is DirectX 11. There is also a DirectX12 renderer (experimental) and Vulkan renderer (experiemntal).
+The default renderer is DirectX 11. There is also a DirectX12 renderer (experimental) and Vulkan renderer (experimental).
 You can specify command line arguments to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
