@@ -187,7 +187,6 @@ void RenderPath3D::ResizeBuffers()
 		else
 		{
 			desc.Format = wiRenderer::DSFormat_full_alias;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
 		}
 		desc.SampleDesc.Count = 1;
 		device->CreateTexture2D(&desc, nullptr, &depthBuffer_Copy);

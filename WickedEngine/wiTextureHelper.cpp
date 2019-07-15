@@ -39,6 +39,7 @@ namespace wiTextureHelper
 
 			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
 			assert(SUCCEEDED(hr));
+			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_RANDOM64X64], "HELPERTEXTURE_RANDOM64X64");
 		}
 
 		// ColorGradeDefault
@@ -65,6 +66,7 @@ namespace wiTextureHelper
 
 			HRESULT hr = CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16);
 			assert(SUCCEEDED(hr));
+			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], "HELPERTEXTURE_COLORGRADEDEFAULT");
 		}
 
 		// BlackCubemap
@@ -114,6 +116,7 @@ namespace wiTextureHelper
 
 			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
 			assert(SUCCEEDED(hr));
+			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_BLACKCUBEMAP], "HELPERTEXTURE_BLACKCUBEMAP");
 		}
 
 		wiBackLog::post("wiTextureHelper Initialized");
@@ -183,6 +186,7 @@ namespace wiTextureHelper
 			delete texture;
 			return nullptr;
 		}
+		wiRenderer::GetDevice()->SetName(texture, "HELPERTEXTURE_COLOR");
 
 		colorlock.lock();
 		colorTextures[color.rgba] = texture;

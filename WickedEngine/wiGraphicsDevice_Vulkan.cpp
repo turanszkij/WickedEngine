@@ -19,13 +19,6 @@
 namespace wiGraphics
 {
 
-	template <class T>
-	inline void hash_combine(std::size_t& seed, const T& v)
-	{
-		std::hash<T> hasher;
-		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-	}
-
 
 	// Converters:
 	inline VkFormat _ConvertFormat(FORMAT value)
@@ -483,7 +476,12 @@ namespace wiGraphics
 		}
 		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	}
-
+	
+	// Extension functions:
+	PFN_vkSetDebugUtilsObjectNameEXT setDebugUtilsObjectNameEXT;
+	PFN_vkCmdBeginDebugUtilsLabelEXT cmdBeginDebugUtilsLabelEXT;
+	PFN_vkCmdEndDebugUtilsLabelEXT cmdEndDebugUtilsLabelEXT;
+	PFN_vkCmdInsertDebugUtilsLabelEXT cmdInsertDebugUtilsLabelEXT;
 
 	// Validation layer helpers:
 	const std::vector<const char*> validationLayers = {
@@ -1319,7 +1317,12 @@ namespace wiGraphics
 
 
 
-
+	template <class T>
+	inline void hash_combine(std::size_t& seed, const T& v)
+	{
+		std::hash<T> hasher;
+		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+	}
 	void GraphicsDevice_Vulkan::RenderPassManager::reset()
 	{
 		dirty = true;
@@ -1345,10 +1348,11 @@ namespace wiGraphics
 			vkCmdEndRenderPass(commandBuffer);
 		}
 		activeRTHash = 0;
+		dirty = true;
 	}
 	void GraphicsDevice_Vulkan::RenderPassManager::validate(VkDevice device, VkCommandBuffer commandBuffer)
 	{
-		if (attachmentCount == 0)
+		if (!dirty || attachmentCount == 0)
 		{
 			return;
 		}
@@ -1357,21 +1361,17 @@ namespace wiGraphics
 
 		if (!overrideRenderPass && !overrideFramebuffer)
 		{
-			hash_combine(requestRTHash, pDesc->DSFormat);
-			for (UINT i = 0; i < pDesc->numRTs; ++i)
+			for (uint32_t i = 0; i < attachmentCount; ++i)
 			{
-				hash_combine(requestRTHash, pDesc->RTFormats[i]); // primary hash based on PSO formats description
-				hash_combine(requestRTHash, attachments[i]); // setrendertarget <-> PSO layout might mismatch so we HAVE to also include this in the hash
+				hash_combine(requestRTHash, attachments[i]);
 			}
-			hash_combine(requestRTHash, attachmentsExtents.width);
-			hash_combine(requestRTHash, attachmentsExtents.height);
 		}
 		else
 		{
 			requestRTHash = 0xFFFFFFFF; // override setrendertarget hashing with custom renderpass (eg. presentation render pass because it has some custom setup)
 		}
 
-		if (dirty || activeRTHash == 0 || activeRTHash != requestRTHash)
+		if (activeRTHash == 0 || activeRTHash != requestRTHash)
 		{
 			VkRenderPass renderPass = overrideRenderPass;
 			VkFramebuffer frameBuffer = overrideFramebuffer;
@@ -1526,7 +1526,7 @@ namespace wiGraphics
 									clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 								}
 								clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-								clearInfos[realClearCount].colorAttachment = 0;
+								clearInfos[realClearCount].colorAttachment = j;
 
 								realClearCount++;
 								clearRequests[i].attachment = VK_NULL_HANDLE;
@@ -1598,6 +1598,7 @@ namespace wiGraphics
 		//}
 		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+		extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 
 		bool enableValidationLayers = debuglayer;
@@ -1735,6 +1736,11 @@ namespace wiGraphics
 			vkGetDeviceQueue(device, queueIndices.copyFamily, 0, &copyQueue);
 		}
 
+		// Extension functions:
+		setDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(device, "vkSetDebugUtilsObjectNameEXT");
+		cmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
+		cmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
+		cmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdInsertDebugUtilsLabelEXT");
 
 		// Create default pipeline:
 		{
@@ -2026,6 +2032,18 @@ namespace wiGraphics
 			swapChainImages.resize(imageCount);
 			vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 			swapChainImageFormat = surfaceFormat.format;
+
+			VkDebugUtilsObjectNameInfoEXT info = {};
+			info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+			info.pObjectName = "SWAPCHAIN";
+			info.objectType = VK_OBJECT_TYPE_IMAGE;
+			for (auto& x : swapChainImages)
+			{
+				info.objectHandle = (uint64_t)x;
+
+				VkResult res = setDebugUtilsObjectNameEXT(device, &info);
+				assert(res == VK_SUCCESS);
+			}
 
 		}
 
@@ -2363,7 +2381,7 @@ namespace wiGraphics
 
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = pBuffer->desc.ByteWidth /** BACKBUFFER_COUNT*/;
+		bufferInfo.size = pBuffer->desc.ByteWidth;
 		bufferInfo.usage = 0;
 		if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 		{
@@ -2399,12 +2417,9 @@ namespace wiGraphics
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
+		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 		bufferInfo.flags = 0;
-
-		// Allow access from copy queue:
-		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
 
 		uint32_t queueFamilyIndices[] = { 
 			static_cast<uint32_t>(queueIndices.graphicsFamily), 
@@ -2412,6 +2427,7 @@ namespace wiGraphics
 		};
 		bufferInfo.pQueueFamilyIndices = queueFamilyIndices;
 		bufferInfo.queueFamilyIndexCount = ARRAYSIZE(queueFamilyIndices);
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // either owned by copy queue OR graphics queue, but not  both at the same time
 
 
 
@@ -2479,26 +2495,32 @@ namespace wiGraphics
 
 				VkAccessFlags tmp = barrier.srcAccessMask;
 				barrier.srcAccessMask = barrier.dstAccessMask;
+				barrier.dstAccessMask = 0;
 
 				if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 				{
-					barrier.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 				}
-				else if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+				if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 				{
-					barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 				}
-				else if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+				if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
 				{
-					barrier.dstAccessMask = VK_ACCESS_INDEX_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 				}
-				else
+				if(pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
 				{
-					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+				}
+				if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+				{
+					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 				}
 
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				// transfer queue-ownership from copy to graphics:
+				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
+				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
 				vkCmdPipelineBarrier(
 					copyCommandBuffer,
@@ -2613,6 +2635,15 @@ namespace wiGraphics
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
 
+
+		uint32_t queueFamilyIndices[] = {
+			static_cast<uint32_t>(queueIndices.graphicsFamily),
+			static_cast<uint32_t>(queueIndices.copyFamily)
+		};
+		imageInfo.pQueueFamilyIndices = queueFamilyIndices;
+		imageInfo.queueFamilyIndexCount = ARRAYSIZE(queueFamilyIndices);
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // either owned by copy queue OR graphics queue, but not  both at the same time
+
 		VkResult res;
 		res = vkCreateImage(device, &imageInfo, nullptr, reinterpret_cast<VkImage*>(&pTexture2D->resource));
 		hr = res == VK_SUCCESS;
@@ -2698,7 +2729,7 @@ namespace wiGraphics
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 				barrier.image = (VkImage)pTexture2D->resource;
-				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.oldLayout = imageInfo.initialLayout;
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.srcAccessMask = 0;
 				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -2727,6 +2758,8 @@ namespace wiGraphics
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+				// transfer queue-ownership from copy to graphics:
 				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
 				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
@@ -2774,18 +2807,14 @@ namespace wiGraphics
 				// TextureCube, TextureCubeArray...
 				UINT slices = arraySize / 6;
 
-				if (arraySize > 6)
-				{
-					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-				}
-				else
-				{
-					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-				}
+				rtv_desc.subresourceRange.baseMipLevel = 0;
+				rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
 
 				if (pTexture2D->independentRTVCubemapFaces)
 				{
 					// independent faces
+					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
 					for (UINT i = 0; i < arraySize; ++i)
 					{
 						rtv_desc.subresourceRange.baseArrayLayer = i;
@@ -2799,6 +2828,8 @@ namespace wiGraphics
 				else if (pTexture2D->independentRTVArraySlices)
 				{
 					// independent cubemaps
+					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+
 					for (UINT i = 0; i < slices; ++i)
 					{
 						rtv_desc.subresourceRange.baseArrayLayer = i * 6;
@@ -2812,6 +2843,14 @@ namespace wiGraphics
 
 				{
 					// Create full-resource RTVs:
+					if (arraySize > 6)
+					{
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+					}
+					else
+					{
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+					}
 					rtv_desc.subresourceRange.baseArrayLayer = 0;
 					rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 					rtv_desc.subresourceRange.baseMipLevel = 0;
@@ -2828,12 +2867,15 @@ namespace wiGraphics
 				{
 					if (multisampled)
 					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MS?
 					}
 					else
 					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 					}
+					rtv_desc.subresourceRange.baseMipLevel = 0;
+					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
+
 					UINT slices = arraySize;
 
 					// independent slices
@@ -2903,11 +2945,47 @@ namespace wiGraphics
 
 			dsv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
 
-
-			if (arraySize > 1)
+			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 			{
-				if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				// TextureCube, TextureCubeArray...
+				UINT slices = arraySize / 6;
+
+				dsv_desc.subresourceRange.baseMipLevel = 0;
+				dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
+
+				if (pTexture2D->independentRTVCubemapFaces)
 				{
+					// independent faces
+					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+					for (UINT i = 0; i < arraySize; ++i)
+					{
+						dsv_desc.subresourceRange.baseArrayLayer = i;
+						dsv_desc.subresourceRange.layerCount = 1;
+
+						pTexture2D->additionalDSVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalDSVs.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+				else if (pTexture2D->independentRTVArraySlices)
+				{
+					// independent cubemaps
+					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+
+					for (UINT i = 0; i < slices; ++i)
+					{
+						dsv_desc.subresourceRange.baseArrayLayer = i * 6;
+						dsv_desc.subresourceRange.layerCount = 6;
+
+						pTexture2D->additionalDSVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalDSVs.back()));
+						assert(res == VK_SUCCESS);
+					}
+				}
+
+				{
+					// Create full-resource RTVs:
 					if (arraySize > 6)
 					{
 						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
@@ -2916,41 +2994,82 @@ namespace wiGraphics
 					{
 						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-					}
-					else
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					}
-				}
+					dsv_desc.subresourceRange.baseArrayLayer = 0;
+					dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
+					dsv_desc.subresourceRange.baseMipLevel = 0;
+					dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
 
+					res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
+					hr = res == VK_SUCCESS;
+					assert(SUCCEEDED(hr));
+				}
 			}
 			else
 			{
-				if (multisampled)
+				if (arraySize > 1 && pTexture2D->independentRTVArraySlices)
 				{
-					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
+					if (multisampled)
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MS?
+					}
+					else
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+					}
+					dsv_desc.subresourceRange.baseMipLevel = 0;
+					dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
+
+					UINT slices = arraySize;
+
+					// independent slices
+					for (UINT i = 0; i < slices; ++i)
+					{
+						dsv_desc.subresourceRange.baseArrayLayer = i;
+						dsv_desc.subresourceRange.layerCount = 1;
+
+						pTexture2D->additionalDSVs.push_back(VK_NULL_HANDLE);
+						res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalDSVs.back()));
+						assert(res == VK_SUCCESS);
+					}
 				}
-				else
+
 				{
-					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+					// Create full-resource RTV:
+
+					if (arraySize > 1)
+					{
+						if (multisampled)
+						{
+							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+						}
+						else
+						{
+							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+						}
+					}
+					else
+					{
+						if (multisampled)
+						{
+							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
+						}
+						else
+						{
+							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+						}
+					}
+
+					dsv_desc.subresourceRange.baseArrayLayer = 0;
+					dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
+					dsv_desc.subresourceRange.baseMipLevel = 0;
+					dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
+
+					res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
+					hr = res == VK_SUCCESS;
+					assert(SUCCEEDED(hr));
 				}
+
 			}
-
-			// Create full-resource DSV:
-			dsv_desc.subresourceRange.baseArrayLayer = 0;
-			dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-			dsv_desc.subresourceRange.baseMipLevel = 0;
-			dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
-
-			res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
-			hr = res == VK_SUCCESS;
-			assert(SUCCEEDED(hr));
 		}
 
 
@@ -2967,44 +3086,16 @@ namespace wiGraphics
 			srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
-			{
-				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-			}
-
 			srv_desc.subresourceRange.baseArrayLayer = 0;
-			srv_desc.subresourceRange.layerCount = 1;
+			srv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 			srv_desc.subresourceRange.baseMipLevel = 0;
-			srv_desc.subresourceRange.levelCount = 1;
+			srv_desc.subresourceRange.levelCount = pTexture2D->desc.MipLevels;
 
 			srv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
 
 
 			if (arraySize > 1)
 			{
-				if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-				{
-					if (arraySize > 6)
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-					}
-					else
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-					}
-					else
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					}
-				}
-
 				if (pTexture2D->independentSRVArraySlices)
 				{
 					if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
@@ -3012,6 +3103,8 @@ namespace wiGraphics
 						UINT slices = arraySize / 6;
 
 						// independent cubemaps
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+
 						for (UINT i = 0; i < slices; ++i)
 						{
 							srv_desc.subresourceRange.baseArrayLayer = i * 6;
@@ -3027,6 +3120,8 @@ namespace wiGraphics
 						UINT slices = arraySize;
 
 						// independent slices
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
 						for (UINT i = 0; i < slices; ++i)
 						{
 							srv_desc.subresourceRange.baseArrayLayer = i;
@@ -3067,6 +3162,42 @@ namespace wiGraphics
 			}
 
 			// Create full-resource SRV:
+			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+			{
+				if (arraySize > 6)
+				{
+					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+				}
+				else
+				{
+					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+				}
+			}
+			else
+			{
+				if (arraySize > 1)
+				{
+					if (multisampled)
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+					}
+					else
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					}
+				}
+				else
+				{
+					if (multisampled)
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MS?
+					}
+					else
+					{
+						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+					}
+				}
+			}
 			srv_desc.subresourceRange.baseArrayLayer = 0;
 			srv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 			srv_desc.subresourceRange.baseMipLevel = 0;
@@ -4162,7 +4293,21 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const std::string& name)
 	{
+		VkDebugUtilsObjectNameInfoEXT info = {};
+		info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+		info.pObjectName = name.c_str();
+		if (pResource->IsTexture())
+		{
+			info.objectType = VK_OBJECT_TYPE_IMAGE;
+		}
+		else if (pResource->IsBuffer())
+		{
+			info.objectType = VK_OBJECT_TYPE_BUFFER;
+		}
+		info.objectHandle = (uint64_t)pResource->resource;
 
+		VkResult res = setDebugUtilsObjectNameEXT(device, &info);
+		assert(res == VK_SUCCESS);
 	}
 
 
@@ -4295,7 +4440,7 @@ namespace wiGraphics
 			submitInfo.pSignalSemaphores = signalSemaphores;
 
 			if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, GetFrameResources().frameFence) != VK_SUCCESS) {
-				throw std::runtime_error("failed to submit draw command buffer!");
+				throw std::runtime_error("failed to submit graphics command buffer!");
 			}
 		}
 
@@ -4500,7 +4645,15 @@ namespace wiGraphics
 	{
 		RenderPassManager::ClearRequest clear;
 
-		clear.attachment = (VkImageView)pTexture->RTV;
+		if (arrayIndex < 0 || pTexture->additionalRTVs.empty())
+		{
+			clear.attachment = (VkImageView)pTexture->RTV;
+		}
+		else
+		{
+			assert(pTexture->additionalRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+			clear.attachment = (VkImageView)pTexture->additionalRTVs[arrayIndex];
+		}
 		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
 
 		renderPass[cmd].clearRequests.push_back(clear);
@@ -4509,7 +4662,15 @@ namespace wiGraphics
 	{
 		RenderPassManager::ClearRequest clear;
 
-		clear.attachment = (VkImageView)pTexture->DSV;
+		if (arrayIndex < 0 || pTexture->additionalDSVs.empty())
+		{
+			clear.attachment = (VkImageView)pTexture->DSV;
+		}
+		else
+		{
+			assert(pTexture->additionalDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
+			clear.attachment = (VkImageView)pTexture->additionalDSVs[arrayIndex];
+		}
 		clear.clearValue.depthStencil.depth = Depth;
 		clear.clearValue.depthStencil.stencil = Stencil;
 		clear.clearFlags = ClearFlags;
@@ -4910,20 +5071,6 @@ namespace wiGraphics
 
 		GetFrameResources().ResourceDescriptorsGPU[cmd]->validate(GetDirectCommandList(cmd));
 		vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
-
-		//VkMemoryBarrier barrier;
-		//barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-		//barrier.pNext = nullptr;
-		//barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-		//barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-		//vkCmdPipelineBarrier(GetDirectCommandList(cmd), 
-		//	VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 
-		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-		//	0, 
-		//	1, &barrier, 
-		//	0, nullptr, 
-		//	0, nullptr);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
@@ -4989,6 +5136,7 @@ namespace wiGraphics
 
 
 
+		// barrier to transfer:
 
 		VkPipelineStageFlags stages = 0;
 
@@ -4998,22 +5146,27 @@ namespace wiGraphics
 		barrier.srcAccessMask = 0;
 		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
-			barrier.srcAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+			barrier.srcAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		}
-		else if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 		{
-			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+			barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 		}
-		else if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
 		{
-			barrier.srcAccessMask = VK_ACCESS_INDEX_READ_BIT;
+			barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 			stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 		}
-		else
+		if (buffer->desc.BindFlags & BIND_SHADER_RESOURCE)
 		{
-			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			barrier.srcAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		}
+		if (buffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		{
+			barrier.srcAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 			stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 		}
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -5045,12 +5198,8 @@ namespace wiGraphics
 
 
 
-
-
-
-		VkAccessFlags tmp = barrier.srcAccessMask;
-		barrier.srcAccessMask = barrier.dstAccessMask;
-		barrier.dstAccessMask = tmp;
+		// reverse barrier:
+		std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
 		vkCmdPipelineBarrier(
 			GetDirectCommandList(cmd),
@@ -5241,44 +5390,29 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::EventBegin(const std::string& name, CommandList cmd)
 	{
-		//PFN_vkCmdDebugMarkerBeginEXT pfnCmdDebugMarkerBeginEXT = (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerBeginEXT");
-
-		//VkDebugMarkerMarkerInfoEXT info = {};
-		//info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-		//info.pNext = nullptr;
-		//info.color[0] = 1;
-		//info.color[1] = 0;
-		//info.color[2] = 1;
-		//info.color[3] = 1;
-		//info.pMarkerName = name.c_str();
-
-		//pfnCmdDebugMarkerBeginEXT(GetDirectCommandList(cmd), &info);
-
-		////vkCmdDebugMarkerBeginEXT(GetDirectCommandList(cmd), &info);
+		VkDebugUtilsLabelEXT label = {};
+		label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+		label.pLabelName = name.c_str();
+		label.color[0] = 0;
+		label.color[1] = 0;
+		label.color[2] = 0;
+		label.color[3] = 1;
+		cmdBeginDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
 	}
 	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
 	{
-		//PFN_vkCmdDebugMarkerEndEXT pfnCmdDebugMarkerEndEXT = (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerEndEXT");
-		//pfnCmdDebugMarkerEndEXT(GetDirectCommandList(cmd));
-
-		////vkCmdDebugMarkerEndEXT(GetDirectCommandList(cmd));
+		cmdEndDebugUtilsLabelEXT(GetDirectCommandList(cmd));
 	}
 	void GraphicsDevice_Vulkan::SetMarker(const std::string& name, CommandList cmd)
 	{
-		//PFN_vkCmdDebugMarkerInsertEXT pfnCmdDebugMarkerInsertEXT = (PFN_vkCmdDebugMarkerInsertEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerInsertEXT");
-
-		//VkDebugMarkerMarkerInfoEXT info = {};
-		//info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-		//info.pNext = nullptr;
-		//info.color[0] = 1;
-		//info.color[1] = 1;
-		//info.color[2] = 0;
-		//info.color[3] = 1;
-		//info.pMarkerName = name.c_str();
-
-		//pfnCmdDebugMarkerInsertEXT(GetDirectCommandList(cmd), &info);
-
-		////vkCmdDebugMarkerInsertEXT(GetDirectCommandList(cmd), &info);
+		VkDebugUtilsLabelEXT label = {};
+		label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+		label.pLabelName = name.c_str();
+		label.color[0] = 0;
+		label.color[1] = 0;
+		label.color[2] = 0;
+		label.color[3] = 1;
+		cmdInsertDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
 	}
 
 }

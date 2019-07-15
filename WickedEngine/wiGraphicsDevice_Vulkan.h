@@ -99,7 +99,7 @@ namespace wiGraphics
 			};
 			// RTFormats hash <-> renderpass+framebuffer
 			std::unordered_map<uint64_t, RenderPassAndFramebuffer> renderPassCollection;
-			uint64_t activeRTHash = 0;
+			size_t activeRTHash = 0;
 			const PipelineStateDesc* pDesc = nullptr;
 
 			VkRenderPass overrideRenderPass = VK_NULL_HANDLE;
