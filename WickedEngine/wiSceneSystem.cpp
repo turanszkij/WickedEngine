@@ -891,33 +891,42 @@ namespace wiSceneSystem
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
 	{
-		// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
-		std::unordered_map<size_t, uint32_t> uniquePositions;
-		graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
-		physicsToGraphicsVertexMapping.clear();
-		weights.clear();
-
-		for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
+		if (restPose.empty())
 		{
-			const XMFLOAT3& position = mesh.vertex_positions[i];
-
-			size_t hashes[] = {
-				std::hash<float>{}(position.x),
-				std::hash<float>{}(position.y),
-				std::hash<float>{}(position.z),
-			};
-			size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
-
-			if (uniquePositions.count(vertexHash) == 0)
-			{
-				uniquePositions[vertexHash] = (uint32_t)physicsToGraphicsVertexMapping.size();
-				physicsToGraphicsVertexMapping.push_back((uint32_t)i);
-			}
-			graphicsToPhysicsVertexMapping[i] = uniquePositions[vertexHash];
+			// Rest pose is saved:
+			restPose = mesh.vertex_positions;
 		}
 
-		weights.resize(physicsToGraphicsVertexMapping.size());
-		std::fill(weights.begin(), weights.end(), 1.0f);
+		if(physicsToGraphicsVertexMapping.empty())
+		{
+			// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
+			std::unordered_map<size_t, uint32_t> uniquePositions;
+			graphicsToPhysicsVertexMapping.resize(restPose.size());
+			physicsToGraphicsVertexMapping.clear();
+			weights.clear();
+
+			for (size_t i = 0; i < restPose.size(); ++i)
+			{
+				const XMFLOAT3& position = restPose[i];
+
+				size_t hashes[] = {
+					std::hash<float>{}(position.x),
+					std::hash<float>{}(position.y),
+					std::hash<float>{}(position.z),
+				};
+				size_t vertexHash = (((hashes[0] ^ (hashes[1] << 1) >> 1) ^ (hashes[2] << 1)) >> 1);
+
+				if (uniquePositions.count(vertexHash) == 0)
+				{
+					uniquePositions[vertexHash] = (uint32_t)physicsToGraphicsVertexMapping.size();
+					physicsToGraphicsVertexMapping.push_back((uint32_t)i);
+				}
+				graphicsToPhysicsVertexMapping[i] = uniquePositions[vertexHash];
+			}
+
+			weights.resize(physicsToGraphicsVertexMapping.size());
+			std::fill(weights.begin(), weights.end(), 1.0f);
+		}
 	}
 	
 	void CameraComponent::CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV)

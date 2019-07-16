@@ -565,11 +565,11 @@ namespace wiSceneSystem
 		std::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
 		std::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
 		std::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
+		std::vector<XMFLOAT3> restPose; // unsimulated vertex positions
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
 		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
-		std::vector<XMFLOAT3> saved_vertex_positions;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 

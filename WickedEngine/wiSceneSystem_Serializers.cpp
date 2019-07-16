@@ -386,6 +386,11 @@ namespace wiSceneSystem
 			archive >> graphicsToPhysicsVertexMapping;
 			archive >> weights;
 
+			if (archive.GetVersion() >= 29)
+			{
+				archive >> restPose;
+			}
+
 			_flags &= ~SAFE_TO_REGISTER;
 		}
 		else
@@ -396,6 +401,11 @@ namespace wiSceneSystem
 			archive << physicsToGraphicsVertexMapping;
 			archive << graphicsToPhysicsVertexMapping;
 			archive << weights;
+
+			if (archive.GetVersion() >= 29)
+			{
+				archive << restPose;
+			}
 		}
 	}
 	void ArmatureComponent::Serialize(wiArchive& archive, uint32_t seed)

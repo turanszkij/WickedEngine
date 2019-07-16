@@ -197,12 +197,7 @@ namespace wiPhysicsEngine
 	}
 	void AddSoftBody(Entity entity, wiSceneSystem::SoftBodyPhysicsComponent& physicscomponent, const wiSceneSystem::MeshComponent& mesh)
 	{
-		if (physicscomponent.physicsToGraphicsVertexMapping.empty())
-		{
-			physicscomponent.CreateFromMesh(mesh);
-		}
-
-		physicscomponent.saved_vertex_positions = mesh.vertex_positions;
+		physicscomponent.CreateFromMesh(mesh);
 
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&physicscomponent.worldMatrix);
 
@@ -212,7 +207,7 @@ namespace wiPhysicsEngine
 		{
 			uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[i];
 
-			XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
+			XMFLOAT3 position = physicscomponent.restPose[graphicsInd];
 			XMVECTOR P = XMLoadFloat3(&position);
 			P = XMVector3Transform(P, worldMatrix);
 			XMStoreFloat3(&position, P);
@@ -403,7 +398,7 @@ namespace wiPhysicsEngine
 					{
 						btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
 						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
-						XMFLOAT3 position = physicscomponent.saved_vertex_positions[graphicsInd];
+						XMFLOAT3 position = physicscomponent.restPose[graphicsInd];
 						XMVECTOR P = XMLoadFloat3(&position);
 						P = XMVector3Transform(P, worldMatrix);
 						// todo: here goes skinning...
