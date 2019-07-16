@@ -103,7 +103,7 @@ wiSceneSystem::LoadModel("myModel.wiscene"); // Simply load a model into the cur
 wiSceneSystem::GetScene(); // Get the current global scene
 wiRenderer::ClearWorld(); // Delete every model, etc. from the current global scene
 
-Scene scene2; // create a separate scene
+wiSceneSystem::Scene scene2; // create a separate scene
 wiSceneSystem::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
 wiSceneSystem::GetScene().Merge(scene2); // Combine separate scene with global scene
 
