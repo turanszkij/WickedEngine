@@ -249,10 +249,10 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					desc.Usage = USAGE_DEFAULT;
 
 					UINT mipwidth = width;
-					SubresourceData* InitData = new SubresourceData[desc.MipLevels];
+					std::vector<SubresourceData> InitData(desc.MipLevels);
 					for (UINT mip = 0; mip < desc.MipLevels; ++mip)
 					{
-						InitData[mip].pSysMem = rgb;
+						InitData[mip].pSysMem = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
 						InitData[mip].SysMemPitch = static_cast<UINT>(mipwidth * channelCount);
 						mipwidth = std::max(1u, mipwidth / 2);
 					}
@@ -260,7 +260,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					Texture2D* image = new Texture2D;
 					image->RequestIndependentShaderResourcesForMIPs(true);
 					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData, image);
+					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), image);
 					assert(SUCCEEDED(hr));
 					wiRenderer::GetDevice()->SetName(image, nameStr);
 

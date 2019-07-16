@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <deque>
 #include <atomic>
 #include <mutex>
 
@@ -201,6 +202,30 @@ namespace wiGraphics
 		std::atomic<uint8_t> commandlist_count{ 0 };
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> free_commandlists;
 		wiContainers::ThreadSafeRingBuffer<CommandList, COMMANDLIST_COUNT> active_commandlists;
+
+		struct DestroyItem
+		{
+			enum TYPE
+			{
+				DEVICEMEMORY,
+				IMAGE,
+				IMAGEVIEW,
+				BUFFER,
+				BUFFERVIEW,
+				SAMPLER,
+				PIPELINE,
+			} type;
+			uint64_t frame;
+			wiCPUHandle handle;
+		};
+		std::deque<DestroyItem> destroyer;
+		std::mutex destroylocker;
+		inline void DeferredDestroy(const DestroyItem& item) 
+		{
+			destroylocker.lock();
+			destroyer.push_back(item);
+			destroylocker.unlock();
+		}
 
 	public:
 		GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen = false, bool debuglayer = false);

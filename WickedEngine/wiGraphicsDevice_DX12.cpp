@@ -3139,66 +3139,66 @@ namespace wiGraphics
 	{
 		if (pResource->resource != WI_NULL_HANDLE)
 		{
-			((ID3D12Resource*)pResource->resource)->Release();
+			DeferredDestroy({ DestroyItem::RESOURCE, FRAMECOUNT, pResource->resource });
 			pResource->resource = WI_NULL_HANDLE;
 		}
 
-		ResourceAllocator->free(pResource->SRV);
+		DeferredDestroy({ DestroyItem::RESOURCEVIEW, FRAMECOUNT, pResource->SRV });
 		pResource->SRV = WI_NULL_HANDLE;
 		for (auto& x : pResource->additionalSRVs)
 		{
-			ResourceAllocator->free(x);
+			DeferredDestroy({ DestroyItem::RESOURCEVIEW, FRAMECOUNT, x });
 		}
 		pResource->additionalSRVs.clear();
 
-		ResourceAllocator->free(pResource->UAV);
+		DeferredDestroy({ DestroyItem::RESOURCEVIEW, FRAMECOUNT, pResource->UAV });
 		pResource->UAV = WI_NULL_HANDLE;
 		for (auto& x : pResource->additionalUAVs)
 		{
-			ResourceAllocator->free(x);
+			DeferredDestroy({ DestroyItem::RESOURCEVIEW, FRAMECOUNT, x });
 		}
 		pResource->additionalUAVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyBuffer(GPUBuffer *pBuffer)
 	{
-		ResourceAllocator->free(pBuffer->CBV);
+		DeferredDestroy({ DestroyItem::RESOURCEVIEW, FRAMECOUNT, pBuffer->CBV });
 		pBuffer->CBV = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_DX12::DestroyTexture1D(Texture1D *pTexture1D)
 	{
-		RTAllocator->free(pTexture1D->RTV);
+		DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, pTexture1D->RTV });
 		pTexture1D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalRTVs)
 		{
-			RTAllocator->free(x);
+			DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, x });
 		}
 		pTexture1D->additionalRTVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyTexture2D(Texture2D *pTexture2D)
 	{
-		RTAllocator->free(pTexture2D->RTV);
+		DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, pTexture2D->RTV });
 		pTexture2D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalRTVs)
 		{
-			RTAllocator->free(x);
+			DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, x });
 		}
 		pTexture2D->additionalRTVs.clear();
 
-		DSAllocator->free(pTexture2D->DSV);
+		DeferredDestroy({ DestroyItem::DEPTHSTENCILVIEW, FRAMECOUNT, pTexture2D->DSV });
 		pTexture2D->DSV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalDSVs)
 		{
-			DSAllocator->free(x);
+			DeferredDestroy({ DestroyItem::DEPTHSTENCILVIEW, FRAMECOUNT, x });
 		}
 		pTexture2D->additionalDSVs.clear();
 	}
 	void GraphicsDevice_DX12::DestroyTexture3D(Texture3D *pTexture3D)
 	{
-		RTAllocator->free(pTexture3D->RTV);
+		DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, pTexture3D->RTV });
 		pTexture3D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalRTVs)
 		{
-			RTAllocator->free(x);
+			DeferredDestroy({ DestroyItem::RENDERTARGETVIEW, FRAMECOUNT, x });
 		}
 		pTexture3D->additionalRTVs.clear();
 	}
@@ -3230,7 +3230,7 @@ namespace wiGraphics
 	{
 		if (pComputeShader->resource != WI_NULL_HANDLE)
 		{
-			((ID3D12PipelineState*)pComputeShader->resource)->Release();
+			DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, pComputeShader->resource });
 			pComputeShader->resource = WI_NULL_HANDLE;
 		}
 	}
@@ -3248,7 +3248,7 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_DX12::DestroySamplerState(Sampler *pSamplerState)
 	{
-		SamplerAllocator->free(pSamplerState->resource);
+		DeferredDestroy({ DestroyItem::SAMPLER, FRAMECOUNT, pSamplerState->resource });
 	}
 	void GraphicsDevice_DX12::DestroyQuery(GPUQuery *pQuery)
 	{
@@ -3258,7 +3258,7 @@ namespace wiGraphics
 	{
 		if (pso->pipeline != WI_NULL_HANDLE)
 		{
-			((ID3D12PipelineState*)pso->pipeline)->Release();
+			DeferredDestroy({ DestroyItem::PIPELINE, FRAMECOUNT, pso->pipeline });
 			pso->pipeline = WI_NULL_HANDLE;
 		}
 	}
@@ -3393,6 +3393,47 @@ namespace wiGraphics
 		}
 
 		memset(prev_pt, 0, sizeof(prev_pt));
+
+
+		// Deferred destroy of resources that the GPU is already finished with:
+		destroylocker.lock();
+		while (!destroyer.empty())
+		{
+			if (destroyer.front().frame + BACKBUFFER_COUNT < FRAMECOUNT)
+			{
+				DestroyItem item = destroyer.front();
+				destroyer.pop_front();
+
+				switch (item.type)
+				{
+				case DestroyItem::RESOURCE:
+					((ID3D12Resource*)item.handle)->Release();
+					break;
+				case DestroyItem::RESOURCEVIEW:
+					ResourceAllocator->free(item.handle);
+					break;
+				case DestroyItem::RENDERTARGETVIEW:
+					RTAllocator->free(item.handle);
+					break;
+				case DestroyItem::DEPTHSTENCILVIEW:
+					DSAllocator->free(item.handle);
+					break;
+				case DestroyItem::SAMPLER:
+					SamplerAllocator->free(item.handle);
+					break;
+				case DestroyItem::PIPELINE:
+					((ID3D12PipelineState*)item.handle)->Release();
+					break;
+				default:
+					break;
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+		destroylocker.unlock();
 
 		RESOLUTIONCHANGED = false;
 	}

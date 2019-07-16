@@ -2943,7 +2943,26 @@ namespace wiGraphics
 			dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			dsv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			dsv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
+			switch (pTexture2D->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				dsv_desc.format = VK_FORMAT_D16_UNORM;
+				break;
+			case FORMAT_R32_TYPELESS:
+				dsv_desc.format = VK_FORMAT_D32_SFLOAT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				dsv_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+				dsv_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				dsv_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+				dsv_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			default:
+				dsv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
+				break;
+			}
 
 			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 			{
@@ -3084,14 +3103,35 @@ namespace wiGraphics
 			srv_desc.flags = 0;
 			srv_desc.image = (VkImage)pTexture2D->resource;
 			srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 			srv_desc.subresourceRange.baseArrayLayer = 0;
 			srv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 			srv_desc.subresourceRange.baseMipLevel = 0;
 			srv_desc.subresourceRange.levelCount = pTexture2D->desc.MipLevels;
 
-			srv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
+			switch (pTexture2D->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				srv_desc.format = VK_FORMAT_D16_UNORM;
+				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case FORMAT_R32_TYPELESS:
+				srv_desc.format = VK_FORMAT_D32_SFLOAT;
+				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				srv_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				srv_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			default:
+				srv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
+				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				break;
+			}
 
 
 			if (arraySize > 1)
@@ -4112,122 +4152,122 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
 	{
-		vkFreeMemory(device, (VkDeviceMemory)pResource->resourceMemory, nullptr);
+		DeferredDestroy({ DestroyItem::DEVICEMEMORY, FRAMECOUNT, pResource->resourceMemory });
 		pResource->resourceMemory = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_Vulkan::DestroyBuffer(GPUBuffer *pBuffer)
 	{
-		vkDestroyBuffer(device, (VkBuffer)pBuffer->resource, nullptr);
+		DeferredDestroy({ DestroyItem::BUFFER, FRAMECOUNT, pBuffer->resource });
 		pBuffer->resource = WI_NULL_HANDLE;
 
-		vkDestroyBufferView(device, (VkBufferView)pBuffer->SRV, nullptr);
+		DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, pBuffer->SRV });
 		pBuffer->SRV = WI_NULL_HANDLE;
 		for (auto& x : pBuffer->additionalSRVs)
 		{
-			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
+			DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, x });
 		}
 		pBuffer->additionalSRVs.clear();
 
-		vkDestroyBufferView(device, (VkBufferView)pBuffer->UAV, nullptr);
+		DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, pBuffer->UAV });
 		pBuffer->UAV = WI_NULL_HANDLE;
 		for (auto& x : pBuffer->additionalUAVs)
 		{
-			vkDestroyBufferView(device, (VkBufferView)x, nullptr);
+			DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, x });
 		}
 		pBuffer->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
 	{
-		vkDestroyImage(device, (VkImage)pTexture1D->resource, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGE, FRAMECOUNT, pTexture1D->resource });
 		pTexture1D->resource = WI_NULL_HANDLE;
 
-		vkDestroyImageView(device, (VkImageView)pTexture1D->RTV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->RTV });
 		pTexture1D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalRTVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture1D->additionalRTVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture1D->SRV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->SRV });
 		pTexture1D->SRV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalSRVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture1D->additionalSRVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture1D->UAV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->UAV });
 		pTexture1D->UAV = WI_NULL_HANDLE;
 		for (auto& x : pTexture1D->additionalUAVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture1D->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
 	{
-		vkDestroyImage(device, (VkImage)pTexture2D->resource, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGE, pTexture2D->resource });
 		pTexture2D->resource = WI_NULL_HANDLE;
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->RTV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->RTV });
 		pTexture2D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalRTVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture2D->additionalRTVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->DSV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->DSV });
 		pTexture2D->DSV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalDSVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture2D->additionalDSVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->SRV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->SRV });
 		pTexture2D->SRV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalSRVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture2D->additionalSRVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture2D->UAV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->UAV });
 		pTexture2D->UAV = WI_NULL_HANDLE;
 		for (auto& x : pTexture2D->additionalUAVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture2D->additionalUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
 	{
-		vkDestroyImage(device, (VkImage)pTexture3D->resource, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGE, pTexture3D->resource });
 		pTexture3D->resource = WI_NULL_HANDLE;
 
-		vkDestroyImageView(device, (VkImageView)pTexture3D->RTV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->RTV });
 		pTexture3D->RTV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalRTVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture3D->additionalRTVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture3D->SRV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->SRV });
 		pTexture3D->SRV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalSRVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture3D->additionalSRVs.clear();
 
-		vkDestroyImageView(device, (VkImageView)pTexture3D->UAV, nullptr);
+		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->UAV });
 		pTexture3D->UAV = WI_NULL_HANDLE;
 		for (auto& x : pTexture3D->additionalUAVs)
 		{
-			vkDestroyImageView(device, (VkImageView)x, nullptr);
+			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
 		pTexture3D->additionalUAVs.clear();
 	}
@@ -4257,7 +4297,7 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DestroyComputeShader(ComputeShader *pComputeShader)
 	{
-		vkDestroyPipeline(device, (VkPipeline)pComputeShader->resource, nullptr);
+		DeferredDestroy({ DestroyItem::PIPELINE, pComputeShader->resource });
 		pComputeShader->resource = WI_NULL_HANDLE;
 	}
 	void GraphicsDevice_Vulkan::DestroyBlendState(BlendState *pBlendState)
@@ -4274,7 +4314,7 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DestroySamplerState(Sampler *pSamplerState)
 	{
-		vkDestroySampler(device, (VkSampler)pSamplerState->resource, nullptr);
+		DeferredDestroy({ DestroyItem::SAMPLER, pSamplerState->resource });
 	}
 	void GraphicsDevice_Vulkan::DestroyQuery(GPUQuery *pQuery)
 	{
@@ -4282,7 +4322,7 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DestroyPipelineState(PipelineState* pso)
 	{
-		vkDestroyPipeline(device, (VkPipeline)pso->pipeline, nullptr);
+		DeferredDestroy({ DestroyItem::PIPELINE, pso->pipeline });
 		pso->pipeline = WI_NULL_HANDLE;
 	}
 
@@ -4475,6 +4515,51 @@ namespace wiGraphics
 			res = vkResetFences(device, 1, &GetFrameResources().frameFence);
 			assert(res == VK_SUCCESS);
 		}
+
+
+		// Deferred destroy of resources that the GPU is already finished with:
+		destroylocker.lock();
+		while (!destroyer.empty())
+		{
+			if (destroyer.front().frame + BACKBUFFER_COUNT < FRAMECOUNT)
+			{
+				DestroyItem item = destroyer.front();
+				destroyer.pop_front();
+
+				switch (item.type)
+				{
+				case DestroyItem::DEVICEMEMORY:
+					vkFreeMemory(device, (VkDeviceMemory)item.handle, nullptr);
+					break;
+				case DestroyItem::IMAGE:
+					vkDestroyImage(device, (VkImage)item.handle, nullptr);
+					break;
+				case DestroyItem::IMAGEVIEW:
+					vkDestroyImageView(device, (VkImageView)item.handle, nullptr);
+					break;
+				case DestroyItem::BUFFER:
+					vkDestroyBuffer(device, (VkBuffer)item.handle, nullptr);
+					break;
+				case DestroyItem::BUFFERVIEW:
+					vkDestroyBufferView(device, (VkBufferView)item.handle, nullptr);
+					break;
+				case DestroyItem::SAMPLER:
+					vkDestroySampler(device, (VkSampler)item.handle, nullptr);
+					break;
+				case DestroyItem::PIPELINE:
+					vkDestroyPipeline(device, (VkPipeline)item.handle, nullptr);
+					break;
+				default:
+					break;
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+		destroylocker.unlock();
+
 
 		RESOLUTIONCHANGED = false;
 	}
@@ -4683,111 +4768,105 @@ namespace wiGraphics
 
 		if (resource != nullptr && resource->resource != VK_NULL_HANDLE)
 		{
-			if (arrayIndex < 0)
+			wiCPUHandle SRV = arrayIndex < 0 ? resource->SRV : resource->additionalSRVs[arrayIndex];
+
+			if (resource->IsTexture() && resource->SRV != VK_NULL_HANDLE)
 			{
-				if (resource->IsTexture() && resource->SRV != VK_NULL_HANDLE)
+				// Texture:
+
+				uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+
+				if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == SRV)
 				{
-					// Texture:
+					return;
+				}
 
-					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TEXTURE + slot;
+				VkDescriptorImageInfo imageInfo = {};
+				imageInfo.imageView = (VkImageView)resource->SRV;
+				imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
-					if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == resource->SRV)
+				VkWriteDescriptorSet descriptorWrite = {};
+				descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
+				descriptorWrite.dstBinding = binding;
+				descriptorWrite.dstArrayElement = 0;
+				descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+				descriptorWrite.descriptorCount = 1;
+				descriptorWrite.pBufferInfo = nullptr;
+				descriptorWrite.pImageInfo = &imageInfo;
+				descriptorWrite.pTexelBufferView = nullptr;
+
+				vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = SRV;
+			}
+			else
+			{
+				// Buffer:
+				const GPUBuffer* buffer = (const GPUBuffer*)resource;
+
+				if (buffer->desc.Format == FORMAT_UNKNOWN)
+				{
+					// structured buffer, raw buffer:
+
+					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot;
+
+					if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == buffer->resource)
 					{
 						return;
 					}
 
-					VkDescriptorImageInfo imageInfo = {};
-					imageInfo.imageView = (VkImageView)resource->SRV;
-					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					VkDescriptorBufferInfo bufferInfo = {};
+					bufferInfo.buffer = (VkBuffer)buffer->resource;
+					bufferInfo.offset = 0;
+					bufferInfo.range = buffer->desc.ByteWidth;
 
 					VkWriteDescriptorSet descriptorWrite = {};
 					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
 					descriptorWrite.dstBinding = binding;
 					descriptorWrite.dstArrayElement = 0;
-					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					descriptorWrite.descriptorCount = 1;
-					descriptorWrite.pBufferInfo = nullptr;
-					descriptorWrite.pImageInfo = &imageInfo;
+					descriptorWrite.pBufferInfo = &bufferInfo;
+					descriptorWrite.pImageInfo = nullptr;
 					descriptorWrite.pTexelBufferView = nullptr;
 
 					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 					GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
-					GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = resource->SRV;
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = buffer->resource;
+
 				}
-				else
+				else if (resource->SRV != VK_NULL_HANDLE)
 				{
-					// Buffer:
-					const GPUBuffer* buffer = (const GPUBuffer*)resource;
+					// typed buffer:
 
-					if (buffer->desc.Format == FORMAT_UNKNOWN)
+					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot;
+
+					if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == SRV)
 					{
-						// structured buffer, raw buffer:
-
-						uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_UNTYPEDBUFFER + slot;
-
-						if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == buffer->resource)
-						{
-							return;
-						}
-
-						VkDescriptorBufferInfo bufferInfo = {};
-						bufferInfo.buffer = (VkBuffer)buffer->resource;
-						bufferInfo.offset = 0;
-						bufferInfo.range = buffer->desc.ByteWidth;
-
-						VkWriteDescriptorSet descriptorWrite = {};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
-						descriptorWrite.dstBinding = binding;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pBufferInfo = &bufferInfo;
-						descriptorWrite.pImageInfo = nullptr;
-						descriptorWrite.pTexelBufferView = nullptr;
-
-						vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = buffer->resource;
-
-					}
-					else if (resource->SRV != VK_NULL_HANDLE)
-					{
-						// typed buffer:
-
-						uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_SRV_TYPEDBUFFER + slot;
-
-						if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == resource->SRV)
-						{
-							return;
-						}
-
-						VkWriteDescriptorSet descriptorWrite = {};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
-						descriptorWrite.dstBinding = binding;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pBufferInfo = nullptr;
-						descriptorWrite.pImageInfo = nullptr;
-						descriptorWrite.pTexelBufferView = reinterpret_cast<const VkBufferView*>(&resource->SRV);
-
-						vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = resource->SRV;
+						return;
 					}
 
+					VkWriteDescriptorSet descriptorWrite = {};
+					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
+					descriptorWrite.dstBinding = binding;
+					descriptorWrite.dstArrayElement = 0;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+					descriptorWrite.descriptorCount = 1;
+					descriptorWrite.pBufferInfo = nullptr;
+					descriptorWrite.pImageInfo = nullptr;
+					descriptorWrite.pTexelBufferView = reinterpret_cast<const VkBufferView*>(&SRV);
+
+					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = SRV;
 				}
-
-			}
-			else
-			{
-				assert(resource->additionalSRVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 
 			}
 		}
+
 	}
 	void GraphicsDevice_Vulkan::BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
 	{
@@ -4805,111 +4884,105 @@ namespace wiGraphics
 
 		if (resource != nullptr && resource->resource != VK_NULL_HANDLE)
 		{
-			if (arrayIndex < 0)
-			{
-				if (resource->IsTexture() && resource->UAV != VK_NULL_HANDLE)
-				{
-					// Texture:
-					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
+			wiCPUHandle UAV = arrayIndex < 0 ? resource->UAV : resource->additionalUAVs[arrayIndex];
 
-					if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == resource->UAV)
+			if (resource->IsTexture() && resource->UAV != VK_NULL_HANDLE)
+			{
+				// Texture:
+				uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TEXTURE + slot;
+
+				if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == UAV)
+				{
+					return;
+				}
+
+				VkDescriptorImageInfo imageInfo = {};
+				imageInfo.imageView = (VkImageView)UAV;
+				imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+				VkWriteDescriptorSet descriptorWrite = {};
+				descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
+				descriptorWrite.dstBinding = binding;
+				descriptorWrite.dstArrayElement = 0;
+				descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+				descriptorWrite.descriptorCount = 1;
+				descriptorWrite.pBufferInfo = nullptr;
+				descriptorWrite.pImageInfo = &imageInfo;
+				descriptorWrite.pTexelBufferView = nullptr;
+
+				vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
+				GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = UAV;
+			}
+			else
+			{
+				// Buffer:
+				const GPUBuffer* buffer = (const GPUBuffer*)resource;
+
+				if (buffer->desc.Format == FORMAT_UNKNOWN)
+				{
+					// structured buffer, raw buffer:
+
+					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot;
+
+					if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == buffer->resource)
 					{
 						return;
 					}
 
-					VkDescriptorImageInfo imageInfo = {};
-					imageInfo.imageView = (VkImageView)resource->UAV;
-					imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					VkDescriptorBufferInfo bufferInfo = {};
+					bufferInfo.buffer = (VkBuffer)buffer->resource;
+					bufferInfo.offset = 0;
+					bufferInfo.range = buffer->desc.ByteWidth;
 
 					VkWriteDescriptorSet descriptorWrite = {};
 					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
 					descriptorWrite.dstBinding = binding;
 					descriptorWrite.dstArrayElement = 0;
-					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					descriptorWrite.descriptorCount = 1;
-					descriptorWrite.pBufferInfo = nullptr;
-					descriptorWrite.pImageInfo = &imageInfo;
+					descriptorWrite.pBufferInfo = &bufferInfo;
+					descriptorWrite.pImageInfo = nullptr;
 					descriptorWrite.pTexelBufferView = nullptr;
 
 					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 					GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
-					GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = resource->UAV;
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = buffer->resource;
+
 				}
-				else
+				else if (resource->UAV != VK_NULL_HANDLE)
 				{
-					// Buffer:
-					const GPUBuffer* buffer = (const GPUBuffer*)resource;
+					// typed buffer:
 
-					if (buffer->desc.Format == FORMAT_UNKNOWN)
+					uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot;
+
+					if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == UAV)
 					{
-						// structured buffer, raw buffer:
-
-						uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_UNTYPEDBUFFER + slot;
-
-						if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == buffer->resource)
-						{
-							return;
-						}
-
-						VkDescriptorBufferInfo bufferInfo = {};
-						bufferInfo.buffer = (VkBuffer)buffer->resource;
-						bufferInfo.offset = 0;
-						bufferInfo.range = buffer->desc.ByteWidth;
-
-						VkWriteDescriptorSet descriptorWrite = {};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
-						descriptorWrite.dstBinding = binding;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pBufferInfo = &bufferInfo;
-						descriptorWrite.pImageInfo = nullptr;
-						descriptorWrite.pTexelBufferView = nullptr;
-
-						vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = buffer->resource;
-
+						return;
 					}
-					else if (resource->UAV != VK_NULL_HANDLE)
-					{
-						// typed buffer:
 
-						uint32_t binding = VULKAN_DESCRIPTOR_SET_OFFSET_UAV_TYPEDBUFFER + slot;
+					VkWriteDescriptorSet descriptorWrite = {};
+					descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
+					descriptorWrite.dstBinding = binding;
+					descriptorWrite.dstArrayElement = 0;
+					descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+					descriptorWrite.descriptorCount = 1;
+					descriptorWrite.pBufferInfo = nullptr;
+					descriptorWrite.pImageInfo = nullptr;
+					descriptorWrite.pTexelBufferView = reinterpret_cast<const VkBufferView*>(&UAV);
 
-						if (GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] == resource->UAV)
-						{
-							return;
-						}
-
-						VkWriteDescriptorSet descriptorWrite = {};
-						descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						descriptorWrite.dstSet = GetFrameResources().ResourceDescriptorsGPU[cmd]->descriptorSet_CPU[stage];
-						descriptorWrite.dstBinding = binding;
-						descriptorWrite.dstArrayElement = 0;
-						descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-						descriptorWrite.descriptorCount = 1;
-						descriptorWrite.pBufferInfo = nullptr;
-						descriptorWrite.pImageInfo = nullptr;
-						descriptorWrite.pTexelBufferView = reinterpret_cast<const VkBufferView*>(&resource->UAV);
-
-						vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
-						GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = resource->UAV;
-
-					}
+					vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->dirty[stage] = true;
+					GetFrameResources().ResourceDescriptorsGPU[cmd]->boundDescriptors[stage][binding] = UAV;
 
 				}
-
-			}
-			else
-			{
-				//assert(resource->additionalUAVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
 
 			}
 		}
+
 	}
 	void GraphicsDevice_Vulkan::BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd)
 	{
