@@ -267,6 +267,7 @@ namespace wiImage
 				prcb.xPPParams0.y = params.process.params.blur.y / params.siz.y;
 				prcb.xPPParams0.z = params.mipLevel;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::LIGHTSHAFT:
 				prcb.xPPParams0.x = 0.65f;	// density
@@ -276,6 +277,7 @@ namespace wiImage
 				prcb.xPPParams1.x = params.process.params.sun.x;
 				prcb.xPPParams1.y = params.process.params.sun.y;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::OUTLINE:
 				prcb.xPPParams0.x = params.process.params.outline.threshold;
@@ -284,16 +286,19 @@ namespace wiImage
 				prcb.xPPParams1.y = params.process.params.outline.colorG;
 				prcb.xPPParams1.z = params.process.params.outline.colorB;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::DEPTHOFFIELD:
 				prcb.xPPParams0.z = params.process.params.dofFocus;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::MOTIONBLUR:
 				break;
 			case wiImageParams::PostProcess::BLOOMSEPARATE:
 				prcb.xPPParams0.x = params.process.params.bloomThreshold;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::FXAA:
 				break;
@@ -301,11 +306,13 @@ namespace wiImage
 				prcb.xPPParams0.x = params.process.params.ssao.range;
 				prcb.xPPParams0.y = (float)params.process.params.ssao.sampleCount;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::SSSS:
 				prcb.xPPParams0.x = params.process.params.ssss.x;
 				prcb.xPPParams0.y = params.process.params.ssss.y;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::SSR:
 				break;
@@ -314,6 +321,7 @@ namespace wiImage
 			case wiImageParams::PostProcess::TONEMAP:
 				prcb.xPPParams0.x = params.process.params.exposure;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::REPROJECTDEPTHBUFFER:
 				break;
@@ -324,6 +332,7 @@ namespace wiImage
 			case wiImageParams::PostProcess::SHARPEN:
 				prcb.xPPParams0.x = params.process.params.sharpen;
 				device->UpdateBuffer(&processCb, &prcb, cmd);
+				device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 				break;
 			case wiImageParams::PostProcess::LINEARDEPTH:
 				break;
@@ -331,8 +340,6 @@ namespace wiImage
 				assert(0); // shouldn't reach here
 				break;
 			}
-
-			device->BindConstantBuffer(PS, &processCb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		}
 

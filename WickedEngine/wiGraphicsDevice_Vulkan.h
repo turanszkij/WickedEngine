@@ -133,28 +133,41 @@ namespace wiGraphics
 			{
 				GraphicsDevice_Vulkan* device;
 				VkDescriptorPool descriptorPool;
-				VkDescriptorSet descriptorSet_CPU[SHADERSTAGE_COUNT];
-				std::vector<VkDescriptorSet> descriptorSet_GPU[SHADERSTAGE_COUNT];
-				UINT ringOffset[SHADERSTAGE_COUNT];
-				bool dirty[SHADERSTAGE_COUNT];
 
-				// default descriptor table contents:
-				VkDescriptorBufferInfo bufferInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-				VkDescriptorImageInfo imageInfo[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-				VkBufferView bufferViews[GPU_RESOURCE_HEAP_SRV_COUNT] = {};
-				VkDescriptorImageInfo samplerInfo[GPU_SAMPLER_HEAP_COUNT] = {};
-				std::vector<VkWriteDescriptorSet> initWrites[SHADERSTAGE_COUNT];
+				struct Table
+				{
+					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+					const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+					int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+					const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
 
-				// descriptor table rename guards:
-				std::vector<wiCPUHandle> boundDescriptors[SHADERSTAGE_COUNT];
+					std::vector<VkDescriptorSet> descriptorSet_GPU;
+					UINT ringOffset;
+					bool dirty;
+
+					void reset()
+					{
+						memset(CBV, 0, sizeof(CBV));
+						memset(SRV, 0, sizeof(SRV));
+						memset(SRV_index, -1, sizeof(SRV_index));
+						memset(UAV, 0, sizeof(UAV));
+						memset(UAV_index, -1, sizeof(UAV_index));
+						memset(SAM, 0, sizeof(SAM));
+						ringOffset = 0;
+						dirty = true;
+					}
+
+				} tables[SHADERSTAGE_COUNT];
 
 				DescriptorTableFrameAllocator(GraphicsDevice_Vulkan* device, UINT maxRenameCount);
 				~DescriptorTableFrameAllocator();
 
 				void reset();
-				void validate(VkCommandBuffer commandList);
+				void validate(CommandList cmd);
 			};
-			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[COMMANDLIST_COUNT];
+			DescriptorTableFrameAllocator*		descriptors[COMMANDLIST_COUNT];
 
 
 			struct ResourceFrameAllocator
@@ -173,11 +186,18 @@ namespace wiGraphics
 				uint64_t calculateOffset(uint8_t* address);
 			};
 			ResourceFrameAllocator* resourceBuffer[COMMANDLIST_COUNT];
+
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
+		struct DynamicResourceState
+		{
+			GPUAllocation allocation;
+			bool binding[SHADERSTAGE_COUNT] = {};
+		};
+		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
 
 		struct UploadBuffer
 		{

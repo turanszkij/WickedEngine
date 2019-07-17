@@ -32,6 +32,8 @@ void Translator::LoadShaders()
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
 		desc.pt = TRIANGLELIST;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 
 		device->CreatePipelineState(&desc, &pso_solidpart);
 	}
@@ -46,6 +48,8 @@ void Translator::LoadShaders()
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.pt = LINELIST;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = wiRenderer::GetDevice()->GetBackBufferFormat();
 
 		device->CreatePipelineState(&desc, &pso_wirepart);
 	}

@@ -6,10 +6,12 @@
 #include "wiWindowRegistration.h"
 #include "wiSpinLock.h"
 #include "wiContainers.h"
+#include "wiGraphicsDevice_SharedInternals.h"
 
 #include <dxgi1_4.h>
 #include <d3d12.h>
 
+#include <unordered_map>
 #include <deque>
 #include <atomic>
 #include <mutex>
@@ -73,24 +75,45 @@ namespace wiGraphics
 
 			struct DescriptorTableFrameAllocator
 			{
-				ID3D12DescriptorHeap*	heap_CPU = nullptr;
-				ID3D12DescriptorHeap*	heap_GPU = nullptr;
-				UINT descriptorType;
-				UINT itemSize;
-				UINT itemCount;
-				UINT ringOffset;
-				bool dirty[SHADERSTAGE_COUNT];
-				wiCPUHandle* boundDescriptors = nullptr;
+				GraphicsDevice_DX12*	device = nullptr;
+				ID3D12DescriptorHeap*	resource_heap_GPU = nullptr;
+				ID3D12DescriptorHeap*	sampler_heap_GPU = nullptr;
+				UINT ringOffset_resources = 0;
+				UINT ringOffset_samplers = 0;
 
-				DescriptorTableFrameAllocator(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT maxRenameCount);
+				struct Table
+				{
+					const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+					const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+					int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+					const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+					int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+					const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+
+					bool dirty_resources;
+					bool dirty_samplers;
+
+					void reset()
+					{
+						memset(CBV, 0, sizeof(CBV));
+						memset(SRV, 0, sizeof(SRV));
+						memset(SRV_index, -1, sizeof(SRV_index));
+						memset(UAV, 0, sizeof(UAV));
+						memset(UAV_index, -1, sizeof(UAV_index));
+						memset(SAM, 0, sizeof(SAM));
+						dirty_resources = true;
+						dirty_samplers = true;
+					}
+
+				} tables[SHADERSTAGE_COUNT];
+
+				DescriptorTableFrameAllocator(GraphicsDevice_DX12* device, UINT maxRenameCount_resources, UINT maxRenameCount_samplers);
 				~DescriptorTableFrameAllocator();
 
-				void reset(ID3D12Device* device, D3D12_CPU_DESCRIPTOR_HANDLE* nullDescriptorsSamplerCBVSRVUAV);
-				void update(SHADERSTAGE stage, UINT slot, wiCPUHandle descriptor, ID3D12Device* device);
-				void validate(ID3D12Device* device, ID3D12GraphicsCommandList* commandList);
+				void reset();
+				void validate(CommandList cmd);
 			};
-			DescriptorTableFrameAllocator*		ResourceDescriptorsGPU[COMMANDLIST_COUNT] = {};
-			DescriptorTableFrameAllocator*		SamplerDescriptorsGPU[COMMANDLIST_COUNT] = {};
+			DescriptorTableFrameAllocator*		descriptors[COMMANDLIST_COUNT] = {};
 
 			struct ResourceFrameAllocator
 			{
@@ -112,6 +135,12 @@ namespace wiGraphics
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 		inline ID3D12GraphicsCommandList* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[cmd]); }
 
+		struct DynamicResourceState
+		{
+			GPUAllocation allocation;
+			bool binding[SHADERSTAGE_COUNT] = {};
+		};
+		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSampler = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};

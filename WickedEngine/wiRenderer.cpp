@@ -8045,6 +8045,8 @@ void BindCommonResources(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
+	ResetAlphaRef(cmd);
+
 	for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
 	{
 		SHADERSTAGE stage = (SHADERSTAGE)i;

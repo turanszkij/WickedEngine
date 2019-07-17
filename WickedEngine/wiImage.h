@@ -249,17 +249,21 @@ struct wiImageParams
 	void disableFullScreen() { _flags &= ~FULLSCREEN; }
 
 
-	wiImageParams() {
+	wiImageParams() 
+	{
 		init();
 	}
-	wiImageParams(float width, float height) {
+	wiImageParams(float width, float height) 
+	{
 		init();
 		siz = XMFLOAT2(width, height);
 	}
-	wiImageParams(float posX, float posY, float width, float height) {
+	wiImageParams(float posX, float posY, float width, float height, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1))
+	{
 		init();
 		pos.x = posX;
 		pos.y = posY;
 		siz = XMFLOAT2(width, height);
+		col = color;
 	}
 };

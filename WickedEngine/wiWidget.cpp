@@ -126,7 +126,7 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 		static const float _border = 2;
 		float fontWidth = (float)tooltipFont.textWidth() + _border * 2;
 		float fontHeight = (float)tooltipFont.textHeight() + _border * 2;
-		wiImage::Draw(wiTextureHelper::getColor(wiColor(255, 234, 165)), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight), cmd);
+		wiImage::Draw(wiTextureHelper::getWhite(), wiImageParams(tooltipPos.x - _border, tooltipPos.y - _border, fontWidth, fontHeight, wiColor(255, 234, 165).toFloat4()), cmd);
 		tooltipFont.SetText(tooltip);
 		tooltipFont.Draw(cmd);
 		if (!scriptTip.empty())
@@ -391,8 +391,8 @@ void wiButton::Render(const wiGUI* gui, CommandList cmd) const
 
 	gui->ResetScissor(cmd);
 
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
 
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
@@ -457,8 +457,8 @@ void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 
 	gui->ResetScissor(cmd);
 
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
 
 	wiRenderer::GetDevice()->BindScissorRects(1, &scissorRect, cmd);
@@ -608,8 +608,8 @@ void wiTextInputField::Render(const wiGUI* gui, CommandList cmd) const
 
 	gui->ResetScissor(cmd);
 
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
 
 
@@ -799,12 +799,12 @@ void wiSlider::Render(const wiGUI* gui, CommandList cmd) const
 	gui->ResetScissor(cmd);
 
 	// trail
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x - headWidth * 0.5f, translation.y + scale.y * 0.5f - scale.y*0.1f, scale.x + headWidth, scale.y * 0.2f, color.toFloat4()), cmd);
 	// head
 	float headPosX = wiMath::Lerp(translation.x, translation.x + scale.x, wiMath::Clamp(wiMath::InverseLerp(start, end, value), 0, 1));
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(headPosX - headWidth * 0.5f, translation.y, headWidth, scale.y, color.toFloat4()), cmd);
 
 	if (parent != gui)
 	{
@@ -932,14 +932,14 @@ void wiCheckBox::Render(const wiGUI* gui, CommandList cmd) const
 	gui->ResetScissor(cmd);
 
 	// control
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 
 	// check
 	if (GetCheck())
 	{
-		wiImage::Draw(wiTextureHelper::getColor(wiColor::lerp(color, wiColor::White(), 0.8f))
-			, wiImageParams(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f)
+		wiImage::Draw(wiTextureHelper::getWhite()
+			, wiImageParams(translation.x + scale.x*0.25f, translation.y + scale.y*0.25f, scale.x*0.5f, scale.y*0.5f, wiColor::lerp(color, wiColor::White(), 0.8f).toFloat4())
 			, cmd);
 	}
 
@@ -1127,11 +1127,11 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 	gui->ResetScissor(cmd);
 
 	// control-base
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 	// control-arrow
-	wiImage::Draw(wiTextureHelper::getColor(color)
-		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y), cmd);
+	wiImage::Draw(wiTextureHelper::getWhite()
+		, wiImageParams(translation.x + scale.x + 1, translation.y, scale.y, scale.y, color.toFloat4()), cmd);
 	wiFont("V", wiFontParams((int)(translation.x + scale.x + scale.y*0.5f), (int)(translation.y + scale.y*0.5f), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 		textColor, textShadowColor)).Draw(cmd);
 
@@ -1176,8 +1176,8 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 					col = colors[ACTIVE];
 				}
 			}
-			wiImage::Draw(wiTextureHelper::getColor(col)
-				, wiImageParams(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y), cmd);
+			wiImage::Draw(wiTextureHelper::getWhite()
+				, wiImageParams(translation.x, translation.y + _GetItemOffset(i), scale.x, scale.y, col.toFloat4()), cmd);
 			wiFont(x, wiFontParams((int)(translation.x + scale.x*0.5f), (int)(translation.y + scale.y*0.5f + _GetItemOffset(i)), WIFONTSIZE_DEFAULT, WIFALIGN_CENTER, WIFALIGN_CENTER, 0, 0,
 				textColor, textShadowColor)).Draw(cmd);
 			i++;
@@ -1449,8 +1449,8 @@ void wiWindow::Render(const wiGUI* gui, CommandList cmd) const
 	// body
 	if (!IsMinimized())
 	{
-		wiImage::Draw(wiTextureHelper::getColor(color)
-			, wiImageParams(translation.x, translation.y, scale.x, scale.y), cmd);
+		wiImage::Draw(wiTextureHelper::getWhite()
+			, wiImageParams(translation.x, translation.y, scale.x, scale.y, color.toFloat4()), cmd);
 	}
 
 	for (auto& x : childrenWidgets)
