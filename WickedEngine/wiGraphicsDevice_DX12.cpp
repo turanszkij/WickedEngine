@@ -1266,26 +1266,30 @@ namespace wiGraphics
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 		heapDesc.NodeMask = 0;
 
+		// Resource descriptor heap:
 		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		heapDesc.NumDescriptors = (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT) * SHADERSTAGE_COUNT * maxRenameCount_resources;
 		hr = device->device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&resource_heap_GPU);
 		assert(SUCCEEDED(hr));
 
+		// Sampler descriptor heap:
 		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		heapDesc.NumDescriptors = GPU_SAMPLER_HEAP_COUNT * SHADERSTAGE_COUNT * maxRenameCount_samplers;
 		hr = device->device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&sampler_heap_GPU);
 		assert(SUCCEEDED(hr));
 
-		resource_descriptor_size = device->device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		// Save heap properties:
 		resource_heap_cpu_start = resource_heap_GPU->GetCPUDescriptorHandleForHeapStart();
 		resource_heap_gpu_start = resource_heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
-		sampler_descriptor_size = device->device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		sampler_heap_cpu_start = sampler_heap_GPU->GetCPUDescriptorHandleForHeapStart();
 		sampler_heap_gpu_start = sampler_heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
+
+		// Reset state to empty:
 		reset();
 	}
 	GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::~DescriptorTableFrameAllocator()
@@ -1312,101 +1316,109 @@ namespace wiGraphics
 			{
 				table.dirty_resources = false;
 
+				// First, reset table with null descriptors:
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
+					dst.ptr += ringOffset_resources;
+
+					device->device->CopyDescriptorsSimple(
+						GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT,
+						dst,
+						device->null_resource_heap_cpu_start,
+						D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				}
+
 				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
 				{
 					const GPUBuffer* buffer = table.CBV[slot];
+					if (buffer == nullptr)
+					{
+						continue;
+					}
 
 					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources + slot * resource_descriptor_size;
+					dst.ptr += ringOffset_resources + slot * device->resource_descriptor_size;
 
-					D3D12_CPU_DESCRIPTOR_HANDLE descriptor = {};
-					if (buffer != nullptr)
+					if (buffer->desc.Usage == USAGE_DYNAMIC)
 					{
-						if (buffer->desc.Usage == USAGE_DYNAMIC)
+						auto it = device->dynamic_constantbuffers[cmd].find(buffer);
+						if (it != device->dynamic_constantbuffers[cmd].end())
 						{
-							auto it = device->dynamic_constantbuffers[cmd].find(buffer);
-							if (it != device->dynamic_constantbuffers[cmd].end())
-							{
-								DynamicResourceState& state = it->second;
-								state.binding[stage] = true;
-								D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-								cbv.BufferLocation = ((ID3D12Resource*)state.allocation.buffer->resource)->GetGPUVirtualAddress();
-								cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
-								cbv.SizeInBytes = (UINT)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+							DynamicResourceState& state = it->second;
+							state.binding[stage] = true;
+							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+							cbv.BufferLocation = ((ID3D12Resource*)state.allocation.buffer->resource)->GetGPUVirtualAddress();
+							cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)state.allocation.offset;
+							cbv.SizeInBytes = (UINT)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 								
-								// Instead of copying like usually, here we create a CBV in place into the GPU-visible table:
-								device->device->CreateConstantBufferView(&cbv, dst);
-								continue;
-							}
-						}
-						else
-						{
-							descriptor = ToNativeHandle(buffer->CBV);
+							// Instead of copying like usually, here we create a CBV in place into the GPU-visible table:
+							device->device->CreateConstantBufferView(&cbv, dst);
+							continue;
 						}
 					}
-
-					if (descriptor.ptr == 0)
+					else
 					{
-						descriptor = device->nullCBV;
+						D3D12_CPU_DESCRIPTOR_HANDLE src = ToNativeHandle(buffer->CBV);
+						device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 					}
-
-					device->device->CopyDescriptorsSimple(1, dst, descriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
 				{
 					const GPUResource* resource = table.SRV[slot];
 					const int arrayIndex = table.SRV_index[slot];
-
-					D3D12_CPU_DESCRIPTOR_HANDLE descriptor = {};
-					if (resource != nullptr)
+					if (resource == nullptr)
 					{
-						if (arrayIndex < 0)
-						{
-							descriptor = ToNativeHandle(resource->SRV);
-						}
-						else
-						{
-							descriptor = ToNativeHandle(resource->additionalSRVs[arrayIndex]);
-						}
+						continue;
 					}
 
-					if (descriptor.ptr == 0)
+					D3D12_CPU_DESCRIPTOR_HANDLE src = {};
+					if (arrayIndex < 0)
 					{
-						descriptor = device->nullSRV;
+						src = ToNativeHandle(resource->SRV);
+					}
+					else
+					{
+						src = ToNativeHandle(resource->additionalSRVs[arrayIndex]);
+					}
+
+					if (src.ptr == 0)
+					{
+						continue;
 					}
 
 					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources + (GPU_RESOURCE_HEAP_CBV_COUNT + slot) * resource_descriptor_size;
+					dst.ptr += ringOffset_resources + (GPU_RESOURCE_HEAP_CBV_COUNT + slot) * device->resource_descriptor_size;
 
-					device->device->CopyDescriptorsSimple(1, dst, descriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
 				{
 					const GPUResource* resource = table.UAV[slot];
 					const int arrayIndex = table.UAV_index[slot];
-
-					D3D12_CPU_DESCRIPTOR_HANDLE descriptor = {};
-					if (resource != nullptr)
+					if (resource == nullptr)
 					{
-						if (arrayIndex < 0)
-						{
-							descriptor = ToNativeHandle(resource->UAV);
-						}
-						else
-						{
-							descriptor = ToNativeHandle(resource->additionalUAVs[arrayIndex]);
-						}
+						continue;
 					}
 
-					if (descriptor.ptr == 0)
+					D3D12_CPU_DESCRIPTOR_HANDLE src = {};
+					if (arrayIndex < 0)
 					{
-						descriptor = device->nullUAV;
+						src = ToNativeHandle(resource->UAV);
+					}
+					else
+					{
+						src = ToNativeHandle(resource->additionalUAVs[arrayIndex]);
+					}
+
+					if (src.ptr == 0)
+					{
+						continue;
 					}
 
 					D3D12_CPU_DESCRIPTOR_HANDLE dst = resource_heap_cpu_start;
-					dst.ptr += ringOffset_resources + (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot) * resource_descriptor_size;
+					dst.ptr += ringOffset_resources + (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + slot) * device->resource_descriptor_size;
 
-					device->device->CopyDescriptorsSimple(1, dst, descriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				}
 
 				// bind table to root sig
@@ -1423,31 +1435,39 @@ namespace wiGraphics
 				}
 
 				// allocate next chunk
-				ringOffset_resources += (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT) * resource_descriptor_size;
+				ringOffset_resources += (GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT) * device->resource_descriptor_size;
 			}
 
 			if (table.dirty_samplers)
 			{
 				table.dirty_samplers = false;
 
+				// First, reset table with null descriptors:
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = sampler_heap_cpu_start;
+					dst.ptr += ringOffset_samplers;
+
+					device->device->CopyDescriptorsSimple(
+						GPU_SAMPLER_HEAP_COUNT,
+						dst,
+						device->null_sampler_heap_cpu_start,
+						D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+				}
+
 				for (UINT slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
 				{
 					const Sampler* sampler = table.SAM[slot];
-
-					D3D12_CPU_DESCRIPTOR_HANDLE descriptor = {};
 					if (sampler == nullptr || sampler->resource == WI_NULL_HANDLE)
 					{
-						descriptor = device->nullSampler;
+						continue;
 					}
-					else
-					{
-						descriptor = ToNativeHandle(sampler->resource);
-					}
+
+					D3D12_CPU_DESCRIPTOR_HANDLE src = ToNativeHandle(sampler->resource);
 
 					D3D12_CPU_DESCRIPTOR_HANDLE dst = sampler_heap_cpu_start;
-					dst.ptr += ringOffset_samplers + slot * sampler_descriptor_size;
+					dst.ptr += ringOffset_samplers + slot * device->sampler_descriptor_size;
 
-					device->device->CopyDescriptorsSimple(1, dst, descriptor, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+					device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 				}
 
 				// bind table to root sig
@@ -1466,7 +1486,7 @@ namespace wiGraphics
 				}
 
 				// allocate next chunk
-				ringOffset_samplers += GPU_SAMPLER_HEAP_COUNT * sampler_descriptor_size;
+				ringOffset_samplers += GPU_SAMPLER_HEAP_COUNT * device->sampler_descriptor_size;
 			}
 
 
@@ -1704,36 +1724,66 @@ namespace wiGraphics
 		ResourceAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 16384);
 		SamplerAllocator = new DescriptorAllocator(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 64);
 
-		// Create null resources for unbinding:
+		resource_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		
+		// Create "null descriptor" heaps:
+		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+		heapDesc.NodeMask = 0;
+		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		heapDesc.NumDescriptors = GPU_RESOURCE_HEAP_CBV_COUNT + GPU_RESOURCE_HEAP_SRV_COUNT + GPU_RESOURCE_HEAP_UAV_COUNT;
+		hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&null_resource_heap_CPU);
+		assert(SUCCEEDED(hr));
+
+		heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+		heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		heapDesc.NumDescriptors = GPU_SAMPLER_HEAP_COUNT;
+		hr = device->CreateDescriptorHeap(&heapDesc, __uuidof(ID3D12DescriptorHeap), (void**)&null_sampler_heap_CPU);
+		assert(SUCCEEDED(hr));
+
+		null_sampler_heap_cpu_start = null_sampler_heap_CPU->GetCPUDescriptorHandleForHeapStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE null_sampler_heap_dest = null_sampler_heap_cpu_start;
+
+		null_resource_heap_cpu_start = null_resource_heap_CPU->GetCPUDescriptorHandleForHeapStart();
+		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_dest = null_resource_heap_cpu_start;
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
+		for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_CBV_COUNT; ++slot)
 		{
-			D3D12_SAMPLER_DESC sampler_desc = {};
-			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-			sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-			sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			nullSampler.ptr = SamplerAllocator->allocate();
-			device->CreateSampler(&sampler_desc, nullSampler);
+			device->CreateConstantBufferView(&cbv_desc, null_resource_heap_dest);
+			null_resource_heap_dest.ptr += resource_descriptor_size;
+		}
 
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srv_desc.Format = DXGI_FORMAT_R32_UINT;
+		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
+		{
+			device->CreateShaderResourceView(nullptr, &srv_desc, null_resource_heap_dest);
+			null_resource_heap_dest.ptr += resource_descriptor_size;
+		}
 
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-			nullCBV.ptr = ResourceAllocator->allocate();
-			device->CreateConstantBufferView(&cbv_desc, nullCBV);
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+		uav_desc.Format = DXGI_FORMAT_R32_UINT;
+		uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
+		{
+			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, null_resource_heap_dest);
+			null_resource_heap_dest.ptr += resource_descriptor_size;
+		}
 
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R32_UINT;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			nullSRV.ptr = ResourceAllocator->allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV);
-
-
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			nullUAV.ptr = ResourceAllocator->allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV);
+		D3D12_SAMPLER_DESC sampler_desc = {};
+		sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		for (UINT slot = 0; slot < GPU_SAMPLER_HEAP_COUNT; ++slot)
+		{
+			device->CreateSampler(&sampler_desc, null_sampler_heap_dest);
+			null_sampler_heap_dest.ptr += sampler_descriptor_size;
 		}
 
 		// Create resource upload buffer
@@ -2029,6 +2079,9 @@ namespace wiGraphics
 		SAFE_DELETE(DSAllocator);
 		SAFE_DELETE(ResourceAllocator);
 		SAFE_DELETE(SamplerAllocator);
+
+		SAFE_RELEASE(null_resource_heap_CPU);
+		SAFE_RELEASE(null_sampler_heap_CPU);
 
 		SAFE_DELETE(bufferUploader);
 		SAFE_DELETE(textureUploader);
@@ -3526,9 +3579,6 @@ namespace wiGraphics
 		GetDirectCommandList((CommandList)cmd)->SetGraphicsRootSignature(graphicsRootSig);
 		GetDirectCommandList((CommandList)cmd)->SetComputeRootSignature(computeRootSig);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE nullDescriptors[] = {
-			nullSampler,nullCBV,nullSRV,nullUAV
-		};
 		GetFrameResources().descriptors[cmd]->reset();
 		GetFrameResources().resourceBuffer[cmd]->clear();
 

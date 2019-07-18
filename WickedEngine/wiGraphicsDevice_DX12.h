@@ -65,6 +65,12 @@ namespace wiGraphics
 		DescriptorAllocator*		ResourceAllocator = nullptr;
 		DescriptorAllocator*		SamplerAllocator = nullptr;
 
+		ID3D12DescriptorHeap*	null_resource_heap_CPU = nullptr;
+		ID3D12DescriptorHeap*	null_sampler_heap_CPU = nullptr;
+		D3D12_CPU_DESCRIPTOR_HANDLE null_resource_heap_cpu_start = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE null_sampler_heap_cpu_start = {};
+		UINT resource_descriptor_size = 0;
+		UINT sampler_descriptor_size = 0;
 
 		struct FrameResources
 		{
@@ -78,8 +84,6 @@ namespace wiGraphics
 				GraphicsDevice_DX12*	device = nullptr;
 				ID3D12DescriptorHeap*	resource_heap_GPU = nullptr;
 				ID3D12DescriptorHeap*	sampler_heap_GPU = nullptr;
-				UINT resource_descriptor_size = 0;
-				UINT sampler_descriptor_size = 0;
 				D3D12_CPU_DESCRIPTOR_HANDLE resource_heap_cpu_start = {};
 				D3D12_GPU_DESCRIPTOR_HANDLE resource_heap_gpu_start = {};
 				D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_cpu_start = {};
@@ -147,11 +151,6 @@ namespace wiGraphics
 			bool binding[SHADERSTAGE_COUNT] = {};
 		};
 		std::unordered_map<const GPUBuffer*, DynamicResourceState> dynamic_constantbuffers[COMMANDLIST_COUNT];
-
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSampler = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
 
 		struct UploadBuffer
 		{
