@@ -78,6 +78,12 @@ namespace wiGraphics
 				GraphicsDevice_DX12*	device = nullptr;
 				ID3D12DescriptorHeap*	resource_heap_GPU = nullptr;
 				ID3D12DescriptorHeap*	sampler_heap_GPU = nullptr;
+				UINT resource_descriptor_size = 0;
+				UINT sampler_descriptor_size = 0;
+				D3D12_CPU_DESCRIPTOR_HANDLE resource_heap_cpu_start = {};
+				D3D12_GPU_DESCRIPTOR_HANDLE resource_heap_gpu_start = {};
+				D3D12_CPU_DESCRIPTOR_HANDLE sampler_heap_cpu_start = {};
+				D3D12_GPU_DESCRIPTOR_HANDLE sampler_heap_gpu_start = {};
 				UINT ringOffset_resources = 0;
 				UINT ringOffset_samplers = 0;
 
