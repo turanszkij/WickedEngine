@@ -24,6 +24,7 @@
 #include <deque>
 #include <atomic>
 #include <mutex>
+#include <algorithm>
 
 namespace wiGraphics
 {
@@ -133,6 +134,26 @@ namespace wiGraphics
 			{
 				GraphicsDevice_Vulkan* device;
 				VkDescriptorPool descriptorPool;
+
+				static const int writeCapacity =
+					1 +									// null		CBV
+					3 +									// null		SRV (texture + typedbuffer + untypedbuffer)
+					3 +									// null		UAV (texture + typedbuffer + untypedbuffer)
+					1 +									// null		SAMPLER
+					GPU_RESOURCE_HEAP_CBV_COUNT +		// valid	CBV
+					GPU_RESOURCE_HEAP_SRV_COUNT * 3 +	// valid	SRV (texture + typedbuffer + untypedbuffer)
+					GPU_RESOURCE_HEAP_UAV_COUNT * 3 +	// valid	UAV (texture + typedbuffer + untypedbuffer)
+					GPU_SAMPLER_HEAP_COUNT;				// valid	SAMPLER
+				VkWriteDescriptorSet descriptorWrites[writeCapacity];
+				VkDescriptorBufferInfo bufferInfos[writeCapacity];
+				VkDescriptorImageInfo imageInfos[writeCapacity];
+				VkBufferView texelBufferViews[writeCapacity];
+
+				static const int max_null_resource_capacity = std::max(GPU_RESOURCE_HEAP_CBV_COUNT, std::max(GPU_RESOURCE_HEAP_SRV_COUNT, GPU_RESOURCE_HEAP_UAV_COUNT));
+				VkDescriptorBufferInfo null_bufferInfos[max_null_resource_capacity];
+				VkDescriptorImageInfo null_imageInfos[max_null_resource_capacity];
+				VkBufferView null_texelBufferViews[max_null_resource_capacity];
+				VkDescriptorImageInfo null_samplerInfos[GPU_SAMPLER_HEAP_COUNT];
 
 				struct Table
 				{
