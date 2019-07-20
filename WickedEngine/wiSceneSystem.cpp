@@ -1041,7 +1041,7 @@ namespace wiSceneSystem
 
 		RunLightUpdateSystem(ctx, transforms, aabb_lights, lights);
 
-		RunParticleUpdateSystem(ctx, transforms, meshes, emitters, hairs, dt);
+		RunParticleUpdateSystem(ctx, transforms, prev_transforms, meshes, emitters, hairs, dt);
 
 		wiJobSystem::Wait(ctx); // dependecies
 
@@ -1388,6 +1388,8 @@ namespace wiSceneSystem
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);
 		transform.UpdateTransform();
+
+		prev_transforms.Create(entity);
 
 		materials.Create(entity);
 
@@ -2053,6 +2055,7 @@ namespace wiSceneSystem
 	void RunParticleUpdateSystem(
 		wiJobSystem::context& ctx,
 		const ComponentManager<TransformComponent>& transforms,
+		const ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const ComponentManager<MeshComponent>& meshes,
 		ComponentManager<wiEmittedParticle>& emitters,
 		ComponentManager<wiHairParticle>& hairs,
@@ -2070,16 +2073,18 @@ namespace wiSceneSystem
 		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobDispatchArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
-			Entity entity = hairs.GetEntity(args.jobIndex);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			if (hair.meshID != INVALID_ENTITY)
 			{
+				Entity entity = hairs.GetEntity(args.jobIndex);
 				const MeshComponent* mesh = meshes.GetComponent(hair.meshID);
 
 				if (mesh != nullptr)
 				{
-					hair.UpdateCPU(transform, *mesh, dt);
+					const TransformComponent& transform = *transforms.GetComponent(entity);
+					const PreviousFrameTransformComponent* prev_transform = prev_transforms.GetComponent(entity);
+
+					hair.UpdateCPU(transform, *mesh, dt, prev_transform);
 				}
 			}
 

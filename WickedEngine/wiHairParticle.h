@@ -19,7 +19,7 @@ private:
 	std::unique_ptr<wiGraphics::GPUBuffer> simulationBuffer;
 public:
 
-	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
+	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt, const PreviousFrameTransformComponent* prevTransform = nullptr);
 	void UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
 	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, bool transparent, wiGraphics::CommandList cmd) const;
 
@@ -42,6 +42,7 @@ public:
 
 	// Non-serialized attributes:
 	XMFLOAT4X4 world;
+	XMFLOAT4X4 worldPrev;
 	AABB aabb;
 
 	void Serialize(wiArchive& archive, uint32_t seed = 0);

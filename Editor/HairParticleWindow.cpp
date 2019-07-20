@@ -55,6 +55,23 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 	meshComboBox->SetTooltip("Choose a mesh where hair will grow from...");
 	hairWindow->AddWidget(meshComboBox);
 
+	localCheckBox = new wiCheckBox("Local Only: ");
+	localCheckBox->SetPos(XMFLOAT2(x, y += step));
+	localCheckBox->OnClick([&](wiEventArgs args) {
+		const PreviousFrameTransformComponent* prev_transform = GetScene().prev_transforms.GetComponent(entity);
+		if (!args.bValue && prev_transform == nullptr)
+		{
+			GetScene().prev_transforms.Create(entity);
+		}
+		else if(args.bValue && prev_transform != nullptr)
+		{
+			GetScene().prev_transforms.Remove(entity);
+		}
+	});
+	localCheckBox->SetCheck(false);
+	localCheckBox->SetTooltip("If enabled, global surface velocity (eg. when object is moved) will affect hair strand simulation.");
+	hairWindow->AddWidget(localCheckBox);
+
 	countSlider = new wiSlider(0, 100000, 1000, 100000, "Strand Count: ");
 	countSlider->SetSize(XMFLOAT2(360, 30));
 	countSlider->SetPos(XMFLOAT2(x, y += step * 2));
@@ -199,6 +216,9 @@ void HairParticleWindow::UpdateData()
 	}
 
 	Scene& scene = wiSceneSystem::GetScene();
+
+	const PreviousFrameTransformComponent* prev_transform = scene.prev_transforms.GetComponent(entity);
+	localCheckBox->SetCheck(prev_transform == nullptr);
 
 	meshComboBox->ClearItems();
 	meshComboBox->AddItem("NO MESH");

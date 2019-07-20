@@ -30,6 +30,7 @@ public:
 
 	wiButton* addButton;
 	wiComboBox*	meshComboBox;
+	wiCheckBox*	localCheckBox;
 	wiSlider* lengthSlider;
 	wiSlider* stiffnessSlider;
 	wiSlider* randomnessSlider;

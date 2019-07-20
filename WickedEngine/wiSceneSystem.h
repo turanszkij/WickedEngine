@@ -1137,6 +1137,7 @@ namespace wiSceneSystem
 	void RunParticleUpdateSystem(
 		wiJobSystem::context& ctx,
 		const wiECS::ComponentManager<TransformComponent>& transforms,
+		const wiECS::ComponentManager<PreviousFrameTransformComponent>& prev_transforms,
 		const wiECS::ComponentManager<MeshComponent>& meshes,
 		wiECS::ComponentManager<wiEmittedParticle>& emitters,
 		wiECS::ComponentManager<wiHairParticle>& hairs,

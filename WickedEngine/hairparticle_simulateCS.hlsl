@@ -6,6 +6,7 @@ RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 1);
 
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+RAWBUFFER(meshVertexBuffer_PRE, TEXSLOT_ONDEMAND2);
 
 #define NUM_LDS_FORCEFIELDS 32
 struct LDS_ForceField
@@ -52,28 +53,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xHairBaseMeshVertexPositionStride));
 	float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xHairBaseMeshVertexPositionStride));
 	float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xHairBaseMeshVertexPositionStride));
+    float3 nor0 = unpack_unitvector(asuint(pos_nor0.w));
+    float3 nor1 = unpack_unitvector(asuint(pos_nor1.w));
+    float3 nor2 = unpack_unitvector(asuint(pos_nor2.w));
 
-	uint nor_u = asuint(pos_nor0.w);
-	float3 nor0;
-	{
-		nor0.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor0.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor0.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	}
-	nor_u = asuint(pos_nor1.w);
-	float3 nor1;
-	{
-		nor1.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor1.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor1.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	}
-	nor_u = asuint(pos_nor2.w);
-	float3 nor2;
-	{
-		nor2.x = (float)((nor_u >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor2.y = (float)((nor_u >> 8) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-		nor2.z = (float)((nor_u >> 16) & 0x000000FF) / 255.0f * 2.0f - 1.0f;
-	}
+    float4 pre_nor0 = asfloat(meshVertexBuffer_PRE.Load4(i0 * xHairBaseMeshVertexPositionStride));
+    float4 pre_nor1 = asfloat(meshVertexBuffer_PRE.Load4(i1 * xHairBaseMeshVertexPositionStride));
+    float4 pre_nor2 = asfloat(meshVertexBuffer_PRE.Load4(i2 * xHairBaseMeshVertexPositionStride));
+    float3 prev_nor0 = unpack_unitvector(asuint(pre_nor0.w));
+    float3 prev_nor1 = unpack_unitvector(asuint(pre_nor1.w));
+    float3 prev_nor2 = unpack_unitvector(asuint(pre_nor2.w));
 
 	// random barycentric coords:
 	float f = rand(seed, uv);
@@ -87,7 +76,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
+    float3 prev_position = pre_nor0.xyz + f * (pre_nor1.xyz - pre_nor0.xyz) + g * (pre_nor2.xyz - pre_nor0.xyz);
 	float3 target = normalize(nor0 + f * (nor1 - nor0) + g * (nor2 - nor0));
+    float3 prev_target = normalize(prev_nor0 + f * (prev_nor1 - prev_nor0) + g * (prev_nor2 - prev_nor0));
 	float3 tangent = normalize((rand(seed, uv) < 0.5f ? pos_nor0.xyz : pos_nor2.xyz) - pos_nor1.xyz);
 	float3 binormal = cross(target, tangent);
 
@@ -104,9 +95,24 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	binormal_length |= (uint)(rand(seed, uv) * 255 * saturate(xHairRandomness)) << 24;
 
 	// Identifies the hair strand root particle:
-	const uint strandID = DTid.x * xHairSegmentCount;
+    const uint strandID = DTid.x * xHairSegmentCount;
+    
+	// Transform particle by the emitter object matrix:
+    float3 base = mul(xWorld, float4(position.xyz, 1)).xyz;
+    float3 prev_base = mul(xWorldPrev, float4(prev_position.xyz, 1)).xyz;
+    target = normalize(mul((float3x3) xWorld, target));
+    prev_target = normalize(mul((float3x3) xWorldPrev, prev_target));
 
-	float3 segmentRootNormal = 0;
+    if (xHairRegenerate)
+    {
+        particleBuffer[strandID].normal = target;
+    }
+    
+    // Apply surface-based velocity:
+    simulationBuffer[strandID].velocity += (prev_base + prev_target) - (base + target);
+    
+    float3 normal = 0;
+    GroupMemoryBarrierWithGroupSync();
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
 		// Identifies the hair strand segment particle:
@@ -114,74 +120,60 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		particleBuffer[particleID].tangent_random = tangent_random;
 		particleBuffer[particleID].binormal_length = binormal_length;
 
-		[branch]
-		if (xHairRegenerate)
-		{
-			particleBuffer[particleID].normal = target;
-		}
+        normal += particleBuffer[particleID].normal;
+        normal = normalize(normal);
 
-		float3 normal = particleBuffer[particleID].normal;
-		normal += segmentRootNormal;
-
-		// Particle buffer load:
 		float len = (binormal_length >> 24) & 0x000000FF;
 		len /= 255.0f;
 		len += 1;
 		len *= xLength;
 
-		// Simulation buffer load:
-		float3 velocity = simulationBuffer[particleID].velocity;
-
-		// transform particle by the emitter object matrix:
-		normal = normalize(mul((float3x3)xWorld, normal));
-		target = normalize(mul((float3x3)xWorld, target));
-
-		float3 tip = mul(xWorld, float4(position.xyz, 1)).xyz + normal * len;
+		float3 tip = base + normal * len;
 
 		// Accumulate forces:
-		GroupMemoryBarrierWithGroupSync();
 		float3 force = 0;
-		for (uint i = 0; i < numForceFields; ++i)
-		{
-			LDS_ForceField forceField = forceFields[i];
+        for (uint i = 0; i < numForceFields; ++i)
+        {
+            LDS_ForceField forceField = forceFields[i];
 
-			float3 dir = forceField.position - tip;
-			float dist;
-			if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
-			{
-				dist = length(dir);
-			}
-			else // planar force field
-			{
-				dist = dot(forceField.normal, dir);
-				dir = forceField.normal;
-			}
+            float3 dir = forceField.position - tip;
+            float dist;
+            if (forceField.type == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
+            {
+                dist = length(dir);
+            }
+            else // planar force field
+            {
+                dist = dot(forceField.normal, dir);
+                dir = forceField.normal;
+            }
 
-			force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
-		}
+            force += dir * forceField.gravity * (1 - saturate(dist * forceField.range_inverse));
+        }
 
 		// Pull back to rest position:
-		force += (target - normal) * xStiffness;
+        force += (target - normal) * xStiffness;
+
+        force *= g_xFrame_DeltaTime;
+
+		// Simulation buffer load:
+        float3 velocity = simulationBuffer[particleID].velocity;
 
 		// Apply forces:
-		velocity += force * g_xFrame_DeltaTime;
+		velocity += force;
 		normal += velocity * g_xFrame_DeltaTime;
 
 		// Drag:
 		velocity *= 0.98f;
 
-		// Transform back to mesh space and renormalize:
-		normal = normalize(mul(normal, (float3x3)xWorld)); // transposed mul!
-
 		// Store particle:
-		particleBuffer[particleID].position = position;
+        particleBuffer[particleID].position = base;
 		particleBuffer[particleID].normal = normal;
 
 		// Store simulation data:
 		simulationBuffer[particleID].velocity = velocity;
 
-		// Offset next segment position to segment root:
-		position.xyz += normal * len;
-		segmentRootNormal = normal;
-	}
+		// Offset next segment root to current tip:
+        base = tip;
+    }
 }
