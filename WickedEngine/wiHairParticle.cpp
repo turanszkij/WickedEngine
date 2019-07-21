@@ -28,10 +28,9 @@ static BlendState bs[2];
 static PipelineState PSO[RENDERPASS_COUNT][2];
 static PipelineState PSO_wire;
 
-void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt, const PreviousFrameTransformComponent* prevTransform)
+void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt)
 {
 	world = transform.world;
-	worldPrev = prevTransform != nullptr ? prevTransform->world_prev : world;
 
 	XMFLOAT3 _min = mesh.aabb.getMin();
 	XMFLOAT3 _max = mesh.aabb.getMax();
@@ -99,7 +98,6 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 
 	HairParticleCB hcb;
 	hcb.xWorld = world;
-	hcb.xWorldPrev = worldPrev;
 	hcb.xColor = material.baseColor;
 	hcb.xHairRegenerate = (_flags & REGENERATE_FRAME) ? 1 : 0;
 	hcb.xLength = length;
@@ -127,7 +125,6 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	GPUResource* res[] = {
 		mesh.indexBuffer.get(),
 		mesh.streamoutBuffer_POS != nullptr ? mesh.streamoutBuffer_POS.get() : mesh.vertexBuffer_POS.get(),
-		mesh.vertexBuffer_PRE.get() != nullptr ? mesh.vertexBuffer_PRE.get() : mesh.vertexBuffer_POS.get(),
 	};
 	device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 

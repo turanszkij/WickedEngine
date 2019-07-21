@@ -22,7 +22,6 @@ struct PatchSimulationData
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 {
 	float4x4 xWorld;
-	float4x4 xWorldPrev;
 	float4 xColor;
 
 	uint xHairRegenerate;
