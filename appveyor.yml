@@ -2,11 +2,13 @@ version: '{build}'
 branches:
   only:
   - master
+  - appveyor
 image: Visual Studio 2019
 configuration: Release
 build:
+  project: WickedEngine.sln
   parallel: true
-  verbosity: minimal
+  verbosity: detailed
 platform:
   - x64
   - Win32
