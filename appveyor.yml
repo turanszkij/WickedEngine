@@ -3,12 +3,12 @@ branches:
   only:
   - master
   - appveyor
-image: Visual Studio 2019 Preview
+image: Visual Studio 2017
 configuration: Release
 build:
   project: WickedEngine.sln
   parallel: true
-  verbosity: detailed
+  verbosity: minimal
 platform:
   - x64
   - Win32
