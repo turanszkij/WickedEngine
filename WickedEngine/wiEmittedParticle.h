@@ -7,6 +7,8 @@
 #include "wiSceneSystem_Decl.h"
 #include "wiECS.h"
 
+#include <memory>
+
 class wiArchive;
 
 namespace wiSceneSystem

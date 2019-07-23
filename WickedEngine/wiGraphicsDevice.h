@@ -5,6 +5,8 @@
 #include "wiGraphicsDescriptors.h"
 #include "wiGraphicsResource.h"
 
+#include <string>
+
 namespace wiGraphics
 {
 	typedef uint8_t CommandList;

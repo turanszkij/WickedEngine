@@ -6,6 +6,8 @@
 #include "wiSceneSystem_Decl.h"
 #include "wiIntersect.h"
 
+#include <memory>
+
 class wiArchive;
 
 namespace wiSceneSystem

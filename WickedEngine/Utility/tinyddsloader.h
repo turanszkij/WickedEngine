@@ -713,7 +713,7 @@ Result DDSFile::Load(std::istream& input) {
     if (fileSize == 0) {
         return Result::ErrorRead;
     }
-    std::vector<uint8_t> dds(fileSize);
+    std::vector<uint8_t> dds((size_t)fileSize);
 
     input.read(reinterpret_cast<char*>(dds.data()), fileSize);
 

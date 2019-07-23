@@ -2,6 +2,8 @@
 #include "CommonInclude.h"
 #include "wiResourceManager.h"
 
+#include <functional>
+
 class RenderPath
 {
 private:

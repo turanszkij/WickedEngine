@@ -51,7 +51,7 @@ You can download the engine by using Git and cloning the repository, or download
 ### Requirements:
 
 - Windows 10
-- Visual Studio 2017
+- Visual Studio 2019
 - Windows 10 SDK
 
 ### Getting started: 
