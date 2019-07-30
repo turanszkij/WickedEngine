@@ -61,7 +61,6 @@ BlendState				blendStates[BSTYPE_LAST];
 GPUBuffer				constantBuffers[CBTYPE_LAST];
 GPUBuffer				resourceBuffers[RBTYPE_LAST];
 Sampler					samplers[SSLOT_COUNT];
-Sampler					customsamplers[SSTYPE_LAST];
 
 string SHADERPATH = "shaders/";
 
@@ -3094,21 +3093,6 @@ void SetUpStates()
 	samplerDesc.MaxAnisotropy = 0;
 	samplerDesc.ComparisonFunc = COMPARISON_GREATER_EQUAL;
 	device->CreateSamplerState(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
-
-	samplerDesc.Filter = FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 0;
-	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
-	samplerDesc.MinLOD = 0;
-	samplerDesc.MaxLOD = FLT_MAX;
-	device->CreateSamplerState(&samplerDesc, &customsamplers[SSTYPE_MAXIMUM_CLAMP]);
 
 
 
@@ -6985,11 +6969,6 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
 				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
-			case MIPGENFILTER_LINEAR_MAXIMUM:
-				device->EventBegin("GenerateMipChain CubeArray - LinearMaxFilter", cmd);
-				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4_SIMPLEFILTER], cmd);
-				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
-				break;
 			default:
 				assert(0);
 				break;
@@ -7032,11 +7011,6 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 				device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
 				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
 				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
-				break;
-			case MIPGENFILTER_LINEAR_MAXIMUM:
-				device->EventBegin("GenerateMipChain Cube - LinearMaxFilter", cmd);
-				device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4_SIMPLEFILTER], cmd);
-				device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			default:
 				assert(0); // not implemented
@@ -7082,11 +7056,6 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 			device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
 			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
 			device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
-			break;
-		case MIPGENFILTER_LINEAR_MAXIMUM:
-			device->EventBegin("GenerateMipChain 2D - LinearMaxFilter", cmd);
-			device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN2D_UNORM4_SIMPLEFILTER], cmd);
-			device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		case MIPGENFILTER_GAUSSIAN:
 			device->EventBegin("GenerateMipChain 2D - GaussianFilter", cmd);
@@ -7156,11 +7125,6 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, CommandList
 		device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
 		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
 		device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
-		break;
-	case MIPGENFILTER_LINEAR_MAXIMUM:
-		device->EventBegin("GenerateMipChain 3D - LinearMaxFilter", cmd);
-		device->BindComputeShader(computeShaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4_SIMPLEFILTER : CSTYPE_GENERATEMIPCHAIN3D_UNORM4_SIMPLEFILTER], cmd);
-		device->BindSampler(CS, &customsamplers[SSTYPE_MAXIMUM_CLAMP], SSLOT_ONDEMAND0, cmd);
 		break;
 	case MIPGENFILTER_GAUSSIAN:
 		device->EventBegin("GenerateMipChain 3D - GaussianFilter", cmd);
