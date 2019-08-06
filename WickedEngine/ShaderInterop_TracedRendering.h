@@ -3,17 +3,19 @@
 #include "ShaderInterop.h"
 
 
-#define TRACEDRENDERING_CLEAR_BLOCKSIZE 8
 #define TRACEDRENDERING_LAUNCH_BLOCKSIZE 8
 #define TRACEDRENDERING_TRACE_GROUPSIZE 64
+#define TRACEDRENDERING_ACCUMULATE_BLOCKSIZE 8
 
 
 CBUFFER(TracedRenderingCB, CBSLOT_RENDERER_TRACED)
 {
 	float2 xTracePixelOffset;
 	float xTraceRandomSeed;
-	float xTraceUserData;
-	uint4 xTraceUserData2;
+	float xTraceAccumulationFactor;
+	uint2 xTraceResolution;
+	float2 xTraceResolution_Inverse;
+	uint4 xTraceUserData;
 };
 
 struct TracedRenderingStoredRay

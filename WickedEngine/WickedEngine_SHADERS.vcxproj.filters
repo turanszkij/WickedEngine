@@ -705,9 +705,6 @@
     <FxCompile Include="raytrace_primaryCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_clearCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="bvh_hierarchyCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -856,6 +853,9 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="bvh_primitivesCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_accumulateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

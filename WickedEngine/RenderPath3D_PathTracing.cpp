@@ -22,21 +22,12 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.Format = FORMAT_R32G32B32A32_FLOAT;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
-	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R32G32B32A32_FLOAT; // needs full float for correct accumulation over long time period!
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
-		device->CreateTexture2D(&desc, nullptr, &rtAccumulation);
-		device->SetName(&rtAccumulation, "rtAccumulation");
 	}
 
 	// also reset accumulation buffer state:
@@ -51,6 +42,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 	{
 		wiRenderer::GetCamera().SetDirty(false);
 		sam = -1;
+		rebuild_bvh = false;
 	}
 	else
 	{
@@ -61,6 +53,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 			if (transform.IsDirty())
 			{
 				sam = -1;
+				rebuild_bvh = true;
 				break;
 			}
 		}
@@ -78,11 +71,11 @@ void RenderPath3D_PathTracing::Render() const
 
 	// Setup:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd] {
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
 		wiRenderer::UpdateRenderData(cmd);
 
-		if (sam == 0)
+		if (sam == 0 && rebuild_bvh)
 		{
 			wiRenderer::BuildSceneBVH(cmd);
 		}
@@ -96,7 +89,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
 		{
-			const Texture2D* rts[] = { &rtAccumulation };
+			const Texture2D* rts[] = { &traceResult };
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
 			float clear[] = { 0,0,0,1 };
 			device->ClearRenderTarget(rts[0], clear, cmd);
@@ -106,7 +99,7 @@ void RenderPath3D_PathTracing::Render() const
 			vp.Height = (float)rts[0]->GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawTracedSceneBVH(cmd);
+			wiRenderer::RayTraceSceneBVH(cmd);
 		}
 		else
 		{
@@ -114,29 +107,9 @@ void RenderPath3D_PathTracing::Render() const
 
 			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 
-			wiRenderer::DrawTracedScene(wiRenderer::GetCamera(), &traceResult, cmd);
+			wiRenderer::RayBuffers* rayBuffers = wiRenderer::GenerateScreenRayBuffers(wiRenderer::GetCamera(), cmd);
+			wiRenderer::RayTraceScene(rayBuffers, &traceResult, sam, cmd);
 
-
-
-
-			wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
-			fx.enableHDR();
-
-
-			// Accumulate with moving averaged blending:
-			fx.opacity = 1.0f / (sam + 1.0f);
-			fx.blendFlag = BLENDMODE_ALPHA;
-
-
-			const Texture2D* rts[] = { &rtAccumulation };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
-
-			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
-			device->BindViewports(1, &vp, cmd);
-
-			wiImage::Draw(&traceResult, fx, cmd);
 
 			wiProfiler::EndRange(range); // Traced Scene
 		}
@@ -162,7 +135,7 @@ void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
 	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
 	
-	wiImage::Draw(&rtAccumulation, fx, cmd);
+	wiImage::Draw(&traceResult, fx, cmd);
 
 
 	device->EventEnd(cmd);

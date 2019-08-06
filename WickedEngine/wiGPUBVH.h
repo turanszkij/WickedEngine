@@ -23,7 +23,8 @@ private:
 	wiGraphics::GPUBuffer primitiveBuffer;
 	wiGraphics::GPUBuffer primitiveDataBuffer;
 	wiGraphics::GPUBuffer primitiveMortonBuffer;
-	uint32_t maxPrimitiveCount = 0;
+	uint32_t primitiveCapacity = 0;
+	uint32_t primitiveCount = 0;
 
 	// Scene material resources:
 	wiGraphics::GPUBuffer globalMaterialBuffer;
@@ -34,7 +35,11 @@ private:
 	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
 
 public:
+	// Update hierarchy + bounding boxes
 	void Build(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
+	// Only update bounding boxes
+	void Refit(wiGraphics::CommandList cmd);
+	// Bind shader resources
 	void Bind(wiGraphics::SHADERSTAGE stage, wiGraphics::CommandList cmd) const;
 
 	static void LoadShaders();

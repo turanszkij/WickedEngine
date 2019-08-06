@@ -145,14 +145,26 @@ namespace wiRenderer
 		const wiGraphics::Texture2D* lightbuffer_specular = nullptr);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wiGraphics::Texture2D* dst, const wiGraphics::Texture2D* src, wiGraphics::CommandList cmd);
-	// Build the scene BVH on GPU that can be used by ray traced rendering
-	void BuildSceneBVH(wiGraphics::CommandList cmd);
-	// Render the scene with ray tracing only
-	void DrawTracedScene(const wiSceneSystem::CameraComponent& camera, const wiGraphics::Texture2D* result, wiGraphics::CommandList cmd);
-	// Render the scene BVH with ray tracing
-	void DrawTracedSceneBVH(wiGraphics::CommandList cmd);
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	const wiGraphics::Texture2D* ComputeLuminance(const wiGraphics::Texture2D* sourceImage, wiGraphics::CommandList cmd);
+
+	// Build the scene BVH on GPU that can be used by ray traced rendering
+	void BuildSceneBVH(wiGraphics::CommandList cmd);
+
+	struct RayBuffers
+	{
+		uint32_t rayCapacity = 0;
+		wiGraphics::GPUBuffer rayBuffer[2];
+		wiGraphics::GPUBuffer rayIndexBuffer[2];
+		wiGraphics::GPUBuffer raySortBuffer;
+		void Create(wiGraphics::GraphicsDevice* device, uint32_t newRayCapacity);
+	};
+	// Generate rays for every pixel of the internal resolution
+	RayBuffers* GenerateScreenRayBuffers(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	// Render the scene with ray tracing only
+	void RayTraceScene(const RayBuffers* rayBuffers, const wiGraphics::Texture2D* result, int accumulation_sample, wiGraphics::CommandList cmd);
+	// Render the scene BVH with ray tracing to the screen
+	void RayTraceSceneBVH(wiGraphics::CommandList cmd);
 
 	// Render occluders against a depth buffer
 	void OcclusionCulling_Render(wiGraphics::CommandList cmd);

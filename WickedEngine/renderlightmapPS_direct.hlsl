@@ -136,5 +136,5 @@ float4 main(Input input) : SV_TARGET
 		}
 	}
 
-	return max(0, float4(finalResult, xTraceUserData));
+	return max(0, float4(finalResult, xTraceAccumulationFactor));
 }

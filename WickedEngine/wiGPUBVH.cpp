@@ -315,16 +315,16 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		}
 	}
 
-	if (totalTriangles > maxPrimitiveCount)
+	if (totalTriangles > primitiveCapacity)
 	{
-		maxPrimitiveCount = std::max(2u, totalTriangles);
+		primitiveCapacity = std::max(2u, totalTriangles);
 
 		GPUBufferDesc desc;
 		HRESULT hr;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHNode);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount * 2;
+		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity * 2;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -335,7 +335,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount * 2;
+		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity * 2;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -346,7 +346,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * (((maxPrimitiveCount - 1) + 31) / 32); // bitfield for internal nodes
+		desc.ByteWidth = desc.StructureByteStride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -357,7 +357,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
+		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -368,7 +368,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHPrimitive);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
+		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -379,7 +379,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHPrimitiveData);
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
+		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -389,7 +389,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		device->SetName(&primitiveDataBuffer, "primitiveDataBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.ByteWidth = desc.StructureByteStride * maxPrimitiveCount;
+		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -405,8 +405,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 	UpdateGlobalMaterialResources(scene, cmd);
 
-
-	uint32_t triangleCount = 0;
+	primitiveCount = 0;
 	uint32_t materialCount = 0;
 
 	device->EventBegin("BVH - Primitive Builder", cmd);
@@ -432,13 +431,13 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 				cb.xTraceBVHWorld = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
 				cb.xTraceBVHInstanceColor = object.color;
 				cb.xTraceBVHMaterialOffset = materialCount;
-				cb.xTraceBVHMeshTriangleOffset = triangleCount;
+				cb.xTraceBVHMeshTriangleOffset = primitiveCount;
 				cb.xTraceBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
 				cb.xTraceBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
 
 				device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-				triangleCount += cb.xTraceBVHMeshTriangleCount;
+				primitiveCount += cb.xTraceBVHMeshTriangleCount;
 
 				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), cmd);
 
@@ -464,15 +463,13 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
-	device->UpdateBuffer(&primitiveCounterBuffer, &triangleCount, cmd);
+	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
 	device->EventEnd(cmd);
 
 
 	device->EventBegin("BVH - Sort Primitive Mortons", cmd);
-	wiGPUSortLib::Sort(triangleCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, cmd);
+	wiGPUSortLib::Sort(primitiveCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, cmd);
 	device->EventEnd(cmd);
-
-	const UINT threadgroup_count = (triangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE;
 
 	device->EventBegin("BVH - Build Hierarchy", cmd);
 	{
@@ -491,36 +488,16 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		};
 		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-		device->Dispatch(threadgroup_count, 1, 1, cmd);
+		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 	}
 	device->EventEnd(cmd);
 
-	device->EventBegin("BVH - Propagate AABB", cmd);
-	{
-		device->BindComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
-		GPUResource* uavs[] = {
-			&bvhNodeBuffer,
-			&bvhFlagBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+	Refit(cmd);
 
-		GPUResource* res[] = {
-			&primitiveCounterBuffer,
-			&primitiveIDBuffer,
-			&primitiveBuffer,
-			&bvhParentBuffer,
-		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
-
-		device->Dispatch(threadgroup_count, 1, 1, cmd);
-
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-	}
-	device->EventEnd(cmd);
+	wiProfiler::EndRange(range); // BVH rebuild
 
 #ifdef BVH_VALIDATE
 
@@ -607,8 +584,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 
 #endif // BVH_VALIDATE
 
-
-	wiProfiler::EndRange(range); // BVH rebuild
 }
 void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 {
@@ -626,6 +601,38 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 }
 
+void wiGPUBVH::Refit(CommandList cmd)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	auto range = wiProfiler::BeginRangeGPU("BVH Refit", cmd);
+
+	device->EventBegin("BVH - Propagate AABB", cmd);
+	{
+		device->BindComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
+		GPUResource* uavs[] = {
+			&bvhNodeBuffer,
+			&bvhFlagBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		GPUResource* res[] = {
+			&primitiveCounterBuffer,
+			&primitiveIDBuffer,
+			&primitiveBuffer,
+			&bvhParentBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+
+		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+	device->EventEnd(cmd);
+
+	wiProfiler::EndRange(range); // BVH refit
+}
 
 void wiGPUBVH::LoadShaders()
 {

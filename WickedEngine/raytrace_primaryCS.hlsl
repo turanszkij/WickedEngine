@@ -57,18 +57,25 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		LoadRay(rayBuffer_READ[rayIndexBuffer_READ[DTid.x]], ray, pixelID);
 
 		// Compute real pixel coords from flattened:
-		uint2 coords2D = unflatten2D(pixelID, GetInternalResolution());
+		uint2 coords2D = unflatten2D(pixelID, xTraceResolution.xy);
 
 		// Compute screen coordinates:
-		float2 uv = float2((coords2D + xTracePixelOffset) * g_xFrame_InternalResolution_Inverse * 2.0f - 1.0f) * float2(1, -1);
+		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_Inverse.xy * 2.0f - 1.0f) * float2(1, -1);
 
 		float seed = xTraceRandomSeed;
 
 		RayHit hit = TraceScene(ray);
-		float3 result = ray.energy * Shade(ray, hit, seed, uv);
+		float4 result = float4(max(0, ray.energy * Shade(ray, hit, seed, uv)), 0);
 
 		// Write pixel color:
-		resultTexture[coords2D] += float4(max(0, result), 0);
+		if (xTraceUserData.x == 0) // first bounce clears texture
+		{
+			resultTexture[coords2D] = result;
+		}
+		else // other bounces accumulate to texture
+		{
+			resultTexture[coords2D] += result;
+		}
 
 #ifndef ADVANCED_ALLOCATION
 		if (any(ray.energy))

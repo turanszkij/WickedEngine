@@ -2129,11 +2129,11 @@ void LoadShaders()
 	computeShaders[CSTYPE_SKINNING] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_CLEAR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_clearCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_ACCUMULATE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_accumulateCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<const HullShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -5988,7 +5988,7 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 	if (GetRaytraceDebugBVHVisualizerEnabled())
 	{
-		DrawTracedSceneBVH(cmd);
+		RayTraceSceneBVH(cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -7240,64 +7240,108 @@ void BuildSceneBVH(CommandList cmd)
 
 	sceneBVH.Build(scene, cmd);
 }
-void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, CommandList cmd)
+
+void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
+{
+	rayCapacity = newRayCapacity;
+
+	GPUBufferDesc desc;
+	HRESULT hr;
+
+	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.StructureByteStride = sizeof(uint);
+	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
+	desc.CPUAccessFlags = 0;
+	desc.Format = FORMAT_UNKNOWN;
+	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.Usage = USAGE_DEFAULT;
+	hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[0]);
+	assert(SUCCEEDED(hr));
+	device->SetName(&rayIndexBuffer[0], "rayIndexBuffer[0]");
+	hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
+	assert(SUCCEEDED(hr));
+	device->SetName(&rayIndexBuffer[1], "rayIndexBuffer[1]");
+
+	desc.StructureByteStride = sizeof(float); // sorting needs float now
+	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
+	hr = device->CreateBuffer(&desc, nullptr, &raySortBuffer);
+	assert(SUCCEEDED(hr));
+	device->SetName(&raySortBuffer, "raySortBuffer");
+
+	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
+	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
+	desc.CPUAccessFlags = 0;
+	desc.Format = FORMAT_UNKNOWN;
+	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	desc.Usage = USAGE_DEFAULT;
+	hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
+	assert(SUCCEEDED(hr));
+	device->SetName(&rayBuffer[0], "rayBuffer[0]");
+	hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
+	assert(SUCCEEDED(hr));
+	device->SetName(&rayBuffer[1], "rayBuffer[1]");
+}
+
+RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
-	const Scene& scene = GetScene();
-
-	device->EventBegin("DrawTracedScene", cmd);
 
 	uint _width = GetInternalResolution().x;
 	uint _height = GetInternalResolution().y;
-
-	// Ray storage buffer:
-	static GPUBuffer rayIndexBuffer[2];
-	static GPUBuffer raySortBuffer;
-	static GPUBuffer rayBuffer[2];
 	static uint RayCountPrev = 0;
 	const uint _raycount = _width * _height;
+
+	static RayBuffers screenRayBuffers;
 
 	if (RayCountPrev != _raycount)
 	{
 		RayCountPrev = _raycount;
-
-		GPUBufferDesc desc;
-		HRESULT hr;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride * _raycount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[0]);
-		assert(SUCCEEDED(hr));
-		device->SetName(&rayIndexBuffer[0], "raytrace_rayIndexBuffer[0]");
-		hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[1]);
-		assert(SUCCEEDED(hr));
-		device->SetName(&rayIndexBuffer[1], "raytrace_rayIndexBuffer[1]");
-
-		desc.StructureByteStride = sizeof(float); // sorting needs float now
-		desc.ByteWidth = desc.StructureByteStride * _raycount;
-		hr = device->CreateBuffer(&desc, nullptr, &raySortBuffer);
-		assert(SUCCEEDED(hr));
-		device->SetName(&raySortBuffer, "raytrace_raySortBuffer");
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(TracedRenderingStoredRay);
-		desc.ByteWidth = desc.StructureByteStride * _raycount;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
-		assert(SUCCEEDED(hr));
-		device->SetName(&rayBuffer[0], "raytrace_rayBuffer[0]");
-		hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
-		assert(SUCCEEDED(hr));
-		device->SetName(&rayBuffer[1], "raytrace_rayBuffer[1]");
+		screenRayBuffers.Create(device, _raycount);
 	}
+
+
+	device->EventBegin("Launch Screen Rays", cmd);
+	{
+		device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_LAUNCH], cmd);
+
+		const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
+		TracedRenderingCB cb;
+		cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
+		cb.xTraceResolution.x = _width;
+		cb.xTraceResolution.y = _height;
+		cb.xTraceResolution_Inverse.x = 1.0f / cb.xTraceResolution.x;
+		cb.xTraceResolution_Inverse.y = 1.0f / cb.xTraceResolution.y;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
+
+		GPUResource* uavs[] = {
+			&screenRayBuffers.rayIndexBuffer[0],
+			&screenRayBuffers.raySortBuffer,
+			&screenRayBuffers.rayBuffer[0],
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		device->Dispatch(
+			(_width + TRACEDRENDERING_LAUNCH_BLOCKSIZE - 1) / TRACEDRENDERING_LAUNCH_BLOCKSIZE,
+			(_height + TRACEDRENDERING_LAUNCH_BLOCKSIZE - 1) / TRACEDRENDERING_LAUNCH_BLOCKSIZE,
+			1, 
+			cmd);
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+	device->EventEnd(cmd);
+
+	return &screenRayBuffers;
+}
+void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int accumulation_sample, CommandList cmd)
+{
+	GraphicsDevice* device = GetDevice();
+	const Scene& scene = GetScene();
+
+	device->EventBegin("RayTraceScene", cmd);
+
 
 	// Misc buffers:
 	static bool initialized = false;
@@ -7336,59 +7380,25 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, Com
 		device->SetName(&counterBuffer[1], "raytrace_counterBuffer[1]");
 	}
 
+	const TextureDesc& result_desc = result->GetDesc();
+	static TextureDesc temp_desc;
+	static Texture2D temp_texture;
+	if (temp_desc.Width < result_desc.Width || temp_desc.Height < result_desc.Height)
+	{
+		temp_desc.Width = std::max(temp_desc.Width, result_desc.Width);
+		temp_desc.Height = std::max(temp_desc.Height, result_desc.Height);
+		temp_desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		temp_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		device->CreateTexture2D(&temp_desc, nullptr, &temp_texture);
+		device->SetName(&temp_texture, "raytrace_temp_texture");
+	}
+
 	// Begin raytrace
 
 	auto range = wiProfiler::BeginRangeGPU("RayTrace - ALL", cmd);
 
-	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
-	TracedRenderingCB cb;
-	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
-	cb.xTraceRandomSeed = renderTime;
-
-	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-
-	device->EventBegin("Clear", cmd);
-	{
-		device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_CLEAR], cmd);
-
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
-
-		const GPUResource* uavs[] = {
-			result,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
-
-		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_CLEAR_BLOCKSIZE), 1, cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
-
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-	}
-	device->EventEnd(cmd);
-
-	device->EventBegin("Launch Rays", cmd);
-	{
-		device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_LAUNCH], cmd);
-
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
-
-		GPUResource* uavs[] = {
-			&rayIndexBuffer[0],
-			&raySortBuffer,
-			&rayBuffer[0],
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
-
-		device->Dispatch((UINT)ceilf((float)_width / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), (UINT)ceilf((float)_height / (float)TRACEDRENDERING_LAUNCH_BLOCKSIZE), 1, cmd);
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
-
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-
-		// just write initial ray count:
-		device->UpdateBuffer(&counterBuffer[0], &_raycount, cmd);
-	}
-	device->EventEnd(cmd);
-
-
+	// write initial ray count to RW-counter:
+	device->UpdateBuffer(&counterBuffer[0], &rayBuffers->rayCapacity, cmd);
 
 	// Set up tracing resources:
 	sceneBVH.Bind(CS, cmd);
@@ -7398,11 +7408,21 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, Com
 		device->BindResource(CS, enviroMap, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
+	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)GetDevice()->GetFrameCount());
+	TracedRenderingCB cb;
+	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
+	cb.xTraceAccumulationFactor = 1.0f / ((float)accumulation_sample + 1.0f);
+	cb.xTraceResolution.x = result_desc.Width;
+	cb.xTraceResolution.y = result_desc.Height;
+	cb.xTraceResolution_Inverse.x = 1.0f / cb.xTraceResolution.x;
+	cb.xTraceResolution_Inverse.y = 1.0f / cb.xTraceResolution.y;
+
 	for (uint32_t bounce = 0; bounce < raytraceBounceCount + 1; ++bounce) // first contact + indirect bounces
 	{
 		uint32_t __readBufferID = bounce % 2;
 		uint32_t __writeBufferID = (bounce + 1) % 2;
 
+		cb.xTraceUserData.x = bounce;
 		cb.xTraceRandomSeed = renderTime + (float)bounce;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
@@ -7449,16 +7469,16 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, Com
 
 			const GPUResource* res[] = {
 				&counterBuffer[__readBufferID],
-				&rayIndexBuffer[__readBufferID],
-				&rayBuffer[__readBufferID],
+				&rayBuffers->rayIndexBuffer[__readBufferID],
+				&rayBuffers->rayBuffer[__readBufferID],
 			};
 			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
 			const GPUResource* uavs[] = {
 				&counterBuffer[__writeBufferID],
-				&rayIndexBuffer[__writeBufferID],
-				&raySortBuffer,
-				&rayBuffer[__writeBufferID],
-				result,
+				&rayBuffers->rayIndexBuffer[__writeBufferID],
+				&rayBuffers->raySortBuffer,
+				&rayBuffers->rayBuffer[__writeBufferID],
+				&temp_texture,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
@@ -7479,7 +7499,7 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, Com
 
 		// 2.) Sort rays to achieve more coherency:
 		device->EventBegin("Ray Sorting", cmd);
-		wiGPUSortLib::Sort(_raycount, raySortBuffer, counterBuffer[__readBufferID], 0, rayIndexBuffer[__readBufferID], cmd);
+		wiGPUSortLib::Sort(rayBuffers->rayCapacity, rayBuffers->raySortBuffer, counterBuffer[__readBufferID], 0, rayBuffers->rayIndexBuffer[__readBufferID], cmd);
 		device->EventEnd(cmd);
 
 
@@ -7497,12 +7517,12 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, Com
 
 			const GPUResource* res[] = {
 				&counterBuffer[__readBufferID],
-				&rayIndexBuffer[__readBufferID],
-				&rayBuffer[__readBufferID],
+				&rayBuffers->rayIndexBuffer[__readBufferID],
+				&rayBuffers->rayBuffer[__readBufferID],
 			};
 			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
 			const GPUResource* uavs[] = {
-				result,
+				&temp_texture,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
@@ -7520,18 +7540,45 @@ void DrawTracedScene(const CameraComponent& camera, const Texture2D* result, Com
 
 	}
 
+	device->EventBegin("Accumulate", cmd);
+	{
+		device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_ACCUMULATE], cmd);
+
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
+
+		const GPUResource* res[] = {
+			&temp_texture
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+		const GPUResource* uavs[] = {
+			result,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		device->Dispatch(
+			(result_desc.Width + TRACEDRENDERING_ACCUMULATE_BLOCKSIZE - 1) / TRACEDRENDERING_ACCUMULATE_BLOCKSIZE, 
+			(result_desc.Height + TRACEDRENDERING_ACCUMULATE_BLOCKSIZE - 1) / TRACEDRENDERING_ACCUMULATE_BLOCKSIZE, 
+			1, 
+			cmd);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+	device->EventEnd(cmd);
+
 	wiProfiler::EndRange(range); // RayTrace - ALL
 
 
 
 
-	device->EventEnd(cmd); // DrawTracedScene
+	device->EventEnd(cmd); // RayTraceScene
 }
-void DrawTracedSceneBVH(CommandList cmd)
+void RayTraceSceneBVH(CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("DebugRaytraceBVH", cmd);
+	device->EventBegin("RayTraceSceneBVH", cmd);
 	device->BindPipelineState(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], cmd);
 	sceneBVH.Bind(PS, cmd);
 	device->Draw(3, 0, cmd);
@@ -7911,8 +7958,8 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 	cb.xTraceRandomSeed = renderTime; // random seed
-	cb.xTraceUserData = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
-	cb.xTraceUserData2.x = raytraceBounceCount;
+	cb.xTraceAccumulationFactor = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+	cb.xTraceUserData.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(TracedRenderingCB), cmd);

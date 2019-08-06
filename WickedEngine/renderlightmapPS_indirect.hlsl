@@ -22,7 +22,7 @@ float4 main(Input input) : SV_TARGET
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
 	float3 finalResult = 0;
 
-	const uint bounces = xTraceUserData2.x;
+	const uint bounces = xTraceUserData.x;
 	for (uint i = 0; (i < bounces) && any(ray.energy); ++i)
 	{
 		// Sample primary ray (scene materials, sky, etc):
@@ -150,5 +150,5 @@ float4 main(Input input) : SV_TARGET
 		}
 	}
 
-	return max(0, float4(finalResult, xTraceUserData));
+	return max(0, float4(finalResult, xTraceAccumulationFactor));
 }

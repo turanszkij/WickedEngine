@@ -7,10 +7,10 @@ class RenderPath3D_PathTracing :
 {
 private:
 	int sam = -1;
+	bool rebuild_bvh = true;
 
 protected:
 	wiGraphics::Texture2D traceResult;
-	wiGraphics::Texture2D rtAccumulation;
 
 	void ResizeBuffers() override;
 
