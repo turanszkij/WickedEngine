@@ -466,7 +466,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
 	device->EventEnd(cmd);
 
-
 	device->EventBegin("BVH - Sort Primitive Mortons", cmd);
 	wiGPUSortLib::Sort(primitiveCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, cmd);
 	device->EventEnd(cmd);
@@ -477,7 +476,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 		GPUResource* uavs[] = {
 			&bvhNodeBuffer,
 			&bvhParentBuffer,
-			&bvhFlagBuffer,
+			&bvhFlagBuffer
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
@@ -495,7 +494,34 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 	}
 	device->EventEnd(cmd);
 
-	Refit(cmd);
+	device->EventBegin("BVH - Propagate AABB", cmd);
+	{
+		GPUResource* barrier[] = {
+			&bvhFlagBuffer
+		};
+		device->UAVBarrier(barrier, ARRAYSIZE(barrier), cmd);
+
+		device->BindComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
+		GPUResource* uavs[] = {
+			&bvhNodeBuffer,
+			&bvhFlagBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		GPUResource* res[] = {
+			&primitiveCounterBuffer,
+			&primitiveIDBuffer,
+			&primitiveBuffer,
+			&bvhParentBuffer,
+		};
+		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+
+		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+	device->EventEnd(cmd);
 
 	wiProfiler::EndRange(range); // BVH rebuild
 
@@ -599,39 +625,6 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 		&bvhNodeBuffer,
 	};
 	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
-}
-
-void wiGPUBVH::Refit(CommandList cmd)
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	auto range = wiProfiler::BeginRangeGPU("BVH Refit", cmd);
-
-	device->EventBegin("BVH - Propagate AABB", cmd);
-	{
-		device->BindComputeShader(computeShaders[CSTYPE_BVH_PROPAGATEAABB], cmd);
-		GPUResource* uavs[] = {
-			&bvhNodeBuffer,
-			&bvhFlagBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
-
-		GPUResource* res[] = {
-			&primitiveCounterBuffer,
-			&primitiveIDBuffer,
-			&primitiveBuffer,
-			&bvhParentBuffer,
-		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
-
-		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
-
-		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
-		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
-	}
-	device->EventEnd(cmd);
-
-	wiProfiler::EndRange(range); // BVH refit
 }
 
 void wiGPUBVH::LoadShaders()

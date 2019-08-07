@@ -97,6 +97,11 @@ namespace wiGPUSortLib
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+			GPUResource* trans[] = {
+				&indirectBuffer
+			};
+			device->TransitionBarrier(trans, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
 		}
 
 

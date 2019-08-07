@@ -35,11 +35,7 @@ private:
 	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
 
 public:
-	// Update hierarchy + bounding boxes
 	void Build(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);
-	// Only update bounding boxes
-	void Refit(wiGraphics::CommandList cmd);
-	// Bind shader resources
 	void Bind(wiGraphics::SHADERSTAGE stage, wiGraphics::CommandList cmd) const;
 
 	static void LoadShaders();

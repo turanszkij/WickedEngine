@@ -4,7 +4,7 @@
 TEXTURE2DMS(input, float, TEXSLOT_ONDEMAND0)
 RWTEXTURE2D(output, float, 0)
 
-[numthreads(16, 16, 1)]
+[numthreads(8, 8, 1)]
 void main(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
 	uint2 dim;

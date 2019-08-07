@@ -42,7 +42,6 @@ void RenderPath3D_PathTracing::Update(float dt)
 	{
 		wiRenderer::GetCamera().SetDirty(false);
 		sam = -1;
-		rebuild_bvh = false;
 	}
 	else
 	{
@@ -53,8 +52,21 @@ void RenderPath3D_PathTracing::Update(float dt)
 			if (transform.IsDirty())
 			{
 				sam = -1;
-				rebuild_bvh = true;
 				break;
+			}
+		}
+
+		if (sam >= 0)
+		{
+			for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+			{
+				const MaterialComponent& material = scene.materials[i];
+
+				if (material.IsDirty())
+				{
+					sam = -1;
+					break;
+				}
 			}
 		}
 	}
@@ -71,11 +83,11 @@ void RenderPath3D_PathTracing::Render() const
 
 	// Setup:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd] {
+	wiJobSystem::Execute(ctx, [this, cmd] {
 
 		wiRenderer::UpdateRenderData(cmd);
 
-		if (sam == 0 && rebuild_bvh)
+		if (sam == 0)
 		{
 			wiRenderer::BuildSceneBVH(cmd);
 		}

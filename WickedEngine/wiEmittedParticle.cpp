@@ -156,10 +156,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, indirectBuffers.get());
 
 	// Constant buffer:
-	bd.Usage = USAGE_DYNAMIC;
+	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(EmittedParticleCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+	bd.CPUAccessFlags = 0;
 	bd.MiscFlags = 0;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, constantBuffer.get());
 

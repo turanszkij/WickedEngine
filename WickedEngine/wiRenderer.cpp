@@ -2869,6 +2869,7 @@ void LoadShaders()
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = TRIANGLELIST;
 			desc.DSFormat = FORMAT_UNKNOWN;
+			desc.RTFormats[0] = FORMAT_R32G32B32A32_FLOAT;
 			break;
 		}
 
@@ -6810,8 +6811,8 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 		dispatchParams.xDispatchParams_numThreads.x = tileCount.x;
 		dispatchParams.xDispatchParams_numThreads.y = tileCount.y;
 		dispatchParams.xDispatchParams_numThreads.z = 1;
-		dispatchParams.xDispatchParams_numThreadGroups.x = (UINT)ceilf(dispatchParams.xDispatchParams_numThreads.x / (float)TILED_CULLING_BLOCKSIZE);
-		dispatchParams.xDispatchParams_numThreadGroups.y = (UINT)ceilf(dispatchParams.xDispatchParams_numThreads.y / (float)TILED_CULLING_BLOCKSIZE);
+		dispatchParams.xDispatchParams_numThreadGroups.x = (dispatchParams.xDispatchParams_numThreads.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE;
+		dispatchParams.xDispatchParams_numThreadGroups.y = (dispatchParams.xDispatchParams_numThreads.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE;
 		dispatchParams.xDispatchParams_numThreadGroups.z = 1;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_DISPATCHPARAMS], &dispatchParams, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
@@ -6921,7 +6922,7 @@ void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, CommandL
 	TextureDesc desc = src->GetDesc();
 
 	device->BindComputeShader(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], cmd);
-	device->Dispatch((UINT)ceilf(desc.Width / 16.f), (UINT)ceilf(desc.Height / 16.f), 1, cmd);
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
 
 
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
@@ -6989,8 +6990,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 				device->Dispatch(
-					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+					std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					6,
 					cmd);
 
@@ -7032,8 +7033,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 				device->Dispatch(
-					std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+					std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					6,
 					cmd);
 
@@ -7085,8 +7086,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 			device->Dispatch(
-				std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-				std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+				std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
+				std::max(1u, (desc.Height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 				1,
 				cmd);
 
@@ -7152,9 +7153,9 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, CommandList
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 		device->Dispatch(
-			std::max(1u, (UINT)ceilf((float)desc.Width / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			std::max(1u, (UINT)ceilf((float)desc.Height / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
-			std::max(1u, (UINT)ceilf((float)desc.Depth / GENERATEMIPCHAIN_3D_BLOCK_SIZE)), 
+			std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE), 
+			std::max(1u, (desc.Height + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
+			std::max(1u, (desc.Depth + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
 			cmd);
 	}
 
@@ -7226,7 +7227,7 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 		device->BindUAV(CS, dst, 0, cmd);
 	}
 
-	device->Dispatch((UINT)ceilf((float)cb.xCopySrcSize.x / 8.0f), (UINT)ceilf((float)cb.xCopySrcSize.y / 8.0f), 1, cmd);
+	device->Dispatch((cb.xCopySrcSize.x + 7) / 8, (cb.xCopySrcSize.y + 7) / 8, 1, cmd);
 
 	device->UnbindUAVs(0, 1, cmd);
 
@@ -7448,6 +7449,11 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+			GPUResource* trans[] = {
+				&indirectBuffer
+			};
+			device->TransitionBarrier(trans, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
 		}
 		device->EventEnd(cmd);
 
