@@ -42,21 +42,19 @@ inline float3x3 GetTangentSpace(float3 normal)
 	return float3x3(tangent, binormal, normal);
 }
 
-float4 main(VertexToPixelPostProcess input):SV_Target
+float main(VertexToPixelPostProcess input) : SV_Target
 {
 	const float range = xPPParams0.x;
 	const uint sampleCount = xPPParams0.y;
 
 	float3 noise = xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0;
-	float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
-	float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_point_clamp, input.tex, 0));
+	float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_linear_clamp, input.tex, 0));
+	//float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
+	float3 normal = normalize(cross(ddx(P), ddy(P))); // instead of reading normals g-buffer, reconstruct flat normals from position
 
 	float3 tangent = normalize(noise - normal * dot(noise, normal));
 	float3 bitangent = cross(normal, tangent);
 	float3x3 tangentSpace = float3x3(tangent, bitangent, normal);
-
-	float center_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, input.tex, 0);
-	center_depth -= 0.0006f; // self-occlusion bias
 
 	float ao = 0;
 	for (uint i = 0; i < sampleCount; ++i)
@@ -66,17 +64,19 @@ float4 main(VertexToPixelPostProcess input):SV_Target
 		float3 cone = mul(hemisphere, tangentSpace);
 		float3 sam = P + cone * range;
 
-		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xCamera_VP);
-		vProjectedCoord.xy /= vProjectedCoord.w;
+		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xFrame_MainCamera_VP);
+		vProjectedCoord.xyz /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		float ray_depth = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
-
-		float depth_fix = 1 - saturate(abs(center_depth - ray_depth) * 200); // too much depth difference cancels the effect
-
-		ao += (ray_depth < center_depth ? 1 : 0) * depth_fix;
+		if (is_saturated(vProjectedCoord.xy))
+		{
+			const float ray_depth_real = getLinearDepth(vProjectedCoord.z) * g_xFrame_MainCamera_ZFarP_Recip;
+			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
+			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 250); // too much depth difference cancels the effect
+			ao += (ray_depth_sample < ray_depth_real) * depth_fix;
+		}
 	}
 	ao /= (float)sampleCount;
 
-	return saturate(1 - ao.xxxx);
+	return saturate(1 - ao);
 }
