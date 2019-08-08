@@ -70,9 +70,9 @@ float main(VertexToPixelPostProcess input) : SV_Target
 
 		if (is_saturated(vProjectedCoord.xy))
 		{
-			const float ray_depth_real = getLinearDepth(vProjectedCoord.z) * g_xFrame_MainCamera_ZFarP_Recip;
-			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
-			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 250); // too much depth difference cancels the effect
+			const float ray_depth_real = getLinearDepth(vProjectedCoord.z);
+			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xFrame_MainCamera_ZFarP;
+			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 0.2f); // too much depth difference cancels the effect
 			ao += (ray_depth_sample < ray_depth_real) * depth_fix;
 		}
 	}
