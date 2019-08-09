@@ -50,22 +50,23 @@ float main(VertexToPixelPostProcess input) : SV_Target
 	const uint sampleCount = xPPParams0.y;
 
 	float seed = 1;
-	float3 noise = float3(rand(seed, input.tex), rand(seed, input.tex), rand(seed, input.tex)) * 2 - 1;
-	float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_linear_clamp, input.tex, 0));
-	//float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
-	float3 normal = normalize(cross(ddx(P), ddy(P))); // instead of reading normals g-buffer, reconstruct flat normals from position
+	const float3 noise = float3(rand(seed, input.tex), rand(seed, input.tex), rand(seed, input.tex)) * 2 - 1;
+	const float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_linear_clamp, input.tex, 0));
+	//const float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
+	const float3 normal = normalize(cross(ddx(P), ddy(P))); // instead of reading normals g-buffer, reconstruct flat normals from position
 
-	float3 tangent = normalize(noise - normal * dot(noise, normal));
-	float3 bitangent = cross(normal, tangent);
-	float3x3 tangentSpace = float3x3(tangent, bitangent, normal);
+	const float3 tangent = normalize(noise - normal * dot(noise, normal));
+	const float3 bitangent = cross(normal, tangent);
+	const float3x3 tangentSpace = float3x3(tangent, bitangent, normal);
 
 	float ao = 0;
 	for (uint i = 0; i < sampleCount; ++i)
 	{
-		float2 hamm = hammersley2d(i, sampleCount);
-		float3 hemisphere = hemisphereSample_uniform(hamm.x, hamm.y);
-		float3 cone = mul(hemisphere, tangentSpace);
-		float3 sam = P + cone * range;
+		const float2 hamm = hammersley2d(i, sampleCount);
+		const float3 hemisphere = hemisphereSample_uniform(hamm.x, hamm.y);
+		const float3 cone = mul(hemisphere, tangentSpace);
+		const float ray_range = range * lerp(0.2f, 1.0f, rand(seed, input.tex)); // modulate ray-length a bit to avoid uniform look
+		const float3 sam = P + cone * ray_range;
 
 		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xFrame_MainCamera_VP);
 		vProjectedCoord.xyz /= vProjectedCoord.w;
@@ -74,14 +75,14 @@ float main(VertexToPixelPostProcess input) : SV_Target
 		if (is_saturated(vProjectedCoord.xy))
 		{
 #ifdef USE_LINEARDEPTH
-			const float ray_depth_real = getLinearDepth(vProjectedCoord.z);
+			const float ray_depth_real = vProjectedCoord.w; // .w is also linear depth, could be also written as getLinearDepth(vProjectedCoord.z)
 			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xFrame_MainCamera_ZFarP;
 			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 0.2f); // too much depth difference cancels the effect
 			ao += (ray_depth_sample < ray_depth_real) * depth_fix;
 #else
 			const float ray_depth_real = vProjectedCoord.z;
 			const float ray_depth_sample = texture_depth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
-			const float depth_fix = 1 - saturate(abs(getLinearDepth(ray_depth_real) - getLinearDepth(ray_depth_sample)) * 0.2f); // too much depth difference cancels the effect
+			const float depth_fix = 1 - saturate(abs(vProjectedCoord.w - getLinearDepth(ray_depth_sample)) * 0.2f); // too much depth difference cancels the effect (vProjectedCoord.w is also linear depth)
 			ao += (ray_depth_sample > ray_depth_real) * depth_fix;
 #endif // USE_LINEARDEPTH
 		}
