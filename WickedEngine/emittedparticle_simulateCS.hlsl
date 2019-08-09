@@ -91,7 +91,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				float2 uv = pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
 				uint2 pixel = uv * g_xFrame_InternalResolution;
 
-				float depth0 = texture_depth[pixel + uint2(0, 0)];
+				float depth0 = texture_depth[pixel];
 				float surfaceLinearDepth = getLinearDepth(depth0);
 				float surfaceThickness = 1.5f;
 
@@ -103,16 +103,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				{
 					// Calculate surface normal and bounce off the particle:
 					float depth1 = texture_depth[pixel + uint2(1, 0)];
-					float depth2 = texture_depth[pixel + uint2(0, 1)];
+					float depth2 = texture_depth[pixel + uint2(0, -1)];
 
 					float3 p0 = getPositionEx(uv, depth0, g_xFrame_MainCamera_PrevInvVP);
-					float3 p1 = getPositionEx(uv, depth1, g_xFrame_MainCamera_PrevInvVP);
-					float3 p2 = getPositionEx(uv, depth2, g_xFrame_MainCamera_PrevInvVP);
+					float3 p1 = getPositionEx(uv + float2(1, 0) * g_xFrame_InternalResolution_Inverse, depth1, g_xFrame_MainCamera_PrevInvVP);
+					float3 p2 = getPositionEx(uv + float2(0, -1) * g_xFrame_InternalResolution_Inverse, depth2, g_xFrame_MainCamera_PrevInvVP);
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 
-					const float restitution = 0.98f;
-					particle.velocity = reflect(particle.velocity, surfaceNormal) * restitution;
+					if (dot(particle.velocity, surfaceNormal) < 0)
+					{
+						const float restitution = 0.98f;
+						particle.velocity = reflect(particle.velocity, surfaceNormal) * restitution;
+					}
 				}
 			}
 
