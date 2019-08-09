@@ -361,7 +361,6 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 			device->BindViewports(1, &vp, cmd);
 
 			fx.process.setSSAO(getSSAORange(), getSSAOSampleCount());
-			fx.setMaskMap(wiTextureHelper::getRandom64x64());
 			fx.quality = QUALITY_LINEAR;
 			fx.sampleFlag = SAMPLEMODE_MIRROR;
 			wiImage::Draw(nullptr, fx, cmd);

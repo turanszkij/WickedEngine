@@ -1,6 +1,8 @@
 #include "postProcessHF.hlsli"
 #include "reconstructPositionHF.hlsli"
 
+// Define this to use reduced precision, but faster depth buffer:
+#define USE_LINEARDEPTH
 
 // Hemisphere point generation from:
 //	http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
@@ -47,7 +49,8 @@ float main(VertexToPixelPostProcess input) : SV_Target
 	const float range = xPPParams0.x;
 	const uint sampleCount = xPPParams0.y;
 
-	float3 noise = xMaskTex.Load(int3((64 * input.tex.xy * 400) % 64, 0)).xyz * 2.0 - 1.0;
+	float seed = 1;
+	float3 noise = float3(rand(seed, input.tex), rand(seed, input.tex), rand(seed, input.tex)) * 2 - 1;
 	float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_linear_clamp, input.tex, 0));
 	//float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
 	float3 normal = normalize(cross(ddx(P), ddy(P))); // instead of reading normals g-buffer, reconstruct flat normals from position
@@ -70,10 +73,17 @@ float main(VertexToPixelPostProcess input) : SV_Target
 
 		if (is_saturated(vProjectedCoord.xy))
 		{
+#ifdef USE_LINEARDEPTH
 			const float ray_depth_real = getLinearDepth(vProjectedCoord.z);
 			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * g_xFrame_MainCamera_ZFarP;
 			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 0.2f); // too much depth difference cancels the effect
 			ao += (ray_depth_sample < ray_depth_real) * depth_fix;
+#else
+			const float ray_depth_real = vProjectedCoord.z;
+			const float ray_depth_sample = texture_depth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
+			const float depth_fix = 1 - saturate(abs(getLinearDepth(ray_depth_real) - getLinearDepth(ray_depth_sample)) * 0.2f); // too much depth difference cancels the effect
+			ao += (ray_depth_sample > ray_depth_real) * depth_fix;
+#endif // USE_LINEARDEPTH
 		}
 	}
 	ao /= (float)sampleCount;
