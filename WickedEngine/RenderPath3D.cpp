@@ -330,7 +330,6 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 	if (getSSAOEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
 		device->EventBegin("SSAO", cmd);
@@ -387,9 +386,6 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, wiRenderer::GetCamera().GetAt())) > 0)
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-		fx.enableHDR();
 
 		device->EventBegin("Light Shafts", cmd);
 		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
@@ -572,18 +568,15 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 	if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-
-		wiRenderer::BindGBufferTextures(nullptr, &srcGbuffer1, nullptr, cmd);
 
 		device->EventBegin("Temporal AA Resolve", cmd);
 		auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", cmd);
-		fx.enableHDR();
-		fx.blendFlag = BLENDMODE_OPAQUE;
+
 		int output = device->GetFrameCount() % 2;
 		int history = 1 - output;
 		wiRenderer::Postprocess_TemporalAA(srcdstSceneRT, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
 		wiRenderer::CopyTexture2D(&srcdstSceneRT, 0, 0, 0, &rtTemporalAA[output], 0, cmd);
+
 		wiProfiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
@@ -633,15 +626,12 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Texture2D& srcGbuffer1, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
 
 	const Texture2D* rt_read = &srcSceneRT;
 	const Texture2D* rt_write = &rtPostprocess_HDR;
 
 	// 1.) HDR post process chain
 	{
-		fx.enableHDR();
-
 		if (getMotionBlurEnabled())
 		{
 			wiRenderer::Postprocess_MotionBlur(*rt_read, srcGbuffer1, *rt_write, cmd);
@@ -665,8 +655,6 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 			}
 			device->EventEnd(cmd);
 		}
-
-		fx.disableHDR();
 	}
 
 	// 2.) Tone mapping HDR -> LDR
@@ -689,8 +677,6 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 	// 3.) LDR post process chain
 	{
-		fx.disableHDR();
-
 		if (getSharpenFilterEnabled())
 		{
 			wiRenderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
