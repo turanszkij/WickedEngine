@@ -147,13 +147,7 @@
     <FxCompile Include="lensFlareGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
-    <FxCompile Include="bloomSeparatePS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="circlePS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="colorGradePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="cubeShadowPS.hlsl">
@@ -163,9 +157,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="deferredPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="depthofFieldPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="dirLightPS.hlsl">
@@ -183,16 +174,7 @@
     <FxCompile Include="lensFlarePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="lightShaftPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="linDepthPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="linesPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="motionBlurPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="objectPS_blackout.hlsl">
@@ -204,9 +186,6 @@
     <FxCompile Include="objectPS_textureonly.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="outlinePS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="pointLightPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -216,25 +195,10 @@
     <FxCompile Include="spotLightPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="ssao.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="ssr.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="ssss.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="sunPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="toneMapPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="trailPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="fxaa.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="waterVS.hlsl">
@@ -366,9 +330,6 @@
     <FxCompile Include="resolveMSAADepthStencilCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="reprojectDepthBufferPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="sphereLightPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -441,12 +402,6 @@
     <FxCompile Include="objectVS_simple.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="temporalAAResolvePS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="sharpenPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="objectVS_common.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -513,13 +468,7 @@
     <FxCompile Include="hairparticlePS_tiledforward.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="imagePS_distortion.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="imagePS_masked.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="imagePS_distortion_masked.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="imagePS_separatenormalmap.hlsl">
@@ -795,9 +744,6 @@
     <FxCompile Include="captureImpostorPS_albedo.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="blurPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="renderlightmapVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -828,12 +774,6 @@
     <FxCompile Include="imagePS_bicubic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="imagePS_distortion_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="imagePS_distortion_masked_bicubic.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="imagePS_masked_bicubic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -857,6 +797,60 @@
     </FxCompile>
     <FxCompile Include="raytrace_accumulateCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssaoCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_gaussian_float4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_gaussian_unorm4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_gaussian_unorm1CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_gaussian_float1CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="lightShaftsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="depthoffieldCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="outlineCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="motionblurCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="bloomseparateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="fxaaCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="ssrCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="colorgradeCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="lineardepthCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="sharpenCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="temporalaaCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="tonemapCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="sssPS.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

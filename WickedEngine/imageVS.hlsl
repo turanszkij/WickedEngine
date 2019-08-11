@@ -12,13 +12,12 @@ VertextoPixel main(uint vI : SV_VERTEXID)
 	//	3--4
 
 	Out.pos = xCorners[vI];
-	Out.pos2D = Out.pos;
 
-	Out.tex = float2(vI % 2, vI % 4 / 2);
-	Out.tex.x = xMirror == 1 ? (1 - Out.tex.x) : Out.tex.x;
-	Out.tex2 = Out.tex;
-	Out.tex = Out.tex * xTexMulAdd.xy + xTexMulAdd.zw;
-	Out.tex2 = Out.tex2 * xTexMulAdd2.xy + xTexMulAdd2.zw;
+	Out.uv0 = float2(vI % 2, vI % 4 / 2);
+	Out.uv0.x = xMirror == 1 ? (1 - Out.uv0.x) : Out.uv0.x;
+	Out.uv1 = Out.uv0;
+	Out.uv0 = Out.uv0 * xTexMulAdd.xy + xTexMulAdd.zw;
+	Out.uv1 = Out.uv1 * xTexMulAdd2.xy + xTexMulAdd2.zw;
 
 	return Out;
 }

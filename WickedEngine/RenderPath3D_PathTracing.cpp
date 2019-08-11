@@ -29,6 +29,15 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		device->CreateTexture2D(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 	}
+	{
+		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = defaultTextureFormat;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+		device->CreateTexture2D(&desc, nullptr, &rtPostprocess_LDR[0]);
+		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
+	}
 
 	// also reset accumulation buffer state:
 	sam = -1;
@@ -125,6 +134,15 @@ void RenderPath3D_PathTracing::Render() const
 
 			wiProfiler::EndRange(range); // Traced Scene
 		}
+
+		wiRenderer::Postprocess_Tonemap(
+			traceResult,
+			*wiTextureHelper::getColor(wiColor::Gray()),
+			*wiTextureHelper::getBlack(),
+			rtPostprocess_LDR[0],
+			cmd,
+			getExposure()
+		);
 	});
 
 	RenderPath2D::Render();
@@ -140,15 +158,11 @@ void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 
 	wiRenderer::BindCommonResources(cmd);
 
-	wiImageParams fx((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
+	wiImageParams fx;
+	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_LINEAR;
-	fx.process.setToneMap(getExposure());
-	fx.setDistortionMap(wiTextureHelper::getBlack()); // tonemap shader uses signed distortion mask, so black = no distortion
-	fx.setMaskMap(wiTextureHelper::getColor(wiColor::Gray()));
-	
-	wiImage::Draw(&traceResult, fx, cmd);
-
+	wiImage::Draw(&rtPostprocess_LDR[0], fx, cmd);
 
 	device->EventEnd(cmd);
 

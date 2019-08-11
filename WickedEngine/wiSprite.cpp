@@ -7,89 +7,40 @@
 using namespace wiGraphics;
 
 
-wiSprite::wiSprite(wiResourceManager* contentHolder) :ContentHolder(contentHolder)
+wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask)
 {
-	Init();
-}
-wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask, const std::string& newNormal, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
-{
-	Init();
-	CreateReference(newTexture,newMask,newNormal);
-}
-wiSprite::wiSprite(const std::string& newTexture, const std::string& newMask, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
-{
-	Init();
-	CreateReference(newTexture,newMask,"");
-}
-wiSprite::wiSprite(const std::string& newTexture, wiResourceManager* contentHolder) : ContentHolder(contentHolder)
-{
-	Init();
-	CreateReference(newTexture,"","");
-}
-void wiSprite::Init()
-{
-	if (ContentHolder == nullptr)
-	{
-		ContentHolder = &wiResourceManager::GetGlobal();
-	}
-	texture.clear();
-	mask.clear();
-	normal.clear();
-	name.clear();
-	texturePointer = nullptr;
-	maskPointer = nullptr;
-	normalPointer = nullptr;
-}
-void wiSprite::CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal)
-{
-	if (newTexture.length())
+	if (!newTexture.empty())
 	{
 		texture = newTexture;
-		texturePointer = (Texture2D*)ContentHolder->add(newTexture);
+		texturePointer = (Texture2D*)wiResourceManager::GetGlobal().add(newTexture);
 	}
-	if (newMask.length())
+	if (!newMask.empty())
 	{
-		maskPointer = (Texture2D*)ContentHolder->add(newMask);
+		maskPointer = (Texture2D*)wiResourceManager::GetGlobal().add(newMask);
 		params.setMaskMap(maskPointer);
 		mask = newMask;
 	}
-	if (newNormal.length())
-	{
-		normalPointer = (Texture2D*)ContentHolder->add(newNormal);
-		normal = newNormal;
-	}
 }
-void wiSprite::CleanUp()
+void wiSprite::Destroy()
 {
-	ContentHolder->del(texture);
-	ContentHolder->del(normal);
-	ContentHolder->del(mask);
+	wiResourceManager::GetGlobal().del(texture);
+	wiResourceManager::GetGlobal().del(mask);
 	texturePointer = nullptr;
 	maskPointer = nullptr;
-	normalPointer = nullptr;
 }
 
-void wiSprite::Draw(const Texture2D* refracRes, CommandList cmd) const
-{
-	if(params.opacity>0 && ((params.blendFlag==BLENDMODE_ADDITIVE && params.fade<1) || params.blendFlag!=BLENDMODE_ADDITIVE) )
-	{
-		wiImageParams fx = params;
-		fx.setRefractionSource(refracRes);
-		wiImage::Draw(texturePointer,fx,cmd);
-	}
-}
 void wiSprite::Draw(CommandList cmd) const
 {
-	wiSprite::Draw(nullptr, cmd);
+	wiImage::Draw(texturePointer, params, cmd);
 }
 void wiSprite::DrawNormal(CommandList cmd) const
 {
-	if(normalPointer && params.opacity>0 && ((params.blendFlag==BLENDMODE_ADDITIVE && params.fade<1) || params.blendFlag!=BLENDMODE_ADDITIVE))
+	if (params.opacity > 0 && ((params.blendFlag == BLENDMODE_ADDITIVE && params.fade < 1) || params.blendFlag != BLENDMODE_ADDITIVE))
 	{
 		wiImageParams effectsMod(params);
-		effectsMod.blendFlag=BLENDMODE_ADDITIVE;
+		effectsMod.blendFlag = BLENDMODE_ADDITIVE;
 		effectsMod.enableExtractNormalMap();
-		wiImage::Draw(normalPointer,effectsMod,cmd);
+		wiImage::Draw(texturePointer, effectsMod, cmd);
 	}
 }
 

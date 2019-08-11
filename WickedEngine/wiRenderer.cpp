@@ -531,7 +531,9 @@ void ClearWorld()
 	enviroMap = nullptr;
 
 	for (wiSprite* x : waterRipples)
-		x->CleanUp();
+	{
+		delete x;
+	}
 	waterRipples.clear();
 
 	GetScene().Clear();
@@ -1112,6 +1114,10 @@ PipelineState PSO_enviromentallight;
 
 PipelineState PSO_renderlightmap_indirect;
 PipelineState PSO_renderlightmap_direct;
+
+PipelineState PSO_downsampledepthbuffer;
+PipelineState PSO_deferredcomposition;
+PipelineState PSO_sss;
 
 enum SKYRENDERING
 {
@@ -2003,6 +2009,7 @@ void LoadShaders()
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_POINT] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPointVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_RAYTRACE_SCREEN] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_screenVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_SCREEN] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER));
 
 
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
@@ -2090,6 +2097,9 @@ void LoadShaders()
 	pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_indirect.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_direct.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_debugbvhPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_DEFERREDCOMPOSITION] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_POSTPROCESS_SSS] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sssPS.cso", wiResourceManager::PIXELSHADER));
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -2134,6 +2144,24 @@ void LoadShaders()
 	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_ACCUMULATE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_accumulateCS.cso", wiResourceManager::COMPUTESHADER));
+	
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_float1CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_float4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_unorm1CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_SSAO] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "ssaoCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_SSR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "ssrCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lightshaftsCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "depthoffieldCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_OUTLINE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "outlineCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "motionblurCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "bloomseparateCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_FXAA] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "fxaaCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "temporalaaCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_COLORGRADE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "colorgradeCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lineardepthCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_SHARPEN] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sharpenCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_TONEMAP] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "tonemapCS.cso", wiResourceManager::COMPUTESHADER));
 
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<const HullShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -2728,6 +2756,46 @@ void LoadShaders()
 
 		device->CreatePipelineState(&desc, &PSO_renderlightmap_direct);
 	});
+	wiJobSystem::Execute(ctx, [device] {
+		PipelineStateDesc desc;
+		desc.vs = vertexShaders[VSTYPE_SCREEN];
+		desc.ps = pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_WRITEONLY];
+
+		desc.DSFormat = DSFormat_small;
+
+		device->CreatePipelineState(&desc, &PSO_downsampledepthbuffer);
+		});
+	wiJobSystem::Execute(ctx, [device] {
+		PipelineStateDesc desc;
+		desc.vs = vertexShaders[VSTYPE_SCREEN];
+		desc.ps = pixelShaders[PSTYPE_DEFERREDCOMPOSITION];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_DEFERREDCOMPOSITION];
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
+		device->CreatePipelineState(&desc, &PSO_deferredcomposition);
+		});
+	wiJobSystem::Execute(ctx, [device] {
+		PipelineStateDesc desc;
+		desc.vs = vertexShaders[VSTYPE_SCREEN];
+		desc.ps = pixelShaders[PSTYPE_POSTPROCESS_SSS];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.bs = &blendStates[BSTYPE_OPAQUE];
+		desc.dss = &depthStencils[DSSTYPE_SSS];
+
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+		desc.DSFormat = DSFormat_full;
+
+		device->CreatePipelineState(&desc, &PSO_sss);
+		});
 	wiJobSystem::Dispatch(ctx, SKYRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
 		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_SKY];
@@ -3004,6 +3072,10 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(ForwardEntityMaskCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FORWARDENTITYMASK]);
 	device->SetName(&constantBuffers[CBTYPE_FORWARDENTITYMASK], "ForwardEntityMaskCB");
+
+	bd.ByteWidth = sizeof(PostProcessCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS]);
+	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS], "PostProcessCB");
 
 
 }
@@ -3325,6 +3397,40 @@ void SetUpStates()
 	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD_MATCH]);
 
 
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthEnable = false;
+	dsd.StencilEnable = true;
+	dsd.DepthFunc = COMPARISON_GREATER;
+	dsd.StencilReadMask = 0xFF;
+	dsd.StencilWriteMask = 0x00;
+	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDCOMPOSITION]);
+
+
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthEnable = false;
+	dsd.StencilEnable = true;
+	dsd.DepthFunc = COMPARISON_GREATER;
+	dsd.StencilReadMask = 0xFF;
+	dsd.StencilWriteMask = 0x00;
+	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_SSS]);
+
+
 	dsd.DepthEnable = true;
 	dsd.StencilEnable = false;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
@@ -3347,6 +3453,11 @@ void SetUpStates()
 	dsd.DepthFunc = COMPARISON_GREATER;
 	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_ENVMAP]);
 
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
+	dsd.DepthFunc = COMPARISON_ALWAYS;
+	dsd.StencilEnable = false;
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_WRITEONLY]);
 
 
 
@@ -4452,31 +4563,34 @@ void EndFrame()
 
 void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 {
-	wiSprite* img=new wiSprite("","",image);
-	img->anim.fad=0.01f;
-	img->anim.scaleX=0.2f;
-	img->anim.scaleY=0.2f;
-	img->params.pos=pos;
-	img->params.rotation=(wiRandom::getRandom(0,1000)*0.001f)*2*3.1415f;
-	img->params.siz=XMFLOAT2(1,1);
-	img->params.typeFlag=WORLD;
-	img->params.quality=QUALITY_ANISOTROPIC;
+	wiSprite* img = new wiSprite(image);
+	img->anim.fad = 0.01f;
+	img->anim.scaleX = 0.2f;
+	img->anim.scaleY = 0.2f;
+	img->params.pos = pos;
+	img->params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
+	img->params.siz = XMFLOAT2(1, 1);
+	img->params.typeFlag = WORLD;
+	img->params.quality = QUALITY_ANISOTROPIC;
 	img->params.pivot = XMFLOAT2(0.5f, 0.5f);
-	img->params.lookAt=waterPlane;
-	img->params.lookAt.w=1;
+	img->params.lookAt = waterPlane;
+	img->params.lookAt.w = 1;
 	waterRipples.push_back(img);
 }
 void ManageWaterRipples(){
-	while(	
-		!waterRipples.empty() && 
-			(waterRipples.front()->params.opacity <= 0 + FLT_EPSILON || waterRipples.front()->params.fade==1)
+	while (
+		!waterRipples.empty() &&
+		(waterRipples.front()->params.opacity <= 0 + FLT_EPSILON || waterRipples.front()->params.fade == 1)
 		)
+	{
 		waterRipples.pop_front();
+	}
 }
 void DrawWaterRipples(CommandList cmd)
 {
 	GetDevice()->EventBegin("Water Ripples", cmd);
-	for(wiSprite* i:waterRipples){
+	for(wiSprite* i:waterRipples)
+	{
 		i->DrawNormal(cmd);
 	}
 	GetDevice()->EventEnd(cmd);
@@ -6919,7 +7033,7 @@ void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, CommandL
 	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, cmd);
 	device->BindUAV(CS, dst, 0, cmd);
 
-	TextureDesc desc = src->GetDesc();
+	const TextureDesc& desc = src->GetDesc();
 
 	device->BindComputeShader(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], cmd);
 	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
@@ -6930,6 +7044,22 @@ void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, CommandL
 
 	device->EventEnd(cmd);
 }
+void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::CommandList cmd)
+{
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("Downsample DepthBuffer", cmd);
+
+	device->BindPipelineState(&PSO_downsampledepthbuffer, cmd);
+
+	device->BindResource(PS, &src, TEXSLOT_ONDEMAND0, cmd);
+
+	device->Draw(3, 0, cmd);
+
+	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+
+	device->EventEnd(cmd);
+}
+
 void GenerateMipChain(const Texture1D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	assert(0 && "Not implemented!");
@@ -8278,10 +8408,11 @@ void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, Com
 	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
 }
 
-
 const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	static std::unique_ptr<Texture2D> luminance_map;
 	static std::vector<Texture2D*> luminance_avg(0);
@@ -8337,7 +8468,12 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 		{
 			luminance_avg_desc = luminance_avg[i]->GetDesc();
 			device->BindComputeShader(computeShaders[CSTYPE_LUMINANCE_PASS2], cmd);
-			device->BindUAV(CS, luminance_avg[i], 0, cmd);
+
+			const GPUResource* uavs[] = {
+				luminance_avg[i]
+			};
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
 			if (i > 0)
 			{
 				device->BindResource(CS, luminance_avg[i-1], TEXSLOT_ONDEMAND0, cmd);
@@ -8347,6 +8483,8 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 				device->BindResource(CS, luminance_map.get(), TEXSLOT_ONDEMAND0, cmd);
 			}
 			device->Dispatch(luminance_avg_desc.Width, luminance_avg_desc.Height, 1, cmd);
+
+			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		}
 
 
@@ -8358,6 +8496,762 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 	}
 
 	return nullptr;
+}
+
+
+void DeferredComposition(
+	const Texture2D& lightmap_diffuse,
+	const Texture2D& lightmap_specular,
+	const Texture2D& ao,
+	CommandList cmd)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("DeferredComposition", cmd);
+
+	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
+	device->BindPipelineState(&PSO_deferredcomposition, cmd);
+
+	device->BindResource(PS, &lightmap_diffuse, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(PS, &lightmap_specular, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(PS, &ao, TEXSLOT_ONDEMAND2, cmd);
+
+	device->Draw(3, 0, cmd);
+
+	device->EventEnd(cmd);
+}
+
+void Postprocess_Blur_Gaussian(
+	const Texture2D& input,
+	const Texture2D& temp,
+	const Texture2D& output,
+	CommandList cmd,
+	float amountX,
+	float amountY,
+	float mip
+)
+{
+	GraphicsDevice* device = GetDevice();
+	device->EventBegin("wiRenderer::Postprocess_SSAO", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	CSTYPES cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
+	switch (output.GetDesc().Format)
+	{
+	case FORMAT_R16_UNORM: 
+		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1; 
+		break;
+	case FORMAT_R16_FLOAT:
+	case FORMAT_R32_FLOAT:
+		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1; 
+		break;
+	case FORMAT_R8G8B8A8_UNORM:
+		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
+		break;
+	case FORMAT_R16G16B16A16_FLOAT:
+	case FORMAT_R32G32B32A32_FLOAT:
+		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
+		break;
+	default:
+		assert(0); // implement format!
+		break;
+	}
+
+	device->BindComputeShader(computeShaders[cs], cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	
+	// Horizontal:
+	{
+		const TextureDesc& desc = temp.GetDesc();
+
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		cb.xPPParams0.x = amountX;
+		cb.xPPParams0.y = 0;
+		cb.xPPParams0.z = mip;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&temp,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+
+	// Vertical:
+	{
+		const TextureDesc& desc = output.GetDesc();
+
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		cb.xPPParams0.x = 0;
+		cb.xPPParams0.y = amountY;
+		cb.xPPParams0.z = mip;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+
+	device->EventEnd(cmd);
+}
+void Postprocess_SSAO(
+	const Texture2D& depthbuffer,
+	const Texture2D& lineardepth,
+	const Texture2D& output,
+	CommandList cmd,
+	float range,
+	uint32_t samplecount
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_SSAO", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSAO], cmd);
+
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = range;
+	cb.xPPParams0.y = (float)samplecount;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_SSR(
+	const Texture2D& input,
+	const Texture2D& depthbuffer,
+	const Texture2D& lineardepth,
+	const Texture2D& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_SSR", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSR], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_SSS(
+	const Texture2D& depthbuffer,
+	const Texture2D& lineardepth,
+	const Texture2D& gbuffer0,
+	const Texture2D& input_output_lightbuffer_diffuse,
+	const Texture2D& input_output_temp1,
+	const Texture2D& input_output_temp2,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("Postprocess_SSS", cmd);
+
+	device->BindStencilRef(STENCILREF_SKIN, cmd);
+	device->BindPipelineState(&PSO_sss, cmd);
+
+	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
+
+	const Texture2D* rt_read = &input_output_lightbuffer_diffuse;
+	const Texture2D* rt_write = &input_output_temp1;
+
+	static int sssPassCount = 6;
+	for (int i = 0; i < sssPassCount; ++i)
+	{
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+
+		if (i == sssPassCount - 1)
+		{
+			// last pass will write into light buffer, but still use the previous ping-pong result:
+			rt_write = &input_output_lightbuffer_diffuse;
+		}
+
+		const TextureDesc& desc = rt_write->GetDesc();
+
+		device->BindRenderTargets(1, &rt_write, &depthbuffer, cmd);
+
+		ViewPort vp;
+		vp.Width = (float)desc.Width;
+		vp.Height = (float)desc.Height;
+		device->BindViewports(1, &vp, cmd);
+
+
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		const float blur_strength = 400.0f;
+		if (i % 2 == 0)
+		{
+			cb.xPPParams0.x = blur_strength * cb.xPPResolution_rcp.x;
+			cb.xPPParams0.y = 0;
+		}
+		else
+		{
+			cb.xPPParams0.x = 0;
+			cb.xPPParams0.y = blur_strength * cb.xPPResolution_rcp.y;
+		}
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+		device->BindResource(PS, rt_read, TEXSLOT_ONDEMAND0, cmd);
+
+		device->Draw(3, 0, cmd);
+
+		if (i == 0)
+		{
+			// first pass was reading from lightbuffer, so correct here for next pass ping-pong:
+			rt_read = &input_output_temp1;
+			rt_write = &input_output_temp2;
+		}
+		else
+		{
+			// ping-pong between temp render targets:
+			std::swap(rt_read, rt_write);
+		}
+	}
+
+	device->EventEnd(cmd);
+}
+void Postprocess_LightShafts(
+	const Texture2D& input,
+	const Texture2D& output,
+	CommandList cmd,
+	const XMFLOAT2& center
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_LightShafts", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = 0.65f;	// density
+	cb.xPPParams0.y = 0.25f;	// weight
+	cb.xPPParams0.z = 0.945f;	// decay
+	cb.xPPParams0.w = 0.2f;		// exposure
+	cb.xPPParams1.x = center.x;
+	cb.xPPParams1.y = center.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_DepthOfField(
+	const Texture2D& input_sharp,
+	const Texture2D& input_blurred,
+	const Texture2D& output,
+	const Texture2D& lineardepth,
+	CommandList cmd,
+	float focus
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_DepthOfField", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], cmd);
+
+	device->BindResource(CS, &input_sharp, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &input_blurred, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = focus;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Outline(
+	const Texture2D& lineardepth,
+	const Texture2D& output,
+	CommandList cmd,
+	float threshold,
+	float thickness,
+	const XMFLOAT3& color
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_Outline", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE], cmd);
+
+	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = threshold;
+	cb.xPPParams0.y = thickness;
+	cb.xPPParams1.x = color.x;
+	cb.xPPParams1.y = color.y;
+	cb.xPPParams1.z = color.z;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_MotionBlur(
+	const Texture2D& input,
+	const Texture2D& velocity,
+	const Texture2D& output,
+	wiGraphics::CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_MotionBlur", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_BloomSeparate(
+	const Texture2D& input,
+	const Texture2D& output,
+	CommandList cmd,
+	float threshold
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_BloomSeparate", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = threshold;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_FXAA(
+	const Texture2D& input,
+	const Texture2D& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_FXAA", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_FXAA], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_TemporalAA(
+	const Texture2D& input_current,
+	const Texture2D& input_history,
+	const Texture2D& velocity,
+	const Texture2D& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_TemporalAA", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
+
+	device->BindResource(CS, &input_current, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &velocity, TEXSLOT_GBUFFER1, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Colorgrade(
+	const Texture2D& input,
+	const Texture2D& lookuptable,
+	const Texture2D& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_Colorgrade", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &lookuptable, TEXSLOT_ONDEMAND1, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Lineardepth(
+	const Texture2D& input,
+	const Texture2D& output,
+	CommandList cmd
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_Lineardepth", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Sharpen(
+	const Texture2D& input,
+	const Texture2D& output,
+	CommandList cmd,
+	float amount
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_Sharpen", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SHARPEN], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = amount;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Tonemap(
+	const Texture2D& input,
+	const Texture2D& input_luminance,
+	const Texture2D& input_distortion,
+	const Texture2D& output,
+	CommandList cmd,
+	float exposure
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_Tonemap", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &input_luminance, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &input_distortion, TEXSLOT_ONDEMAND2, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = exposure;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
 }
 
 const XMFLOAT4& GetWaterPlane()

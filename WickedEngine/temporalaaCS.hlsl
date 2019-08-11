@@ -1,28 +1,35 @@
 // This can retrieve better velocity vectors so moving objects could be better anti aliased:
 #define DILATE_VELOCITY_BEST_3X3
-
+#include "globals.hlsli"
+#include "ShaderInterop_Renderer.h"
 #include "postProcessHF.hlsli"
-#include "reconstructPositionHF.hlsli"
 #include "tonemapHF.hlsli"
+
+TEXTURE2D(input_current, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(input_history, float4, TEXSLOT_ONDEMAND1);
+
+RWTEXTURE2D(output, float4, 0);
 
 // This hack can improve bright areas:
 #define HDR_CORRECTION
 
-float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
+[numthreads(8, 8, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-	float2 velocity = GetVelocity(PSIn.pos.xy);
-	float2 prevTC = PSIn.tex + velocity;
+	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 velocity = GetVelocity(DTid.xy);
+	const float2 prevUV = uv + velocity;
 
 	float4 neighborhood[9];
-	neighborhood[0] = xTexture[PSIn.pos.xy + float2(-1, -1)];
-	neighborhood[1] = xTexture[PSIn.pos.xy + float2(0, -1)];
-	neighborhood[2] = xTexture[PSIn.pos.xy + float2(1, -1)];
-	neighborhood[3] = xTexture[PSIn.pos.xy + float2(-1, 0)];
-	neighborhood[4] = xTexture[PSIn.pos.xy + float2(0, 0)]; // center
-	neighborhood[5] = xTexture[PSIn.pos.xy + float2(1, 0)];
-	neighborhood[6] = xTexture[PSIn.pos.xy + float2(-1, 1)];
-	neighborhood[7] = xTexture[PSIn.pos.xy + float2(0, 1)];
-	neighborhood[8] = xTexture[PSIn.pos.xy + float2(1, 1)];
+	neighborhood[0] = input_current[DTid.xy + float2(-1, -1)];
+	neighborhood[1] = input_current[DTid.xy + float2(0, -1)];
+	neighborhood[2] = input_current[DTid.xy + float2(1, -1)];
+	neighborhood[3] = input_current[DTid.xy + float2(-1, 0)];
+	neighborhood[4] = input_current[DTid.xy + float2(0, 0)]; // center
+	neighborhood[5] = input_current[DTid.xy + float2(1, 0)];
+	neighborhood[6] = input_current[DTid.xy + float2(-1, 1)];
+	neighborhood[7] = input_current[DTid.xy + float2(0, 1)];
+	neighborhood[8] = input_current[DTid.xy + float2(1, 1)];
 	float4 neighborhoodMin = neighborhood[0];
 	float4 neighborhoodMax = neighborhood[0];
 	[unroll]
@@ -33,7 +40,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	}
 
 	// we cannot avoid the linear filter here because point sampling could sample irrelevant pixels but we try to correct it later:
-	float4 history = xMaskTex.SampleLevel(sampler_linear_clamp, prevTC, 0);
+	float4 history = input_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 
 	// simple correction of image signal incoherency (eg. moving shadows or lighting changes):
 	history = clamp(history, neighborhoodMin, neighborhoodMax);
@@ -48,7 +55,7 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));
 
 	// if information can not be found on the screen, revert to aliased image:
-	blendfactor = is_saturated(prevTC) ? blendfactor : 1.0f;
+	blendfactor = is_saturated(prevUV) ? blendfactor : 1.0f;
 
 #ifdef HDR_CORRECTION
 	history.rgb = tonemap(history.rgb);
@@ -62,5 +69,5 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 	resolved.rgb = inverseTonemap(resolved.rgb);
 #endif
 
-	return resolved;
+	output[DTid.xy] = resolved;
 }

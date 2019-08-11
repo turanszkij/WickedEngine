@@ -1,10 +1,10 @@
 #include "imageHF.hlsli"
 
-float4 main(VertextoPixel PSIn) : SV_TARGET
+float4 main(VertextoPixel input) : SV_TARGET
 {
-	float4 color = xTexture.SampleLevel(Sampler, PSIn.tex.xy, xMipLevel) * xColor;
+	float4 color = xTexture.SampleLevel(Sampler, input.uv0, xMipLevel) * xColor;
 	
-	color *= xMaskTex.SampleLevel(Sampler, PSIn.tex2.xy, xMipLevel);
+	color *= xMaskTex.SampleLevel(Sampler, input.uv1, xMipLevel);
 
 	return color;
 }

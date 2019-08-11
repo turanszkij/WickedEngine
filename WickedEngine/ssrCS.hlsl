@@ -1,6 +1,12 @@
-#include "postProcessHF.hlsli"
+#include "globals.hlsli"
+#include "ShaderInterop_Renderer.h"
 #include "reconstructPositionHF.hlsli"
 #include "brdf.hlsli"
+#include "postProcessHF.hlsli"
+
+TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+
+RWTEXTURE2D(output, float4, 0);
 
 // Avoid stepping zero distance
 static const float	g_fMinRayStep = 0.01f;
@@ -77,10 +83,12 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 	return float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-float4 main(VertexToPixelPostProcess input) : SV_Target
+[numthreads(8, 8, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-	float3 N = decode(texture_gbuffer1[input.pos.xy].xy);
-	float3 P = getPosition(input.tex, texture_depth[input.pos.xy]);
+	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float3 N = decode(texture_gbuffer1[DTid.xy].xy);
+	const float3 P = getPosition(uv, texture_depth[DTid.xy]);
 
 
 	//Reflection vector
@@ -107,8 +115,7 @@ float4 main(VertexToPixelPostProcess input) : SV_Target
 			);
 
 
-	float3 reflectionColor = xTexture.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
+	float3 reflectionColor = input.SampleLevel(sampler_linear_clamp, vCoords.xy, 0).rgb;
 
-	return max(0, float4(reflectionColor, reflectionIntensity));
-
+	output[DTid.xy] = max(0, float4(reflectionColor, reflectionIntensity));
 }

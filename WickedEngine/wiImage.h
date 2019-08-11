@@ -9,13 +9,6 @@ namespace wiImage
 {
 	void Draw(const wiGraphics::Texture2D* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
 
-	void DrawDeferred(
-		const wiGraphics::Texture2D* lightmap_diffuse, 
-		const wiGraphics::Texture2D* lightmap_specular,
-		const wiGraphics::Texture2D* ao, 
-		wiGraphics::CommandList cmd,
-		int stencilref = 0);
-
 	void LoadShaders();
 	void Initialize();
 };
@@ -91,98 +84,8 @@ struct wiImageParams
 	QUALITY quality;
 
 	const wiGraphics::Texture2D* maskMap;
-	const wiGraphics::Texture2D* distortionMap;
-	const wiGraphics::Texture2D* refractionSource;
 	// Generic texture
-	void setMaskMap(const wiGraphics::Texture2D* view) { maskMap = view; }
-	// The normalmap texture which should distort the refraction source
-	void setDistortionMap(const wiGraphics::Texture2D* view) { distortionMap = view; }
-	// The texture which should be distorted
-	void setRefractionSource(const wiGraphics::Texture2D* view) { refractionSource = view; }
-
-	struct PostProcess 
-	{
-		enum POSTPROCESS
-		{
-			DISABLED,
-			BLUR_LDR,
-			BLUR_HDR,
-			LIGHTSHAFT,
-			OUTLINE,
-			DEPTHOFFIELD,
-			MOTIONBLUR,
-			BLOOMSEPARATE,
-			FXAA,
-			SSAO,
-			SSSS,
-			SSR,
-			COLORGRADE,
-			TONEMAP,
-			REPROJECTDEPTHBUFFER,
-			DOWNSAMPLEDEPTHBUFFER,
-			TEMPORALAA,
-			SHARPEN,
-			LINEARDEPTH,
-			POSTPROCESS_COUNT
-		} type = DISABLED;
-
-		union PostProcessParams
-		{
-			struct Outline
-			{
-				float colorR;
-				float colorG;
-				float colorB;
-				float threshold;
-				float thickness;
-			} outline;
-			struct Blur
-			{
-				float x;
-				float y;
-			} blur;
-			Blur ssss;
-			Blur sun;
-			struct SSAO
-			{
-				float range;
-				UINT sampleCount;
-			} ssao;
-			float dofFocus;
-			float sharpen;
-			float exposure;
-			float bloomThreshold;
-		} params;
-
-		bool isActive() const { return type != DISABLED; }
-		void clear() { type = DISABLED; }
-		void setBlur(const XMFLOAT2& direction, bool hdr = false) { type = (hdr ? BLUR_HDR : BLUR_LDR); params.blur.x = direction.x; params.blur.y = direction.y; }
-		void setBloom(float threshold) { type = BLOOMSEPARATE; params.bloomThreshold = threshold; }
-		void setDOF(float focus) { if (focus > 0) { type = DEPTHOFFIELD; params.dofFocus = focus; } }
-		void setMotionBlur() { type = MOTIONBLUR; }
-		void setOutline(float threshold = 0.1f, float thickness = 1.0f, const XMFLOAT3& color = XMFLOAT3(0, 0, 0)) 
-		{ 
-			type = OUTLINE; 
-			params.outline.threshold = threshold; 
-			params.outline.thickness = thickness; 
-			params.outline.colorR = color.x;
-			params.outline.colorG = color.y;
-			params.outline.colorB = color.z;
-		}
-		void setFXAA() { type = FXAA; }
-		void setSSAO(float range = 1.0f, UINT sampleCount = 16) { type = SSAO; params.ssao.range = range; params.ssao.sampleCount = sampleCount; }
-		void setLinDepth() { type = LINEARDEPTH; }
-		void setColorGrade() { type = COLORGRADE; }
-		void setSSSS(const XMFLOAT2& value) { type = SSSS; params.ssss.x = value.x; params.ssss.y = value.y; }
-		void setSSR() { type = SSR; }
-		void setToneMap(float exposure) { type = TONEMAP; params.exposure = exposure; }
-		void setDepthBufferReprojection() { type = REPROJECTDEPTHBUFFER; }
-		void setDepthBufferDownsampling() { type = DOWNSAMPLEDEPTHBUFFER; }
-		void setTemporalAAResolve() { type = TEMPORALAA; }
-		void setSharpen(float value) { if (value > 0) { type = SHARPEN; params.sharpen = value; } }
-		void setLightShaftCenter(const XMFLOAT2& pos) { type = LIGHTSHAFT; params.sun.x = pos.x; params.sun.y = pos.y; }
-	};
-	PostProcess process;
+	void setMaskMap(const wiGraphics::Texture2D* tex) { maskMap = tex; }
 
 	void init() 
 	{
@@ -207,8 +110,6 @@ struct wiImageParams
 		sampleFlag = SAMPLEMODE_MIRROR;
 		quality = QUALITY_LINEAR;
 		maskMap = nullptr;
-		distortionMap = nullptr;
-		refractionSource = nullptr;
 		corners[0] = XMFLOAT2(0, 0);
 		corners[1] = XMFLOAT2(1, 0);
 		corners[2] = XMFLOAT2(0, 1);

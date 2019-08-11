@@ -1,11 +1,11 @@
 #include "postProcessHF.hlsli"
 
-float main(VertexToPixelPostProcess PSIn) : SV_DEPTH
+float main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_DEPTH
 {
-	float4 samples0 = xTexture.GatherRed(sampler_point_clamp, PSIn.tex, int2(-1,-1));
-	float4 samples1 = xTexture.GatherRed(sampler_point_clamp, PSIn.tex, int2(-1,1));
-	float4 samples2 = xTexture.GatherRed(sampler_point_clamp, PSIn.tex, int2(1,-1));
-	float4 samples3 = xTexture.GatherRed(sampler_point_clamp, PSIn.tex, int2(1,1));
+	float4 samples0 = xTexture.GatherRed(sampler_point_clamp, uv, int2(-1,-1));
+	float4 samples1 = xTexture.GatherRed(sampler_point_clamp, uv, int2(-1,1));
+	float4 samples2 = xTexture.GatherRed(sampler_point_clamp, uv, int2(1,-1));
+	float4 samples3 = xTexture.GatherRed(sampler_point_clamp, uv, int2(1,1));
 	
 	float min0 = min(samples0.x, min(samples0.y, min(samples0.z, samples0.w)));
 	float min1 = min(samples1.x, min(samples1.y, min(samples1.z, samples1.w)));

@@ -60,16 +60,16 @@ void RenderPath2D::Unload()
 		{
 			if (y.sprite != nullptr)
 			{
-				y.sprite->CleanUp();
+				y.sprite->Destroy();
 				delete y.sprite;
 			}
 			if (y.font != nullptr)
 			{
-				y.font->CleanUp();
 				delete y.font;
 			}
 		}
 	}
+	layers.clear();
 
 	RenderPath::Unload();
 }
@@ -209,7 +209,7 @@ void RenderPath2D::Render() const
 }
 void RenderPath2D::Compose(CommandList cmd) const
 {
-	wiImageParams fx((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+	wiImageParams fx;
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 

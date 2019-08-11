@@ -25,7 +25,7 @@ wiSprite_BindLua::wiSprite_BindLua(wiSprite* sprite) :sprite(sprite)
 
 wiSprite_BindLua::wiSprite_BindLua(lua_State *L)
 {
-	string name = "", mask = "", normal = "";
+	string name = "", mask = "";
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
@@ -33,13 +33,9 @@ wiSprite_BindLua::wiSprite_BindLua(lua_State *L)
 		if (argc > 1)
 		{
 			mask = wiLua::SGetString(L, 2);
-			if (argc > 2)
-			{
-				normal = wiLua::SGetString(L, 3);
-			}
 		}
 	}
-	sprite = new wiSprite(name, mask, normal);
+	sprite = new wiSprite(name, mask);
 }
 
 
@@ -116,7 +112,7 @@ int wiSprite_BindLua::Destroy(lua_State* L)
 {
 	if (sprite != nullptr)
 	{
-		sprite->CleanUp();
+		sprite->Destroy();
 		delete sprite;
 		sprite = nullptr;
 	}

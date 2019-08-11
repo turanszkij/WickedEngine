@@ -321,5 +321,13 @@ CBUFFER(DispatchParamsCB, CBSLOT_RENDERER_DISPATCHPARAMS)
 	uint	xDispatchParams_value1;
 };
 
+CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
+{
+	uint2		xPPResolution;
+	float2		xPPResolution_rcp;
+	float4		xPPParams0;
+	float4		xPPParams1;
+};
+
 
 #endif // _SHADERINTEROP_RENDERER_H_

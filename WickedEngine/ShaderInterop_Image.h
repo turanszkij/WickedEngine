@@ -2,7 +2,7 @@
 #define _SHADERINTEROP_IMAGE_H_
 #include "ShaderInterop.h"
 
-CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
+CBUFFER(ImageCB, CBSLOT_IMAGE)
 {
 	float4		xCorners[4];
 	float4		xTexMulAdd;
@@ -11,11 +11,6 @@ CBUFFER(ImageCB, CBSLOT_IMAGE_IMAGE)
 	float2		padding_imageCB;
 	uint		xMirror;
 	float		xMipLevel;
-};
-CBUFFER(PostProcessCB, CBSLOT_IMAGE_POSTPROCESS)
-{
-	float4		xPPParams0;
-	float4		xPPParams1;
 };
 
 

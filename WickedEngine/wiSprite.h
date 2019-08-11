@@ -7,27 +7,17 @@ class wiResourceManager;
 class wiSprite
 {
 private:
-	std::string texture, mask, normal;
+	std::string texture, mask;
 	const wiGraphics::Texture2D* texturePointer = nullptr;
-	const wiGraphics::Texture2D* normalPointer = nullptr;
 	const wiGraphics::Texture2D* maskPointer = nullptr;
-	wiResourceManager* ContentHolder = nullptr;
 public:
-	wiSprite(wiResourceManager* contentHolder = nullptr);
-	wiSprite(const std::string& newTexture, const std::string& newMask, const std::string& newNormal, wiResourceManager* contentHolder = nullptr);
-	wiSprite(const std::string& newTexture, const std::string& newMask, wiResourceManager* contentHolder = nullptr);
-	wiSprite(const std::string& newTexture, wiResourceManager* contentHolder = nullptr);
-	void Init();
-	void CreateReference(const std::string& newTexture, const std::string& newMask, const std::string& newNormal);
-	void CleanUp();
+	wiSprite(const std::string& newTexture = "", const std::string& newMask = "");
+	void Destroy();
 
 	virtual void FixedUpdate(float speed);
 	virtual void Update(float dt);
-	void Draw(const wiGraphics::Texture2D* refracRes, wiGraphics::CommandList cmd) const;
 	void Draw(wiGraphics::CommandList cmd) const;
 	void DrawNormal(wiGraphics::CommandList cmd) const;
-
-	std::string name;
 
 	wiImageParams params;
 

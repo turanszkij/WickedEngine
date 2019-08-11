@@ -145,8 +145,121 @@ namespace wiRenderer
 		const wiGraphics::Texture2D* lightbuffer_specular = nullptr);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
 	void ResolveMSAADepthBuffer(const wiGraphics::Texture2D* dst, const wiGraphics::Texture2D* src, wiGraphics::CommandList cmd);
+	void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::CommandList cmd);
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	const wiGraphics::Texture2D* ComputeLuminance(const wiGraphics::Texture2D* sourceImage, wiGraphics::CommandList cmd);
+
+	void DeferredComposition(
+		const wiGraphics::Texture2D& lightmap_diffuse,
+		const wiGraphics::Texture2D& lightmap_specular,
+		const wiGraphics::Texture2D& ao,
+		wiGraphics::CommandList cmd);
+
+
+	void Postprocess_Blur_Gaussian(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& temp,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float amountX = 1.0f,
+		float amountY = 1.0f,
+		float mip = 0.0f
+	);
+	void Postprocess_SSAO(
+		const wiGraphics::Texture2D& depthbuffer, 
+		const wiGraphics::Texture2D& lineardepth, 
+		const wiGraphics::Texture2D& output, 
+		wiGraphics::CommandList cmd,
+		float range = 1.0f,
+		uint32_t samplecount = 16
+	);
+	void Postprocess_SSR(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& depthbuffer,
+		const wiGraphics::Texture2D& lineardepth,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_SSS(
+		const wiGraphics::Texture2D& depthbuffer,
+		const wiGraphics::Texture2D& lineardepth,
+		const wiGraphics::Texture2D& gbuffer0,
+		const wiGraphics::Texture2D& input_output_lightbuffer_diffuse,
+		const wiGraphics::Texture2D& input_output_temp1,
+		const wiGraphics::Texture2D& input_output_temp2,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_LightShafts(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		const XMFLOAT2& center
+	);
+	void Postprocess_DepthOfField(
+		const wiGraphics::Texture2D& input_sharp,
+		const wiGraphics::Texture2D& input_blurred,
+		const wiGraphics::Texture2D& output,
+		const wiGraphics::Texture2D& lineardepth,
+		wiGraphics::CommandList cmd,
+		float focus = 10.0f
+	);
+	void Postprocess_Outline(
+		const wiGraphics::Texture2D& lineardepth,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float threshold = 0.1f,
+		float thickness = 1.0f,
+		const XMFLOAT3& color = XMFLOAT3(0, 0, 0)
+	);
+	void Postprocess_MotionBlur(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& velocity,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_BloomSeparate(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float threshold
+	);
+	void Postprocess_FXAA(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_TemporalAA(
+		const wiGraphics::Texture2D& input_current,
+		const wiGraphics::Texture2D& input_history,
+		const wiGraphics::Texture2D& velocity,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_Colorgrade(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& lookuptable,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_Lineardepth(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd
+	);
+	void Postprocess_Sharpen(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float amount = 1.0f
+	);
+	void Postprocess_Tonemap(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& input_luminance,
+		const wiGraphics::Texture2D& input_distortion,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float exposure
+	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(wiGraphics::CommandList cmd);

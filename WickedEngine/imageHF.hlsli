@@ -5,21 +5,14 @@
 
 #define xTexture		texture_0
 #define xMaskTex		texture_1
-#define xDistortionTex	texture_2
 
 SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 
 struct VertextoPixel
 {
 	float4 pos				: SV_POSITION;
-	float2 tex				: TEXCOORD0;
-	float2 tex2				: TEXCOORD1;
-	float4 pos2D			: TEXCOORD2;
-};
-struct VertexToPixelPostProcess
-{
-	float4 pos				: SV_POSITION;
-	float2 tex				: TEXCOORD0;
+	float2 uv0				: TEXCOORD0;
+	float2 uv1				: TEXCOORD1;
 };
 
 #endif // _IMAGEHF_

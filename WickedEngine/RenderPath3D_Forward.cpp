@@ -19,6 +19,10 @@ void RenderPath3D_Forward::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		if (getMSAASampleCount() == 1)
+		{
+			desc.BindFlags |= BIND_UNORDERED_ACCESS;
+		}
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		desc.SampleDesc.Count = getMSAASampleCount();
@@ -34,6 +38,7 @@ void RenderPath3D_Forward::ResizeBuffers()
 		if (getMSAASampleCount() > 1)
 		{
 			desc.SampleDesc.Count = 1;
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
 			desc.Format = wiRenderer::RTFormat_hdr;
 			device->CreateTexture2D(&desc, nullptr, &rtMain_resolved[0]);

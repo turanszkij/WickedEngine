@@ -1,11 +1,16 @@
-#include "imageHF.hlsli"
 #include "fullScreenTriangleHF.hlsli"
 
-VertexToPixelPostProcess main(uint vI : SV_VERTEXID)
+struct Output
 {
-	VertexToPixelPostProcess Out;
+	float4 pos : SV_Position;
+	float2 uv : TEXCOORD;
+};
 
-	FullScreenTriangle(vI, Out.pos, Out.tex);
+Output main(uint vI : SV_VERTEXID)
+{
+	Output Out;
+
+	FullScreenTriangle(vI, Out.pos, Out.uv);
 
 	return Out;
 }

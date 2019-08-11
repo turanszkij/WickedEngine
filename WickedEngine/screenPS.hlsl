@@ -1,6 +1,6 @@
 #include "imageHF.hlsli"
 
-float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
+float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
-	return xTexture.SampleLevel(Sampler, PSIn.tex, 0);
+	return xTexture.SampleLevel(Sampler, uv, xMipLevel) * xColor;
 }

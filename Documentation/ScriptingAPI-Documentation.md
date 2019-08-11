@@ -164,7 +164,7 @@ Gives you the ability to render text with a custom font.
 
 ### Sprite
 Render images on the screen.
-- [constructor]Sprite(opt string texture, opt string maskTexture, opt string normalMapTexture)
+- [constructor]Sprite(opt string texture, opt string maskTexture)
 - SetParams(ImageParams effects)
 - GetParams() : ImageParams result
 - SetAnim(SpriteAnim anim)

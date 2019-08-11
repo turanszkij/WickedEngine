@@ -1,8 +1,11 @@
-#include "postProcessHF.hlsli"
+#include "globals.hlsli"
+#include "ShaderInterop_Renderer.h"
 #include "reconstructPositionHF.hlsli"
 
 // Define this to use reduced precision, but faster depth buffer:
 #define USE_LINEARDEPTH
+
+RWTEXTURE2D(output, unorm float, 0);
 
 // Hemisphere point generation from:
 //	http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
@@ -26,34 +29,35 @@ float3 hemisphereSample_uniform(float u, float v) {
 	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
 
-float3 hemisphereSample_cos(float u, float v) {
-	float phi = v * 2.0 * PI;
-	float cosTheta = sqrt(1.0 - u);
-	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-}
-
-inline float3x3 GetTangentSpace(float3 normal)
+[numthreads(8, 8, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-	// Choose a helper vector for the cross product
-	float3 helper = abs(normal.x) > 0.99f ? float3(0, 0, 1) : float3(1, 0, 0);
-
-	// Generate vectors
-	float3 tangent = normalize(cross(normal, helper));
-	float3 binormal = normalize(cross(normal, tangent));
-	return float3x3(tangent, binormal, normal);
-}
-
-float main(VertexToPixelPostProcess input) : SV_Target
-{
+	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 	const float range = xPPParams0.x;
 	const uint sampleCount = xPPParams0.y;
 
 	float seed = 1;
-	const float3 noise = float3(rand(seed, input.tex), rand(seed, input.tex), rand(seed, input.tex)) * 2 - 1;
-	const float3 P = getPosition(input.tex, texture_depth.SampleLevel(sampler_linear_clamp, input.tex, 0));
-	//const float3 normal = decode(texture_gbuffer1.SampleLevel(sampler_linear_clamp, input.tex, 0).xy);
-	const float3 normal = normalize(cross(ddx(P), ddy(P))); // instead of reading normals g-buffer, reconstruct flat normals from position
+	const float3 noise = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
+	
+	// reconstruct flat normals from depth buffer:
+	uint2 dim;
+	texture_depth.GetDimensions(dim.x, dim.y);
+	const float2 dim_rcp = rcp(dim);
+
+	const float2 uv1 = uv + float2(1, 0) * dim_rcp;
+	const float2 uv2 = uv + float2(0, -1) * dim_rcp;
+
+	const float depth0 = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+	const float depth1 = texture_depth.SampleLevel(sampler_linear_clamp, uv1, 0);
+	const float depth2 = texture_depth.SampleLevel(sampler_linear_clamp, uv2, 0);
+
+	const float3 p0 = getPosition(uv, depth0);
+	const float3 p1 = getPosition(uv1, depth1);
+	const float3 p2 = getPosition(uv2, depth2);
+
+	const float3 normal = normalize(cross(p2 - p0, p1 - p0));
+
+	const float3 P = p0;
 
 	const float3 tangent = normalize(noise - normal * dot(noise, normal));
 	const float3 bitangent = cross(normal, tangent);
@@ -65,7 +69,7 @@ float main(VertexToPixelPostProcess input) : SV_Target
 		const float2 hamm = hammersley2d(i, sampleCount);
 		const float3 hemisphere = hemisphereSample_uniform(hamm.x, hamm.y);
 		const float3 cone = mul(hemisphere, tangentSpace);
-		const float ray_range = range * lerp(0.2f, 1.0f, rand(seed, input.tex)); // modulate ray-length a bit to avoid uniform look
+		const float ray_range = range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
 		const float3 sam = P + cone * ray_range;
 
 		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xFrame_MainCamera_VP);
@@ -89,5 +93,5 @@ float main(VertexToPixelPostProcess input) : SV_Target
 	}
 	ao /= (float)sampleCount;
 
-	return saturate(1 - ao);
+	output[DTid.xy] = saturate(1 - ao);
 }

@@ -38,7 +38,7 @@ void RenderPath3D_Deferred::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = wiRenderer::RTFormat_hdr;
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
@@ -196,74 +196,15 @@ void RenderPath3D_Deferred::RenderSSS(CommandList cmd) const
 {
 	if (getSSSEnabled())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiImageParams fx((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y);
-
-		device->EventBegin("SSS", cmd);
-
-		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(&rtSSS[0], clear, cmd);
-		device->ClearRenderTarget(&rtSSS[1], clear, cmd);
-
-		ViewPort vp;
-		vp.Width = (float)rtSSS[0].GetDesc().Width;
-		vp.Height = (float)rtSSS[0].GetDesc().Height;
-		device->BindViewports(1, &vp, cmd);
-
-		fx.stencilRef = STENCILREF_SKIN;
-		fx.stencilComp = STENCILMODE_EQUAL;
-		fx.quality = QUALITY_LINEAR;
-		fx.sampleFlag = SAMPLEMODE_CLAMP;
-		static int sssPassCount = 6;
-		for (int i = 0; i < sssPassCount; ++i)
-		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-
-			const Texture2D* rts[] = { &rtSSS[i % 2] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-
-			XMFLOAT2 dir = XMFLOAT2(0, 0);
-			static float stren = 0.018f;
-			if (i % 2 == 0)
-			{
-				dir.x = stren * ((float)wiRenderer::GetInternalResolution().y / (float)wiRenderer::GetInternalResolution().x);
-			}
-			else
-			{
-				dir.y = stren;
-			}
-			fx.process.setSSSS(dir);
-			if (i == 0)
-			{
-				wiImage::Draw(&lightbuffer_diffuse, fx, cmd);
-			}
-			else
-			{
-				wiImage::Draw(&rtSSS[(i + 1) % 2], fx, cmd);
-			}
-		}
-		fx.process.clear();
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-		{
-			const Texture2D* rts[] = { &rtSSS[0] };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-			device->ClearRenderTarget(rts[0], clear, cmd);
-
-			fx.setMaskMap(nullptr);
-			fx.quality = QUALITY_NEAREST;
-			fx.sampleFlag = SAMPLEMODE_CLAMP;
-			fx.blendFlag = BLENDMODE_OPAQUE;
-			fx.stencilRef = STENCILREF_SKIN;
-			fx.stencilComp = STENCILMODE_NOT;
-			fx.enableFullScreen();
-			fx.enableHDR();
-			wiImage::Draw(&lightbuffer_diffuse, fx, cmd);
-			fx.stencilRef = STENCILREF_SKIN;
-			fx.stencilComp = STENCILMODE_EQUAL;
-			wiImage::Draw(&rtSSS[1], fx, cmd);
-		}
-
-		device->EventEnd(cmd);
+		wiRenderer::Postprocess_SSS(
+			depthBuffer,
+			rtLinearDepth,
+			rtGBuffer[0],
+			lightbuffer_diffuse,
+			rtSSS[0],
+			rtSSS[1],
+			cmd
+		);
 	}
 }
 void RenderPath3D_Deferred::RenderDecals(CommandList cmd) const
@@ -294,9 +235,11 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 	vp.Height = (float)rts[0]->GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
-	wiImage::DrawDeferred((getSSSEnabled() ? &rtSSS[0] : &lightbuffer_diffuse),
-		&lightbuffer_specular
-		, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite()
-		, cmd, STENCILREF_DEFAULT);
+	wiRenderer::DeferredComposition(
+		lightbuffer_diffuse,
+		lightbuffer_specular,
+		getSSAOEnabled() ? rtSSAO[0] : *wiTextureHelper::getWhite(),
+		cmd
+	);
 	wiRenderer::DrawSky(cmd);
 }

@@ -22,16 +22,14 @@ static const float4 kernel[] = {
     float4(0.00471691, 0.000184771, 5.07565e-005, 2),
 };
 
-float4 main(VertexToPixelPostProcess input) : SV_TARGET
+float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
-    // Fetch color and linear depth for current pixel:
-    float4 colorM = xTexture.Sample(Sampler, input.tex);
-	float depthM = texture_lineardepth[input.pos.xy];
-	float sss = texture_gbuffer0[input.pos.xy].a;
-	sss *= 0.01f;
+    const float4 color_ref = texture_0[pos.xy];
+	const float depth_ref = texture_lineardepth[pos.xy] * g_xFrame_MainCamera_ZFarP;
+	const float sss = texture_gbuffer0[pos.xy].a;
 
     // Accumulate center sample, multiplying it with its gaussian weight:
-    float4 colorBlurred = colorM;
+    float4 colorBlurred = color_ref;
     colorBlurred.rgb *= kernel[0].rgb;
 
     // Calculate the step that we will use to fetch the surrounding pixels,
@@ -40,20 +38,19 @@ float4 main(VertexToPixelPostProcess input) : SV_TARGET
     // The closer the pixel, the stronger the effect needs to be, hence
     // the factor 1.0 / depthM.
 	float2 step = xPPParams0.xy * sss;
-    float2 finalStep = colorM.a * step / depthM;
+    float2 finalStep = color_ref.a * step / depth_ref;
 
     // Accumulate the other samples:
-    [unroll]
-    for (int i = 1; i < SSSS_N_SAMPLES; i++) {
+    for (int i = 1; i < SSSS_N_SAMPLES; i++) 
+	{
         // Fetch color and depth for current sample:
-        float2 offset = input.tex + kernel[i].a * finalStep;
-        float3 color = xTexture.SampleLevel(Sampler, offset, 0).rgb;
-        float depth = ( texture_lineardepth.SampleLevel(Sampler,offset,0).r );
+        float2 offset = uv + kernel[i].a * finalStep;
+        float3 color = texture_0.SampleLevel(sampler_linear_clamp, offset, 0).rgb;
+		float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, offset, 0) * g_xFrame_MainCamera_ZFarP;
 
         // If the difference in depth is huge, we lerp color back to "colorM":
-		static const float correction = 500;
-        float s = min(0.0125 * correction * abs(depthM - depth), 1.0);
-        color = lerp(color, colorM.rgb, s);
+        const float edge_fallback = saturate(abs(depth_ref - depth));
+        color = lerp(color, color_ref.rgb, edge_fallback);
 
         // Accumulate:
         colorBlurred.rgb += kernel[i].rgb * color.rgb;

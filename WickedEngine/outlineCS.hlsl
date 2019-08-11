@@ -1,18 +1,21 @@
-#include "postProcessHF.hlsli"
+#include "globals.hlsli"
+#include "ShaderInterop_Renderer.h"
 
-float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
+RWTEXTURE2D(output, float4, 0);
+
+[numthreads(8, 8, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-	float outlineThreshold = xPPParams0.x;
-	float outlineThickness = xPPParams0.y;
-	float3 outlineColor = xPPParams1.xyz;
+	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+
+	const float midDepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0);
+
+	const float outlineThickness = xPPParams0.y;
+	const float3 outlineColor = xPPParams1.xyz;
+	const float outlineThreshold = xPPParams0.x * midDepth;
 
 	float2 dim;
 	texture_lineardepth.GetDimensions(dim.x, dim.y);
-
-	float2 uv = PSIn.tex.xy;
-	float midDepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0);
-
-	outlineThreshold *= midDepth;
 
 	float2 ox = float2(outlineThickness / dim.x, 0.0);
 	float2 oy = float2(0.0, outlineThickness / dim.y);
@@ -62,5 +65,6 @@ float4 main(VertexToPixelPostProcess PSIn) : SV_TARGET
 
 	float edge = dist > outlineThreshold ? 1 : 0;
 
-	return float4(outlineColor.rgb, edge);
+	float4 color_prev = output[DTid.xy];
+	output[DTid.xy] = lerp(color_prev, float4(outlineColor.rgb, color_prev.a), edge);
 }

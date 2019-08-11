@@ -13,9 +13,8 @@
 
 // On demand buffers:
 // These are bound on demand and alive until another is bound at the same slot
-#define CBSLOT_IMAGE_IMAGE						2
-#define CBSLOT_IMAGE_POSTPROCESS				3
-#define CBSLOT_FONT								4
+#define CBSLOT_IMAGE							2
+#define CBSLOT_FONT								3
 
 #define CBSLOT_RENDERER_MISC					4
 #define CBSLOT_RENDERER_CAMERA					5
@@ -31,6 +30,7 @@
 #define CBSLOT_RENDERER_TRACED					7
 #define CBSLOT_RENDERER_BVH						7
 #define CBSLOT_RENDERER_UTILITY					7
+#define CBSLOT_RENDERER_POSTPROCESS				7
 
 #define CBSLOT_OTHER_EMITTEDPARTICLE			7
 #define CBSLOT_OTHER_HAIRPARTICLE				7
