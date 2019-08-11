@@ -34,22 +34,33 @@ float4 main(VertexToPixel input) : SV_TARGET
 	[loop]
 	for (uint i = 0; i < sampleCount; ++i)
 	{
-		float3 attenuation = 1;
+		bool valid = false;
 
-		float3 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]).xyz; // ortho matrix, no divide by .w
-		float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-
-		[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
+		for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
 		{
-			attenuation *= shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + 0);
+			float3 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz; // ortho matrix, no divide by .w
+			float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+
+			[branch]if (is_saturated(ShTex))
+			{
+				float3 attenuation = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
+
+				attenuation *= GetFog(cameraDistance - marchedDistance);
+
+				accumulation += attenuation;
+
+				marchedDistance += stepSize;
+				P = P + V * stepSize;
+
+				valid = true;
+				break;
+			}
 		}
 
-		attenuation *= GetFog(cameraDistance - marchedDistance);
-
-		accumulation += attenuation;
-
-		marchedDistance += stepSize;
-		P = P + V * stepSize;
+		if (!valid)
+		{
+			break;
+		}
 	}
 
 	accumulation /= sampleCount;
