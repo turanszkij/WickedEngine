@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "impostorHF.hlsli"
-#include "ditherHF.hlsli"
 
 float4 main(VSOut input) : SV_TARGET
 {

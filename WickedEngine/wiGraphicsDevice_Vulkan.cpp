@@ -23,15 +23,10 @@ namespace wiGraphics
 	// Converters:
 	inline VkFormat _ConvertFormat(FORMAT value)
 	{
-		// _TYPELESS is converted to _UINT or _FLOAT or _UNORM in that order depending on availability!
-		// X channel is converted to regular missing channel (eg. FORMAT_B8G8R8X8_UNORM -> VK_FORMAT_B8G8R8A8_UNORM)
 		switch (value)
 		{
 		case FORMAT_UNKNOWN:
 			return VK_FORMAT_UNDEFINED;
-			break;
-		case FORMAT_R32G32B32A32_TYPELESS:
-			return VK_FORMAT_R32G32B32A32_UINT;
 			break;
 		case FORMAT_R32G32B32A32_FLOAT:
 			return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -42,9 +37,6 @@ namespace wiGraphics
 		case FORMAT_R32G32B32A32_SINT:
 			return VK_FORMAT_R32G32B32A32_SINT;
 			break;
-		case FORMAT_R32G32B32_TYPELESS:
-			return VK_FORMAT_R32G32B32_UINT;
-			break;
 		case FORMAT_R32G32B32_FLOAT:
 			return VK_FORMAT_R32G32B32_SFLOAT;
 			break;
@@ -53,9 +45,6 @@ namespace wiGraphics
 			break;
 		case FORMAT_R32G32B32_SINT:
 			return VK_FORMAT_R32G32B32_SINT;
-			break;
-		case FORMAT_R16G16B16A16_TYPELESS:
-			return VK_FORMAT_R16G16B16A16_UINT;
 			break;
 		case FORMAT_R16G16B16A16_FLOAT:
 			return VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -72,9 +61,6 @@ namespace wiGraphics
 		case FORMAT_R16G16B16A16_SINT:
 			return VK_FORMAT_R16G16B16A16_SINT;
 			break;
-		case FORMAT_R32G32_TYPELESS:
-			return VK_FORMAT_R32G32_UINT;
-			break;
 		case FORMAT_R32G32_FLOAT:
 			return VK_FORMAT_R32G32_SFLOAT;
 			break;
@@ -85,19 +71,10 @@ namespace wiGraphics
 			return VK_FORMAT_R32G32_SINT;
 			break;
 		case FORMAT_R32G8X24_TYPELESS:
-			return VK_FORMAT_D32_SFLOAT_S8_UINT; // possible mismatch!
+			return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			break;
 		case FORMAT_D32_FLOAT_S8X24_UINT:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			break;
-		case FORMAT_R32_FLOAT_X8X24_TYPELESS:
-			return VK_FORMAT_R32G32_SFLOAT; // possible mismatch!
-			break;
-		case FORMAT_X32_TYPELESS_G8X24_UINT:
-			return VK_FORMAT_R32G32_UINT; // possible mismatch!
-			break;
-		case FORMAT_R10G10B10A2_TYPELESS:
-			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
 			break;
 		case FORMAT_R10G10B10A2_UNORM:
 			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
@@ -107,9 +84,6 @@ namespace wiGraphics
 			break;
 		case FORMAT_R11G11B10_FLOAT:
 			return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-			break;
-		case FORMAT_R8G8B8A8_TYPELESS:
-			return VK_FORMAT_R8G8B8A8_UINT;
 			break;
 		case FORMAT_R8G8B8A8_UNORM:
 			return VK_FORMAT_R8G8B8A8_UNORM;
@@ -125,9 +99,6 @@ namespace wiGraphics
 			break;
 		case FORMAT_R8G8B8A8_SINT:
 			return VK_FORMAT_R8G8B8A8_SINT;
-			break;
-		case FORMAT_R16G16_TYPELESS:
-			return VK_FORMAT_R16G16_UINT;
 			break;
 		case FORMAT_R16G16_FLOAT:
 			return VK_FORMAT_R16G16_SFLOAT;
@@ -165,15 +136,6 @@ namespace wiGraphics
 		case FORMAT_D24_UNORM_S8_UINT:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
 			break;
-		case FORMAT_R24_UNORM_X8_TYPELESS:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_X24_TYPELESS_G8_UINT:
-			return VK_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_R8G8_TYPELESS:
-			return VK_FORMAT_R8G8_UINT;
-			break;
 		case FORMAT_R8G8_UNORM:
 			return VK_FORMAT_R8G8_UNORM;
 			break;
@@ -207,9 +169,6 @@ namespace wiGraphics
 		case FORMAT_R16_SINT:
 			return VK_FORMAT_R16_SINT;
 			break;
-		case FORMAT_R8_TYPELESS:
-			return VK_FORMAT_R8_UINT;
-			break;
 		case FORMAT_R8_UNORM:
 			return VK_FORMAT_R8_UNORM;
 			break;
@@ -222,32 +181,11 @@ namespace wiGraphics
 		case FORMAT_R8_SINT:
 			return VK_FORMAT_R8_SINT;
 			break;
-		case FORMAT_A8_UNORM:
-			return VK_FORMAT_R8_UNORM; // mismatch!
-			break;
-		case FORMAT_R1_UNORM:
-			return VK_FORMAT_R8_UNORM; // mismatch!
-			break;
-		case FORMAT_R9G9B9E5_SHAREDEXP:
-			return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32; // maybe ok
-			break;
-		case FORMAT_R8G8_B8G8_UNORM:
-			return VK_FORMAT_R8G8B8A8_UNORM; // mismatch
-			break;
-		case FORMAT_G8R8_G8B8_UNORM:
-			return VK_FORMAT_R8G8B8A8_UNORM; // mismatch
-			break;
-		case FORMAT_BC1_TYPELESS:
-			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-			break;
 		case FORMAT_BC1_UNORM:
 			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
 			break;
 		case FORMAT_BC1_UNORM_SRGB:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-			break;
-		case FORMAT_BC2_TYPELESS:
-			return VK_FORMAT_BC2_UNORM_BLOCK;
 			break;
 		case FORMAT_BC2_UNORM:
 			return VK_FORMAT_BC2_UNORM_BLOCK;
@@ -255,17 +193,11 @@ namespace wiGraphics
 		case FORMAT_BC2_UNORM_SRGB:
 			return VK_FORMAT_BC2_SRGB_BLOCK;
 			break;
-		case FORMAT_BC3_TYPELESS:
-			return VK_FORMAT_BC3_UNORM_BLOCK;
-			break;
 		case FORMAT_BC3_UNORM:
 			return VK_FORMAT_BC3_UNORM_BLOCK;
 			break;
 		case FORMAT_BC3_UNORM_SRGB:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
-			break;
-		case FORMAT_BC4_TYPELESS:
-			return VK_FORMAT_BC4_UNORM_BLOCK;
 			break;
 		case FORMAT_BC4_UNORM:
 			return VK_FORMAT_BC4_UNORM_BLOCK;
@@ -273,44 +205,17 @@ namespace wiGraphics
 		case FORMAT_BC4_SNORM:
 			return VK_FORMAT_BC4_SNORM_BLOCK;
 			break;
-		case FORMAT_BC5_TYPELESS:
-			return VK_FORMAT_BC5_UNORM_BLOCK;
-			break;
 		case FORMAT_BC5_UNORM:
 			return VK_FORMAT_BC5_UNORM_BLOCK;
 			break;
 		case FORMAT_BC5_SNORM:
 			return VK_FORMAT_BC5_SNORM_BLOCK;
 			break;
-		case FORMAT_B5G6R5_UNORM:
-			return VK_FORMAT_B5G6R5_UNORM_PACK16;
-			break;
-		case FORMAT_B5G5R5A1_UNORM:
-			return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
-			break;
 		case FORMAT_B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_UNORM;
 			break;
-		case FORMAT_B8G8R8X8_UNORM:
-			return VK_FORMAT_B8G8R8A8_UNORM;
-			break;
-		case FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
-			return VK_FORMAT_B10G11R11_UFLOAT_PACK32; // mismatch
-			break;
-		case FORMAT_B8G8R8A8_TYPELESS:
-			return VK_FORMAT_B8G8R8A8_UINT;
-			break;
 		case FORMAT_B8G8R8A8_UNORM_SRGB:
 			return VK_FORMAT_B8G8R8A8_SRGB;
-			break;
-		case FORMAT_B8G8R8X8_TYPELESS:
-			return VK_FORMAT_B8G8R8A8_UINT;
-			break;
-		case FORMAT_B8G8R8X8_UNORM_SRGB:
-			return VK_FORMAT_B8G8R8A8_SRGB;
-			break;
-		case FORMAT_BC6H_TYPELESS:
-			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
 			break;
 		case FORMAT_BC6H_UF16:
 			return VK_FORMAT_BC6H_UFLOAT_BLOCK;
@@ -318,19 +223,11 @@ namespace wiGraphics
 		case FORMAT_BC6H_SF16:
 			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
 			break;
-		case FORMAT_BC7_TYPELESS:
-			return VK_FORMAT_BC7_UNORM_BLOCK; // maybe mismatch
-			break;
 		case FORMAT_BC7_UNORM:
 			return VK_FORMAT_BC7_UNORM_BLOCK;
 			break;
 		case FORMAT_BC7_UNORM_SRGB:
 			return VK_FORMAT_BC7_SRGB_BLOCK;
-			break;
-		case FORMAT_B4G4R4A4_UNORM:
-			return VK_FORMAT_B4G4R4A4_UNORM_PACK16;
-			break;
-		default:
 			break;
 		}
 		return VK_FORMAT_UNDEFINED;

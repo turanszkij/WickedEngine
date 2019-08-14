@@ -1,7 +1,4 @@
 #include "globals.hlsli"
-#include "reconstructPositionHF.hlsli"
-#include "tangentComputeHF.hlsli"
-#include "packHF.hlsli"
 
 
 struct VertexToPixel{
@@ -20,9 +17,9 @@ PixelOutputType main(VertexToPixel PSIn)
 
 	float2 screenPos = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f,-0.5f) + 0.5f;
 	float depth = texture_depth.Load(int3(PSIn.pos.xy,0)).r;
-	float3 pos3D = getPosition(screenPos,depth);
+	float3 pos3D = reconstructPosition(screenPos,depth);
 
-	float3 clipSpace = mul(float4(pos3D, 1), xDecalVP).xyz;
+	float3 clipSpace = mul(xDecalVP, float4(pos3D, 1)).xyz;
 	float3 projTex = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 	
 	clip( ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))?1:-1 );

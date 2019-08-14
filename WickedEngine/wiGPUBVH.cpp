@@ -139,32 +139,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 			for (auto& subset : mesh.subsets)
 			{
 				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-				TracedRenderingMaterial global_material;
-
-				// Copy base params:
-				global_material.baseColor = material.baseColor;
-				global_material.emissiveColor = material.emissiveColor;
-				global_material.texMulAdd = material.texMulAdd;
-				global_material.roughness = material.roughness;
-				global_material.reflectance = material.reflectance;
-				global_material.metalness = material.metalness;
-				global_material.refractionIndex = material.refractionIndex;
-				global_material.subsurfaceScattering = material.subsurfaceScattering;
-				global_material.normalMapStrength = material.normalMapStrength;
-				global_material.normalMapFlip = (material._flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
-				global_material.parallaxOcclusionMapping = material.parallaxOcclusionMapping;
-				global_material.displacementMapping = material.displacementMapping;
-				global_material.useVertexColors = material.IsUsingVertexColors() ? 1 : 0;
-				global_material.uvset_baseColorMap = material.baseColorMap == nullptr ? -1 : (int)material.uvset_baseColorMap;
-				global_material.uvset_surfaceMap = material.surfaceMap == nullptr ? -1 : (int)material.uvset_surfaceMap;
-				global_material.uvset_normalMap = material.normalMap == nullptr ? -1 : (int)material.uvset_normalMap;
-				global_material.uvset_displacementMap = material.displacementMap == nullptr ? -1 : (int)material.uvset_displacementMap;
-				global_material.uvset_emissiveMap = material.emissiveMap == nullptr ? -1 : (int)material.uvset_emissiveMap;
-				global_material.uvset_occlusionMap = material.occlusionMap == nullptr ? -1 : (int)material.uvset_occlusionMap;
-				global_material.specularGlossinessWorkflow = material.IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
-				global_material.occlusion_primary = material.IsOcclusionEnabled_Primary() ? 1 : 0;
-				global_material.occlusion_secondary = material.IsOcclusionEnabled_Secondary() ? 1 : 0;
+				ShaderMaterial global_material = material.CreateShaderMaterial();
 
 				// Add extended properties:
 				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
@@ -251,13 +226,13 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 		return;
 	}
 
-	if (globalMaterialBuffer.GetDesc().ByteWidth != sizeof(TracedRenderingMaterial) * materialArray.size())
+	if (globalMaterialBuffer.GetDesc().ByteWidth != sizeof(ShaderMaterial) * materialArray.size())
 	{
 		GPUBufferDesc desc;
 		HRESULT hr;
 
 		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.StructureByteStride = sizeof(TracedRenderingMaterial);
+		desc.StructureByteStride = sizeof(ShaderMaterial);
 		desc.ByteWidth = desc.StructureByteStride * (UINT)materialArray.size();
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
@@ -267,7 +242,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 		hr = device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
 		assert(SUCCEEDED(hr));
 	}
-	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(TracedRenderingMaterial) * (int)materialArray.size());
+	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(ShaderMaterial) * (int)materialArray.size());
 
 }
 

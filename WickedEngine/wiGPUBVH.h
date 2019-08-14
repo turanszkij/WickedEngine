@@ -5,7 +5,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiSceneSystem_Decl.h"
 #include "wiRectPacker.h"
-#include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_Renderer.h"
 
 #include <vector>
 #include <unordered_map>
@@ -29,7 +29,7 @@ private:
 	// Scene material resources:
 	wiGraphics::GPUBuffer globalMaterialBuffer;
 	wiGraphics::Texture2D globalMaterialAtlas;
-	std::vector<TracedRenderingMaterial> materialArray;
+	std::vector<ShaderMaterial> materialArray;
 	std::unordered_map<const wiGraphics::Texture2D*, wiRectPacker::rect_xywh> storedTextures;
 	std::unordered_set<const wiGraphics::Texture2D*> sceneTextures;
 	void UpdateGlobalMaterialResources(const wiSceneSystem::Scene& scene, wiGraphics::CommandList cmd);

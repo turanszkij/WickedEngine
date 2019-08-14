@@ -275,6 +275,33 @@ namespace wiSceneSystem
 		}
 		return wiTextureHelper::getWhite();
 	}
+	ShaderMaterial MaterialComponent::CreateShaderMaterial() const
+	{
+		ShaderMaterial retVal;
+		retVal.baseColor = baseColor;
+		retVal.emissiveColor = emissiveColor;
+		retVal.texMulAdd = texMulAdd;
+		retVal.roughness = roughness;
+		retVal.reflectance = reflectance;
+		retVal.metalness = metalness;
+		retVal.refractionIndex = refractionIndex;
+		retVal.subsurfaceScattering = subsurfaceScattering;
+		retVal.normalMapStrength = (normalMap == nullptr ? 0 : normalMapStrength);
+		retVal.normalMapFlip = (_flags & MaterialComponent::FLIP_NORMALMAP ? -1.0f : 1.0f);
+		retVal.parallaxOcclusionMapping = parallaxOcclusionMapping;
+		retVal.displacementMapping = displacementMapping;
+		retVal.useVertexColors = IsUsingVertexColors() ? 1 : 0;
+		retVal.uvset_baseColorMap = baseColorMap == nullptr ? -1 : (int)uvset_baseColorMap;
+		retVal.uvset_surfaceMap = surfaceMap == nullptr ? -1 : (int)uvset_surfaceMap;
+		retVal.uvset_normalMap = normalMap == nullptr ? -1 : (int)uvset_normalMap;
+		retVal.uvset_displacementMap = displacementMap == nullptr ? -1 : (int)uvset_displacementMap;
+		retVal.uvset_emissiveMap = emissiveMap == nullptr ? -1 : (int)uvset_emissiveMap;
+		retVal.uvset_occlusionMap = occlusionMap == nullptr ? -1 : (int)uvset_occlusionMap;
+		retVal.specularGlossinessWorkflow = IsUsingSpecularGlossinessWorkflow() ? 1 : 0;
+		retVal.occlusion_primary = IsOcclusionEnabled_Primary() ? 1 : 0;
+		retVal.occlusion_secondary = IsOcclusionEnabled_Secondary() ? 1 : 0;
+		return retVal;
+	}
 
 	void MeshComponent::CreateRenderData()
 	{

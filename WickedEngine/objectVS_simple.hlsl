@@ -7,11 +7,11 @@ PixelInputType_Simple main(Input_Object_POS_TEX input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	surface.position = mul(surface.position, WORLD);
+	surface.position = mul(WORLD, surface.position);
 
 	Out.clip = dot(surface.position, g_xClipPlane);
 
-	Out.pos = mul(surface.position, g_xCamera_VP);
+	Out.pos = mul(g_xCamera_VP, surface.position);
 	Out.color = surface.color;
 	Out.uvsets = surface.uvsets;
 

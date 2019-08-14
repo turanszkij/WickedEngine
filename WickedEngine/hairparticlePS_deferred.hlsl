@@ -1,7 +1,6 @@
 #include "globals.hlsli"
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
-#include "ditherHF.hlsli"
 
 GBUFFEROutputType main(VertexToPixel input)
 {

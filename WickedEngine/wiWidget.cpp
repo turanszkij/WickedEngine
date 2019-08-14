@@ -1788,11 +1788,11 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), cmd, vb_saturation.GetDesc().ByteWidth);
 		}
 
-		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixRotationZ(-angle) *
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
 			__cam
-		));
+		);
 		cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
@@ -1807,10 +1807,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render hue circle
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
 			__cam
-		));
+		);
 		cb.g_xColor = float4(1, 1, 1, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
@@ -1825,10 +1825,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render hue picker
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
 			__cam
-		));
+		);
 		cb.g_xColor = float4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
@@ -1843,10 +1843,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render saturation picker
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
 			__cam
-		));
+		);
 		cb.g_xColor = float4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {
@@ -1861,10 +1861,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 
 	// render preview
 	{
-		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
 			__cam
-		));
+		);
 		cb.g_xColor = GetPickColor();
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		GPUBuffer* vbs[] = {

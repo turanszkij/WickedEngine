@@ -2,7 +2,44 @@
 #define _SHADERINTEROP_RENDERER_H_
 #include "ShaderInterop.h"
 
-struct ShaderEntityType
+struct ShaderMaterial
+{
+	float4		baseColor;
+	float4		emissiveColor;
+	float4		texMulAdd;
+
+	float		roughness;
+	float		reflectance;
+	float		metalness;
+	float		refractionIndex;
+
+	float		subsurfaceScattering;
+	float		normalMapStrength;
+	float		normalMapFlip;
+	float		parallaxOcclusionMapping;
+
+	float		displacementMapping;
+	uint		useVertexColors;
+	int			uvset_baseColorMap;
+	int			uvset_surfaceMap;
+
+	int			uvset_normalMap;
+	int			uvset_displacementMap;
+	int			uvset_emissiveMap;
+	int			uvset_occlusionMap;
+
+	uint		specularGlossinessWorkflow;
+	uint		occlusion_primary;
+	uint		occlusion_secondary;
+	uint		padding;
+
+	float4		baseColorAtlasMulAdd;
+	float4		surfaceMapAtlasMulAdd;
+	float4		emissiveMapAtlasMulAdd;
+	float4		normalMapAtlasMulAdd;
+};
+
+struct ShaderEntity
 {
 	float3 positionVS;
 	uint params;
@@ -133,13 +170,13 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_SpecularAA;
 
 	float		g_xFrame_VoxelRadianceDataSize;				// voxel half-extent in world space units
-	float		g_xFrame_VoxelRadianceDataSize_Inverse;		// 1.0 / voxel-half extent
+	float		g_xFrame_VoxelRadianceDataSize_rcp;			// 1.0 / voxel-half extent
 	uint		g_xFrame_VoxelRadianceDataRes;				// voxel grid resolution
-	float		g_xFrame_VoxelRadianceDataRes_Inverse;		// 1.0 / voxel grid resolution
+	float		g_xFrame_VoxelRadianceDataRes_rcp;			// 1.0 / voxel grid resolution
 
 	uint		g_xFrame_VoxelRadianceDataMIPs;				// voxel grid mipmap count
 	uint		g_xFrame_VoxelRadianceNumCones;				// number of diffuse cones to trace
-	float		g_xFrame_VoxelRadianceNumCones_Inverse;		// 1.0 / number of diffuse cones to trace
+	float		g_xFrame_VoxelRadianceNumCones_rcp;			// 1.0 / number of diffuse cones to trace
 	float		g_xFrame_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
 
 	float3		g_xFrame_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
@@ -151,7 +188,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	uint		g_xFrame_TransparentShadowsEnabled;
 	int			g_xFrame_GlobalEnvProbeIndex;
 	uint		g_xFrame_EnvProbeMipCount;
-	float		g_xFrame_EnvProbeMipCount_Inverse;
+	float		g_xFrame_EnvProbeMipCount_rcp;
 
 	float		g_xFrame_Time;
 	float		g_xFrame_TimePrev;
@@ -202,17 +239,17 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_MainCamera_Up;
 	float		g_xFrame_MainCamera_ZFarP;
 
-	float		g_xFrame_MainCamera_ZNearP_Recip;
-	float		g_xFrame_MainCamera_ZFarP_Recip;
+	float		g_xFrame_MainCamera_ZNearP_rcp;
+	float		g_xFrame_MainCamera_ZFarP_rcp;
 	float		g_xFrame_MainCamera_ZRange;
-	float		g_xFrame_MainCamera_ZRange_Recip;
+	float		g_xFrame_MainCamera_ZRange_rcp;
 
 	float4		g_xFrame_FrustumPlanesWS[6];	// Frustum planes in world space in order: left,right,top,bottom,near,far
 
 	float3		g_xFrame_WorldBoundsMin;				float pad0_frameCB;		// world enclosing AABB min
 	float3		g_xFrame_WorldBoundsMax;				float pad1_frameCB;		// world enclosing AABB max
 	float3		g_xFrame_WorldBoundsExtents;			float pad2_frameCB;		// world enclosing AABB abs(max - min)
-	float3		g_xFrame_WorldBoundsExtents_Inverse;	float pad3_frameCB;		// world enclosing AABB 1.0f / abs(max - min)
+	float3		g_xFrame_WorldBoundsExtents_rcp;		float pad3_frameCB;		// world enclosing AABB 1.0f / abs(max - min)
 };
 
 CBUFFER(APICB, CBSLOT_API)
@@ -238,34 +275,7 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 
 CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 {
-	float4		g_xMat_baseColor;
-	float4		g_xMat_emissiveColor;
-	float4		g_xMat_texMulAdd;
-
-	float		g_xMat_roughness;
-	float		g_xMat_reflectance;
-	float		g_xMat_metalness;
-	float		g_xMat_refractionIndex;
-
-	float		g_xMat_subsurfaceScattering;
-	float		g_xMat_normalMapStrength;
-	float		g_xMat_normalMapFlip;
-	float		g_xMat_parallaxOcclusionMapping;
-
-	float		g_xMat_displacementMapping;
-	uint		g_xMat_useVertexColors;
-	int			g_xMat_uvset_baseColorMap;
-	int			g_xMat_uvset_surfaceMap;
-
-	int			g_xMat_uvset_normalMap;
-	int			g_xMat_uvset_displacementMap;
-	int			g_xMat_uvset_emissiveMap;
-	int			g_xMat_uvset_occlusionMap;
-
-	uint		g_xMat_specularGlossinessWorkflow;
-	uint		g_xMat_occlusion_primary;
-	uint		g_xMat_occlusion_secondary;
-	uint		g_xMat_padding;
+	ShaderMaterial g_xMaterial;
 };
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)

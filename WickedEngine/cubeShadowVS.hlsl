@@ -14,7 +14,7 @@ GS_CUBEMAP_IN main(Input_Object_POS input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.Pos = mul(surface.position, WORLD);
+	Out.Pos = mul(WORLD, surface.position);
 
 	return Out;
 }

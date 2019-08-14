@@ -1,13 +1,10 @@
 //#define RAY_BACKFACE_CULLING
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "ShaderInterop_BVH.h"
-#include "tracedRenderingHF.hlsli"
-#include "raySceneIntersectHF.hlsli"
+#include "raytracingHF.hlsli"
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND7);
 STRUCTUREDBUFFER(rayIndexBuffer_READ, uint, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_ONDEMAND9);
+STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWTEXTURE2D(resultTexture, float4, 0);
 
@@ -27,7 +24,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		uint2 coords2D = unflatten2D(pixelID, xTraceResolution.xy);
 
 		// Compute screen coordinates:
-		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_Inverse.xy * 2.0f - 1.0f) * float2(1, -1);
+		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
 
 		float seed = xTraceRandomSeed;
 
@@ -50,7 +47,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		uint materialIndex = tri.materialIndex;
 
-		TracedRenderingMaterial material = materialBuffer[materialIndex];
+		ShaderMaterial material = materialBuffer[materialIndex];
 
 		uvsets = frac(uvsets); // emulate wrap
 
@@ -104,7 +101,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 		{
-			ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
 			Lighting lighting = CreateLighting(0, 0, 0, 0);
 		
 			float3 L = 0;

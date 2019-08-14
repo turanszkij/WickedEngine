@@ -228,6 +228,8 @@ namespace wiSceneSystem
 		inline void SetUVSet_EmissiveMap(uint32_t value) { uvset_emissiveMap = value; SetDirty(); }
 		inline void SetUVSet_OcclusionMap(uint32_t value) { uvset_occlusionMap = value; SetDirty(); }
 
+		ShaderMaterial CreateShaderMaterial() const;
+
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 

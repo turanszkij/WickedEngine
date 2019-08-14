@@ -20,9 +20,9 @@ HullInputType main(Input_Object_ALL input)
 	float4x4 WORLDPREV = MakeWorldMatrixFromInstance(input.instPrev);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	surface.position = mul(surface.position, WORLD);
-	surface.prevPos = mul(surface.prevPos, WORLDPREV);
-	surface.normal = normalize(mul(surface.normal, (float3x3)WORLD));
+	surface.position = mul(WORLD, surface.position);
+	surface.prevPos = mul(WORLDPREV, surface.prevPos);
+	surface.normal = normalize(mul((float3x3)WORLD, surface.normal));
 
 	Out.pos = surface.position;
 	Out.color = surface.color;

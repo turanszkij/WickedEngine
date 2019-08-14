@@ -27,7 +27,7 @@ void main(
 			element.pos.xyz += (CreateCube(i) - float3(0, 1, 0)) * 2;
 			element.pos.xyz *= g_xFrame_VoxelRadianceDataRes * g_xFrame_VoxelRadianceDataSize / g_xFrame_VoxelRadianceDataRes;
 
-			element.pos = mul(float4(element.pos.xyz, 1), g_xTransform);
+			element.pos = mul(g_xTransform, float4(element.pos.xyz, 1));
 			element.col *= g_xColor;
 
 			output.Append(element);

@@ -4,9 +4,9 @@ float4 main(PixelInputType input) : SV_TARGET
 {
 	float4 color;
 	[branch]
-	if (g_xMat_uvset_baseColorMap >= 0)
+	if (g_xMaterial.uvset_baseColorMap >= 0)
 	{
-		const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
 		color.rgb = DEGAMMA(color.rgb);
 		color.rgb = max(color.r, max(color.g, color.b));

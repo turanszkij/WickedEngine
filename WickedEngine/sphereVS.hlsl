@@ -13,8 +13,8 @@ VSOut_Sphere main( uint vID : SV_VERTEXID )
 	VSOut_Sphere o;
 	o.pos = UVSPHERE[vID];
 	o.nor = o.pos.xyz;
-	o.pos = mul(o.pos, g_xTransform);
+	o.pos = mul(g_xTransform, o.pos);
 	o.pos3D = o.pos.xyz;
-	o.pos = mul(o.pos, g_xCamera_VP);
+	o.pos = mul(g_xCamera_VP, o.pos);
 	return o;
 }

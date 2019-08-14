@@ -11,7 +11,7 @@ VertexToPixel main( float3 inPos : POSITION, float2 inTex : TEXCOORD0, float4 in
 {
 	VertexToPixel Out = (VertexToPixel)0;
 
-	Out.pos = Out.dis = mul( float4(inPos,1),g_xCamera_VP );
+	Out.pos = Out.dis = mul(g_xCamera_VP, float4(inPos, 1));
 	Out.col = inCol;
 	Out.tex = inTex;
 

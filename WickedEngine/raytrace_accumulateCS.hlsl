@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_Raytracing.h"
 
 TEXTURE2D(sourceTexture, float4, TEXSLOT_ONDEMAND0);
 

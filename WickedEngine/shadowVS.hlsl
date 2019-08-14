@@ -14,8 +14,8 @@ VertexOut main(Input_Object_POS input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 		
-	Out.pos = mul(surface.position, WORLD);
-	Out.pos = mul(Out.pos, g_xCamera_VP);
+	Out.pos = mul(WORLD, surface.position);
+	Out.pos = mul(g_xCamera_VP, Out.pos);
 
 	return Out;
 }

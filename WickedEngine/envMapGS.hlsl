@@ -11,7 +11,7 @@ void main(triangle VSOut_EnvmapRendering input[3], inout TriangleStream<PSIn_Env
 		[unroll]
 		for (uint v = 0; v < 3; v++)
 		{
-			output.pos = mul(input[v].pos, xCubeShadowVP[f]);
+			output.pos = mul(xCubeShadowVP[f], input[v].pos);
 			output.color = input[v].color;
 			output.uvsets = input[v].uvsets;
 			output.atl = input[v].atl;

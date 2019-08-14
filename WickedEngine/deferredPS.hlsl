@@ -1,10 +1,6 @@
 #include "postProcessHF.hlsli"
-#include "fogHF.hlsli"
-#include "reconstructPositionHF.hlsli"
 #include "brdf.hlsli"
-#include "packHF.hlsli"
 #include "objectHF.hlsli"
-#include "normalsCompressHF.hlsli"
 
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET

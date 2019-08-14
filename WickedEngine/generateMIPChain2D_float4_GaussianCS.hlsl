@@ -12,8 +12,6 @@ static const uint TILE_BORDER = 4;
 static const uint TILE_SIZE = TILE_BORDER + GENERATEMIPCHAIN_2D_BLOCK_SIZE + TILE_BORDER;
 groupshared float4 tile[TILE_SIZE * TILE_SIZE];
 
-//#define FAKE_GAUSS // this is not completely correct, but two-pass, so faster
-
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
 {
@@ -28,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	for (i = 0; i < 4; ++i)
 	{
 		const int2 coord = GTid.xy * 2 + co[i];
-		const float2 uv = (tile_upperleft + coord + 0.5f) / (float2)outputResolution.xy;
+		const float2 uv = (tile_upperleft + coord + 0.5f) * (float2)outputResolution_rcp.xy;
 		tile[flatten2D(coord, TILE_SIZE)] = input.SampleLevel(sampler_linear_clamp, uv, 0);
 	}
 	GroupMemoryBarrierWithGroupSync();
@@ -36,35 +34,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	const int2 thread_to_cache = GTid.xy + TILE_BORDER;
 
 	float4 sum = 0;
-
-
-#ifdef FAKE_GAUSS
-
-	// Horizontal accumulation for each tile pixel, with help of the border region
-	for (i = 0; i < 9; ++i)
-	{
-		const uint2 coord = thread_to_cache + int2(gaussianOffsets[i], 0);
-		sum += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[i];
-	}
-
-	GroupMemoryBarrierWithGroupSync();
-
-	// write out into cache (excluding border region):
-	tile[flatten2D(thread_to_cache, TILE_SIZE)] = sum;
-
-	GroupMemoryBarrierWithGroupSync();
-
-	sum = 0;
-
-	// Vertical accumulation for each tile pixel, with help of the border region
-	for (i = 0; i < 9; ++i)
-	{
-		const uint2 coord = thread_to_cache + int2(0, gaussianOffsets[i]);
-		sum += tile[flatten2D(coord, TILE_SIZE)] * gaussianWeightsNormalized[i];
-	}
-
-#else
-
 	for (i = 0; i < 9; ++i)
 	{
 		float4 sumY = 0;
@@ -76,16 +45,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		sum += sumY * gaussianWeightsNormalized[i];
 	}
 
-#endif // FAKE_GAUSS
-
-
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
 	{
 		// Each valid thread writes out one pixel:
 		output[DTid.xy] = sum;
-
-		//const int2 a = max(TILE_BORDER, Gid.xy * GENERATEMIPCHAIN_2D_BLOCK_SIZE) - TILE_BORDER;
-		//const int2 b = Gid.xy * GENERATEMIPCHAIN_2D_BLOCK_SIZE - TILE_BORDER;
-		//output[DTid.xy] = float4((a-b) / (float2)outputResolution, 0, 1);
 	}
 }

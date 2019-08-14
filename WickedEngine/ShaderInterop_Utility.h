@@ -11,15 +11,18 @@ CBUFFER(GenerateMIPChainCB, CBSLOT_RENDERER_UTILITY)
 {
 	uint3 outputResolution;
 	uint arrayIndex;
+	float3 outputResolution_rcp;
+	uint padding_mipgenCB;
 };
 
 CBUFFER(FilterEnvmapCB, CBSLOT_RENDERER_UTILITY)
 {
 	uint2 filterResolution;
+	float2 filterResolution_rcp;
 	uint filterArrayIndex;
 	float filterRoughness;
-	uint3 padding_filterCB;
 	uint filterRayCount;
+	uint padding_filterCB;
 };
 
 

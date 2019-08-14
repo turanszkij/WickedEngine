@@ -1,4 +1,4 @@
-#include "fullScreenTriangleHF.hlsli"
+#include "globals.hlsli"
 
 struct VSOut
 {

@@ -1,7 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
-#include "raySceneIntersectHF.hlsli"
+#include "raytracingHF.hlsli"
 
 struct Input
 {
@@ -22,7 +20,7 @@ float4 main(Input input) : SV_TARGET
 	[loop]
 	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 	{
-		ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
 		Lighting lighting = CreateLighting(0, 0, 0, 0);
 
 		if (!(light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC))

@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
-#include "ShaderInterop_TracedRendering.h"
+#include "ShaderInterop_Raytracing.h"
 
 struct Input
 {
@@ -30,7 +30,7 @@ Output main(Input input)
 
 	output.uv = input.atl;
 
-	output.pos3D = mul(float4(input.pos.xyz, 1), WORLD).xyz;
+	output.pos3D = mul(WORLD, float4(input.pos.xyz, 1)).xyz;
 
 	uint normal_wind_matID = asuint(input.pos.w);
 	output.normal.x = (float)((normal_wind_matID >> 0) & 0x000000FF) / 255.0f * 2.0f - 1.0f;

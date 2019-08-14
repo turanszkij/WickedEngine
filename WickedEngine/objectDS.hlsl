@@ -124,11 +124,11 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	vertexNormal = PhongNormal(fU, fV, fW, input);
 
 	// Displacement
-	float3 displacement = -g_xMat_displacementMapping * vertexNormal.xyz;
+	float3 displacement = -g_xMaterial.displacementMapping * vertexNormal.xyz;
 	[branch]
-	if (g_xMat_uvset_displacementMap >= 0)
+	if (g_xMaterial.uvset_displacementMap >= 0)
 	{
-		const float2 UV_displacementMap = g_xMat_uvset_displacementMap == 0 ? vertexUvsets.xy : vertexUvsets.zw;
+		const float2 UV_displacementMap = g_xMaterial.uvset_displacementMap == 0 ? vertexUvsets.xy : vertexUvsets.zw;
 		displacement *= 1 - xDisplacementMap.SampleLevel(sampler_linear_wrap, UV_displacementMap, 0).rrr;
 	}
 	vertexPosition.xyz += displacement;
@@ -136,16 +136,16 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	
 	Out.clip = dot(vertexPosition, g_xClipPlane);
 	
-	Out.pos = Out.pos2D = mul( vertexPosition, g_xCamera_VP );
-	Out.pos2DPrev = mul(vertexPositionPrev, g_xFrame_MainCamera_PrevVP);
+	Out.pos = Out.pos2D = mul(g_xCamera_VP, vertexPosition);
+	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, vertexPositionPrev);
 	Out.pos3D = vertexPosition.xyz;
 	Out.uvsets = vertexUvsets;
 	Out.atl = vertexAtlas;
 	Out.color = vertexColor;
 	Out.nor = normalize(vertexNormal.xyz);
-	Out.nor2D = mul(Out.nor.xyz, (float3x3)g_xCamera_View).xy;
+	Out.nor2D = mul((float3x3)g_xCamera_View, Out.nor.xyz).xy;
 
-	Out.ReflectionMapSamplingPos = mul(vertexPosition, g_xFrame_MainCamera_ReflVP);
+	Out.ReflectionMapSamplingPos = mul(g_xFrame_MainCamera_ReflVP, vertexPosition);
 
 
 	return Out;

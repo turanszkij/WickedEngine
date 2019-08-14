@@ -15,7 +15,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
 	{
-		float2 uv = ((float2)DTid.xy + 0.5f) / outputResolution.xy;
+		float2 uv = ((float2)DTid.xy + 0.5f) * outputResolution_rcp.xy;
 		float3 N = UV_to_CubeMap(uv, DTid.z);
 
 		output[DTid.xyz] = input.SampleLevel(customsampler, N, 0);

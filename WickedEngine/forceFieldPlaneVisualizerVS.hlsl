@@ -14,14 +14,14 @@ PSIn main(uint vID : SV_VERTEXID)
 	Out.pos = float4(CreateCube(vID) * 2 - 1, 1);
 
 	uint forceFieldID = g_xFrame_ForceFieldArrayOffset + (uint)g_xColor.w;
-	ShaderEntityType forceField = EntityArray[forceFieldID];
+	ShaderEntity forceField = EntityArray[forceFieldID];
 
 	Out.pos.xyz *= forceField.coneAngleCos; // range...
 	Out.pos.xyz += forceField.positionWS;
 
 	Out.pos3D = Out.pos;
 
-	Out.pos = mul(Out.pos, g_xTransform);
+	Out.pos = mul(g_xTransform, Out.pos);
 	Out.pos2D = Out.pos;
 
 	return Out;

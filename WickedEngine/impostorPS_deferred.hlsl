@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "impostorHF.hlsli"
-#include "ditherHF.hlsli"
 #include "objectHF.hlsli"
 
 GBUFFEROutputType main(VSOut input)

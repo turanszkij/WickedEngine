@@ -1,13 +1,13 @@
 #include "globals.hlsli"
 #include "ShaderInterop_BVH.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_Raytracing.h"
 
 // This shader builds scene triangle data and performs BVH classification:
 //	- This shader is run per object.
 //	- Each thread processes a triangle
 //	- Computes triangle bounding box, morton code and other properties and stores into global primitive buffer
 
-STRUCTUREDBUFFER(materialBuffer, TracedRenderingMaterial, TEXSLOT_ONDEMAND0);
+STRUCTUREDBUFFER(materialBuffer, ShaderMaterial, TEXSLOT_ONDEMAND0);
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND1);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND2);
 TYPEDBUFFER(meshVertexBuffer_UV0, float2, TEXSLOT_ONDEMAND3);
@@ -53,7 +53,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// Compute triangle parameters:
 		float4x4 WORLD = xTraceBVHWorld;
 		const uint materialIndex = xTraceBVHMaterialOffset + subsetIndex;
-		TracedRenderingMaterial material = materialBuffer[materialIndex];
+		ShaderMaterial material = materialBuffer[materialIndex];
 
 		float3 v0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
 		float3 v1 = mul(WORLD, float4(pos_nor1.xyz, 1)).xyz;
@@ -145,7 +145,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float3 minAABB = min(v0, min(v1, v2));
 		float3 maxAABB = max(v0, max(v1, v2));
 		float3 centerAABB = (minAABB + maxAABB) * 0.5f;
-		const uint mortoncode = morton3D((centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_Inverse);
+		const uint mortoncode = morton3D((centerAABB - g_xFrame_WorldBoundsMin) * g_xFrame_WorldBoundsExtents_rcp);
 		primitiveMortonBuffer[primitiveID] = (float)mortoncode; // convert to float before sorting
 	}
 }

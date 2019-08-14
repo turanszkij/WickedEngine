@@ -1017,9 +1017,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GPUSortLib.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_TracedRendering.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_BVH.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
@@ -1136,6 +1133,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\ShaderInterop_Raytracing.h">
+      <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

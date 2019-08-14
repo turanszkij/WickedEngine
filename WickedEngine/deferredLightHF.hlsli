@@ -2,15 +2,12 @@
 #define _LIGHTHF_
 #include "globals.hlsli"
 #include "brdf.hlsli"
-#include "packHF.hlsli"
 #include "lightingHF.hlsli"
 
 struct VertexToPixel{
 	float4 pos			: SV_POSITION;
 	float4 pos2D		: POSITION2D;
 };
-
-#include "reconstructPositionHF.hlsli"
 
 
 struct LightOutputType
@@ -23,7 +20,7 @@ struct LightOutputType
 // MACROS
 
 #define DEFERREDLIGHT_MAKEPARAMS														\
-	ShaderEntityType light = EntityArray[(uint)g_xColor.x];								\
+	ShaderEntity light = EntityArray[(uint)g_xColor.x];								\
 	Lighting lighting = CreateLighting(0, 0, 0, 0);										\
 	float diffuse_alpha = 1;															\
 	float specular_alpha = 1;															\
@@ -32,10 +29,10 @@ struct LightOutputType
 	float4 g0 = texture_gbuffer0[PSIn.pos.xy];											\
 	float4 g1 = texture_gbuffer1[PSIn.pos.xy];											\
 	float4 g2 = texture_gbuffer2[PSIn.pos.xy];											\
-	float3 N = decode(g1.xy);															\
+	float3 N = decodeNormal(g1.xy);															\
 	float2 velocity = g1.zw;															\
 	float2 ReprojectedScreenCoord = ScreenCoord + velocity;								\
-	float3 P = getPosition(ScreenCoord, depth);											\
+	float3 P = reconstructPosition(ScreenCoord, depth);											\
 	float3 V = normalize(g_xCamera_CamPos - P);											\
 	Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
 

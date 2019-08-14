@@ -1,6 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
+#include "ShaderInterop_Raytracing.h"
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
 RWRAWBUFFER(indirectBuffer, 1);

@@ -15,8 +15,8 @@ GS_CUBEMAP_IN main(Input_Object_POS_TEX input)
 	float4x4 WORLD = MakeWorldMatrixFromInstance(input.inst);
 	VertexSurface surface = MakeVertexSurfaceFromInput(input);
 
-	Out.pos = mul(surface.position, WORLD);
-	Out.uv = g_xMat_uvset_baseColorMap == 0 ? surface.uvsets.xy : surface.uvsets.zw;
+	Out.pos = mul(WORLD, surface.position);
+	Out.uv = g_xMaterial.uvset_baseColorMap == 0 ? surface.uvsets.xy : surface.uvsets.zw;
 
 	return Out;
 }

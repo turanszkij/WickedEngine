@@ -1,33 +1,10 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
-#include "reconstructPositionHF.hlsli"
 
 // Define this to use reduced precision, but faster depth buffer:
 #define USE_LINEARDEPTH
 
 RWTEXTURE2D(output, unorm float, 0);
-
-// Hemisphere point generation from:
-//	http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
-
-float radicalInverse_VdC(uint bits) {
-	bits = (bits << 16u) | (bits >> 16u);
-	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-	return float(bits) * 2.3283064365386963e-10; // / 0x100000000
-}
-float2 hammersley2d(uint i, uint N) {
-	return float2(float(i) / float(N), radicalInverse_VdC(i));
-}
-
-float3 hemisphereSample_uniform(float u, float v) {
-	float phi = v * 2.0 * PI;
-	float cosTheta = 1.0 - u;
-	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-}
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -51,9 +28,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth1 = texture_depth.SampleLevel(sampler_linear_clamp, uv1, 0);
 	const float depth2 = texture_depth.SampleLevel(sampler_linear_clamp, uv2, 0);
 
-	const float3 p0 = getPosition(uv, depth0);
-	const float3 p1 = getPosition(uv1, depth1);
-	const float3 p2 = getPosition(uv2, depth2);
+	const float3 p0 = reconstructPosition(uv, depth0);
+	const float3 p1 = reconstructPosition(uv1, depth1);
+	const float3 p2 = reconstructPosition(uv2, depth2);
 
 	const float3 normal = normalize(cross(p2 - p0, p1 - p0));
 
@@ -67,12 +44,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	for (uint i = 0; i < sampleCount; ++i)
 	{
 		const float2 hamm = hammersley2d(i, sampleCount);
-		const float3 hemisphere = hemisphereSample_uniform(hamm.x, hamm.y);
+		const float3 hemisphere = hemispherepoint_uniform(hamm.x, hamm.y);
 		const float3 cone = mul(hemisphere, tangentSpace);
 		const float ray_range = range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
 		const float3 sam = P + cone * ray_range;
 
-		float4 vProjectedCoord = mul(float4(sam, 1.0f), g_xFrame_MainCamera_VP);
+		float4 vProjectedCoord = mul(g_xFrame_MainCamera_VP, float4(sam, 1.0f));
 		vProjectedCoord.xyz /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 

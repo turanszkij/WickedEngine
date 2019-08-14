@@ -1,8 +1,6 @@
 #define RAY_BACKFACE_CULLING
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "tracedRenderingHF.hlsli"
-#include "raySceneIntersectHF.hlsli"
+#include "raytracingHF.hlsli"
 
 struct Input
 {
@@ -18,7 +16,7 @@ float4 main(Input input) : SV_TARGET
 	float3 N = normalize(input.normal);
 	float2 uv = input.uv;
 	float seed = xTraceRandomSeed;
-	float3 direction = SampleHemisphere(N, seed, uv);
+	float3 direction = SampleHemisphere_uniform(N, seed, uv); // uniform because we care about only diffuse here
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
 	float3 finalResult = 0;
 
@@ -35,7 +33,7 @@ float4 main(Input input) : SV_TARGET
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 		{
-			ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
 			Lighting lighting = CreateLighting(0, 0, 0, 0);
 
 			if (!(light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC))

@@ -34,8 +34,8 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	// We rotate the billboard to face camera, but unlike emitted particles, 
 	//	they don't rotate according to camera rotation, but the camera position relative
 	//	to the impostor (at least for now)
-	float3 origin = mul(float4(0, 0, 0, 1), WORLD).xyz;
-	float3 up = normalize(mul(float3(0, 1, 0), (float3x3)WORLD));
+	float3 origin = mul(WORLD, float4(0, 0, 0, 1)).xyz;
+	float3 up = normalize(mul((float3x3)WORLD, float3(0, 1, 0)));
 	float3 face = normalize(g_xCamera_CamPos - origin);
 	float3 right = normalize(cross(face, up));
 	pos = mul(pos, float3x3(right, up, face));
@@ -50,13 +50,13 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	tex.z += floor(saturate(angle) * impostorCaptureAngles);
 
 	VSOut Out;
-	Out.pos3D = mul(float4(pos, 1), WORLD).xyz;
-	Out.pos = mul(float4(Out.pos3D, 1), g_xCamera_VP);
+	Out.pos3D = mul(WORLD, float4(pos, 1)).xyz;
+	Out.pos = mul(g_xCamera_VP, float4(Out.pos3D, 1));
 	Out.tex = tex;
 	Out.dither = 1 - instance.color.a;
 	Out.instanceColor = 0xFFFFFFFF; // todo
 	Out.pos2D = Out.pos;
-	Out.pos2DPrev = mul(float4(Out.pos3D, 1), g_xFrame_MainCamera_PrevVP);
+	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(Out.pos3D, 1));
 
 	return Out;
 }

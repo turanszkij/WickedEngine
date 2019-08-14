@@ -168,10 +168,12 @@ namespace wiRenderer
 	void Postprocess_SSAO(
 		const wiGraphics::Texture2D& depthbuffer, 
 		const wiGraphics::Texture2D& lineardepth, 
-		const wiGraphics::Texture2D& output, 
+		const wiGraphics::Texture2D& temp,
+		const wiGraphics::Texture2D& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
-		uint32_t samplecount = 16
+		uint32_t samplecount = 16,
+		float blur = 2.3f
 	);
 	void Postprocess_SSR(
 		const wiGraphics::Texture2D& input,

@@ -18,7 +18,7 @@ TEXTURE2DARRAY(texture_shadowarray_transparent, float4, TEXSLOT_SHADOWARRAY_TRAN
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE)
 
 STRUCTUREDBUFFER(EntityTiles, uint, SBSLOT_ENTITYTILES);
-STRUCTUREDBUFFER(EntityArray, ShaderEntityType, SBSLOT_ENTITYARRAY);
+STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
 
 TEXTURE2D(texture_0, float4, TEXSLOT_ONDEMAND0)
@@ -107,13 +107,10 @@ inline void ConvertToSpecularGlossiness(inout float4 surface_occlusion_roughness
 	surface_occlusion_roughness_metallic_reflectance.a = 0.02f;
 }
 
-struct ComputeShaderInput
+inline float GetFog(float dist)
 {
-	uint3 groupID           : SV_GroupID;           // 3D index of the thread group in the dispatch.
-	uint3 groupThreadID     : SV_GroupThreadID;     // 3D index of local thread ID in a thread group.
-	uint3 dispatchThreadID  : SV_DispatchThreadID;  // 3D index of global thread ID in the dispatch.
-	uint  groupIndex        : SV_GroupIndex;        // Flattened local index of the thread within a thread group.
-};
+	return saturate((dist - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
+}
 
 
 // Helpers:
@@ -124,6 +121,21 @@ inline float rand(inout float seed, in float2 uv)
 	float result = frac(sin(seed * dot(uv, float2(12.9898f, 78.233f))) * 43758.5453f);
 	seed += 1.0f;
 	return result;
+}
+
+// A uniform 2D random generator for hemisphere sampling: http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+//	idx	: iteration index
+//	num	: number of iterations in total
+inline float2 hammersley2d(uint idx, uint num) {
+	uint bits = idx;
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	const float radicalInverse_VdC = float(bits) * 2.3283064365386963e-10; // / 0x100000000
+
+	return float2(float(idx) / float(num), radicalInverse_VdC);
 }
 
 // 2D array index to flattened 1D array index
@@ -158,6 +170,156 @@ inline float3 CreateCube(in uint vertexID)
 	uint b = 1 << vertexID;
 	return float3((0x287a & b) != 0, (0x02af & b) != 0, (0x31e3 & b) != 0);
 }
+
+// Creates a full screen triangle from 3 vertices:
+inline void FullScreenTriangle(in uint vertexID, out float4 pos)
+{
+	pos.x = (float)(vertexID / 2) * 4.0f - 1.0f;
+	pos.y = (float)(vertexID % 2) * 4.0f - 1.0f;
+	pos.z = 0.0f;
+	pos.w = 1.0f;
+}
+inline void FullScreenTriangle(in uint vertexID, out float4 pos, out float2 uv)
+{
+	FullScreenTriangle(vertexID, pos);
+
+	uv.x = (float)(vertexID / 2) * 2.0f;
+	uv.y = 1.0f - (float)(vertexID % 2) * 2.0f;
+}
+
+// Computes a tangent-basis matrix for a surface using screen-space derivatives
+inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
+{
+	// ddx_coarse can be faster than ddx, but could result in artifacts. Haven't observed any artifacts yet.
+	float3 dp1 = ddx_coarse(P);
+	float3 dp2 = ddy_coarse(P);
+	float2 duv1 = ddx_coarse(UV);
+	float2 duv2 = ddy_coarse(UV);
+
+	float3x3 M = float3x3(dp1, dp2, cross(dp1, dp2));
+	float2x3 inverseM = float2x3(cross(M[1], M[2]), cross(M[2], M[0]));
+	float3 T = normalize(mul(float2(duv1.x, duv2.x), inverseM));
+	float3 B = normalize(mul(float2(duv1.y, duv2.y), inverseM));
+
+	return float3x3(T, B, N);
+}
+
+// Computes linear depth from post-projection depth
+inline float getLinearDepth(in float z, in float near, in float far)
+{
+	float z_n = 2.0 * z - 1.0;
+	float lin = 2.0 * far * near / (near + far - z_n * (near - far));
+	return lin;
+}
+inline float getLinearDepth(in float z)
+{
+	return getLinearDepth(z, g_xFrame_MainCamera_ZNearP, g_xFrame_MainCamera_ZFarP);
+}
+
+inline float3x3 GetTangentSpace(in float3 normal)
+{
+	// Choose a helper vector for the cross product
+	float3 helper = abs(normal.x) > 0.99f ? float3(0, 0, 1) : float3(1, 0, 0);
+
+	// Generate vectors
+	float3 tangent = normalize(cross(normal, helper));
+	float3 binormal = normalize(cross(normal, tangent));
+	return float3x3(tangent, binormal, normal);
+}
+
+// Point on hemisphere with uniform distribution
+//	u, v : in range [0, 1]
+float3 hemispherepoint_uniform(float u, float v) {
+	float phi = v * 2.0 * PI;
+	float cosTheta = 1.0 - u;
+	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+// Point on hemisphere with cosine-weighted distribution
+//	u, v : in range [0, 1]
+float3 hemispherepoint_cos(float u, float v) {
+	float phi = v * 2.0 * PI;
+	float cosTheta = sqrt(1.0 - u);
+	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+// Get randim hemisphere sample in world-space along the normal (uniform distribution)
+inline float3 SampleHemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
+{
+	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+}
+// Get randim hemisphere sample in world-space along the normal (cosine-weighted distribution)
+inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
+{
+	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+}
+
+// Reconstructs world-space position from depth buffer
+//	uv		: screen space coordinate in [0, 1] range
+//	z		: depth value at current pixel
+//	InvVP	: Inverse of the View-Projection matrix that was used to generate the depth value
+inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
+{
+	float x = uv.x * 2.0f - 1.0f;
+	float y = (1.0 - uv.y) * 2.0f - 1.0f;
+	float4 position_s = float4(x, y, z, 1.0f);
+	float4 position_v = mul(InvVP, position_s);
+	return position_v.xyz / position_v.w;
+}
+inline float3 reconstructPosition(in float2 uv, in float z)
+{
+	return reconstructPosition(uv, z, g_xFrame_MainCamera_InvVP);
+}
+
+#define NORMALMAPCOMPRESSOR 1
+
+#if NORMALMAPCOMPRESSOR == 0
+// Reconstruct Z
+inline float2 encodeNormal(float3 n)
+{
+	return float2(n.xy*0.5 + 0.5);
+}
+inline float3 decodeNormal(float2 enc)
+{
+	float3 n;
+	n.xy = enc * 2 - 1;
+	n.z = sqrt(1 - dot(n.xy, n.xy));
+	return n;
+}
+
+#elif NORMALMAPCOMPRESSOR == 1
+// Spherical coordinates
+inline float2 encodeNormal(float3 n)
+{
+	return (float2(atan2(n.y, n.x) / PI, n.z) + 1.0)*0.5;
+}
+inline float3 decodeNormal(float2 enc)
+{
+	float2 ang = enc * 2 - 1;
+	float2 scth;
+	sincos(ang.x * PI, scth.x, scth.y);
+	float2 scphi = float2(sqrt(1.0 - ang.y*ang.y), ang.y);
+	return float3(scth.y*scphi.x, scth.x*scphi.x, scphi.y);
+}
+
+#elif NORMALMAPCOMPRESSOR == 2
+// Spheremap
+inline float2 encodeNormal(float3 n)
+{
+	float2 enc = normalize(n.xy) * (sqrt(-n.z*0.5 + 0.5));
+	enc = enc * 0.5 + 0.5;
+	return enc;
+}
+inline float3 decodeNormal(float2 enc)
+{
+	float4 nn = float4(enc, 0, 0)*float4(2, 2, 0, 0) + float4(-1, -1, 1, -1);
+	float l = dot(nn.xyz, -nn.xyw);
+	nn.z = l;
+	nn.xy *= sqrt(l);
+	return nn.xyz * 2 + float3(0, 0, -1);
+}
+
+#endif
 
 
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:
@@ -306,7 +468,6 @@ inline float4 unpack_half4(in uint2 value)
 }
 
 
-
 // Expands a 10-bit integer into 30 bits
 // by inserting 2 zeros after each bit.
 inline uint expandBits(uint v)
@@ -329,6 +490,67 @@ inline uint morton3D(in float3 pos)
 	uint yy = expandBits((uint)pos.y);
 	uint zz = expandBits((uint)pos.z);
 	return xx * 4 + yy * 2 + zz;
+}
+
+
+
+static const float2x2 BayerMatrix2 =
+{
+	1.0 / 5.0, 3.0 / 5.0,
+	4.0 / 5.0, 2.0 / 5.0
+};
+
+static const float3x3 BayerMatrix3 =
+{
+	3.0 / 10.0, 7.0 / 10.0, 4.0 / 10.0,
+	6.0 / 10.0, 1.0 / 10.0, 9.0 / 10.0,
+	2.0 / 10.0, 8.0 / 10.0, 5.0 / 10.0
+};
+
+static const float4x4 BayerMatrix4 =
+{
+	1.0 / 17.0, 9.0 / 17.0, 3.0 / 17.0, 11.0 / 17.0,
+	13.0 / 17.0, 5.0 / 17.0, 15.0 / 17.0, 7.0 / 17.0,
+	4.0 / 17.0, 12.0 / 17.0, 2.0 / 17.0, 10.0 / 17.0,
+	16.0 / 17.0, 8.0 / 17.0, 14.0 / 17.0, 6.0 / 17.0
+};
+
+static const float BayerMatrix8[8][8] =
+{
+	{ 1.0 / 65.0, 49.0 / 65.0, 13.0 / 65.0, 61.0 / 65.0, 4.0 / 65.0, 52.0 / 65.0, 16.0 / 65.0, 64.0 / 65.0 },
+	{ 33.0 / 65.0, 17.0 / 65.0, 45.0 / 65.0, 29.0 / 65.0, 36.0 / 65.0, 20.0 / 65.0, 48.0 / 65.0, 32.0 / 65.0 },
+	{ 9.0 / 65.0, 57.0 / 65.0, 5.0 / 65.0, 53.0 / 65.0, 12.0 / 65.0, 60.0 / 65.0, 8.0 / 65.0, 56.0 / 65.0 },
+	{ 41.0 / 65.0, 25.0 / 65.0, 37.0 / 65.0, 21.0 / 65.0, 44.0 / 65.0, 28.0 / 65.0, 40.0 / 65.0, 24.0 / 65.0 },
+	{ 3.0 / 65.0, 51.0 / 65.0, 15.0 / 65.0, 63.0 / 65.0, 2.0 / 65.0, 50.0 / 65.0, 14.0 / 65.0, 62.0 / 65.0 },
+	{ 35.0 / 65.0, 19.0 / 65.0, 47.0 / 65.0, 31.0 / 65.0, 34.0 / 65.0, 18.0 / 65.0, 46.0 / 65.0, 30.0 / 65.0 },
+	{ 11.0 / 65.0, 59.0 / 65.0, 7.0 / 65.0, 55.0 / 65.0, 10.0 / 65.0, 58.0 / 65.0, 6.0 / 65.0, 54.0 / 65.0 },
+	{ 43.0 / 65.0, 27.0 / 65.0, 39.0 / 65.0, 23.0 / 65.0, 42.0 / 65.0, 26.0 / 65.0, 38.0 / 65.0, 22.0 / 65.0 }
+};
+
+
+inline float ditherMask2(in float2 pixel)
+{
+	return BayerMatrix2[pixel.x % 2][pixel.y % 2];
+}
+
+inline float ditherMask3(in float2 pixel)
+{
+	return BayerMatrix3[pixel.x % 3][pixel.y % 3];
+}
+
+inline float ditherMask4(in float2 pixel)
+{
+	return BayerMatrix4[pixel.x % 4][pixel.y % 4];
+}
+
+inline float ditherMask8(in float2 pixel)
+{
+	return BayerMatrix8[pixel.x % 8][pixel.y % 8];
+}
+
+inline float dither(in float2 pixel)
+{
+	return ditherMask8(pixel);
 }
 
 #endif // _SHADER_GLOBALS_

@@ -91,14 +91,14 @@ VertexToPixel main(uint fakeIndex : SV_VERTEXID)
 	float3 savedPos = Out.pos.xyz;
 	Out.pos.xyz += wind;
 	Out.pos3D = Out.pos.xyz;
-	Out.pos = mul(Out.pos, g_xCamera_VP);
+	Out.pos = mul(g_xCamera_VP, Out.pos);
 
 	Out.nor = normal;
 	Out.tex = uv; 
 	
 	Out.fade = pow(saturate(distance(position.xyz, g_xCamera_CamPos.xyz) / (xHairViewDistance*hairPopDistanceThreshold)), 10);
 	Out.pos2D = Out.pos;
-	Out.pos2DPrev = mul(float4(savedPos + windPrev, 1), g_xFrame_MainCamera_PrevVP);
+	Out.pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(savedPos + windPrev, 1));
 
 	Out.color = xColor.rgb;
 

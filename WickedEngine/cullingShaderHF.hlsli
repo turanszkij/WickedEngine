@@ -40,7 +40,7 @@ struct Frustum
 float4 ClipToView(float4 clip)
 {
 	// View space position.
-	float4 view = mul(clip, g_xFrame_MainCamera_InvP);
+	float4 view = mul(g_xFrame_MainCamera_InvP, clip);
 	// Perspective projection.
 	view = view / view.w;
 
@@ -218,7 +218,7 @@ void AABBtransform(inout AABB aabb, float4x4 mat)
 	[unroll]
 	for (uint i = 0; i < 8; ++i)
 	{
-		corners[i] = mul(float4(corners[i], 1), mat).xyz;
+		corners[i] = mul(mat, float4(corners[i], 1)).xyz;
 		_min = min(_min, corners[i]);
 		_max = max(_max, corners[i]);
 	}

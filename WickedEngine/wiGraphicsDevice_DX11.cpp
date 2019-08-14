@@ -474,9 +474,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_UNKNOWN:
 		return DXGI_FORMAT_UNKNOWN;
 		break;
-	case FORMAT_R32G32B32A32_TYPELESS:
-		return DXGI_FORMAT_R32G32B32A32_TYPELESS;
-		break;
 	case FORMAT_R32G32B32A32_FLOAT:
 		return DXGI_FORMAT_R32G32B32A32_FLOAT;
 		break;
@@ -486,9 +483,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_R32G32B32A32_SINT:
 		return DXGI_FORMAT_R32G32B32A32_SINT;
 		break;
-	case FORMAT_R32G32B32_TYPELESS:
-		return DXGI_FORMAT_R32G32B32_TYPELESS;
-		break;
 	case FORMAT_R32G32B32_FLOAT:
 		return DXGI_FORMAT_R32G32B32_FLOAT;
 		break;
@@ -497,9 +491,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 		break;
 	case FORMAT_R32G32B32_SINT:
 		return DXGI_FORMAT_R32G32B32_SINT;
-		break;
-	case FORMAT_R16G16B16A16_TYPELESS:
-		return DXGI_FORMAT_R16G16B16A16_TYPELESS;
 		break;
 	case FORMAT_R16G16B16A16_FLOAT:
 		return DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -516,9 +507,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_R16G16B16A16_SINT:
 		return DXGI_FORMAT_R16G16B16A16_SINT;
 		break;
-	case FORMAT_R32G32_TYPELESS:
-		return DXGI_FORMAT_R32G32_TYPELESS;
-		break;
 	case FORMAT_R32G32_FLOAT:
 		return DXGI_FORMAT_R32G32_FLOAT;
 		break;
@@ -534,15 +522,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_D32_FLOAT_S8X24_UINT:
 		return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 		break;
-	case FORMAT_R32_FLOAT_X8X24_TYPELESS:
-		return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-		break;
-	case FORMAT_X32_TYPELESS_G8X24_UINT:
-		return DXGI_FORMAT_X32_TYPELESS_G8X24_UINT;
-		break;
-	case FORMAT_R10G10B10A2_TYPELESS:
-		return DXGI_FORMAT_R10G10B10A2_TYPELESS;
-		break;
 	case FORMAT_R10G10B10A2_UNORM:
 		return DXGI_FORMAT_R10G10B10A2_UNORM;
 		break;
@@ -551,9 +530,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 		break;
 	case FORMAT_R11G11B10_FLOAT:
 		return DXGI_FORMAT_R11G11B10_FLOAT;
-		break;
-	case FORMAT_R8G8B8A8_TYPELESS:
-		return DXGI_FORMAT_R8G8B8A8_TYPELESS;
 		break;
 	case FORMAT_R8G8B8A8_UNORM:
 		return DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -569,9 +545,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 		break;
 	case FORMAT_R8G8B8A8_SINT:
 		return DXGI_FORMAT_R8G8B8A8_SINT;
-		break;
-	case FORMAT_R16G16_TYPELESS:
-		return DXGI_FORMAT_R16G16_TYPELESS;
 		break;
 	case FORMAT_R16G16_FLOAT:
 		return DXGI_FORMAT_R16G16_FLOAT;
@@ -609,15 +582,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_D24_UNORM_S8_UINT:
 		return DXGI_FORMAT_D24_UNORM_S8_UINT;
 		break;
-	case FORMAT_R24_UNORM_X8_TYPELESS:
-		return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-		break;
-	case FORMAT_X24_TYPELESS_G8_UINT:
-		return DXGI_FORMAT_X24_TYPELESS_G8_UINT;
-		break;
-	case FORMAT_R8G8_TYPELESS:
-		return DXGI_FORMAT_R8G8_TYPELESS;
-		break;
 	case FORMAT_R8G8_UNORM:
 		return DXGI_FORMAT_R8G8_UNORM;
 		break;
@@ -651,9 +615,6 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_R16_SINT:
 		return DXGI_FORMAT_R16_SINT;
 		break;
-	case FORMAT_R8_TYPELESS:
-		return DXGI_FORMAT_R8_TYPELESS;
-		break;
 	case FORMAT_R8_UNORM:
 		return DXGI_FORMAT_R8_UNORM;
 		break;
@@ -666,32 +627,11 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_R8_SINT:
 		return DXGI_FORMAT_R8_SINT;
 		break;
-	case FORMAT_A8_UNORM:
-		return DXGI_FORMAT_A8_UNORM;
-		break;
-	case FORMAT_R1_UNORM:
-		return DXGI_FORMAT_R1_UNORM;
-		break;
-	case FORMAT_R9G9B9E5_SHAREDEXP:
-		return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
-		break;
-	case FORMAT_R8G8_B8G8_UNORM:
-		return DXGI_FORMAT_R8G8_B8G8_UNORM;
-		break;
-	case FORMAT_G8R8_G8B8_UNORM:
-		return DXGI_FORMAT_G8R8_G8B8_UNORM;
-		break;
-	case FORMAT_BC1_TYPELESS:
-		return DXGI_FORMAT_BC1_TYPELESS;
-		break;
 	case FORMAT_BC1_UNORM:
 		return DXGI_FORMAT_BC1_UNORM;
 		break;
 	case FORMAT_BC1_UNORM_SRGB:
 		return DXGI_FORMAT_BC1_UNORM_SRGB;
-		break;
-	case FORMAT_BC2_TYPELESS:
-		return DXGI_FORMAT_BC2_TYPELESS;
 		break;
 	case FORMAT_BC2_UNORM:
 		return DXGI_FORMAT_BC2_UNORM;
@@ -699,17 +639,11 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_BC2_UNORM_SRGB:
 		return DXGI_FORMAT_BC2_UNORM_SRGB;
 		break;
-	case FORMAT_BC3_TYPELESS:
-		return DXGI_FORMAT_BC3_TYPELESS;
-		break;
 	case FORMAT_BC3_UNORM:
 		return DXGI_FORMAT_BC3_UNORM;
 		break;
 	case FORMAT_BC3_UNORM_SRGB:
 		return DXGI_FORMAT_BC3_UNORM_SRGB;
-		break;
-	case FORMAT_BC4_TYPELESS:
-		return DXGI_FORMAT_BC4_TYPELESS;
 		break;
 	case FORMAT_BC4_UNORM:
 		return DXGI_FORMAT_BC4_UNORM;
@@ -717,44 +651,17 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_BC4_SNORM:
 		return DXGI_FORMAT_BC4_SNORM;
 		break;
-	case FORMAT_BC5_TYPELESS:
-		return DXGI_FORMAT_BC5_TYPELESS;
-		break;
 	case FORMAT_BC5_UNORM:
 		return DXGI_FORMAT_BC5_UNORM;
 		break;
 	case FORMAT_BC5_SNORM:
 		return DXGI_FORMAT_BC5_SNORM;
 		break;
-	case FORMAT_B5G6R5_UNORM:
-		return DXGI_FORMAT_B5G6R5_UNORM;
-		break;
-	case FORMAT_B5G5R5A1_UNORM:
-		return DXGI_FORMAT_B5G5R5A1_UNORM;
-		break;
 	case FORMAT_B8G8R8A8_UNORM:
 		return DXGI_FORMAT_B8G8R8A8_UNORM;
 		break;
-	case FORMAT_B8G8R8X8_UNORM:
-		return DXGI_FORMAT_B8G8R8X8_UNORM;
-		break;
-	case FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
-		return DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM;
-		break;
-	case FORMAT_B8G8R8A8_TYPELESS:
-		return DXGI_FORMAT_B8G8R8A8_TYPELESS;
-		break;
 	case FORMAT_B8G8R8A8_UNORM_SRGB:
 		return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-		break;
-	case FORMAT_B8G8R8X8_TYPELESS:
-		return DXGI_FORMAT_B8G8R8X8_TYPELESS;
-		break;
-	case FORMAT_B8G8R8X8_UNORM_SRGB:
-		return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
-		break;
-	case FORMAT_BC6H_TYPELESS:
-		return DXGI_FORMAT_BC6H_TYPELESS;
 		break;
 	case FORMAT_BC6H_UF16:
 		return DXGI_FORMAT_BC6H_UF16;
@@ -762,67 +669,11 @@ inline DXGI_FORMAT _ConvertFormat(FORMAT value)
 	case FORMAT_BC6H_SF16:
 		return DXGI_FORMAT_BC6H_SF16;
 		break;
-	case FORMAT_BC7_TYPELESS:
-		return DXGI_FORMAT_BC7_TYPELESS;
-		break;
 	case FORMAT_BC7_UNORM:
 		return DXGI_FORMAT_BC7_UNORM;
 		break;
 	case FORMAT_BC7_UNORM_SRGB:
 		return DXGI_FORMAT_BC7_UNORM_SRGB;
-		break;
-	case FORMAT_AYUV:
-		return DXGI_FORMAT_AYUV;
-		break;
-	case FORMAT_Y410:
-		return DXGI_FORMAT_Y410;
-		break;
-	case FORMAT_Y416:
-		return DXGI_FORMAT_Y416;
-		break;
-	case FORMAT_NV12:
-		return DXGI_FORMAT_NV12;
-		break;
-	case FORMAT_P010:
-		return DXGI_FORMAT_P010;
-		break;
-	case FORMAT_P016:
-		return DXGI_FORMAT_P016;
-		break;
-	case FORMAT_420_OPAQUE:
-		return DXGI_FORMAT_420_OPAQUE;
-		break;
-	case FORMAT_YUY2:
-		return DXGI_FORMAT_YUY2;
-		break;
-	case FORMAT_Y210:
-		return DXGI_FORMAT_Y210;
-		break;
-	case FORMAT_Y216:
-		return DXGI_FORMAT_Y216;
-		break;
-	case FORMAT_NV11:
-		return DXGI_FORMAT_NV11;
-		break;
-	case FORMAT_AI44:
-		return DXGI_FORMAT_AI44;
-		break;
-	case FORMAT_IA44:
-		return DXGI_FORMAT_IA44;
-		break;
-	case FORMAT_P8:
-		return DXGI_FORMAT_P8;
-		break;
-	case FORMAT_A8P8:
-		return DXGI_FORMAT_A8P8;
-		break;
-	case FORMAT_B4G4R4A4_UNORM:
-		return DXGI_FORMAT_B4G4R4A4_UNORM;
-		break;
-	case FORMAT_FORCE_UINT:
-		return DXGI_FORMAT_FORCE_UINT;
-		break;
-	default:
 		break;
 	}
 	return DXGI_FORMAT_UNKNOWN;
@@ -948,9 +799,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_UNKNOWN:
 		return FORMAT_UNKNOWN;
 		break;
-	case DXGI_FORMAT_R32G32B32A32_TYPELESS:
-		return FORMAT_R32G32B32A32_TYPELESS;
-		break;
 	case DXGI_FORMAT_R32G32B32A32_FLOAT:
 		return FORMAT_R32G32B32A32_FLOAT;
 		break;
@@ -960,9 +808,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_R32G32B32A32_SINT:
 		return FORMAT_R32G32B32A32_SINT;
 		break;
-	case DXGI_FORMAT_R32G32B32_TYPELESS:
-		return FORMAT_R32G32B32_TYPELESS;
-		break;
 	case DXGI_FORMAT_R32G32B32_FLOAT:
 		return FORMAT_R32G32B32_FLOAT;
 		break;
@@ -971,9 +816,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 		break;
 	case DXGI_FORMAT_R32G32B32_SINT:
 		return FORMAT_R32G32B32_SINT;
-		break;
-	case DXGI_FORMAT_R16G16B16A16_TYPELESS:
-		return FORMAT_R16G16B16A16_TYPELESS;
 		break;
 	case DXGI_FORMAT_R16G16B16A16_FLOAT:
 		return FORMAT_R16G16B16A16_FLOAT;
@@ -990,9 +832,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_R16G16B16A16_SINT:
 		return FORMAT_R16G16B16A16_SINT;
 		break;
-	case DXGI_FORMAT_R32G32_TYPELESS:
-		return FORMAT_R32G32_TYPELESS;
-		break;
 	case DXGI_FORMAT_R32G32_FLOAT:
 		return FORMAT_R32G32_FLOAT;
 		break;
@@ -1008,15 +847,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
 		return FORMAT_D32_FLOAT_S8X24_UINT;
 		break;
-	case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
-		return FORMAT_R32_FLOAT_X8X24_TYPELESS;
-		break;
-	case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
-		return FORMAT_X32_TYPELESS_G8X24_UINT;
-		break;
-	case DXGI_FORMAT_R10G10B10A2_TYPELESS:
-		return FORMAT_R10G10B10A2_TYPELESS;
-		break;
 	case DXGI_FORMAT_R10G10B10A2_UNORM:
 		return FORMAT_R10G10B10A2_UNORM;
 		break;
@@ -1025,9 +855,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 		break;
 	case DXGI_FORMAT_R11G11B10_FLOAT:
 		return FORMAT_R11G11B10_FLOAT;
-		break;
-	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
-		return FORMAT_R8G8B8A8_TYPELESS;
 		break;
 	case DXGI_FORMAT_R8G8B8A8_UNORM:
 		return FORMAT_R8G8B8A8_UNORM;
@@ -1043,9 +870,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 		break;
 	case DXGI_FORMAT_R8G8B8A8_SINT:
 		return FORMAT_R8G8B8A8_SINT;
-		break;
-	case DXGI_FORMAT_R16G16_TYPELESS:
-		return FORMAT_R16G16_TYPELESS;
 		break;
 	case DXGI_FORMAT_R16G16_FLOAT:
 		return FORMAT_R16G16_FLOAT;
@@ -1083,15 +907,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_D24_UNORM_S8_UINT:
 		return FORMAT_D24_UNORM_S8_UINT;
 		break;
-	case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
-		return FORMAT_R24_UNORM_X8_TYPELESS;
-		break;
-	case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
-		return FORMAT_X24_TYPELESS_G8_UINT;
-		break;
-	case DXGI_FORMAT_R8G8_TYPELESS:
-		return FORMAT_R8G8_TYPELESS;
-		break;
 	case DXGI_FORMAT_R8G8_UNORM:
 		return FORMAT_R8G8_UNORM;
 		break;
@@ -1125,9 +940,6 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_R16_SINT:
 		return FORMAT_R16_SINT;
 		break;
-	case DXGI_FORMAT_R8_TYPELESS:
-		return FORMAT_R8_TYPELESS;
-		break;
 	case DXGI_FORMAT_R8_UNORM:
 		return FORMAT_R8_UNORM;
 		break;
@@ -1140,32 +952,11 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_R8_SINT:
 		return FORMAT_R8_SINT;
 		break;
-	case DXGI_FORMAT_A8_UNORM:
-		return FORMAT_A8_UNORM;
-		break;
-	case DXGI_FORMAT_R1_UNORM:
-		return FORMAT_R1_UNORM;
-		break;
-	case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
-		return FORMAT_R9G9B9E5_SHAREDEXP;
-		break;
-	case DXGI_FORMAT_R8G8_B8G8_UNORM:
-		return FORMAT_R8G8_B8G8_UNORM;
-		break;
-	case DXGI_FORMAT_G8R8_G8B8_UNORM:
-		return FORMAT_G8R8_G8B8_UNORM;
-		break;
-	case DXGI_FORMAT_BC1_TYPELESS:
-		return FORMAT_BC1_TYPELESS;
-		break;
 	case DXGI_FORMAT_BC1_UNORM:
 		return FORMAT_BC1_UNORM;
 		break;
 	case DXGI_FORMAT_BC1_UNORM_SRGB:
 		return FORMAT_BC1_UNORM_SRGB;
-		break;
-	case DXGI_FORMAT_BC2_TYPELESS:
-		return FORMAT_BC2_TYPELESS;
 		break;
 	case DXGI_FORMAT_BC2_UNORM:
 		return FORMAT_BC2_UNORM;
@@ -1173,17 +964,11 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_BC2_UNORM_SRGB:
 		return FORMAT_BC2_UNORM_SRGB;
 		break;
-	case DXGI_FORMAT_BC3_TYPELESS:
-		return FORMAT_BC3_TYPELESS;
-		break;
 	case DXGI_FORMAT_BC3_UNORM:
 		return FORMAT_BC3_UNORM;
 		break;
 	case DXGI_FORMAT_BC3_UNORM_SRGB:
 		return FORMAT_BC3_UNORM_SRGB;
-		break;
-	case DXGI_FORMAT_BC4_TYPELESS:
-		return FORMAT_BC4_TYPELESS;
 		break;
 	case DXGI_FORMAT_BC4_UNORM:
 		return FORMAT_BC4_UNORM;
@@ -1191,44 +976,17 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_BC4_SNORM:
 		return FORMAT_BC4_SNORM;
 		break;
-	case DXGI_FORMAT_BC5_TYPELESS:
-		return FORMAT_BC5_TYPELESS;
-		break;
 	case DXGI_FORMAT_BC5_UNORM:
 		return FORMAT_BC5_UNORM;
 		break;
 	case DXGI_FORMAT_BC5_SNORM:
 		return FORMAT_BC5_SNORM;
 		break;
-	case DXGI_FORMAT_B5G6R5_UNORM:
-		return FORMAT_B5G6R5_UNORM;
-		break;
-	case DXGI_FORMAT_B5G5R5A1_UNORM:
-		return FORMAT_B5G5R5A1_UNORM;
-		break;
 	case DXGI_FORMAT_B8G8R8A8_UNORM:
 		return FORMAT_B8G8R8A8_UNORM;
 		break;
-	case DXGI_FORMAT_B8G8R8X8_UNORM:
-		return FORMAT_B8G8R8X8_UNORM;
-		break;
-	case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
-		return FORMAT_R10G10B10_XR_BIAS_A2_UNORM;
-		break;
-	case DXGI_FORMAT_B8G8R8A8_TYPELESS:
-		return FORMAT_B8G8R8A8_TYPELESS;
-		break;
 	case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
 		return FORMAT_B8G8R8A8_UNORM_SRGB;
-		break;
-	case DXGI_FORMAT_B8G8R8X8_TYPELESS:
-		return FORMAT_B8G8R8X8_TYPELESS;
-		break;
-	case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
-		return FORMAT_B8G8R8X8_UNORM_SRGB;
-		break;
-	case DXGI_FORMAT_BC6H_TYPELESS:
-		return FORMAT_BC6H_TYPELESS;
 		break;
 	case DXGI_FORMAT_BC6H_UF16:
 		return FORMAT_BC6H_UF16;
@@ -1236,67 +994,11 @@ inline FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	case DXGI_FORMAT_BC6H_SF16:
 		return FORMAT_BC6H_SF16;
 		break;
-	case DXGI_FORMAT_BC7_TYPELESS:
-		return FORMAT_BC7_TYPELESS;
-		break;
 	case DXGI_FORMAT_BC7_UNORM:
 		return FORMAT_BC7_UNORM;
 		break;
 	case DXGI_FORMAT_BC7_UNORM_SRGB:
 		return FORMAT_BC7_UNORM_SRGB;
-		break;
-	case DXGI_FORMAT_AYUV:
-		return FORMAT_AYUV;
-		break;
-	case DXGI_FORMAT_Y410:
-		return FORMAT_Y410;
-		break;
-	case DXGI_FORMAT_Y416:
-		return FORMAT_Y416;
-		break;
-	case DXGI_FORMAT_NV12:
-		return FORMAT_NV12;
-		break;
-	case DXGI_FORMAT_P010:
-		return FORMAT_P010;
-		break;
-	case DXGI_FORMAT_P016:
-		return FORMAT_P016;
-		break;
-	case DXGI_FORMAT_420_OPAQUE:
-		return FORMAT_420_OPAQUE;
-		break;
-	case DXGI_FORMAT_YUY2:
-		return FORMAT_YUY2;
-		break;
-	case DXGI_FORMAT_Y210:
-		return FORMAT_Y210;
-		break;
-	case DXGI_FORMAT_Y216:
-		return FORMAT_Y216;
-		break;
-	case DXGI_FORMAT_NV11:
-		return FORMAT_NV11;
-		break;
-	case DXGI_FORMAT_AI44:
-		return FORMAT_AI44;
-		break;
-	case DXGI_FORMAT_IA44:
-		return FORMAT_IA44;
-		break;
-	case DXGI_FORMAT_P8:
-		return FORMAT_P8;
-		break;
-	case DXGI_FORMAT_A8P8:
-		return FORMAT_A8P8;
-		break;
-	case DXGI_FORMAT_B4G4R4A4_UNORM:
-		return FORMAT_B4G4R4A4_UNORM;
-		break;
-	case DXGI_FORMAT_FORCE_UINT:
-		return FORMAT_FORCE_UINT;
-		break;
-	default:
 		break;
 	}
 	return FORMAT_UNKNOWN;

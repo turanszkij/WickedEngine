@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
-#include "depthConvertHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
 float4 main(VertextoPixel input) : SV_TARGET

@@ -1,5 +1,4 @@
 #include "deferredLightHF.hlsli"
-#include "fullScreenTriangleHF.hlsli"
 
 VertexToPixel main(uint vid : SV_VERTEXID)
 {

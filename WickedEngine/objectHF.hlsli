@@ -20,12 +20,7 @@
 
 #include "globals.hlsli"
 #include "objectInputLayoutHF.hlsli"
-#include "ditherHF.hlsli"
-#include "tangentComputeHF.hlsli"
-#include "depthConvertHF.hlsli"
-#include "fogHF.hlsli"
 #include "brdf.hlsli"
-#include "packHF.hlsli"
 #include "lightingHF.hlsli"
 
 // DEFINITIONS
@@ -83,7 +78,7 @@ inline GBUFFEROutputType CreateGbuffer(in float4 color, in Surface surface, in f
 
 	GBUFFEROutputType Out;
 	Out.g0 = float4(color.rgb, surface.sss);														/*FORMAT_R8G8B8A8_UNORM*/
-	Out.g1 = float4(encode(surface.N), velocity);													/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);													/*FORMAT_R16G16B16A16_FLOAT*/
 	Out.g2 = float4(surface.occlusion, surface.roughness, surface.metalness, surface.reflectance);	/*FORMAT_R8G8B8A8_UNORM*/
 	Out.diffuse = float4(combined_lighting.diffuse, 1);												/*wiRenderer::RTFormat_deferred_lightbuffer*/
 	Out.specular = float4(combined_lighting.specular, 1);											/*wiRenderer::RTFormat_deferred_lightbuffer*/
@@ -99,7 +94,7 @@ inline GBUFFEROutputType_Thin CreateGbuffer_Thin(in float4 color, in Surface sur
 {
 	GBUFFEROutputType_Thin Out;
 	Out.g0 = color;																		/*FORMAT_R16G16B16A16_FLOAT*/
-	Out.g1 = float4(encode(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
+	Out.g1 = float4(encodeNormal(surface.N), velocity);										/*FORMAT_R16G16B16A16_FLOAT*/
 	return Out;
 }
 
@@ -129,9 +124,9 @@ inline void NormalMapping(in float2 UV, in float3 V, inout float3 N, in float3x3
 {
 	float3 normalMap = xNormalMap.Sample(sampler_objectshader, UV).rgb;
 	bumpColor = normalMap.rgb * 2 - 1;
-	bumpColor.g *= g_xMat_normalMapFlip;
-	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMat_normalMapStrength));
-	bumpColor *= g_xMat_normalMapStrength;
+	bumpColor.g *= g_xMaterial.normalMapFlip;
+	N = normalize(lerp(N, mul(bumpColor, TBN), g_xMaterial.normalMapStrength));
+	bumpColor *= g_xMaterial.normalMapStrength;
 }
 
 inline void SpecularAA(in float3 N, inout float roughness)
@@ -148,7 +143,7 @@ inline void SpecularAA(in float3 N, inout float roughness)
 
 inline float3 PlanarReflection(in float2 reflectionUV, in float2 bumpColor)
 {
-	return xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + bumpColor*g_xMat_normalMapStrength, 0).rgb;
+	return xReflection.SampleLevel(sampler_linear_clamp, reflectionUV + bumpColor*g_xMaterial.normalMapStrength, 0).rgb;
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
@@ -157,8 +152,8 @@ inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3
 	V = mul(TBN, V);
 	float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
 	float curLayerHeight = 0;
-	float2 dtex = g_xMat_parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-	float2 originalTextureCoords = g_xMat_uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+	float2 dtex = g_xMaterial.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+	float2 originalTextureCoords = g_xMaterial.uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
 	float2 currentTextureCoords = originalTextureCoords;
 	float2 derivX = ddx_coarse(currentTextureCoords);
 	float2 derivY = ddy_coarse(currentTextureCoords);
@@ -183,13 +178,13 @@ inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3
 
 inline void Refraction(in float2 ScreenCoord, in float2 normal2D, in float3 bumpColor, inout Surface surface, inout float4 color, inout Lighting lighting)
 {
-	if (g_xMat_refractionIndex > 0)
+	if (g_xMaterial.refractionIndex > 0)
 	{
 		float2 size;
 		float mipLevels;
 		xRefraction.GetDimensions(0, size.x, size.y, mipLevels);
 		const float sampled_mip = (g_xFrame_AdvancedRefractions ? surface.roughness * mipLevels : 0);
-		float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMat_refractionIndex;
+		float2 perturbatedRefrTexCoords = ScreenCoord.xy + (normal2D + bumpColor.rg) * g_xMaterial.refractionIndex;
 		float4 refractiveColor = xRefraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, sampled_mip);
 		surface.albedo.rgb = lerp(refractiveColor.rgb, surface.albedo.rgb, color.a);
 		lighting.direct.diffuse = lerp(1, lighting.direct.diffuse, color.a);
@@ -221,10 +216,10 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			[branch]
 			if (decalAccumulation.a < 1)
 			{
-				ShaderEntityType decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
+				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
 
 				const float4x4 decalProjection = MatrixArray[decal.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
+				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
 				if (is_saturated(uvw))
@@ -287,10 +282,10 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			[branch]
 			if (envmapAccumulation.a < 1)
 			{
-				ShaderEntityType probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
+				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
 
 				const float4x4 probeProjection = MatrixArray[probe.userdata];
-				const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 				[branch]
 				if (is_saturated(uvw))
@@ -353,7 +348,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1 << bucket_bit_index;
 
-				ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
+				ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
 
 				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 				{
@@ -443,10 +438,10 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
 				{
-					ShaderEntityType decal = EntityArray[entity_index];
+					ShaderEntity decal = EntityArray[entity_index];
 
 					const float4x4 decalProjection = MatrixArray[decal.userdata];
-					const float3 clipSpacePos = mul(float4(surface.P, 1), decalProjection).xyz;
+					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 					[branch]
 					if (is_saturated(uvw))
@@ -522,10 +517,10 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 				{
-					ShaderEntityType probe = EntityArray[entity_index];
+					ShaderEntity probe = EntityArray[entity_index];
 
 					const float4x4 probeProjection = MatrixArray[probe.userdata];
-					const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 					[branch]
 					if (is_saturated(uvw))
@@ -597,7 +592,7 @@ inline void TiledLighting(in float2 pixel, inout Surface surface, inout Lighting
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
-					ShaderEntityType light = EntityArray[entity_index];
+					ShaderEntity light = EntityArray[entity_index];
 
 					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 					{
@@ -754,9 +749,9 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	float4 color;
 	[branch]
-	if (g_xMat_uvset_baseColorMap >= 0)
+	if (g_xMaterial.uvset_baseColorMap >= 0)
 	{
-		const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
 		color.rgb = DEGAMMA(color.rgb);
 	}
@@ -788,22 +783,22 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #endif // SIMPLE_INPUT
 
 #ifdef NORMALMAP
-	const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+	const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 	NormalMapping(UV_normalMap, surface.P, surface.N, TBN, bumpColor);
 #endif // NORMALMAP
 
 	// Surface map:
 	float4 surface_occlusion_roughness_metallic_reflectance;
 	[branch]
-	if (g_xMat_uvset_surfaceMap >= 0)
+	if (g_xMaterial.uvset_surfaceMap >= 0)
 	{
-		const float2 UV_surfaceMap = g_xMat_uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_surfaceMap = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		surface_occlusion_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
-		if (g_xMat_occlusion_primary == 0)
+		if (g_xMaterial.occlusion_primary == 0)
 		{
 			surface_occlusion_roughness_metallic_reflectance.r = 1;
 		}
-		if (g_xMat_specularGlossinessWorkflow)
+		if (g_xMaterial.specularGlossinessWorkflow)
 		{
 			ConvertToSpecularGlossiness(surface_occlusion_roughness_metallic_reflectance);
 		}
@@ -814,11 +809,11 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	}
 
 	// Emissive map:
-	float4 emissiveColor = g_xMat_emissiveColor;
+	float4 emissiveColor = g_xMaterial.emissiveColor;
 	[branch]
-	if (emissiveColor.a > 0 && g_xMat_uvset_emissiveMap >= 0)
+	if (emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
 	{
-		const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		float4 emissiveMap = xEmissiveMap.Sample(sampler_objectshader, UV_emissiveMap);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 		emissiveColor *= emissiveMap;
@@ -826,9 +821,9 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 	// Secondary occlusion map:
 	[branch]
-	if (g_xMat_occlusion_secondary && g_xMat_uvset_occlusionMap >= 0)
+	if (g_xMaterial.occlusion_secondary && g_xMaterial.uvset_occlusionMap >= 0)
 	{
-		const float2 UV_occlusionMap = g_xMat_uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		const float2 UV_occlusionMap = g_xMaterial.uvset_occlusionMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		surface_occlusion_roughness_metallic_reflectance.r *= xOcclusionMap.Sample(sampler_objectshader, UV_occlusionMap).r;
 	}
 
@@ -848,11 +843,11 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 		surface.V, 
 		color,
 		surface_occlusion_roughness_metallic_reflectance.r,
-		g_xMat_roughness * surface_occlusion_roughness_metallic_reflectance.g,
-		g_xMat_metalness * surface_occlusion_roughness_metallic_reflectance.b,
-		g_xMat_reflectance * surface_occlusion_roughness_metallic_reflectance.a,
+		g_xMaterial.roughness * surface_occlusion_roughness_metallic_reflectance.g,
+		g_xMaterial.metalness * surface_occlusion_roughness_metallic_reflectance.b,
+		g_xMaterial.reflectance * surface_occlusion_roughness_metallic_reflectance.a,
 		emissiveColor,
-		g_xMat_subsurfaceScattering
+		g_xMaterial.subsurfaceScattering
 	);
 
 	Lighting lighting = CreateLighting(0, 0, GetAmbient(surface.N), 0);
@@ -868,16 +863,16 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	float2 bumpColor1 = 0;
 	float2 bumpColor2 = 0;
 	[branch]
-	if (g_xMat_uvset_normalMap >= 0)
+	if (g_xMaterial.uvset_normalMap >= 0)
 	{
-		const float2 UV_normalMap = g_xMat_uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMat_texMulAdd.ww).rg - 1.0f;
-		bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap + g_xMat_texMulAdd.zw).rg - 1.0f;
+		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		bumpColor0 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1.0f;
+		bumpColor1 = 2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap + g_xMaterial.texMulAdd.zw).rg - 1.0f;
 	}
 	bumpColor2 = xWaterRipples.Sample(sampler_objectshader, ScreenCoord).rg;
-	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMat_refractionIndex;
-	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMat_normalMapStrength));
-	bumpColor *= g_xMat_normalMapStrength;
+	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * g_xMaterial.refractionIndex;
+	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), g_xMaterial.normalMapStrength));
+	bumpColor *= g_xMaterial.normalMapStrength;
 
 	//REFLECTION
 	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, refUV + bumpColor.rg, 0);

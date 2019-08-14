@@ -1,18 +1,15 @@
 #define RAY_BACKFACE_CULLING
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "ShaderInterop_BVH.h"
-#include "tracedRenderingHF.hlsli"
-#include "raySceneIntersectHF.hlsli"
+#include "raytracingHF.hlsli"
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND7);
 STRUCTUREDBUFFER(rayIndexBuffer_READ, uint, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(rayBuffer_READ, TracedRenderingStoredRay, TEXSLOT_ONDEMAND9);
+STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWRAWBUFFER(counterBuffer_WRITE, 0);
 RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 1);
 RWSTRUCTUREDBUFFER(raySortBuffer_WRITE, float, 2);
-RWSTRUCTUREDBUFFER(rayBuffer_WRITE, TracedRenderingStoredRay, 3);
+RWSTRUCTUREDBUFFER(rayBuffer_WRITE, RaytracingStoredRay, 3);
 RWTEXTURE2D(resultTexture, float4, 4);
 
 // This enables reduced atomics into global memory
@@ -60,7 +57,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 		uint2 coords2D = unflatten2D(pixelID, xTraceResolution.xy);
 
 		// Compute screen coordinates:
-		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_Inverse.xy * 2.0f - 1.0f) * float2(1, -1);
+		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
 
 		float seed = xTraceRandomSeed;
 

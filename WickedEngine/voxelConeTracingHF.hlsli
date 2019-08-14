@@ -45,13 +45,13 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	while (dist < maxDistance && alpha < 1)
 	{
 		float diameter = max(g_xFrame_VoxelRadianceDataSize, 2 * coneAperture * dist);
-		float mip = log2(diameter * g_xFrame_VoxelRadianceDataSize_Inverse);
+		float mip = log2(diameter * g_xFrame_VoxelRadianceDataSize_rcp);
 
 		// Because we do the ray-marching in world space, we need to remap into 3d texture space before sampling:
 		//	todo: optimization could be doing ray-marching in texture space
 		float3 tc = startPos + coneDirection * dist;
-		tc = (tc - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataSize_Inverse;
-		tc *= g_xFrame_VoxelRadianceDataRes_Inverse;
+		tc = (tc - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataSize_rcp;
+		tc *= g_xFrame_VoxelRadianceDataRes_rcp;
 		tc = tc * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 		// break if the ray exits the voxel grid, or we sample from the last mip:
@@ -91,7 +91,7 @@ inline float4 ConeTraceRadiance(in Texture3D<float4> voxels, in float3 P, in flo
 	}
 
 	// final radiance is average of all the cones radiances
-	radiance *= g_xFrame_VoxelRadianceNumCones_Inverse;
+	radiance *= g_xFrame_VoxelRadianceNumCones_rcp;
 	radiance.a = saturate(radiance.a);
 
 	return max(0, radiance);

@@ -9,7 +9,7 @@ void main(triangle VSOut_Sky_EnvmapRendering input[3], inout TriangleStream< PSI
 		output.RTIndex = f;
 		for (uint v = 0; v < 3; v++)
 		{
-			output.pos = mul(input[v].pos, xCubeShadowVP[f]);
+			output.pos = mul(xCubeShadowVP[f], input[v].pos);
 			output.nor = input[v].nor;
 			CubeMapStream.Append(output);
 		}

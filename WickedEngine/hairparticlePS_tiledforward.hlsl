@@ -3,7 +3,6 @@
 #include "globals.hlsli"
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
-#include "ditherHF.hlsli"
 
 [earlydepthstencil]
 GBUFFEROutputType_Thin main(VertexToPixel input)

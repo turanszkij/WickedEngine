@@ -88,7 +88,7 @@ inline float3 shadowCascade(float3 shadowPos, float2 ShTex, float shadowKernel, 
 }
 
 
-inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.directionWS.xyz;
 	SurfaceToLight surfaceToLight = CreateSurfaceToLight(surface, L);
@@ -107,7 +107,7 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 			for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
-				float3 ShPos = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz;
+				float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
 				float3 ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
@@ -124,7 +124,7 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 					{
 						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
 						cascade += 1;
-						ShPos = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz;
+						ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(surface.P, 1)).xyz;
 						ShTex = ShPos * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 						const float3 shadow_fallback = shadowCascade(ShPos, ShTex.xy, light.shadowKernel, light.shadowBias, light.GetShadowMapIndex() + cascade);
 
@@ -150,7 +150,7 @@ inline void DirectionalLight(in ShaderEntityType light, in Surface surface, inou
 		}
 	}
 }
-inline void PointLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
@@ -191,7 +191,7 @@ inline void PointLight(in ShaderEntityType light, in Surface surface, inout Ligh
 		}
 	}
 }
-inline void SpotLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.positionWS - surface.P;
 	const float dist2 = dot(L, L);
@@ -219,7 +219,7 @@ inline void SpotLight(in ShaderEntityType light, in Surface surface, inout Light
 				[branch]
 				if (light.IsCastingShadow())
 				{
-					float4 ShPos = mul(float4(surface.P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
+					float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(surface.P, 1));
 					ShPos.xyz /= ShPos.w;
 					float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 					[branch]
@@ -415,7 +415,7 @@ float illuminanceSphereOrDisk(float cosTheta, float sinSigmaSqr)
 	return max(illuminance, 0.0f);
 }
 
-inline void SphereLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void SphereLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
@@ -464,7 +464,7 @@ inline void SphereLight(in ShaderEntityType light, in Surface surface, inout Lig
 		}
 	}
 }
-inline void DiscLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void DiscLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
@@ -519,7 +519,7 @@ inline void DiscLight(in ShaderEntityType light, in Surface surface, inout Light
 		}
 	}
 }
-inline void RectangleLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void RectangleLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 L = light.positionWS - surface.P;
 	float dist = length(L);
@@ -634,7 +634,7 @@ inline void RectangleLight(in ShaderEntityType light, in Surface surface, inout 
 		}
 	}
 }
-inline void TubeLight(in ShaderEntityType light, in Surface surface, inout Lighting lighting)
+inline void TubeLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
 {
 	float3 Lunormalized = light.positionWS - surface.P;
 	float dist = length(Lunormalized);
@@ -737,8 +737,8 @@ inline LightingContribution VoxelGI(in Surface surface, inout Lighting lighting)
 	{
 		// determine blending factor (we will blend out voxel GI on grid edges):
 		float3 voxelSpacePos = surface.P - g_xFrame_VoxelRadianceDataCenter;
-		voxelSpacePos *= g_xFrame_VoxelRadianceDataSize_Inverse;
-		voxelSpacePos *= g_xFrame_VoxelRadianceDataRes_Inverse;
+		voxelSpacePos *= g_xFrame_VoxelRadianceDataSize_rcp;
+		voxelSpacePos *= g_xFrame_VoxelRadianceDataRes_rcp;
 		voxelSpacePos = saturate(abs(voxelSpacePos));
 		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
 
@@ -796,7 +796,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 		// There are no envmaps, approximate sky color:
 		float3 realSkyColor = lerp(GetHorizonColor(), GetZenithColor(), pow(saturate(surface.R.y), 0.25f));
 		float3 roughSkyColor = (GetHorizonColor() + GetZenithColor()) * 0.5f;
-		float blendSkyByRoughness = saturate(MIP * g_xFrame_EnvProbeMipCount_Inverse);
+		float blendSkyByRoughness = saturate(MIP * g_xFrame_EnvProbeMipCount_rcp);
 		envColor = lerp(realSkyColor, roughSkyColor, blendSkyByRoughness);
 	}
 
@@ -809,7 +809,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface, in float MIP)
 // clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
 // MIP:					mip level to sample
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
-inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntityType probe, in float4x4 probeProjection, in float3 clipSpacePos, in float MIP)
+inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos, in float MIP)
 {
 	// Perform parallax correction of reflection ray (R) into OBB:
 	float3 RayLS = mul(surface.R, (float3x3)probeProjection);

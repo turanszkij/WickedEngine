@@ -332,19 +332,17 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
-		device->EventBegin("SSAO", cmd);
 
 		wiRenderer::Postprocess_SSAO(
 			depthBuffer_Copy, 
 			rtLinearDepth, 
-			rtSSAO[0], 
+			rtSSAO[1],
+			rtSSAO[0],
 			cmd,
 			getSSAORange(),
-			getSSAOSampleCount());
-
-		wiRenderer::Postprocess_Blur_Gaussian(rtSSAO[0], rtSSAO[1], rtSSAO[0], cmd, getSSAOBlur(), getSSAOBlur());
-
-		device->EventEnd(cmd);
+			getSSAOSampleCount(),
+			getSSAOBlur()
+		);
 	}
 }
 void RenderPath3D::RenderSSR(const Texture2D& srcSceneRT, CommandList cmd) const
@@ -569,15 +567,11 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		device->EventBegin("Temporal AA Resolve", cmd);
-		auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", cmd);
-
 		int output = device->GetFrameCount() % 2;
 		int history = 1 - output;
 		wiRenderer::Postprocess_TemporalAA(srcdstSceneRT, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
-		wiRenderer::CopyTexture2D(&srcdstSceneRT, 0, 0, 0, &rtTemporalAA[output], 0, cmd);
+		wiRenderer::CopyTexture2D(&srcdstSceneRT, 0, 0, 0, &rtTemporalAA[output], 0, cmd); // todo: remove and do better ping pong
 
-		wiProfiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
 }
@@ -588,6 +582,7 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->EventBegin("Bloom", cmd);
+		auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
 
 		wiRenderer::Postprocess_BloomSeparate(srcdstSceneRT, rtBloom, cmd, getBloomThreshold());
 
@@ -620,6 +615,7 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 			fx.quality = QUALITY_LINEAR;
 		}
 
+		wiProfiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
 }

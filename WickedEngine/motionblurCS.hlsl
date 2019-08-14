@@ -1,7 +1,6 @@
 #define DILATE_VELOCITY_AVG_FAR
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
-#include "reconstructPositionHF.hlsli"
 #include "postprocessHF.hlsli"
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);

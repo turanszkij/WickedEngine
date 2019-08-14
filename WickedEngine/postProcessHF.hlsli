@@ -1,10 +1,6 @@
 #ifndef _POSTPROCESS_HF_
 #define _POSTPROCESS_HF_
-
-#include "imageHF.hlsli"
-#include "packHF.hlsli"
-#include "depthConvertHF.hlsli"
-
+#include "globals.hlsli"
 
 float2 GetVelocity(in int2 pixel)
 {

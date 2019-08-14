@@ -1,8 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_TracedRendering.h"
-#include "ShaderInterop_BVH.h"
-#include "tracedRenderingHF.hlsli"
-#include "raySceneIntersectHF.hlsli"
+#include "raytracingHF.hlsli"
 
 float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_Target
 {

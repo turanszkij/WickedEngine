@@ -43,7 +43,7 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 
 	// Perform ray tracing of screen grid and plane surface to unproject to world space:
 	float3 o = g_xFrame_MainCamera_CamPos;
-	float4 r = mul(float4(Out.pos.xy, 0, 1), g_xFrame_MainCamera_InvVP);
+	float4 r = mul(g_xFrame_MainCamera_InvVP, float4(Out.pos.xy, 0, 1));
 	r.xyz /= r.w;
 	float3 d = normalize(o.xyz - r.xyz);
 
@@ -56,11 +56,11 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 	worldPos += displacement;
 
 	// Reproject displaced surface and output:
-	Out.pos = mul(float4(worldPos, 1), g_xFrame_MainCamera_VP);
+	Out.pos = mul(g_xFrame_MainCamera_VP, float4(worldPos, 1));
 	Out.pos2D = Out.pos;
 	Out.pos3D = worldPos;
 	Out.uv = uv;
-	Out.ReflectionMapSamplingPos = mul(float4(worldPos, 1), g_xFrame_MainCamera_ReflVP);
+	Out.ReflectionMapSamplingPos = mul(g_xFrame_MainCamera_ReflVP, float4(worldPos, 1));
 
 	return Out;
 }

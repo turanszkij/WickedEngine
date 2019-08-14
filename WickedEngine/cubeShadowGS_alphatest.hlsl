@@ -24,7 +24,7 @@ void main(triangle GS_CUBEMAP_IN input[3], inout TriangleStream<PS_CUBEMAP_IN> C
 		[unroll]
 		for (int v = 0; v < 3; v++)
 		{
-			output.pos = mul(input[v].pos, xCubeShadowVP[f]);
+			output.pos = mul(xCubeShadowVP[f], input[v].pos);
 			output.pos3D = input[v].pos.xyz;
 			output.uv = input[v].uv;
 			CubeMapStream.Append(output);

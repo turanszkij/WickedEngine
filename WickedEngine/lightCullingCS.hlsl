@@ -1,8 +1,6 @@
 #include "globals.hlsli"
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
-#include "packHF.hlsli"
-#include "reconstructPositionHF.hlsli"
 
 #define	xSSR texture_9
 
@@ -91,7 +89,7 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 }
 
 [numthreads(TILED_CULLING_THREADSIZE, TILED_CULLING_THREADSIZE, 1)]
-void main(ComputeShaderInput IN)
+void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	// This controls the unrolling granularity if the blocksize and threadsize are different:
 	uint granularity = 0;
@@ -100,9 +98,9 @@ void main(ComputeShaderInput IN)
 	uint i = 0;
 
 	// Compute addresses and load frustum:
-	const uint flatTileIndex = flatten2D(IN.groupID.xy, xDispatchParams_numThreadGroups.xy);
+	const uint flatTileIndex = flatten2D(Gid.xy, xDispatchParams_numThreadGroups.xy);
 	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
-	const uint bucketIndex = IN.groupIndex;
+	const uint bucketIndex = groupIndex;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
 
 	// Each thread will zero out one bucket in the LDS:
@@ -113,7 +111,7 @@ void main(ComputeShaderInput IN)
 	}
 
 	// First thread zeroes out other LDS data:
-	if (IN.groupIndex == 0)
+	if (groupIndex == 0)
 	{
 		uMinDepth = 0xffffffff;
 		uMaxDepth = 0;
@@ -132,7 +130,7 @@ void main(ComputeShaderInput IN)
 	[unroll]
 	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{
-		uint2 pixel = IN.dispatchThreadID.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
 		pixel = min(pixel, GetInternalResolution() - 1); // avoid loading from outside the texture, it messes up the min-max depth!
 		depth[granularity] = texture_depth[pixel];
 		depthMinUnrolled = min(depthMinUnrolled, depth[granularity]);
@@ -150,7 +148,7 @@ void main(ComputeShaderInput IN)
 	float fMinDepth = asfloat(uMaxDepth);
 	float fMaxDepth = asfloat(uMinDepth);
 
-	if (IN.groupIndex == 0)
+	if (groupIndex == 0)
 	{
 		// I construct an AABB around the minmax depth bounds to perform tighter culling:
 		// The frustum is asymmetric so we must consider all corners!
@@ -158,22 +156,22 @@ void main(ComputeShaderInput IN)
 		float3 viewSpace[8];
 
 		// Top left point, near
-		viewSpace[0] = ScreenToView(float4(IN.groupID.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 		// Top right point, near
-		viewSpace[1] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 		// Bottom left point, near
-		viewSpace[2] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 		// Bottom right point, near
-		viewSpace[3] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
+		viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f)).xyz;
 
 		// Top left point, far
-		viewSpace[4] = ScreenToView(float4(IN.groupID.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 		// Top right point, far
-		viewSpace[5] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 		// Bottom left point, far
-		viewSpace[6] = ScreenToView(float4(float2(IN.groupID.x, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 		// Bottom right point, far
-		viewSpace[7] = ScreenToView(float4(float2(IN.groupID.x + 1, IN.groupID.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
+		viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f)).xyz;
 
 		float3 minAABB = 10000000;
 		float3 maxAABB = -10000000;
@@ -216,9 +214,9 @@ void main(ComputeShaderInput IN)
 	GroupMemoryBarrierWithGroupSync();
 
 	// Each thread will cull one entity until all entities have been culled:
-	for (i = IN.groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	for (i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		ShaderEntityType entity = EntityArray[i];
+		ShaderEntity entity = EntityArray[i];
 
 		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 		{
@@ -327,7 +325,7 @@ void main(ComputeShaderInput IN)
 	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY * g_xFrame_ConstantOne; ++granularity)
 	{
 		// Light the pixels:
-		uint2 pixel = IN.dispatchThreadID.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
 		if (pixel.x >= (uint)GetInternalResolution().x || pixel.y >= (uint)GetInternalResolution().y)
 			continue;
 
@@ -336,8 +334,8 @@ void main(ComputeShaderInput IN)
 		float4 g2 = texture_gbuffer2[pixel];
 		float3 ld = deferred_Diffuse[pixel].rgb;
 		float3 ls = deferred_Specular[pixel].rgb;
-		float3 N = decode(g1.xy);
-		float3 P = getPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
+		float3 N = decodeNormal(g1.xy);
+		float3 P = reconstructPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
 		Lighting lighting = CreateLighting(0, ls, ld, 0);
@@ -372,10 +370,10 @@ void main(ComputeShaderInput IN)
 					[branch]
 					if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 					{
-						ShaderEntityType probe = EntityArray[entity_index];
+						ShaderEntity probe = EntityArray[entity_index];
 
 						const float4x4 probeProjection = MatrixArray[probe.userdata];
-						const float3 clipSpacePos = mul(float4(surface.P, 1), probeProjection).xyz;
+						const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 						const float3 uvw = clipSpacePos.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 						[branch]
 						if (is_saturated(uvw))
@@ -443,7 +441,7 @@ void main(ComputeShaderInput IN)
 					[branch]
 					if (entity_index >= first_item && entity_index <= last_item)
 					{
-						ShaderEntityType light = EntityArray[entity_index];
+						ShaderEntity light = EntityArray[entity_index];
 
 						switch (light.GetType())
 						{
@@ -510,7 +508,7 @@ void main(ComputeShaderInput IN)
 #ifdef DEBUG_TILEDLIGHTCULLING
 	for (granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{
-		uint2 pixel = IN.dispatchThreadID.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
 
 		const float3 mapTex[] = {
 			float3(0,0,0),

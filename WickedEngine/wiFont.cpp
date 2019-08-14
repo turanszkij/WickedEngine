@@ -511,10 +511,10 @@ void wiFont::Draw(CommandList cmd) const
 	if (newProps.shadowColor.getA() > 0)
 	{
 		// font shadow render:
-		XMStoreFloat4x4(&cb.g_xFont_Transform, XMMatrixTranspose(
+		XMStoreFloat4x4(&cb.g_xFont_Transform,
 			XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 			* device->GetScreenProjection()
-		));
+		);
 		cb.g_xFont_Color = newProps.shadowColor.toFloat4();
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
@@ -522,10 +522,10 @@ void wiFont::Draw(CommandList cmd) const
 	}
 
 	// font base render:
-	XMStoreFloat4x4(&cb.g_xFont_Transform, XMMatrixTranspose(
+	XMStoreFloat4x4(&cb.g_xFont_Transform, 
 		XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 		* device->GetScreenProjection()
-	));
+	);
 	cb.g_xFont_Color = newProps.color.toFloat4();
 	device->UpdateBuffer(&constantBuffer, &cb, cmd);
 

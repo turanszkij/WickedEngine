@@ -13,6 +13,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < outputResolution.x && DTid.y < outputResolution.y)
 	{
-		output[DTid.xy] = SampleTextureCatmullRom(input, ((float2)DTid.xy + 0.5f) / (float2)outputResolution.xy);
+		output[DTid.xy] = SampleTextureCatmullRom(input, ((float2)DTid.xy + 0.5f) * (float2)outputResolution_rcp.xy);
 	}
 }

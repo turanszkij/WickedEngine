@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "hairparticleHF.hlsli"
-#include "ditherHF.hlsli"
 
 void main(VertexToPixel PSIn)
 {

@@ -1,6 +1,5 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
-#include "reconstructPositionHF.hlsli"
 #include "brdf.hlsli"
 #include "postProcessHF.hlsli"
 
@@ -32,7 +31,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 
 	for (int i = 0; i < g_iNumBinarySearchSteps; i++)
 	{
-		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), g_xCamera_Proj);
+		float4 vProjectedCoord = mul(g_xCamera_Proj, float4(vHitCoord, 1.0f));
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -46,7 +45,7 @@ float4 SSRBinarySearch(float3 vDir, inout float3 vHitCoord)
 		vHitCoord -= vDir;
 	}
 
-	float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), g_xCamera_Proj);
+	float4 vProjectedCoord = mul(g_xCamera_Proj, float4(vHitCoord, 1.0f));
 	vProjectedCoord.xy /= vProjectedCoord.w;
 	vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -64,7 +63,7 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 	{
 		vHitCoord += vDir;
 
-		float4 vProjectedCoord = mul(float4(vHitCoord, 1.0f), g_xCamera_Proj);
+		float4 vProjectedCoord = mul(g_xCamera_Proj, float4(vHitCoord, 1.0f));
 		vProjectedCoord.xy /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -87,13 +86,13 @@ float4 SSRRayMarch(float3 vDir, inout float3 vHitCoord)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float3 N = decode(texture_gbuffer1[DTid.xy].xy);
-	const float3 P = getPosition(uv, texture_depth[DTid.xy]);
+	const float3 N = decodeNormal(texture_gbuffer1[DTid.xy].xy);
+	const float3 P = reconstructPosition(uv, texture_depth[DTid.xy]);
 
 
 	//Reflection vector
-	float3 vViewPos = mul(float4(P.xyz, 1), g_xCamera_View).xyz;
-	float3 vViewNor = mul(float4(N, 0), g_xCamera_View).xyz;
+	float3 vViewPos = mul(g_xCamera_View, float4(P.xyz, 1)).xyz;
+	float3 vViewNor = mul(g_xCamera_View, float4(N, 0)).xyz;
 	float3 vReflectDir = normalize(reflect(vViewPos.xyz, vViewNor.xyz));
 
 

@@ -18,7 +18,7 @@ void main(PSInput input)
 	float3 N = input.N;
 	float3 P = input.P;
 
-	float3 diff = (P - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataRes_Inverse * g_xFrame_VoxelRadianceDataSize_Inverse;
+	float3 diff = (P - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataRes_rcp * g_xFrame_VoxelRadianceDataSize_rcp;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 	[branch]
@@ -26,9 +26,9 @@ void main(PSInput input)
 	{
 		float4 baseColor;
 		[branch]
-		if (g_xMat_uvset_baseColorMap >= 0)
+		if (g_xMaterial.uvset_baseColorMap >= 0)
 		{
-			const float2 UV_baseColorMap = g_xMat_uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			baseColor = xBaseColorMap.Sample(sampler_linear_wrap, UV_baseColorMap);
 			baseColor.rgb = DEGAMMA(baseColor.rgb);
 		}
@@ -38,11 +38,11 @@ void main(PSInput input)
 		}
 		baseColor *= input.color;
 		float4 color = baseColor;
-		float4 emissiveColor = g_xMat_emissiveColor;
+		float4 emissiveColor = g_xMaterial.emissiveColor;
 		[branch]
-		if (g_xMat_emissiveColor.a > 0 && g_xMat_uvset_emissiveMap >= 0)
+		if (g_xMaterial.emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
 		{
-			const float2 UV_emissiveMap = g_xMat_uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+			const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			float4 emissiveMap = xEmissiveMap.Sample(sampler_linear_wrap, UV_emissiveMap);
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 			emissiveColor *= emissiveMap;
@@ -75,7 +75,7 @@ void main(PSInput input)
 					const uint entity_index = bucket * 32 + bucket_bit_index;
 					bucket_bits ^= 1 << bucket_bit_index;
 
-					ShaderEntityType light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
+					ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
 
 					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 					{
@@ -94,7 +94,7 @@ void main(PSInput input)
 						if (light.IsCastingShadow() >= 0)
 						{
 							const uint cascade = g_xFrame_ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
-							float3 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + cascade]).xyz; // ortho matrix, no divide by .w
+							float3 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
 							float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 							[branch]if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y) && (saturate(ShTex.z) == ShTex.z))
@@ -159,7 +159,7 @@ void main(PSInput input)
 								[branch]
 								if (light.IsCastingShadow() >= 0)
 								{
-									float4 ShPos = mul(float4(P, 1), MatrixArray[light.GetShadowMatrixIndex() + 0]);
+									float4 ShPos = mul(MatrixArray[light.GetShadowMatrixIndex() + 0], float4(P, 1));
 									ShPos.xyz /= ShPos.w;
 									float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 									[branch]

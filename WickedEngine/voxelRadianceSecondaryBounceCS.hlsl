@@ -19,7 +19,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	{
 		float3 N = DecodeNormal(input_voxelscene[DTid.x].normalMask);
 
-		float3 P = ((float3)writecoord + 0.5f) * g_xFrame_VoxelRadianceDataRes_Inverse;
+		float3 P = ((float3)writecoord + 0.5f) * g_xFrame_VoxelRadianceDataRes_rcp;
 		P = P * 2 - 1;
 		P.y *= -1;
 		P *= g_xFrame_VoxelRadianceDataSize;

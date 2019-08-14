@@ -10,19 +10,7 @@
     <None Include="cube.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="depthConvertHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="ditherHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="envMapHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="fogHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="fullScreenTriangleHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="fxaa.hlsli">
@@ -34,16 +22,10 @@
     <None Include="icosphere.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="normalsCompressHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="objectHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="objectInputLayoutHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="packHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="postProcessHF.hlsli">
@@ -52,16 +34,10 @@
     <None Include="quad.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="reconstructPositionHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="skyHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="sOHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="tangentComputeHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="volumeLightHF.hlsli">
@@ -109,13 +85,10 @@
     <None Include="oceanSurfaceHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="tracedRenderingHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="impostorHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="raySceneIntersectHF.hlsli">
+    <None Include="raytracingHF.hlsli">
       <Filter>HF</Filter>
     </None>
   </ItemGroup>
@@ -131,9 +104,6 @@
     </FxCompile>
     <FxCompile Include="luminancePass2CS.hlsl">
       <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="circleGS.hlsl">
-      <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="cubeShadowGS.hlsl">
       <Filter>GS</Filter>
@@ -202,9 +172,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="waterVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="circleVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="decalVS.hlsl">
@@ -678,9 +645,6 @@
     <FxCompile Include="generateMIPChain2D_float4_SimpleFilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="generateMIPChain3D_float4_GaussianCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="generateMIPChain3D_float4_SimpleFilterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -688,9 +652,6 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="generateMIPChain2D_unorm4_SimpleFilterCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="generateMIPChain3D_unorm4_GaussianCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="generateMIPChain3D_unorm4_SimpleFilterCS.hlsl">
