@@ -1134,7 +1134,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="C:\PROJECTS\WickedEngine\WickedEngine\ShaderInterop_Raytracing.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Raytracing.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
   </ItemGroup>
