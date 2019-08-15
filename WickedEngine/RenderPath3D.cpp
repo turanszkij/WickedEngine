@@ -23,8 +23,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = wiRenderer::GetInternalResolution().x;
-		desc.Height = wiRenderer::GetInternalResolution().y;
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture2D(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 	}

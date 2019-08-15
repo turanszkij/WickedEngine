@@ -8,7 +8,7 @@ STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND9);
 
 RWTEXTURE2D(resultTexture, float4, 0);
 
-[numthreads(TRACEDRENDERING_TRACE_GROUPSIZE, 1, 1)]
+[numthreads(RAYTRACING_TRACE_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	// Initialize ray and pixel ID as non-contributing:

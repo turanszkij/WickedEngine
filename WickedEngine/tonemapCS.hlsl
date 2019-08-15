@@ -1,6 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
-#include "tonemapHF.hlsli"
+#include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(input_luminance, float, TEXSLOT_ONDEMAND1);
@@ -8,7 +7,7 @@ TEXTURE2D(input_distortion, float4, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, unorm float4, 0);
 
-[numthreads(8, 8, 1)]
+[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;

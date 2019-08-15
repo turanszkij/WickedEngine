@@ -27,12 +27,9 @@
     <None Include="objectHF.hlsli" />
     <None Include="objectInputLayoutHF.hlsli" />
     <None Include="oceanSurfaceHF.hlsli" />
-    <None Include="postProcessHF.hlsli" />
     <None Include="quad.hlsli" />
     <None Include="raytracingHF.hlsli" />
     <None Include="skyHF.hlsli" />
-    <None Include="sOHF.hlsli" />
-    <None Include="tonemapHF.hlsli" />
     <None Include="uvsphere.hlsli" />
     <None Include="volumeLightHF.hlsli" />
     <None Include="voxelConeTracingHF.hlsli" />

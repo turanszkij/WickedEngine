@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
@@ -8,7 +8,7 @@ RWTEXTURE2D(output, float4, 0);
 static const uint NUM_SAMPLES = 32;
 static const uint UNROLL_GRANULARITY = 8;
 
-[numthreads(8, 8, 1)]
+[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;

@@ -3,9 +3,9 @@
 #include "ShaderInterop.h"
 
 
-#define TRACEDRENDERING_LAUNCH_BLOCKSIZE 8
-#define TRACEDRENDERING_TRACE_GROUPSIZE 64
-#define TRACEDRENDERING_ACCUMULATE_BLOCKSIZE 8
+static const uint RAYTRACING_LAUNCH_BLOCKSIZE = 8;
+static const uint RAYTRACING_ACCUMULATE_BLOCKSIZE = 8;
+static const uint RAYTRACING_TRACE_GROUPSIZE = 64;
 
 
 CBUFFER(RaytracingCB, CBSLOT_RENDERER_TRACED)
@@ -21,8 +21,8 @@ CBUFFER(RaytracingCB, CBSLOT_RENDERER_TRACED)
 struct RaytracingStoredRay
 {
 	float3 origin;
-	uint pixelID;
-	uint3 direction_energy;
+	uint pixelID; // unflattened pixel index
+	uint3 direction_energy; // packed half3 direction | half3 energy
 	uint primitiveID;
 	float2 bary;
 	uint2 userdata; // vulkan complains about 16-byte padding here so might as well add userdata here and not pack barycentric coords

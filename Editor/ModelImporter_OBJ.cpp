@@ -15,13 +15,6 @@ using namespace wiECS;
 // Transform the data from OBJ space to engine-space:
 static const bool transform_to_LH = true;
 
-template <class T>
-inline void hash_combine(std::size_t& seed, const T& v)
-{
-	std::hash<T> hasher;
-	seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
 void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
 	string directory, name;
@@ -172,10 +165,10 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 					// eliminate duplicate vertices by means of hashing:
 					size_t vertexHash = 0;
-					hash_combine(vertexHash, index.vertex_index);
-					hash_combine(vertexHash, index.normal_index);
-					hash_combine(vertexHash, index.texcoord_index);
-					hash_combine(vertexHash, materialIndex);
+					wiHelper::hash_combine(vertexHash, index.vertex_index);
+					wiHelper::hash_combine(vertexHash, index.normal_index);
+					wiHelper::hash_combine(vertexHash, index.texcoord_index);
+					wiHelper::hash_combine(vertexHash, materialIndex);
 
 					if (uniqueVertices.count(vertexHash) == 0)
 					{

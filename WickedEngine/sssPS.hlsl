@@ -1,4 +1,5 @@
-#include "postProcessHF.hlsli"
+#include "globals.hlsli"
+#include "ShaderInterop_Postprocess.h"
 
 
 // Gaussian weights for the six samples around the current pixel:

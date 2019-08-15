@@ -5,7 +5,7 @@ TEXTURE2D(sourceTexture, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(resultTexture, float4, 0);
 
-[numthreads(TRACEDRENDERING_ACCUMULATE_BLOCKSIZE, TRACEDRENDERING_ACCUMULATE_BLOCKSIZE, 1)]
+[numthreads(RAYTRACING_ACCUMULATE_BLOCKSIZE, RAYTRACING_ACCUMULATE_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	if (xTraceAccumulationFactor == 1.0f)

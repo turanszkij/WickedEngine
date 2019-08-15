@@ -1287,12 +1287,6 @@ namespace wiGraphics
 
 
 
-	template <class T>
-	inline void hash_combine(std::size_t& seed, const T& v)
-	{
-		std::hash<T> hasher;
-		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-	}
 	void GraphicsDevice_Vulkan::RenderPassManager::reset()
 	{
 		dirty = true;
@@ -1333,7 +1327,7 @@ namespace wiGraphics
 		{
 			for (uint32_t i = 0; i < attachmentCount; ++i)
 			{
-				hash_combine(requestRTHash, attachments[i]);
+				wiHelper::hash_combine(requestRTHash, attachments[i]);
 			}
 		}
 		else
@@ -4906,12 +4900,6 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 	{
-		// This will fully update the buffer on the GPU timeline
-		//	But on the CPU side we need to keep the in flight data versioned, and we use the temporary buffer for that
-		//	This is like a USAGE_DEFAULT buffer updater on DX11
-		// TODO: USAGE_DYNAMIC would not use GPU copies, but then it would need to handle assigning descriptor pointer dynamically. 
-		//	However, now descriptors are created ahead of time in CreateBuffer
-
 		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 

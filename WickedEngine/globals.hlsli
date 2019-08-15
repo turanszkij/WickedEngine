@@ -112,6 +112,15 @@ inline float GetFog(float dist)
 	return saturate((dist - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
 }
 
+float3 tonemap(float3 x)
+{
+	return x / (x + 1); // Reinhard tonemap
+}
+float3 inverseTonemap(float3 x)
+{
+	return x / (1 - x);
+}
+
 
 // Helpers:
 
@@ -243,12 +252,12 @@ float3 hemispherepoint_cos(float u, float v) {
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
-// Get randim hemisphere sample in world-space along the normal (uniform distribution)
+// Get random hemisphere sample in world-space along the normal (uniform distribution)
 inline float3 SampleHemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
 {
 	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
 }
-// Get randim hemisphere sample in world-space along the normal (cosine-weighted distribution)
+// Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
 inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
 {
 	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
@@ -271,55 +280,21 @@ inline float3 reconstructPosition(in float2 uv, in float z)
 	return reconstructPosition(uv, z, g_xFrame_MainCamera_InvVP);
 }
 
-#define NORMALMAPCOMPRESSOR 1
 
-#if NORMALMAPCOMPRESSOR == 0
-// Reconstruct Z
-inline float2 encodeNormal(float3 n)
+// For storing normal in gbuffer in world space, we convert to spherical coordinates:
+//  [Commented out optimized parts, because we don't need to normalize range when storing to float format]
+inline float2 encodeNormal(in float3 N)
 {
-	return float2(n.xy*0.5 + 0.5);
+	return float2(atan2(N.y, N.x) /*/ PI*/, N.z)/* * 0.5f + 0.5f*/;
 }
-inline float3 decodeNormal(float2 enc)
+inline float3 decodeNormal(in float2 spherical)
 {
-	float3 n;
-	n.xy = enc * 2 - 1;
-	n.z = sqrt(1 - dot(n.xy, n.xy));
-	return n;
+	float2 sinCosTheta, sinCosPhi;
+	//spherical = spherical * 2.0f - 1.0f;
+	sincos(spherical.x /** PI*/, sinCosTheta.x, sinCosTheta.y);
+	sinCosPhi = float2(sqrt(1.0 - spherical.y * spherical.y), spherical.y);
+	return float3(sinCosTheta.y * sinCosPhi.x, sinCosTheta.x * sinCosPhi.x, sinCosPhi.y);
 }
-
-#elif NORMALMAPCOMPRESSOR == 1
-// Spherical coordinates
-inline float2 encodeNormal(float3 n)
-{
-	return (float2(atan2(n.y, n.x) / PI, n.z) + 1.0)*0.5;
-}
-inline float3 decodeNormal(float2 enc)
-{
-	float2 ang = enc * 2 - 1;
-	float2 scth;
-	sincos(ang.x * PI, scth.x, scth.y);
-	float2 scphi = float2(sqrt(1.0 - ang.y*ang.y), ang.y);
-	return float3(scth.y*scphi.x, scth.x*scphi.x, scphi.y);
-}
-
-#elif NORMALMAPCOMPRESSOR == 2
-// Spheremap
-inline float2 encodeNormal(float3 n)
-{
-	float2 enc = normalize(n.xy) * (sqrt(-n.z*0.5 + 0.5));
-	enc = enc * 0.5 + 0.5;
-	return enc;
-}
-inline float3 decodeNormal(float2 enc)
-{
-	float4 nn = float4(enc, 0, 0)*float4(2, 2, 0, 0) + float4(-1, -1, 1, -1);
-	float l = dot(nn.xyz, -nn.xyw);
-	nn.z = l;
-	nn.xy *= sqrt(l);
-	return nn.xyz * 2 + float3(0, 0, -1);
-}
-
-#endif
 
 
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:

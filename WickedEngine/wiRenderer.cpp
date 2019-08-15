@@ -18,6 +18,7 @@
 #include "wiProfiler.h"
 #include "wiOcean.h"
 #include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_Postprocess.h"
 #include "ShaderInterop_CloudGenerator.h"
 #include "ShaderInterop_Skinning.h"
 #include "ShaderInterop_Raytracing.h"
@@ -1195,8 +1196,15 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
 	shcam = SHCAM(XMLoadFloat3(&light.position), XMLoadFloat4(&light.rotation), 0.1f, light.GetRange(), light.fov);
 }
-inline void CreateDirLightShadowCams(const LightComponent& light, const CameraComponent& camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
+inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, std::array<SHCAM, CASCADE_COUNT>& shcams)
 {
+	if (GetTemporalAAEnabled())
+	{
+		// remove camera jittering
+		camera.jitter = XMFLOAT2(0, 0);
+		camera.UpdateCamera();
+	}
+
 	const XMMATRIX lightRotation = XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation));
 	const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), lightRotation);
 	const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), lightRotation);
@@ -7436,8 +7444,8 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		device->Dispatch(
-			(_width + TRACEDRENDERING_LAUNCH_BLOCKSIZE - 1) / TRACEDRENDERING_LAUNCH_BLOCKSIZE,
-			(_height + TRACEDRENDERING_LAUNCH_BLOCKSIZE - 1) / TRACEDRENDERING_LAUNCH_BLOCKSIZE,
+			(_width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
+			(_height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
 			1, 
 			cmd);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
@@ -7674,8 +7682,8 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 		device->Dispatch(
-			(result_desc.Width + TRACEDRENDERING_ACCUMULATE_BLOCKSIZE - 1) / TRACEDRENDERING_ACCUMULATE_BLOCKSIZE, 
-			(result_desc.Height + TRACEDRENDERING_ACCUMULATE_BLOCKSIZE - 1) / TRACEDRENDERING_ACCUMULATE_BLOCKSIZE, 
+			(result_desc.Width + RAYTRACING_ACCUMULATE_BLOCKSIZE - 1) / RAYTRACING_ACCUMULATE_BLOCKSIZE,
+			(result_desc.Height + RAYTRACING_ACCUMULATE_BLOCKSIZE - 1) / RAYTRACING_ACCUMULATE_BLOCKSIZE,
 			1, 
 			cmd);
 
@@ -8564,7 +8572,12 @@ void Postprocess_Blur_Gaussian(
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-		device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8591,7 +8604,12 @@ void Postprocess_Blur_Gaussian(
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-		device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8639,7 +8657,12 @@ void Postprocess_SSAO(
 	};
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8685,7 +8708,12 @@ void Postprocess_SSR(
 	};
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE, 
+		1, 
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8817,7 +8845,12 @@ void Postprocess_LightShafts(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8864,7 +8897,12 @@ void Postprocess_DepthOfField(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8913,7 +8951,12 @@ void Postprocess_Outline(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8956,7 +8999,12 @@ void Postprocess_MotionBlur(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -8998,7 +9046,12 @@ void Postprocess_BloomSeparate(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -9038,7 +9091,12 @@ void Postprocess_FXAA(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -9083,7 +9141,12 @@ void Postprocess_TemporalAA(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -9125,7 +9188,12 @@ void Postprocess_Colorgrade(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -9164,7 +9232,12 @@ void Postprocess_Lineardepth(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -9205,7 +9278,12 @@ void Postprocess_Sharpen(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
@@ -9250,7 +9328,12 @@ void Postprocess_Tonemap(
 	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 
-	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);

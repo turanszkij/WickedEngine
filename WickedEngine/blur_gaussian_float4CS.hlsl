@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_Postprocess.h"
 
 #ifndef BLUR_FORMAT
 #define BLUR_FORMAT float4
@@ -9,7 +9,7 @@ TEXTURE2D(input, BLUR_FORMAT, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, BLUR_FORMAT, 0);
 
-[numthreads(8, 8, 1)]
+[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 direction = xPPParams0.xy;

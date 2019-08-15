@@ -1,9 +1,5 @@
-// This can retrieve better velocity vectors so moving objects could be better anti aliased:
-#define DILATE_VELOCITY_BEST_3X3
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
-#include "postProcessHF.hlsli"
-#include "tonemapHF.hlsli"
+#include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(input_current, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(input_history, float4, TEXSLOT_ONDEMAND1);
@@ -13,11 +9,33 @@ RWTEXTURE2D(output, float4, 0);
 // This hack can improve bright areas:
 #define HDR_CORRECTION
 
-[numthreads(8, 8, 1)]
+[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float2 velocity = GetVelocity(DTid.xy);
+
+	// Search for best velocity in a 3x3 neighborhood:
+	int2 bestPixel = int2(0, 0);
+	{
+		float bestDepth = 1;
+
+		for (int i = -1; i <= 1; ++i)
+		{
+			for (int j = -1; j <= 1; ++j)
+			{
+				int2 curPixel = DTid.xy + int2(i, j);
+				float depth = texture_lineardepth[curPixel];
+				[flatten]
+				if (depth < bestDepth)
+				{
+					bestDepth = depth;
+					bestPixel = curPixel;
+				}
+			}
+		}
+	}
+
+	const float2 velocity = texture_gbuffer1[bestPixel].zw;
 	const float2 prevUV = uv + velocity;
 
 	float4 neighborhood[9];
@@ -32,7 +50,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	neighborhood[8] = input_current[DTid.xy + float2(1, 1)];
 	float4 neighborhoodMin = neighborhood[0];
 	float4 neighborhoodMax = neighborhood[0];
-	[unroll]
 	for (uint i = 1; i < 9; ++i)
 	{
 		neighborhoodMin = min(neighborhoodMin, neighborhood[i]);

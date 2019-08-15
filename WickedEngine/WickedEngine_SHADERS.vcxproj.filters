@@ -28,16 +28,10 @@
     <None Include="objectInputLayoutHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="postProcessHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="quad.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="skyHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="sOHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="volumeLightHF.hlsli">
@@ -68,9 +62,6 @@
       <Filter>HF</Filter>
     </None>
     <None Include="voxelConeTracingHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
-    <None Include="tonemapHF.hlsli">
       <Filter>HF</Filter>
     </None>
     <None Include="bitonicSortHF.hlsli">

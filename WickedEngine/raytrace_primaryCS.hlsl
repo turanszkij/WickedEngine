@@ -16,14 +16,14 @@ RWTEXTURE2D(resultTexture, float4, 4);
 #define ADVANCED_ALLOCATION
 
 #ifdef ADVANCED_ALLOCATION
-static const uint GroupActiveRayMaskBucketCount = TRACEDRENDERING_TRACE_GROUPSIZE / 32;
+static const uint GroupActiveRayMaskBucketCount = RAYTRACING_TRACE_GROUPSIZE / 32;
 groupshared uint GroupActiveRayMask[GroupActiveRayMaskBucketCount];
 groupshared uint GroupRayCount;
 groupshared uint GroupRayWriteOffset;
 #endif // ADVANCED_ALLOCATION
 
 
-[numthreads(TRACEDRENDERING_TRACE_GROUPSIZE, 1, 1)]
+[numthreads(RAYTRACING_TRACE_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 {
 #ifdef ADVANCED_ALLOCATION

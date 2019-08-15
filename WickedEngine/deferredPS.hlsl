@@ -1,6 +1,7 @@
-#include "postProcessHF.hlsli"
+#include "globals.hlsli"
 #include "brdf.hlsli"
 #include "objectHF.hlsli"
+#include "ShaderInterop_Postprocess.h"
 
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET

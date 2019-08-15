@@ -5,7 +5,7 @@ RWSTRUCTUREDBUFFER(rayIndexBuffer, uint, 0);
 RWSTRUCTUREDBUFFER(raySortBuffer, float, 1);
 RWSTRUCTUREDBUFFER(rayBuffer, RaytracingStoredRay, 2);
 
-[numthreads(TRACEDRENDERING_LAUNCH_BLOCKSIZE, TRACEDRENDERING_LAUNCH_BLOCKSIZE, 1)]
+[numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	if (DTid.x < xTraceResolution.x && DTid.y < xTraceResolution.y)
