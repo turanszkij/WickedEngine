@@ -8526,20 +8526,22 @@ void Postprocess_Blur_Gaussian(
 )
 {
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("wiRenderer::Postprocess_SSAO", cmd);
+	device->EventBegin("wiRenderer::Postprocess_Blur_Gaussian", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	CSTYPES cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
 	switch (output.GetDesc().Format)
 	{
-	case FORMAT_R16_UNORM: 
+	case FORMAT_R16_UNORM:
+	case FORMAT_R8_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1; 
 		break;
 	case FORMAT_R16_FLOAT:
 	case FORMAT_R32_FLOAT:
 		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1; 
 		break;
+	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4;
 		break;
@@ -8642,12 +8644,14 @@ void Postprocess_Blur_Bilateral(
 	switch (output.GetDesc().Format)
 	{
 	case FORMAT_R16_UNORM:
+	case FORMAT_R8_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1;
 		break;
 	case FORMAT_R16_FLOAT:
 	case FORMAT_R32_FLOAT:
 		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1;
 		break;
+	case FORMAT_R16G16B16A16_UNORM:
 	case FORMAT_R8G8B8A8_UNORM:
 		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
 		break;
