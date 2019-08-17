@@ -804,6 +804,18 @@
     <FxCompile Include="sssPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="blur_bilateral_float4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_bilateral_unorm1CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_bilateral_unorm4CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="blur_bilateral_float1CS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

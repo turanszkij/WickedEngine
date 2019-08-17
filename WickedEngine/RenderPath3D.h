@@ -8,11 +8,7 @@ class RenderPath3D :
 {
 private:
 	float exposure = 1.0f;
-	float lightShaftQuality = 0.4f;
 	float bloomThreshold = 1.0f;
-	float particleDownSample = 1.0f;
-	float reflectionQuality = 0.5f;
-	float ssaoQuality = 0.5f;
 	float ssaoBlur = 2.3f;
 	float dofFocus = 10.0f;
 	float dofStrength = 2.2f;
@@ -106,11 +102,7 @@ public:
 	const wiGraphics::Texture2D* GetDepthStencil() const override { return &depthBuffer; }
 
 	inline float getExposure() const { return exposure; }
-	inline float getLightShaftQuality() const { return lightShaftQuality; }
 	inline float getBloomThreshold() const { return bloomThreshold; }
-	inline float getParticleDownSample() const { return particleDownSample; }
-	inline float getReflectionQuality() const { return reflectionQuality; }
-	inline float getSSAOQuality() const { return ssaoQuality; }
 	inline float getSSAOBlur() const { return ssaoBlur; }
 	inline float getDepthOfFieldFocus() const { return dofFocus; }
 	inline float getDepthOfFieldStrength() const { return dofStrength; }
@@ -147,11 +139,7 @@ public:
 	inline UINT getMSAASampleCount() const { return msaaSampleCount; }
 
 	inline void setExposure(float value) { exposure = value; }
-	inline void setLightShaftQuality(float value){ lightShaftQuality = value; }
 	inline void setBloomThreshold(float value){ bloomThreshold = value; }
-	inline void setParticleDownSample(float value){ particleDownSample = value; }
-	inline void setReflectionQuality(float value){ reflectionQuality = value; }
-	inline void setSSAOQuality(float value){ ssaoQuality = value; }
 	inline void setSSAOBlur(float value){ ssaoBlur = value; }
 	inline void setDepthOfFieldFocus(float value){ dofFocus = value; }
 	inline void setDepthOfFieldStrength(float value){ dofStrength = value; }

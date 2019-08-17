@@ -32,8 +32,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x*getParticleDownSample());
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y*getParticleDownSample());
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &rtParticle);
 		device->SetName(&rtParticle, "rtParticle");
 	}
@@ -41,8 +41,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x * 0.25f);
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y * 0.25f);
+		desc.Width = wiRenderer::GetInternalResolution().x / 4;
+		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		device->CreateTexture2D(&desc, nullptr, &rtVolumetricLights);
 		device->SetName(&rtVolumetricLights, "rtVolumetricLights");
 	}
@@ -71,8 +71,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x * getReflectionQuality());
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y * getReflectionQuality());
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture2D(&desc, nullptr, &rtReflection);
 		device->SetName(&rtReflection, "rtReflection");
 	}
@@ -80,8 +80,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x / 2);
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y / 2);
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture2D(&desc, nullptr, &rtDof[0]);
 		device->SetName(&rtDof[0], "rtDof[0]");
 		device->CreateTexture2D(&desc, nullptr, &rtDof[1]);
@@ -91,8 +91,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = wiRenderer::RTFormat_ssao;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x*getSSAOQuality());
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y*getSSAOQuality());
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture2D(&desc, nullptr, &rtSSAO[0]);
 		device->SetName(&rtSSAO[0], "rtSSAO[0]");
 		device->CreateTexture2D(&desc, nullptr, &rtSSAO[1]);
@@ -110,8 +110,8 @@ void RenderPath3D::ResizeBuffers()
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.SampleDesc.Count = 1;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x*getLightShaftQuality());
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y*getLightShaftQuality());
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture2D(&desc, nullptr, &rtSun[1]);
 		device->SetName(&rtSun[1], "rtSun[1]");
 
@@ -215,8 +215,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_DEPTH_STENCIL;
 		desc.Format = wiRenderer::DSFormat_small;
-		desc.Width = (UINT)(wiRenderer::GetInternalResolution().x * getReflectionQuality());
-		desc.Height = (UINT)(wiRenderer::GetInternalResolution().y * getReflectionQuality());
+		desc.Width = wiRenderer::GetInternalResolution().x / 2;
+		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		device->CreateTexture2D(&desc, nullptr, &depthBuffer_reflection);
 		device->SetName(&depthBuffer_reflection, "depthBuffer_reflection");
 	}

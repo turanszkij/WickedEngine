@@ -2155,6 +2155,10 @@ void LoadShaders()
 	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_float4CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_unorm1CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_UNORM4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_bilateral_float1CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_bilateral_float4CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_bilateral_unorm1CS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_bilateral_unorm4CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_SSAO] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "ssaoCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_SSR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "ssrCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lightshaftsCS.cso", wiResourceManager::COMPUTESHADER));
@@ -2168,7 +2172,7 @@ void LoadShaders()
 	computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lineardepthCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_SHARPEN] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sharpenCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_TONEMAP] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "tonemapCS.cso", wiResourceManager::COMPUTESHADER));
-
+	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<const HullShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
 
@@ -8547,7 +8551,6 @@ void Postprocess_Blur_Gaussian(
 		assert(0); // implement format!
 		break;
 	}
-
 	device->BindComputeShader(computeShaders[cs], cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 	
@@ -8595,6 +8598,116 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = amountY;
 		cb.xPPParams0.z = mip;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Blur_Bilateral(
+	const Texture2D& input,
+	const Texture2D& lineardepth,
+	const Texture2D& temp,
+	const Texture2D& output,
+	CommandList cmd,
+	float amountX,
+	float amountY,
+	float depth_threshold,
+	float mip
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("wiRenderer::Postprocess_Blur_Bilateral", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	CSTYPES cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4;
+	switch (output.GetDesc().Format)
+	{
+	case FORMAT_R16_UNORM:
+		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM1;
+		break;
+	case FORMAT_R16_FLOAT:
+	case FORMAT_R32_FLOAT:
+		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT1;
+		break;
+	case FORMAT_R8G8B8A8_UNORM:
+		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_UNORM4;
+		break;
+	case FORMAT_R16G16B16A16_FLOAT:
+	case FORMAT_R32G32B32A32_FLOAT:
+		cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4;
+		break;
+	default:
+		assert(0); // implement format!
+		break;
+	}
+	device->BindComputeShader(computeShaders[cs], cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	// Horizontal:
+	{
+		const TextureDesc& desc = temp.GetDesc();
+
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		cb.xPPParams0.x = amountX;
+		cb.xPPParams0.y = 0;
+		cb.xPPParams0.z = mip;
+		cb.xPPParams0.w = depth_threshold;
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&temp,
+		};
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+	}
+
+	// Vertical:
+	{
+		const TextureDesc& desc = output.GetDesc();
+
+		PostProcessCB cb;
+		cb.xPPResolution.x = desc.Width;
+		cb.xPPResolution.y = desc.Height;
+		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+		cb.xPPParams0.x = 0;
+		cb.xPPParams0.y = amountY;
+		cb.xPPParams0.z = mip;
+		cb.xPPParams0.w = depth_threshold;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
 		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
@@ -8667,7 +8780,7 @@ void Postprocess_SSAO(
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
-	wiRenderer::Postprocess_Blur_Gaussian(output, temp, output, cmd, blur, blur); // bilateral would be nicer
+	wiRenderer::Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, blur, blur, 1.2f);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);

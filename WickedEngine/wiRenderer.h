@@ -165,6 +165,17 @@ namespace wiRenderer
 		float amountY = 1.0f,
 		float mip = 0.0f
 	);
+	void Postprocess_Blur_Bilateral(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& lineardepth,
+		const wiGraphics::Texture2D& temp,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float amountX = 1.0f,
+		float amountY = 1.0f,
+		float depth_threshold = 1.0f,
+		float mip = 0.0f
+	);
 	void Postprocess_SSAO(
 		const wiGraphics::Texture2D& depthbuffer, 
 		const wiGraphics::Texture2D& lineardepth, 

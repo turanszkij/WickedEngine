@@ -58,8 +58,9 @@ float4 SSRRayMarch(in float3 origin, in float3 direction)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);		if (depth == 0.0f) return;
+	float3 P = reconstructPosition(uv, depth);
 	float3 N = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
-	float3 P = reconstructPosition(uv, texture_depth.SampleLevel(sampler_point_clamp, uv, 0));
 
 	// Everything in view space:
 	P = mul(g_xCamera_View, float4(P.xyz, 1)).xyz;

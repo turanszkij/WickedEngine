@@ -6,35 +6,77 @@
 
 RWTEXTURE2D(output, unorm float, 0);
 
+static const uint TILE_BORDER = 1;
+static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
+groupshared float tile_depths[TILE_SIZE*TILE_SIZE];
+groupshared float3 tile_positions[TILE_SIZE*TILE_SIZE];
+
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
+	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
+	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
+	{
+		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
+		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+		const float3 position = reconstructPosition(uv, depth);
+		tile_depths[t] = depth;
+		tile_positions[t] = position;
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// reconstruct flat normals from depth buffer:
+	//	Explanation: There are two main ways to reconstruct flat normals from depth buffer:
+	//		1: use ddx() and ddy() on the reconstructed positions to compute triangle, this has artifacts on depth discontinuities and doesn't work in compute shader
+	//		2: Take 3 taps from the depth buffer, reconstruct positions and compute triangle. This can still produce artifacts
+	//			on discontinuities, but a little less. To fix the remaining artifacts, we can take 4 taps around the center, and find the "best triangle"
+	//			by only computing the positions from those depths that have the least amount of discontinuity
+
+	const uint cross_idx[5] = {
+		flatten2D(TILE_BORDER + GTid.xy, TILE_SIZE),				// 0: center
+		flatten2D(TILE_BORDER + GTid.xy + int2(1, 0), TILE_SIZE),	// 1: right
+		flatten2D(TILE_BORDER + GTid.xy + int2(-1, 0), TILE_SIZE),	// 2: left
+		flatten2D(TILE_BORDER + GTid.xy + int2(0, 1), TILE_SIZE),	// 3: down
+		flatten2D(TILE_BORDER + GTid.xy + int2(0, -1), TILE_SIZE),	// 4: up
+	};
+
+	const float center_depth = tile_depths[cross_idx[0]];	if (center_depth == 0.0f) return;
+
+	const uint best_depth_horizontal = abs(tile_depths[cross_idx[1]] - center_depth) < abs(tile_depths[cross_idx[2]] - center_depth) ? 1 : 2;
+	const uint best_depth_vertical = abs(tile_depths[cross_idx[3]] - center_depth) < abs(tile_depths[cross_idx[4]] - center_depth) ? 3 : 4;
+
+	float3 p1 = 0, p2 = 0;
+	if (best_depth_horizontal == 1 && best_depth_vertical == 4)
+	{
+		p1 = tile_positions[cross_idx[1]];
+		p2 = tile_positions[cross_idx[4]];
+	}
+	else if (best_depth_horizontal == 1 && best_depth_vertical == 3)
+	{
+		p1 = tile_positions[cross_idx[3]];
+		p2 = tile_positions[cross_idx[1]];
+	}
+	else if (best_depth_horizontal == 2 && best_depth_vertical == 4)
+	{
+		p1 = tile_positions[cross_idx[4]];
+		p2 = tile_positions[cross_idx[2]];
+	}
+	else if (best_depth_horizontal == 2 && best_depth_vertical == 3)
+	{
+		p1 = tile_positions[cross_idx[2]];
+		p2 = tile_positions[cross_idx[3]];
+	}
+
+	const float3 P = tile_positions[cross_idx[0]];
+	const float3 normal = normalize(cross(p2 - P, p1 - P));
+
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 	const float range = xPPParams0.x;
 	const uint sampleCount = xPPParams0.y;
 
 	float seed = 1;
 	const float3 noise = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
-	
-	// reconstruct flat normals from depth buffer:
-	uint2 dim;
-	texture_depth.GetDimensions(dim.x, dim.y);
-	const float2 dim_rcp = rcp(dim);
-
-	const float2 uv1 = uv + float2(1, 0) * dim_rcp;
-	const float2 uv2 = uv + float2(0, -1) * dim_rcp;
-
-	const float depth0 = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float depth1 = texture_depth.SampleLevel(sampler_linear_clamp, uv1, 0);
-	const float depth2 = texture_depth.SampleLevel(sampler_linear_clamp, uv2, 0);
-
-	const float3 p0 = reconstructPosition(uv, depth0);
-	const float3 p1 = reconstructPosition(uv1, depth1);
-	const float3 p2 = reconstructPosition(uv2, depth2);
-
-	const float3 normal = normalize(cross(p2 - p0, p1 - p0));
-
-	const float3 P = p0;
 
 	const float3 tangent = normalize(noise - normal * dot(noise, normal));
 	const float3 bitangent = cross(normal, tangent);
