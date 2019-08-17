@@ -14,16 +14,16 @@ RWTEXTURE2D(output, float4, 0);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared float tile_depths[TILE_SIZE*TILE_SIZE];
-groupshared float2 tile_velocities[TILE_SIZE*TILE_SIZE];
-groupshared float4 tile_colors[TILE_SIZE*TILE_SIZE];
+groupshared uint tile_RG[TILE_SIZE*TILE_SIZE];
+groupshared uint tile_B_depth[TILE_SIZE*TILE_SIZE];
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	float4 neighborhoodMin = 100000;
-	float4 neighborhoodMax = -100000;
+	float3 neighborhoodMin = 100000;
+	float3 neighborhoodMax = -100000;
+	float3 current;
 	float bestDepth = 1;
 
 #ifdef USE_LDS
@@ -31,57 +31,61 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		tile_depths[t] = texture_lineardepth[pixel];
-		tile_velocities[t] = texture_gbuffer1[pixel].zw;
-		tile_colors[t] = input_current[pixel];
+		const float depth = texture_lineardepth[pixel];
+		const float3 color = input_current[pixel].rgb;
+		tile_RG[t] = f32tof16(color.r) | (f32tof16(color.g) << 16);
+		tile_B_depth[t] = f32tof16(color.b) | (f32tof16(depth) << 16);
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	// our currently rendered frame sample:
-	const uint idx = flatten2D(GTid.xy + TILE_BORDER, TILE_SIZE);
-	float4 current = tile_colors[idx];
-
 	// Search for best velocity and compute color clamping range in 3x3 neighborhood:
-	uint bestIdx = 0;
+	int2 bestOffset = 0;
 	for (int x = -1; x <= 1; ++x)
 	{
 		for (int y = -1; y <= 1; ++y)
 		{
-			const uint idx = flatten2D(GTid.xy + TILE_BORDER + int2(x, y), TILE_SIZE);
+			const int2 offset = int2(x, y);
+			const uint idx = flatten2D(GTid.xy + TILE_BORDER + offset, TILE_SIZE);
+			const uint RG = tile_RG[idx];
+			const uint B_depth = tile_B_depth[idx];
 
-			const float4 neighbor = tile_colors[idx];
+			const float3 neighbor = float3(f16tof32(RG), f16tof32(RG >> 16), f16tof32(B_depth));
 			neighborhoodMin = min(neighborhoodMin, neighbor);
 			neighborhoodMax = max(neighborhoodMax, neighbor);
+			if (x == 0 && y == 0)
+			{
+				current = neighbor;
+			}
 
-			const float depth = tile_depths[idx];
-			[flatten]
+			const float depth = f16tof32(B_depth >> 16);
 			if (depth < bestDepth)
 			{
 				bestDepth = depth;
-				bestIdx = idx;
+				bestOffset = offset;
 			}
 		}
 	}
-	const float2 velocity = tile_velocities[bestIdx];
+	const float2 velocity = texture_gbuffer1[DTid.xy + bestOffset].zw;
 
 #else
-	// our currently rendered frame sample:
-	float4 current = input_current[DTid.xy];
 
 	// Search for best velocity and compute color clamping range in 3x3 neighborhood:
 	int2 bestPixel = int2(0, 0);
-	for (int i = -1; i <= 1; ++i)
+	for (int x = -1; x <= 1; ++x)
 	{
-		for (int j = -1; j <= 1; ++j)
+		for (int y = -1; y <= 1; ++y)
 		{
-			int2 curPixel = DTid.xy + int2(i, j);
+			const int2 curPixel = DTid.xy + int2(x, y);
 
-			float4 neighbor = input_current[curPixel];
+			const float3 neighbor = input_current[curPixel].rgb;
 			neighborhoodMin = min(neighborhoodMin, neighbor);
 			neighborhoodMax = max(neighborhoodMax, neighbor);
+			if (x == 0 && y == 0)
+			{
+				current = neighbor;
+			}
 
-			float depth = texture_lineardepth[curPixel];
-			[flatten]
+			const float depth = texture_lineardepth[curPixel];
 			if (depth < bestDepth)
 			{
 				bestDepth = depth;
@@ -92,13 +96,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	const float2 velocity = texture_gbuffer1[bestPixel].zw;
 
 #endif // USE_LDS
+
 	const float2 prevUV = uv + velocity;
 
 	// we cannot avoid the linear filter here because point sampling could sample irrelevant pixels but we try to correct it later:
-	float4 history = input_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
+	float3 history = input_history.SampleLevel(sampler_linear_clamp, prevUV, 0).rgb;
 
 	// simple correction of image signal incoherency (eg. moving shadows or lighting changes):
-	history = clamp(history, neighborhoodMin, neighborhoodMax);
+	history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 
 	// the linear filtering can cause blurry image, try to account for that:
 	float subpixelCorrection = frac(max(abs(velocity.x)*g_xFrame_InternalResolution.x, abs(velocity.y)*g_xFrame_InternalResolution.y)) * 0.5f;
