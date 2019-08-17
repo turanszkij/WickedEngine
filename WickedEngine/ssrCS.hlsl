@@ -14,7 +14,7 @@ float4 SSRBinarySearch(in float3 origin, in float3 direction)
 {
 	for (uint i = 0; i < fineStepCount; i++)
 	{
-		float4 coord = mul(g_xCamera_Proj, float4(origin, 1.0f));
+		float4 coord = mul(g_xFrame_MainCamera_Proj, float4(origin, 1.0f));
 		coord.xy /= coord.w;
 		coord.xy = coord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -39,7 +39,7 @@ float4 SSRRayMarch(in float3 origin, in float3 direction)
 	{
 		origin += direction;
 
-		float4 coord = mul(g_xCamera_Proj, float4(origin, 1.0f));
+		float4 coord = mul(g_xFrame_MainCamera_Proj, float4(origin, 1.0f));
 		coord.xy /= coord.w;
 		coord.xy = coord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -58,25 +58,33 @@ float4 SSRRayMarch(in float3 origin, in float3 direction)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);		if (depth == 0.0f) return;
-	float3 P = reconstructPosition(uv, depth);
-	float3 N = decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy);
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);		
+	if (depth == 0.0f) 
+		return;
 
 	// Everything in view space:
-	P = mul(g_xCamera_View, float4(P.xyz, 1)).xyz;
-	N = mul(g_xCamera_View, float4(N, 0)).xyz;
-	float3 R = normalize(reflect(P.xyz, N.xyz));
+	const float3 P = reconstructPosition(uv, depth, g_xFrame_MainCamera_InvP); // specify matrix to get view-space position!
+	const float3 N = mul((float3x3)g_xFrame_MainCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;
+	const float3 R = normalize(reflect(P.xyz, N.xyz));
 
-	float4 hit = SSRRayMarch(P, R);
+	const float4 hit = SSRRayMarch(P, R);
 
-	float2 edgefactor = 1 - pow(saturate(abs(hit.xy - 0.5) * 2), 8);
+	float4 color;
+	if (hit.w)
+	{
+		const float2 edgefactor = 1 - pow(saturate(abs(hit.xy - 0.5) * 2), 8);
 
-	//Color
-	float blend = saturate(
-		min(edgefactor.x, edgefactor.y) *	// screen edge fade
-		saturate(R.z) *						// camera facing fade
-		hit.w								// rayhit binary fade
-	);
+		const float blend = saturate(
+			min(edgefactor.x, edgefactor.y) *	// screen edge fade
+			saturate(R.z)						// camera facing fade
+		);
 
-	output[DTid.xy] = max(0, float4(input.SampleLevel(sampler_linear_clamp, hit.xy, 0).rgb, blend));
+		color = max(0, float4(input.SampleLevel(sampler_linear_clamp, hit.xy, 0).rgb, blend));
+	}
+	else
+	{
+		color = 0;
+	}
+
+	output[DTid.xy] = color;
 }

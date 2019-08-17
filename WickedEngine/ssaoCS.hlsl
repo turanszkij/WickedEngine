@@ -8,8 +8,8 @@ RWTEXTURE2D(output, unorm float, 0);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared float tile_depths[TILE_SIZE*TILE_SIZE];
-groupshared float3 tile_positions[TILE_SIZE*TILE_SIZE];
+groupshared float2 tile_XY[TILE_SIZE*TILE_SIZE];
+groupshared float tile_Z[TILE_SIZE*TILE_SIZE];
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
@@ -20,9 +20,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
 		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-		const float3 position = reconstructPosition(uv, depth);
-		tile_depths[t] = depth;
-		tile_positions[t] = position;
+		const float3 position = reconstructPosition(uv, depth, g_xFrame_MainCamera_InvP); // specify matrix to get view-space position!
+		tile_XY[t] = position.xy;
+		tile_Z[t] = position.z;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -41,34 +41,36 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		flatten2D(TILE_BORDER + GTid.xy + int2(0, -1), TILE_SIZE),	// 4: up
 	};
 
-	const float center_depth = tile_depths[cross_idx[0]];	if (center_depth == 0.0f) return;
+	const float center_Z = tile_Z[cross_idx[0]];	
+	if (center_Z >= g_xFrame_MainCamera_ZFarP) 
+		return;
 
-	const uint best_depth_horizontal = abs(tile_depths[cross_idx[1]] - center_depth) < abs(tile_depths[cross_idx[2]] - center_depth) ? 1 : 2;
-	const uint best_depth_vertical = abs(tile_depths[cross_idx[3]] - center_depth) < abs(tile_depths[cross_idx[4]] - center_depth) ? 3 : 4;
+	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;
+	const uint best_Z_vertical = abs(tile_Z[cross_idx[3]] - center_Z) < abs(tile_Z[cross_idx[4]] - center_Z) ? 3 : 4;
 
 	float3 p1 = 0, p2 = 0;
-	if (best_depth_horizontal == 1 && best_depth_vertical == 4)
+	if (best_Z_horizontal == 1 && best_Z_vertical == 4)
 	{
-		p1 = tile_positions[cross_idx[1]];
-		p2 = tile_positions[cross_idx[4]];
+		p1 = float3(tile_XY[cross_idx[1]], tile_Z[cross_idx[1]]);
+		p2 = float3(tile_XY[cross_idx[4]], tile_Z[cross_idx[4]]);
 	}
-	else if (best_depth_horizontal == 1 && best_depth_vertical == 3)
+	else if (best_Z_horizontal == 1 && best_Z_vertical == 3)
 	{
-		p1 = tile_positions[cross_idx[3]];
-		p2 = tile_positions[cross_idx[1]];
+		p1 = float3(tile_XY[cross_idx[3]], tile_Z[cross_idx[3]]);
+		p2 = float3(tile_XY[cross_idx[1]], tile_Z[cross_idx[1]]);
 	}
-	else if (best_depth_horizontal == 2 && best_depth_vertical == 4)
+	else if (best_Z_horizontal == 2 && best_Z_vertical == 4)
 	{
-		p1 = tile_positions[cross_idx[4]];
-		p2 = tile_positions[cross_idx[2]];
+		p1 = float3(tile_XY[cross_idx[4]], tile_Z[cross_idx[4]]);
+		p2 = float3(tile_XY[cross_idx[2]], tile_Z[cross_idx[2]]);
 	}
-	else if (best_depth_horizontal == 2 && best_depth_vertical == 3)
+	else if (best_Z_horizontal == 2 && best_Z_vertical == 3)
 	{
-		p1 = tile_positions[cross_idx[2]];
-		p2 = tile_positions[cross_idx[3]];
+		p1 = float3(tile_XY[cross_idx[2]], tile_Z[cross_idx[2]]);
+		p2 = float3(tile_XY[cross_idx[3]], tile_Z[cross_idx[3]]);
 	}
 
-	const float3 P = tile_positions[cross_idx[0]];
+	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
 	const float3 normal = normalize(cross(p2 - P, p1 - P));
 
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
@@ -91,7 +93,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const float ray_range = range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
 		const float3 sam = P + cone * ray_range;
 
-		float4 vProjectedCoord = mul(g_xFrame_MainCamera_VP, float4(sam, 1.0f));
+		float4 vProjectedCoord = mul(g_xFrame_MainCamera_Proj, float4(sam, 1.0f));
 		vProjectedCoord.xyz /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
