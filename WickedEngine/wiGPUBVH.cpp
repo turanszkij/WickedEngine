@@ -116,7 +116,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene, CommandList cmd
 
 			for (auto& it : storedTextures)
 			{
-				wiRenderer::CopyTexture2D(&globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
+				wiRenderer::CopyTexture2D(globalMaterialAtlas, 0, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, *it.first, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
 			}
 		}
 		else

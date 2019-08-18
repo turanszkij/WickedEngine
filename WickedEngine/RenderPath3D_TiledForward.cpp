@@ -58,7 +58,7 @@ void RenderPath3D_TiledForward::Render() const
 		if (getMSAASampleCount() > 1)
 		{
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, cmd);
-			wiRenderer::ResolveMSAADepthBuffer(&depthBuffer_Copy, &depthBuffer, cmd);
+			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer, cmd);
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 		}
 		else
@@ -74,9 +74,10 @@ void RenderPath3D_TiledForward::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, device, cmd, scene_read] {
 
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
-
-		wiRenderer::ComputeTiledLightCulling(cmd);
+		wiRenderer::ComputeTiledLightCulling(
+			depthBuffer_Copy, 
+			cmd
+		);
 
 		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
@@ -114,18 +115,15 @@ void RenderPath3D_TiledForward::Render() const
 
 		wiRenderer::BindCommonResources(cmd);
 
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
-
 		if (getMSAASampleCount() > 1)
 		{
 			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
 			device->MSAAResolve(scene_read[1], &rtMain[1], cmd);
 		}
-		wiRenderer::BindGBufferTextures(scene_read[0], scene_read[1], nullptr, cmd);
 
 		RenderSSAO(cmd);
 
-		RenderSSR(*scene_read[0], cmd);
+		RenderSSR(*scene_read[0], rtMain[1], cmd);
 
 		DownsampleDepthBuffer(cmd);
 

@@ -105,15 +105,13 @@ void RenderPath3D_Forward::Render() const
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_FORWARD, getHairParticlesEnabled(), true);
 			wiRenderer::DrawSky(cmd);
 
-			device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 
 		if (getMSAASampleCount() > 1)
 		{
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, cmd);
-			wiRenderer::ResolveMSAADepthBuffer(&depthBuffer_Copy, &depthBuffer, cmd);
+			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer, cmd);
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 
 			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
@@ -125,7 +123,6 @@ void RenderPath3D_Forward::Render() const
 			device->CopyTexture2D(&depthBuffer_Copy, &depthBuffer, cmd);
 			device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 		}
-		wiRenderer::BindGBufferTextures(scene_read[0], scene_read[1], nullptr, cmd);
 
 		RenderLinearDepth(cmd);
 	});
@@ -134,11 +131,10 @@ void RenderPath3D_Forward::Render() const
 	wiJobSystem::Execute(ctx, [this, device, cmd, scene_read] {
 
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
 
 		RenderSSAO(cmd);
 
-		RenderSSR(*scene_read[0], cmd);
+		RenderSSR(*scene_read[0], rtMain[1], cmd);
 
 		DownsampleDepthBuffer(cmd);
 

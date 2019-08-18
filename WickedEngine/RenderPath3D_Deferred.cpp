@@ -128,11 +128,8 @@ void RenderPath3D_Deferred::Render() const
 	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
 
 		RenderDecals(cmd);
-
-		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], cmd);
 
 		// Deferred lights:
 		{
@@ -148,7 +145,7 @@ void RenderPath3D_Deferred::Render() const
 
 			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
 			device->BindResource(PS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			wiRenderer::DrawLights(wiRenderer::GetCamera(), cmd);
+			wiRenderer::DrawDeferredLights(wiRenderer::GetCamera(), depthBuffer_Copy, rtGBuffer[0], rtGBuffer[1], rtGBuffer[2], cmd);
 		}
 
 		RenderSSAO(cmd);
@@ -157,7 +154,7 @@ void RenderPath3D_Deferred::Render() const
 
 		RenderDeferredComposition(cmd);
 
-		RenderSSR(rtDeferred, cmd);
+		RenderSSR(rtDeferred, rtGBuffer[1], cmd);
 
 		wiRenderer::BindCommonResources(cmd);
 
@@ -219,7 +216,7 @@ void RenderPath3D_Deferred::RenderDecals(CommandList cmd) const
 	vp.Height = (float)rts[0]->GetDesc().Height;
 	device->BindViewports(1, &vp, cmd);
 
-	wiRenderer::DrawDecals(wiRenderer::GetCamera(), cmd);
+	wiRenderer::DrawDeferredDecals(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 }
@@ -236,9 +233,13 @@ void RenderPath3D_Deferred::RenderDeferredComposition(CommandList cmd) const
 	device->BindViewports(1, &vp, cmd);
 
 	wiRenderer::DeferredComposition(
+		rtGBuffer[0],
+		rtGBuffer[1],
+		rtGBuffer[2],
 		lightbuffer_diffuse,
 		lightbuffer_specular,
 		getSSAOEnabled() ? rtSSAO[0] : *wiTextureHelper::getWhite(),
+		rtLinearDepth,
 		cmd
 	);
 	wiRenderer::DrawSky(cmd);

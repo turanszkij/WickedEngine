@@ -68,16 +68,21 @@ void RenderPath3D_TiledDeferred::Render() const
 	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::BindDepthTextures(&depthBuffer_Copy, &rtLinearDepth, cmd);
 
 		RenderDecals(cmd);
-
-		wiRenderer::BindGBufferTextures(&rtGBuffer[0], &rtGBuffer[1], &rtGBuffer[2], cmd);
 
 		device->BindResource(CS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
 		device->BindResource(CS, getSSREnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 
-		wiRenderer::ComputeTiledLightCulling(cmd, &lightbuffer_diffuse, &lightbuffer_specular);
+		wiRenderer::ComputeTiledLightCulling(
+			depthBuffer_Copy,
+			cmd, 
+			&rtGBuffer[0],
+			&rtGBuffer[1],
+			&rtGBuffer[2],
+			&lightbuffer_diffuse,
+			&lightbuffer_specular
+		);
 
 		RenderSSAO(cmd);
 
@@ -85,7 +90,7 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderDeferredComposition(cmd);
 
-		RenderSSR(rtDeferred, cmd);
+		RenderSSR(rtDeferred, rtGBuffer[1], cmd);
 
 		DownsampleDepthBuffer(cmd);
 

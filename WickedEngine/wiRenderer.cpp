@@ -3997,7 +3997,7 @@ void UpdateRenderData(CommandList cmd)
 	deferredMIPGenLock.lock();
 	for (auto& it : deferredMIPGens)
 	{
-		GenerateMipChain(it, MIPGENFILTER_LINEAR, cmd);
+		GenerateMipChain(*it, MIPGENFILTER_LINEAR, cmd);
 	}
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -4394,7 +4394,7 @@ void UpdateRenderData(CommandList cmd)
 		}
 
 		float cloudPhase = renderTime * scene.weather.cloudSpeed;
-		GenerateClouds((Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, cmd);
+		GenerateClouds(*(Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, cmd);
 	}
 
 	RefreshDecalAtlas(cmd);
@@ -4584,11 +4584,22 @@ void DrawWaterRipples(CommandList cmd)
 
 
 
-void DrawSoftParticles(const CameraComponent& camera, bool distortion, CommandList cmd)
+void DrawSoftParticles(
+	const CameraComponent& camera,
+	const Texture2D& lineardepth,
+	bool distortion, 
+	CommandList cmd
+)
 {
 	const Scene& scene = GetScene();
 	const FrameCulling& culling = frameCullings.at(&camera);
 	size_t emitterCount = culling.culledEmitters.size();
+	if (emitterCount == 0)
+	{
+		return;
+	}
+
+	GetDevice()->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
@@ -4624,18 +4635,30 @@ void DrawSoftParticles(const CameraComponent& camera, bool distortion, CommandLi
 	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
 }
-void DrawLights(const CameraComponent& camera, CommandList cmd)
+void DrawDeferredLights(
+	const CameraComponent& camera,
+	const Texture2D& depthbuffer,
+	const Texture2D& gbuffer0,
+	const Texture2D& gbuffer1,
+	const Texture2D& gbuffer2,
+	CommandList cmd
+)
 {
 	GraphicsDevice* device = GetDevice();
 	const FrameCulling& culling = frameCullings.at(&camera);
 
 	const Scene& scene = GetScene();
 
-	device->EventBegin("Light Render", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Light Render", cmd);
+	device->EventBegin("DrawDeferredLights", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Deferred Light Render", cmd);
 
 	BindShadowmaps(PS, cmd);
 	BindEnvironmentTextures(PS, cmd);
+
+	device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(PS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(PS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
@@ -4711,7 +4734,10 @@ void DrawLights(const CameraComponent& camera, CommandList cmd)
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void DrawLightVisualizers(const CameraComponent& camera, CommandList cmd)
+void DrawLightVisualizers(
+	const CameraComponent& camera, 
+	CommandList cmd
+)
 {
 	const FrameCulling& culling = frameCullings.at(&camera);
 
@@ -4831,7 +4857,11 @@ void DrawLightVisualizers(const CameraComponent& camera, CommandList cmd)
 
 	}
 }
-void DrawVolumeLights(const CameraComponent& camera, CommandList cmd)
+void DrawVolumeLights(
+	const CameraComponent& camera,
+	const Texture2D& depthbuffer,
+	CommandList cmd
+)
 {
 	const FrameCulling& culling = frameCullings.at(&camera);
 
@@ -4841,6 +4871,8 @@ void DrawVolumeLights(const CameraComponent& camera, CommandList cmd)
 		device->EventBegin("Volumetric Light Render", cmd);
 
 		BindShadowmaps(PS, cmd);
+
+		device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
 		const Scene& scene = GetScene();
 
@@ -4922,7 +4954,11 @@ void DrawVolumeLights(const CameraComponent& camera, CommandList cmd)
 
 
 }
-void DrawLensFlares(const CameraComponent& camera, CommandList cmd)
+void DrawLensFlares(
+	const CameraComponent& camera,
+	const Texture2D& depthbuffer,
+	CommandList cmd
+)
 {
 	if (IsWireRender())
 		return;
@@ -4930,6 +4966,8 @@ void DrawLensFlares(const CameraComponent& camera, CommandList cmd)
 	const FrameCulling& culling = frameCullings.at(&camera);
 
 	const Scene& scene = GetScene();
+
+	GetDevice()->BindResource(GS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	for (uint32_t lightIndex : culling.culledLights)
 	{
@@ -5038,7 +5076,7 @@ void SetShadowPropsCube(int resolution, int count)
 	}
 
 }
-void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t layerMask)
+void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t layerMask)
 {
 	if (IsWireRender())
 		return;
@@ -5048,7 +5086,7 @@ void DrawForShadowMap(const CameraComponent& camera, CommandList cmd, uint32_t l
 
 	if (!culling.culledLights.empty())
 	{
-		device->EventBegin("ShadowMap Render", cmd);
+		device->EventBegin("DrawShadowmaps", cmd);
 		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", cmd);
 
 		BindCommonResources(cmd);
@@ -5415,7 +5453,7 @@ void DrawScene(const CameraComponent& camera, bool tessellation, CommandList cmd
 
 }
 
-void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
+void DrawScene_Transparent(const CameraComponent& camera, const Texture2D& lineardepth, RENDERPASS renderPass, CommandList cmd, bool grass, bool occlusionCulling)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
@@ -5429,6 +5467,7 @@ void DrawScene_Transparent(const CameraComponent& camera, RENDERPASS renderPass,
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
 
+	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
 	if (decalAtlas.IsValid())
 	{
@@ -6152,7 +6191,11 @@ void DrawSun(CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void DrawDecals(const CameraComponent& camera, CommandList cmd)
+void DrawDeferredDecals(
+	const CameraComponent& camera,
+	const Texture2D& depthbuffer,
+	CommandList cmd
+)
 {
 	const FrameCulling& culling = frameCullings.at(&camera);
 
@@ -6160,7 +6203,7 @@ void DrawDecals(const CameraComponent& camera, CommandList cmd)
 	{
 		GraphicsDevice* device = GetDevice();
 
-		device->EventBegin("Decals", cmd);
+		device->EventBegin("DrawDeferredDecals", cmd);
 
 		const Scene& scene = GetScene();
 
@@ -6169,6 +6212,8 @@ void DrawDecals(const CameraComponent& camera, CommandList cmd)
 		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 
 		device->BindPipelineState(&PSO_decal, cmd);
+
+		device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
 		for (size_t decalIndex : culling.culledDecals) 
 		{
@@ -6423,7 +6468,7 @@ void RefreshEnvProbes(CommandList cmd)
 		}
 
 		device->BindRenderTargets(0, nullptr, nullptr, cmd);
-		GenerateMipChain((Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
+		GenerateMipChain(*(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
@@ -6796,7 +6841,7 @@ void VoxelRadiance(CommandList cmd)
 			device->EventBegin("Voxel Radiance Secondary Bounce", cmd);
 			device->UnbindUAVs(1, 1, cmd);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
-			GenerateMipChain((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
+			GenerateMipChain(*(Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
 			device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
 			device->BindResource(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
 			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
@@ -6819,7 +6864,7 @@ void VoxelRadiance(CommandList cmd)
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
 		{
-			GenerateMipChain(result, MIPGENFILTER_LINEAR, cmd);
+			GenerateMipChain(*result, MIPGENFILTER_LINEAR, cmd);
 		}
 	}
 
@@ -6836,7 +6881,15 @@ inline XMUINT3 GetEntityCullingTileCount()
 		(GetInternalResolution().y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
 		1);
 }
-void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diffuse, const Texture2D* lightbuffer_specular)
+void ComputeTiledLightCulling(
+	const Texture2D& depthbuffer,
+	CommandList cmd, 
+	const Texture2D* gbuffer0,
+	const Texture2D* gbuffer1,
+	const Texture2D* gbuffer2,
+	const Texture2D* lightbuffer_diffuse,
+	const Texture2D* lightbuffer_specular
+)
 {
 	const bool deferred = lightbuffer_diffuse != nullptr && lightbuffer_specular != nullptr;
 	auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
@@ -6961,7 +7014,6 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, cmd);
 		}
 
-
 		const FrameCulling& frameCulling = frameCullings.at(&GetCamera());
 
 
@@ -6978,6 +7030,8 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 
 		BindConstantBuffers(CS, cmd);
 
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+
 		if (deferred)
 		{
 			const GPUResource* uavs[] = {
@@ -6986,6 +7040,13 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 				lightbuffer_specular,
 			};
 			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), cmd);
+
+			const GPUResource* res[] = {
+				gbuffer0,
+				gbuffer1,
+				gbuffer2,
+			};
+			device->BindResources(CS, res, TEXSLOT_GBUFFER0, ARRAYSIZE(res), cmd);
 
 			BindShadowmaps(CS, cmd);
 			BindEnvironmentTextures(CS, cmd);
@@ -7014,15 +7075,17 @@ void ComputeTiledLightCulling(CommandList cmd, const Texture2D* lightbuffer_diff
 }
 
 
-void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, CommandList cmd)
+void ResolveMSAADepthBuffer(const Texture2D& dst, const Texture2D& src, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("Resolve MSAA DepthBuffer", cmd);
+	device->EventBegin("ResolveMSAADepthBuffer", cmd);
 
-	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, cmd);
-	device->BindUAV(CS, dst, 0, cmd);
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
-	const TextureDesc& desc = src->GetDesc();
+	device->BindResource(CS, &src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindUAV(CS, &dst, 0, cmd);
+
+	const TextureDesc& desc = src.GetDesc();
 
 	device->BindComputeShader(computeShaders[CSTYPE_RESOLVEMSAADEPTHSTENCIL], cmd);
 	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
@@ -7036,7 +7099,7 @@ void ResolveMSAADepthBuffer(const Texture2D* dst, const Texture2D* src, CommandL
 void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("Downsample DepthBuffer", cmd);
+	device->EventBegin("DownsampleDepthBuffer", cmd);
 
 	device->BindPipelineState(&PSO_downsampledepthbuffer, cmd);
 
@@ -7049,14 +7112,14 @@ void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::Command
 	device->EventEnd(cmd);
 }
 
-void GenerateMipChain(const Texture1D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
+void GenerateMipChain(const Texture1D& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	assert(0 && "Not implemented!");
 }
-void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
+void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	GraphicsDevice* device = GetDevice();
-	TextureDesc desc = texture->GetDesc();
+	TextureDesc desc = texture.GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -7096,8 +7159,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 
 			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 			{
-				device->BindUAV(CS, texture, 0, cmd, i + 1);
-				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
+				device->BindUAV(CS, &texture, 0, cmd, i + 1);
+				device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7141,8 +7204,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 
 			for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 			{
-				device->BindUAV(CS, texture, 0, cmd, i + 1);
-				device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
+				device->BindUAV(CS, &texture, 0, cmd, i + 1);
+				device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7196,8 +7259,8 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 
 		for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 		{
-			device->BindUAV(CS, texture, 0, cmd, i + 1);
-			device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
+			device->BindUAV(CS, &texture, 0, cmd, i + 1);
+			device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7225,10 +7288,10 @@ void GenerateMipChain(const Texture2D* texture, MIPGENFILTER filter, CommandList
 
 	device->EventEnd(cmd);
 }
-void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
+void GenerateMipChain(const Texture3D& texture, MIPGENFILTER filter, CommandList cmd, int arrayIndex)
 {
 	GraphicsDevice* device = GetDevice();
-	TextureDesc desc = texture->GetDesc();
+	TextureDesc desc = texture.GetDesc();
 
 	if (desc.MipLevels < 2)
 	{
@@ -7259,8 +7322,8 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, CommandList
 
 	for (UINT i = 0; i < desc.MipLevels - 1; ++i)
 	{
-		device->BindUAV(CS, texture, 0, cmd, i + 1);
-		device->BindResource(CS, texture, TEXSLOT_UNIQUE0, cmd, i);
+		device->BindUAV(CS, &texture, 0, cmd, i + 1);
+		device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
 		desc.Width = std::max(1u, desc.Width / 2);
 		desc.Height = std::max(1u, desc.Height / 2);
 		desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7289,12 +7352,12 @@ void GenerateMipChain(const Texture3D* texture, MIPGENFILTER filter, CommandList
 	device->EventEnd(cmd);
 }
 
-void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture2D* src, UINT SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
+void CopyTexture2D(const Texture2D& dst, UINT DstMIP, UINT DstX, UINT DstY, const Texture2D& src, UINT SrcMIP, CommandList cmd, BORDEREXPANDSTYLE borderExpand)
 {
 	GraphicsDevice* device = GetDevice();
 
-	const TextureDesc& desc_dst = dst->GetDesc();
-	const TextureDesc& desc_src = src->GetDesc();
+	const TextureDesc& desc_dst = dst.GetDesc();
+	const TextureDesc& desc_src = src.GetDesc();
 
 	assert(desc_dst.BindFlags & BIND_UNORDERED_ACCESS);
 	assert(desc_src.BindFlags & BIND_SHADER_RESOURCE);
@@ -7339,16 +7402,16 @@ void CopyTexture2D(const Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, cons
 
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), cmd);
 
-	device->BindResource(CS, src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &src, TEXSLOT_ONDEMAND0, cmd);
 
 	if (DstMIP > 0)
 	{
 		assert(desc_dst.MipLevels > DstMIP);
-		device->BindUAV(CS, dst, 0, cmd, DstMIP);
+		device->BindUAV(CS, &dst, 0, cmd, DstMIP);
 	}
 	else
 	{
-		device->BindUAV(CS, dst, 0, cmd);
+		device->BindUAV(CS, &dst, 0, cmd);
 	}
 
 	device->Dispatch((cb.xCopySrcSize.x + 7) / 8, (cb.xCopySrcSize.y + 7) / 8, 1, cmd);
@@ -7715,18 +7778,18 @@ void RayTraceSceneBVH(CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void GenerateClouds(const Texture2D* dst, UINT refinementCount, float randomness, CommandList cmd)
+void GenerateClouds(const Texture2D& dst, UINT refinementCount, float randomness, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("Cloud Generator", cmd);
 
 	TextureDesc src_desc = wiTextureHelper::getRandom64x64()->GetDesc();
 
-	TextureDesc dst_desc = dst->GetDesc();
+	TextureDesc dst_desc = dst.GetDesc();
 	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
 
 	device->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, cmd);
-	device->BindUAV(CS, dst, 0, cmd);
+	device->BindUAV(CS, &dst, 0, cmd);
 
 	CloudGeneratorCB cb;
 	cb.xNoiseTexDim = XMFLOAT2((float)src_desc.Width, (float)src_desc.Height);
@@ -7862,7 +7925,7 @@ void RefreshDecalAtlas(CommandList cmd)
 			{
 				if (mip < it.first->GetDesc().MipLevels)
 				{
-					CopyTexture2D(&decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first, mip, cmd, BORDEREXPAND_CLAMP);
+					CopyTexture2D(decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, *it.first, mip, cmd, BORDEREXPAND_CLAMP);
 				}
 			}
 		}
@@ -8151,7 +8214,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 					if (object.lightmap != nullptr)
 					{
 						const auto& rec = packedLightmaps.at(object.lightmap.get());
-						CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, cmd);
+						CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, *object.lightmap.get(), 0, cmd);
 					}
 				}
 			}
@@ -8162,7 +8225,7 @@ void RefreshLightmapAtlas(CommandList cmd)
 				{
 					const ObjectComponent& object = scene.objects[objectIndex];
 					const auto& rec = packedLightmaps.at(object.lightmap.get());
-					CopyTexture2D(&globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap.get(), 0, cmd);
+					CopyTexture2D(globalLightmap, 0, rec.x + atlasClampBorder, rec.y + atlasClampBorder, *object.lightmap.get(), 0, cmd);
 				}
 			}
 			device->EventEnd(cmd);
@@ -8402,7 +8465,7 @@ void BindDepthTextures(const Texture2D* depth, const Texture2D* linearDepth, Com
 	device->BindResource(CS, linearDepth, TEXSLOT_LINEARDEPTH, cmd);
 }
 
-const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
+const Texture2D* ComputeLuminance(const Texture2D& sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
@@ -8452,7 +8515,7 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 		// Pass 1 : Create luminance map from scene tex
 		TextureDesc luminance_map_desc = luminance_map->GetDesc();
 		device->BindComputeShader(computeShaders[CSTYPE_LUMINANCE_PASS1], cmd);
-		device->BindResource(CS, sourceImage, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &sourceImage, TEXSLOT_ONDEMAND0, cmd);
 		device->BindUAV(CS, luminance_map.get(), 0, cmd);
 		device->Dispatch(luminance_map_desc.Width/16, luminance_map_desc.Height/16, 1, cmd);
 
@@ -8494,10 +8557,15 @@ const Texture2D* ComputeLuminance(const Texture2D* sourceImage, CommandList cmd)
 
 
 void DeferredComposition(
+	const Texture2D& gbuffer0,
+	const Texture2D& gbuffer1,
+	const Texture2D& gbuffer2,
 	const Texture2D& lightmap_diffuse,
 	const Texture2D& lightmap_specular,
 	const Texture2D& ao,
-	CommandList cmd)
+	const Texture2D& lineardepth,
+	CommandList cmd
+)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -8506,9 +8574,13 @@ void DeferredComposition(
 	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 	device->BindPipelineState(&PSO_deferredcomposition, cmd);
 
+	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(PS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(PS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
 	device->BindResource(PS, &lightmap_diffuse, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(PS, &lightmap_specular, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(PS, &ao, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -8526,7 +8598,7 @@ void Postprocess_Blur_Gaussian(
 )
 {
 	GraphicsDevice* device = GetDevice();
-	device->EventBegin("wiRenderer::Postprocess_Blur_Gaussian", cmd);
+	device->EventBegin("Postprocess_Blur_Gaussian", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
@@ -8636,7 +8708,7 @@ void Postprocess_Blur_Bilateral(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_Blur_Bilateral", cmd);
+	device->EventBegin("Postprocess_Blur_Bilateral", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
@@ -8747,10 +8819,11 @@ void Postprocess_SSAO(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_SSAO", cmd);
+	device->EventBegin("Postprocess_SSAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SSAO", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+	device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSAO], cmd);
 
@@ -8784,7 +8857,7 @@ void Postprocess_SSAO(
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
-	wiRenderer::Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, blur, blur, 1.2f);
+	Postprocess_Blur_Bilateral(output, lineardepth, temp, output, cmd, blur, blur, 1.2f);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -8793,22 +8866,25 @@ void Postprocess_SSR(
 	const Texture2D& input,
 	const Texture2D& depthbuffer,
 	const Texture2D& lineardepth,
+	const Texture2D& gbuffer1,
 	const Texture2D& output,
 	CommandList cmd
 )
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_SSR", cmd);
+	device->EventBegin("Postprocess_SSR", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSR", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSR], cmd);
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(CS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -8834,6 +8910,11 @@ void Postprocess_SSR(
 
 	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	if (desc.MipLevels > 1)
+	{
+		GenerateMipChain(output, MIPGENFILTER_GAUSSIAN, cmd);
+	}
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -8931,7 +9012,7 @@ void Postprocess_LightShafts(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_LightShafts", cmd);
+	device->EventBegin("Postprocess_LightShafts", cmd);
 	auto range = wiProfiler::BeginRangeGPU("LightShafts", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
@@ -8986,7 +9067,7 @@ void Postprocess_DepthOfField(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_DepthOfField", cmd);
+	device->EventBegin("Postprocess_DepthOfField", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Depth of Field", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
@@ -9038,7 +9119,7 @@ void Postprocess_Outline(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_Outline", cmd);
+	device->EventBegin("Postprocess_Outline", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Outline", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
@@ -9085,12 +9166,12 @@ void Postprocess_MotionBlur(
 	const Texture2D& input,
 	const Texture2D& velocity,
 	const Texture2D& output,
-	wiGraphics::CommandList cmd
+	CommandList cmd
 )
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_MotionBlur", cmd);
+	device->EventBegin("Postprocess_MotionBlur", cmd);
 	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
@@ -9138,7 +9219,7 @@ void Postprocess_BloomSeparate(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_BloomSeparate", cmd);
+	device->EventBegin("Postprocess_BloomSeparate", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
@@ -9183,7 +9264,7 @@ void Postprocess_FXAA(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_FXAA", cmd);
+	device->EventBegin("Postprocess_FXAA", cmd);
 	auto range = wiProfiler::BeginRangeGPU("FXAA", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
@@ -9231,7 +9312,7 @@ void Postprocess_TemporalAA(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_TemporalAA", cmd);
+	device->EventBegin("Postprocess_TemporalAA", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
@@ -9280,7 +9361,7 @@ void Postprocess_Colorgrade(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_Colorgrade", cmd);
+	device->EventBegin("Postprocess_Colorgrade", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
@@ -9325,7 +9406,7 @@ void Postprocess_Lineardepth(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_Lineardepth", cmd);
+	device->EventBegin("Postprocess_Lineardepth", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
@@ -9370,7 +9451,7 @@ void Postprocess_Sharpen(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_Sharpen", cmd);
+	device->EventBegin("Postprocess_Sharpen", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
@@ -9418,7 +9499,7 @@ void Postprocess_Tonemap(
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->EventBegin("wiRenderer::Postprocess_Tonemap", cmd);
+	device->EventBegin("Postprocess_Tonemap", cmd);
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 

@@ -86,7 +86,7 @@ protected:
 
 	virtual void RenderLinearDepth(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSAO(wiGraphics::CommandList cmd) const;
-	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderSSR(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& gbuffer1, wiGraphics::CommandList cmd) const;
 	virtual void DownsampleDepthBuffer(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(const wiGraphics::Texture2D& dstSceneRT, wiGraphics::CommandList cmd) const;
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;

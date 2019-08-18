@@ -16,13 +16,13 @@ PixelOutputType main(VertexToPixel PSIn)
 	PixelOutputType Out = (PixelOutputType)0;
 
 	float2 screenPos = PSIn.pos2D.xy / PSIn.pos2D.w * float2(0.5f,-0.5f) + 0.5f;
-	float depth = texture_depth.Load(int3(PSIn.pos.xy,0)).r;
-	float3 pos3D = reconstructPosition(screenPos,depth);
+	float depth = texture_depth[PSIn.pos.xy];
+	float3 pos3D = reconstructPosition(screenPos, depth);
 
 	float3 clipSpace = mul(xDecalVP, float4(pos3D, 1)).xyz;
 	float3 projTex = clipSpace.xyz*float3(0.5f, -0.5f, 0.5f) + 0.5f;
 	
-	clip( ((saturate(projTex.x) == projTex.x) && (saturate(projTex.y) == projTex.y) && (saturate(projTex.z) == projTex.z))?1:-1 );
+	clip(is_saturated(projTex) ? 1 : -1);
 
 	//if (hasTexNor & 0x0000010){
 	//	float3 normal = normalize(cross(ddx(pos3D), ddy(pos3D)));

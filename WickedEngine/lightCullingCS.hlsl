@@ -496,7 +496,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		float2 ScreenCoord = (float2)pixel * g_xFrame_InternalResolution_Inverse;
 		float2 velocity = g1.zw;
 		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-		float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+		float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
 		LightingPart combined_lighting = CombineLighting(surface, lighting);

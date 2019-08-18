@@ -920,7 +920,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 #ifdef TRANSPARENT
 	Refraction(ScreenCoord, input.nor2D, bumpColor, surface, color, lighting);
 #else
-	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING

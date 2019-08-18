@@ -92,17 +92,6 @@ namespace wiRenderer
 	void SetAlphaRef(float alphaRef, wiGraphics::CommandList cmd);
 	// Resets the global shader alpha reference value to float g_xAlphaRef = 0.75f
 	inline void ResetAlphaRef(wiGraphics::CommandList cmd) { SetAlphaRef(0.75f, cmd); }
-	// Binds the gbuffer textures that will be used in deferred rendering, or thin gbuffer in case of forward rendering
-	void BindGBufferTextures(
-		const wiGraphics::Texture2D* slot0, 
-		const wiGraphics::Texture2D* slot1, 
-		const wiGraphics::Texture2D* slot2, 
-		wiGraphics::CommandList cmd);
-	// Binds the hardware depth buffer and a linear depth buffer to be read by shaders
-	void BindDepthTextures(
-		const wiGraphics::Texture2D* depth, 
-		const wiGraphics::Texture2D* linearDepth, 
-		wiGraphics::CommandList cmd);
 
 	// Draw skydome centered to camera. Its color will be either dynamically computed, or the global environment map will be used if you called SetEnvironmentMap()
 	void DrawSky(wiGraphics::CommandList cmd);
@@ -111,23 +100,50 @@ namespace wiRenderer
 	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
 	void DrawScene(const wiSceneSystem::CameraComponent& camera, bool tessellation, wiGraphics::CommandList cmd, RENDERPASS renderPass, bool grass, bool occlusionCulling);
 	// Draw the transparent world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
-	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, RENDERPASS renderPass, wiGraphics::CommandList cmd, bool grass, bool occlusionCulling);
+	void DrawScene_Transparent(const wiSceneSystem::CameraComponent& camera, const wiGraphics::Texture2D& lineardepth, RENDERPASS renderPass, wiGraphics::CommandList cmd, bool grass, bool occlusionCulling);
 	// Draw shadow maps for each visible light that has associated shadow maps
-	void DrawForShadowMap(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
+	void DrawShadowmaps(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd, uint32_t layerMask = ~0);
 	// Draw debug world. You must also enable what parts to draw, eg. SetToDrawGridHelper, etc, see implementation for details what can be enabled.
 	void DrawDebugWorld(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
 	// Draw Soft offscreen particles. Linear depth should be already readable (see BindDepthTextures())
-	void DrawSoftParticles(const wiSceneSystem::CameraComponent& camera, bool distortion, wiGraphics::CommandList cmd);
+	void DrawSoftParticles(
+		const wiSceneSystem::CameraComponent& camera, 
+		const wiGraphics::Texture2D& lineardepth,
+		bool distortion, 
+		wiGraphics::CommandList cmd
+	);
 	// Draw deferred lights. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
-	void DrawLights(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void DrawDeferredLights(
+		const wiSceneSystem::CameraComponent& camera,
+		const wiGraphics::Texture2D& depthbuffer,
+		const wiGraphics::Texture2D& gbuffer0,
+		const wiGraphics::Texture2D& gbuffer1,
+		const wiGraphics::Texture2D& gbuffer2,
+		wiGraphics::CommandList cmd
+	);
 	// Draw simple light visualizer geometries
-	void DrawLightVisualizers(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void DrawLightVisualizers(
+		const wiSceneSystem::CameraComponent& camera, 
+		wiGraphics::CommandList cmd
+	);
 	// Draw volumetric light scattering effects. Linear depth should be already readable (see BindDepthTextures())
-	void DrawVolumeLights(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void DrawVolumeLights(
+		const wiSceneSystem::CameraComponent& camera,
+		const wiGraphics::Texture2D& depthbuffer,
+		wiGraphics::CommandList cmd
+	);
 	// Draw Lens Flares for lights that have them enabled. Linear depth should be already readable (see BindDepthTextures())
-	void DrawLensFlares(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void DrawLensFlares(
+		const wiSceneSystem::CameraComponent& camera,
+		const wiGraphics::Texture2D& depthbuffer,
+		wiGraphics::CommandList cmd
+	);
 	// Draw deferred decals. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
-	void DrawDecals(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
+	void DrawDeferredDecals(
+		const wiSceneSystem::CameraComponent& camera,
+		const wiGraphics::Texture2D& depthbuffer,
+		wiGraphics::CommandList cmd
+	);
 	// Call once per frame to re-render out of date environment probes
 	void RefreshEnvProbes(wiGraphics::CommandList cmd);
 	// Call once per frame to re-render out of date impostors
@@ -140,19 +156,29 @@ namespace wiRenderer
 	void VoxelRadiance(wiGraphics::CommandList cmd);
 	// Compute light grid tiles for tiled rendering paths
 	//	If you specify lightbuffers (diffuse, specular), then a tiled deferred lighting will be computed as well. Otherwise, only the light grid gets computed
-	void ComputeTiledLightCulling(wiGraphics::CommandList cmd, 
-		const wiGraphics::Texture2D* lightbuffer_diffuse = nullptr, 
-		const wiGraphics::Texture2D* lightbuffer_specular = nullptr);
+	void ComputeTiledLightCulling(
+		const wiGraphics::Texture2D& depthbuffer,
+		wiGraphics::CommandList cmd, 
+		const wiGraphics::Texture2D* gbuffer0 = nullptr,
+		const wiGraphics::Texture2D* gbuffer1 = nullptr,
+		const wiGraphics::Texture2D* gbuffer2 = nullptr,
+		const wiGraphics::Texture2D* lightbuffer_diffuse = nullptr,
+		const wiGraphics::Texture2D* lightbuffer_specular = nullptr
+	);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
-	void ResolveMSAADepthBuffer(const wiGraphics::Texture2D* dst, const wiGraphics::Texture2D* src, wiGraphics::CommandList cmd);
+	void ResolveMSAADepthBuffer(const wiGraphics::Texture2D& dst, const wiGraphics::Texture2D& src, wiGraphics::CommandList cmd);
 	void DownsampleDepthBuffer(const wiGraphics::Texture2D& src, wiGraphics::CommandList cmd);
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
-	const wiGraphics::Texture2D* ComputeLuminance(const wiGraphics::Texture2D* sourceImage, wiGraphics::CommandList cmd);
+	const wiGraphics::Texture2D* ComputeLuminance(const wiGraphics::Texture2D& sourceImage, wiGraphics::CommandList cmd);
 
 	void DeferredComposition(
+		const wiGraphics::Texture2D& gbuffer0,
+		const wiGraphics::Texture2D& gbuffer1,
+		const wiGraphics::Texture2D& gbuffer2,
 		const wiGraphics::Texture2D& lightmap_diffuse,
 		const wiGraphics::Texture2D& lightmap_specular,
 		const wiGraphics::Texture2D& ao,
+		const wiGraphics::Texture2D& lineardepth,
 		wiGraphics::CommandList cmd);
 
 
@@ -190,6 +216,7 @@ namespace wiRenderer
 		const wiGraphics::Texture2D& input,
 		const wiGraphics::Texture2D& depthbuffer,
 		const wiGraphics::Texture2D& lineardepth,
+		const wiGraphics::Texture2D& gbuffer1,
 		const wiGraphics::Texture2D& output,
 		wiGraphics::CommandList cmd
 	);
@@ -307,9 +334,9 @@ namespace wiRenderer
 		MIPGENFILTER_GAUSSIAN,
 		MIPGENFILTER_BICUBIC,
 	};
-	void GenerateMipChain(const wiGraphics::Texture1D* texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
-	void GenerateMipChain(const wiGraphics::Texture2D* texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
-	void GenerateMipChain(const wiGraphics::Texture3D* texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture1D& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture2D& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
+	void GenerateMipChain(const wiGraphics::Texture3D& texture, MIPGENFILTER filter, wiGraphics::CommandList cmd, int arrayIndex = -1);
 
 	enum BORDEREXPANDSTYLE
 	{
@@ -320,15 +347,15 @@ namespace wiRenderer
 	// Performs copy operation even between different texture formats
 	//	Can also expand border region according to desired sampler func
 	void CopyTexture2D(
-		const wiGraphics::Texture2D* dst, UINT DstMIP, UINT DstX, UINT DstY, 
-		const wiGraphics::Texture2D* src, UINT SrcMIP, 
+		const wiGraphics::Texture2D& dst, UINT DstMIP, UINT DstX, UINT DstY, 
+		const wiGraphics::Texture2D& src, UINT SrcMIP, 
 		wiGraphics::CommandList cmd,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
 	// dst: Texture2D with unordered access, the output will be written to this
 	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing
 	// randomness: random seed
-	void GenerateClouds(const wiGraphics::Texture2D* dst, UINT refinementCount, float randomness, wiGraphics::CommandList cmd);
+	void GenerateClouds(const wiGraphics::Texture2D& dst, UINT refinementCount, float randomness, wiGraphics::CommandList cmd);
 
 	// Assign texture slots to out of date environemnt probes
 	void ManageEnvProbes();

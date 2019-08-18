@@ -25,6 +25,9 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = wiRenderer::RTFormat_hdr;
 		desc.Width = wiRenderer::GetInternalResolution().x / 2;
 		desc.Height = wiRenderer::GetInternalResolution().y / 2;
+		desc.MipLevels = 5;
+		rtSSR.RequestIndependentUnorderedAccessResourcesForMIPs(true);
+		rtSSR.RequestIndependentShaderResourcesForMIPs(true);
 		device->CreateTexture2D(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 	}
@@ -315,7 +318,7 @@ void RenderPath3D::RenderShadows(CommandList cmd) const
 {
 	if (getShadowsEnabled())
 	{
-		wiRenderer::DrawForShadowMap(wiRenderer::GetCamera(), cmd, getLayerMask());
+		wiRenderer::DrawShadowmaps(wiRenderer::GetCamera(), cmd, getLayerMask());
 	}
 
 	wiRenderer::VoxelRadiance(cmd);
@@ -329,10 +332,6 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 {
 	if (getSSAOEnabled())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
-
 		wiRenderer::Postprocess_SSAO(
 			depthBuffer_Copy, 
 			rtLinearDepth, 
@@ -345,14 +344,11 @@ void RenderPath3D::RenderSSAO(CommandList cmd) const
 		);
 	}
 }
-void RenderPath3D::RenderSSR(const Texture2D& srcSceneRT, CommandList cmd) const
+void RenderPath3D::RenderSSR(const Texture2D& srcSceneRT, const wiGraphics::Texture2D& gbuffer1, CommandList cmd) const
 {
 	if (getSSREnabled())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
-
-		wiRenderer::Postprocess_SSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth, rtSSR, cmd);
+		wiRenderer::Postprocess_SSR(srcSceneRT, depthBuffer_Copy, rtLinearDepth, gbuffer1, rtSSR, cmd);
 	}
 }
 void RenderPath3D::DownsampleDepthBuffer(CommandList cmd) const
@@ -440,7 +436,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		vp.Height = (float)rts[0]->GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), cmd);
+		wiRenderer::DrawVolumeLights(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
 	}
 }
 void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) const
@@ -459,7 +455,7 @@ void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) cons
 		vp.Height = (float)rts[0]->GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), isDistrortionPass, cmd);
+		wiRenderer::DrawSoftParticles(wiRenderer::GetCamera(), rtLinearDepth, isDistrortionPass, cmd);
 	}
 }
 void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, CommandList cmd) const
@@ -468,11 +464,11 @@ void RenderPath3D::RenderRefractionSource(const Texture2D& srcSceneRT, CommandLi
 
 	device->EventBegin("Refraction Source", cmd);
 
-	wiRenderer::CopyTexture2D(&rtSceneCopy, 0, 0, 0, &srcSceneRT, 0, cmd);
+	wiRenderer::CopyTexture2D(rtSceneCopy, 0, 0, 0, srcSceneRT, 0, cmd);
 
 	if (wiRenderer::GetAdvancedRefractionsEnabled())
 	{
-		wiRenderer::GenerateMipChain(&rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
+		wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
 	}
 	device->EventEnd(cmd);
 }
@@ -514,7 +510,7 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
 		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
-		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), renderPass, cmd, getHairParticlesEnabled(), true);
+		wiRenderer::DrawScene_Transparent(wiRenderer::GetCamera(), rtLinearDepth, renderPass, cmd, getHairParticlesEnabled(), true);
 
 		wiProfiler::EndRange(range); // Transparent Scene
 	}
@@ -550,7 +546,7 @@ void RenderPath3D::RenderTransparents(const Texture2D& dstSceneRT, RENDERPASS re
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(wiRenderer::GetCamera(), cmd);
+		wiRenderer::DrawLensFlares(wiRenderer::GetCamera(), depthBuffer_Copy, cmd);
 	}
 
 	wiRenderer::DrawDebugWorld(wiRenderer::GetCamera(), cmd);
@@ -570,7 +566,7 @@ void RenderPath3D::TemporalAAResolve(const Texture2D& srcdstSceneRT, const Textu
 		int output = device->GetFrameCount() % 2;
 		int history = 1 - output;
 		wiRenderer::Postprocess_TemporalAA(srcdstSceneRT, rtTemporalAA[history], srcGbuffer1, rtTemporalAA[output], cmd);
-		wiRenderer::CopyTexture2D(&srcdstSceneRT, 0, 0, 0, &rtTemporalAA[output], 0, cmd); // todo: remove and do better ping pong
+		wiRenderer::CopyTexture2D(srcdstSceneRT, 0, 0, 0, rtTemporalAA[output], 0, cmd); // todo: remove and do better ping pong
 
 		device->EventEnd(cmd);
 	}
@@ -586,7 +582,7 @@ void RenderPath3D::RenderBloom(const Texture2D& srcdstSceneRT, CommandList cmd) 
 
 		wiRenderer::Postprocess_BloomSeparate(srcdstSceneRT, rtBloom, cmd, getBloomThreshold());
 
-		wiRenderer::GenerateMipChain(&rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
+		wiRenderer::GenerateMipChain(rtBloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd);
 
 		// add to the scene
 		{
@@ -659,7 +655,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 
 		wiRenderer::Postprocess_Tonemap(
 			*rt_read,
-			getEyeAdaptionEnabled() ? *wiRenderer::ComputeLuminance(&srcSceneRT, cmd) : *wiTextureHelper::getColor(wiColor::Gray()),
+			getEyeAdaptionEnabled() ? *wiRenderer::ComputeLuminance(srcSceneRT, cmd) : *wiTextureHelper::getColor(wiColor::Gray()),
 			rtParticle,
 			*rt_write,
 			cmd,

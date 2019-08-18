@@ -310,7 +310,7 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, float time,
 	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 
-	wiRenderer::GenerateMipChain(&m_pGradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
+	wiRenderer::GenerateMipChain(m_pGradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
 
 	device->EventEnd(cmd);
 }

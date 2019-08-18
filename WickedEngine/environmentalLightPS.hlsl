@@ -12,7 +12,7 @@ LightOutputType main(VertexToPixel PSIn)
 
 	LightingContribution vxgi_contribution = VoxelGI(surface, lighting);
 
-	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, 0);
+	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
 	diffuse_alpha = vxgi_contribution.diffuse;
