@@ -5028,57 +5028,79 @@ namespace wiGraphics
 	{
 		for (UINT i = 0; i < NumBarriers; ++i)
 		{
-			const GPUResource* uav = uavs[i];
-
-			if (uav->IsTexture())
+			if (uavs == nullptr)
 			{
-				const TextureDesc& desc = ((const Texture*)uav)->GetDesc();
-
-				VkImageMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-				barrier.image = (VkImage)uav->resource;
-				barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-				barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				barrier.subresourceRange.baseArrayLayer = 0;
-				barrier.subresourceRange.layerCount = desc.ArraySize;
-				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = desc.MipLevels;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				// Barrier for all writes to complete:
+				VkMemoryBarrier barrier = {};
+				barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+				barrier.pNext = nullptr;
+				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
 
 				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					0,
+					1, &barrier,
 					0, nullptr,
-					0, nullptr,
-					1, &barrier
+					0, nullptr
 				);
 			}
 			else
 			{
-				VkBufferMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-				barrier.pNext = nullptr;
-				barrier.buffer = (VkBuffer)uav->resource;
-				barrier.size = ((const GPUBuffer*)uav)->GetDesc().ByteWidth;
-				barrier.offset = 0;
-				barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				// Barrier for specific resource:
+				const GPUResource* uav = uavs[i];
 
-				vkCmdPipelineBarrier(GetDirectCommandList(cmd),
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					1, &barrier,
-					0, nullptr
-				);
+				if (uav->IsTexture())
+				{
+					const TextureDesc& desc = ((const Texture*)uav)->GetDesc();
+
+					VkImageMemoryBarrier barrier = {};
+					barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+					barrier.image = (VkImage)uav->resource;
+					barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+					barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+					barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					barrier.subresourceRange.baseArrayLayer = 0;
+					barrier.subresourceRange.layerCount = desc.ArraySize;
+					barrier.subresourceRange.baseMipLevel = 0;
+					barrier.subresourceRange.levelCount = desc.MipLevels;
+					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+					vkCmdPipelineBarrier(GetDirectCommandList(cmd),
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier
+					);
+				}
+				else
+				{
+					VkBufferMemoryBarrier barrier = {};
+					barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+					barrier.pNext = nullptr;
+					barrier.buffer = (VkBuffer)uav->resource;
+					barrier.size = ((const GPUBuffer*)uav)->GetDesc().ByteWidth;
+					barrier.offset = 0;
+					barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+					vkCmdPipelineBarrier(GetDirectCommandList(cmd),
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						0,
+						0, nullptr,
+						1, &barrier,
+						0, nullptr
+					);
+				}
 			}
 		}
 	}

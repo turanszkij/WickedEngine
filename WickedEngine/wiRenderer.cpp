@@ -1741,7 +1741,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 					const GPUResource* res[] = {
 						material.GetBaseColorMap(),
 					};
-					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, ARRAYSIZE(res), cmd);
 				}
 				else
 				{
@@ -1753,7 +1753,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 						material.GetEmissiveMap(),
 						material.GetOcclusionMap(),
 					};
-					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+					device->BindResources(PS, res, TEXSLOT_RENDERER_BASECOLORMAP, ARRAYSIZE(res), cmd);
 				}
 
 				if (tessellatorRequested)
@@ -1761,7 +1761,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 					const GPUResource* res[] = {
 						material.GetDisplacementMap(),
 					};
-					device->BindResources(DS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
+					device->BindResources(DS, res, TEXSLOT_RENDERER_DISPLACEMENTMAP, ARRAYSIZE(res), cmd);
 					device->BindConstantBuffer(DS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);
 				}
 
@@ -2256,6 +2256,7 @@ void LoadShaders()
 										case RENDERPASS_SHADOWCUBE:
 											desc.dss = &depthStencils[transparency ? DSSTYPE_DEPTHREAD : DSSTYPE_SHADOW];
 											break;
+										case RENDERPASS_FORWARD:
 										case RENDERPASS_TILEDFORWARD:
 											if (blendMode == BLENDMODE_ADDITIVE)
 											{
@@ -2469,7 +2470,7 @@ void LoadShaders()
 		desc.ps = pixelShaders[PSTYPE_DECAL];
 		desc.rs = &rasterizers[RSTYPE_FRONT];
 		desc.bs = &blendStates[BSTYPE_DECAL];
-		desc.dss = &depthStencils[DSSTYPE_DECAL];
+		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
 		desc.pt = TRIANGLESTRIP;
 
 		desc.numRTs = 1;
@@ -2591,43 +2592,37 @@ void LoadShaders()
 		desc.pt = TRIANGLELIST;
 		desc.rs = &rasterizers[RSTYPE_BACK];
 		desc.bs = &blendStates[BSTYPE_DEFERREDLIGHT];
+		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
 
 		switch (args.jobIndex)
 		{
 		case LightComponent::DIRECTIONAL:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_DIRLIGHT];
-			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::POINT:
 			desc.vs = vertexShaders[VSTYPE_POINTLIGHT];
 			desc.ps = pixelShaders[PSTYPE_POINTLIGHT];
-			desc.dss = &depthStencils[DSSTYPE_LIGHT];
 			break;
 		case LightComponent::SPOT:
 			desc.vs = vertexShaders[VSTYPE_SPOTLIGHT];
 			desc.ps = pixelShaders[PSTYPE_SPOTLIGHT];
-			desc.dss = &depthStencils[DSSTYPE_LIGHT];
 			break;
 		case LightComponent::SPHERE:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_SPHERELIGHT];
-			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::DISC:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_DISCLIGHT];
-			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::RECTANGLE:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_RECTANGLELIGHT];
-			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		case LightComponent::TUBE:
 			desc.vs = vertexShaders[VSTYPE_DIRLIGHT];
 			desc.ps = pixelShaders[PSTYPE_TUBELIGHT];
-			desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
 			break;
 		}
 
@@ -2727,7 +2722,7 @@ void LoadShaders()
 		desc.ps = pixelShaders[PSTYPE_ENVIRONMENTALLIGHT];
 		desc.rs = &rasterizers[RSTYPE_BACK];
 		desc.bs = &blendStates[BSTYPE_ENVIRONMENTALLIGHT];
-		desc.dss = &depthStencils[DSSTYPE_DIRLIGHT];
+		desc.dss = &depthStencils[DSSTYPE_DEFERREDLIGHT];
 
 		desc.numRTs = 2;
 		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
@@ -3340,54 +3335,20 @@ void SetUpStates()
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthEnable = false;
-	dsd.DepthFunc = COMPARISON_LESS;
-	dsd.StencilEnable = false;
-	dsd.StencilReadMask = 0xFF;
-	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = COMPARISON_LESS;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DIRLIGHT]);
-
-
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = true;
 	dsd.DepthFunc = COMPARISON_LESS;
-	dsd.StencilEnable = false;
-	dsd.StencilReadMask = 0xFF;
-	dsd.StencilWriteMask = 0xFF;
-	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_LIGHT]);
-
-
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthEnable = true;
 	dsd.StencilEnable = true;
-	dsd.DepthFunc = COMPARISON_LESS;
 	dsd.StencilReadMask = 0xFF;
-	dsd.StencilWriteMask = 0x00;
-	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.StencilWriteMask = 0;
+	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+	dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DECAL]);
+	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDLIGHT]);
 
 
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
@@ -3544,12 +3505,12 @@ void SetUpStates()
 	 
 	bd.RenderTarget[0].BlendEnable = true;
 	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
+	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA; // can overwrite ambient and lightmap
 	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
 	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN | COLOR_WRITE_ENABLE_BLUE; // alpha is not written by deferred lights!
 	bd.IndependentBlendEnable = false;
 	bd.AlphaToCoverageEnable = false;
 	device->CreateBlendState(&bd, &blendStates[BSTYPE_ENVIRONMENTALLIGHT]);
@@ -4290,14 +4251,14 @@ void UpdateRenderData(CommandList cmd)
 				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, ARRAYSIZE(vbs), cmd);
 				device->BindUAVs(CS, so, 0, ARRAYSIZE(so), cmd);
 
-				device->Dispatch((UINT)ceilf((float)mesh.vertex_positions.size() / SKINNING_COMPUTE_THREADCOUNT), 1, 1, cmd);
-				device->UAVBarrier(so, ARRAYSIZE(so), cmd); // todo: defer, to gain from async compute
+				device->Dispatch(((UINT)mesh.vertex_positions.size() + SKINNING_COMPUTE_THREADCOUNT - 1) / SKINNING_COMPUTE_THREADCOUNT, 1, 1, cmd);
 			}
 
 		}
 
 		if (streamOutSetUp)
 		{
+			device->UAVBarrier(nullptr, 1, cmd); // wait all skinning to finish (but they can overlap)
 			device->UnbindUAVs(0, 2, cmd);
 			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 2, cmd);
 		}
@@ -4659,6 +4620,8 @@ void DrawDeferredLights(
 	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(PS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(PS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
+
+	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
@@ -6960,7 +6923,7 @@ void ComputeTiledLightCulling(
 
 		GPUResource* uavs[] = { frustumBuffer };
 
-		device->BindUAVs(CS, uavs, UAVSLOT_TILEFRUSTUMS, ARRAYSIZE(uavs), cmd);
+		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 		device->BindComputeShader(computeShaders[CSTYPE_TILEFRUSTUMS], cmd);
 
 		DispatchParamsCB dispatchParams;
@@ -6974,7 +6937,7 @@ void ComputeTiledLightCulling(
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_DISPATCHPARAMS], CB_GETBINDSLOT(DispatchParamsCB), cmd);
 
 		device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
-		device->UnbindUAVs(UAVSLOT_TILEFRUSTUMS, 1, cmd);
+		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 	}
 
@@ -7011,7 +6974,7 @@ void ComputeTiledLightCulling(
 
 		if (GetDebugLightCulling())
 		{
-			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], UAVSLOT_DEBUGTEXTURE, cmd);
+			device->BindUAV(CS, textures[TEXTYPE_2D_DEBUGUAV], 3, cmd);
 		}
 
 		const FrameCulling& frameCulling = frameCullings.at(&GetCamera());
@@ -7035,11 +6998,11 @@ void ComputeTiledLightCulling(
 		if (deferred)
 		{
 			const GPUResource* uavs[] = {
-				lightbuffer_diffuse,
 				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
+				lightbuffer_diffuse,
 				lightbuffer_specular,
 			};
-			device->BindUAVs(CS, uavs, UAVSLOT_TILEDDEFERRED_DIFFUSE, ARRAYSIZE(uavs), cmd);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 			const GPUResource* res[] = {
 				gbuffer0,
@@ -7057,10 +7020,10 @@ void ComputeTiledLightCulling(
 		else
 		{
 			GPUResource* uavs[] = {
-				&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
 				&resourceBuffers[RBTYPE_ENTITYTILES_TRANSPARENT],
+				&resourceBuffers[RBTYPE_ENTITYTILES_OPAQUE],
 			};
-			device->BindUAVs(CS, uavs, UAVSLOT_ENTITYTILES_OPAQUE, ARRAYSIZE(uavs), cmd);
+			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
 			device->Dispatch(dispatchParams.xDispatchParams_numThreadGroups.x, dispatchParams.xDispatchParams_numThreadGroups.y, dispatchParams.xDispatchParams_numThreadGroups.z, cmd);
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
@@ -7179,7 +7142,7 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 					6,
 					cmd);
 
-				device->UAVBarrier((GPUResource**)&texture, 1, cmd);
+				device->UAVBarrier(nullptr, 1, cmd);
 			}
 		}
 		else
@@ -7224,7 +7187,7 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 					6,
 					cmd);
 
-				device->UAVBarrier((GPUResource**)&texture, 1, cmd);
+				device->UAVBarrier(nullptr, 1, cmd);
 			}
 		}
 
@@ -7279,7 +7242,7 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 				1,
 				cmd);
 
-			device->UAVBarrier((GPUResource**)&texture, 1, cmd);
+			device->UAVBarrier(nullptr, 1, cmd);
 		}
 	}
 
@@ -7344,6 +7307,8 @@ void GenerateMipChain(const Texture3D& texture, MIPGENFILTER filter, CommandList
 			std::max(1u, (desc.Height + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
 			std::max(1u, (desc.Depth + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
 			cmd);
+
+		device->UAVBarrier(nullptr, 1, cmd);
 	}
 
 	device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);

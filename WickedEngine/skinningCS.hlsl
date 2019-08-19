@@ -19,7 +19,7 @@ groupshared Bone LDS_BoneList[SKINNING_COMPUTE_THREADCOUNT];
 RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
 RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
 
-RWRAWBUFFER(streamoutBuffer_POS, SKINNINGSLOT_OUT_VERTEX_POS);
+RWRAWBUFFER(streamoutBuffer_POS, 0);
 
 
 inline void Skinning(inout float3 pos, inout float3 nor, in float4 inBon, in float4 inWei)

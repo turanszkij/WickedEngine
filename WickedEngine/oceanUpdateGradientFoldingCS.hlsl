@@ -1,7 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
 
-#define xDisplacementMap texture_0
+TEXTURE2D(texture_displacementmap, float4, TEXSLOT_ONDEMAND0);
+
 RWTEXTURE2D(output, float4, 0);
 
 [numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]
@@ -17,10 +18,10 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	float2 tc_back = float2(uv.x, uv.y - one_texel.y);
 	float2 tc_front = float2(uv.x, uv.y + one_texel.y);
 
-	float3 displace_left = xDisplacementMap.SampleLevel(sampler_linear_clamp, tc_left, 0).xyz;
-	float3 displace_right = xDisplacementMap.SampleLevel(sampler_linear_clamp, tc_right, 0).xyz;
-	float3 displace_back = xDisplacementMap.SampleLevel(sampler_linear_clamp, tc_back, 0).xyz;
-	float3 displace_front = xDisplacementMap.SampleLevel(sampler_linear_clamp, tc_front, 0).xyz;
+	float3 displace_left = texture_displacementmap.SampleLevel(sampler_linear_clamp, tc_left, 0).xyz;
+	float3 displace_right = texture_displacementmap.SampleLevel(sampler_linear_clamp, tc_right, 0).xyz;
+	float3 displace_back = texture_displacementmap.SampleLevel(sampler_linear_clamp, tc_back, 0).xyz;
+	float3 displace_front = texture_displacementmap.SampleLevel(sampler_linear_clamp, tc_front, 0).xyz;
 
 	// Do not store the actual normal value. Using gradient instead, which preserves two differential values.
 	float2 gradient = { -(displace_right.z - displace_left.z), -(displace_front.z - displace_back.z) };

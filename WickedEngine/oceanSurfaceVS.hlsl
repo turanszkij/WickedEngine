@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
 
-#define xDisplacementMap	texture_0 
+TEXTURE2D(texture_displacementmap, float4, TEXSLOT_ONDEMAND0);
 
 static const float3 QUAD[] = {
 	float3(0, 0, 0),
@@ -51,7 +51,7 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 
 	// Displace surface:
 	float2 uv = worldPos.xz * xOceanPatchSizeRecip;
-	float3 displacement = xDisplacementMap.SampleLevel(sampler_linear_wrap, uv + xOceanMapHalfTexel, 0).xzy;
+	float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, uv + xOceanMapHalfTexel, 0).xzy;
 	displacement *= 1 - saturate(distance(g_xCamera_CamPos, worldPos) * 0.005f);
 	worldPos += displacement;
 

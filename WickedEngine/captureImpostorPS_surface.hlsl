@@ -7,7 +7,7 @@ float4 main(PixelInputType input) : SV_Target0
 	if (g_xMaterial.uvset_surfaceMap >= 0)
 	{
 		const float2 UV_surfaceMap = g_xMaterial.uvset_surfaceMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		surface_occlusion_roughness_metallic_reflectance = xSurfaceMap.Sample(sampler_objectshader, UV_surfaceMap);
+		surface_occlusion_roughness_metallic_reflectance = texture_surfacemap.Sample(sampler_objectshader, UV_surfaceMap);
 
 		if (g_xMaterial.specularGlossinessWorkflow)
 		{

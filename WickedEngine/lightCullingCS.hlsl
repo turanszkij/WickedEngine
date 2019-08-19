@@ -2,25 +2,27 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
-#define	xSSR texture_9
-
-#ifdef DEBUG_TILEDLIGHTCULLING
-RWTEXTURE2D(DebugTexture, unorm float4, UAVSLOT_DEBUGTEXTURE);
-#endif
+TEXTURE2D(texture_ssao, float, TEXSLOT_RENDERPATH_SSAO);
+TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, SBSLOT_TILEFRUSTUMS);
 
 #define entityCount xDispatchParams_value0
 
 
+RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, 0);
+
 #ifdef DEFERRED
-RWTEXTURE2D(deferred_Diffuse, float4, UAVSLOT_TILEDDEFERRED_DIFFUSE);
-RWTEXTURE2D(deferred_Specular, float4, UAVSLOT_TILEDDEFERRED_SPECULAR);
+RWTEXTURE2D(deferred_Diffuse, float4, 1);
+RWTEXTURE2D(deferred_Specular, float4, 2);
 #else
-RWSTRUCTUREDBUFFER(EntityTiles_Opaque, uint, UAVSLOT_ENTITYTILES_OPAQUE);
+RWSTRUCTUREDBUFFER(EntityTiles_Opaque, uint, 1);
 #endif
 
-RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, UAVSLOT_ENTITYTILES_TRANSPARENT);
+
+#ifdef DEBUG_TILEDLIGHTCULLING
+RWTEXTURE2D(DebugTexture, unorm float4, 3);
+#endif
 
 // Group shared variables.
 groupshared uint uMinDepth;
@@ -335,7 +337,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		float3 ld = deferred_Diffuse[pixel].rgb;
 		float3 ls = deferred_Specular[pixel].rgb;
 		float3 N = decodeNormal(g1.xy);
-		float3 P = reconstructPosition((float2)pixel * g_xFrame_InternalResolution_Inverse, depth[granularity]);
+		float2 ScreenCoord = (float2)pixel * g_xFrame_InternalResolution_Inverse;
+		float3 P = reconstructPosition(ScreenCoord, depth[granularity]);
 		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
 		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
 		Lighting lighting = CreateLighting(0, ls, ld, 0);
@@ -493,11 +496,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			}
 		}
 
-		float2 ScreenCoord = (float2)pixel * g_xFrame_InternalResolution_Inverse;
 		float2 velocity = g1.zw;
 		float2 ReprojectedScreenCoord = ScreenCoord + velocity;
-		float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
+		float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
+
+		float ssao = texture_ssao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= ssao;
 
 		LightingPart combined_lighting = CombineLighting(surface, lighting);
 		deferred_Diffuse[pixel] = float4(combined_lighting.diffuse, 1);

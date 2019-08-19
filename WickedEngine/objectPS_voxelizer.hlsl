@@ -29,7 +29,7 @@ void main(PSInput input)
 		if (g_xMaterial.uvset_baseColorMap >= 0)
 		{
 			const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			baseColor = xBaseColorMap.Sample(sampler_linear_wrap, UV_baseColorMap);
+			baseColor = texture_basecolormap.Sample(sampler_linear_wrap, UV_baseColorMap);
 			baseColor.rgb = DEGAMMA(baseColor.rgb);
 		}
 		else
@@ -43,7 +43,7 @@ void main(PSInput input)
 		if (g_xMaterial.emissiveColor.a > 0 && g_xMaterial.uvset_emissiveMap >= 0)
 		{
 			const float2 UV_emissiveMap = g_xMaterial.uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			float4 emissiveMap = xEmissiveMap.Sample(sampler_linear_wrap, UV_emissiveMap);
+			float4 emissiveMap = texture_emissivemap.Sample(sampler_linear_wrap, UV_emissiveMap);
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 			emissiveColor *= emissiveMap;
 		}

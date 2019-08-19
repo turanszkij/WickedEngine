@@ -13,5 +13,5 @@ void main(
 	float2 dimOut;
 	tex.GetDimensions(dimOut.x, dimOut.y);
 	float4 color = texture_0.SampleLevel(sampler_linear_clamp, (dispatchThreadId.xy + 0.5f) / dimOut, 0);
-	tex[dispatchThreadId.xy] = dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
+	tex[dispatchThreadId.xy] = max(0, dot(color.rgb, float3(0.2126, 0.7152, 0.0722)));
 }

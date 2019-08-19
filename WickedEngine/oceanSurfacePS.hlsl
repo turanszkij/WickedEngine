@@ -30,12 +30,12 @@ float4 main(PSIn input) : SV_TARGET
 
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
-	float4 reflectiveColor = xReflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
+	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
 
 	//REFRACTION 
 	float2 perturbatedRefrTexCoords = ScreenCoord.xy + surface.N.xz * 0.04f;
 	float refDepth = texture_lineardepth.Sample(sampler_linear_mirror, ScreenCoord) * g_xFrame_MainCamera_ZFarP;
-	float3 refractiveColor = xRefraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
+	float3 refractiveColor = texture_refraction.SampleLevel(sampler_linear_mirror, perturbatedRefrTexCoords, 0).rgb;
 	float mod = saturate(0.05*(refDepth - lineardepth));
 	refractiveColor = lerp(refractiveColor, surface.baseColor.rgb, mod).rgb;
 

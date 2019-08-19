@@ -129,7 +129,7 @@ PixelInputType main(ConstantOutputType input, float3 uvwCoord : SV_DomainLocatio
 	if (g_xMaterial.uvset_displacementMap >= 0)
 	{
 		const float2 UV_displacementMap = g_xMaterial.uvset_displacementMap == 0 ? vertexUvsets.xy : vertexUvsets.zw;
-		displacement *= 1 - xDisplacementMap.SampleLevel(sampler_linear_wrap, UV_displacementMap, 0).rrr;
+		displacement *= 1 - texture_displacementmap.SampleLevel(sampler_linear_wrap, UV_displacementMap, 0).rrr;
 	}
 	vertexPosition.xyz += displacement;
 	vertexPositionPrev.xyz += displacement;

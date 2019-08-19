@@ -51,7 +51,6 @@ void RenderPath3D_TiledDeferred::Render() const
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			device->BindResource(PS, getSSAOEnabled() ? &rtSSAO[0] : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_SSAO, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
 
 			wiProfiler::EndRange(range); // Opaque Scene
@@ -62,6 +61,8 @@ void RenderPath3D_TiledDeferred::Render() const
 		device->TransitionBarrier(dsv, ARRAYSIZE(dsv), RESOURCE_STATE_COPY_SOURCE, RESOURCE_STATE_DEPTH_READ, cmd);
 
 		RenderLinearDepth(cmd);
+
+		RenderSSAO(cmd);
 	});
 
 	cmd = device->BeginCommandList();
@@ -83,8 +84,6 @@ void RenderPath3D_TiledDeferred::Render() const
 			&lightbuffer_diffuse,
 			&lightbuffer_specular
 		);
-
-		RenderSSAO(cmd);
 
 		RenderSSS(cmd);
 

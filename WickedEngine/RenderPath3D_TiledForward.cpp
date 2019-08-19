@@ -69,6 +69,8 @@ void RenderPath3D_TiledForward::Render() const
 		}
 
 		RenderLinearDepth(cmd);
+
+		RenderSSAO(cmd);
 	});
 
 	cmd = device->BeginCommandList();
@@ -120,8 +122,6 @@ void RenderPath3D_TiledForward::Render() const
 			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
 			device->MSAAResolve(scene_read[1], &rtMain[1], cmd);
 		}
-
-		RenderSSAO(cmd);
 
 		RenderSSR(*scene_read[0], rtMain[1], cmd);
 

@@ -1,6 +1,7 @@
 #include "deferredLightHF.hlsli"
 
-#define	xSSR texture_9
+TEXTURE2D(texture_ssao, float, TEXSLOT_RENDERPATH_SSAO);
+TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);
 
 
 LightOutputType main(VertexToPixel PSIn)
@@ -12,11 +13,18 @@ LightOutputType main(VertexToPixel PSIn)
 
 	LightingContribution vxgi_contribution = VoxelGI(surface, lighting);
 
-	float4 ssr = xSSR.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
+	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ReprojectedScreenCoord, surface.roughness * 5);
 	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb, ssr.a);
 
-	diffuse_alpha = vxgi_contribution.diffuse;
-	specular_alpha = max(vxgi_contribution.specular, ssr.a);
+	float ssao = texture_ssao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+	surface.occlusion = ssao;
+
+	// Blend factor modulation:
+	//	Alpha is not written, but blending will multiply the dest rgb with 1-alpha
+	//	Modulate alpha to overwrite dest (which contains ambient and light map before this pass)
+	ssao = saturate(1 - ssao);
+	diffuse_alpha = max(vxgi_contribution.diffuse, ssao);
+	specular_alpha = max(max(vxgi_contribution.specular, ssr.a), ssao);
 
 	DEFERREDLIGHT_RETURN
 }

@@ -9,5 +9,5 @@ struct VertextoPixel
 
 void main(VertextoPixel PSIn)
 {
-	ALPHATEST(xBaseColorMap.Sample(sampler_linear_wrap, PSIn.uv).a);
+	ALPHATEST(texture_basecolormap.Sample(sampler_linear_wrap, PSIn.uv).a);
 }

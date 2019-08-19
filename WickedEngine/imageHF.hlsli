@@ -3,8 +3,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Image.h"
 
-#define xTexture		texture_0
-#define xMaskTex		texture_1
+TEXTURE2D(texture_base, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(texture_mask, float4, TEXSLOT_ONDEMAND1);
 
 SAMPLERSTATE(Sampler, SSLOT_ONDEMAND0);
 

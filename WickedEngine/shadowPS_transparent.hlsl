@@ -17,7 +17,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	if (g_xMaterial.uvset_baseColorMap >= 0)
 	{
 		const float2 UV_baseColorMap = g_xMaterial.uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		color = xBaseColorMap.Sample(sampler_objectshader, UV_baseColorMap);
+		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
 		color.rgb = DEGAMMA(color.rgb);
 	}
 	else
@@ -37,7 +37,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		float3 bumpColor;
 
 		const float2 UV_normalMap = g_xMaterial.uvset_normalMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-		bumpColor = float3(2.0f * xNormalMap.Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1.0f, 1);
+		bumpColor = float3(2.0f * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - g_xMaterial.texMulAdd.ww).rg - 1.0f, 1);
 		bumpColor.rg *= g_xMaterial.refractionIndex;
 		bumpColor.rg *= g_xMaterial.normalMapStrength;
 		bumpColor = normalize(max(bumpColor, float3(0, 0, 0.0001f)));

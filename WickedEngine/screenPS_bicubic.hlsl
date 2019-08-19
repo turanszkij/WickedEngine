@@ -2,5 +2,5 @@
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
-	return SampleTextureCatmullRom(xTexture, uv, xMipLevel) * xColor;
+	return SampleTextureCatmullRom(texture_base, uv, xMipLevel) * xColor;
 }
