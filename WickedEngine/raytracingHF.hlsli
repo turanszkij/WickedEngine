@@ -34,14 +34,14 @@ struct Ray
 {
 	float3 origin;
 	float3 direction;
-	float3 direction_inverse;
+	float3 direction_rcp;
 	float3 energy;
 	uint primitiveID;
 	float2 bary;
 
 	inline void Update()
 	{
-		direction_inverse = rcp(direction);
+		direction_rcp = rcp(direction);
 	}
 };
 
@@ -294,12 +294,12 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimiti
 inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_distance)
 {
 	float t[6];
-	t[0] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;
-	t[1] = (box.max.x - ray.origin.x) * ray.direction_inverse.x;
-	t[2] = (box.min.y - ray.origin.y) * ray.direction_inverse.y;
-	t[3] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
-	t[4] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
-	t[5] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
+	t[0] = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
+	t[1] = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
+	t[2] = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
+	t[3] = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
+	t[4] = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
+	t[5] = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
 	const float tmin = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
 	const float tmax = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
 
@@ -320,12 +320,12 @@ inline bool IntersectNode(in Ray ray, in BVHNode box)
 	//	return true;
 
 	float t[6];
-	t[0] = (box.min.x - ray.origin.x) * ray.direction_inverse.x;
-	t[1] = (box.max.x - ray.origin.x) * ray.direction_inverse.x;
-	t[2] = (box.min.y - ray.origin.y) * ray.direction_inverse.y;
-	t[3] = (box.max.y - ray.origin.y) * ray.direction_inverse.y;
-	t[4] = (box.min.z - ray.origin.z) * ray.direction_inverse.z;
-	t[5] = (box.max.z - ray.origin.z) * ray.direction_inverse.z;
+	t[0] = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
+	t[1] = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
+	t[2] = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
+	t[3] = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
+	t[4] = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
+	t[5] = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
 	const float tmin = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
 	const float tmax = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
 
@@ -340,10 +340,9 @@ inline bool IntersectNode(in Ray ray, in BVHNode box)
 STRUCTUREDBUFFER(materialBuffer, ShaderMaterial, TEXSLOT_ONDEMAND0);
 TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND1);
 RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, TEXSLOT_ONDEMAND5);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND6);
+STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to INFINITE_RAYHIT
@@ -372,8 +371,7 @@ inline RayHit TraceScene(Ray ray)
 			if (nodeIndex >= leafNodeOffset)
 			{
 				// Leaf node
-				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
-				const uint primitiveID = primitiveIDBuffer[nodeToPrimitiveID];
+				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer[primitiveID];
 				IntersectTriangle(ray, bestHit, prim, primitiveID);
 			}
@@ -428,8 +426,7 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 			if (nodeIndex >= leafNodeOffset)
 			{
 				// Leaf node
-				const uint nodeToPrimitiveID = nodeIndex - leafNodeOffset;
-				const uint primitiveID = primitiveIDBuffer[nodeToPrimitiveID];
+				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer[primitiveID];
 
 				if (IntersectTriangleANY(ray, maxDistance, prim))

@@ -140,7 +140,7 @@ float4 main(Input input) : SV_TARGET
 				Ray newRay;
 				newRay.origin = ray.origin;
 				newRay.direction = L + sampling_offset * 0.025f;
-				newRay.direction_inverse = rcp(newRay.direction);
+				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
 				finalResult += ray.energy * (hit ? 0 : NdotL) * (lighting.direct.diffuse);

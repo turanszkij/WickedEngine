@@ -30,6 +30,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		BVHPrimitive prim = primitiveBuffer[primitiveID];
 		bvhNodeBuffer[nodeIndex].min = min(prim.v0(), min(prim.v1(), prim.v2()));
 		bvhNodeBuffer[nodeIndex].max = max(prim.v0(), max(prim.v1(), prim.v2()));
+
+		// Also store primitiveID in left child index of leaf node to avoid indirection 
+		//	with primitiveIDBuffer when tracing later:
+		bvhNodeBuffer[nodeIndex].LeftChildIndex = primitiveID;
 		
 
 		// Propagate until we reach root node:

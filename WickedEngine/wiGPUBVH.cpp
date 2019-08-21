@@ -594,7 +594,6 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 		&globalMaterialBuffer,
 		(globalMaterialAtlas.IsValid() ? &globalMaterialAtlas : wiTextureHelper::getWhite()),
 		&primitiveCounterBuffer,
-		&primitiveIDBuffer,
 		&primitiveBuffer,
 		&primitiveDataBuffer,
 		&bvhNodeBuffer,

@@ -212,7 +212,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				Ray newRay;
 				newRay.origin = P;
 				newRay.direction = L + sampling_offset * 0.025f;
-				newRay.direction_inverse = rcp(newRay.direction);
+				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
 				finalResult += (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular);
