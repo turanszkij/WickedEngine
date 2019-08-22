@@ -13,15 +13,13 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		// Compute screen coordinates:
 		float2 uv = float2((DTid.xy + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
 
-		// Target pixel:
-		uint pixelID = flatten2D(DTid.xy, xTraceResolution.xy);
-
 		// Create starting ray:
 		Ray ray = CreateCameraRay(uv);
+		ray.pixelID = flatten2D(DTid.xy, xTraceResolution.xy);
 
 		// The launch writes each ray to the pixel location:
-		rayIndexBuffer[pixelID] = pixelID;
-		raySortBuffer[pixelID] = CreateRaySortCode(ray);
-		rayBuffer[pixelID] = CreateStoredRay(ray, pixelID);
+		rayIndexBuffer[ray.pixelID] = ray.pixelID;
+		raySortBuffer[ray.pixelID] = CreateRaySortCode(ray);
+		rayBuffer[ray.pixelID] = CreateStoredRay(ray);
 	}
 }

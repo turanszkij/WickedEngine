@@ -17,27 +17,18 @@ static const float EPSILON = 0.0001f;
 inline float3 trace_bias_position(in float3 P, in float3 N)
 {
 	return P + N * EPSILON; // this is the original version
-	//return P + sign(N) * abs(P * 0.0000002); // this is from https://ndotl.wordpress.com/2018/08/29/baking-artifact-free-lightmaps/ 
 }
-
-
-//struct Sphere
-//{
-//	float3 position;
-//	float radius;
-//	float3 albedo;
-//	float3 specular;
-//	float emission;
-//};
 
 struct Ray
 {
+	uint pixelID;
 	float3 origin;
 	float3 direction;
 	float3 direction_rcp;
 	float3 energy;
 	uint primitiveID;
 	float2 bary;
+	float3 color;
 
 	inline void Update()
 	{
@@ -65,31 +56,28 @@ inline float CreateRaySortCode(in Ray ray)
 
 	//return (float)hash;
 }
-inline RaytracingStoredRay CreateStoredRay(in Ray ray, in uint pixelID)
+inline RaytracingStoredRay CreateStoredRay(in Ray ray)
 {
 	RaytracingStoredRay storedray;
 
 	storedray.origin = ray.origin;
-	storedray.pixelID = pixelID;
+	storedray.pixelID = ray.pixelID;
 	storedray.direction_energy = f32tof16(ray.direction) | (f32tof16(ray.energy) << 16);
 	storedray.primitiveID = ray.primitiveID;
-	//storedray.bary = f32tof16(ray.bary.x) | (f32tof16(ray.bary.y) << 16);
 	storedray.bary = ray.bary;
-	storedray.userdata = 0; // free to use for something
+	storedray.color = pack_half3(ray.color);
 
 	return storedray;
 }
-inline void LoadRay(in RaytracingStoredRay storedray, out Ray ray, out uint pixelID)
+inline void LoadRay(in RaytracingStoredRay storedray, out Ray ray)
 {
-	pixelID = storedray.pixelID;
-
+	ray.pixelID = storedray.pixelID;
 	ray.origin = storedray.origin;
 	ray.direction = asfloat(f16tof32(storedray.direction_energy));
 	ray.energy = asfloat(f16tof32(storedray.direction_energy >> 16));
 	ray.primitiveID = storedray.primitiveID;
 	ray.bary = storedray.bary;
-	//ray.bary.x = f16tof32(storedray.bary);
-	//ray.bary.y = f16tof32(storedray.bary >> 16);
+	ray.color = unpack_half3(storedray.color);
 	ray.Update();
 }
 
@@ -99,8 +87,10 @@ inline Ray CreateRay(float3 origin, float3 direction)
 	ray.origin = origin;
 	ray.direction = direction;
 	ray.energy = float3(1, 1, 1);
+	ray.pixelID = 0xFFFFFFFF;
 	ray.primitiveID = 0xFFFFFFFF;
 	ray.bary = 0;
+	ray.color = 0;
 	ray.Update();
 	return ray;
 }
@@ -147,37 +137,6 @@ inline RayHit CreateRayHit()
 
 	return hit;
 }
-
-//inline void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
-//{
-//	// Calculate distance along the ray where the ground plane is intersected
-//	float t = -ray.origin.y / ray.direction.y;
-//	if (t > 0 && t < bestHit.distance)
-//	{
-//		bestHit.distance = t;
-//		bestHit.position = ray.origin + t * ray.direction;
-//		bestHit.normal = float3(0.0f, 1.0f, 0.0f);
-//	}
-//}
-//
-//inline void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
-//{
-//	// Calculate distance along the ray where the sphere is intersected
-//	float3 d = ray.origin - sphere.position;
-//	float p1 = -dot(ray.direction, d);
-//	float p2sqr = p1 * p1 - dot(d, d) + sphere.radius * sphere.radius;
-//	if (p2sqr < 0)
-//		return;
-//	float p2 = sqrt(p2sqr);
-//	float t = p1 - p2 > 0 ? p1 - p2 : p1 + p2;
-//	if (t > 0 && t < bestHit.distance)
-//	{
-//		bestHit.distance = t;
-//		bestHit.position = ray.origin + t * ray.direction;
-//		bestHit.normal = normalize(bestHit.position - sphere.position);
-//	}
-//}
-
 
 struct TriangleData
 {
@@ -314,11 +273,6 @@ inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_di
 }
 inline bool IntersectNode(in Ray ray, in BVHNode box)
 {
-	//if (ray.origin.x >= box.min.x && ray.origin.x <= box.max.x &&
-	//	ray.origin.y >= box.min.y && ray.origin.y <= box.max.y &&
-	//	ray.origin.z >= box.min.z && ray.origin.z <= box.max.z)
-	//	return true;
-
 	float t[6];
 	t[0] = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
 	t[1] = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
@@ -519,7 +473,7 @@ inline uint TraceBVH(Ray ray)
 //	Also fill the final params of rayHit, such as normal, uv, materialIndex
 //	seed should be > 0
 //	pixel should be normalized uv coordinates of the ray start position (used to randomize)
-inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2 pixel)
+inline void ShadeRay(inout Ray ray, inout RayHit hit, inout float seed, in float2 pixel)
 {
 	if (hit.distance < INFINITE_RAYHIT)
 	{
@@ -582,6 +536,8 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 			emissiveColor *= emissiveMap;
 		}
 
+		ray.color += max(0, ray.energy * emissiveColor.rgb * emissiveColor.a);
+
 		[branch]
 		if (material.uvset_normalMap >= 0)
 		{
@@ -593,8 +549,6 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 			const float3x3 TBN = float3x3(tri.tangent, tri.binormal, N);
 			hit.N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
-
-
 
 		// Calculate chances of reflection types:
 		const float refractChance = 1 - baseColor.a;
@@ -641,13 +595,9 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		ray.primitiveID = hit.primitiveID;
 		ray.bary = hit.bary;
 		ray.Update();
-
-		return emissiveColor.rgb * emissiveColor.a;
 	}
 	else
 	{
-		// Erase the ray's energy - the sky doesn't reflect anything
-		ray.energy = 0.0f;
 
 		float3 envColor;
 		[branch]
@@ -660,7 +610,10 @@ inline float3 Shade(inout Ray ray, inout RayHit hit, inout float seed, in float2
 		{
 			envColor = GetDynamicSkyColor(ray.direction);
 		}
-		return envColor;
+		ray.color += max(0, ray.energy * envColor);
+
+		// Erase the ray's energy - the sky doesn't reflect anything
+		ray.energy = 0.0f;
 	}
 }
 

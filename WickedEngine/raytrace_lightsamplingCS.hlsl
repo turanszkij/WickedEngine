@@ -4,24 +4,23 @@
 
 RAWBUFFER(counterBuffer_READ, TEXSLOT_ONDEMAND7);
 STRUCTUREDBUFFER(rayIndexBuffer_READ, uint, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(rayBuffer_READ, RaytracingStoredRay, TEXSLOT_ONDEMAND9);
 
-RWTEXTURE2D(resultTexture, float4, 0);
+RWSTRUCTUREDBUFFER(rayBuffer, RaytracingStoredRay, 0);
 
 [numthreads(RAYTRACING_TRACE_GROUPSIZE, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	// Initialize ray and pixel ID as non-contributing:
 	Ray ray = (Ray)0;
-	uint pixelID = 0xFFFFFFFF;
 
 	if (DTid.x < counterBuffer_READ.Load(0))
 	{
 		// Load the current ray:
-		LoadRay(rayBuffer_READ[rayIndexBuffer_READ[DTid.x]], ray, pixelID);
+		const uint rayIndex = rayIndexBuffer_READ[DTid.x];
+		LoadRay(rayBuffer[rayIndex], ray);
 
 		// Compute real pixel coords from flattened:
-		uint2 coords2D = unflatten2D(pixelID, xTraceResolution.xy);
+		uint2 coords2D = unflatten2D(ray.pixelID, xTraceResolution.xy);
 
 		// Compute screen coordinates:
 		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
@@ -219,11 +218,9 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 		}
 		
-		finalResult *= ray.energy;
+		ray.color += max(0, ray.energy * finalResult);
 
-		resultTexture[coords2D] += float4(max(0, finalResult), 0);
-
+		// Store the current ray color:
+		rayBuffer[rayIndex].color = pack_half3(ray.color);
 	}
-
-	// This shader doesn't export any rays!
 }

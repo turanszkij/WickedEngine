@@ -18,14 +18,13 @@ float4 main(Input input) : SV_TARGET
 	float seed = xTraceRandomSeed;
 	float3 direction = SampleHemisphere_uniform(N, seed, uv); // uniform because we care about only diffuse here
 	Ray ray = CreateRay(trace_bias_position(P, N), direction);
-	float3 finalResult = 0;
 
 	const uint bounces = xTraceUserData.x;
 	for (uint i = 0; (i < bounces) && any(ray.energy); ++i)
 	{
 		// Sample primary ray (scene materials, sky, etc):
 		RayHit hit = TraceScene(ray);
-		finalResult += ray.energy * Shade(ray, hit, seed, uv);
+		ShadeRay(ray, hit, seed, uv);
 
 		// We sample explicit lights for every bounce, but only diffuse part. Specular will not be baked here.
 		//	Also, because we do it after the primary ray was bounced off, we only get the indirect part.
@@ -143,10 +142,10 @@ float4 main(Input input) : SV_TARGET
 				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
-				finalResult += ray.energy * (hit ? 0 : NdotL) * (lighting.direct.diffuse);
+				ray.color += ray.energy * (hit ? 0 : NdotL) * (lighting.direct.diffuse);
 			}
 		}
 	}
 
-	return max(0, float4(finalResult, xTraceAccumulationFactor));
+	return max(0, float4(ray.color, xTraceAccumulationFactor));
 }

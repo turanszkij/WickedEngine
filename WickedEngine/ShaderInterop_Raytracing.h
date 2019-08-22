@@ -25,7 +25,7 @@ struct RaytracingStoredRay
 	uint3 direction_energy; // packed half3 direction | half3 energy
 	uint primitiveID;
 	float2 bary;
-	uint2 userdata; // vulkan complains about 16-byte padding here so might as well add userdata here and not pack barycentric coords
+	uint2 color; // packed rgba16
 };
 
 

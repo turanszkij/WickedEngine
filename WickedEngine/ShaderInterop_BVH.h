@@ -2,7 +2,7 @@
 #define _SHADERINTEROP_BVH_H_
 #include "ShaderInterop.h"
 
-#define BVH_BUILDER_GROUPSIZE 64
+static const uint BVH_BUILDER_GROUPSIZE = 64;
 
 CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 {

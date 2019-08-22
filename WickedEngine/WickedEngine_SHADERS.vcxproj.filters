@@ -747,9 +747,6 @@
     <FxCompile Include="bvh_primitivesCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_accumulateCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="ssaoCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
