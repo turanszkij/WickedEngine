@@ -309,6 +309,7 @@ namespace wiRenderer
 		uint32_t rayCapacity = 0;
 		wiGraphics::GPUBuffer rayBuffer[2];
 		wiGraphics::GPUBuffer rayIndexBuffer[2];
+		wiGraphics::GPUBuffer rayCountBuffer[2];
 		wiGraphics::GPUBuffer raySortBuffer;
 		void Create(wiGraphics::GraphicsDevice* device, uint32_t newRayCapacity);
 	};

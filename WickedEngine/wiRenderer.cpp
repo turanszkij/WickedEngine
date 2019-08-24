@@ -7401,12 +7401,13 @@ void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
 	HRESULT hr;
 
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.StructureByteStride = sizeof(uint);
-	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
 	desc.CPUAccessFlags = 0;
 	desc.Format = FORMAT_UNKNOWN;
 	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	desc.Usage = USAGE_DEFAULT;
+
+	desc.StructureByteStride = sizeof(uint);
+	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
 	hr = device->CreateBuffer(&desc, nullptr, &rayIndexBuffer[0]);
 	assert(SUCCEEDED(hr));
 	device->SetName(&rayIndexBuffer[0], "rayIndexBuffer[0]");
@@ -7420,19 +7421,24 @@ void RayBuffers::Create(GraphicsDevice* device, uint32_t newRayCapacity)
 	assert(SUCCEEDED(hr));
 	device->SetName(&raySortBuffer, "raySortBuffer");
 
-	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.StructureByteStride = sizeof(RaytracingStoredRay);
 	desc.ByteWidth = desc.StructureByteStride * rayCapacity;
-	desc.CPUAccessFlags = 0;
-	desc.Format = FORMAT_UNKNOWN;
-	desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	desc.Usage = USAGE_DEFAULT;
 	hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[0]);
 	assert(SUCCEEDED(hr));
 	device->SetName(&rayBuffer[0], "rayBuffer[0]");
 	hr = device->CreateBuffer(&desc, nullptr, &rayBuffer[1]);
 	assert(SUCCEEDED(hr));
 	device->SetName(&rayBuffer[1], "rayBuffer[1]");
+
+	desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+	desc.StructureByteStride = sizeof(uint);
+	desc.ByteWidth = desc.StructureByteStride;
+	hr = device->CreateBuffer(&desc, nullptr, &rayCountBuffer[0]);
+	assert(SUCCEEDED(hr));
+	device->SetName(&rayCountBuffer[0], "rayCountBuffer[0]");
+	hr = device->CreateBuffer(&desc, nullptr, &rayCountBuffer[1]);
+	assert(SUCCEEDED(hr));
+	device->SetName(&rayCountBuffer[1], "rayCountBuffer[1]");
 }
 
 RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList cmd)
@@ -7482,6 +7488,9 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 		device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 
 		device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+		// write initial ray count:
+		device->UpdateBuffer(&screenRayBuffers.rayCountBuffer[0], &screenRayBuffers.rayCapacity, cmd);
 	}
 	device->EventEnd(cmd);
 
@@ -7495,14 +7504,9 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 	device->EventBegin("RayTraceScene", cmd);
 
 
-	// Misc buffers:
-	static bool initialized = false;
 	static GPUBuffer indirectBuffer; // GPU job kicks
-	static GPUBuffer counterBuffer[2]; // Active ray counter
-
-	if (!initialized)
+	if (!indirectBuffer.IsValid())
 	{
-		initialized = true;
 		GPUBufferDesc desc;
 		HRESULT hr;
 
@@ -7516,20 +7520,6 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 		hr = device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		assert(SUCCEEDED(hr));
 		device->SetName(&indirectBuffer, "raytrace_indirectBuffer");
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(uint);
-		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-		desc.Usage = USAGE_DEFAULT;
-		hr = device->CreateBuffer(&desc, nullptr, &counterBuffer[0]);
-		assert(SUCCEEDED(hr));
-		device->SetName(&counterBuffer[0], "raytrace_counterBuffer[0]");
-		hr = device->CreateBuffer(&desc, nullptr, &counterBuffer[1]);
-		assert(SUCCEEDED(hr));
-		device->SetName(&counterBuffer[1], "raytrace_counterBuffer[1]");
 	}
 
 	const TextureDesc& result_desc = result->GetDesc();
@@ -7537,9 +7527,6 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 	// Begin raytrace
 
 	auto range = wiProfiler::BeginRangeGPU("RayTrace - ALL", cmd);
-
-	// write initial ray count to RW-counter:
-	device->UpdateBuffer(&counterBuffer[0], &rayBuffers->rayCapacity, cmd);
 
 	// Set up tracing resources:
 	sceneBVH.Bind(CS, cmd);
@@ -7576,12 +7563,12 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 			// Prepare indirect dispatch based on counter buffer value:
 			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_KICKJOBS], cmd);
 
-			GPUResource* res[] = {
-				&counterBuffer[__readBufferID],
+			const GPUResource* res[] = {
+				&rayBuffers->rayCountBuffer[__readBufferID],
 			};
 			device->BindResources(CS, res, TEXSLOT_UNIQUE0, ARRAYSIZE(res), cmd);
-			GPUResource* uavs[] = {
-				&counterBuffer[__writeBufferID],
+			const GPUResource* uavs[] = {
+				&rayBuffers->rayCountBuffer[__writeBufferID],
 				&indirectBuffer,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
@@ -7591,7 +7578,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 			device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
 			device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
 
-			GPUResource* trans[] = {
+			const GPUResource* trans[] = {
 				&indirectBuffer
 			};
 			device->TransitionBarrier(trans, 1, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT, cmd);
@@ -7603,7 +7590,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 		{
 			// Sort rays to achieve more coherency:
 			device->EventBegin("Ray Sorting", cmd);
-			wiGPUSortLib::Sort(rayBuffers->rayCapacity, rayBuffers->raySortBuffer, counterBuffer[__readBufferID], 0, rayBuffers->rayIndexBuffer[__readBufferID], cmd);
+			wiGPUSortLib::Sort(rayBuffers->rayCapacity, rayBuffers->raySortBuffer, rayBuffers->rayCountBuffer[__readBufferID], 0, rayBuffers->rayIndexBuffer[__readBufferID], cmd);
 			device->EventEnd(cmd);
 
 			// Light sampling (any hit)
@@ -7619,7 +7606,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 				device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING], cmd);
 
 				const GPUResource* res[] = {
-					&counterBuffer[__readBufferID],
+					&rayBuffers->rayCountBuffer[__readBufferID],
 					&rayBuffers->rayIndexBuffer[__readBufferID],
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
@@ -7658,13 +7645,13 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_PRIMARY], cmd);
 
 			const GPUResource* res[] = {
-				&counterBuffer[__readBufferID],
+				&rayBuffers->rayCountBuffer[__readBufferID],
 				&rayBuffers->rayIndexBuffer[__readBufferID],
 				&rayBuffers->rayBuffer[__readBufferID],
 			};
 			device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
 			const GPUResource* uavs[] = {
-				&counterBuffer[__writeBufferID],
+				&rayBuffers->rayCountBuffer[__writeBufferID],
 				&rayBuffers->rayIndexBuffer[__writeBufferID],
 				&rayBuffers->raySortBuffer,
 				&rayBuffers->rayBuffer[__writeBufferID],
