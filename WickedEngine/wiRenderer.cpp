@@ -2147,8 +2147,8 @@ void LoadShaders()
 	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_PRIMARY] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_primaryCS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_lightsamplingCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_closesthitCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_RAYTRACE_SHADE] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_shadeCS.cso", wiResourceManager::COMPUTESHADER));
 	
 	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_float1CS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "blur_gaussian_float4CS.cso", wiResourceManager::COMPUTESHADER));
@@ -2744,7 +2744,7 @@ void LoadShaders()
 		desc.DSFormat = FORMAT_UNKNOWN;
 
 		device->CreatePipelineState(&desc, &PSO_renderlightmap_indirect);
-	});
+		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
 		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
@@ -2759,7 +2759,7 @@ void LoadShaders()
 		desc.DSFormat = FORMAT_UNKNOWN;
 
 		device->CreatePipelineState(&desc, &PSO_renderlightmap_direct);
-	});
+		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
 		desc.vs = vertexShaders[VSTYPE_SCREEN];
@@ -7475,7 +7475,6 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 
 		GPUResource* uavs[] = {
 			&screenRayBuffers.rayIndexBuffer[0],
-			&screenRayBuffers.raySortBuffer,
 			&screenRayBuffers.rayBuffer[0],
 		};
 		device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
@@ -7496,7 +7495,12 @@ RayBuffers* GenerateScreenRayBuffers(const CameraComponent& camera, CommandList 
 
 	return &screenRayBuffers;
 }
-void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int accumulation_sample, CommandList cmd)
+void RayTraceScene(
+	const RayBuffers* rayBuffers, 
+	const Texture2D* result, 
+	int accumulation_sample, 
+	CommandList cmd
+)
 {
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
@@ -7524,8 +7528,6 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 
 	const TextureDesc& result_desc = result->GetDesc();
 
-	// Begin raytrace
-
 	auto range = wiProfiler::BeginRangeGPU("RayTrace - ALL", cmd);
 
 	// Set up tracing resources:
@@ -7547,12 +7549,12 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 
 	for (uint32_t bounce = 0; bounce < raytraceBounceCount + 1; ++bounce) // first contact + indirect bounces
 	{
-		uint32_t __readBufferID = bounce % 2;
-		uint32_t __writeBufferID = (bounce + 1) % 2;
+		const uint32_t __readBufferID = bounce % 2;
+		const uint32_t __writeBufferID = (bounce + 1) % 2;
 
-		cb.xTraceUserData.x = (bounce == 0 && accumulation_sample == 0) ? 1 : 0; // pre-clear result texture?
+		cb.xTraceUserData.x = (bounce == 1 && accumulation_sample == 0) ? 1 : 0; // pre-clear result texture?
 		cb.xTraceUserData.y = bounce == raytraceBounceCount ? 1 : 0; // accumulation step?
-		cb.xTraceRandomSeed = renderTime + (float)bounce;
+		cb.xTraceRandomSeed = renderTime * (float)(bounce + 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -7585,7 +7587,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 		}
 		device->EventEnd(cmd);
 
-		// Sorting and light sampling only after first bounce:
+		// Sorting and shading only after first bounce (except lightmap, because that starts from the surface):
 		if (bounce > 0)
 		{
 			// Sort rays to achieve more coherency:
@@ -7593,17 +7595,17 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 			wiGPUSortLib::Sort(rayBuffers->rayCapacity, rayBuffers->raySortBuffer, rayBuffers->rayCountBuffer[__readBufferID], 0, rayBuffers->rayIndexBuffer[__readBufferID], cmd);
 			device->EventEnd(cmd);
 
-			// Light sampling (any hit)
+			// Shade
 			{
-				device->EventBegin("Light Sampling Rays", cmd);
+				device->EventBegin("Shading Rays", cmd);
 
 				wiProfiler::range_id range;
 				if (bounce == 1)
 				{
-					range = wiProfiler::BeginRangeGPU("RayTrace - First Light Sampling", cmd);
+					range = wiProfiler::BeginRangeGPU("RayTrace - Shade", cmd);
 				}
 
-				device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_LIGHTSAMPLING], cmd);
+				device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_SHADE], cmd);
 
 				const GPUResource* res[] = {
 					&rayBuffers->rayCountBuffer[__readBufferID],
@@ -7612,6 +7614,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND7, ARRAYSIZE(res), cmd);
 				const GPUResource* uavs[] = {
 					&rayBuffers->rayBuffer[__readBufferID],
+					result,
 				};
 				device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
@@ -7622,13 +7625,14 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 
 				if (bounce == 1)
 				{
-					wiProfiler::EndRange(range); // RayTrace - First Light Sampling
+					wiProfiler::EndRange(range); // RayTrace - Shade
 				}
 				device->EventEnd(cmd);
 			}
 		}
 
-		// Compute Primary Trace (closest hit)
+		// Compute Closest hits (skip after last bounce)
+		if(bounce < raytraceBounceCount)
 		{
 			device->EventBegin("Primary Rays", cmd);
 
@@ -7642,7 +7646,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 				range = wiProfiler::BeginRangeGPU("RayTrace - First Bounce", cmd);
 			}
 
-			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_PRIMARY], cmd);
+			device->BindComputeShader(computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT], cmd);
 
 			const GPUResource* res[] = {
 				&rayBuffers->rayCountBuffer[__readBufferID],
@@ -7655,7 +7659,6 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 				&rayBuffers->rayIndexBuffer[__writeBufferID],
 				&rayBuffers->raySortBuffer,
 				&rayBuffers->rayBuffer[__writeBufferID],
-				result,
 			};
 			device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
 
@@ -7666,7 +7669,7 @@ void RayTraceScene(const RayBuffers* rayBuffers, const Texture2D* result, int ac
 
 			if (bounce == 0 || bounce == 1)
 			{
-				wiProfiler::EndRange(range); // RayTrace - First Bounce
+				wiProfiler::EndRange(range); // RayTrace - First Contact/Bounce
 			}
 			device->EventEnd(cmd);
 		}
@@ -7898,7 +7901,7 @@ void ManageLightmapAtlas()
 				//	But the global atlas will have less precision for good bandwidth for sampling
 				desc.Format = RTFormat_lightmap_object;
 
-				object.lightmap.reset(new Texture2D);
+				object.lightmap = std::make_unique<Texture2D>();
 				HRESULT hr = device->CreateTexture2D(&desc, nullptr, object.lightmap.get());
 				assert(SUCCEEDED(hr));
 				device->SetName(object.lightmap.get(), "objectLightmap");

@@ -609,16 +609,10 @@
     <FxCompile Include="raytrace_launchCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="raytrace_primaryCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="bvh_hierarchyCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="bvh_propagateaabbCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="raytrace_lightsamplingCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="raytrace_kickjobsCS.hlsl">
@@ -717,12 +711,6 @@
     <FxCompile Include="objectPS_deferred_normalmap_planarreflection.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="renderlightmapPS_direct.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="renderlightmapPS_indirect.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="imagePS_bicubic.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -812,6 +800,18 @@
     </FxCompile>
     <FxCompile Include="blur_bilateral_float1CS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_shadeCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="raytrace_closesthitCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="renderlightmapPS_direct.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="renderlightmapPS_indirect.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

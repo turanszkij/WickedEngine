@@ -315,8 +315,13 @@ namespace wiRenderer
 	};
 	// Generate rays for every pixel of the internal resolution
 	RayBuffers* GenerateScreenRayBuffers(const wiSceneSystem::CameraComponent& camera, wiGraphics::CommandList cmd);
-	// Render the scene with ray tracing only
-	void RayTraceScene(const RayBuffers* rayBuffers, const wiGraphics::Texture2D* result, int accumulation_sample, wiGraphics::CommandList cmd);
+	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
+	void RayTraceScene(
+		const RayBuffers* rayBuffers,
+		const wiGraphics::Texture2D* result,
+		int accumulation_sample,
+		wiGraphics::CommandList cmd
+	);
 	// Render the scene BVH with ray tracing to the screen
 	void RayTraceSceneBVH(wiGraphics::CommandList cmd);
 

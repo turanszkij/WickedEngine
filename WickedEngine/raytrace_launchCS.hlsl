@@ -2,8 +2,7 @@
 #include "raytracingHF.hlsli"
 
 RWSTRUCTUREDBUFFER(rayIndexBuffer, uint, 0);
-RWSTRUCTUREDBUFFER(raySortBuffer, float, 1);
-RWSTRUCTUREDBUFFER(rayBuffer, RaytracingStoredRay, 2);
+RWSTRUCTUREDBUFFER(rayBuffer, RaytracingStoredRay, 1);
 
 [numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
@@ -19,7 +18,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 		// The launch writes each ray to the pixel location:
 		rayIndexBuffer[ray.pixelID] = ray.pixelID;
-		raySortBuffer[ray.pixelID] = CreateRaySortCode(ray);
 		rayBuffer[ray.pixelID] = CreateStoredRay(ray);
 	}
 }

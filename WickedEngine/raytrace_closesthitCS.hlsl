@@ -10,7 +10,6 @@ RWRAWBUFFER(counterBuffer_WRITE, 0);
 RWSTRUCTUREDBUFFER(rayIndexBuffer_WRITE, uint, 1);
 RWSTRUCTUREDBUFFER(raySortBuffer_WRITE, float, 2);
 RWSTRUCTUREDBUFFER(rayBuffer_WRITE, RaytracingStoredRay, 3);
-RWTEXTURE2D(resultTexture, float4, 4);
 
 // This enables reduced atomics into global memory
 #define ADVANCED_ALLOCATION
@@ -51,47 +50,45 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 	if (DTid.x < counterBuffer_READ.Load(0))
 	{
 		// Load the current ray:
-		LoadRay(rayBuffer_READ[rayIndexBuffer_READ[DTid.x]], ray);
-
-		// Compute real pixel coords from flattened:
-		uint2 coords2D = unflatten2D(ray.pixelID, xTraceResolution.xy);
-
-		// Pre-clear result texture for first bounce and first accumulation sample:
-		if (xTraceUserData.x == 1)
-		{
-			resultTexture[coords2D] = 0;
-		}
-
-		// Compute screen coordinates:
-		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
-
-		float seed = xTraceRandomSeed;
-
-		RayHit hit = TraceScene(ray);
-		ShadeRay(ray, hit, seed, uv);
-
+		ray = LoadRay(rayBuffer_READ[rayIndexBuffer_READ[DTid.x]]);
 		ray_active = any(ray.energy);
 
-		// If the ray is killed or last bounce, we write to accumulation texture:
-		if (!ray_active || xTraceUserData.y == 1)
-		{
-			resultTexture[coords2D] = lerp(resultTexture[coords2D], float4(ray.color, 1), xTraceAccumulationFactor);
-		}
-
-#ifndef ADVANCED_ALLOCATION
 		if (ray_active)
 		{
+			RayHit hit = TraceScene(ray);
+			if (hit.distance >= INFINITE_RAYHIT - 1)
+			{
+				float3 envColor;
+				[branch]
+				if (IsStaticSky())
+				{
+					// We have envmap information in a texture:
+					envColor = DEGAMMA_SKY(texture_globalenvmap.SampleLevel(sampler_linear_clamp, ray.direction, 0).rgb);
+				}
+				else
+				{
+					envColor = GetDynamicSkyColor(ray.direction);
+				}
+				ray.color += max(0, ray.energy * envColor);
+
+				// Erase the ray's energy
+				ray.energy = 0.0f;
+			}
+
+			ray.origin = hit.position;
+			ray.primitiveID = hit.primitiveID;
+			ray.bary = hit.bary;
+
+#ifndef ADVANCED_ALLOCATION
 			// Naive strategy to allocate active rays. Global memory atomics will be performed for every thread:
 			uint dest;
 			counterBuffer_WRITE.InterlockedAdd(0, 1, dest);
 			rayIndexBuffer_WRITE[dest] = dest;
 			raySortBuffer_WRITE[dest] = CreateRaySortCode(ray);
 			rayBuffer_WRITE[dest] = CreateStoredRay(ray);
-		}
 #endif // ADVANCED_ALLOCATION
-
+		}
 	}
-
 
 #ifdef ADVANCED_ALLOCATION
 

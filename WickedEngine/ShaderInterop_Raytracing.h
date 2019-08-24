@@ -4,7 +4,6 @@
 
 
 static const uint RAYTRACING_LAUNCH_BLOCKSIZE = 8;
-static const uint RAYTRACING_ACCUMULATE_BLOCKSIZE = 8;
 static const uint RAYTRACING_TRACE_GROUPSIZE = 64;
 
 
@@ -21,7 +20,7 @@ CBUFFER(RaytracingCB, CBSLOT_RENDERER_TRACED)
 struct RaytracingStoredRay
 {
 	float3 origin;
-	uint pixelID; // unflattened pixel index
+	uint pixelID; // flattened pixel index
 	uint3 direction_energy; // packed half3 direction | half3 energy
 	uint primitiveID;
 	float2 bary;
