@@ -1113,8 +1113,7 @@ PipelineState PSO_lightvisualizer[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_enviromentallight;
 
-PipelineState PSO_renderlightmap_indirect;
-PipelineState PSO_renderlightmap_direct;
+PipelineState PSO_renderlightmap;
 
 PipelineState PSO_downsampledepthbuffer;
 PipelineState PSO_deferredcomposition;
@@ -2102,8 +2101,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_VOXELIZER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_voxelizer.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_VOXEL] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_FORCEFIELDVISUALIZER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldVisualizerPS.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_indirect.cso", wiResourceManager::PIXELSHADER));
-	pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS_direct.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_RENDERLIGHTMAP] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "renderlightmapPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_RAYTRACE_DEBUGBVH] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_debugbvhPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DEFERREDCOMPOSITION] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
@@ -2734,7 +2732,7 @@ void LoadShaders()
 		PipelineStateDesc desc;
 		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
 		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
-		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_INDIRECT];
+		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 		desc.dss = &depthStencils[DSSTYPE_XRAY];
@@ -2743,22 +2741,7 @@ void LoadShaders()
 		desc.RTFormats[0] = RTFormat_lightmap_object;
 		desc.DSFormat = FORMAT_UNKNOWN;
 
-		device->CreatePipelineState(&desc, &PSO_renderlightmap_indirect);
-		});
-	wiJobSystem::Execute(ctx, [device] {
-		PipelineStateDesc desc;
-		desc.il = &vertexLayouts[VLTYPE_RENDERLIGHTMAP];
-		desc.vs = vertexShaders[VSTYPE_RENDERLIGHTMAP];
-		desc.ps = pixelShaders[PSTYPE_RENDERLIGHTMAP_DIRECT];
-		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = &depthStencils[DSSTYPE_XRAY];
-
-		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_lightmap_object;
-		desc.DSFormat = FORMAT_UNKNOWN;
-
-		device->CreatePipelineState(&desc, &PSO_renderlightmap_direct);
+		device->CreatePipelineState(&desc, &PSO_renderlightmap);
 		});
 	wiJobSystem::Execute(ctx, [device] {
 		PipelineStateDesc desc;
@@ -7587,7 +7570,7 @@ void RayTraceScene(
 		}
 		device->EventEnd(cmd);
 
-		// Sorting and shading only after first bounce (except lightmap, because that starts from the surface):
+		// Sorting and shading only after first bounce:
 		if (bounce > 0)
 		{
 			// Sort rays to achieve more coherency:
@@ -8060,28 +8043,24 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	device->BindIndexBuffer(mesh.indexBuffer.get(), mesh.GetIndexFormat(), 0, cmd);
 
 	RaytracingCB cb;
+	cb.xTraceResolution.x = desc.Width;
+	cb.xTraceResolution.y = desc.Height;
+	cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
+	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	XMFLOAT4 halton = wiMath::GetHaltonSequence(lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
-	cb.xTracePixelOffset.x = (halton.x * 2 - 1) / vp.Width;
-	cb.xTracePixelOffset.y = (halton.y * 2 - 1) / vp.Height;
+	cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
+	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-	cb.xTraceRandomSeed = renderTime; // random seed
+	cb.xTraceRandomSeed = (float)lightmapIterationCount + 1.2345f; // random seed
 	cb.xTraceAccumulationFactor = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
-	// Render direct lighting part:
-	device->BindPipelineState(&PSO_renderlightmap_direct, cmd);
+	device->BindPipelineState(&PSO_renderlightmap, cmd);
 	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
-
-	if (raytraceBounceCount > 0)
-	{
-		// Render indirect lighting part:
-		device->BindPipelineState(&PSO_renderlightmap_indirect, cmd);
-		device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
-	}
 
 	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 

@@ -23,7 +23,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if (any(ray.energy))
 	{
-		float3 finalResult = 0;
+		float3 bounceResult = 0;
 		float2 uv = float2((coords2D + xTracePixelOffset) * xTraceResolution_rcp.xy * 2.0f - 1.0f) * float2(1, -1);
 		float seed = xTraceRandomSeed;
 
@@ -86,7 +86,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			emissiveColor *= emissiveMap;
 		}
 
-		finalResult += emissiveColor.rgb * emissiveColor.a;
+		bounceResult += emissiveColor.rgb * emissiveColor.a;
 
 		[branch]
 		if (material.uvset_normalMap >= 0)
@@ -269,12 +269,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
 				bool hit = TraceSceneANY(newRay, dist);
-				finalResult += (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular);
+				bounceResult += (hit ? 0 : NdotL) * (lighting.direct.diffuse + lighting.direct.specular);
 			}
 		}
 
 
-		ray.color += max(0, ray.energy * finalResult);
+		ray.color += max(0, ray.energy * bounceResult);
 	}
 
 

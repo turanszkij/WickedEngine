@@ -807,10 +807,7 @@
     <FxCompile Include="raytrace_closesthitCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="renderlightmapPS_direct.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="renderlightmapPS_indirect.hlsl">
+    <FxCompile Include="renderlightmapPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
