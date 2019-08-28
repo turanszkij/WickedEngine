@@ -12,8 +12,8 @@ dofile("../scripts/camera_animation_repeat.lua");
 ToggleCameraAnimation();
 
 -- Load an image:
-local sprite = Sprite("images/HelloWorld.png");
-sprite.SetParams(ImageParams(100,100,100,50));
+local sprite = Sprite("../images/logo_small.png");
+sprite.SetParams(ImageParams(100,100,128,128));
 -- Set this image as renderable to the active component:
 local component = main.GetActivePath();
 component.AddSprite(sprite);

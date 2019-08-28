@@ -124,13 +124,19 @@ TestsRenderer::TestsRenderer()
 		{
 		case 0:
 		{
+			// This will spawn a sprite with two textures. The first texture is a color texture and it will be animated.
+			//	The second texture is a static image of "hello world" written on it
+			//	Then add some animations to the sprite to get a nice wobbly and color changing effect.
+			//	YOu can learn more in the Sprite test in RunSpriteTest() function
 			static wiSprite sprite;
-			sprite = wiSprite("images/HelloWorld.png");
+			sprite = wiSprite("images/movingtex.png", "images/HelloWorld.png");
 			sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
 			sprite.params.siz = XMFLOAT2(200, 100);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
 			sprite.anim.rot = XM_PI / 4.0f;
-			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.14f, 0.14f);
+			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.16f, 0.16f);
+			sprite.anim.movingTexAnim.speedX = 0;
+			sprite.anim.movingTexAnim.speedY = 3;
 			this->addSprite(&sprite);
 			break;
 		}
