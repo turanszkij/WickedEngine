@@ -1,6 +1,7 @@
 #pragma once
 #include "wiImage.h"
 #include "wiGraphicsDevice.h"
+#include "wiRandom.h"
 
 class wiResourceManager;
 
@@ -40,8 +41,30 @@ public:
 		struct WobbleAnim
 		{
 			XMFLOAT2 amount = XMFLOAT2(0, 0);	// how much the sprite wobbles in X and Y direction
+			float speed = 1; // how fast the sprite wobbles
 
-			XMFLOAT2 corner_target_offsets[4] = {}; // internal use; you don't need to initialize
+			float corner_angles[4]; // internal use; you don't need to initialize
+			float corner_speeds[4]; // internal use; you don't need to initialize
+			float corner_angles2[4]; // internal use; you don't need to initialize
+			float corner_speeds2[4]; // internal use; you don't need to initialize
+			WobbleAnim()
+			{
+				for (int i = 0; i < 4; ++i)
+				{
+					corner_angles[i] = wiRandom::getRandom(0, 1000) / 1000.0f * XM_2PI;
+					corner_speeds[i] = wiRandom::getRandom(500, 1000) / 1000.0f;
+					if (wiRandom::getRandom(0, 1) == 0)
+					{
+						corner_speeds[i] *= -1;
+					}
+					corner_angles2[i] = wiRandom::getRandom(0, 1000) / 1000.0f * XM_2PI;
+					corner_speeds2[i] = wiRandom::getRandom(500, 1000) / 1000.0f;
+					if (wiRandom::getRandom(0, 1) == 0)
+					{
+						corner_speeds2[i] *= -1;
+					}
+				}
+			}
 		};
 
 		bool repeatable = false;

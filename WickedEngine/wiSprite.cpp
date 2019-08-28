@@ -126,22 +126,19 @@ void wiSprite::Update(float dt)
 	// Wobble anim:
 	if (anim.wobbleAnim.amount.x > 0 || anim.wobbleAnim.amount.y > 0)
 	{
-		// offset a random corner of the sprite:
-		int corner = wiRandom::getRandom(0, 4);
-		anim.wobbleAnim.corner_target_offsets[corner].x = (wiRandom::getRandom(0, 1000) * 0.001f - 0.5f) * anim.wobbleAnim.amount.x;
-		anim.wobbleAnim.corner_target_offsets[corner].y = (wiRandom::getRandom(0, 1000) * 0.001f - 0.5f) * anim.wobbleAnim.amount.y;
-
-		// All corners of the sprite will always follow the offset corners to obtain the wobble effect:
-		wiImageParams default_params;
+		// Rotate each corner on a scaled circle (ellipsoid):
+		//	Since the rotations are randomized, it will look like a wobble effect
+		//	Also use two circles on each other to achieve more random look
+		wiImageParams default_params; // contains corners in idle positions
 		for (int i = 0; i < 4; ++i)
 		{
-			XMVECTOR I = XMLoadFloat2(&default_params.corners[i]);
-			XMVECTOR V = XMLoadFloat2(&params.corners[i]);
-			XMVECTOR O = XMLoadFloat2(&anim.wobbleAnim.corner_target_offsets[i]);
-
-			V = XMVectorLerp(V, I + O, 0.01f);
-
-			XMStoreFloat2(&params.corners[i], V);
+			anim.wobbleAnim.corner_angles[i] += XM_2PI * anim.wobbleAnim.speed * anim.wobbleAnim.corner_speeds[i] * dt;
+			anim.wobbleAnim.corner_angles2[i] += XM_2PI * anim.wobbleAnim.speed * anim.wobbleAnim.corner_speeds2[i] * dt;
+			default_params.corners[i].x += std::sin(anim.wobbleAnim.corner_angles[i]) * anim.wobbleAnim.amount.x * 0.5f;
+			default_params.corners[i].y += std::cos(anim.wobbleAnim.corner_angles[i]) * anim.wobbleAnim.amount.y * 0.5f;
+			default_params.corners[i].x += std::sin(anim.wobbleAnim.corner_angles2[i]) * anim.wobbleAnim.amount.x * 0.25f;
+			default_params.corners[i].y += std::cos(anim.wobbleAnim.corner_angles2[i]) * anim.wobbleAnim.amount.y * 0.25f;
+			params.corners[i] = default_params.corners[i];
 		}
 	}
 

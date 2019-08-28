@@ -130,6 +130,7 @@ TestsRenderer::TestsRenderer()
 			sprite.params.siz = XMFLOAT2(200, 100);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
 			sprite.anim.rot = XM_PI / 4.0f;
+			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.14f, 0.14f);
 			this->addSprite(&sprite);
 			break;
 		}
@@ -401,7 +402,8 @@ void TestsRenderer::RunSpriteTest()
 		static wiSprite sprite("../images/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
-		sprite.anim.wobbleAnim.amount = XMFLOAT2(1.2f, 0.8f);
+		sprite.anim.wobbleAnim.amount = XMFLOAT2(0.11f, 0.18f);
+		sprite.anim.wobbleAnim.speed = 1.4f;
 		addSprite(&sprite);
 
 		static wiFont font("Wobble animation: ");
@@ -442,7 +444,6 @@ void TestsRenderer::RunSpriteTest()
 		sprite.params.pivot = params.pivot;
 		sprite.params.col = XMFLOAT4(2, 2, 2, 1); // increase brightness a bit
 		sprite.params.sampleFlag = SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
-		sprite.anim = wiSprite::Anim();
 		sprite.anim.movingTexAnim.speedX = 0;
 		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2
 		addSprite(&sprite);
