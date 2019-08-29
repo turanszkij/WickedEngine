@@ -22,6 +22,7 @@ float4 main(Input input) : SV_TARGET
 	const uint bounces = xTraceUserData.x;
 	for (uint i = 0; (i < bounces) && any(ray.energy); ++i)
 	{
+		P = ray.origin;
 		float3 bounceResult = 0;
 
 		[loop]
@@ -175,7 +176,7 @@ float4 main(Input input) : SV_TARGET
 		float v = ray.bary.y;
 		float w = 1 - u - v;
 
-		float3 N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
+		N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
 		float4 uvsets = tri.u0 * w + tri.u1 * u + tri.u2 * v;
 		float4 color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
 		uint materialIndex = tri.materialIndex;
