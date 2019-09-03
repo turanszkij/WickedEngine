@@ -403,16 +403,16 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
 				BVHCB cb;
-				cb.xTraceBVHWorld = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
-				cb.xTraceBVHInstanceColor = object.color;
-				cb.xTraceBVHMaterialOffset = materialCount;
-				cb.xTraceBVHMeshTriangleOffset = primitiveCount;
-				cb.xTraceBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
-				cb.xTraceBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
+				cb.xBVHWorld = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
+				cb.xBVHInstanceColor = object.color;
+				cb.xBVHMaterialOffset = materialCount;
+				cb.xBVHMeshTriangleOffset = primitiveCount;
+				cb.xBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
+				cb.xBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
 
 				device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
-				primitiveCount += cb.xTraceBVHMeshTriangleCount;
+				primitiveCount += cb.xBVHMeshTriangleCount;
 
 				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), cmd);
 
@@ -426,7 +426,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd)
 				};
 				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, ARRAYSIZE(res), cmd);
 
-				device->Dispatch((cb.xTraceBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
+				device->Dispatch((cb.xBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
 				for (auto& subset : mesh.subsets)
 				{

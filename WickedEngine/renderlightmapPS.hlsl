@@ -137,14 +137,14 @@ float4 main(Input input) : SV_TARGET
 				newRay.direction = L + sampling_offset * 0.025f;
 				newRay.direction_rcp = rcp(newRay.direction);
 				newRay.energy = 0;
-				bool hit = TraceSceneANY(newRay, dist);
+				bool hit = TraceRay_Any(newRay, dist);
 				bounceResult += (hit ? 0 : NdotL) * lighting.direct.diffuse / PI;
 			}
 		}
 		ray.color += max(0, ray.energy * bounceResult);
 
 		// Sample primary ray (scene materials, sky, etc):
-		RayHit hit = TraceScene(ray);
+		RayHit hit = TraceRay_Closest(ray);
 
 		if (hit.distance >= INFINITE_RAYHIT - 1)
 		{

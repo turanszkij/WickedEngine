@@ -239,15 +239,14 @@ inline bool IntersectTriangleANY(in Ray ray, in float maxDistance, in BVHPrimiti
 
 inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_distance)
 {
-	float t[6];
-	t[0] = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
-	t[1] = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
-	t[2] = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
-	t[3] = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
-	t[4] = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
-	t[5] = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
-	const float tmin = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
-	const float tmax = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
+	const float t0 = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
+	const float t1 = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
+	const float t2 = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
+	const float t3 = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
+	const float t4 = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
+	const float t5 = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
+	const float tmin = max(max(min(t0, t1), min(t2, t3)), min(t4, t5)); // close intersection point's distance on ray
+	const float tmax = min(min(max(t0, t1), max(t2, t3)), max(t4, t5)); // far intersection point's distance on ray
 
 	if (tmax < 0 || tmin > tmax || tmin > primitive_best_distance) // this also checks if a better primitive was already hit or not and skips if yes
 	{
@@ -260,15 +259,14 @@ inline bool IntersectNode(in Ray ray, in BVHNode box, in float primitive_best_di
 }
 inline bool IntersectNode(in Ray ray, in BVHNode box)
 {
-	float t[6];
-	t[0] = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
-	t[1] = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
-	t[2] = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
-	t[3] = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
-	t[4] = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
-	t[5] = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
-	const float tmin = max(max(min(t[0], t[1]), min(t[2], t[3])), min(t[4], t[5])); // close intersection point's distance on ray
-	const float tmax = min(min(max(t[0], t[1]), max(t[2], t[3])), max(t[4], t[5])); // far intersection point's distance on ray
+	const float t0 = (box.min.x - ray.origin.x) * ray.direction_rcp.x;
+	const float t1 = (box.max.x - ray.origin.x) * ray.direction_rcp.x;
+	const float t2 = (box.min.y - ray.origin.y) * ray.direction_rcp.y;
+	const float t3 = (box.max.y - ray.origin.y) * ray.direction_rcp.y;
+	const float t4 = (box.min.z - ray.origin.z) * ray.direction_rcp.z;
+	const float t5 = (box.max.z - ray.origin.z) * ray.direction_rcp.z;
+	const float tmin = max(max(min(t0, t1), min(t2, t3)), min(t4, t5)); // close intersection point's distance on ray
+	const float tmax = min(min(max(t0, t1), max(t2, t3)), max(t4, t5)); // far intersection point's distance on ray
 
 	return (tmax < 0 || tmin > tmax) ? false : true;
 }
@@ -287,7 +285,7 @@ STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to INFINITE_RAYHIT
-inline RayHit TraceScene(Ray ray)
+inline RayHit TraceRay_Closest(Ray ray)
 {
 	RayHit bestHit = CreateRayHit();
 
@@ -342,7 +340,7 @@ inline RayHit TraceScene(Ray ray)
 }
 
 // Returns true immediately if any primitives were hit, flase if nothing was hit (useful for opaque shadows):
-inline bool TraceSceneANY(Ray ray, float maxDistance)
+inline bool TraceRay_Any(Ray ray, float maxDistance)
 {
 	bool shadow = false;
 
@@ -402,8 +400,7 @@ inline bool TraceSceneANY(Ray ray, float maxDistance)
 
 // Returns number of BVH nodes that were hit (useful for debug):
 //	returns 0xFFFFFFFF when there was a stack overflow
-//	returns (0xFFFFFFFF - 1) when the exit condition was reached
-inline uint TraceBVH(Ray ray)
+inline uint TraceRay_DebugBVH(Ray ray)
 {
 	uint hit_counter = 0;
 

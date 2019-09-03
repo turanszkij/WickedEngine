@@ -238,6 +238,9 @@ Sponza scene with voxel GI enabled:
 Damaged Helmet GLTF sample model:
 ![Sponza](https://turanszkij.files.wordpress.com/2019/03/damagedhelmet.png)
 
+Path tracing in the living room:
+![LivingRoom](https://turanszkij.files.wordpress.com/2019/09/livingroom.jpg)
+
 City scene with a light map, model from <a href="https://www.cgtrader.com/michaelmilesgallie">Michael Gallie</a>:
 ![City](https://turanszkij.files.wordpress.com/2019/01/city1.png)
 

@@ -6,12 +6,12 @@ static const uint BVH_BUILDER_GROUPSIZE = 64;
 
 CBUFFER(BVHCB, CBSLOT_RENDERER_BVH)
 {
-	float4x4 xTraceBVHWorld;
-	float4 xTraceBVHInstanceColor;
-	uint xTraceBVHMaterialOffset;
-	uint xTraceBVHMeshTriangleOffset;
-	uint xTraceBVHMeshTriangleCount;
-	uint xTraceBVHMeshVertexPOSStride;
+	float4x4 xBVHWorld;
+	float4 xBVHInstanceColor;
+	uint xBVHMaterialOffset;
+	uint xBVHMeshTriangleOffset;
+	uint xBVHMeshTriangleCount;
+	uint xBVHMeshVertexPOSStride;
 };
 
 

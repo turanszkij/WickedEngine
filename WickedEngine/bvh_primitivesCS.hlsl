@@ -24,8 +24,8 @@ RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 3); // morton buffer is float b
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tri = DTid.x;
-	const uint primitiveID = xTraceBVHMeshTriangleOffset + tri;
-	const bool activeThread = tri < xTraceBVHMeshTriangleCount;
+	const uint primitiveID = xBVHMeshTriangleOffset + tri;
+	const bool activeThread = tri < xBVHMeshTriangleCount;
 
 	if (activeThread)
 	{
@@ -35,9 +35,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		uint i2 = meshIndexBuffer[tri * 3 + 1];
 
 		// load vertices of triangle from vertex buffer:
-		float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xTraceBVHMeshVertexPOSStride));
-		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xTraceBVHMeshVertexPOSStride));
-		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xTraceBVHMeshVertexPOSStride));
+		float4 pos_nor0 = asfloat(meshVertexBuffer_POS.Load4(i0 * xBVHMeshVertexPOSStride));
+		float4 pos_nor1 = asfloat(meshVertexBuffer_POS.Load4(i1 * xBVHMeshVertexPOSStride));
+		float4 pos_nor2 = asfloat(meshVertexBuffer_POS.Load4(i2 * xBVHMeshVertexPOSStride));
 
 		uint nor_u = asuint(pos_nor0.w);
 		float3 nor0 = unpack_unitvector(nor_u);
@@ -51,8 +51,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 
 		// Compute triangle parameters:
-		float4x4 WORLD = xTraceBVHWorld;
-		const uint materialIndex = xTraceBVHMaterialOffset + subsetIndex;
+		float4x4 WORLD = xBVHWorld;
+		const uint materialIndex = xBVHMaterialOffset + subsetIndex;
 		ShaderMaterial material = materialBuffer[materialIndex];
 
 		float3 v0 = mul(WORLD, float4(pos_nor0.xyz, 1)).xyz;
@@ -65,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		float4 u1 = float4(meshVertexBuffer_UV0[i1] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i1]);
 		float4 u2 = float4(meshVertexBuffer_UV0[i2] * material.texMulAdd.xy + material.texMulAdd.zw, meshVertexBuffer_UV1[i2]);
 
-		const float4 color = xTraceBVHInstanceColor * material.baseColor;
+		const float4 color = xBVHInstanceColor * material.baseColor;
 		float4 c0 = color;
 		float4 c1 = color;
 		float4 c2 = color;

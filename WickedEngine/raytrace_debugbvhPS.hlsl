@@ -5,7 +5,7 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_Target
 {
 	Ray ray = CreateCameraRay(clipspace);
 
-	uint hitCount = TraceBVH(ray);
+	uint hitCount = TraceRay_DebugBVH(ray);
 
 	if (hitCount == 0xFFFFFFFF)
 	{

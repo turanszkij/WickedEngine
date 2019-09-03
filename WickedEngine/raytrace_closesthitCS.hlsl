@@ -55,7 +55,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex )
 
 		if (ray_active)
 		{
-			RayHit hit = TraceScene(ray);
+			RayHit hit = TraceRay_Closest(ray);
 			if (hit.distance >= INFINITE_RAYHIT - 1)
 			{
 				float3 envColor;
