@@ -358,11 +358,6 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
-	// dst: Texture2D with unordered access, the output will be written to this
-	// refinementCount: 0: auto select, 1: perfect noise, greater numbers: smoother clouds, slower processing
-	// randomness: random seed
-	void GenerateClouds(const wiGraphics::Texture2D& dst, UINT refinementCount, float randomness, wiGraphics::CommandList cmd);
-
 	// Assign texture slots to out of date environemnt probes
 	void ManageEnvProbes();
 	// Invalidate out of date impostors

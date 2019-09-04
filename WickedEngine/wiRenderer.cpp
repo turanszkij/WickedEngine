@@ -19,7 +19,6 @@
 #include "wiOcean.h"
 #include "ShaderInterop_Renderer.h"
 #include "ShaderInterop_Postprocess.h"
-#include "ShaderInterop_CloudGenerator.h"
 #include "ShaderInterop_Skinning.h"
 #include "ShaderInterop_Raytracing.h"
 #include "ShaderInterop_BVH.h"
@@ -2142,7 +2141,6 @@ void LoadShaders()
 	computeShaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "copytexture2D_float4_borderexpandCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_SKINNING_LDS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "skinningCS_LDS.cso", wiResourceManager::COMPUTESHADER));
-	computeShaders[CSTYPE_CLOUDGENERATOR] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cloudGeneratorCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_LAUNCH] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_launchCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_KICKJOBS] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_kickjobsCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_RAYTRACE_CLOSESTHIT] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_closesthitCS.cso", wiResourceManager::COMPUTESHADER));
@@ -3035,10 +3033,6 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(DispatchParamsCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_DISPATCHPARAMS]);
 	device->SetName(&constantBuffers[CBTYPE_DISPATCHPARAMS], "DispatchParamsCB");
-
-	bd.ByteWidth = sizeof(CloudGeneratorCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CLOUDGENERATOR]);
-	device->SetName(&constantBuffers[CBTYPE_CLOUDGENERATOR], "CloudGeneratorCB");
 
 	bd.ByteWidth = sizeof(RaytracingCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
@@ -4314,30 +4308,6 @@ void UpdateRenderData(CommandList cmd)
 	if (ocean != nullptr)
 	{
 		ocean->UpdateDisplacementMap(scene.weather, renderTime, cmd);
-	}
-
-	// Generate cloud layer:
-	if(enviroMap == nullptr && scene.weather.cloudiness > 0) // generate only when sky is dynamic
-	{
-		if (textures[TEXTYPE_2D_CLOUDS] == nullptr)
-		{
-			TextureDesc desc;
-			desc.ArraySize = 1;
-			desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-			desc.CPUAccessFlags = 0;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.Height = 128;
-			desc.Width = 128;
-			desc.MipLevels = 1;
-			desc.MiscFlags = 0;
-			desc.Usage = USAGE_DEFAULT;
-
-			textures[TEXTYPE_2D_CLOUDS] = new Texture2D;
-			device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_CLOUDS]);
-		}
-
-		float cloudPhase = renderTime * scene.weather.cloudSpeed;
-		GenerateClouds(*(Texture2D*)textures[TEXTYPE_2D_CLOUDS], 5, cloudPhase, cmd);
 	}
 
 	RefreshDecalAtlas(cmd);
@@ -6094,14 +6064,6 @@ void DrawSky(CommandList cmd)
 	else
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
-		if (scene.weather.cloudiness > 0)
-		{
-			device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, cmd);
-		}
-		else
-		{
-			device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, cmd);
-		}
 	}
 
 	BindConstantBuffers(VS, cmd);
@@ -6122,10 +6084,6 @@ void DrawSun(CommandList cmd)
 	if (enviroMap != nullptr)
 	{
 		device->BindResource(PS, wiTextureHelper::getBlack(), TEXSLOT_ONDEMAND0, cmd);
-	}
-	else
-	{
-		device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, cmd);
 	}
 
 	BindConstantBuffers(VS, cmd);
@@ -6406,7 +6364,6 @@ void RefreshEnvProbes(CommandList cmd)
 			else
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_DYNAMIC], cmd);
-				device->BindResource(PS, textures[TEXTYPE_2D_CLOUDS], TEXSLOT_ONDEMAND0, cmd);
 			}
 
 			device->Draw(240, 0, cmd);
@@ -7676,42 +7633,6 @@ void RayTraceSceneBVH(CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void GenerateClouds(const Texture2D& dst, UINT refinementCount, float randomness, CommandList cmd)
-{
-	GraphicsDevice* device = GetDevice();
-	device->EventBegin("Cloud Generator", cmd);
-
-	TextureDesc src_desc = wiTextureHelper::getRandom64x64()->GetDesc();
-
-	TextureDesc dst_desc = dst.GetDesc();
-	assert(dst_desc.BindFlags & BIND_UNORDERED_ACCESS);
-
-	device->BindResource(CS, wiTextureHelper::getRandom64x64(), TEXSLOT_ONDEMAND0, cmd);
-	device->BindUAV(CS, &dst, 0, cmd);
-
-	CloudGeneratorCB cb;
-	cb.xNoiseTexDim = XMFLOAT2((float)src_desc.Width, (float)src_desc.Height);
-	cb.xRandomness = randomness;
-	if (refinementCount == 0)
-	{
-		cb.xRefinementCount = std::max(1u, (UINT)log2(dst_desc.Width));
-	}
-	else
-	{
-		cb.xRefinementCount = refinementCount;
-	}
-	device->UpdateBuffer(&constantBuffers[CBTYPE_CLOUDGENERATOR], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_CLOUDGENERATOR], CB_GETBINDSLOT(CloudGeneratorCB), cmd);
-
-	device->BindComputeShader(computeShaders[CSTYPE_CLOUDGENERATOR], cmd);
-	device->Dispatch((UINT)ceilf(dst_desc.Width / (float)CLOUDGENERATOR_BLOCKSIZE), (UINT)ceilf(dst_desc.Height / (float)CLOUDGENERATOR_BLOCKSIZE), 1, cmd);
-
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-	device->UnbindUAVs(0, 1, cmd);
-
-
-	device->EventEnd(cmd);
-}
 
 bool repackAtlas_Decal = false;
 void ManageDecalAtlas()
@@ -8185,6 +8106,7 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_Ambient = scene.weather.ambient;
 	cb.g_xFrame_Cloudiness = scene.weather.cloudiness;
 	cb.g_xFrame_CloudScale = scene.weather.cloudScale;
+	cb.g_xFrame_CloudSpeed = scene.weather.cloudSpeed;
 	cb.g_xFrame_Fog = float3(scene.weather.fogStart, scene.weather.fogEnd, scene.weather.fogHeight);
 	cb.g_xFrame_Horizon = scene.weather.horizon;
 	cb.g_xFrame_Zenith = scene.weather.zenith;

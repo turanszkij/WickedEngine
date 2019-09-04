@@ -990,9 +990,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_CloudGenerator.h">
-      <Filter>ENGINE\Graphics\GPUMapping</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Skinning.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>

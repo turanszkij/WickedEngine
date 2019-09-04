@@ -501,9 +501,6 @@
     <FxCompile Include="emittedparticlePS_soft_distortion.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="cloudGeneratorCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="hairparticlePS_forward.hlsl">
       <Filter>PS</Filter>
     </FxCompile>

@@ -249,7 +249,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_WorldBoundsMin;				float pad0_frameCB;		// world enclosing AABB min
 	float3		g_xFrame_WorldBoundsMax;				float pad1_frameCB;		// world enclosing AABB max
 	float3		g_xFrame_WorldBoundsExtents;			float pad2_frameCB;		// world enclosing AABB abs(max - min)
-	float3		g_xFrame_WorldBoundsExtents_rcp;		float pad3_frameCB;		// world enclosing AABB 1.0f / abs(max - min)
+	float3		g_xFrame_WorldBoundsExtents_rcp;								// world enclosing AABB 1.0f / abs(max - min)
+	float		g_xFrame_CloudSpeed;
 };
 
 CBUFFER(APICB, CBSLOT_API)
