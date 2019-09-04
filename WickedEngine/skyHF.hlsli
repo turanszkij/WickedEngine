@@ -64,7 +64,7 @@ void AddCloudLayer(inout float4 color, in float3 normal, bool dark)
 	const float2 cloudUV = cloudPos.xz * g_xFrame_CloudScale;
 	const float cloudTime = g_xFrame_Time * g_xFrame_CloudSpeed;
 	const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
-	const uint quality = 7 * g_xFrame_ConstantOne;
+	const uint quality = 8;
 
 	// rotate uvs like a flow effect:
 	float q = 0;
@@ -114,7 +114,7 @@ void AddCloudLayer(inout float4 color, in float3 normal, bool dark)
 	f = f * r;
 
 	// lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
-	float clouds = lerp(0.3f + 9.0f * g_xFrame_Cloudiness * f, f * 0.5f + 0.5f, pow(saturate(g_xFrame_Cloudiness), 8));
+	float clouds = lerp(f * 9.0f * g_xFrame_Cloudiness + 0.3f, f * 0.5f + 0.5f, pow(saturate(g_xFrame_Cloudiness), 8));
 	clouds = saturate(clouds - (1 - g_xFrame_Cloudiness)); // modulate constant cloudiness
 	clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
 
