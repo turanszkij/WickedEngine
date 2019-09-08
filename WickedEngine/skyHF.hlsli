@@ -3,31 +3,15 @@
 #include "globals.hlsli"
 #include "lightingHF.hlsli"
 
-float3 GetDynamicSkyColor(in float3 normal)
-{
-	float aboveHorizon = saturate(pow(saturate(normal.y), 0.25f + g_xFrame_Fog.z) / (g_xFrame_Fog.z + 1));
-	float3 sky = lerp(GetHorizonColor(), GetZenithColor(), aboveHorizon);
-
-#ifdef NOSUN
-	return sky;
-
-#else
-
-	float3 sunc = GetSunColor();
-
-	float3 sun = normal.y > 0 ? max(saturate(dot(GetSunDirection(), normal) > 0.9998 ? 1 : 0)*sunc * 1000, 0) : 0;
-	return sky + sun;
-#endif // NOSUN
-}
-
-
+// Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
 // Cloud noise based on: https://www.shadertoy.com/view/4tdSWr
-float2 hash(float2 p) 
+
+float2 hash(float2 p)
 {
 	p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
 	return -1.0 + 2.0*frac(sin(p)*43758.5453123);
 }
-float noise(in float2 p) 
+float noise(in float2 p)
 {
 	const float K1 = 0.366025404; // (sqrt(3)-1)/2;
 	const float K2 = 0.211324865; // (3-sqrt(3))/6;
@@ -41,91 +25,141 @@ float noise(in float2 p)
 	return dot(n, float3(70.0, 70.0, 70.0));
 }
 
-void AddCloudLayer(inout float4 color, in float3 normal, bool dark)
+//#define SIMPLE_SKY
+float3 GetDynamicSkyColor(in float3 normal, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false)
 {
-	if (g_xFrame_Cloudiness <= 0)
+#ifdef SIMPLE_SKY
+	const float aboveHorizon = saturate(pow(saturate(normal.y), 0.3f + g_xFrame_Fog.z) / (g_xFrame_Fog.z + 1));
+	const float3 sky = lerp(GetHorizonColor(), GetZenithColor(), smoothstep(0, 1, aboveHorizon));
+#else
+	const float3 skyColor = GetZenithColor();
+	const float3 sunDirection = GetSunDirection();
+	const float3 sunColor = GetSunColor();
+
+	const float zenith = normal.y; // how much is above (0: horizon, 1: directly above)
+	const float sunScatter = saturate(sunDirection.y + 0.1f); // how much the sun is directly above. Even if sunis at horizon, we add a constant scattering amount so that light still scatters at horizon
+
+	const float atmosphereDensity = 0.7f; // constant of air density (bigger is more obstruction of sun)
+	const float zenithDensity = atmosphereDensity / pow(max(0.000001f, zenith), 0.75f);
+	const float sunScatterDensity = atmosphereDensity / pow(max(0.000001f, sunScatter), 0.75f);
+
+	const float3 skyAbsorption = exp2(skyColor * -zenithDensity) * 2.0f; // gradient on horizon
+	const float3 sunAbsorption = sunColor * exp2(skyColor * -sunScatterDensity) * 2.0f; // gradient of sun when it's getting below horizon
+
+	const float sunAmount = distance(normal, sunDirection); // sun falloff descreasing from mid point
+	const float rayleigh = 1.0 + pow(1.0 - saturate(sunAmount), 2.0) * PI * 0.5;
+	const float mie_disk = saturate(1.0 - pow(sunAmount, 0.1));
+	const float3 mie = mie_disk * mie_disk*(3.0 - 2.0 * mie_disk) * 2.0 * PI * sunAbsorption;
+
+	const float3 sun = smoothstep(0.03, 0.026, sunAmount) * 50.0 * skyAbsorption; // sun disc
+	const float3 horizon = GetHorizonColor() * saturate(1 - skyAbsorption); // horizon color will affect when zenith density decreases
+
+	float3 sky = skyColor * zenithDensity * rayleigh;
+	sky = lerp(sky * skyAbsorption, sky / (sky + 0.5), sunScatter); // when sun goes below horizon, absorb sky color
+	sky += horizon; // tint horizon color
+	if (sun_enabled)
 	{
-		return;
+		sky += sun;
+		sky += mie;
+	}
+	sky *= (sunAbsorption + length(sunAbsorption)) * 0.5f; // when sun goes below horizon, fade out whole sky
+	sky *= 0.25; // exposure level
+
+	if (dark_enabled)
+	{
+		sky = max(pow(saturate(dot(GetSunDirection().xyz, normal)), 64)*GetSunColor().rgb, 0) * skyAbsorption;
 	}
 
-	// Trace a cloud layer plane:
-	const float3 o = g_xCamera_CamPos;
-	const float3 d = normal;
-	const float3 planeOrigin = float3(0, 1000, 0);
-	const float3 planeNormal = float3(0, -1, 0);
-	const float t = Trace_plane(o, d, planeOrigin, planeNormal);
-
-	if (t < 0)
+	if (clouds_enabled)
 	{
-		return;
-	}
-	
-	const float3 cloudPos = o + d * t;
-	const float2 cloudUV = cloudPos.xz * g_xFrame_CloudScale;
-	const float cloudTime = g_xFrame_Time * g_xFrame_CloudSpeed;
-	const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
-	const uint quality = 8;
-
-	// rotate uvs like a flow effect:
-	float q = 0;
-	{
-		float2 uv = cloudUV * 0.5f;
-		float swirling = 0.1;
-		for (uint i = 0; i < quality; i++)
+		if (g_xFrame_Cloudiness <= 0)
 		{
-			q += noise(uv) * swirling;
-			uv = mul(m, uv);
-			swirling *= 0.4;
+			return sky;
+		}
+
+		// Trace a cloud layer plane:
+		const float3 o = g_xCamera_CamPos;
+		const float3 d = normal;
+		const float3 planeOrigin = float3(0, 1000, 0);
+		const float3 planeNormal = float3(0, -1, 0);
+		const float t = Trace_plane(o, d, planeOrigin, planeNormal);
+
+		if (t < 0)
+		{
+			return sky;
+		}
+
+		const float3 cloudPos = o + d * t;
+		const float2 cloudUV = cloudPos.xz * g_xFrame_CloudScale;
+		const float cloudTime = g_xFrame_Time * g_xFrame_CloudSpeed;
+		const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
+		const uint quality = 8;
+
+		// rotate uvs like a flow effect:
+		float flow = 0;
+		{
+			float2 uv = cloudUV * 0.5f;
+			float amount = 0.1;
+			for (uint i = 0; i < quality; i++)
+			{
+				flow += noise(uv) * amount;
+				uv = mul(m, uv);
+				amount *= 0.4;
+			}
+		}
+
+
+		// Main shape:
+		float clouds = 0.0;
+		{
+			const float time = cloudTime * 0.2f;
+			float density = 1.1f;
+			float2 uv = cloudUV * 0.8f;
+			uv -= flow - time;
+			for (uint i = 0; i < quality; i++)
+			{
+				clouds += density * noise(uv);
+				uv = mul(m, uv) + time;
+				density *= 0.6f;
+			}
+		}
+
+		// Detail shape:
+		{
+			float detail_shape = 0.0;
+			const float time = cloudTime * 0.1f;
+			float density = 0.8f;
+			float2 uv = cloudUV;
+			uv -= flow - time;
+			for (uint i = 0; i < quality; i++)
+			{
+				detail_shape += abs(density*noise(uv));
+				uv = mul(m, uv) + time;
+				density *= 0.7f;
+			}
+			clouds *= detail_shape + clouds;
+			clouds *= detail_shape;
+		}
+
+
+		// lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
+		clouds = lerp(clouds * 9.0f * g_xFrame_Cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(g_xFrame_Cloudiness), 8));
+		clouds = saturate(clouds - (1 - g_xFrame_Cloudiness)); // modulate constant cloudiness
+		clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
+
+		if (dark_enabled)
+		{
+			sky *= pow(saturate(1 - clouds), 16.0f); // only sun and clouds. Boost clouds to have nicer sun shafts occlusion
+		}
+		else
+		{
+			sky = lerp(sky, 1, clouds); // sky and clouds on top
 		}
 	}
 
-	float weight = 0.8;
+#endif // SIMPLE_SKY
 
-	// main noise:
-	float r = 0.0;
-	{
-		const float time = cloudTime * 0.1f;
-		float2 uv = cloudUV;
-		uv -= q - time;
-		for (uint i = 0; i < quality; i++)
-		{
-			r += abs(weight*noise(uv));
-			uv = mul(m, uv) + time;
-			weight *= 0.7;
-		}
-	}
-
-	// secondary noise:
-	float f = 0.0;
-	{
-		const float time = cloudTime * 0.2f;
-		float2 uv = cloudUV * 0.8f;
-		uv -= q - time;
-		weight = 0.7;
-		for (uint i = 0; i < quality; i++)
-		{
-			f += weight * noise(uv);
-			uv = mul(m, uv) + time;
-			weight *= 0.6;
-		}
-	}
-
-	f *= r + f;
-	f = f * r;
-
-	// lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
-	float clouds = lerp(f * 9.0f * g_xFrame_Cloudiness + 0.3f, f * 0.5f + 0.5f, pow(saturate(g_xFrame_Cloudiness), 8));
-	clouds = saturate(clouds - (1 - g_xFrame_Cloudiness)); // modulate constant cloudiness
-	clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
-
-	if (dark)
-	{
-		color.rgb *= pow(saturate(1 - clouds), 16.0f); // only sun and clouds. Boost clouds to have nicer sun shafts occlusion
-	}
-	else
-	{
-		color.rgb = lerp(color.rgb, 1, clouds); // sky and clouds on top
-	}
+	return sky;
 }
 
 

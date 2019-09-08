@@ -1,3 +1,4 @@
+#define DARK_SKY // no sky colors, only sun
 #include "objectHF.hlsli"
 #include "globals.hlsli"
 #include "skyHF.hlsli"
@@ -13,11 +14,5 @@ float4 main(VSOut PSIn) : SV_TARGET
 { 
 	float3 normal = normalize(PSIn.nor);
 
-	float3 sunc = GetSunColor();
-
-	float4 color = float4(normal.y > 0 ? max(pow(saturate(dot(GetSunDirection().xyz, normal) + 0.0001), 64)*sunc, 0) : 0, 1);
-
-	AddCloudLayer(color, normal, true);
-
-	return color;
+	return float4(GetDynamicSkyColor(normal, true, true, true), 1);
 }
