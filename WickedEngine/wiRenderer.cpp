@@ -3550,7 +3550,7 @@ void UpdatePerFrameData(float dt, uint32_t layerMask)
 {
 	renderTime_Prev = renderTime;
 	deltaTime = dt * GetGameSpeed();
-	renderTime += dt;
+	renderTime += deltaTime;
 
 	GraphicsDevice* device = GetDevice();
 	Scene& scene = GetScene();

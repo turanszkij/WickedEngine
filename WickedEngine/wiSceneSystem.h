@@ -906,7 +906,7 @@ namespace wiSceneSystem
 		};
 		uint32_t _flags = EMPTY;
 
-		XMFLOAT3 sunColor = XMFLOAT3(1, 1, 1);
+		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
