@@ -18,7 +18,7 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 
-	weatherWindow = new wiWindow(GUI, "World Window");
+	weatherWindow = new wiWindow(GUI, "Weather Window");
 	weatherWindow->SetSize(XMFLOAT2(760, 820));
 	GUI->AddWidget(weatherWindow);
 
@@ -140,11 +140,25 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 
 
 
+	wiButton* preset0Button = new wiButton("WeatherPreset - Default");
+	preset0Button->SetTooltip("Apply this weather preset to the world.");
+	preset0Button->SetSize(XMFLOAT2(240, 30));
+	preset0Button->SetPos(XMFLOAT2(x - 100, y += step * 2));
+	preset0Button->OnClick([=](wiEventArgs args) {
+
+		Scene& scene = wiSceneSystem::GetScene();
+		scene.weathers.Clear();
+		scene.weather = WeatherComponent();
+
+		InvalidateProbes();
+
+		});
+	weatherWindow->AddWidget(preset0Button);
 
 	wiButton* preset1Button = new wiButton("WeatherPreset - Daytime");
 	preset1Button->SetTooltip("Apply this weather preset to the world.");
 	preset1Button->SetSize(XMFLOAT2(240, 30));
-	preset1Button->SetPos(XMFLOAT2(x - 100, y += step * 2));
+	preset1Button->SetPos(XMFLOAT2(x - 100, y += step));
 	preset1Button->OnClick([=](wiEventArgs args) {
 
 		auto& weather = GetWeather();

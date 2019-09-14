@@ -300,6 +300,12 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float exposure
 	);
+	void Postprocess_Chromatic_Aberration(
+		const wiGraphics::Texture2D& input,
+		const wiGraphics::Texture2D& output,
+		wiGraphics::CommandList cmd,
+		float amount = 1.0f
+	);
 
 	// Build the scene BVH on GPU that can be used by ray traced rendering
 	void BuildSceneBVH(wiGraphics::CommandList cmd);

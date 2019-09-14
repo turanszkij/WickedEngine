@@ -18,10 +18,10 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	ppWindow = new wiWindow(GUI, "PostProcess Window");
-	ppWindow->SetSize(XMFLOAT2(360, 660));
+	ppWindow->SetSize(XMFLOAT2(400, 660));
 	GUI->AddWidget(ppWindow);
 
-	float x = 110;
+	float x = 150;
 	float y = 0;
 
 	exposureSlider = new wiSlider(0.0f, 3.0f, 1, 10000, "Exposure: ");
@@ -295,8 +295,27 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 	});
 	ppWindow->AddWidget(outlineThicknessSlider);
 
+	chromaticaberrationCheckBox = new wiCheckBox("Chromatic Aberration: ");
+	chromaticaberrationCheckBox->SetTooltip("Toggle the full screen chromatic aberration effect. This simulates lens distortion at screen edges.");
+	chromaticaberrationCheckBox->SetPos(XMFLOAT2(x, y += 35));
+	chromaticaberrationCheckBox->SetCheck(component->getOutlineEnabled());
+	chromaticaberrationCheckBox->OnClick([&](wiEventArgs args) {
+		component->setChromaticAberrationEnabled(args.bValue);
+		});
+	ppWindow->AddWidget(chromaticaberrationCheckBox);
 
-	ppWindow->Translate(XMFLOAT3(screenW - 500, 50, 0));
+	chromaticaberrationSlider = new wiSlider(0, 4, 1.0f, 1000, "Amount: ");
+	chromaticaberrationSlider->SetTooltip("The lens distortion amount.");
+	chromaticaberrationSlider->SetSize(XMFLOAT2(100, 20));
+	chromaticaberrationSlider->SetPos(XMFLOAT2(x + 100, y));
+	chromaticaberrationSlider->SetValue(component->getChromaticAberrationAmount());
+	chromaticaberrationSlider->OnSlide([&](wiEventArgs args) {
+		component->setChromaticAberrationAmount(args.fValue);
+		});
+	ppWindow->AddWidget(chromaticaberrationSlider);
+
+
+	ppWindow->Translate(XMFLOAT3(screenW - 550, 50, 0));
 	ppWindow->SetVisible(false);
 
 }

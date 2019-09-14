@@ -18,6 +18,7 @@ private:
 	XMFLOAT3 outlineColor = XMFLOAT3(0, 0, 0);
 	float ssaoRange = 1.0f;
 	UINT ssaoSampleCount = 16;
+	float chromaticAberrationAmount = 2.0f;
 
 	bool fxaaEnabled = false;
 	bool ssaoEnabled = false;
@@ -39,6 +40,7 @@ private:
 	bool tessellationEnabled = false;
 	bool sharpenFilterEnabled = false;
 	bool outlineEnabled = false;
+	bool chromaticAberrationEnabled = false;
 
 	const wiGraphics::Texture2D* colorGradingTex = nullptr;
 
@@ -74,6 +76,7 @@ protected:
 		ldr_postprocess_count += sharpenFilterEnabled ? 1 : 0;
 		ldr_postprocess_count += colorGradingEnabled ? 1 : 0;
 		ldr_postprocess_count += fxaaEnabled ? 1 : 0;
+		ldr_postprocess_count += chromaticAberrationEnabled ? 1 : 0;
 		int rt_index = ldr_postprocess_count % 2;
 		return &rtPostprocess_LDR[rt_index];
 	}
@@ -112,6 +115,7 @@ public:
 	inline XMFLOAT3 getOutlineColor() const { return outlineColor; }
 	inline float getSSAORange() const { return ssaoRange; }
 	inline UINT getSSAOSampleCount() const { return ssaoSampleCount; }
+	inline float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 
 	inline bool getSSAOEnabled() const { return ssaoEnabled; }
 	inline bool getSSREnabled() const { return ssrEnabled; }
@@ -133,6 +137,7 @@ public:
 	inline bool getTessellationEnabled() const { return tessellationEnabled && wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDevice::GRAPHICSDEVICE_CAPABILITY_TESSELLATION); }
 	inline bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
 	inline bool getOutlineEnabled() const { return outlineEnabled; }
+	inline bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
 
 	inline const wiGraphics::Texture2D* getColorGradingTexture() const { return colorGradingTex; }
 
@@ -149,6 +154,7 @@ public:
 	inline void setOutlineColor(const XMFLOAT3& value) { outlineColor = value; }
 	inline void setSSAORange(float value) { ssaoRange = value; }
 	inline void setSSAOSampleCount(UINT value) { ssaoSampleCount = value; }
+	inline void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 
 	inline void setSSAOEnabled(bool value){ ssaoEnabled = value; }
 	inline void setSSREnabled(bool value){ ssrEnabled = value; }
@@ -170,6 +176,7 @@ public:
 	inline void setTessellationEnabled(bool value) { tessellationEnabled = value; }
 	inline void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
 	inline void setOutlineEnabled(bool value) { outlineEnabled = value; }
+	inline void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 
 	inline void setColorGradingTexture(const wiGraphics::Texture2D* tex) { colorGradingTex = tex; }
 

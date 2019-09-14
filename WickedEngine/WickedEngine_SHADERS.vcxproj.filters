@@ -807,6 +807,9 @@
     <FxCompile Include="renderlightmapPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="chromatic_aberrationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="PS">

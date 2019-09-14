@@ -2167,6 +2167,7 @@ void LoadShaders()
 	computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lineardepthCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_SHARPEN] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sharpenCS.cso", wiResourceManager::COMPUTESHADER));
 	computeShaders[CSTYPE_POSTPROCESS_TONEMAP] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "tonemapCS.cso", wiResourceManager::COMPUTESHADER));
+	computeShaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "chromatic_aberrationCS.cso", wiResourceManager::COMPUTESHADER));
 	
 
 	hullShaders[HSTYPE_OBJECT] = static_cast<const HullShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectHS.cso", wiResourceManager::HULLSHADER));
@@ -9333,6 +9334,52 @@ void Postprocess_Tonemap(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = exposure;
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(CS, uavs, 0, ARRAYSIZE(uavs), cmd);
+
+
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	device->UAVBarrier(uavs, ARRAYSIZE(uavs), cmd);
+	device->UnbindUAVs(0, ARRAYSIZE(uavs), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_Chromatic_Aberration(
+	const Texture2D& input,
+	const Texture2D& output,
+	CommandList cmd,
+	float amount
+)
+{
+	GraphicsDevice* device = GetDevice();
+
+	device->EventBegin("Postprocess_Chromatic_Aberration", cmd);
+
+	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+
+	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], cmd);
+
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcessCB cb;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
+	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
+	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
+	cb.xPPParams0.x = amount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

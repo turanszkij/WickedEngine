@@ -42,6 +42,8 @@ public:
 	wiCheckBox* outlineCheckBox;
 	wiSlider*	outlineThresholdSlider;
 	wiSlider*	outlineThicknessSlider;
+	wiCheckBox* chromaticaberrationCheckBox;
+	wiSlider*	chromaticaberrationSlider;
 
 
 };

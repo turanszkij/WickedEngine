@@ -697,5 +697,13 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 			SwapPtr(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
+
+		if (getChromaticAberrationEnabled())
+		{
+			wiRenderer::Postprocess_Chromatic_Aberration(*rt_read, *rt_write, cmd, getChromaticAberrationAmount());
+
+			SwapPtr(rt_read, rt_write);
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+		}
 	}
 }
