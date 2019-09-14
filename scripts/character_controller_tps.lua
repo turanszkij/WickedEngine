@@ -23,13 +23,13 @@ Character = {
 	left_foot = INVALID_ENTITY,
 	right_foot = INVALID_ENTITY,
 	face = Vector(0,0,1), -- forward direction
+	force = Vector(),
 	velocity = Vector(),
-	velocityPrev = Vector(),
 	ray = Ray(Vector(),Vector()),
 	o = INVALID_ENTITY, -- collision prop with scene (entity)
 	p,n = Vector(), -- collision props with scene (position,normal)
 	savedPointerPos = Vector(),
-	moveSpeed = 0.2,
+	moveSpeed = 90,
 	layerMask = 0x2, -- The character will be tagged to use this layer, so scene Picking can filter out the character
 	scale = Vector(0.8,0.8,0.8),
 	rotation = Vector(0,3.1415,0),
@@ -69,7 +69,7 @@ Character = {
 	end,
 	
 	Jump = function(self,f)
-		self.velocity = self.velocity:Add(Vector(0,f,0))
+		self.force = vector.Add(self.force, Vector(0,f,0))
 		self.state = self.states.JUMP
 	end,
 	MoveDirection = function(self,dir,f)
@@ -87,9 +87,7 @@ Character = {
 		model_transform.UpdateTransform()
 		scene.Component_Detach(self.target)
 		scene.Component_Attach(self.target, self.model)
-		self.velocityPrev = self.velocity;
-		self.velocity = self.face:Multiply(Vector(f,f,f))
-		self.velocity.SetY(self.velocityPrev.GetY())
+		self.force = vector.Add(self.force, self.face:Multiply(Vector(f,f,f)))
 		self.state = self.states.WALK
 	end,
 	
@@ -125,7 +123,7 @@ Character = {
 		end
 		
 		if( input.Press(string.byte('J'))  or input.Press(VK_SPACE) or input.Press(GAMEPAD_BUTTON_2, INPUT_TYPE_GAMEPAD) ) then
-			self:Jump(0.6)
+			self:Jump(2000)
 		end
 
 		-- Camera target control:
@@ -157,6 +155,13 @@ Character = {
 	Update = function(self)
 		local model_transform = scene.Component_GetTransform(self.model)
 		local target_transform = scene.Component_GetTransform(self.target)
+		
+		-- gravity:
+		self.force = vector.Add(self.force, Vector(0,-9.8 * 10,0))
+		
+		-- apply force:
+		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, getDeltaTime()))
+		self.force = Vector(0,0,0,0)
 		
 		-- state and animation update
 		if(self.state == self.states.STAND) then
@@ -203,15 +208,12 @@ Character = {
 		local head_transform = scene.Component_GetTransform(self.head)
 		local waterRay = Ray(head_transform.GetPosition(),Vector(0,-1,0))
 		local w,wp,wn = Pick(waterRay,PICK_WATER)
-		if(w ~= INVALID_ENTITY and self.velocity.Length()>0.1) then
+		if(w ~= INVALID_ENTITY and self.velocity.Length() > 2) then
 			PutWaterRipple("../Editor/images/ripple.png",wp)
 		end
-		
-		-- add gravity:
-		self.velocity = vector.Add(self.velocity, Vector(0,-0.04,0))
-		
+
 		-- apply velocity:
-		model_transform.Translate(vector.Multiply(getDeltaTime() * 60, self.velocity))
+		model_transform.Translate(vector.Multiply(self.velocity, getDeltaTime()))
 		model_transform.UpdateTransform()
 		
 		-- check if we are below or on the ground:
@@ -224,7 +226,9 @@ Character = {
 				model_transform.Translate(Vector(0,self.p.GetY()-posY,0)) -- snap to ground
 			end
 			self.velocity.SetY(0) -- don't fall below ground
-			self.velocity = vector.Multiply(self.velocity, 0.8) -- slow down gradually on ground
+			self.velocity = vector.Multiply(self.velocity, 0.8) -- slow down on ground
+		else	
+			self.velocity = vector.Multiply(self.velocity, 0.96) -- slow down in air
 		end
 		
 	end
