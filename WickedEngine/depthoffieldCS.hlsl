@@ -14,7 +14,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float4 color_sharp = input_sharp.SampleLevel(sampler_point_clamp, uv, 0);
 	const float4 color_blurred = input_blurred.SampleLevel(sampler_linear_clamp, uv,0);
-	const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0).r * g_xFrame_MainCamera_ZFarP;
+	const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0).r * g_xCamera_ZFarP;
 	const float difference = abs(focus - depth);
 
 	output[DTid.xy] = lerp(color_sharp, color_blurred, saturate(difference * 0.008f));

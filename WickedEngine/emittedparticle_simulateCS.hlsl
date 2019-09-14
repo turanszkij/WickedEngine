@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 #ifdef SORTING
 			// store squared distance to main camera:
-			float3 eyeVector = particle.position - g_xFrame_MainCamera_CamPos;
+			float3 eyeVector = particle.position - g_xCamera_CamPos;
 			float distSQ = dot(eyeVector, eyeVector);
 			distanceBuffer[particleIndex] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
 #endif // SORTING

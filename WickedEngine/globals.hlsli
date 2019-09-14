@@ -222,7 +222,7 @@ inline float getLinearDepth(in float z, in float near, in float far)
 }
 inline float getLinearDepth(in float z)
 {
-	return getLinearDepth(z, g_xFrame_MainCamera_ZNearP, g_xFrame_MainCamera_ZFarP);
+	return getLinearDepth(z, g_xCamera_ZNearP, g_xCamera_ZFarP);
 }
 
 inline float3x3 GetTangentSpace(in float3 normal)
@@ -277,7 +277,7 @@ inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
 }
 inline float3 reconstructPosition(in float2 uv, in float z)
 {
-	return reconstructPosition(uv, z, g_xFrame_MainCamera_InvVP);
+	return reconstructPosition(uv, z, g_xCamera_InvVP);
 }
 
 

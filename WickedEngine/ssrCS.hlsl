@@ -14,11 +14,11 @@ float4 SSRBinarySearch(in float3 origin, in float3 direction)
 {
 	for (uint i = 0; i < fineStepCount; i++)
 	{
-		float4 coord = mul(g_xFrame_MainCamera_Proj, float4(origin, 1.0f));
+		float4 coord = mul(g_xCamera_Proj, float4(origin, 1.0f));
 		coord.xy /= coord.w;
 		coord.xy = coord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, coord.xy, 0) * g_xFrame_MainCamera_ZFarP;
+		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, coord.xy, 0) * g_xCamera_ZFarP;
 
 		if (abs(origin.z - depth) < tolerance)
 			return float4(coord.xy, depth, 1);
@@ -39,11 +39,11 @@ float4 SSRRayMarch(in float3 origin, in float3 direction)
 	{
 		origin += direction;
 
-		float4 coord = mul(g_xFrame_MainCamera_Proj, float4(origin, 1.0f));
+		float4 coord = mul(g_xCamera_Proj, float4(origin, 1.0f));
 		coord.xy /= coord.w;
 		coord.xy = coord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
-		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, coord.xy, 0) * g_xFrame_MainCamera_ZFarP;
+		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, coord.xy, 0) * g_xCamera_ZFarP;
 
 		if (origin.z > depth)
 			return SSRBinarySearch(origin, direction);
@@ -63,8 +63,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 
 	// Everything in view space:
-	const float3 P = reconstructPosition(uv, depth, g_xFrame_MainCamera_InvP); // specify matrix to get view-space position!
-	const float3 N = mul((float3x3)g_xFrame_MainCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;
+	const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP); // specify matrix to get view-space position!
+	const float3 N = mul((float3x3)g_xCamera_View, decodeNormal(texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy)).xyz;
 	const float3 R = normalize(reflect(P.xyz, N.xyz));
 
 	const float4 hit = SSRRayMarch(P, R);

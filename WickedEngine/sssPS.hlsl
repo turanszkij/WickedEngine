@@ -26,7 +26,7 @@ static const float4 kernel[] = {
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
     const float4 color_ref = texture_0[pos.xy];
-	const float depth_ref = texture_lineardepth[pos.xy] * g_xFrame_MainCamera_ZFarP;
+	const float depth_ref = texture_lineardepth[pos.xy] * g_xCamera_ZFarP;
 	const float sss = texture_gbuffer0[pos.xy].a;
 
     // Accumulate center sample, multiplying it with its gaussian weight:
@@ -47,7 +47,7 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
         // Fetch color and depth for current sample:
         float2 offset = uv + kernel[i].a * finalStep;
         float3 color = texture_0.SampleLevel(sampler_linear_clamp, offset, 0).rgb;
-		float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, offset, 0) * g_xFrame_MainCamera_ZFarP;
+		float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, offset, 0) * g_xCamera_ZFarP;
 
         // If the difference in depth is huge, we lerp color back to "colorM":
         const float edge_fallback = saturate(abs(depth_ref - depth));

@@ -7,17 +7,17 @@
 // Common buffers:
 // These are usable by all shaders
 #define CBSLOT_RENDERER_FRAME					0
-#define CBSLOT_API								1
+#define CBSLOT_RENDERER_CAMERA					2
+#define CBSLOT_API								3
 
 
 
 // On demand buffers:
 // These are bound on demand and alive until another is bound at the same slot
-#define CBSLOT_IMAGE							2
-#define CBSLOT_FONT								3
+#define CBSLOT_IMAGE							3
+#define CBSLOT_FONT								4
 
-#define CBSLOT_RENDERER_MISC					4
-#define CBSLOT_RENDERER_CAMERA					5
+#define CBSLOT_RENDERER_MISC					5
 #define CBSLOT_RENDERER_MATERIAL				6
 #define CBSLOT_RENDERER_FORWARD_LIGHTMASK		7
 #define CBSLOT_RENDERER_CUBEMAPRENDER			7

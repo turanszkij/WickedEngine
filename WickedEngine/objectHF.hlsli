@@ -777,7 +777,7 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 	const float2 velocity = ((input.pos2DPrev.xy - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
 	const float2 ReprojectedScreenCoord = ScreenCoord + velocity;
 
-	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord, 0) * g_xFrame_MainCamera_ZFarP;
+	const float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord, 0) * g_xCamera_ZFarP;
 	const float depth_difference = sampled_lineardepth - lineardepth;
 #endif // ENVMAPRENDERING
 #endif // SIMPLE_INPUT

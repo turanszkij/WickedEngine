@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		const float2 uv2 = uv + direction * gaussianOffsets[i] * xPPResolution_rcp;
 		const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
-		const float weight = saturate(abs(depth - center_depth) * g_xFrame_MainCamera_ZFarP * depth_threshold);
+		const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * depth_threshold);
 		color += lerp(input.SampleLevel(sampler_linear_clamp, uv2, mip), center_color, weight) * gaussianWeightsNormalized[i];
 	}
 

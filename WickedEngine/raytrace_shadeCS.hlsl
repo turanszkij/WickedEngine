@@ -147,7 +147,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		// Light sampling:
 		float3 P = ray.origin;
-		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
+		float3 V = normalize(g_xCamera_CamPos - P);
 		Surface surface = CreateSurface(P, N, V, baseColor, 1, roughness, metalness, reflectance);
 
 		[loop]

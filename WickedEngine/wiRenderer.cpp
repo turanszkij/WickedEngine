@@ -8186,37 +8186,13 @@ void UpdateFrameCB(CommandList cmd)
 	cb.g_xFrame_TemporalAAJitter = temporalAAJitter;
 	cb.g_xFrame_TemporalAAJitterPrev = temporalAAJitterPrev;
 
-	const auto& camera = GetCamera();
 	const auto& prevCam = GetPrevCamera();
 	const auto& reflCam = GetRefCamera();
-
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_VP, camera.GetViewProjection());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_View, camera.GetView());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_Proj, camera.GetProjection());
-	cb.g_xFrame_MainCamera_CamPos = camera.Eye;
-	cb.g_xFrame_MainCamera_DistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.g_xFrame_MainCamera_CamPos)));
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevV, prevCam.GetView());
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevP, prevCam.GetProjection());
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevVP, prevCam.GetViewProjection());
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_PrevInvVP, prevCam.GetInvViewProjection());
 	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_ReflVP, reflCam.GetViewProjection());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_InvV, camera.GetInvView());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_InvP, camera.GetInvProjection());
-	XMStoreFloat4x4(&cb.g_xFrame_MainCamera_InvVP, camera.GetInvViewProjection());
-	cb.g_xFrame_MainCamera_At = camera.At;
-	cb.g_xFrame_MainCamera_Up = camera.Up;
-	cb.g_xFrame_MainCamera_ZNearP = camera.zNearP;
-	cb.g_xFrame_MainCamera_ZFarP = camera.zFarP;
-	cb.g_xFrame_MainCamera_ZNearP_rcp = 1.0f / std::max(0.0001f, cb.g_xFrame_MainCamera_ZNearP);
-	cb.g_xFrame_MainCamera_ZFarP_rcp = 1.0f / std::max(0.0001f, cb.g_xFrame_MainCamera_ZFarP);
-	cb.g_xFrame_MainCamera_ZRange = abs(cb.g_xFrame_MainCamera_ZFarP - cb.g_xFrame_MainCamera_ZNearP);
-	cb.g_xFrame_MainCamera_ZRange_rcp = 1.0f / std::max(0.0001f, cb.g_xFrame_MainCamera_ZRange);
-	cb.g_xFrame_FrustumPlanesWS[0] = camera.frustum.getLeftPlane();
-	cb.g_xFrame_FrustumPlanesWS[1] = camera.frustum.getRightPlane();
-	cb.g_xFrame_FrustumPlanesWS[2] = camera.frustum.getTopPlane();
-	cb.g_xFrame_FrustumPlanesWS[3] = camera.frustum.getBottomPlane();
-	cb.g_xFrame_FrustumPlanesWS[4] = camera.frustum.getNearPlane();
-	cb.g_xFrame_FrustumPlanesWS[5] = camera.frustum.getFarPlane();
 
 	cb.g_xFrame_WorldBoundsMin = scene.bounds.getMin();
 	cb.g_xFrame_WorldBoundsMax = scene.bounds.getMax();
@@ -8237,6 +8213,18 @@ void UpdateCameraCB(const CameraComponent& camera, CommandList cmd)
 	XMStoreFloat4x4(&cb.g_xCamera_View, camera.GetView());
 	XMStoreFloat4x4(&cb.g_xCamera_Proj, camera.GetProjection());
 	cb.g_xCamera_CamPos = camera.Eye;
+	cb.g_xCamera_DistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.g_xCamera_CamPos)));
+	XMStoreFloat4x4(&cb.g_xCamera_InvV, camera.GetInvView());
+	XMStoreFloat4x4(&cb.g_xCamera_InvP, camera.GetInvProjection());
+	XMStoreFloat4x4(&cb.g_xCamera_InvVP, camera.GetInvViewProjection());
+	cb.g_xCamera_At = camera.At;
+	cb.g_xCamera_Up = camera.Up;
+	cb.g_xCamera_ZNearP = camera.zNearP;
+	cb.g_xCamera_ZFarP = camera.zFarP;
+	cb.g_xCamera_ZNearP_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZNearP);
+	cb.g_xCamera_ZFarP_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZFarP);
+	cb.g_xCamera_ZRange = abs(cb.g_xCamera_ZFarP - cb.g_xCamera_ZNearP);
+	cb.g_xCamera_ZRange_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZRange);
 
 	GetDevice()->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 }

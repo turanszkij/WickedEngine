@@ -216,41 +216,42 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float2		g_xFrame_TemporalAAJitter;
 	float2		g_xFrame_TemporalAAJitterPrev;
 
-	// The following are per frame properties for the main camera:
-	float4x4	g_xFrame_MainCamera_VP;			// View*Projection
-	float4x4	g_xFrame_MainCamera_View;
-	float4x4	g_xFrame_MainCamera_Proj;
-
-	float3		g_xFrame_MainCamera_CamPos;
-	float		g_xFrame_MainCamera_DistanceFromOrigin;
-
 	float4x4	g_xFrame_MainCamera_PrevV;
 	float4x4	g_xFrame_MainCamera_PrevP;
-	float4x4	g_xFrame_MainCamera_PrevVP;		// PrevView*PrevProjection
-	float4x4	g_xFrame_MainCamera_PrevInvVP;	// Inverse(PrevView*PrevProjection)
-	float4x4	g_xFrame_MainCamera_ReflVP;		// ReflectionView*ReflectionProjection
-	float4x4	g_xFrame_MainCamera_InvV;		// Inverse View
-	float4x4	g_xFrame_MainCamera_InvP;		// Inverse Projection
-	float4x4	g_xFrame_MainCamera_InvVP;		// Inverse View-Projection
-
-	float3		g_xFrame_MainCamera_At;
-	float		g_xFrame_MainCamera_ZNearP;
-
-	float3		g_xFrame_MainCamera_Up;
-	float		g_xFrame_MainCamera_ZFarP;
-
-	float		g_xFrame_MainCamera_ZNearP_rcp;
-	float		g_xFrame_MainCamera_ZFarP_rcp;
-	float		g_xFrame_MainCamera_ZRange;
-	float		g_xFrame_MainCamera_ZRange_rcp;
-
-	float4		g_xFrame_FrustumPlanesWS[6];	// Frustum planes in world space in order: left,right,top,bottom,near,far
+	float4x4	g_xFrame_MainCamera_PrevVP;			// PrevView*PrevProjection
+	float4x4	g_xFrame_MainCamera_PrevInvVP;		// Inverse(PrevView*PrevProjection)
+	float4x4	g_xFrame_MainCamera_ReflVP;			// ReflectionView*ReflectionProjection
 
 	float3		g_xFrame_WorldBoundsMin;				float pad0_frameCB;		// world enclosing AABB min
 	float3		g_xFrame_WorldBoundsMax;				float pad1_frameCB;		// world enclosing AABB max
 	float3		g_xFrame_WorldBoundsExtents;			float pad2_frameCB;		// world enclosing AABB abs(max - min)
 	float3		g_xFrame_WorldBoundsExtents_rcp;								// world enclosing AABB 1.0f / abs(max - min)
 	float		g_xFrame_CloudSpeed;
+};
+
+CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
+{
+	float4x4	g_xCamera_VP;			// View*Projection
+	float4x4	g_xCamera_View;
+	float4x4	g_xCamera_Proj;
+
+	float3		g_xCamera_CamPos;
+	float		g_xCamera_DistanceFromOrigin;
+
+	float4x4	g_xCamera_InvV;			// Inverse View
+	float4x4	g_xCamera_InvP;			// Inverse Projection
+	float4x4	g_xCamera_InvVP;		// Inverse View-Projection
+
+	float3		g_xCamera_At;
+	float		g_xCamera_ZNearP;
+
+	float3		g_xCamera_Up;
+	float		g_xCamera_ZFarP;
+
+	float		g_xCamera_ZNearP_rcp;
+	float		g_xCamera_ZFarP_rcp;
+	float		g_xCamera_ZRange;
+	float		g_xCamera_ZRange_rcp;
 };
 
 CBUFFER(APICB, CBSLOT_API)
@@ -264,15 +265,6 @@ CBUFFER(APICB, CBSLOT_API)
 
 
 // ------- On demand Constant buffers: ----------
-
-// The following buffer contains properties for a temporary camera (eg. main camera, reflection camera, shadow camera...)
-CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
-{
-	float4x4	g_xCamera_VP;					// View*Projection
-	float4x4	g_xCamera_View;
-	float4x4	g_xCamera_Proj;
-	float3		g_xCamera_CamPos;				float xPadding0_Camera_CommonCB;
-};
 
 CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
 {

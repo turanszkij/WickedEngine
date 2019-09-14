@@ -188,7 +188,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 		// We can perform coarse AABB intersection tests with this:
 		GroupAABB_WS = GroupAABB;
-		AABBtransform(GroupAABB_WS, g_xFrame_MainCamera_InvV);
+		AABBtransform(GroupAABB_WS, g_xCamera_InvV);
 	}
 
 	// Convert depth values to view space.
@@ -339,7 +339,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		float3 N = decodeNormal(g1.xy);
 		float2 ScreenCoord = (float2)pixel * g_xFrame_InternalResolution_Inverse;
 		float3 P = reconstructPosition(ScreenCoord, depth[granularity]);
-		float3 V = normalize(g_xFrame_MainCamera_CamPos - P);
+		float3 V = normalize(g_xCamera_CamPos - P);
 		Surface surface = CreateSurface(P, N, V, float4(g0.rgb, 1), g2.r, g2.g, g2.b, g2.a);
 		Lighting lighting = CreateLighting(0, ls, ld, 0);
 
