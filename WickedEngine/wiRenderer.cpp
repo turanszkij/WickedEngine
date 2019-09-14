@@ -6069,7 +6069,7 @@ void DrawSky(CommandList cmd)
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
 
-	device->Draw(240, 0, cmd); // icosphere
+	device->Draw(3, 0, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -6089,7 +6089,7 @@ void DrawSun(CommandList cmd)
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
 
-	device->Draw(240, 0, cmd);
+	device->Draw(3, 0, cmd);
 
 	device->EventEnd(cmd);
 }

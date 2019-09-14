@@ -1,18 +1,14 @@
-#define DARK_SKY // no sky colors, only sun
 #include "objectHF.hlsli"
 #include "globals.hlsli"
 #include "skyHF.hlsli"
 
-struct VSOut {
-	float4 pos : SV_POSITION;
-	float3 nor : TEXCOORD0;
-	float4 pos2D : SCREENPOSITION;
-	float4 pos2DPrev : SCREENPOSITIONPREV;
-};
+float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
+{
+	float4 unprojected = mul(g_xFrame_MainCamera_InvVP, float4(clipspace, 0.0f, 1.0f));
+	unprojected.xyz /= unprojected.w;
 
-float4 main(VSOut PSIn) : SV_TARGET
-{ 
-	float3 normal = normalize(PSIn.nor);
+	const float3 origin = g_xFrame_MainCamera_CamPos;
+	const float3 direction = normalize(unprojected.xyz - origin);
 
-	return float4(GetDynamicSkyColor(normal, true, true, true), 1);
+	return float4(GetDynamicSkyColor(direction, true, true, true), 1);
 }

@@ -1,22 +1,19 @@
 #include "objectHF.hlsli"
 #include "skyHF.hlsli"
 
-
-struct VSOut {
-	float4 pos : SV_POSITION;
-	float3 nor : TEXCOORD0;
-	float4 pos2D : SCREENPOSITION;
-	float4 pos2DPrev : SCREENPOSITIONPREV;
-};
-
-GBUFFEROutputType_Thin main(VSOut input)
+GBUFFEROutputType_Thin main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD)
 {
-	float3 normal = normalize(input.nor);
+	float4 unprojected = mul(g_xFrame_MainCamera_InvVP, float4(clipspace, 0.0f, 1.0f));
+	unprojected.xyz /= unprojected.w;
 
-	float4 color = float4(GetDynamicSkyColor(normal), 1);
-	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (input.pos2D.xy / input.pos2D.w - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+	const float3 V = normalize(unprojected.xyz - g_xFrame_MainCamera_CamPos);
 
-	GBUFFEROutputType_Thin Out = (GBUFFEROutputType_Thin)0;
+	float4 color = float4(GetDynamicSkyColor(V), 1);
+
+	float4 pos2DPrev = mul(g_xFrame_MainCamera_PrevVP, float4(unprojected.xyz, 1));
+	float2 velocity = ((pos2DPrev.xy / pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (clipspace - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
+
+	GBUFFEROutputType_Thin Out;
 	Out.g0 = color;
 	Out.g1 = float4(0, 0, velocity);
 	return Out;

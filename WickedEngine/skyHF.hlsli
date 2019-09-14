@@ -64,7 +64,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 
 	if (dark_enabled)
 	{
-		sky = max(pow(saturate(dot(GetSunDirection().xyz, V)), 64) * sunColor, 0) * skyAbsorption;
+		sky = max(pow(saturate(dot(sunDirection, V)), 64) * sunColor, 0) * skyAbsorption;
 	}
 
 	if (clouds_enabled)

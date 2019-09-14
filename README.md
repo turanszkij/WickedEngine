@@ -6,16 +6,17 @@
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij">
         <img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social"
             alt="follow on Twitter"></a><br/>
-[![DownloadEditor][s4]][do64] [![DownloadEditor32][s5]][do32]
-[![DownloadTests][s6]][dt64] [![DownloadTests32][s7]][dt32] <br/>
+Latest builds: 
+[![Editor][s4]][do64] [![Editor32][s5]][do32]
+[![Tests][s6]][dt64] [![Tests32][s7]][dt32] <br/>
 
 [s1]: https://ci.appveyor.com/api/projects/status/3dbcee5gd6i7qh7v?svg=true
 [s2]: https://img.shields.io/discord/602811659224088577?logo=discord
 [s3]: https://img.shields.io/badge/License-MIT-orange.svg
-[s4]: https://img.shields.io/badge/download%20editor-64bit-blue.svg
-[s5]: https://img.shields.io/badge/download%20editor-32bit-blue.svg
-[s6]: https://img.shields.io/badge/download%20tests-64bit-blue.svg
-[s7]: https://img.shields.io/badge/download%20tests-32bit-blue.svg
+[s4]: https://img.shields.io/badge/editor-64bit-blue.svg
+[s5]: https://img.shields.io/badge/editor-32bit-blue.svg
+[s6]: https://img.shields.io/badge/tests-64bit-blue.svg
+[s7]: https://img.shields.io/badge/tests-32bit-blue.svg
 
 [av]: https://ci.appveyor.com/project/turanszkij/wickedengine
 [di]: https://discord.gg/CFjRYmE
