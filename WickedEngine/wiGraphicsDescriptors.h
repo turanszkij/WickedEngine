@@ -262,6 +262,13 @@ namespace wiGraphics
 		INDEXFORMAT_16BIT,
 		INDEXFORMAT_32BIT,
 	};
+	enum SUBRESOURCE_TYPE
+	{
+		SRV,
+		UAV,
+		RTV,
+		DSV,
+	};
 
 	// Flags ////////////////////////////////////////////
 	enum CLEAR_FLAG

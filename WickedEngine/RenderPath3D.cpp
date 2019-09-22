@@ -26,10 +26,17 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x / 2;
 		desc.Height = wiRenderer::GetInternalResolution().y / 2;
 		desc.MipLevels = 5;
-		rtSSR.RequestIndependentUnorderedAccessResourcesForMIPs(true);
-		rtSSR.RequestIndependentShaderResourcesForMIPs(true);
 		device->CreateTexture2D(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
+
+		for (UINT i = 0; i < rtSSR.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&rtSSR, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtSSR, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 	{
 		TextureDesc desc;
@@ -65,10 +72,17 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x;
 		desc.Height = wiRenderer::GetInternalResolution().y;
 		desc.MipLevels = 8;
-		rtSceneCopy.RequestIndependentShaderResourcesForMIPs(true);
-		rtSceneCopy.RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		device->CreateTexture2D(&desc, nullptr, &rtSceneCopy);
 		device->SetName(&rtSceneCopy, "rtSceneCopy");
+
+		for (UINT i = 0; i < rtSceneCopy.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&rtSceneCopy, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtSceneCopy, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 	{
 		TextureDesc desc;
@@ -134,10 +148,17 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = wiRenderer::GetInternalResolution().x / 4;
 		desc.Height = wiRenderer::GetInternalResolution().y / 4;
 		desc.MipLevels = 5;
-		rtBloom.RequestIndependentShaderResourcesForMIPs(true);
-		rtBloom.RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		device->CreateTexture2D(&desc, nullptr, &rtBloom);
 		device->SetName(&rtBloom, "rtBloom");
+
+		for (UINT i = 0; i < rtBloom.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 	{
 		TextureDesc desc;

@@ -102,6 +102,8 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 
 		if (!image->image.empty())
 		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
 			TextureDesc desc;
 			desc.ArraySize = 1;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -123,10 +125,17 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 			}
 
 			Texture2D* tex = new Texture2D;
-			tex->RequestIndependentShaderResourcesForMIPs(true);
-			tex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-			HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), tex);
+			HRESULT hr = device->CreateTexture2D(&desc, InitData.data(), tex);
 			assert(SUCCEEDED(hr));
+
+			for (UINT i = 0; i < tex->GetDesc().MipLevels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
 
 			if (tex != nullptr)
 			{

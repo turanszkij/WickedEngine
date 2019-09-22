@@ -1065,7 +1065,7 @@ namespace wiGraphics
 							continue;
 						}
 
-						wiCPUHandle SRV = arrayIndex < 0 ? resource->SRV : resource->additionalSRVs[arrayIndex];
+						wiCPUHandle SRV = arrayIndex < 0 ? resource->SRV : resource->subresourceSRVs[arrayIndex];
 
 						if (resource->IsTexture() && resource->SRV != VK_NULL_HANDLE)
 						{
@@ -1153,7 +1153,7 @@ namespace wiGraphics
 							continue;
 						}
 
-						wiCPUHandle UAV = arrayIndex < 0 ? resource->UAV : resource->additionalUAVs[arrayIndex];
+						wiCPUHandle UAV = arrayIndex < 0 ? resource->UAV : resource->subresourceUAVs[arrayIndex];
 
 						if (resource->IsTexture() && resource->UAV != VK_NULL_HANDLE)
 						{
@@ -2755,128 +2755,59 @@ namespace wiGraphics
 
 			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 			{
-				// TextureCube, TextureCubeArray...
-				UINT slices = arraySize / 6;
-
+				// Create full-resource RTVs:
+				if (arraySize > 6)
+				{
+					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+				}
+				else
+				{
+					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+				}
+				rtv_desc.subresourceRange.baseArrayLayer = 0;
+				rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 				rtv_desc.subresourceRange.baseMipLevel = 0;
 				rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
 
-				if (pTexture2D->independentRTVCubemapFaces)
-				{
-					// independent faces
-					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-					for (UINT i = 0; i < arraySize; ++i)
-					{
-						rtv_desc.subresourceRange.baseArrayLayer = i;
-						rtv_desc.subresourceRange.layerCount = 1;
-
-						pTexture2D->additionalRTVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalRTVs.back()));
-						assert(res == VK_SUCCESS);
-					}
-				}
-				else if (pTexture2D->independentRTVArraySlices)
-				{
-					// independent cubemaps
-					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-
-					for (UINT i = 0; i < slices; ++i)
-					{
-						rtv_desc.subresourceRange.baseArrayLayer = i * 6;
-						rtv_desc.subresourceRange.layerCount = 6;
-
-						pTexture2D->additionalRTVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalRTVs.back()));
-						assert(res == VK_SUCCESS);
-					}
-				}
-
-				{
-					// Create full-resource RTVs:
-					if (arraySize > 6)
-					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-					}
-					else
-					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-					}
-					rtv_desc.subresourceRange.baseArrayLayer = 0;
-					rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-					rtv_desc.subresourceRange.baseMipLevel = 0;
-					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
-
-					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->RTV));
-					hr = res == VK_SUCCESS;
-					assert(SUCCEEDED(hr));
-				}
+				res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->RTV));
+				hr = res == VK_SUCCESS;
+				assert(SUCCEEDED(hr));
 			}
 			else
 			{
-				if (arraySize > 1 && pTexture2D->independentRTVArraySlices)
+				// Create full-resource RTV:
+
+				if (arraySize > 1)
 				{
 					if (multisampled)
 					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MS?
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+					}
+					else
+					{
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					}
+				}
+				else
+				{
+					if (multisampled)
+					{
+						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
 					}
 					else
 					{
 						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 					}
-					rtv_desc.subresourceRange.baseMipLevel = 0;
-					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
-
-					UINT slices = arraySize;
-
-					// independent slices
-					for (UINT i = 0; i < slices; ++i)
-					{
-						rtv_desc.subresourceRange.baseArrayLayer = i;
-						rtv_desc.subresourceRange.layerCount = 1;
-
-						pTexture2D->additionalRTVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalRTVs.back()));
-						assert(res == VK_SUCCESS);
-					}
 				}
 
-				{
-					// Create full-resource RTV:
+				rtv_desc.subresourceRange.baseArrayLayer = 0;
+				rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
+				rtv_desc.subresourceRange.baseMipLevel = 0;
+				rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
 
-					if (arraySize > 1)
-					{
-						if (multisampled)
-						{
-							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-						}
-						else
-						{
-							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-						}
-					}
-					else
-					{
-						if (multisampled)
-						{
-							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
-						}
-						else
-						{
-							rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-						}
-					}
-
-					rtv_desc.subresourceRange.baseArrayLayer = 0;
-					rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-					rtv_desc.subresourceRange.baseMipLevel = 0;
-					rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
-
-					res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->RTV));
-					hr = res == VK_SUCCESS;
-					assert(SUCCEEDED(hr));
-				}
-
+				res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->RTV));
+				hr = res == VK_SUCCESS;
+				assert(SUCCEEDED(hr));
 			}
 		}
 
@@ -2917,128 +2848,56 @@ namespace wiGraphics
 
 			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 			{
-				// TextureCube, TextureCubeArray...
-				UINT slices = arraySize / 6;
-
+				if (arraySize > 6)
+				{
+					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+				}
+				else
+				{
+					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+				}
+				dsv_desc.subresourceRange.baseArrayLayer = 0;
+				dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 				dsv_desc.subresourceRange.baseMipLevel = 0;
 				dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
 
-				if (pTexture2D->independentRTVCubemapFaces)
-				{
-					// independent faces
-					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-					for (UINT i = 0; i < arraySize; ++i)
-					{
-						dsv_desc.subresourceRange.baseArrayLayer = i;
-						dsv_desc.subresourceRange.layerCount = 1;
-
-						pTexture2D->additionalDSVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalDSVs.back()));
-						assert(res == VK_SUCCESS);
-					}
-				}
-				else if (pTexture2D->independentRTVArraySlices)
-				{
-					// independent cubemaps
-					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-
-					for (UINT i = 0; i < slices; ++i)
-					{
-						dsv_desc.subresourceRange.baseArrayLayer = i * 6;
-						dsv_desc.subresourceRange.layerCount = 6;
-
-						pTexture2D->additionalDSVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalDSVs.back()));
-						assert(res == VK_SUCCESS);
-					}
-				}
-
-				{
-					// Create full-resource RTVs:
-					if (arraySize > 6)
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-					}
-					else
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-					}
-					dsv_desc.subresourceRange.baseArrayLayer = 0;
-					dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-					dsv_desc.subresourceRange.baseMipLevel = 0;
-					dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
-
-					res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
-					hr = res == VK_SUCCESS;
-					assert(SUCCEEDED(hr));
-				}
+				res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
+				hr = res == VK_SUCCESS;
+				assert(SUCCEEDED(hr));
 			}
 			else
 			{
-				if (arraySize > 1 && pTexture2D->independentRTVArraySlices)
+				if (arraySize > 1)
 				{
 					if (multisampled)
 					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MS?
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
+					}
+					else
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+					}
+				}
+				else
+				{
+					if (multisampled)
+					{
+						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
 					}
 					else
 					{
 						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 					}
-					dsv_desc.subresourceRange.baseMipLevel = 0;
-					dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
-
-					UINT slices = arraySize;
-
-					// independent slices
-					for (UINT i = 0; i < slices; ++i)
-					{
-						dsv_desc.subresourceRange.baseArrayLayer = i;
-						dsv_desc.subresourceRange.layerCount = 1;
-
-						pTexture2D->additionalDSVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalDSVs.back()));
-						assert(res == VK_SUCCESS);
-					}
 				}
 
-				{
-					// Create full-resource RTV:
+				dsv_desc.subresourceRange.baseArrayLayer = 0;
+				dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
+				dsv_desc.subresourceRange.baseMipLevel = 0;
+				dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
 
-					if (arraySize > 1)
-					{
-						if (multisampled)
-						{
-							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-						}
-						else
-						{
-							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-						}
-					}
-					else
-					{
-						if (multisampled)
-						{
-							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
-						}
-						else
-						{
-							dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-						}
-					}
-
-					dsv_desc.subresourceRange.baseArrayLayer = 0;
-					dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-					dsv_desc.subresourceRange.baseMipLevel = 0;
-					dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
-
-					res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
-					hr = res == VK_SUCCESS;
-					assert(SUCCEEDED(hr));
-				}
-
+				res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
+				hr = res == VK_SUCCESS;
+				assert(SUCCEEDED(hr));
 			}
 		}
 
@@ -3084,75 +2943,6 @@ namespace wiGraphics
 				break;
 			}
 
-
-			if (arraySize > 1)
-			{
-				if (pTexture2D->independentSRVArraySlices)
-				{
-					if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-					{
-						UINT slices = arraySize / 6;
-
-						// independent cubemaps
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-
-						for (UINT i = 0; i < slices; ++i)
-						{
-							srv_desc.subresourceRange.baseArrayLayer = i * 6;
-							srv_desc.subresourceRange.layerCount = 6;
-
-							pTexture2D->additionalSRVs.push_back(VK_NULL_HANDLE);
-							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalSRVs.back()));
-							assert(res == VK_SUCCESS);
-						}
-					}
-					else
-					{
-						UINT slices = arraySize;
-
-						// independent slices
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-						for (UINT i = 0; i < slices; ++i)
-						{
-							srv_desc.subresourceRange.baseArrayLayer = i;
-							srv_desc.subresourceRange.layerCount = 1;
-
-							pTexture2D->additionalSRVs.push_back(VK_NULL_HANDLE);
-							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalSRVs.back()));
-							assert(res == VK_SUCCESS);
-						}
-					}
-				}
-			}
-			else
-			{
-				if (multisampled)
-				{
-					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
-				}
-				else
-				{
-					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-					if (pTexture2D->independentSRVMIPs)
-					{
-						// Create subresource SRVs:
-						UINT miplevels = pTexture2D->desc.MipLevels;
-						for (UINT i = 0; i < miplevels; ++i)
-						{
-							srv_desc.subresourceRange.baseMipLevel = i;
-							srv_desc.subresourceRange.levelCount = 1;
-
-							pTexture2D->additionalSRVs.push_back(VK_NULL_HANDLE);
-							res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalSRVs.back()));
-							assert(res == VK_SUCCESS);
-						}
-					}
-				}
-			}
-
-			// Create full-resource SRV:
 			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 			{
 				if (arraySize > 6)
@@ -3213,51 +3003,6 @@ namespace wiGraphics
 
 			uav_desc.format = _ConvertFormat(pTexture2D->desc.Format);
 
-
-			if (arraySize > 1)
-			{
-				uav_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-				uav_desc.subresourceRange.baseArrayLayer = 0;
-				uav_desc.subresourceRange.layerCount = arraySize;
-				uav_desc.subresourceRange.levelCount = 1;
-
-				if (pTexture2D->independentUAVMIPs)
-				{
-					// Create subresource SRVs:
-					UINT miplevels = pTexture2D->desc.MipLevels;
-					for (UINT i = 0; i < miplevels; ++i)
-					{
-						uav_desc.subresourceRange.baseMipLevel = i;
-
-						pTexture2D->additionalUAVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &uav_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalUAVs.back()));
-						assert(res == VK_SUCCESS);
-					}
-				}
-			}
-			else
-			{
-				uav_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				uav_desc.subresourceRange.baseArrayLayer = 0;
-				uav_desc.subresourceRange.layerCount = 1;
-				uav_desc.subresourceRange.levelCount = 1;
-
-				if (pTexture2D->independentUAVMIPs)
-				{
-					// Create subresource SRVs:
-					UINT miplevels = pTexture2D->desc.MipLevels;
-					for (UINT i = 0; i < miplevels; ++i)
-					{
-						uav_desc.subresourceRange.baseMipLevel = i;
-
-						pTexture2D->additionalUAVs.push_back(VK_NULL_HANDLE);
-						res = vkCreateImageView(device, &uav_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->additionalUAVs.back()));
-						assert(res == VK_SUCCESS);
-					}
-				}
-			}
-
-			// Create full-resource UAV:
 			uav_desc.subresourceRange.baseArrayLayer = 0;
 			uav_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
 			uav_desc.subresourceRange.baseMipLevel = 0;
@@ -4100,6 +3845,23 @@ namespace wiGraphics
 		return hr;
 	}
 
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
+	{
+		switch (type)
+		{
+		case wiGraphics::SRV:
+			break;
+		case wiGraphics::UAV:
+			break;
+		case wiGraphics::RTV:
+			break;
+		case wiGraphics::DSV:
+			break;
+		default:
+			break;
+		}
+		return -1;
+	}
 
 	void GraphicsDevice_Vulkan::DestroyResource(GPUResource* pResource)
 	{
@@ -4113,19 +3875,19 @@ namespace wiGraphics
 
 		DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, pBuffer->SRV });
 		pBuffer->SRV = WI_NULL_HANDLE;
-		for (auto& x : pBuffer->additionalSRVs)
+		for (auto& x : pBuffer->subresourceSRVs)
 		{
 			DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, x });
 		}
-		pBuffer->additionalSRVs.clear();
+		pBuffer->subresourceSRVs.clear();
 
 		DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, pBuffer->UAV });
 		pBuffer->UAV = WI_NULL_HANDLE;
-		for (auto& x : pBuffer->additionalUAVs)
+		for (auto& x : pBuffer->subresourceUAVs)
 		{
 			DeferredDestroy({ DestroyItem::BUFFERVIEW, FRAMECOUNT, x });
 		}
-		pBuffer->additionalUAVs.clear();
+		pBuffer->subresourceUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture1D(Texture1D *pTexture1D)
 	{
@@ -4134,27 +3896,27 @@ namespace wiGraphics
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->RTV });
 		pTexture1D->RTV = WI_NULL_HANDLE;
-		for (auto& x : pTexture1D->additionalRTVs)
+		for (auto& x : pTexture1D->subresourceRTVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture1D->additionalRTVs.clear();
+		pTexture1D->subresourceRTVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->SRV });
 		pTexture1D->SRV = WI_NULL_HANDLE;
-		for (auto& x : pTexture1D->additionalSRVs)
+		for (auto& x : pTexture1D->subresourceSRVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture1D->additionalSRVs.clear();
+		pTexture1D->subresourceSRVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture1D->UAV });
 		pTexture1D->UAV = WI_NULL_HANDLE;
-		for (auto& x : pTexture1D->additionalUAVs)
+		for (auto& x : pTexture1D->subresourceUAVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture1D->additionalUAVs.clear();
+		pTexture1D->subresourceUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture2D(Texture2D *pTexture2D)
 	{
@@ -4163,35 +3925,35 @@ namespace wiGraphics
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->RTV });
 		pTexture2D->RTV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->additionalRTVs)
+		for (auto& x : pTexture2D->subresourceRTVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture2D->additionalRTVs.clear();
+		pTexture2D->subresourceRTVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->DSV });
 		pTexture2D->DSV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->additionalDSVs)
+		for (auto& x : pTexture2D->subresourceDSVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture2D->additionalDSVs.clear();
+		pTexture2D->subresourceDSVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->SRV });
 		pTexture2D->SRV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->additionalSRVs)
+		for (auto& x : pTexture2D->subresourceSRVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture2D->additionalSRVs.clear();
+		pTexture2D->subresourceSRVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture2D->UAV });
 		pTexture2D->UAV = WI_NULL_HANDLE;
-		for (auto& x : pTexture2D->additionalUAVs)
+		for (auto& x : pTexture2D->subresourceUAVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture2D->additionalUAVs.clear();
+		pTexture2D->subresourceUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyTexture3D(Texture3D *pTexture3D)
 	{
@@ -4200,27 +3962,27 @@ namespace wiGraphics
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->RTV });
 		pTexture3D->RTV = WI_NULL_HANDLE;
-		for (auto& x : pTexture3D->additionalRTVs)
+		for (auto& x : pTexture3D->subresourceRTVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture3D->additionalRTVs.clear();
+		pTexture3D->subresourceRTVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->SRV });
 		pTexture3D->SRV = WI_NULL_HANDLE;
-		for (auto& x : pTexture3D->additionalSRVs)
+		for (auto& x : pTexture3D->subresourceSRVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture3D->additionalSRVs.clear();
+		pTexture3D->subresourceSRVs.clear();
 
 		DeferredDestroy({ DestroyItem::IMAGEVIEW, pTexture3D->UAV });
 		pTexture3D->UAV = WI_NULL_HANDLE;
-		for (auto& x : pTexture3D->additionalUAVs)
+		for (auto& x : pTexture3D->subresourceUAVs)
 		{
 			DeferredDestroy({ DestroyItem::IMAGEVIEW, x });
 		}
-		pTexture3D->additionalUAVs.clear();
+		pTexture3D->subresourceUAVs.clear();
 	}
 	void GraphicsDevice_Vulkan::DestroyInputLayout(VertexLayout *pInputLayout)
 	{
@@ -4640,14 +4402,14 @@ namespace wiGraphics
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs.empty())
+			if (arrayIndex < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
 			{
 				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
 			}
 			else
 			{
-				assert(ppRenderTargets[i]->additionalRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->additionalRTVs[arrayIndex];
+				assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->subresourceRTVs[arrayIndex];
 			}
 
 			renderPass[cmd].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
@@ -4658,14 +4420,14 @@ namespace wiGraphics
 
 		if (depthStencilTexture != nullptr)
 		{
-			if (arrayIndex < 0 || depthStencilTexture->additionalDSVs.empty())
+			if (arrayIndex < 0 || depthStencilTexture->subresourceDSVs.empty())
 			{
 				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
 			}
 			else
 			{
-				assert(depthStencilTexture->additionalDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->additionalDSVs[arrayIndex];
+				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
+				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->subresourceDSVs[arrayIndex];
 			}
 			renderPass[cmd].attachmentCount++;
 
@@ -4681,14 +4443,14 @@ namespace wiGraphics
 	{
 		RenderPassManager::ClearRequest clear;
 
-		if (arrayIndex < 0 || pTexture->additionalRTVs.empty())
+		if (arrayIndex < 0 || pTexture->subresourceRTVs.empty())
 		{
 			clear.attachment = (VkImageView)pTexture->RTV;
 		}
 		else
 		{
-			assert(pTexture->additionalRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-			clear.attachment = (VkImageView)pTexture->additionalRTVs[arrayIndex];
+			assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+			clear.attachment = (VkImageView)pTexture->subresourceRTVs[arrayIndex];
 		}
 		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
 
@@ -4698,14 +4460,14 @@ namespace wiGraphics
 	{
 		RenderPassManager::ClearRequest clear;
 
-		if (arrayIndex < 0 || pTexture->additionalDSVs.empty())
+		if (arrayIndex < 0 || pTexture->subresourceDSVs.empty())
 		{
 			clear.attachment = (VkImageView)pTexture->DSV;
 		}
 		else
 		{
-			assert(pTexture->additionalDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-			clear.attachment = (VkImageView)pTexture->additionalDSVs[arrayIndex];
+			assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
+			clear.attachment = (VkImageView)pTexture->subresourceDSVs[arrayIndex];
 		}
 		clear.clearValue.depthStencil.depth = Depth;
 		clear.clearValue.depthStencil.stencil = Stencil;

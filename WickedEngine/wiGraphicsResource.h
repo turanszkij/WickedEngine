@@ -98,11 +98,11 @@ namespace wiGraphics
 		inline bool IsTexture() const { return type == TEXTURE_1D || type == TEXTURE_2D || type == TEXTURE_3D; }
 		inline bool IsBuffer() const { return type == BUFFER; }
 
-		wiCPUHandle SRV = WI_NULL_HANDLE;			// main resource SRV
-		std::vector<wiCPUHandle> additionalSRVs;	// can be used for sub-resources if requested
+		wiCPUHandle SRV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceSRVs;
 
-		wiCPUHandle UAV = WI_NULL_HANDLE;			// main resource UAV
-		std::vector<wiCPUHandle> additionalUAVs;	// can be used for sub-resources if requested
+		wiCPUHandle UAV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceUAVs;
 
 		wiCPUHandle resource = WI_NULL_HANDLE;
 		wiCPUHandle resourceMemory = WI_NULL_HANDLE;
@@ -163,25 +163,9 @@ namespace wiGraphics
 	{
 		TextureDesc	desc;
 		wiCPUHandle	RTV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> additionalRTVs;
-		bool independentRTVArraySlices = false;
-		bool independentRTVCubemapFaces = false;
-		bool independentSRVArraySlices = false;
-		bool independentSRVMIPs = false;
-		bool independentUAVMIPs = false;
+		std::vector<wiCPUHandle> subresourceRTVs;
 
 		const TextureDesc& GetDesc() const { return desc; }
-
-		// if true, then each array slice will get a unique rendertarget
-		void RequestIndependentRenderTargetArraySlices(bool value);
-		// if true, then each face of the cubemap will get a unique rendertarget
-		void RequestIndependentRenderTargetCubemapFaces(bool value);
-		// if true, then each array slice will get a unique shader resource
-		void RequestIndependentShaderResourceArraySlices(bool value);
-		// if true, then each miplevel will get unique shader resource
-		void RequestIndependentShaderResourcesForMIPs(bool value);
-		// if true, then each miplevel will get unique unordered access resource
-		void RequestIndependentUnorderedAccessResourcesForMIPs(bool value);
 	};
 
 	struct Texture1D : public Texture
@@ -192,7 +176,7 @@ namespace wiGraphics
 	struct Texture2D : public Texture
 	{
 		wiCPUHandle	DSV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> additionalDSVs;
+		std::vector<wiCPUHandle> subresourceDSVs;
 
 		virtual ~Texture2D();
 	};

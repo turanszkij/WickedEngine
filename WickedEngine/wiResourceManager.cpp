@@ -237,6 +237,8 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 
 				if (rgb != nullptr)
 				{
+					GraphicsDevice* device = wiRenderer::GetDevice();
+
 					TextureDesc desc;
 					desc.ArraySize = 1;
 					desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -258,11 +260,18 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 					}
 
 					Texture2D* image = new Texture2D;
-					image->RequestIndependentShaderResourcesForMIPs(true);
-					image->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-					HRESULT hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, InitData.data(), image);
+					HRESULT hr = device->CreateTexture2D(&desc, InitData.data(), image);
 					assert(SUCCEEDED(hr));
-					wiRenderer::GetDevice()->SetName(image, nameStr);
+					device->SetName(image, nameStr);
+
+					for (UINT i = 0; i < image->GetDesc().MipLevels; ++i)
+					{
+						int subresource_index;
+						subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
+						assert(subresource_index == i);
+						subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
+						assert(subresource_index == i);
+					}
 
 					if (image != nullptr && image->GetDesc().MipLevels > 1)
 					{

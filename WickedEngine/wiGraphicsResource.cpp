@@ -107,27 +107,6 @@ namespace wiGraphics
 		}
 	}
 
-	void Texture::RequestIndependentRenderTargetArraySlices(bool value)
-	{
-		independentRTVArraySlices = value;
-	}
-	void Texture::RequestIndependentRenderTargetCubemapFaces(bool value)
-	{
-		independentRTVCubemapFaces = value;
-	}
-	void Texture::RequestIndependentShaderResourceArraySlices(bool value)
-	{
-		independentSRVArraySlices = value;
-	}
-	void Texture::RequestIndependentShaderResourcesForMIPs(bool value)
-	{
-		independentSRVMIPs = value;
-	}
-	void Texture::RequestIndependentUnorderedAccessResourcesForMIPs(bool value)
-	{
-		independentUAVMIPs = value;
-	}
-
 	Texture1D::~Texture1D()
 	{
 		if (device != nullptr)

@@ -49,6 +49,8 @@ namespace wiGraphics
 		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
 		virtual HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;
 
+		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount = 1, UINT firstMip = 0, UINT mipCount = 0) = 0;
+
 
 		virtual void DestroyResource(GPUResource* pResource) = 0;
 		virtual void DestroyBuffer(GPUBuffer *pBuffer) = 0;

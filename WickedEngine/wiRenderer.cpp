@@ -4936,8 +4936,7 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 	if (SHADOWCOUNT_2D > 0 && SHADOWRES_2D > 0)
 	{
-		shadowMapArray_2D.RequestIndependentRenderTargetArraySlices(true);
-		shadowMapArray_Transparent.RequestIndependentRenderTargetArraySlices(true);
+		GraphicsDevice* device = GetDevice();
 
 		TextureDesc desc;
 		desc.Width = SHADOWRES_2D;
@@ -4952,11 +4951,20 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = DSFormat_small_alias;
-		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
+		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_2D);
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = RTFormat_ldr;
-		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+
+		for (UINT i = 0; i < desc.ArraySize; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&shadowMapArray_2D, DSV, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent, RTV, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 
 }
@@ -4973,8 +4981,7 @@ void SetShadowPropsCube(int resolution, int count)
 
 	if (SHADOWCOUNT_CUBE > 0 && SHADOWRES_CUBE > 0)
 	{
-		shadowMapArray_Cube.RequestIndependentRenderTargetArraySlices(true);
-		shadowMapArray_Cube.RequestIndependentRenderTargetCubemapFaces(false);
+		GraphicsDevice* device = GetDevice();
 
 		TextureDesc desc;
 		desc.Width = SHADOWRES_CUBE;
@@ -4988,7 +4995,14 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.CPUAccessFlags = 0;
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		GetDevice()->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
+		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
+
+		for (UINT i = 0; i < desc.ArraySize; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, DSV, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 
 }
@@ -6236,16 +6250,29 @@ void RefreshEnvProbes(CommandList cmd)
 		desc.Height = envmapRes;
 		desc.Width = envmapRes;
 		desc.MipLevels = envmapMIPs;
-		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE /*| RESOURCE_MISC_GENERATE_MIPS*/;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		desc.Usage = USAGE_DEFAULT;
 
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
-		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentRenderTargetArraySlices(true);
-		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourceArraySlices(true);
-		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentShaderResourcesForMIPs(true);
-		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
+
+		for (UINT i = 0; i < envmapCount; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i, 6);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i, 6);
+			assert(subresource_index == i);
+		}
+		for (UINT i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, 0, desc.ArraySize, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], UAV, 0, desc.ArraySize, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 
 	static std::unique_ptr<Texture2D> envrenderingDepthBuffer;
@@ -6473,10 +6500,16 @@ void RefreshImpostors(CommandList cmd)
 			desc.MiscFlags = 0;
 
 			textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
-			textures[TEXTYPE_2D_IMPOSTORARRAY]->RequestIndependentRenderTargetArraySlices(true);
 			HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
 			assert(SUCCEEDED(hr));
 			device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
+
+			for (UINT i = 0; i < desc.ArraySize; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1);
+				assert(subresource_index == i);
+			}
 
 			desc.BindFlags = BIND_DEPTH_STENCIL;
 			desc.ArraySize = 1;
@@ -6647,19 +6680,33 @@ void VoxelRadiance(CommandList cmd)
 		desc.MiscFlags = 0;
 
 		textures[TEXTYPE_3D_VOXELRADIANCE] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentShaderResourcesForMIPs(true);
-		textures[TEXTYPE_3D_VOXELRADIANCE]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
+
+		for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE], SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE], UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
 		TextureDesc desc = ((Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE])->GetDesc();
 		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] = new Texture3D;
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentShaderResourcesForMIPs(true);
-		textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->RequestIndependentUnorderedAccessResourcesForMIPs(true);
 		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
+
+		for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
 	}
 	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
 	{
@@ -7692,10 +7739,15 @@ void ManageDecalAtlas()
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 
-			decalAtlas.RequestIndependentUnorderedAccessResourcesForMIPs(true);
-
 			device->CreateTexture2D(&desc, nullptr, &decalAtlas);
 			device->SetName(&decalAtlas, "decalAtlas");
+
+			for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&decalAtlas, UAV, 0, 1, i, 1);
+				assert(subresource_index == i);
+			}
 		}
 		else
 		{

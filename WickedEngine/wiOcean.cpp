@@ -87,7 +87,8 @@ void createBufferAndUAV(void* data, UINT byte_width, UINT byte_stride, GPUBuffer
 
 void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D* pTex)
 {
-	// Create 2D texture
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	TextureDesc tex_desc;
 	tex_desc.Width = width;
 	tex_desc.Height = height;
@@ -100,10 +101,16 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D* pT
 	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS | BIND_RENDER_TARGET;
 	tex_desc.CPUAccessFlags = 0;
 
-	pTex->RequestIndependentShaderResourcesForMIPs(true);
-	pTex->RequestIndependentUnorderedAccessResourcesForMIPs(true);
-	wiRenderer::GetDevice()->CreateTexture2D(&tex_desc, nullptr, pTex);
+	device->CreateTexture2D(&tex_desc, nullptr, pTex);
 
+	for (UINT i = 0; i < pTex->GetDesc().MipLevels; ++i)
+	{
+		int subresource_index;
+		subresource_index = device->CreateSubresource(pTex, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(pTex, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+	}
 }
 
 

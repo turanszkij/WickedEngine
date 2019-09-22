@@ -1411,11 +1411,11 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const Sub
 		}
 	}
 
-	HRESULT hr = S_OK;
+	HRESULT hr;
 
 	hr = device->CreateTexture1D(&desc, data, (ID3D11Texture1D**)&(pTexture1D->resource));
 	SAFE_DELETE_ARRAY(data);
-	assert(SUCCEEDED(hr) && "Texture1D creation failed!");
+	assert(SUCCEEDED(hr));
 	if (FAILED(hr))
 		return hr;
 
@@ -1424,20 +1424,15 @@ HRESULT GraphicsDevice_DX11::CreateTexture1D(const TextureDesc* pDesc, const Sub
 		pTexture1D->desc.MipLevels = (UINT)log2(pTexture1D->desc.Width);
 	}
 
-	CreateShaderResourceView(pTexture1D);
-
+	if (pTexture1D->desc.BindFlags & BIND_SHADER_RESOURCE)
+	{
+		hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture1D->resource, nullptr, (ID3D11ShaderResourceView**)&pTexture1D->SRV);
+		assert(SUCCEEDED(hr));
+	}
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		assert(pTexture1D->independentRTVArraySlices == false && "TextureArray UAV not implemented!");
-
-		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
-		ZeroMemory(&uav_desc, sizeof(uav_desc));
-		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE1D;
-		uav_desc.Texture2D.MipSlice = 0;
-
-		hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture1D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture1D->UAV);
-
-		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture1D could not be created!");
+		hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture1D->resource, nullptr, (ID3D11UnorderedAccessView**)&pTexture1D->UAV);
+		assert(SUCCEEDED(hr));
 	}
 
 	return hr;
@@ -1465,11 +1460,11 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 	D3D11_TEXTURE2D_DESC desc = _ConvertTextureDesc2D(&pTexture2D->desc);
 
-	D3D11_SUBRESOURCE_DATA* data = nullptr;
+	std::vector<D3D11_SUBRESOURCE_DATA> data;
 	if (pInitialData != nullptr)
 	{
 		UINT dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
-		data = new D3D11_SUBRESOURCE_DATA[dataCount];
+		data.resize(dataCount);
 		for (UINT slice = 0; slice < dataCount; ++slice)
 		{
 			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
@@ -1478,9 +1473,8 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 
 	HRESULT hr = S_OK;
 	
-	hr = device->CreateTexture2D(&desc, data, (ID3D11Texture2D**)&(pTexture2D->resource));
-	assert(SUCCEEDED(hr) && "Texture2D creation failed!");
-	SAFE_DELETE_ARRAY(data);
+	hr = device->CreateTexture2D(&desc, data.data(), (ID3D11Texture2D**)&(pTexture2D->resource));
+	assert(SUCCEEDED(hr));
 	if (FAILED(hr))
 		return hr;
 
@@ -1489,71 +1483,25 @@ HRESULT GraphicsDevice_DX11::CreateTexture2D(const TextureDesc* pDesc, const Sub
 		pTexture2D->desc.MipLevels = (UINT)log2(std::max(pTexture2D->desc.Width, pTexture2D->desc.Height));
 	}
 
-	CreateRenderTargetView(pTexture2D);
-	CreateShaderResourceView(pTexture2D);
-	CreateDepthStencilView(pTexture2D);
-
-
+	if (desc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	{
+		hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture2D->resource, nullptr, (ID3D11RenderTargetView**)&pTexture2D->RTV);
+		assert(SUCCEEDED(hr));
+	}
+	if (desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
+	{
+		hr = device->CreateDepthStencilView((ID3D11Resource*)pTexture2D->resource, nullptr, (ID3D11DepthStencilView**)&pTexture2D->DSV);
+		assert(SUCCEEDED(hr));
+	}
+	if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	{
+		hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture2D->resource, nullptr, (ID3D11ShaderResourceView**)&pTexture2D->SRV);
+		assert(SUCCEEDED(hr));
+	}
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-
-		if (desc.ArraySize > 1)
-		{
-			D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
-			ZeroMemory(&uav_desc, sizeof(uav_desc));
-			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-			uav_desc.Texture2DArray.FirstArraySlice = 0;
-			uav_desc.Texture2DArray.ArraySize = desc.ArraySize;
-			uav_desc.Texture2DArray.MipSlice = 0;
-
-			if (pTexture2D->independentUAVMIPs)
-			{
-				// Create subresource UAVs:
-				UINT miplevels = pTexture2D->desc.MipLevels;
-				for (UINT i = 0; i < miplevels; ++i)
-				{
-					uav_desc.Texture2DArray.MipSlice = i;
-
-					pTexture2D->additionalUAVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->additionalUAVs[i]);
-					assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
-				}
-			}
-
-			{
-				// Create main resource UAV:
-				uav_desc.Texture2DArray.MipSlice = 0;
-				hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->UAV);
-			}
-		}
-		else
-		{
-			D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
-			ZeroMemory(&uav_desc, sizeof(uav_desc));
-			uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-
-			if (pTexture2D->independentUAVMIPs)
-			{
-				// Create subresource UAVs:
-				UINT miplevels = pTexture2D->desc.MipLevels;
-				for (UINT i = 0; i < miplevels; ++i)
-				{
-					uav_desc.Texture2D.MipSlice = i;
-
-					pTexture2D->additionalUAVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->additionalUAVs[i]);
-					assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
-				}
-			}
-
-			{
-				// Create main resource UAV:
-				uav_desc.Texture2D.MipSlice = 0;
-				hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture2D->UAV);
-			}
-		}
-
-		assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture2D could not be created!");
+		hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture2D->resource, nullptr, (ID3D11UnorderedAccessView**)&pTexture2D->UAV);
+		assert(SUCCEEDED(hr));
 	}
 
 	return hr;
@@ -1569,21 +1517,19 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 
 	D3D11_TEXTURE3D_DESC desc = _ConvertTextureDesc3D(&pTexture3D->desc);
 
-	D3D11_SUBRESOURCE_DATA* data = nullptr;
+	D3D11_SUBRESOURCE_DATA data;
 	if (pInitialData != nullptr)
 	{
-		data = new D3D11_SUBRESOURCE_DATA[1];
 		for (UINT slice = 0; slice < 1; ++slice)
 		{
-			data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+			data = _ConvertSubresourceData(pInitialData[slice]);
 		}
 	}
 
 	HRESULT hr = S_OK;
 
-	hr = device->CreateTexture3D(&desc, data, (ID3D11Texture3D**)&(pTexture3D->resource));
-	SAFE_DELETE_ARRAY(data);
-	assert(SUCCEEDED(hr) && "Texture3D creation failed!");
+	hr = device->CreateTexture3D(&desc, &data, (ID3D11Texture3D**)&(pTexture3D->resource));
+	assert(SUCCEEDED(hr));
 	if (FAILED(hr))
 		return hr;
 
@@ -1592,652 +1538,21 @@ HRESULT GraphicsDevice_DX11::CreateTexture3D(const TextureDesc* pDesc, const Sub
 		pTexture3D->desc.MipLevels = (UINT)log2(std::max(pTexture3D->desc.Width, std::max(pTexture3D->desc.Height, pTexture3D->desc.Depth)));
 	}
 
-	CreateShaderResourceView(pTexture3D);
-	CreateRenderTargetView(pTexture3D);
 
-
+	if (desc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	{
+		hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture3D->resource, nullptr, (ID3D11RenderTargetView**)&pTexture3D->RTV);
+		assert(SUCCEEDED(hr));
+	}
+	if (desc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	{
+		hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture3D->resource, nullptr, (ID3D11ShaderResourceView**)&pTexture3D->SRV);
+		assert(SUCCEEDED(hr));
+	}
 	if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc;
-		ZeroMemory(&uav_desc, sizeof(uav_desc));
-		uav_desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
-		uav_desc.Texture3D.FirstWSlice = 0;
-
-		if (pTexture3D->independentUAVMIPs)
-		{
-			// Create subresource UAVs:
-			UINT miplevels = pTexture3D->desc.MipLevels;
-			uav_desc.Texture3D.WSize = desc.Depth;
-			for (UINT i = 0; i < miplevels; ++i)
-			{
-				uav_desc.Texture3D.MipSlice = i;
-
-				pTexture3D->additionalUAVs.push_back(WI_NULL_HANDLE);
-				hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture3D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture3D->additionalUAVs[i]);
-				assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture3D could not be created!");
-
-				uav_desc.Texture3D.WSize /= 2;
-			}
-		}
-
-		{
-			// Create main resource UAV:
-			uav_desc.Texture3D.MipSlice = 0;
-			uav_desc.Texture3D.WSize = desc.Depth;
-			hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture3D->resource, &uav_desc, (ID3D11UnorderedAccessView**)&pTexture3D->UAV);
-			assert(SUCCEEDED(hr) && "UnorderedAccessView of the Texture3D could not be created!");
-		}
-	}
-
-	return hr;
-}
-HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture1D* pTexture)
-{
-	if (pTexture->SRV != WI_NULL_HANDLE)
-	{
-		return E_FAIL;
-	}
-
-	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
-	{
-		UINT arraySize = pTexture->desc.ArraySize;
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
-		shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-
-		if (arraySize > 1)
-		{
-			shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1DARRAY;
-			shaderResourceViewDesc.Texture1DArray.FirstArraySlice = 0;
-			shaderResourceViewDesc.Texture1DArray.ArraySize = arraySize;
-			shaderResourceViewDesc.Texture1DArray.MostDetailedMip = 0; //from most detailed...
-			shaderResourceViewDesc.Texture1DArray.MipLevels = -1; //...to least detailed
-		}
-		else
-		{
-			shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
-			shaderResourceViewDesc.Texture1D.MostDetailedMip = 0; //from most detailed...
-			shaderResourceViewDesc.Texture1D.MipLevels = -1; //...to least detailed
-		}
-
-		hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->SRV);
-
-		assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-	}
-
-	return hr;
-}
-HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture2D* pTexture)
-{
-	if (pTexture->SRV != WI_NULL_HANDLE)
-	{
-		return E_FAIL;
-	}
-
-	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
-	{
-		UINT arraySize = pTexture->desc.ArraySize;
-		UINT sampleCount = pTexture->desc.SampleDesc.Count;
-		bool multisampled = sampleCount > 1;
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
-		// Try to resolve shader resource format:
-		switch (pTexture->desc.Format)
-		{
-		case FORMAT_R16_TYPELESS:
-			shaderResourceViewDesc.Format = DXGI_FORMAT_R16_UNORM;
-			break;
-		case FORMAT_R32_TYPELESS:
-			shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
-			break;
-		case FORMAT_R24G8_TYPELESS:
-			shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-			break;
-		case FORMAT_R32G8X24_TYPELESS:
-			shaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-			break;
-		default:
-			shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-			break;
-		}
-
-		if (arraySize > 1)
-		{
-			if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-			{
-				if (arraySize > 6)
-				{
-					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
-					shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = 0;
-					shaderResourceViewDesc.TextureCubeArray.NumCubes = arraySize / 6;
-					shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
-					shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
-				}
-				else
-				{
-					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-					shaderResourceViewDesc.TextureCube.MostDetailedMip = 0; //from most detailed...
-					shaderResourceViewDesc.TextureCube.MipLevels = -1; //...to least detailed
-				}
-			}
-			else
-			{
-				if (multisampled)
-				{
-					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
-					shaderResourceViewDesc.Texture2DMSArray.FirstArraySlice = 0;
-					shaderResourceViewDesc.Texture2DMSArray.ArraySize = arraySize;
-				}
-				else
-				{
-					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-					shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
-					shaderResourceViewDesc.Texture2DArray.ArraySize = arraySize;
-					shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
-					shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
-				}
-			}
-			hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->SRV);
-			assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-
-
-			if (pTexture->independentSRVMIPs)
-			{
-				if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-				{
-					// independent MIPs
-					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
-					shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = 0;
-					shaderResourceViewDesc.TextureCubeArray.NumCubes = arraySize / 6;
-
-					for (UINT j = 0; j < pTexture->desc.MipLevels; ++j)
-					{
-						shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = j;
-						shaderResourceViewDesc.TextureCubeArray.MipLevels = 1;
-
-						pTexture->additionalSRVs.push_back(WI_NULL_HANDLE);
-						hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->additionalSRVs.back());
-						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-					}
-				}
-				else
-				{
-					UINT slices = arraySize;
-
-					shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-					shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
-					shaderResourceViewDesc.Texture2DArray.ArraySize = pTexture->desc.ArraySize;
-
-					for (UINT j = 0; j < pTexture->desc.MipLevels; ++j)
-					{
-						shaderResourceViewDesc.Texture2DArray.MostDetailedMip = j;
-						shaderResourceViewDesc.Texture2DArray.MipLevels = 1;
-
-						pTexture->additionalSRVs.push_back(WI_NULL_HANDLE);
-						hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->additionalSRVs.back());
-						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-					}
-				}
-			}
-
-			if (pTexture->independentSRVArraySlices)
-			{
-				if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-				{
-					UINT slices = arraySize / 6;
-
-					// independent cubemaps
-					for (UINT i = 0; i < slices; ++i)
-					{
-						shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
-						shaderResourceViewDesc.TextureCubeArray.First2DArrayFace = i * 6;
-						shaderResourceViewDesc.TextureCubeArray.NumCubes = 1;
-						shaderResourceViewDesc.TextureCubeArray.MostDetailedMip = 0; //from most detailed...
-						shaderResourceViewDesc.TextureCubeArray.MipLevels = -1; //...to least detailed
-
-						pTexture->additionalSRVs.push_back(WI_NULL_HANDLE);
-						hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->additionalSRVs.back());
-						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-					}
-				}
-				else
-				{
-					UINT slices = arraySize;
-
-					// independent slices
-					for (UINT i = 0; i < slices; ++i)
-					{
-						if (multisampled)
-						{
-							shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
-							shaderResourceViewDesc.Texture2DMSArray.FirstArraySlice = i;
-							shaderResourceViewDesc.Texture2DMSArray.ArraySize = 1;
-						}
-						else
-						{
-							shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-							shaderResourceViewDesc.Texture2DArray.FirstArraySlice = i;
-							shaderResourceViewDesc.Texture2DArray.ArraySize = 1;
-							shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0; //from most detailed...
-							shaderResourceViewDesc.Texture2DArray.MipLevels = -1; //...to least detailed
-						}
-
-						pTexture->additionalSRVs.push_back(WI_NULL_HANDLE);
-						hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->additionalSRVs.back());
-						assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-					}
-				}
-
-			}
-
-		}
-		else
-		{
-			if (multisampled)
-			{
-				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
-				hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->SRV);
-				assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-			}
-			else
-			{
-				shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-
-				if (pTexture->independentSRVMIPs)
-				{
-					// Create subresource SRVs:
-					UINT miplevels = pTexture->desc.MipLevels;
-					for (UINT i = 0; i < miplevels; ++i)
-					{
-						shaderResourceViewDesc.Texture2D.MostDetailedMip = i;
-						shaderResourceViewDesc.Texture2D.MipLevels = 1;
-
-						pTexture->additionalSRVs.push_back(WI_NULL_HANDLE);
-						hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->additionalSRVs.back());
-						assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-					}
-				}
-
-				{
-					// Create full-resource SRV:
-					shaderResourceViewDesc.Texture2D.MostDetailedMip = 0; //from most detailed...
-					shaderResourceViewDesc.Texture2D.MipLevels = -1; //...to least detailed
-					hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->SRV);
-					assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-				}
-			}
-		}
-	}
-
-	return hr;
-}
-HRESULT GraphicsDevice_DX11::CreateShaderResourceView(Texture3D* pTexture)
-{
-	if (pTexture->SRV != WI_NULL_HANDLE)
-	{
-		return E_FAIL;
-	}
-
-	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
-	{
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-		ZeroMemory(&shaderResourceViewDesc, sizeof(shaderResourceViewDesc));
-		shaderResourceViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-		shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
-
-		if (pTexture->independentSRVMIPs)
-		{
-			// Create subresource SRVs:
-			UINT miplevels = pTexture->desc.MipLevels;
-			for (UINT i = 0; i < miplevels; ++i)
-			{
-				shaderResourceViewDesc.Texture3D.MostDetailedMip = i;
-				shaderResourceViewDesc.Texture3D.MipLevels = 1;
-
-				pTexture->additionalSRVs.push_back(WI_NULL_HANDLE);
-				hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->additionalSRVs[i]);
-				assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-			}
-		}
-
-		{
-			// Create full-resource SRV:
-			shaderResourceViewDesc.Texture3D.MostDetailedMip = 0; //from most detailed...
-			shaderResourceViewDesc.Texture3D.MipLevels = -1; //...to least detailed
-
-			hr = device->CreateShaderResourceView((ID3D11Resource*)pTexture->resource, &shaderResourceViewDesc, (ID3D11ShaderResourceView**)&pTexture->SRV);
-			assert(SUCCEEDED(hr) && "ShaderResourceView Creation failed!");
-		}
-
-	}
-
-	return hr;
-}
-HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture2D* pTexture)
-{
-	if (!pTexture->additionalRTVs.empty())
-	{
-		return E_FAIL;
-	}
-
-	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
-	{
-		UINT arraySize = pTexture->desc.ArraySize;
-		UINT sampleCount = pTexture->desc.SampleDesc.Count;
-		bool multisampled = sampleCount > 1;
-
-		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
-		ZeroMemory(&renderTargetViewDesc, sizeof(renderTargetViewDesc));
-		renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-		renderTargetViewDesc.Texture2DArray.MipSlice = 0;
-
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-		{
-			// TextureCube, TextureCubeArray...
-			UINT slices = arraySize / 6;
-
-			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-			renderTargetViewDesc.Texture2DArray.MipSlice = 0;
-
-			if (pTexture->independentRTVCubemapFaces)
-			{
-				// independent faces
-				for (UINT i = 0; i < arraySize; ++i)
-				{
-					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
-					renderTargetViewDesc.Texture2DArray.ArraySize = 1;
-
-					pTexture->additionalRTVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->additionalRTVs[i]);
-					assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-				}
-			}
-			else if (pTexture->independentRTVArraySlices)
-			{
-				// independent slices
-				for (UINT i = 0; i < slices; ++i)
-				{
-					renderTargetViewDesc.Texture2DArray.FirstArraySlice = i * 6;
-					renderTargetViewDesc.Texture2DArray.ArraySize = 6;
-
-					pTexture->additionalRTVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->additionalRTVs[i]);
-					assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-				}
-			}
-
-			{
-				// Create full-resource RTVs:
-				renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
-				renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
-
-				hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->RTV);
-				assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-			}
-		}
-		else
-		{
-			// Texture2D, Texture2DArray...
-			if (arraySize > 1 && pTexture->independentRTVArraySlices)
-			{
-				// Create subresource RTVs:
-				for (UINT i = 0; i < arraySize; ++i)
-				{
-					if (multisampled)
-					{
-						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
-						renderTargetViewDesc.Texture2DMSArray.FirstArraySlice = i;
-						renderTargetViewDesc.Texture2DMSArray.ArraySize = 1;
-					}
-					else
-					{
-						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-						renderTargetViewDesc.Texture2DArray.FirstArraySlice = i;
-						renderTargetViewDesc.Texture2DArray.ArraySize = 1;
-						renderTargetViewDesc.Texture2DArray.MipSlice = 0;
-					}
-
-					pTexture->additionalRTVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->additionalRTVs[i]);
-					assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-				}
-			}
-
-			{
-				// Create the full-resource RTV:
-				if (arraySize > 1)
-				{
-					if (multisampled)
-					{
-						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
-						renderTargetViewDesc.Texture2DMSArray.FirstArraySlice = 0;
-						renderTargetViewDesc.Texture2DMSArray.ArraySize = arraySize;
-					}
-					else
-					{
-						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-						renderTargetViewDesc.Texture2DArray.FirstArraySlice = 0;
-						renderTargetViewDesc.Texture2DArray.ArraySize = arraySize;
-						renderTargetViewDesc.Texture2DArray.MipSlice = 0;
-					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
-					}
-					else
-					{
-						renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-						renderTargetViewDesc.Texture2D.MipSlice = 0;
-					}
-				}
-
-				hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->RTV);
-				assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-			}
-		}
-	}
-
-	return hr;
-}
-HRESULT GraphicsDevice_DX11::CreateRenderTargetView(Texture3D* pTexture)
-{
-	if (!pTexture->additionalRTVs.empty())
-	{
-		return E_FAIL;
-	}
-
-	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
-	{
-
-		D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc;
-		ZeroMemory(&renderTargetViewDesc, sizeof(renderTargetViewDesc));
-		renderTargetViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-
-		if (pTexture->independentRTVArraySlices)
-		{
-			// Create Subresource RTVs:
-			for (UINT i = 0; i < pTexture->GetDesc().Depth; ++i)
-			{
-				renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
-				renderTargetViewDesc.Texture3D.MipSlice = 0;
-				renderTargetViewDesc.Texture3D.FirstWSlice = i;
-				renderTargetViewDesc.Texture3D.WSize = 1;
-
-				pTexture->additionalRTVs.push_back(WI_NULL_HANDLE);
-				hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->additionalRTVs[i]);
-			}
-		}
-
-		{
-			// Create full-resource RTV:
-			renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
-			renderTargetViewDesc.Texture3D.MipSlice = 0;
-			renderTargetViewDesc.Texture3D.FirstWSlice = 0;
-			renderTargetViewDesc.Texture3D.WSize = -1;
-
-			pTexture->additionalRTVs.push_back(WI_NULL_HANDLE);
-			hr = device->CreateRenderTargetView((ID3D11Resource*)pTexture->resource, &renderTargetViewDesc, (ID3D11RenderTargetView**)&pTexture->additionalRTVs[0]);
-		}
-
-		assert(SUCCEEDED(hr) && "RenderTargetView Creation failed!");
-	}
-
-	return hr;
-}
-HRESULT GraphicsDevice_DX11::CreateDepthStencilView(Texture2D* pTexture)
-{
-	if (!pTexture->additionalDSVs.empty())
-	{
-		return E_FAIL;
-	}
-
-	HRESULT hr = E_FAIL;
-	if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
-	{
-		UINT arraySize = pTexture->desc.ArraySize;
-		UINT sampleCount = pTexture->desc.SampleDesc.Count;
-		bool multisampled = sampleCount > 1;
-
-		D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-		ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-		depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-		depthStencilViewDesc.Flags = 0;
-
-		// Try to resolve depth stencil format:
-		switch (pTexture->desc.Format)
-		{
-		case FORMAT_R16_TYPELESS:
-			depthStencilViewDesc.Format = DXGI_FORMAT_D16_UNORM;
-			break;
-		case FORMAT_R32_TYPELESS:
-			depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
-			break;
-		case FORMAT_R24G8_TYPELESS:
-			depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-			break;
-		case FORMAT_R32G8X24_TYPELESS:
-			depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-			break;
-		default:
-			depthStencilViewDesc.Format = _ConvertFormat(pTexture->desc.Format);
-			break;
-		}
-
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-		{
-			// TextureCube, TextureCubeArray...
-			UINT slices = arraySize / 6;
-
-			depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-			depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-
-			if (pTexture->independentRTVCubemapFaces)
-			{
-				// independent faces
-				for (UINT i = 0; i < arraySize; ++i)
-				{
-					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
-					depthStencilViewDesc.Texture2DArray.ArraySize = 1;
-
-					pTexture->additionalDSVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateDepthStencilView((ID3D11Resource*)pTexture->resource, &depthStencilViewDesc, (ID3D11DepthStencilView**)&pTexture->additionalDSVs[i]);
-				}
-			}
-			else if (pTexture->independentRTVArraySlices)
-			{
-				// independent slices
-				for (UINT i = 0; i < slices; ++i)
-				{
-					depthStencilViewDesc.Texture2DArray.FirstArraySlice = i * 6;
-					depthStencilViewDesc.Texture2DArray.ArraySize = 6;
-
-					pTexture->additionalDSVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateDepthStencilView((ID3D11Resource*)pTexture->resource, &depthStencilViewDesc, (ID3D11DepthStencilView**)&pTexture->additionalDSVs[i]);
-				}
-			}
-
-			{
-				// Create full-resource DSV:
-				depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-				depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
-
-				hr = device->CreateDepthStencilView((ID3D11Resource*)pTexture->resource, &depthStencilViewDesc, (ID3D11DepthStencilView**)&pTexture->DSV);
-			}
-		}
-		else
-		{
-			// Texture2D, Texture2DArray...
-			if (arraySize > 1 && pTexture->independentRTVArraySlices)
-			{
-				// Create subresource DSVs:
-				for (UINT i = 0; i < arraySize; ++i)
-				{
-					if (multisampled)
-					{
-						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
-						depthStencilViewDesc.Texture2DMSArray.FirstArraySlice = i;
-						depthStencilViewDesc.Texture2DMSArray.ArraySize = 1;
-					}
-					else
-					{
-						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-						depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-						depthStencilViewDesc.Texture2DArray.FirstArraySlice = i;
-						depthStencilViewDesc.Texture2DArray.ArraySize = 1;
-					}
-
-					pTexture->additionalDSVs.push_back(WI_NULL_HANDLE);
-					hr = device->CreateDepthStencilView((ID3D11Resource*)pTexture->resource, &depthStencilViewDesc, (ID3D11DepthStencilView**)&pTexture->additionalDSVs[i]);
-				}
-			}
-			else
-			{
-				// Create full-resource DSV:
-				if (arraySize > 1)
-				{
-					if (multisampled)
-					{
-						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
-						depthStencilViewDesc.Texture2DMSArray.FirstArraySlice = 0;
-						depthStencilViewDesc.Texture2DMSArray.ArraySize = arraySize;
-					}
-					else
-					{
-						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-						depthStencilViewDesc.Texture2DArray.FirstArraySlice = 0;
-						depthStencilViewDesc.Texture2DArray.ArraySize = arraySize;
-						depthStencilViewDesc.Texture2DArray.MipSlice = 0;
-					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
-					}
-					else
-					{
-						depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-						depthStencilViewDesc.Texture2D.MipSlice = 0;
-					}
-				}
-
-				hr = device->CreateDepthStencilView((ID3D11Resource*)pTexture->resource, &depthStencilViewDesc, (ID3D11DepthStencilView**)&pTexture->DSV);
-			}
-		}
-
-		assert(SUCCEEDED(hr) && "DepthStencilView Creation failed!");
+		hr = device->CreateUnorderedAccessView((ID3D11Resource*)pTexture3D->resource, nullptr, (ID3D11UnorderedAccessView**)&pTexture3D->UAV);
+		assert(SUCCEEDED(hr));
 	}
 
 	return hr;
@@ -2527,6 +1842,119 @@ HRESULT GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc,
 	return S_OK;
 }
 
+int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
+{
+	switch (type)
+	{
+	case wiGraphics::SRV:
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+
+		// Try to resolve shader resource format:
+		switch (texture->desc.Format)
+		{
+		case FORMAT_R16_TYPELESS:
+			srv_desc.Format = DXGI_FORMAT_R16_UNORM;
+			break;
+		case FORMAT_R32_TYPELESS:
+			srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+			break;
+		case FORMAT_R24G8_TYPELESS:
+			srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+			break;
+		case FORMAT_R32G8X24_TYPELESS:
+			srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+			break;
+		default:
+			srv_desc.Format = _ConvertFormat(texture->desc.Format);
+			break;
+		}
+
+		if (texture->type == GPUResource::TEXTURE_1D)
+		{
+			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
+			srv_desc.Texture1D.MostDetailedMip = firstMip;
+			srv_desc.Texture1D.MipLevels = mipCount;
+		}
+		else if (texture->type == GPUResource::TEXTURE_2D)
+		{
+			if (texture->desc.ArraySize > 1)
+			{
+				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				{
+					if (sliceCount > 6)
+					{
+						srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+						srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;
+						srv_desc.TextureCubeArray.NumCubes = sliceCount / 6;
+						srv_desc.TextureCubeArray.MostDetailedMip = firstMip;
+						srv_desc.TextureCubeArray.MipLevels = mipCount;
+					}
+					else
+					{
+						srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+						srv_desc.TextureCube.MostDetailedMip = firstMip;
+						srv_desc.TextureCube.MipLevels = mipCount;
+					}
+				}
+				else
+				{
+					if (texture->desc.SampleDesc.Count > 1)
+					{
+						srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
+						srv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
+						srv_desc.Texture2DMSArray.ArraySize = sliceCount;
+					}
+					else
+					{
+						srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+						srv_desc.Texture2DArray.FirstArraySlice = firstSlice;
+						srv_desc.Texture2DArray.ArraySize = sliceCount;
+						srv_desc.Texture2DArray.MostDetailedMip = firstMip;
+						srv_desc.Texture2DArray.MipLevels = mipCount;
+					}
+				}
+			}
+			else
+			{
+				if (texture->desc.SampleDesc.Count > 1)
+				{
+					srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+				}
+				else
+				{
+					srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+					srv_desc.Texture2D.MostDetailedMip = firstMip;
+					srv_desc.Texture2D.MipLevels = mipCount;
+				}
+			}
+		}
+		else if (texture->type == GPUResource::TEXTURE_3D)
+		{
+			srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+			srv_desc.Texture3D.MostDetailedMip = firstMip;
+			srv_desc.Texture3D.MipLevels = mipCount;
+		}
+		ID3D11ShaderResourceView* SRV;
+		HRESULT hr = device->CreateShaderResourceView((ID3D11Resource*)texture->resource, &srv_desc, &SRV);
+		if (SUCCEEDED(hr))
+		{
+			texture->subresourceSRVs.push_back((wiCPUHandle)SRV);
+			return int(texture->subresourceSRVs.size() - 1);
+		}
+	}
+		break;
+	case wiGraphics::UAV:
+		break;
+	case wiGraphics::RTV:
+		break;
+	case wiGraphics::DSV:
+		break;
+	default:
+		break;
+	}
+	return -1;
+}
 
 void GraphicsDevice_DX11::DestroyResource(GPUResource* pResource)
 {
@@ -2541,28 +1969,28 @@ void GraphicsDevice_DX11::DestroyResource(GPUResource* pResource)
 		((ID3D11ShaderResourceView*)pResource->SRV)->Release();
 		pResource->SRV = WI_NULL_HANDLE;
 	}
-	for (auto& x : pResource->additionalSRVs)
+	for (auto& x : pResource->subresourceSRVs)
 	{
 		if (x != WI_NULL_HANDLE)
 		{
 			((ID3D11ShaderResourceView*)x)->Release();
 		}
 	}
-	pResource->additionalSRVs.clear();
+	pResource->subresourceSRVs.clear();
 
 	if (pResource->UAV != WI_NULL_HANDLE)
 	{
 		((ID3D11UnorderedAccessView*)pResource->UAV)->Release();
 		pResource->UAV = WI_NULL_HANDLE;
 	}
-	for (auto& x : pResource->additionalUAVs)
+	for (auto& x : pResource->subresourceUAVs)
 	{
 		if (x != WI_NULL_HANDLE)
 		{
 			((ID3D11UnorderedAccessView*)x)->Release();
 		}
 	}
-	pResource->additionalUAVs.clear();
+	pResource->subresourceUAVs.clear();
 }
 void GraphicsDevice_DX11::DestroyBuffer(GPUBuffer *pBuffer)
 {
@@ -2574,14 +2002,14 @@ void GraphicsDevice_DX11::DestroyTexture1D(Texture1D *pTexture1D)
 		((ID3D11RenderTargetView*)pTexture1D->RTV)->Release();
 		pTexture1D->RTV = WI_NULL_HANDLE;
 	}
-	for (auto& x : pTexture1D->additionalRTVs)
+	for (auto& x : pTexture1D->subresourceRTVs)
 	{
 		if (x != WI_NULL_HANDLE)
 		{
 			((ID3D11RenderTargetView*)x)->Release();
 		}
 	}
-	pTexture1D->additionalRTVs.clear();
+	pTexture1D->subresourceRTVs.clear();
 }
 void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
 {
@@ -2590,28 +2018,28 @@ void GraphicsDevice_DX11::DestroyTexture2D(Texture2D *pTexture2D)
 		((ID3D11RenderTargetView*)pTexture2D->RTV)->Release();
 		pTexture2D->RTV = WI_NULL_HANDLE;
 	}
-	for (auto& x : pTexture2D->additionalRTVs)
+	for (auto& x : pTexture2D->subresourceRTVs)
 	{
 		if (x != WI_NULL_HANDLE)
 		{
 			((ID3D11RenderTargetView*)x)->Release();
 		}
 	}
-	pTexture2D->additionalRTVs.clear();
+	pTexture2D->subresourceRTVs.clear();
 
 	if (pTexture2D->DSV != WI_NULL_HANDLE)
 	{
 		((ID3D11DepthStencilView*)pTexture2D->DSV)->Release();
 		pTexture2D->DSV = WI_NULL_HANDLE;
 	}
-	for (auto& x : pTexture2D->additionalDSVs)
+	for (auto& x : pTexture2D->subresourceDSVs)
 	{
 		if (x != WI_NULL_HANDLE)
 		{
 			((ID3D11DepthStencilView*)x)->Release();
 		}
 	}
-	pTexture2D->additionalDSVs.clear();
+	pTexture2D->subresourceDSVs.clear();
 }
 void GraphicsDevice_DX11::DestroyTexture3D(Texture3D *pTexture3D)
 {
@@ -2619,14 +2047,14 @@ void GraphicsDevice_DX11::DestroyTexture3D(Texture3D *pTexture3D)
 	{
 		((ID3D11RenderTargetView*)pTexture3D->RTV)->Release();
 	}
-	for (auto& x : pTexture3D->additionalRTVs)
+	for (auto& x : pTexture3D->subresourceRTVs)
 	{
 		if (x != WI_NULL_HANDLE)
 		{
 			((ID3D11RenderTargetView*)x)->Release();
 		}
 	}
-	pTexture3D->additionalRTVs.clear();
+	pTexture3D->subresourceRTVs.clear();
 }
 void GraphicsDevice_DX11::DestroyInputLayout(VertexLayout *pInputLayout)
 {
@@ -2972,14 +2400,14 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, const Texture2D* cons
 	ID3D11RenderTargetView* renderTargetViews[8] = {};
 	for (UINT i = 0; i < std::min(NumViews, 8u); ++i)
 	{
-		if (arrayIndex < 0 || ppRenderTargets[i]->additionalRTVs.empty())
+		if (arrayIndex < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
 		{
 			renderTargetViews[i] = (ID3D11RenderTargetView*)ppRenderTargets[i]->RTV;
 		}
 		else
 		{
-			assert(ppRenderTargets[i]->additionalRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-			renderTargetViews[i] = (ID3D11RenderTargetView*)ppRenderTargets[i]->additionalRTVs[arrayIndex];
+			assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+			renderTargetViews[i] = (ID3D11RenderTargetView*)ppRenderTargets[i]->subresourceRTVs[arrayIndex];
 		}
 	}
 
@@ -2987,14 +2415,14 @@ void GraphicsDevice_DX11::BindRenderTargets(UINT NumViews, const Texture2D* cons
 	ID3D11DepthStencilView* depthStencilView = nullptr;
 	if (depthStencilTexture != nullptr)
 	{
-		if (arrayIndex < 0 || depthStencilTexture->additionalDSVs.empty())
+		if (arrayIndex < 0 || depthStencilTexture->subresourceDSVs.empty())
 		{
 			depthStencilView = (ID3D11DepthStencilView*)depthStencilTexture->DSV;
 		}
 		else
 		{
-			assert(depthStencilTexture->additionalDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-			depthStencilView = (ID3D11DepthStencilView*)depthStencilTexture->additionalDSVs[arrayIndex];
+			assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
+			depthStencilView = (ID3D11DepthStencilView*)depthStencilTexture->subresourceDSVs[arrayIndex];
 		}
 	}
 
@@ -3022,8 +2450,8 @@ void GraphicsDevice_DX11::ClearRenderTarget(const Texture* pTexture, const FLOAT
 	}
 	else
 	{
-		assert(pTexture->additionalRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-		deviceContexts[cmd]->ClearRenderTargetView((ID3D11RenderTargetView*)pTexture->additionalRTVs[arrayIndex], ColorRGBA);
+		assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
+		deviceContexts[cmd]->ClearRenderTargetView((ID3D11RenderTargetView*)pTexture->subresourceRTVs[arrayIndex], ColorRGBA);
 	}
 }
 void GraphicsDevice_DX11::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex)
@@ -3040,8 +2468,8 @@ void GraphicsDevice_DX11::ClearDepthStencil(const Texture2D* pTexture, UINT Clea
 	}
 	else
 	{
-		assert(pTexture->additionalDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-		deviceContexts[cmd]->ClearDepthStencilView((ID3D11DepthStencilView*)pTexture->additionalDSVs[arrayIndex], _flags, Depth, Stencil);
+		assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
+		deviceContexts[cmd]->ClearDepthStencilView((ID3D11DepthStencilView*)pTexture->subresourceDSVs[arrayIndex], _flags, Depth, Stencil);
 	}
 }
 void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
@@ -3056,8 +2484,8 @@ void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* res
 		}
 		else
 		{
-			assert(resource->additionalSRVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-			SRV = (ID3D11ShaderResourceView*)resource->additionalSRVs[arrayIndex];
+			assert(resource->subresourceSRVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+			SRV = (ID3D11ShaderResourceView*)resource->subresourceSRVs[arrayIndex];
 		}
 
 		switch (stage)
@@ -3132,8 +2560,8 @@ void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource
 		}
 		else
 		{
-			assert(resource->additionalUAVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
-			UAV = (ID3D11UnorderedAccessView*)resource->additionalUAVs[arrayIndex];
+			assert(resource->subresourceUAVs.size() > static_cast<size_t>(arrayIndex) && "Invalid arrayIndex!");
+			UAV = (ID3D11UnorderedAccessView*)resource->subresourceUAVs[arrayIndex];
 		}
 
 		if (stage == CS)

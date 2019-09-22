@@ -88,6 +88,7 @@ namespace wiGraphics
 		HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 
+		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount = 1, UINT firstMip = 0, UINT mipCount = 0) override;
 
 		void DestroyResource(GPUResource* pResource) override;
 		void DestroyBuffer(GPUBuffer *pBuffer) override;
@@ -167,14 +168,6 @@ namespace wiGraphics
 		void EventBegin(const std::string& name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const std::string& name, CommandList cmd) override;
-
-	private:
-		HRESULT CreateShaderResourceView(Texture1D* pTexture);
-		HRESULT CreateShaderResourceView(Texture2D* pTexture);
-		HRESULT CreateShaderResourceView(Texture3D* pTexture);
-		HRESULT CreateRenderTargetView(Texture2D* pTexture);
-		HRESULT CreateRenderTargetView(Texture3D* pTexture);
-		HRESULT CreateDepthStencilView(Texture2D* pTexture);
 	};
 
 }
