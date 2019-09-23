@@ -164,6 +164,8 @@ namespace wiGraphics
 		TextureDesc	desc;
 		wiCPUHandle	RTV = WI_NULL_HANDLE;
 		std::vector<wiCPUHandle> subresourceRTVs;
+		wiCPUHandle	DSV = WI_NULL_HANDLE;
+		std::vector<wiCPUHandle> subresourceDSVs;
 
 		const TextureDesc& GetDesc() const { return desc; }
 	};
@@ -175,9 +177,6 @@ namespace wiGraphics
 
 	struct Texture2D : public Texture
 	{
-		wiCPUHandle	DSV = WI_NULL_HANDLE;
-		std::vector<wiCPUHandle> subresourceDSVs;
-
 		virtual ~Texture2D();
 	};
 

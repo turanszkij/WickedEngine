@@ -34,7 +34,7 @@ void RenderPath3D::ResizeBuffers()
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtSSR, SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtSSR, SRV, 0, 1, i, 1);
+			subresource_index = device->CreateSubresource(&rtSSR, UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -80,7 +80,7 @@ void RenderPath3D::ResizeBuffers()
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtSceneCopy, SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtSceneCopy, SRV, 0, 1, i, 1);
+			subresource_index = device->CreateSubresource(&rtSceneCopy, UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -156,7 +156,7 @@ void RenderPath3D::ResizeBuffers()
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
 			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&rtBloom, SRV, 0, 1, i, 1);
+			subresource_index = device->CreateSubresource(&rtBloom, UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
 	}

@@ -49,8 +49,7 @@ namespace wiGraphics
 		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
 		virtual HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;
 
-		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount = 1, UINT firstMip = 0, UINT mipCount = 0) = 0;
-
+		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) = 0;
 
 		virtual void DestroyResource(GPUResource* pResource) = 0;
 		virtual void DestroyBuffer(GPUBuffer *pBuffer) = 0;
@@ -122,12 +121,12 @@ namespace wiGraphics
 
 		virtual void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) = 0;
-		virtual void BindRenderTargets(UINT NumViews, const Texture2D* const * ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int arrayIndex = -1) = 0;
-		virtual void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int arrayIndex = -1) = 0;
-		virtual void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex = -1) = 0;
-		virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex = -1) = 0;
+		virtual void BindRenderTargets(UINT NumViews, const Texture2D* const * ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) = 0;
+		virtual void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) = 0;
+		virtual void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) = 0;
+		virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;
 		virtual void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) = 0;
-		virtual void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex = -1) = 0;
+		virtual void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;
 		virtual void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) = 0;
 		virtual void UnbindResources(UINT slot, UINT num, CommandList cmd) = 0;
 		virtual void UnbindUAVs(UINT slot, UINT num, CommandList cmd) = 0;

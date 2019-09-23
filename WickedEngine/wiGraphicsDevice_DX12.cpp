@@ -1055,20 +1055,20 @@ namespace wiGraphics
 				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
 				{
 					const GPUResource* resource = table.SRV[slot];
-					const int arrayIndex = table.SRV_index[slot];
+					const int subresource = table.SRV_index[slot];
 					if (resource == nullptr)
 					{
 						continue;
 					}
 
 					D3D12_CPU_DESCRIPTOR_HANDLE src = {};
-					if (arrayIndex < 0)
+					if (subresource < 0)
 					{
 						src = ToNativeHandle(resource->SRV);
 					}
 					else
 					{
-						src = ToNativeHandle(resource->subresourceSRVs[arrayIndex]);
+						src = ToNativeHandle(resource->subresourceSRVs[subresource]);
 					}
 
 					if (src.ptr == 0)
@@ -1084,20 +1084,20 @@ namespace wiGraphics
 				for (UINT slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
 				{
 					const GPUResource* resource = table.UAV[slot];
-					const int arrayIndex = table.UAV_index[slot];
+					const int subresource = table.UAV_index[slot];
 					if (resource == nullptr)
 					{
 						continue;
 					}
 
 					D3D12_CPU_DESCRIPTOR_HANDLE src = {};
-					if (arrayIndex < 0)
+					if (subresource < 0)
 					{
 						src = ToNativeHandle(resource->UAV);
 					}
 					else
 					{
-						src = ToNativeHandle(resource->subresourceUAVs[arrayIndex]);
+						src = ToNativeHandle(resource->subresourceUAVs[subresource]);
 					}
 
 					if (src.ptr == 0)
@@ -1984,6 +1984,7 @@ namespace wiGraphics
 
 		pTexture1D->desc = *pDesc;
 
+		// TODO
 
 		HRESULT hr = E_FAIL;
 
@@ -2109,28 +2110,21 @@ namespace wiGraphics
 			SAFE_DELETE_ARRAY(data);
 		}
 
-
-		// Issue creation of additional descriptors for the resource:
-
 		if (pTexture2D->desc.BindFlags & BIND_RENDER_TARGET)
 		{
-			pTexture2D->RTV = RTAllocator->allocate();
-			device->CreateRenderTargetView((ID3D12Resource*)pTexture2D->resource, nullptr, ToNativeHandle(pTexture2D->RTV));
+			CreateSubresource(pTexture2D, RTV, 0, -1, 0, -1);
 		}
 		if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
-			pTexture2D->DSV = DSAllocator->allocate();
-			device->CreateDepthStencilView((ID3D12Resource*)pTexture2D->resource, nullptr, ToNativeHandle(pTexture2D->DSV));
+			CreateSubresource(pTexture2D, DSV, 0, -1, 0, -1);
 		}
 		if (pTexture2D->desc.BindFlags & BIND_SHADER_RESOURCE)
 		{
-			pTexture2D->SRV = ResourceAllocator->allocate();
-			device->CreateShaderResourceView((ID3D12Resource*)pTexture2D->resource, nullptr, ToNativeHandle(pTexture2D->SRV));
+			CreateSubresource(pTexture2D, SRV, 0, -1, 0, -1);
 		}
 		if (pTexture2D->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			pTexture2D->UAV = ResourceAllocator->allocate();
-			device->CreateUnorderedAccessView((ID3D12Resource*)pTexture2D->resource, nullptr, nullptr, ToNativeHandle(pTexture2D->UAV));
+			CreateSubresource(pTexture2D, UAV, 0, -1, 0, -1);
 		}
 
 		return hr;
@@ -2144,6 +2138,7 @@ namespace wiGraphics
 
 		pTexture3D->desc = *pDesc;
 
+		// TODO
 
 		HRESULT hr = E_FAIL;
 
@@ -2448,13 +2443,321 @@ namespace wiGraphics
 		switch (type)
 		{
 		case wiGraphics::SRV:
-			break;
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+			// Try to resolve resource format:
+			switch (texture->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				srv_desc.Format = DXGI_FORMAT_R16_UNORM;
+				break;
+			case FORMAT_R32_TYPELESS:
+				srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
+			default:
+				srv_desc.Format = _ConvertFormat(texture->desc.Format);
+				break;
+			}
+
+			if (texture->type == GPUResource::TEXTURE_1D)
+			{
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+				srv_desc.Texture1D.MostDetailedMip = firstMip;
+				srv_desc.Texture1D.MipLevels = mipCount;
+			}
+			else if (texture->type == GPUResource::TEXTURE_2D)
+			{
+				if (texture->desc.ArraySize > 1)
+				{
+					if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+					{
+						if (sliceCount > 6)
+						{
+							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+							srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;
+							srv_desc.TextureCubeArray.NumCubes = std::min(texture->desc.ArraySize, sliceCount) / 6;
+							srv_desc.TextureCubeArray.MostDetailedMip = firstMip;
+							srv_desc.TextureCubeArray.MipLevels = mipCount;
+						}
+						else
+						{
+							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+							srv_desc.TextureCube.MostDetailedMip = firstMip;
+							srv_desc.TextureCube.MipLevels = mipCount;
+						}
+					}
+					else
+					{
+						if (texture->desc.SampleDesc.Count > 1)
+						{
+							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
+							srv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
+							srv_desc.Texture2DMSArray.ArraySize = sliceCount;
+						}
+						else
+						{
+							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+							srv_desc.Texture2DArray.FirstArraySlice = firstSlice;
+							srv_desc.Texture2DArray.ArraySize = sliceCount;
+							srv_desc.Texture2DArray.MostDetailedMip = firstMip;
+							srv_desc.Texture2DArray.MipLevels = mipCount;
+						}
+					}
+				}
+				else
+				{
+					if (texture->desc.SampleDesc.Count > 1)
+					{
+						srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+					}
+					else
+					{
+						srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+						srv_desc.Texture2D.MostDetailedMip = firstMip;
+						srv_desc.Texture2D.MipLevels = mipCount;
+					}
+				}
+			}
+			else if (texture->type == GPUResource::TEXTURE_3D)
+			{
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+				srv_desc.Texture3D.MostDetailedMip = firstMip;
+				srv_desc.Texture3D.MipLevels = mipCount;
+			}
+			wiCPUHandle srv = ResourceAllocator->allocate();
+			device->CreateShaderResourceView((ID3D12Resource*)texture->resource, &srv_desc, ToNativeHandle(srv));
+
+			if (texture->SRV == WI_NULL_HANDLE)
+			{
+				texture->SRV = (wiCPUHandle)srv;
+				return -1;
+			}
+			texture->subresourceSRVs.push_back((wiCPUHandle)srv);
+			return int(texture->subresourceSRVs.size() - 1);
+		}
+		break;
 		case wiGraphics::UAV:
-			break;
+		{
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+
+			// Try to resolve resource format:
+			switch (texture->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				uav_desc.Format = DXGI_FORMAT_R16_UNORM;
+				break;
+			case FORMAT_R32_TYPELESS:
+				uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				uav_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
+			default:
+				uav_desc.Format = _ConvertFormat(texture->desc.Format);
+				break;
+			}
+
+			if (texture->type == GPUResource::TEXTURE_1D)
+			{
+				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
+				uav_desc.Texture1D.MipSlice = firstMip;
+			}
+			else if (texture->type == GPUResource::TEXTURE_2D)
+			{
+				if (texture->desc.ArraySize > 1)
+				{
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+					uav_desc.Texture2DArray.FirstArraySlice = firstSlice;
+					uav_desc.Texture2DArray.ArraySize = sliceCount;
+					uav_desc.Texture2DArray.MipSlice = firstMip;
+				}
+				else
+				{
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+					uav_desc.Texture2D.MipSlice = firstMip;
+				}
+			}
+			else if (texture->type == GPUResource::TEXTURE_3D)
+			{
+				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+				uav_desc.Texture3D.MipSlice = firstMip;
+				uav_desc.Texture3D.FirstWSlice = 0;
+				uav_desc.Texture3D.WSize = -1;
+			}
+			wiCPUHandle uav = ResourceAllocator->allocate();
+			device->CreateUnorderedAccessView((ID3D12Resource*)texture->resource, nullptr, &uav_desc, ToNativeHandle(uav));
+
+			if (texture->UAV == WI_NULL_HANDLE)
+			{
+				texture->UAV = (wiCPUHandle)uav;
+				return -1;
+			}
+			texture->subresourceUAVs.push_back((wiCPUHandle)uav);
+			return int(texture->subresourceUAVs.size() - 1);
+		}
+		break;
 		case wiGraphics::RTV:
-			break;
+		{
+			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+
+			// Try to resolve resource format:
+			switch (texture->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
+				break;
+			case FORMAT_R32_TYPELESS:
+				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				rtv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+				break;
+			default:
+				rtv_desc.Format = _ConvertFormat(texture->desc.Format);
+				break;
+			}
+
+			if (texture->type == GPUResource::TEXTURE_1D)
+			{
+				rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1D;
+				rtv_desc.Texture1D.MipSlice = firstMip;
+			}
+			else if (texture->type == GPUResource::TEXTURE_2D)
+			{
+				if (texture->desc.ArraySize > 1)
+				{
+					if (texture->desc.SampleDesc.Count > 1)
+					{
+						rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
+						rtv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
+						rtv_desc.Texture2DMSArray.ArraySize = sliceCount;
+					}
+					else
+					{
+						rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+						rtv_desc.Texture2DArray.FirstArraySlice = firstSlice;
+						rtv_desc.Texture2DArray.ArraySize = sliceCount;
+						rtv_desc.Texture2DArray.MipSlice = firstMip;
+					}
+				}
+				else
+				{
+					if (texture->desc.SampleDesc.Count > 1)
+					{
+						rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+					}
+					else
+					{
+						rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+						rtv_desc.Texture2D.MipSlice = firstMip;
+					}
+				}
+			}
+			else if (texture->type == GPUResource::TEXTURE_3D)
+			{
+				rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
+				rtv_desc.Texture3D.MipSlice = firstMip;
+				rtv_desc.Texture3D.FirstWSlice = 0;
+				rtv_desc.Texture3D.WSize = -1;
+			}
+			wiCPUHandle rtv = RTAllocator->allocate();
+			device->CreateRenderTargetView((ID3D12Resource*)texture->resource, &rtv_desc, ToNativeHandle(rtv));
+
+			if (texture->RTV == WI_NULL_HANDLE)
+			{
+				texture->RTV = (wiCPUHandle)rtv;
+				return -1;
+			}
+			texture->subresourceRTVs.push_back((wiCPUHandle)rtv);
+			return int(texture->subresourceRTVs.size() - 1);
+		}
+		break;
 		case wiGraphics::DSV:
-			break;
+		{
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
+
+			// Try to resolve resource format:
+			switch (texture->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
+				break;
+			case FORMAT_R32_TYPELESS:
+				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+				break;
+			default:
+				dsv_desc.Format = _ConvertFormat(texture->desc.Format);
+				break;
+			}
+
+			if (texture->type == GPUResource::TEXTURE_1D)
+			{
+				dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1D;
+				dsv_desc.Texture1D.MipSlice = firstMip;
+			}
+			else if (texture->type == GPUResource::TEXTURE_2D)
+			{
+				if (texture->desc.ArraySize > 1)
+				{
+					if (texture->desc.SampleDesc.Count > 1)
+					{
+						dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY;
+						dsv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
+						dsv_desc.Texture2DMSArray.ArraySize = sliceCount;
+					}
+					else
+					{
+						dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+						dsv_desc.Texture2DArray.FirstArraySlice = firstSlice;
+						dsv_desc.Texture2DArray.ArraySize = sliceCount;
+						dsv_desc.Texture2DArray.MipSlice = firstMip;
+					}
+				}
+				else
+				{
+					if (texture->desc.SampleDesc.Count > 1)
+					{
+						dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+					}
+					else
+					{
+						dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+						dsv_desc.Texture2D.MipSlice = firstMip;
+					}
+				}
+			}
+			wiCPUHandle dsv = DSAllocator->allocate();
+			device->CreateDepthStencilView((ID3D12Resource*)texture->resource, &dsv_desc, ToNativeHandle(dsv));
+
+			if (texture->DSV == WI_NULL_HANDLE)
+			{
+				texture->DSV = (wiCPUHandle)dsv;
+				return -1;
+			}
+			texture->subresourceDSVs.push_back((wiCPUHandle)dsv);
+			return int(texture->subresourceDSVs.size() - 1);
+		}
+		break;
 		default:
 			break;
 		}
@@ -2857,21 +3160,21 @@ namespace wiGraphics
 		}
 		GetDirectCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindRenderTargets(const UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_DX12::BindRenderTargets(const UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptors[8] = {};
 		for (UINT i = 0; i < NumViews; ++i)
 		{
 			if (ppRenderTargets[i] != nullptr)
 			{
-				if (arrayIndex < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
+				if (subresource < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
 				{
 					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->RTV);
 				}
 				else
 				{
-					assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->subresourceRTVs[arrayIndex]);
+					assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid RTV subresource!");
+					descriptors[i] = ToNativeHandle(ppRenderTargets[i]->subresourceRTVs[subresource]);
 				}
 			}
 		}
@@ -2879,34 +3182,34 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr;
 		if (depthStencilTexture != nullptr)
 		{
-			if (arrayIndex < 0 || depthStencilTexture->subresourceDSVs.empty())
+			if (subresource < 0 || depthStencilTexture->subresourceDSVs.empty())
 			{
 				DSV = &ToNativeHandle(depthStencilTexture->DSV);
 			}
 			else
 			{
-				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-				DSV = &ToNativeHandle(depthStencilTexture->subresourceDSVs[arrayIndex]);
+				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid DSV subresource!");
+				DSV = &ToNativeHandle(depthStencilTexture->subresourceDSVs[subresource]);
 			}
 		}
 
 		GetDirectCommandList(cmd)->OMSetRenderTargets(NumViews, descriptors, FALSE, DSV);
 	}
-	void GraphicsDevice_DX12::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int arrayIndex)
+	void GraphicsDevice_DX12::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource)
 	{
 		if (pTexture != nullptr)
 		{
-			if (arrayIndex < 0)
+			if (subresource < 0)
 			{
 				GetDirectCommandList(cmd)->ClearRenderTargetView(ToNativeHandle(pTexture->RTV), ColorRGBA, 0, nullptr);
 			}
 			else
 			{
-				GetDirectCommandList(cmd)->ClearRenderTargetView(ToNativeHandle(pTexture->subresourceRTVs[arrayIndex]), ColorRGBA, 0, nullptr);
+				GetDirectCommandList(cmd)->ClearRenderTargetView(ToNativeHandle(pTexture->subresourceRTVs[subresource]), ColorRGBA, 0, nullptr);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_DX12::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource)
 	{
 		if (pTexture != nullptr)
 		{
@@ -2916,24 +3219,24 @@ namespace wiGraphics
 			if (ClearFlags & CLEAR_STENCIL)
 				_flags |= D3D12_CLEAR_FLAG_STENCIL;
 
-			if (arrayIndex < 0)
+			if (subresource < 0)
 			{
 				GetDirectCommandList(cmd)->ClearDepthStencilView(ToNativeHandle(pTexture->DSV), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 			else
 			{
-				GetDirectCommandList(cmd)->ClearDepthStencilView(ToNativeHandle(pTexture->subresourceDSVs[arrayIndex]), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
+				GetDirectCommandList(cmd)->ClearDepthStencilView(ToNativeHandle(pTexture->subresourceDSVs[subresource]), (D3D12_CLEAR_FLAGS)_flags, Depth, Stencil, 0, nullptr);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
-		if (table.SRV[slot] != resource || table.SRV_index[slot] != arrayIndex)
+		if (table.SRV[slot] != resource || table.SRV_index[slot] != subresource)
 		{
 			table.SRV[slot] = resource;
-			table.SRV_index[slot] = arrayIndex;
+			table.SRV_index[slot] = subresource;
 			table.dirty_resources = true;
 		}
 	}
@@ -2947,14 +3250,14 @@ namespace wiGraphics
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
-		if (table.UAV[slot] != resource || table.UAV_index[slot] != arrayIndex)
+		if (table.UAV[slot] != resource || table.UAV_index[slot] != subresource)
 		{
 			table.UAV[slot] = resource;
-			table.UAV_index[slot] = arrayIndex;
+			table.UAV_index[slot] = subresource;
 			table.dirty_resources = true;
 		}
 	}

@@ -269,7 +269,7 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 						int subresource_index;
 						subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
 						assert(subresource_index == i);
-						subresource_index = device->CreateSubresource(image, SRV, 0, 1, i, 1);
+						subresource_index = device->CreateSubresource(image, UAV, 0, 1, i, 1);
 						assert(subresource_index == i);
 					}
 

@@ -4957,12 +4957,12 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 		desc.Format = RTFormat_ldr;
 		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
 
-		for (UINT i = 0; i < desc.ArraySize; ++i)
+		for (UINT i = 0; i < SHADOWCOUNT_2D; ++i)
 		{
 			int subresource_index;
-			subresource_index = device->CreateSubresource(&shadowMapArray_2D, DSV, i, 1);
+			subresource_index = device->CreateSubresource(&shadowMapArray_2D, DSV, i, 1, 0, 1);
 			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent, RTV, i, 1);
+			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent, RTV, i, 1, 0, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -4997,10 +4997,10 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
 
-		for (UINT i = 0; i < desc.ArraySize; ++i)
+		for (UINT i = 0; i < SHADOWCOUNT_CUBE; ++i)
 		{
 			int subresource_index;
-			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, DSV, i, 1);
+			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, DSV, i * 6, 6, 0, 1);
 			assert(subresource_index == i);
 		}
 	}
@@ -6260,9 +6260,7 @@ void RefreshEnvProbes(CommandList cmd)
 		for (UINT i = 0; i < envmapCount; ++i)
 		{
 			int subresource_index;
-			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i, 6);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i, 6);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i, 6, 0, 1);
 			assert(subresource_index == i);
 		}
 		for (UINT i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
@@ -6272,6 +6270,14 @@ void RefreshEnvProbes(CommandList cmd)
 			assert(subresource_index == i);
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], UAV, 0, desc.ArraySize, i, 1);
 			assert(subresource_index == i);
+		}
+
+		// debug probe views, individual cubes:
+		for (UINT i = 0; i < envmapCount; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i, 6, 0, -1);
+			assert(subresource_index == textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + i);
 		}
 	}
 
@@ -6507,7 +6513,7 @@ void RefreshImpostors(CommandList cmd)
 			for (UINT i = 0; i < desc.ArraySize; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1);
+				subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
 			}
 
@@ -6683,7 +6689,7 @@ void VoxelRadiance(CommandList cmd)
 		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE]);
 		assert(SUCCEEDED(hr));
 
-		for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+		for (UINT i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE]->GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE], SRV, 0, 1, i, 1);
@@ -6699,7 +6705,7 @@ void VoxelRadiance(CommandList cmd)
 		HRESULT hr = device->CreateTexture3D(&desc, nullptr, (Texture3D*)textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]);
 		assert(SUCCEEDED(hr));
 
-		for (UINT i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+		for (UINT i = 0; i < textures[TEXTYPE_3D_VOXELRADIANCE_HELPER]->GetDesc().MipLevels; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], SRV, 0, 1, i, 1);

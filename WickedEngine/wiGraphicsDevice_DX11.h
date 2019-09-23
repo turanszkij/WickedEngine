@@ -88,7 +88,7 @@ namespace wiGraphics
 		HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
 
-		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount = 1, UINT firstMip = 0, UINT mipCount = 0) override;
+		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) override;
 
 		void DestroyResource(GPUResource* pResource) override;
 		void DestroyBuffer(GPUBuffer *pBuffer) override;
@@ -128,12 +128,12 @@ namespace wiGraphics
 
 		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
-		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int arrayIndex = -1) override;
-		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int arrayIndex = -1) override;
-		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex = -1) override;
-		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex = -1) override;
+		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) override;
+		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) override;
+		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) override;
+		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
 		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
-		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex = -1) override;
+		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
 		void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
 		void UnbindResources(UINT slot, UINT num, CommandList cmd) override;
 		void UnbindUAVs(UINT slot, UINT num, CommandList cmd) override;

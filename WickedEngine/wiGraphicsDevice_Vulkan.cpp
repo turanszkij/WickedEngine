@@ -1059,13 +1059,13 @@ namespace wiGraphics
 					for (int slot = 0; slot < GPU_RESOURCE_HEAP_SRV_COUNT; ++slot)
 					{
 						const GPUResource* resource = table.SRV[slot];
-						const int arrayIndex = table.SRV_index[slot];
+						const int subresource = table.SRV_index[slot];
 						if (resource == nullptr)
 						{
 							continue;
 						}
 
-						wiCPUHandle SRV = arrayIndex < 0 ? resource->SRV : resource->subresourceSRVs[arrayIndex];
+						wiCPUHandle SRV = subresource < 0 ? resource->SRV : resource->subresourceSRVs[subresource];
 
 						if (resource->IsTexture() && resource->SRV != VK_NULL_HANDLE)
 						{
@@ -1147,13 +1147,13 @@ namespace wiGraphics
 					for (int slot = 0; slot < GPU_RESOURCE_HEAP_UAV_COUNT; ++slot)
 					{
 						const GPUResource* resource = table.UAV[slot];
-						const int arrayIndex = table.UAV_index[slot];
+						const int subresource = table.UAV_index[slot];
 						if (resource == nullptr)
 						{
 							continue;
 						}
 
-						wiCPUHandle UAV = arrayIndex < 0 ? resource->UAV : resource->subresourceUAVs[arrayIndex];
+						wiCPUHandle UAV = subresource < 0 ? resource->UAV : resource->subresourceUAVs[subresource];
 
 						if (resource->IsTexture() && resource->UAV != VK_NULL_HANDLE)
 						{
@@ -2536,6 +2536,8 @@ namespace wiGraphics
 
 		pTexture1D->desc = *pDesc;
 
+		// TODO
+
 		return E_FAIL;
 	}
 	HRESULT GraphicsDevice_Vulkan::CreateTexture2D(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture2D *pTexture2D)
@@ -2632,7 +2634,7 @@ namespace wiGraphics
 
 				size_t cpyoffset = 0;
 				UINT initDataIdx = 0;
-				for (UINT arrayIndex = 0; arrayIndex < pDesc->ArraySize; ++arrayIndex)
+				for (UINT slice = 0; slice < pDesc->ArraySize; ++slice)
 				{
 					uint32_t width = pDesc->Width;
 					uint32_t height = pDesc->Height;
@@ -2660,7 +2662,7 @@ namespace wiGraphics
 
 						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 						copyRegion.imageSubresource.mipLevel = mip;
-						copyRegion.imageSubresource.baseArrayLayer = arrayIndex;
+						copyRegion.imageSubresource.baseArrayLayer = slice;
 						copyRegion.imageSubresource.layerCount = 1;
 
 						copyRegion.imageOffset = { 0, 0, 0 };
@@ -2728,291 +2730,22 @@ namespace wiGraphics
 			copyQueueLock.unlock();
 		}
 
-
-
-		// Issue creation of additional descriptors for the resource:
-
 		if (pTexture2D->desc.BindFlags & BIND_RENDER_TARGET)
 		{
-			UINT arraySize = pTexture2D->desc.ArraySize;
-			UINT sampleCount = pTexture2D->desc.SampleDesc.Count;
-			bool multisampled = sampleCount > 1;
-
-			VkImageViewCreateInfo rtv_desc = {};
-			rtv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			rtv_desc.flags = 0;
-			rtv_desc.image = (VkImage)pTexture2D->resource;
-			rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			rtv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-			rtv_desc.subresourceRange.baseArrayLayer = 0;
-			rtv_desc.subresourceRange.layerCount = 1;
-			rtv_desc.subresourceRange.baseMipLevel = 0;
-			rtv_desc.subresourceRange.levelCount = 1;
-
-			rtv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
-
-
-			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-			{
-				// Create full-resource RTVs:
-				if (arraySize > 6)
-				{
-					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-				}
-				else
-				{
-					rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-				}
-				rtv_desc.subresourceRange.baseArrayLayer = 0;
-				rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-				rtv_desc.subresourceRange.baseMipLevel = 0;
-				rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
-
-				res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->RTV));
-				hr = res == VK_SUCCESS;
-				assert(SUCCEEDED(hr));
-			}
-			else
-			{
-				// Create full-resource RTV:
-
-				if (arraySize > 1)
-				{
-					if (multisampled)
-					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-					}
-					else
-					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
-					}
-					else
-					{
-						rtv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-					}
-				}
-
-				rtv_desc.subresourceRange.baseArrayLayer = 0;
-				rtv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-				rtv_desc.subresourceRange.baseMipLevel = 0;
-				rtv_desc.subresourceRange.levelCount = 1; // RTV so only 1 MIP!
-
-				res = vkCreateImageView(device, &rtv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->RTV));
-				hr = res == VK_SUCCESS;
-				assert(SUCCEEDED(hr));
-			}
+			CreateSubresource(pTexture2D, RTV, 0, -1, 0, -1);
 		}
-
-
 		if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
-			UINT arraySize = pTexture2D->desc.ArraySize;
-			UINT sampleCount = pTexture2D->desc.SampleDesc.Count;
-			bool multisampled = sampleCount > 1;
-
-			VkImageViewCreateInfo dsv_desc = {};
-			dsv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			dsv_desc.flags = 0;
-			dsv_desc.image = (VkImage)pTexture2D->resource;
-			dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			dsv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-			switch (pTexture2D->desc.Format)
-			{
-			case FORMAT_R16_TYPELESS:
-				dsv_desc.format = VK_FORMAT_D16_UNORM;
-				break;
-			case FORMAT_R32_TYPELESS:
-				dsv_desc.format = VK_FORMAT_D32_SFLOAT;
-				break;
-			case FORMAT_R24G8_TYPELESS:
-				dsv_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
-				dsv_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				break;
-			case FORMAT_R32G8X24_TYPELESS:
-				dsv_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
-				dsv_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				break;
-			default:
-				dsv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
-				break;
-			}
-
-			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-			{
-				if (arraySize > 6)
-				{
-					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-				}
-				else
-				{
-					dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-				}
-				dsv_desc.subresourceRange.baseArrayLayer = 0;
-				dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-				dsv_desc.subresourceRange.baseMipLevel = 0;
-				dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
-
-				res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
-				hr = res == VK_SUCCESS;
-				assert(SUCCEEDED(hr));
-			}
-			else
-			{
-				if (arraySize > 1)
-				{
-					if (multisampled)
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-					}
-					else
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MSAA?
-					}
-					else
-					{
-						dsv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-					}
-				}
-
-				dsv_desc.subresourceRange.baseArrayLayer = 0;
-				dsv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-				dsv_desc.subresourceRange.baseMipLevel = 0;
-				dsv_desc.subresourceRange.levelCount = 1; // DSV so only 1 MIP!
-
-				res = vkCreateImageView(device, &dsv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->DSV));
-				hr = res == VK_SUCCESS;
-				assert(SUCCEEDED(hr));
-			}
+			CreateSubresource(pTexture2D, DSV, 0, -1, 0, -1);
 		}
-
-
 		if (pTexture2D->desc.BindFlags & BIND_SHADER_RESOURCE)
 		{
-			UINT arraySize = pTexture2D->desc.ArraySize;
-			UINT sampleCount = pTexture2D->desc.SampleDesc.Count;
-			bool multisampled = sampleCount > 1;
-
-			VkImageViewCreateInfo srv_desc = {};
-			srv_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			srv_desc.flags = 0;
-			srv_desc.image = (VkImage)pTexture2D->resource;
-			srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-			srv_desc.subresourceRange.baseArrayLayer = 0;
-			srv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-			srv_desc.subresourceRange.baseMipLevel = 0;
-			srv_desc.subresourceRange.levelCount = pTexture2D->desc.MipLevels;
-
-			switch (pTexture2D->desc.Format)
-			{
-			case FORMAT_R16_TYPELESS:
-				srv_desc.format = VK_FORMAT_D16_UNORM;
-				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			case FORMAT_R32_TYPELESS:
-				srv_desc.format = VK_FORMAT_D32_SFLOAT;
-				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			case FORMAT_R24G8_TYPELESS:
-				srv_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
-				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			case FORMAT_R32G8X24_TYPELESS:
-				srv_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
-				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				break;
-			default:
-				srv_desc.format = _ConvertFormat(pTexture2D->desc.Format);
-				srv_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				break;
-			}
-
-			if (pTexture2D->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
-			{
-				if (arraySize > 6)
-				{
-					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-				}
-				else
-				{
-					srv_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
-				}
-			}
-			else
-			{
-				if (arraySize > 1)
-				{
-					if (multisampled)
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY; // MSArray?
-					}
-					else
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-					}
-				}
-				else
-				{
-					if (multisampled)
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D; // MS?
-					}
-					else
-					{
-						srv_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
-					}
-				}
-			}
-			srv_desc.subresourceRange.baseArrayLayer = 0;
-			srv_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-			srv_desc.subresourceRange.baseMipLevel = 0;
-			srv_desc.subresourceRange.levelCount = pTexture2D->desc.MipLevels;
-
-			res = vkCreateImageView(device, &srv_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->SRV));
-			hr = res == VK_SUCCESS;
-			assert(SUCCEEDED(hr));
+			CreateSubresource(pTexture2D, SRV, 0, -1, 0, -1);
 		}
-
 		if (pTexture2D->desc.BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			UINT arraySize = pTexture2D->desc.ArraySize;
-			UINT sampleCount = pTexture2D->desc.SampleDesc.Count;
-			bool multisampled = sampleCount > 1;
-
-			VkImageViewCreateInfo uav_desc = {};
-			uav_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			uav_desc.flags = 0;
-			uav_desc.image = (VkImage)pTexture2D->resource;
-			uav_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-			uav_desc.format = _ConvertFormat(pTexture2D->desc.Format);
-
-			uav_desc.subresourceRange.baseArrayLayer = 0;
-			uav_desc.subresourceRange.layerCount = pTexture2D->desc.ArraySize;
-			uav_desc.subresourceRange.baseMipLevel = 0;
-			uav_desc.subresourceRange.levelCount = pTexture2D->desc.MipLevels;
-
-			res = vkCreateImageView(device, &uav_desc, nullptr, reinterpret_cast<VkImageView*>(&pTexture2D->UAV));
-			hr = res == VK_SUCCESS;
-			assert(SUCCEEDED(hr));
+			CreateSubresource(pTexture2D, UAV, 0, -1, 0, -1);
 		}
-
 
 		return hr;
 	}
@@ -3024,6 +2757,8 @@ namespace wiGraphics
 		pTexture3D->Register(this);
 
 		pTexture3D->desc = *pDesc;
+
+		// TODO
 
 		return E_FAIL;
 	}
@@ -3847,16 +3582,163 @@ namespace wiGraphics
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
 	{
+		VkImageViewCreateInfo view_desc = {};
+		view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		view_desc.flags = 0;
+		view_desc.image = (VkImage)texture->resource;
+		view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		view_desc.subresourceRange.baseArrayLayer = firstSlice;
+		view_desc.subresourceRange.layerCount = sliceCount;
+		view_desc.subresourceRange.baseMipLevel = firstMip;
+		view_desc.subresourceRange.levelCount = mipCount;
+		view_desc.format = _ConvertFormat(texture->desc.Format);
+
+		if (texture->type == GPUResource::TEXTURE_1D)
+		{
+			view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D;
+		}
+		else if (texture->type == GPUResource::TEXTURE_2D)
+		{
+			if (texture->desc.ArraySize > 1)
+			{
+				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			}
+			else
+			{
+				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			}
+		}
+		else if (texture->type == GPUResource::TEXTURE_3D)
+		{
+			view_desc.viewType = VK_IMAGE_VIEW_TYPE_3D;
+		}
+
 		switch (type)
 		{
 		case wiGraphics::SRV:
-			break;
+		{
+			switch (texture->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				view_desc.format = VK_FORMAT_D16_UNORM;
+				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case FORMAT_R32_TYPELESS:
+				view_desc.format = VK_FORMAT_D32_SFLOAT;
+				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				view_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				break;
+			}
+
+			VkImageView srv;
+			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &srv);
+
+			if (res == VK_SUCCESS)
+			{
+				if (texture->SRV == WI_NULL_HANDLE)
+				{
+					texture->SRV = (wiCPUHandle)srv;
+					return -1;
+				}
+				texture->subresourceSRVs.push_back((wiCPUHandle)srv);
+				return int(texture->subresourceSRVs.size() - 1);
+			}
+			else
+			{
+				assert(0);
+			}
+		}
+		break;
 		case wiGraphics::UAV:
-			break;
+		{
+			VkImageView uav;
+			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &uav);
+
+			if (res == VK_SUCCESS)
+			{
+				if (texture->UAV == WI_NULL_HANDLE)
+				{
+					texture->UAV = (wiCPUHandle)uav;
+					return -1;
+				}
+				texture->subresourceUAVs.push_back((wiCPUHandle)uav);
+				return int(texture->subresourceUAVs.size() - 1);
+			}
+			else
+			{
+				assert(0);
+			}
+		}
+		break;
 		case wiGraphics::RTV:
-			break;
+		{
+			VkImageView rtv;
+			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &rtv);
+
+			if (res == VK_SUCCESS)
+			{
+				if (texture->RTV == WI_NULL_HANDLE)
+				{
+					texture->RTV = (wiCPUHandle)rtv;
+					return -1;
+				}
+				texture->subresourceRTVs.push_back((wiCPUHandle)rtv);
+				return int(texture->subresourceRTVs.size() - 1);
+			}
+			else
+			{
+				assert(0);
+			}
+		}
+		break;
 		case wiGraphics::DSV:
-			break;
+		{
+			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+			switch (texture->desc.Format)
+			{
+			case FORMAT_R16_TYPELESS:
+				view_desc.format = VK_FORMAT_D16_UNORM;
+				break;
+			case FORMAT_R32_TYPELESS:
+				view_desc.format = VK_FORMAT_D32_SFLOAT;
+				break;
+			case FORMAT_R24G8_TYPELESS:
+				view_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
+				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			case FORMAT_R32G8X24_TYPELESS:
+				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
+				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			}
+
+			VkImageView dsv;
+			VkResult res = vkCreateImageView(device, &view_desc, nullptr, &dsv);
+
+			if (res == VK_SUCCESS)
+			{
+				if (texture->DSV == WI_NULL_HANDLE)
+				{
+					texture->DSV = (wiCPUHandle)dsv;
+					return -1;
+				}
+				texture->subresourceDSVs.push_back((wiCPUHandle)dsv);
+				return int(texture->subresourceDSVs.size() - 1);
+			}
+			else
+			{
+				assert(0);
+			}
+		}
+		break;
 		default:
 			break;
 		}
@@ -4397,19 +4279,19 @@ namespace wiGraphics
 		}
 		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, viewports);
 	}
-	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource)
 	{
 		assert(NumViews <= 8);
 		for (UINT i = 0; i < NumViews; ++i)
 		{
-			if (arrayIndex < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
+			if (subresource < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
 			{
 				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
 			}
 			else
 			{
-				assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->subresourceRTVs[arrayIndex];
+				assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid RTV subresource!");
+				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->subresourceRTVs[subresource];
 			}
 
 			renderPass[cmd].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
@@ -4420,14 +4302,14 @@ namespace wiGraphics
 
 		if (depthStencilTexture != nullptr)
 		{
-			if (arrayIndex < 0 || depthStencilTexture->subresourceDSVs.empty())
+			if (subresource < 0 || depthStencilTexture->subresourceDSVs.empty())
 			{
 				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
 			}
 			else
 			{
-				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->subresourceDSVs[arrayIndex];
+				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid DSV subresource!");
+				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->subresourceDSVs[subresource];
 			}
 			renderPass[cmd].attachmentCount++;
 
@@ -4439,35 +4321,35 @@ namespace wiGraphics
 		renderPass[cmd].dirty = true;
 
 	}
-	void GraphicsDevice_Vulkan::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int arrayIndex)
+	void GraphicsDevice_Vulkan::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource)
 	{
 		RenderPassManager::ClearRequest clear;
 
-		if (arrayIndex < 0 || pTexture->subresourceRTVs.empty())
+		if (subresource < 0 || pTexture->subresourceRTVs.empty())
 		{
 			clear.attachment = (VkImageView)pTexture->RTV;
 		}
 		else
 		{
-			assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(arrayIndex) && "Invalid rendertarget arrayIndex!");
-			clear.attachment = (VkImageView)pTexture->subresourceRTVs[arrayIndex];
+			assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
+			clear.attachment = (VkImageView)pTexture->subresourceRTVs[subresource];
 		}
 		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
 
 		renderPass[cmd].clearRequests.push_back(clear);
 	}
-	void GraphicsDevice_Vulkan::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_Vulkan::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource)
 	{
 		RenderPassManager::ClearRequest clear;
 
-		if (arrayIndex < 0 || pTexture->subresourceDSVs.empty())
+		if (subresource < 0 || pTexture->subresourceDSVs.empty())
 		{
 			clear.attachment = (VkImageView)pTexture->DSV;
 		}
 		else
 		{
-			assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(arrayIndex) && "Invalid depthstencil arrayIndex!");
-			clear.attachment = (VkImageView)pTexture->subresourceDSVs[arrayIndex];
+			assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
+			clear.attachment = (VkImageView)pTexture->subresourceDSVs[subresource];
 		}
 		clear.clearValue.depthStencil.depth = Depth;
 		clear.clearValue.depthStencil.stencil = Stencil;
@@ -4475,14 +4357,14 @@ namespace wiGraphics
 
 		renderPass[cmd].clearRequests.push_back(clear);
 	}
-	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
-		if (table.SRV[slot] != resource || table.SRV_index[slot] != arrayIndex)
+		if (table.SRV[slot] != resource || table.SRV_index[slot] != subresource)
 		{
 			table.SRV[slot] = resource;
-			table.SRV_index[slot] = arrayIndex;
+			table.SRV_index[slot] = subresource;
 			table.dirty = true;
 		}
 	}
@@ -4496,14 +4378,14 @@ namespace wiGraphics
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int arrayIndex)
+	void GraphicsDevice_Vulkan::BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 		auto& table = GetFrameResources().descriptors[cmd]->tables[stage];
-		if (table.UAV[slot] != resource || table.UAV_index[slot] != arrayIndex)
+		if (table.UAV[slot] != resource || table.UAV_index[slot] != subresource)
 		{
 			table.UAV[slot] = resource;
-			table.UAV_index[slot] = arrayIndex;
+			table.UAV_index[slot] = subresource;
 			table.dirty = true;
 		}
 	}
