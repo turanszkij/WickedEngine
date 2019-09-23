@@ -133,7 +133,7 @@ void RegisterTexture2D(tinygltf::Image *image, const string& type_name)
 				int subresource_index;
 				subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(tex, SRV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(tex, UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
 

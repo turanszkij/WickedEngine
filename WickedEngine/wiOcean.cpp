@@ -108,7 +108,7 @@ void createTextureAndViews(UINT width, UINT height, FORMAT format, Texture2D* pT
 		int subresource_index;
 		subresource_index = device->CreateSubresource(pTex, SRV, 0, 1, i, 1);
 		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(pTex, SRV, 0, 1, i, 1);
+		subresource_index = device->CreateSubresource(pTex, UAV, 0, 1, i, 1);
 		assert(subresource_index == i);
 	}
 }
