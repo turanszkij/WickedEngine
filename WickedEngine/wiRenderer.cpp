@@ -6260,7 +6260,7 @@ void RefreshEnvProbes(CommandList cmd)
 		for (UINT i = 0; i < envmapCount; ++i)
 		{
 			int subresource_index;
-			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i, 6, 0, 1);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i * 6, 6, 0, 1);
 			assert(subresource_index == i);
 		}
 		for (UINT i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
@@ -6276,7 +6276,7 @@ void RefreshEnvProbes(CommandList cmd)
 		for (UINT i = 0; i < envmapCount; ++i)
 		{
 			int subresource_index;
-			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i, 6, 0, -1);
+			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i * 6, 6, 0, -1);
 			assert(subresource_index == textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + i);
 		}
 	}

@@ -649,7 +649,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 		{
 			wiRenderer::Postprocess_MotionBlur(*rt_read, srcGbuffer1, *rt_write, cmd);
 
-			SwapPtr(rt_read, rt_write);
+			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
@@ -663,7 +663,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 			{
 				wiRenderer::Postprocess_DepthOfField(*rt_read, rtDof[1], *rt_write, rtLinearDepth, cmd, getDepthOfFieldFocus());
 
-				SwapPtr(rt_read, rt_write);
+				std::swap(rt_read, rt_write);
 				device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			}
 			device->EventEnd(cmd);
@@ -694,7 +694,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 		{
 			wiRenderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
 
-			SwapPtr(rt_read, rt_write);
+			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
@@ -707,7 +707,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 				cmd
 			);
 
-			SwapPtr(rt_read, rt_write);
+			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
@@ -715,7 +715,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 		{
 			wiRenderer::Postprocess_FXAA(*rt_read, *rt_write, cmd);
 
-			SwapPtr(rt_read, rt_write);
+			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
@@ -723,7 +723,7 @@ void RenderPath3D::RenderPostprocessChain(const Texture2D& srcSceneRT, const Tex
 		{
 			wiRenderer::Postprocess_Chromatic_Aberration(*rt_read, *rt_write, cmd, getChromaticAberrationAmount());
 
-			SwapPtr(rt_read, rt_write);
+			std::swap(rt_read, rt_write);
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 	}

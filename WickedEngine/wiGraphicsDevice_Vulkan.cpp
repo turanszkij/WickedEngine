@@ -1672,6 +1672,12 @@ namespace wiGraphics
 			VkPhysicalDeviceFeatures deviceFeatures = {};
 			vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
+			assert(deviceFeatures.imageCubeArray == VK_TRUE);
+			assert(deviceFeatures.geometryShader == VK_TRUE);
+			assert(deviceFeatures.samplerAnisotropy == VK_TRUE);
+			assert(deviceFeatures.shaderClipDistance == VK_TRUE);
+			TESSELLATION = deviceFeatures.tessellationShader == VK_TRUE;
+
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -3595,13 +3601,34 @@ namespace wiGraphics
 
 		if (texture->type == GPUResource::TEXTURE_1D)
 		{
-			view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D;
+			if (texture->desc.ArraySize > 1)
+			{
+				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+			}
+			else
+			{
+				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D;
+			}
 		}
 		else if (texture->type == GPUResource::TEXTURE_2D)
 		{
 			if (texture->desc.ArraySize > 1)
 			{
-				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				{
+					if (texture->desc.ArraySize > 6)
+					{
+						view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+					}
+					else
+					{
+						view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+					}
+				}
+				else
+				{
+					view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+				}
 			}
 			else
 			{
@@ -4102,7 +4129,7 @@ namespace wiGraphics
 
 
 		// Initiate stalling CPU when GPU is behind by more frames than would fit in the backbuffers:
-		if (FRAMECOUNT >= BACKBUFFER_COUNT && vkGetFenceStatus(device, GetFrameResources().frameFence) == VK_SUCCESS)
+		if (FRAMECOUNT >= BACKBUFFER_COUNT)
 		{
 			res = vkWaitForFences(device, 1, &GetFrameResources().frameFence, true, 0xFFFFFFFFFFFFFFFF);
 			assert(res == VK_SUCCESS);

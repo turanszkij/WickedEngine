@@ -2469,9 +2469,20 @@ namespace wiGraphics
 
 			if (texture->type == GPUResource::TEXTURE_1D)
 			{
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-				srv_desc.Texture1D.MostDetailedMip = firstMip;
-				srv_desc.Texture1D.MipLevels = mipCount;
+				if (texture->desc.ArraySize > 1)
+				{
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+					srv_desc.Texture1DArray.FirstArraySlice = firstSlice;
+					srv_desc.Texture1DArray.ArraySize = sliceCount;
+					srv_desc.Texture1DArray.MostDetailedMip = firstMip;
+					srv_desc.Texture1DArray.MipLevels = mipCount;
+				}
+				else
+				{
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+					srv_desc.Texture1D.MostDetailedMip = firstMip;
+					srv_desc.Texture1D.MipLevels = mipCount;
+				}
 			}
 			else if (texture->type == GPUResource::TEXTURE_2D)
 			{
@@ -2479,7 +2490,7 @@ namespace wiGraphics
 				{
 					if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 					{
-						if (sliceCount > 6)
+						if (texture->desc.ArraySize > 6)
 						{
 							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
 							srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;
@@ -2570,8 +2581,18 @@ namespace wiGraphics
 
 			if (texture->type == GPUResource::TEXTURE_1D)
 			{
-				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
-				uav_desc.Texture1D.MipSlice = firstMip;
+				if (texture->desc.ArraySize > 1)
+				{
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
+					uav_desc.Texture1DArray.FirstArraySlice = firstSlice;
+					uav_desc.Texture1DArray.ArraySize = sliceCount;
+					uav_desc.Texture1DArray.MipSlice = firstMip;
+				}
+				else
+				{
+					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
+					uav_desc.Texture1D.MipSlice = firstMip;
+				}
 			}
 			else if (texture->type == GPUResource::TEXTURE_2D)
 			{
@@ -2633,8 +2654,18 @@ namespace wiGraphics
 
 			if (texture->type == GPUResource::TEXTURE_1D)
 			{
-				rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1D;
-				rtv_desc.Texture1D.MipSlice = firstMip;
+				if (texture->desc.ArraySize > 1)
+				{
+					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1DARRAY;
+					rtv_desc.Texture1DArray.FirstArraySlice = firstSlice;
+					rtv_desc.Texture1DArray.ArraySize = sliceCount;
+					rtv_desc.Texture1DArray.MipSlice = firstMip;
+				}
+				else
+				{
+					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1D;
+					rtv_desc.Texture1D.MipSlice = firstMip;
+				}
 			}
 			else if (texture->type == GPUResource::TEXTURE_2D)
 			{
@@ -2712,8 +2743,18 @@ namespace wiGraphics
 
 			if (texture->type == GPUResource::TEXTURE_1D)
 			{
-				dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1D;
-				dsv_desc.Texture1D.MipSlice = firstMip;
+				if (texture->desc.ArraySize > 1)
+				{
+					dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1DARRAY;
+					dsv_desc.Texture1DArray.FirstArraySlice = firstSlice;
+					dsv_desc.Texture1DArray.ArraySize = sliceCount;
+					dsv_desc.Texture1DArray.MipSlice = firstMip;
+				}
+				else
+				{
+					dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1D;
+					dsv_desc.Texture1D.MipSlice = firstMip;
+				}
 			}
 			else if (texture->type == GPUResource::TEXTURE_2D)
 			{
