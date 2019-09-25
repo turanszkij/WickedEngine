@@ -125,8 +125,8 @@ namespace wiRectPacker
 		}
 
 		~node() {
-			if (c[0].pn) delete c[0].pn;
-			if (c[1].pn) delete c[1].pn;
+			delete c[0].pn;
+			delete c[1].pn;
 		}
 	};
 

@@ -1,5 +1,5 @@
-#ifndef _SHADERINTEROP_UTILITY_H_
-#define _SHADERINTEROP_UTILITY_H_
+#ifndef WI_SHADERINTEROP_UTILITY_H
+#define WI_SHADERINTEROP_UTILITY_H
 #include "ShaderInterop.h"
 
 // MIP Generator params:
@@ -37,4 +37,4 @@ CBUFFER(CopyTextureCB, CBSLOT_RENDERER_UTILITY)
 	int  xCopyBorderExpandStyle;
 };
 
-#endif //_SHADERINTEROP_UTILITY_H_
+#endif // WI_SHADERINTEROP_UTILITY_H

@@ -1,6 +1,4 @@
-#ifndef _GRAPHICSDEVICE_VULKAN_H_
-#define _GRAPHICSDEVICE_VULKAN_H_
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
@@ -375,5 +373,3 @@ namespace wiGraphics
 }
 
 #endif // WICKEDENGINE_BUILD_VULKAN
-
-#endif // _GRAPHICSDEVICE_VULKAN_H_

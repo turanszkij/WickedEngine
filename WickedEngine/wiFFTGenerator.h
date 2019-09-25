@@ -1,6 +1,4 @@
-#ifndef _FFT_GENERATOR_H_
-#define _FFT_GENERATOR_H_
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 
@@ -47,5 +45,3 @@ void fft_512x512_c2c(
 	const wiGraphics::GPUResource& pSRV_Src, 
 	wiGraphics::CommandList cmd);
 
-
-#endif // _FFT_GENERATOR_H_

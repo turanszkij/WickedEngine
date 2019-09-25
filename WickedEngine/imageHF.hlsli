@@ -1,5 +1,5 @@
-#ifndef _IMAGEHF_
-#define _IMAGEHF_
+#ifndef WI_IMAGE_HF
+#define WI_IMAGE_HF
 #include "globals.hlsli"
 #include "ShaderInterop_Image.h"
 
@@ -15,5 +15,5 @@ struct VertextoPixel
 	float2 uv1				: TEXCOORD1;
 };
 
-#endif // _IMAGEHF_
+#endif // WI_IMAGE_HF
 

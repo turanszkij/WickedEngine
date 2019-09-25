@@ -1,6 +1,4 @@
-#ifndef _WI_ALLOCATORS_H_
-#define _WI_ALLOCATORS_H_
-
+#pragma once
 #include <cstdint>
 #include <memory>
 
@@ -51,5 +49,3 @@ namespace wiAllocators
 	};
 
 }
-
-#endif // _WI_ALLOCATORS_H_

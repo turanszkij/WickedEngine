@@ -1,5 +1,5 @@
-#ifndef _BITONIC_SORT_COMPUTE_HF_
-#define _BITONIC_SORT_COMPUTE_HF_
+#ifndef WI_BITONIC_SORT_COMPUTE_HF
+#define WI_BITONIC_SORT_COMPUTE_HF
 
 CBUFFER(CB,0)
 {
@@ -16,4 +16,4 @@ RWRAWBUFFER(Data, 0);
 static const uint _stride = 4; // using 32 bit uints
 
 
-#endif // _BITONIC_SORT_COMPUTE_HF_
+#endif // WI_BITONIC_SORT_COMPUTE_HF

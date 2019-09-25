@@ -1,5 +1,5 @@
-#ifndef _LIGHTING_HF_
-#define _LIGHTING_HF_
+#ifndef WI_LIGHTING_HF
+#define WI_LIGHTING_HF
 #include "globals.hlsli"
 #include "brdf.hlsli"
 #include "voxelConeTracingHF.hlsli"
@@ -828,4 +828,4 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	return float4(envmapColor, edgeBlend);
 }
 
-#endif // _LIGHTING_HF_
+#endif // WI_LIGHTING_HF

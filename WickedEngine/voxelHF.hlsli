@@ -1,5 +1,5 @@
-#ifndef _VOXEL_HF_
-#define _VOXEL_HF_
+#ifndef WI_VOXEL_HF
+#define WI_VOXEL_HF
 
 struct VoxelType
 {
@@ -81,4 +81,4 @@ float3 DecodeNormal(in uint normalMask)
 	return normal;
 }
 
-#endif
+#endif // WI_VOXEL_HF

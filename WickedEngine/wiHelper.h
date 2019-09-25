@@ -1,6 +1,4 @@
-#ifndef WHELPER
-#define WHELPER
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 
@@ -72,11 +70,13 @@ namespace wiHelper
 
 	bool FileExists(const std::string& fileName);
 
+	void StringConvert(const std::string from, std::wstring& to);
+
+	void StringConvert(const std::wstring from, std::string& to);
+
 	// Puts the current thread to sleeping state for a given time (OS can overtake)
 	void Sleep(float milliseconds);
 
 	// Spins for the given time and does nothing (OS can not overtake)
 	void Spin(float milliseconds);
 };
-
-#endif

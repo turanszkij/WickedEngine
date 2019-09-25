@@ -1,6 +1,4 @@
-#ifndef _XAUDIO2_H_
-#define _XAUDIO2_H_
-
+#pragma once
 #include "CommonInclude.h"
 
 #include <xaudio2.h>
@@ -99,6 +97,4 @@ public:
 	static float GetVolume();
 	HRESULT Play(DWORD delay = 0) override;
 };
-
-#endif // _XAUDIO2_H_
 

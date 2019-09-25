@@ -1,6 +1,4 @@
-#ifndef _GRAPHICSDEVICE_H_
-#define _GRAPHICSDEVICE_H_
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDescriptors.h"
 #include "wiGraphicsResource.h"
@@ -177,5 +175,3 @@ namespace wiGraphics
 	};
 
 }
-
-#endif // _GRAPHICSDEVICE_H_

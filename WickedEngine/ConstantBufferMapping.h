@@ -1,5 +1,5 @@
-#ifndef _CONSTANTBUFFER_MAPPING_H_
-#define _CONSTANTBUFFER_MAPPING_H_
+#ifndef WI_CONSTANTBUFFER_MAPPING_H
+#define WI_CONSTANTBUFFER_MAPPING_H
 
 // Slot matchings:
 ////////////////////////////////////////////////////
@@ -43,4 +43,4 @@
 
 
 
-#endif // _CONSTANTBUFFER_MAPPING_H_
+#endif // WI_CONSTANTBUFFER_MAPPING_H

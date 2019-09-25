@@ -1,5 +1,5 @@
-#ifndef _RAY_SCENE_INTERSECT_HF_
-#define _RAY_SCENE_INTERSECT_HF_
+#ifndef WI_RAYTRACING_HF
+#define WI_RAYTRACING_HF
 #include "globals.hlsli"
 #include "ShaderInterop_Raytracing.h"
 #include "ShaderInterop_BVH.h"
@@ -453,4 +453,4 @@ inline uint TraceRay_DebugBVH(Ray ray)
 	return hit_counter;
 }
 
-#endif // _RAY_SCENE_INTERSECT_HF_
+#endif // WI_RAYTRACING_HF

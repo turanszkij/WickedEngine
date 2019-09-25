@@ -1,5 +1,4 @@
-#ifndef _INTERSECTABLES_H_
-#define _INTERSECTABLES_H_
+#pragma once
 #include "CommonInclude.h"
 #include "wiArchive.h"
 #include "wiECS.h"
@@ -124,5 +123,3 @@ public:
 };
 
 
-
-#endif // _INTERSECTABLES_H_

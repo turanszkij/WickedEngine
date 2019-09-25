@@ -1,6 +1,4 @@
-#ifndef _WI_CONTAINERS_H_
-#define _WI_CONTAINERS_H_
-
+#pragma once
 #include "wiSpinLock.h"
 
 namespace wiContainers
@@ -52,5 +50,3 @@ namespace wiContainers
 		wiSpinLock lock;
 	};
 }
-
-#endif // _WI_CONTAINERS_H_

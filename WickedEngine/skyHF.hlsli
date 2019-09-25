@@ -1,5 +1,5 @@
-#ifndef _SKY_HF_
-#define _SKY_HF_
+#ifndef WI_SKY_HF
+#define WI_SKY_HF
 #include "globals.hlsli"
 #include "lightingHF.hlsli"
 
@@ -158,4 +158,4 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 }
 
 
-#endif // _SKY_HF_
+#endif // WI_SKY_HF

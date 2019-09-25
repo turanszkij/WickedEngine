@@ -1,5 +1,5 @@
-#ifndef _SHADERINTEROP_OCEAN_H_
-#define _SHADERINTEROP_OCEAN_H_
+#ifndef WI_SHADERINTEROP_OCEAN_H
+#define WI_SHADERINTEROP_OCEAN_H
 #include "ShaderInterop.h"
 
 #define OCEAN_COMPUTE_TILESIZE 16
@@ -39,4 +39,4 @@ CBUFFER(Ocean_RenderCB, CBSLOT_OTHER_OCEAN_RENDER)
 	float		xOceanSurfaceDisplacementTolerance;
 };
 
-#endif // _SHADERINTEROP_OCEAN_H_
+#endif // WI_SHADERINTEROP_OCEAN_H

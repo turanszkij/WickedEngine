@@ -1,5 +1,5 @@
-#ifndef _HAIRPARTICLE_HF_
-#define _HAIRPARTICLE_HF_
+#ifndef WI_HAIRPARTICLE_HF
+#define WI_HAIRPARTICLE_HF
 
 struct VertexToPixel
 {
@@ -13,4 +13,4 @@ struct VertexToPixel
 	float3 color : COLOR;
 };
 
-#endif // _HAIRPARTICLE_HF_
+#endif // WI_HAIRPARTICLE_HF

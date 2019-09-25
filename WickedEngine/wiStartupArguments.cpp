@@ -1,4 +1,5 @@
 #include "wiStartupArguments.h"
+#include "wiHelper.h"
 
 #include <vector>
 #include <sstream>
@@ -10,10 +11,11 @@ set<string> wiStartupArguments::params;
 
 void wiStartupArguments::Parse(const wchar_t* args)
 {
-	wstring tmp = args;
-	string tmp1(tmp.begin(), tmp.end());
+	wstring from = args;
+	string to;
+	wiHelper::StringConvert(from, to);
 
-	istringstream iss(tmp1);
+	istringstream iss(to);
 
 	params = 
 	{ 

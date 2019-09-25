@@ -1,5 +1,5 @@
-#ifndef _SHADERINTEROP_RAYTRACING_H_
-#define _SHADERINTEROP_RAYTRACING_H_
+#ifndef WI_SHADERINTEROP_RAYTRACING_H
+#define WI_SHADERINTEROP_RAYTRACING_H
 #include "ShaderInterop.h"
 
 
@@ -28,4 +28,4 @@ struct RaytracingStoredRay
 };
 
 
-#endif // _SHADERINTEROP_RAYTRACING_H_
+#endif // WI_SHADERINTEROP_RAYTRACING_H

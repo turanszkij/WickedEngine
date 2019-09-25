@@ -40,7 +40,7 @@ namespace wiFont_Internal
 	VertexLayout		vertexLayout;
 	const VertexShader	*vertexShader = nullptr;
 	const PixelShader	*pixelShader = nullptr;
-	PipelineState			PSO;
+	PipelineState		PSO;
 
 	atomic_bool initialized = false;
 
@@ -100,9 +100,9 @@ namespace wiFont_Internal
 		XMHALF2 Tex;
 	};
 
-	int WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams params, int style)
+	uint32_t WriteVertices(volatile FontVertex* vertexList, const std::wstring& text, wiFontParams params, int style)
 	{
-		int quadCount = 0;
+		uint32_t quadCount = 0;
 
 		int16_t line = 0;
 		int16_t pos = 0;
@@ -140,7 +140,7 @@ namespace wiFont_Internal
 				const int16_t glyphOffsetX = int16_t(glyph.x * params.scaling);
 				const int16_t glyphOffsetY = int16_t(glyph.y * params.scaling);
 
-				const size_t vertexID = quadCount * 4;
+				const size_t vertexID = size_t(quadCount) * 4;
 
 				const int16_t left = pos + glyphOffsetX;
 				const int16_t right = left + glyphWidth;
@@ -204,24 +204,24 @@ void wiFont::Initialize()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	{
-		uint16_t indices[MAX_TEXT * 6];
+		std::vector<uint16_t> indices(MAX_TEXT * 6);
 		for (uint16_t i = 0; i < MAX_TEXT * 4; i += 4) 
 		{
-			indices[i / 4 * 6 + 0] = i + 0;
-			indices[i / 4 * 6 + 1] = i + 2;
-			indices[i / 4 * 6 + 2] = i + 1;
-			indices[i / 4 * 6 + 3] = i + 1;
-			indices[i / 4 * 6 + 4] = i + 2;
-			indices[i / 4 * 6 + 5] = i + 3;
+			indices[size_t(i) / 4 * 6 + 0] = i + 0;
+			indices[size_t(i) / 4 * 6 + 1] = i + 2;
+			indices[size_t(i) / 4 * 6 + 2] = i + 1;
+			indices[size_t(i) / 4 * 6 + 3] = i + 1;
+			indices[size_t(i) / 4 * 6 + 4] = i + 2;
+			indices[size_t(i) / 4 * 6 + 5] = i + 3;
 		}
 
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_IMMUTABLE;
-		bd.ByteWidth = sizeof(indices);
+		bd.ByteWidth = UINT(sizeof(uint16_t) * indices.size());
 		bd.BindFlags = BIND_INDEX_BUFFER;
 		bd.CPUAccessFlags = 0;
 		SubresourceData InitData;
-		InitData.pSysMem = indices;
+		InitData.pSysMem = indices.data();
 
 		HRESULT hr = device->CreateBuffer(&bd, &InitData, &indexBuffer);
 		assert(SUCCEEDED(hr));
@@ -380,7 +380,7 @@ void UpdatePendingGlyphs()
 			const float inv_height = 1.0f / bitmapHeight;
 
 			// Create the CPU-side texture atlas and fill with transparency (0):
-			vector<uint8_t> bitmap(bitmapWidth * bitmapHeight);
+			vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
 			// Iterate all packed glyph rectangles:
@@ -597,18 +597,9 @@ int wiFont::textHeight() const
 	return height;
 }
 
-
 void wiFont::SetText(const string& text)
 {
-#ifdef WIN32
-	int wchars_num = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
-	wchar_t* wstr = new wchar_t[wchars_num];
-	MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, wstr, wchars_num);
-	this->text = wstr;
-	delete[] wstr;
-#else
-	this->text = wstring(text.begin(), text.end());
-#endif
+	wiHelper::StringConvert(text, this->text);
 }
 void wiFont::SetText(const wstring& text)
 {

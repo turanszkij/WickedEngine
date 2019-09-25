@@ -1,5 +1,5 @@
-#ifndef _SAMPLER_MAPPING_H_
-#define _SAMPLER_MAPPING_H_
+#ifndef WI_SAMPLER_MAPPING_H
+#define WI_SAMPLER_MAPPING_H
 
 // Slot matchings:
 ////////////////////////////////////////////////////
@@ -30,4 +30,4 @@
 
 #define SSLOT_COUNT				(SSLOT_COUNT_PERSISTENT + SSLOT_COUNT_ONDEMAND)
 
-#endif // _SAMPLER_MAPPING_H_
+#endif // WI_SAMPLER_MAPPING_H

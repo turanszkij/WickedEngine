@@ -1,5 +1,5 @@
-#ifndef _ENTITY_COMPONENT_SYSTEM_H_
-#define _ENTITY_COMPONENT_SYSTEM_H_
+#ifndef WI_ENTITY_COMPONENT_SYSTEM_H
+#define WI_ENTITY_COMPONENT_SYSTEM_H
 
 #include "wiArchive.h"
 #include "wiRandom.h"
@@ -336,4 +336,4 @@ namespace wiECS
 	};
 }
 
-#endif // _ENTITY_COMPONENT_SYSTEM_H_
+#endif // WI_ENTITY_COMPONENT_SYSTEM_H

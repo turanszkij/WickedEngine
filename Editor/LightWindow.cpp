@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "LightWindow.h"
 
+#include <string>
+
 using namespace wiECS;
+using namespace wiGraphics;
 using namespace wiSceneSystem;
 
 
@@ -218,6 +221,72 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	lightWindow->AddWidget(typeSelectorComboBox);
 
 
+
+	x = 10;
+	y = 280;
+	step = 25;
+
+	lensflare_Label = new wiLabel("Lens flare textures: ");
+	lensflare_Label->SetPos(XMFLOAT2(x, y += step));
+	lensflare_Label->SetSize(XMFLOAT2(120, 20));
+	lightWindow->AddWidget(lensflare_Label);
+
+	for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
+	{
+		lensflare_Button[i] = new wiButton("LensFlareSlot");
+		lensflare_Button[i]->SetText("");
+		lensflare_Button[i]->SetTooltip("Load a lensflare texture to this slot");
+		lensflare_Button[i]->SetPos(XMFLOAT2(x, y += step));
+		lensflare_Button[i]->SetSize(XMFLOAT2(260, 20));
+		lensflare_Button[i]->OnClick([=](wiEventArgs args) {
+			LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+			if (light == nullptr)
+				return;
+
+			if (light->lensFlareRimTextures.size() <= i)
+			{
+				light->lensFlareRimTextures.resize(i + 1);
+				light->lensFlareNames.resize(i + 1);
+			}
+
+			if (light->lensFlareRimTextures[i] != nullptr)
+			{
+				light->lensFlareNames[i] = "";
+				light->lensFlareRimTextures[i] = nullptr;
+				lensflare_Button[i]->SetText("");
+			}
+			else
+			{
+				char szFile[260];
+
+				OPENFILENAMEA ofn;
+				ZeroMemory(&ofn, sizeof(ofn));
+				ofn.lStructSize = sizeof(ofn);
+				ofn.hwndOwner = nullptr;
+				ofn.lpstrFile = szFile;
+				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+				// use the contents of szFile to initialize itself.
+				ofn.lpstrFile[0] = '\0';
+				ofn.nMaxFile = sizeof(szFile);
+				ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
+				ofn.nFilterIndex = 1;
+				ofn.lpstrFileTitle = NULL;
+				ofn.nMaxFileTitle = 0;
+				ofn.lpstrInitialDir = NULL;
+				ofn.Flags = 0;
+				if (GetSaveFileNameA(&ofn) == TRUE) {
+					std::string fileName = ofn.lpstrFile;
+					light->lensFlareRimTextures[i] = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
+					light->lensFlareNames[i] = fileName;
+					fileName = wiHelper::GetFileNameFromPath(fileName);
+					lensflare_Button[i]->SetText(fileName);
+				}
+			}
+			});
+		lightWindow->AddWidget(lensflare_Button[i]);
+	}
+
+
 	lightWindow->Translate(XMFLOAT3(120, 30, 0));
 	lightWindow->SetVisible(false);
 
@@ -266,6 +335,19 @@ void LightWindow::SetEntity(Entity entity)
 		typeSelectorComboBox->SetSelected((int)light->GetType());
 		
 		SetLightType(light->GetType());
+
+		for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
+		{
+			if (light->lensFlareRimTextures[i] && !light->lensFlareNames[i].empty())
+			{
+				lensflare_Button[i]->SetText(light->lensFlareNames[i]);
+			}
+			else
+			{
+				lensflare_Button[i]->SetText("");
+			}
+			lensflare_Button[i]->SetEnabled(true);
+		}
 	}
 	else
 	{
@@ -283,6 +365,11 @@ void LightWindow::SetEntity(Entity entity)
 		colorPicker->SetEnabled(false);
 		typeSelectorComboBox->SetEnabled(false);
 		//lightWindow->SetEnabled(false);
+
+		for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
+		{
+			lensflare_Button[i]->SetEnabled(false);
+		}
 	}
 }
 void LightWindow::SetLightType(LightComponent::LightType type)

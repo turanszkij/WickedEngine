@@ -1,6 +1,4 @@
-#ifndef _GRAPHICSDEVICE_DX12_H_
-#define _GRAPHICSDEVICE_DX12_H_
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiWindowRegistration.h"
@@ -308,5 +306,3 @@ namespace wiGraphics
 	};
 
 }
-
-#endif // _GRAPHICSDEVICE_DX12_H_

@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <codecvt> // string conversion
 
 using namespace std;
 
@@ -69,7 +70,8 @@ namespace wiHelper
 #ifndef WINSTORE_SUPPORT
 		MessageBoxA(wiWindowRegistration::GetRegisteredWindow(), msg.c_str(), caption.c_str(), 0);
 #else
-		wstring wmsg(msg.begin(), msg.end());
+		wstring wmsg;
+		StringConvert(msg, wmsg);
 		wstring wcaption(caption.begin(), caption.end());
 		Windows::UI::Popups::MessageDialog(ref new Platform::String(wmsg.c_str()), ref new Platform::String(wcaption.c_str())).ShowAsync();
 #endif
@@ -191,17 +193,16 @@ namespace wiHelper
 
 	string GetApplicationDirectory()
 	{
-		static string __appDir;
-		static bool __initComplete = false;
-		if (!__initComplete)
+		static string appDir;
+		static bool initComplete = false;
+		if (!initComplete)
 		{
-			LPSTR fileName = new CHAR[1024];
-			GetModuleFileNameA(NULL, fileName, 1024);
-			__appDir = GetDirectoryFromPath(fileName);
-			delete[] fileName;
-			__initComplete = true;
+			CHAR fileName[1024] = {};
+			GetModuleFileNameA(NULL, fileName, ARRAYSIZE(fileName));
+			appDir = GetDirectoryFromPath(fileName);
+			initComplete = true;
 		}
-		return __appDir;
+		return appDir;
 	}
 
 	string GetOriginalWorkingDirectory()
@@ -212,7 +213,12 @@ namespace wiHelper
 
 	string GetWorkingDirectory()
 	{
-		return string(_getcwd(NULL, 0)) + "/";
+		char* cwd = _getcwd(NULL, 0);
+		if (cwd != nullptr)
+		{
+			return string(cwd) + "/";
+		}
+		return "/";
 	}
 
 	bool SetWorkingDirectory(const std::string& path)
@@ -224,7 +230,8 @@ namespace wiHelper
 	{
 #ifndef WINSTORE_SUPPORT
 		// WINDOWS
-		wstring wdirectory = wstring(directory.begin(), directory.end());
+		wstring wdirectory;
+		StringConvert(directory, wdirectory);
 		HANDLE dir;
 		WIN32_FIND_DATA file_data;
 
@@ -242,7 +249,9 @@ namespace wiHelper
 			//if (is_directory)
 			//	continue;
 
-			out.push_back(string(full_file_name.begin(), full_file_name.end()));
+			string fname;
+			StringConvert(full_file_name, fname);
+			out.push_back(fname);
 		} while (FindNextFile(dir, &file_data));
 
 		FindClose(dir);
@@ -336,6 +345,26 @@ namespace wiHelper
 		bool exists = f.is_open();
 		f.close();
 		return exists;
+	}
+
+	void StringConvert(const std::string from, std::wstring& to)
+	{
+		int num = MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, NULL, 0);
+		if (num > 0)
+		{
+			to.resize(size_t(num) - 1);
+			MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, &to[0], num);
+		}
+	}
+
+	void StringConvert(const std::wstring from, std::string& to)
+	{
+		int num = WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, NULL, 0, NULL, NULL);
+		if (num > 0)
+		{
+			to.resize(size_t(num) - 1);
+			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
+		}
 	}
 	
 	void Sleep(float milliseconds)

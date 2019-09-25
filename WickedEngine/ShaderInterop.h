@@ -1,5 +1,5 @@
-#ifndef _WICKEDENGINE_SHADERINTEROP_H_
-#define _WICKEDENGINE_SHADERINTEROP_H_
+#ifndef WI_SHADERINTEROP_H
+#define WI_SHADERINTEROP_H
 
 #include "ShaderInterop_Vulkan.h"
 #include "ConstantBufferMapping.h"
@@ -138,4 +138,4 @@ typedef XMINT4 int4;
 
 #endif // __cplusplus
 
-#endif
+#endif // WI_SHADERINTEROP_H

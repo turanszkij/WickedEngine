@@ -1,5 +1,5 @@
-#ifndef _OBJECTSHADER_HF_
-#define _OBJECTSHADER_HF_
+#ifndef WI_OBJECTSHADER_HF
+#define WI_OBJECTSHADER_HF
 
 #if (defined(TILEDFORWARD) || defined(FORWARD)) && !defined(TRANSPARENT)
 #define DISABLE_ALPHATEST
@@ -974,5 +974,5 @@ GBUFFEROutputType_Thin main(PIXELINPUT input)
 
 
 
-#endif // _OBJECTSHADER_HF_
+#endif // WI_OBJECTSHADER_HF
 

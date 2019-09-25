@@ -1,5 +1,5 @@
-#ifndef _RESOURCEBUFFER_MAPPING_H_
-#define _RESOURCEBUFFER_MAPPING_H_
+#ifndef WI_RESOURCE_MAPPING_H
+#define WI_RESOURCE_MAPPING_H
 
 // Slot matchings:
 ////////////////////////////////////////////////////
@@ -74,4 +74,4 @@
 #define TEXSLOT_RENDERPATH_SSR				TEXSLOT_ONDEMAND9
 
 
-#endif // _RESOURCEBUFFER_MAPPING_H_
+#endif // WI_RESOURCE_MAPPING_H

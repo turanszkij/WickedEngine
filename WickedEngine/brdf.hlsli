@@ -1,5 +1,5 @@
-#ifndef _BRDF_HF_
-#define _BRDF_HF_
+#ifndef WI_BRDF_HF
+#define WI_BRDF_HF
 #include "globals.hlsli"
 
 
@@ -175,4 +175,4 @@ float BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 	return Fd;
 }
 
-#endif // _BRDF_HF_
+#endif // WI_BRDF_HF

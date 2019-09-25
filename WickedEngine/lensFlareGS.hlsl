@@ -1,7 +1,5 @@
 #include "globals.hlsli"
 
-SAMPLERCOMPARISONSTATE(samplercmp, SSLOT_ONDEMAND0)
-
 struct InVert
 {
 	float4 pos					: SV_POSITION;
@@ -93,15 +91,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 		for (float x = -range.x; x <= range.x; x += step.x)
 		{
 			samples += 1.0f;
-#ifndef SHADERCOMPILER_SPIRV
-			// SampleCmpLevelZero also makes a comparison by using a comparison sampler
-			// It compares the reference depth value to the depthmap value.
-			// Can return in between values based on bilinear filtering
-			accdepth += texture_depth.SampleCmpLevelZero(samplercmp, xSunPos.xy + float2(x, y), referenceDepth).r;
-#else
-			// But samplecmplevelzero seems to not work in GS with my vulkan driver?
-			accdepth += texture_depth.SampleLevel(sampler_point_clamp, xSunPos.xy + float2(x, y), 0).r >= referenceDepth ? 1 : 0;
-#endif
+			accdepth += texture_depth.SampleLevel(sampler_point_clamp, xSunPos.xy + float2(x, y), 0).r < referenceDepth ? 1 : 0;
 		}
 	}
 	accdepth /= samples;
@@ -110,6 +100,8 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 	p1.opa = float4(accdepth, 0, 0, 0);
 
 	// Make a new flare if it is at least partially visible:
-	[branch]if( accdepth>0 )
-		append(triStream,p1,p[0].vid,mods[p[0].vid],flareSize);
+	[branch]if (accdepth > 0)
+	{
+		append(triStream, p1, p[0].vid, mods[p[0].vid], flareSize);
+	}
 }

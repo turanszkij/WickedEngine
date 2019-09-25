@@ -1,5 +1,5 @@
-#ifndef _EMITTEDPARTICLE_HF_
-#define _EMITTEDPARTICLE_HF_
+#ifndef WI_EMITTEDPARTICLE_HF
+#define WI_EMITTEDPARTICLE_HF
 
 struct VertextoPixel
 {
@@ -10,4 +10,4 @@ struct VertextoPixel
 	nointerpolation uint color		: TEXCOORD3;
 };
 
-#endif // _EMITTEDPARTICLE_HF_
+#endif // WI_EMITTEDPARTICLE_HF

@@ -1,5 +1,5 @@
-#ifndef _SHADER_GLOBALS_
-#define _SHADER_GLOBALS_
+#ifndef WI_SHADER_GLOBALS_HF
+#define WI_SHADER_GLOBALS_HF
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
@@ -543,4 +543,4 @@ inline float dither(in float2 pixel)
 	return ditherMask8(pixel);
 }
 
-#endif // _SHADER_GLOBALS_
+#endif // WI_SHADER_GLOBALS_HF

@@ -37,5 +37,8 @@ public:
 	wiButton*	addLightButton;
 	wiColorPicker*	colorPicker;
 	wiComboBox*	typeSelectorComboBox;
+
+	wiLabel* lensflare_Label;
+	wiButton* lensflare_Button[7];
 };
 

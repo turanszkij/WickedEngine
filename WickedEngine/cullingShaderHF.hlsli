@@ -1,5 +1,5 @@
-#ifndef _CULLING_SHADER_HF_
-#define _CULLING_SHADER_HF_
+#ifndef WI_CULLING_SHADER_HF
+#define WI_CULLING_SHADER_HF
 #include "ShaderInterop.h"
 
 struct Plane
@@ -226,4 +226,4 @@ void AABBtransform(inout AABB aabb, float4x4 mat)
 	AABBfromMinMax(aabb, _min, _max);
 }
 
-#endif // _CULLING_SHADER_HF_
+#endif // WI_CULLING_SHADER_HF

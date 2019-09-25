@@ -1,6 +1,4 @@
-#ifndef _OCEAN_SIMULATOR_H
-#define _OCEAN_SIMULATOR_H
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiFFTGenerator.h"
@@ -47,5 +45,3 @@ protected:
 	wiGraphics::GPUBuffer m_pImmutableCB;
 	wiGraphics::GPUBuffer m_pPerFrameCB;
 };
-
-#endif	// _OCEAN_SIMULATOR_H

@@ -1,6 +1,4 @@
-#ifndef _WI_GPU_BVH_H_
-#define _WI_GPU_BVH_H_
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiSceneSystem_Decl.h"
@@ -41,5 +39,3 @@ public:
 	static void LoadShaders();
 
 };
-
-#endif // _WI_GPU_BVH_H_

@@ -1,6 +1,4 @@
-#ifndef _WI_GPU_SORTLIB_H_
-#define _WI_GPU_SORTLIB_H_
-
+#pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 
@@ -24,5 +22,3 @@ namespace wiGPUSortLib
 	void Initialize();
 	void LoadShaders();
 };
-
-#endif // _WI_GPU_SORTLIB_H_

@@ -258,7 +258,7 @@ public:
 	{
 		T** obj = static_cast < T ** >(lua_touserdata(L, -1));
 
-		if (obj && *obj)
+		if (obj)
 			delete(*obj);
 
 		return 0;

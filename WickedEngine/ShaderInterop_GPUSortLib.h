@@ -1,5 +1,5 @@
-#ifndef _SHADERINTEROP_GPUSORTLIB_H_
-#define _SHADERINTEROP_GPUSORTLIB_H_
+#ifndef WI_SHADERINTEROP_GPUSORTLIB_H
+#define WI_SHADERINTEROP_GPUSORTLIB_H
 
 #include "ShaderInterop.h"
 
@@ -12,4 +12,4 @@ CBUFFER(SortConstants, CBSLOT_OTHER_GPUSORTLIB)
 #define __ReadSortElementCount__ counterBuffer.Load(counterReadOffset);
 
 
-#endif // _SHADERINTEROP_GPUSORTLIB_H_
+#endif // WI_SHADERINTEROP_GPUSORTLIB_H

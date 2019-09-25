@@ -852,9 +852,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.h">
       <Filter>BULLET</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiLensFlare.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1714,9 +1711,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletDynamics\Vehicle\btWheelInfo.cpp">
       <Filter>BULLET</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiLensFlare.cpp">
-      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImage.cpp">
       <Filter>ENGINE\Graphics</Filter>

@@ -1,5 +1,5 @@
-#ifndef _LIGHTHF_
-#define _LIGHTHF_
+#ifndef WI_DEFERREDLIGHT_HF
+#define WI_DEFERREDLIGHT_HF
 #include "globals.hlsli"
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
@@ -66,7 +66,7 @@ struct LightOutputType
 	Out.specular = float4(combined_lighting.specular, specular_alpha);					\
 	return Out;
 
-#endif // _LIGHTHF_
+#endif // WI_DEFERREDLIGHT_HF
 
 
 

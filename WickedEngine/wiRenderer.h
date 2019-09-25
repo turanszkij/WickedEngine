@@ -126,19 +126,19 @@ namespace wiRenderer
 		const wiSceneSystem::CameraComponent& camera, 
 		wiGraphics::CommandList cmd
 	);
-	// Draw volumetric light scattering effects. Linear depth should be already readable (see BindDepthTextures())
+	// Draw volumetric light scattering effects
 	void DrawVolumeLights(
 		const wiSceneSystem::CameraComponent& camera,
 		const wiGraphics::Texture2D& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
-	// Draw Lens Flares for lights that have them enabled. Linear depth should be already readable (see BindDepthTextures())
+	// Draw Lens Flares for lights that have them enabled
 	void DrawLensFlares(
 		const wiSceneSystem::CameraComponent& camera,
 		const wiGraphics::Texture2D& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
-	// Draw deferred decals. Gbuffer and depth textures should already be readable (see BindGBufferTextures(), BindDepthTextures())
+	// Draw deferred decals
 	void DrawDeferredDecals(
 		const wiSceneSystem::CameraComponent& camera,
 		const wiGraphics::Texture2D& depthbuffer,

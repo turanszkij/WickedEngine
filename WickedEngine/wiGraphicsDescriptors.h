@@ -1,6 +1,4 @@
-#ifndef _GRAPHICS_DESCRIPTORS_H_
-#define _GRAPHICS_DESCRIPTORS_H_
-
+#pragma once
 #include "CommonInclude.h"
 
 namespace wiGraphics
@@ -507,5 +505,3 @@ namespace wiGraphics
 	};
 
 }
-
-#endif // _GRAPHICS_DESCRIPTORS_H_

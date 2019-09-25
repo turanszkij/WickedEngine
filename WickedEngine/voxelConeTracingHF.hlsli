@@ -1,5 +1,5 @@
-#ifndef _VOXEL_CONERACING_HF_
-#define _VOXEL_CONERACING_HF_
+#ifndef WI_VOXEL_CONERACING_HF
+#define WI_VOXEL_CONERACING_HF
 #include "globals.hlsli"
 
 static const float3 CONES[] = 

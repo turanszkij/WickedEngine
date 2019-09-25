@@ -1,5 +1,5 @@
-#ifndef _MESH_INPUT_LAYOUT_HF_
-#define _MESH_INPUT_LAYOUT_HF_
+#ifndef WI_MESH_INPUT_LAYOUT_HF
+#define WI_MESH_INPUT_LAYOUT_HF
 #include "ShaderInterop_Renderer.h"
 
 struct Input_Instance
@@ -136,4 +136,4 @@ inline VertexSurface MakeVertexSurfaceFromInput(Input_Object_ALL input)
 	return surface;
 }
 
-#endif // _MESH_INPUT_LAYOUT_HF_
+#endif // WI_MESH_INPUT_LAYOUT_HF

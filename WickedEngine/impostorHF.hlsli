@@ -1,5 +1,5 @@
-#ifndef _IMPOSTOR_HF_
-#define _IMPOSTOR_HF_
+#ifndef WI_IMPOSTOR_HF
+#define WI_IMPOSTOR_HF
 
 struct VSOut
 {
@@ -14,4 +14,4 @@ struct VSOut
 
 TEXTURE2DARRAY(impostorTex, float4, TEXSLOT_ONDEMAND0);
 
-#endif // _IMPOSTOR_HF_
+#endif // WI_IMPOSTOR_HF

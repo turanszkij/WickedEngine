@@ -7,7 +7,6 @@
 #include "wiIntersect.h"
 #include "wiHelper.h"
 #include "wiMath.h"
-#include "wiLensFlare.h"
 #include "wiTextureHelper.h"
 #include "wiCube.h"
 #include "wiEnums.h"
@@ -464,7 +463,6 @@ void ReloadShaders(const std::string& path)
 	wiEmittedParticle::LoadShaders();
 	wiFont::LoadShaders();
 	wiImage::LoadShaders();
-	wiLensFlare::LoadShaders();
 	wiOcean::LoadShaders();
 	CSFFT_512x512_Data_t::LoadShaders();
 	wiWidget::LoadShaders();
@@ -1113,6 +1111,8 @@ PipelineState PSO_volumetriclight[LightComponent::LIGHTTYPE_COUNT];
 PipelineState PSO_enviromentallight;
 
 PipelineState PSO_renderlightmap;
+
+PipelineState PSO_lensflare;
 
 PipelineState PSO_downsampledepthbuffer;
 PipelineState PSO_deferredcomposition;
@@ -2016,6 +2016,7 @@ void LoadShaders()
 	vertexShaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "forceFieldPlaneVisualizerVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_RAYTRACE_SCREEN] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "raytrace_screenVS.cso", wiResourceManager::VERTEXSHADER));
 	vertexShaders[VSTYPE_SCREEN] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "screenVS.cso", wiResourceManager::VERTEXSHADER));
+	vertexShaders[VSTYPE_LENSFLARE] = static_cast<const VertexShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lensFlareVS.cso", wiResourceManager::VERTEXSHADER));
 
 
 	pixelShaders[PSTYPE_OBJECT_DEFERRED] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectPS_deferred.cso", wiResourceManager::PIXELSHADER));
@@ -2105,6 +2106,7 @@ void LoadShaders()
 	pixelShaders[PSTYPE_DOWNSAMPLEDEPTHBUFFER] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "downsampleDepthBuffer4xPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_DEFERREDCOMPOSITION] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "deferredPS.cso", wiResourceManager::PIXELSHADER));
 	pixelShaders[PSTYPE_POSTPROCESS_SSS] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "sssPS.cso", wiResourceManager::PIXELSHADER));
+	pixelShaders[PSTYPE_LENSFLARE] = static_cast<const PixelShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lensFlarePS.cso", wiResourceManager::PIXELSHADER));
 
 	geometryShaders[GSTYPE_ENVMAP] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMapGS.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_ENVMAP_SKY] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "envMap_skyGS.cso", wiResourceManager::GEOMETRYSHADER));
@@ -2112,6 +2114,7 @@ void LoadShaders()
 	geometryShaders[GSTYPE_SHADOWCUBEMAPRENDER_ALPHATEST] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "cubeShadowGS_alphatest.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXELIZER] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "objectGS_voxelizer.cso", wiResourceManager::GEOMETRYSHADER));
 	geometryShaders[GSTYPE_VOXEL] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "voxelGS.cso", wiResourceManager::GEOMETRYSHADER));
+	geometryShaders[GSTYPE_LENSFLARE] = static_cast<const GeometryShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "lensFlareGS.cso", wiResourceManager::GEOMETRYSHADER));
 
 
 	computeShaders[CSTYPE_LUMINANCE_PASS1] = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(SHADERPATH + "luminancePass1CS.cso", wiResourceManager::COMPUTESHADER));
@@ -2782,6 +2785,20 @@ void LoadShaders()
 
 		device->CreatePipelineState(&desc, &PSO_sss);
 		});
+	wiJobSystem::Execute(ctx, [device] {
+		PipelineStateDesc desc;
+		desc.vs = vertexShaders[VSTYPE_LENSFLARE];
+		desc.ps = pixelShaders[PSTYPE_LENSFLARE];
+		desc.gs = geometryShaders[GSTYPE_LENSFLARE];
+		desc.bs = &blendStates[BSTYPE_ADDITIVE];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.dss = &depthStencils[DSSTYPE_XRAY];
+		desc.pt = POINTLIST;
+		desc.numRTs = 1;
+		desc.RTFormats[0] = RTFormat_hdr;
+
+		device->CreatePipelineState(&desc, &PSO_lensflare);
+		});
 	wiJobSystem::Dispatch(ctx, SKYRENDERING_COUNT, 1, [device](wiJobDispatchArgs args) {
 		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_SKY];
@@ -3058,6 +3075,10 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(PostProcessCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS]);
 	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS], "PostProcessCB");
+
+	bd.ByteWidth = sizeof(LensFlareCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_LENSFLARE]);
+	device->SetName(&constantBuffers[CBTYPE_LENSFLARE], "LensFlareCB");
 
 
 }
@@ -3943,9 +3964,12 @@ void UpdateRenderData(CommandList cmd)
 	// Update material constant buffers:
 	for (auto& materialIndex : pendingMaterialUpdates)
 	{
-		const MaterialComponent& material = scene.materials[materialIndex];
-		ShaderMaterial materialGPUData = material.CreateShaderMaterial();
-		device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, cmd);
+		if (materialIndex < scene.materials.GetCount())
+		{
+			const MaterialComponent& material = scene.materials[materialIndex];
+			ShaderMaterial materialGPUData = material.CreateShaderMaterial();
+			device->UpdateBuffer(material.constantBuffer.get(), &materialGPUData, cmd);
+		}
 	}
 
 
@@ -4879,6 +4903,9 @@ void DrawLensFlares(
 	if (IsWireRender())
 		return;
 
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->EventBegin("Lens Flares", cmd);
+
 	const FrameCulling& culling = frameCullings.at(&camera);
 
 	const Scene& scene = GetScene();
@@ -4898,24 +4925,50 @@ void DrawLensFlares(
 				// point and spotlight flare will be placed to the source position:
 				POS = XMLoadFloat3(&light.position);
 			}
-			else 
+			else
 			{
 				// directional light flare will be placed at infinite position along direction vector:
-				POS = XMVector3Normalize(
-					-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))
-				) * 100000;
+				POS = 
+					camera.GetEye() + 
+					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * camera.zFarP;
 			}
 
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, camera.GetEye()), camera.GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
+				device->BindPipelineState(&PSO_lensflare, cmd);
+
 				// Get the screen position of the flare:
-				XMVECTOR flarePos = XMVector3Project(POS, 0.f, 0.f, (float)GetInternalResolution().x, (float)GetInternalResolution().y, 0.0f, 1.0f, camera.GetProjection(), camera.GetView(), XMMatrixIdentity());
-				wiLensFlare::Draw(cmd, flarePos, light.lensFlareRimTextures);
+				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, camera.GetProjection(), camera.GetView(), XMMatrixIdentity());
+				LensFlareCB cb;
+				XMStoreFloat4(&cb.xSunPos, flarePos);
+				cb.xScreen = XMFLOAT4((float)wiRenderer::GetInternalResolution().x, (float)wiRenderer::GetInternalResolution().y, 0, 0);
+
+				device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
+				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
+
+				UINT i = 0;
+				for (const Texture2D* x : light.lensFlareRimTextures)
+				{
+					if (x != nullptr)
+					{
+						device->BindResource(PS, x, TEXSLOT_ONDEMAND0 + i, cmd);
+						device->BindResource(GS, x, TEXSLOT_ONDEMAND0 + i, cmd);
+						i++;
+						if (i == 7)
+						{
+							break; // currently the pixel shader has hardcoded max amount of lens flare textures...
+						}
+					}
+				}
+
+				device->Draw(i, 0, cmd);
 			}
 
 		}
 
 	}
+
+	device->EventEnd(cmd);
 }
 
 

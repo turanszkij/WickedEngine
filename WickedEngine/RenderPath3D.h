@@ -32,7 +32,7 @@ private:
 	bool hairParticlesReflectionEnabled = false;
 	bool volumeLightsEnabled = true;
 	bool lightShaftsEnabled = false;
-	bool lensFlareEnabled = false;
+	bool lensFlareEnabled = true;
 	bool motionBlurEnabled = false;
 	bool sssEnabled = true;
 	bool depthOfFieldEnabled = false;

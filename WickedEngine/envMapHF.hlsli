@@ -1,5 +1,5 @@
-#ifndef _ENVMAP_HF_
-#define _ENVMAP_HF_
+#ifndef WI_ENVMAP_HF
+#define WI_ENVMAP_HF
 
 #include "globals.hlsli"
 
@@ -37,4 +37,4 @@ struct PSIn_Sky_EnvmapRendering
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 
-#endif // _ENVMAP_HF_
+#endif // WI_ENVMAP_HF

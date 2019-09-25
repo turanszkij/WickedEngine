@@ -458,6 +458,8 @@ namespace wiSceneSystem
 	}
 	void LightComponent::Serialize(wiArchive& archive, uint32_t seed)
 	{
+		std::string dir = archive.GetSourceDirectory();
+
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
@@ -472,12 +474,21 @@ namespace wiSceneSystem
 			archive >> height;
 
 			archive >> lensFlareNames;
+
+			lensFlareRimTextures.resize(lensFlareNames.size());
+			for (size_t i = 0; i < lensFlareNames.size(); ++i)
+			{
+				if (!lensFlareNames[i].empty())
+				{
+					lensFlareRimTextures[i] = (wiGraphics::Texture2D*)wiResourceManager::GetGlobal().add(dir + lensFlareNames[i]);
+				}
+			}
 		}
 		else
 		{
 			archive << _flags;
 			archive << color;
-			archive << (uint32_t&)type;
+			archive << (uint32_t)type;
 			archive << energy;
 			archive << range_local;
 			archive << fov;
@@ -486,6 +497,15 @@ namespace wiSceneSystem
 			archive << width;
 			archive << height;
 
+			// If detecting an absolute path in textures, remove it and convert to relative:
+			for (size_t i = 0; i < lensFlareNames.size(); ++i)
+			{
+				size_t found = lensFlareNames[i].rfind(dir);
+				if (found != std::string::npos)
+				{
+					lensFlareNames[i] = lensFlareNames[i].substr(found + dir.length());
+				}
+			}
 			archive << lensFlareNames;
 		}
 	}

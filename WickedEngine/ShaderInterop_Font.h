@@ -1,5 +1,5 @@
-#ifndef _SHADERINTEROP_FONT_H_
-#define _SHADERINTEROP_FONT_H_
+#ifndef WI_SHADERINTEROP_FONT_H
+#define WI_SHADERINTEROP_FONT_H
 
 #include "ShaderInterop.h"
 
@@ -10,4 +10,4 @@ CBUFFER(FontCB, CBSLOT_FONT)
 };
 
 
-#endif // _SHADERINTEROP_FONT_H_
+#endif // WI_SHADERINTEROP_FONT_H

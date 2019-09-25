@@ -1,5 +1,5 @@
-#ifndef _OCEAN_SURFACE_HF_
-#define _OCEAN_SURFACE_HF_
+#ifndef WI_OCEAN_SURFACE_HF
+#define WI_OCEAN_SURFACE_HF
 #include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
 
@@ -13,4 +13,4 @@ struct PSIn
 	float4 ReflectionMapSamplingPos : REFLECTIONPOS;
 };
 
-#endif // _OCEAN_SURFACE_HF_
+#endif // WI_OCEAN_SURFACE_HF
