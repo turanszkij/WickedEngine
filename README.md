@@ -230,6 +230,24 @@ This feature is experimental, not tested thoroughly yet.
 
 <br/>
 
+### Building with CMake
+
+To build WickedEngine with CMake, open the CMakeLists.txt with Visual Studio 2019 and click on "generate" when prompted. Then use "Build All" to build the x64-Debug configuration. To build x64-Release, right-click CMakeLists.txt in the solution explorer and choose "CMake Settings for "WickedEngine" and add a new x64-Release configuration. 
+
+When building with CMake without Visual Studio, be sure to set the build root to:
+
+${projectDir}\\out\\build\\x64-Debug
+
+or
+
+${projectDir}\\out\\build\\x64-Release
+
+depending on the configuration type.
+
+To use WickedEngine in a external project, see the provided External_Template_Windows project which contains further information.
+
+[External Template](External_Template_Windows/ReadMe.txt)
+
 ### Finally, take a look at some screenshots:
 
 Sponza scene with voxel GI enabled:
