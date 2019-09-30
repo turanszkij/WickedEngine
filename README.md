@@ -230,6 +230,17 @@ This feature is experimental, not tested thoroughly yet.
 
 <br/>
 
+### Contributions
+
+Contributions can be submitted on Github by following the steps below:
+1) Open an issue and describe the feature or patch in detail
+2) The feature or patch will be discussed in the issue, and determined if it would benefit the project
+3) After the request is accepted, open a pull request and reference the issue with #issue_number
+4) Code review will be conducted and the pull request will be merged when it meets the requirements
+5) When the pull request passes, you will be added to the credits as a contributor and your name shall be remembered by future generations
+
+<br/>
+
 ### Finally, take a look at some screenshots:
 
 Sponza scene with voxel GI enabled:
