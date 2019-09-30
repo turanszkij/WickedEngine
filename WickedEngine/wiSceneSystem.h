@@ -992,8 +992,6 @@ namespace wiSceneSystem
 		void Clear();
 		// Merge with an other scene.
 		void Merge(Scene& other);
-		// Count how many entities there are in the scene:
-		size_t CountEntities() const;
 
 		// Removes a specific entity from the scene (if it exists):
 		void Entity_Remove(wiECS::Entity entity);

@@ -1132,37 +1132,6 @@ namespace wiSceneSystem
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
-	size_t Scene::CountEntities() const
-	{
-		// Entities are unique within a ComponentManager, so the most populated ComponentManager
-		//	will actually give us how many entities there are in the scene
-		size_t entityCount = 0;
-		entityCount = std::max(entityCount, names.GetCount());
-		entityCount = std::max(entityCount, layers.GetCount());
-		entityCount = std::max(entityCount, transforms.GetCount());
-		entityCount = std::max(entityCount, prev_transforms.GetCount());
-		entityCount = std::max(entityCount, hierarchy.GetCount());
-		entityCount = std::max(entityCount, materials.GetCount());
-		entityCount = std::max(entityCount, meshes.GetCount());
-		entityCount = std::max(entityCount, impostors.GetCount());
-		entityCount = std::max(entityCount, objects.GetCount());
-		entityCount = std::max(entityCount, aabb_objects.GetCount());
-		entityCount = std::max(entityCount, rigidbodies.GetCount());
-		entityCount = std::max(entityCount, softbodies.GetCount());
-		entityCount = std::max(entityCount, armatures.GetCount());
-		entityCount = std::max(entityCount, lights.GetCount());
-		entityCount = std::max(entityCount, aabb_lights.GetCount());
-		entityCount = std::max(entityCount, cameras.GetCount());
-		entityCount = std::max(entityCount, probes.GetCount());
-		entityCount = std::max(entityCount, aabb_probes.GetCount());
-		entityCount = std::max(entityCount, forces.GetCount());
-		entityCount = std::max(entityCount, decals.GetCount());
-		entityCount = std::max(entityCount, aabb_decals.GetCount());
-		entityCount = std::max(entityCount, animations.GetCount());
-		entityCount = std::max(entityCount, emitters.GetCount());
-		entityCount = std::max(entityCount, hairs.GetCount());
-		return entityCount;
-	}
 
 	void Scene::Entity_Remove(Entity entity)
 	{

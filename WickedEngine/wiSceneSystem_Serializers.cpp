@@ -701,12 +701,13 @@ namespace wiSceneSystem
 	{
 		if (archive.IsReadMode())
 		{
-			uint32_t entityCount;
-			archive >> entityCount; // reserved
+			uint32_t reserved;
+			archive >> reserved;
 		}
 		else
 		{
-			archive << CountEntities();
+			uint32_t reserved = 0;
+			archive << reserved;
 		}
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
