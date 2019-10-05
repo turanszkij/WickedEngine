@@ -98,6 +98,15 @@ The following quick reference shows an overview of common resource formats and s
 
 ![InformationSheet](information_sheet.png)
 
+## Audio
+The audio system handles audio playback and spatial audio.
+- wiAudio
+	- The namespace that is a collection of audio related functionality
+- Sound
+	- Represents a sound file in memory. Load a sound file via wiAudio interface.
+- SoundInstance
+	- An instance of a sound file that can be played and controlled in various ways through the wiAudio interface.
+
 ## Helpers
 A collection of engine-level helper classes
 

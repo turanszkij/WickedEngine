@@ -43,7 +43,7 @@ Soft shadows
 [removed] Rigid body physics simulation (HAVOK) [PRIVATE]
 Rigid body physics simulation (BULLET)
 Soft body physics simulation (BULLET)
-Sound (Xaudio2)
+3D Audio (Xaudio2)
 Input: Windows Keyboard,Windows Mouse,DirectInput(Joypad,Keyboard,Mouse),XINPUT(Joypad)
 Backlog: log,input,scripting
 Gamma correction

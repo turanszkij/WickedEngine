@@ -38,5 +38,8 @@ using namespace DirectX::PackedVector;
 
 static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
+typedef uint64_t wiCPUHandle;
+static const wiCPUHandle WI_NULL_HANDLE = 0;
+
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

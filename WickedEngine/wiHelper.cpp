@@ -17,26 +17,6 @@ using namespace std;
 
 namespace wiHelper
 {
-	DataBlob::DataBlob(const string& fileName) : DATA(nullptr), dataSize(0), dataPos(0)
-	{
-		ifstream file(fileName, ios::binary | ios::ate);
-
-		if (file.is_open())
-		{
-			dataSize = static_cast<size_t>(file.tellg());
-			file.seekg(0, file.beg);
-			DATA = new char[dataSize];
-			file.read(DATA, dataSize);
-			file.close();
-
-			dataPos = reinterpret_cast<size_t>(DATA);
-		}
-	}
-	DataBlob::~DataBlob()
-	{
-		SAFE_DELETE_ARRAY(DATA);
-	}
-
 	string toUpper(const std::string& s)
 	{
 		std::string result;

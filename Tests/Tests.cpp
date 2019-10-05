@@ -40,6 +40,8 @@ TestsRenderer::TestsRenderer()
 	label->SetPos(XMFLOAT2(screenW / 2.f - label->scale.x / 2.f, screenH*0.95f));
 	GetGUI().AddWidget(label);
 
+	static wiAudio::Sound* sound = nullptr;
+	static wiAudio::SoundInstance* soundinstance = nullptr;
 
 	wiButton* audioTest = new wiButton("AudioTest");
 	audioTest->SetText("Play Test Audio");
@@ -48,17 +50,24 @@ TestsRenderer::TestsRenderer()
 	audioTest->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	audioTest->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	audioTest->OnClick([=](wiEventArgs args) {
-		static wiMusic music("sound/music.wav");
 		static bool playing = false;
+
+		if (sound == nullptr)
+		{
+			sound = new wiAudio::Sound;
+			wiAudio::CreateSound("sound/music.wav", sound);
+			soundinstance = new wiAudio::SoundInstance;
+			wiAudio::CreateSoundInstance(sound, soundinstance);
+		}
 
 		if (playing)
 		{
-			music.Stop();
+			wiAudio::Stop(soundinstance);
 			audioTest->SetText("Play Test Audio");
 		}
 		else
 		{
-			music.Play();
+			wiAudio::Play(soundinstance);
 			audioTest->SetText("Stop Test Audio");
 		}
 
@@ -74,7 +83,7 @@ TestsRenderer::TestsRenderer()
 	volume->SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
 	volume->SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
 	volume->OnSlide([](wiEventArgs args) {
-		wiMusic::SetVolume(args.fValue / 100.0f);
+		wiAudio::SetVolume(args.fValue / 100.0f, soundinstance);
 	});
 	GetGUI().AddWidget(volume);
 

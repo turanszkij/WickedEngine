@@ -201,9 +201,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
@@ -900,9 +897,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h">
       <Filter>ENGINE\Network</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiSound.h">
-      <Filter>ENGINE\Audio</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1134,6 +1128,12 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Postprocess.h">
       <Filter>ENGINE\Graphics\GPUMapping</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h">
+      <Filter>ENGINE\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.h">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1278,9 +1278,6 @@
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
@@ -1751,9 +1748,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp">
       <Filter>ENGINE\Network</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiSound.cpp">
-      <Filter>ENGINE\Audio</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
@@ -1905,6 +1899,12 @@
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.cpp">
+      <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio.cpp">
+      <Filter>ENGINE\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
   </ItemGroup>

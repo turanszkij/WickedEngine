@@ -35,7 +35,7 @@
 #include "wiXInput.h"
 #include "wiRawInput.h"
 #include "wiMath.h"
-#include "wiSound.h"
+#include "wiAudio.h"
 #include "wiResourceManager.h"
 #include "wiTimer.h"
 #include "wiHelper.h"

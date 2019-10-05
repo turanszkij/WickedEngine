@@ -115,13 +115,13 @@ main.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGam
 wiSprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
 myMenuScreen.addSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
 
-wiSoundEffect soundEffect("explosion.wav"); // you can load sound effects, or music
-soundEffect.Play(); // you can play sounds
-soundEffect.Stop(); // you can stop sounds
-
-wiMusic myMusic("music.wav"); // music is the same as sound effects, but they can be controlled independently
-myMusic.Play(); // plays a music
-wiMusic::SetVolume(0.5f); // set volume for every music, but don't modify sound effect volume
+wiAudio::Sound mySound;
+wiAudio::CreateSound("explosion.wav", &mySound); // Loads a sound file
+wiAudio::SoundInstance mySoundInstance;
+wiAudio::CreateSoundInstance(&mySound, &mySoundInstance); // Instances the sound file, it can be played now
+wiAudio::Play(&mySoundInstance); // Play the sound instance
+wiAudio::SetVolume(0.6, &mySoundInstance); // Set the volume of this soundinstance
+wiAudio::SetVolume(0.2); // Set the master volume
 
 if (wiInputManager::press(VK_SPACE)) { soundEffect.Stop(); } // You can check if a button is pressed or not (this only triggers once)
 if (wiInputManager::down(VK_SPACE)) { soundEffect.Play(); } // You can check if a button is pushed down or not (this triggers repeatedly)
@@ -159,8 +159,13 @@ getprops(scene);    -- prints the Scene class methods
 getprops(path);    -- prints the deferred render path methods
 
 -- Play a sound:
-sound = SoundEffect("whoosh.wav");
-sound.Play();
+sound = Sound()
+audio.CreateSound("explosion.wav", sound)
+soundinstance = SoundInstance()
+audio.CreateSoundInstance(sound, soundinstance)  -- several instances can be created from one file
+audio.Play(soundinstance)
+audio.SetVolume(0.6, soundinstance)  -- sets the volume of this soundinstance
+audio.SetVolume(0.2)  -- sets the master volume
 
 -- Check for input:
 if(input.press(VK_LEFT)) then

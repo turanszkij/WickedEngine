@@ -12,7 +12,7 @@
 #include "RenderPath3D_TiledDeferred_BindLua.h"
 #include "Texture_BindLua.h"
 #include "wiRenderer_BindLua.h"
-#include "wiSound_BindLua.h"
+#include "wiAudio_BindLua.h"
 #include "wiSprite_BindLua.h"
 #include "wiImageParams_BindLua.h"
 #include "SpriteAnim_BindLua.h"
@@ -64,9 +64,7 @@ wiLua* wiLua::GetGlobal()
 		RenderPath3D_TiledDeferred_BindLua::Bind();
 		Texture_BindLua::Bind();
 		wiRenderer_BindLua::Bind();
-		wiSound_BindLua::Bind();
-		wiSoundEffect_BindLua::Bind();
-		wiMusic_BindLua::Bind();
+		wiAudio_BindLua::Bind();
 		wiSprite_BindLua::Bind();
 		wiImageParams_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
@@ -374,6 +372,14 @@ void* wiLua::SGetUserData(lua_State* L)
 }
 
 void wiLua::SSetInt(lua_State* L, int data)
+{
+	lua_pushinteger(L, (lua_Integer)data);
+}
+void wiLua::SSetLong(lua_State* L, long data)
+{
+	lua_pushinteger(L, (lua_Integer)data);
+}
+void wiLua::SSetLongLong(lua_State* L, long long data)
 {
 	lua_pushinteger(L, (lua_Integer)data);
 }

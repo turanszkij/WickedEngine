@@ -110,6 +110,10 @@ public:
 	
 	//push int to lua stack
 	static void SSetInt(lua_State* L, int data);
+	//push long to lua stack
+	static void SSetLong(lua_State* L, long data);
+	//push long long to lua stack
+	static void SSetLongLong(lua_State* L, long long data);
 	//push float to lua stack
 	static void SSetFloat(lua_State* L, float data);
 	//push float2 to lua stack

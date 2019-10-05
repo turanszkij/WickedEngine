@@ -16,9 +16,7 @@ The documentation completion is still pending....
 		3. MovingTexAnim
 		4. DrawRecAnim
 	3. Texture
-	4. Sound
-		1. SoundEffect
-		2. Music
+	4. Audio
 	5. Vector
 	6. Matrix
 	7. Scene System (using entity-component system)
@@ -280,21 +278,50 @@ Animate sprite frame by frame.
 Just holds texture information in VRAM.
 - [void-constructor]Texture()
 
-### Sound
-Load a Sound file, either sound effect or music.
-- [outer]SoundVolume(opt float volume)
-- [outer]MusicVolume(opt float volume)
-- [void-constructor]Sound()
-- Play(opt int delay)
-- Stop()
+### Audio
+Loads and plays an audio files.
+- [outer]audio  -- the audio device
+- CreateSound(string filename, Sound sound) : bool  -- Creates a sound file, returns true if successful, false otherwise
+- CreateSoundInstance(Sound sound, SoundInstance soundinstance) : bool  -- Creates a sound instance that can be replayed, returns true if successful, false otherwise
+- Destroy(Sound sound)
+- Destroy(SoundInsance soundinstance)
+- Play(SoundInsance soundinstance)
+- Pause(SoundInsance soundinstance)
+- Stop(SoundInsance soundinstance)
+- GetVolume(opt SoundInsance soundinstance) : float  -- returns the volume of a soundinstance. If soundinstance is not provided, returns the master volume
+- SetVolume(float volume, opt SoundInsance soundinstance)  -- sets the volume of a soundinstance. If soundinstance is not provided, sets the master volume
+- GetSubmixVolume(int submixtype) : float  -- returns the volume of the submix group
+- SetSubmixVolume(int submixtype, float volume)  -- sets the volume for a submix group
+- Update3D(SoundInstance soundinstance, SoundInstance3D instance3D)  -- adds 3D effect to the sound instance
 
-#### SoundEffect
-Sound Effects are for playing a sound file once. Inherits the methods from Sound.
-- [constructor]SoundEffect(string soundFile)
+#### Sound
+An audio file. Can be instanced several times via SoundInstance.
+- [constructor]Sound()  -- creates an empty sound. Use the audio device to load sounds from files
 
-#### Music
-Music is for playing sound files in the background, along with sound effects. Inherits the methods from Sound.
-- [constructor]Music(string soundFile)
+#### SoundInstance
+An audio file instance that can be played.
+- [constructor]SoundInstance()  -- creates an empty soundinstance. Use the audio device to clone sounds
+- SetSubmixType(int submixtype)  -- set a submix type group (default is SUBMIX_TYPE_SOUNDEFFECT)
+
+#### SoundInstance3D
+Describes the relation between a sound instance and a listener in a 3D world
+- [constructor]SoundInstance3D()  -- creates the 3D relation object. By default, the listener and emitter are on the same position, and that disables the 3D effect
+- SetListenerPos(Vector value)
+- SetListenerUp(Vector value)
+- SetListenerFront(Vector value)
+- SetListenerVelocity(Vector value)
+- SetEmitterPos(Vector value)
+- SetEmitterUp(Vector value)
+- SetEmitterFront(Vector value)
+- SetEmitterVelocity(Vector value)
+- SetEmitterRadius(float radius)
+
+#### Submix Types
+The submix types group sound instances together to be controlled together
+- [outer]SUBMIX_TYPE_SOUNDEFFECT : int  -- sound effect group
+- [outer]SUBMIX_TYPE_MUSIC : int  -- music group
+- [outer]SUBMIX_TYPE_USER0 : int  -- user submix group
+- [outer]SUBMIX_TYPE_USER1 : int  -- user submix group
 
 ### Vector
 A four component floating point vector. Provides efficient calculations with SIMD support.
@@ -704,7 +731,7 @@ Describes a touch contact point
 - [outer]GAMEPAD_ANALOG_TRIGGER_R : int
 
 ### ResourceManager
-Stores and manages resources such as textures, sounds and shaders.
+Stores and manages resources such as textures, audio and shaders.
 - [outer]globalResources : Resource
 - [void-constructor]Resource()
 - Get(string name)

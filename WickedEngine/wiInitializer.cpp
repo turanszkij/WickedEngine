@@ -28,7 +28,7 @@ namespace wiInitializer
 		wiJobSystem::Execute(ctx, [] { wiImage::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiInputManager::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiRenderer::Initialize(); wiWidget::LoadShaders(); });
-		wiJobSystem::Execute(ctx, [] { wiSoundEffect::Initialize(); wiMusic::Initialize(); });
+		wiJobSystem::Execute(ctx, [] { wiAudio::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiTextureHelper::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiSceneSystem::wiHairParticle::Initialize(); });
 		wiJobSystem::Execute(ctx, [] { wiSceneSystem::wiEmittedParticle::Initialize(); });

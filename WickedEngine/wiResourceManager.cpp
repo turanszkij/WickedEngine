@@ -1,6 +1,6 @@
 #include "wiResourceManager.h"
 #include "wiRenderer.h"
-#include "wiSound.h"
+#include "wiAudio.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 
@@ -287,12 +287,11 @@ const void* wiResourceManager::add(const wiHashString& name, Data_Type newType)
 		break;
 		case Data_Type::SOUND:
 		{
-			success = new wiSoundEffect(name.GetString());
-		}
-		break;
-		case Data_Type::MUSIC:
-		{
-			success = new wiMusic(name.GetString());
+			wiAudio::Sound* sound = new wiAudio::Sound;
+			if (SUCCEEDED(wiAudio::CreateSound(name.GetString(), sound)))
+			{
+				success = sound;
+			}
 		}
 		break;
 		case Data_Type::VERTEXSHADER:
@@ -425,8 +424,7 @@ bool wiResourceManager::del(const wiHashString& name, bool forceDelete)
 			SAFE_DELETE(reinterpret_cast<const ComputeShader*&>(res.data));
 			break;
 		case Data_Type::SOUND:
-		case Data_Type::MUSIC:
-			SAFE_DELETE(reinterpret_cast<const wiSound*&>(res.data));
+			SAFE_DELETE(reinterpret_cast<const wiAudio::Sound*&>(res.data));
 			break;
 		default:
 			success = false;

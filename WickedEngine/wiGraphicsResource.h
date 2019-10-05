@@ -6,9 +6,6 @@
 
 namespace wiGraphics
 {
-	typedef uint64_t wiCPUHandle;
-	static const wiCPUHandle WI_NULL_HANDLE = 0;
-
 	class GraphicsDevice;
 
 	struct GraphicsDeviceChild

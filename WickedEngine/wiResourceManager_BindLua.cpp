@@ -1,7 +1,7 @@
 #include "wiResourceManager_BindLua.h"
-#include "wiSound_BindLua.h"
 #include "wiHelper.h"
 #include "Texture_BindLua.h"
+#include "wiAudio_BindLua.h"
 #include "wiRenderer.h"
 
 #include <sstream>
@@ -53,9 +53,8 @@ int wiResourceManager_BindLua::Get(lua_State *L)
 				Luna<Texture_BindLua>::push(L, new Texture_BindLua((Texture2D*)data.data));
 				return 1;
 				break;
-			case wiResourceManager::Data_Type::MUSIC:
 			case wiResourceManager::Data_Type::SOUND:
-				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiSound*)data.data));
+				Luna<wiSound_BindLua>::push(L, new wiSound_BindLua((wiAudio::Sound*)data.data));
 				return 1;
 				break;
 			default:
@@ -86,22 +85,13 @@ int wiResourceManager_BindLua::Add(lua_State *L)
 	if (argc > 0)
 	{
 		string name = wiLua::SGetString(L, 1);
-		wiResourceManager::Data_Type type = wiResourceManager::Data_Type::DYNAMIC;
-		if (argc > 1) //type info also provided in this case
-		{
-			string typeStr = wiHelper::toUpper( wiLua::SGetString(L, 2) );
-			if (!typeStr.compare("SOUND"))
-				type = wiResourceManager::Data_Type::SOUND;
-			else if (!typeStr.compare("MUSIC"))
-				type = wiResourceManager::Data_Type::MUSIC;
-		}
-		const void* data = resources->add(name, type);
+		const void* data = resources->add(name);
 		wiLua::SSetString(L, (data != nullptr ? "ok" : "not found"));
 		return 1;
 	}
 	else
 	{
-		wiLua::SError(L, "Resource:Add(string name, (opt) string type) not enough arguments!");
+		wiLua::SError(L, "Resource:Add(string name) not enough arguments!");
 	}
 	return 0;
 }
