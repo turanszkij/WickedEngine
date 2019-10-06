@@ -19,7 +19,7 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	soundWindow = new wiWindow(GUI, "Sound Window");
-	soundWindow->SetSize(XMFLOAT2(440, 200));
+	soundWindow->SetSize(XMFLOAT2(440, 240));
 	soundWindow->SetEnabled(false);
 	GUI->AddWidget(soundWindow);
 
@@ -60,6 +60,21 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	filenameLabel->SetPos(XMFLOAT2(x, y += step));
 	filenameLabel->SetSize(XMFLOAT2(400, 20));
 	soundWindow->AddWidget(filenameLabel);
+
+	nameField = new wiTextInputField("SoundName");
+	nameField->SetTooltip("Enter a sound name to identify this entity...");
+	nameField->SetPos(XMFLOAT2(x, y += step));
+	nameField->SetSize(XMFLOAT2(300, 20));
+	nameField->OnInputAccepted([&](wiEventArgs args) {
+		NameComponent* name = wiSceneSystem::GetScene().names.GetComponent(entity);
+		if (name == nullptr)
+		{
+			name = &wiSceneSystem::GetScene().names.Create(entity);
+		}
+		*name = args.sValue;
+	});
+	soundWindow->AddWidget(nameField);
+	nameField->SetEnabled(false);
 
 	playstopButton = new wiButton("Play");
 	playstopButton->SetTooltip("Play/Stop selected sound instance.");
@@ -136,10 +151,20 @@ void SoundWindow::SetEntity(Entity entity)
 
 	Scene& scene = wiSceneSystem::GetScene();
 	SoundComponent* sound = scene.sounds.GetComponent(entity);
+	NameComponent* name = scene.names.GetComponent(entity);
 
 	if (sound != nullptr)
 	{
 		filenameLabel->SetText(sound->filename);
+		if (name == nullptr)
+		{
+			nameField->SetText("Enter a sound name...");
+		}
+		else
+		{
+			nameField->SetText(name->name);
+		}
+		nameField->SetEnabled(true);
 		playstopButton->SetEnabled(true);
 		loopedCheckbox->SetEnabled(true);
 		loopedCheckbox->SetCheck(sound->IsLooped());
@@ -157,6 +182,8 @@ void SoundWindow::SetEntity(Entity entity)
 	else
 	{
 		filenameLabel->SetText("");
+		nameField->SetText("");
+		nameField->SetEnabled(false);
 		playstopButton->SetEnabled(false);
 		loopedCheckbox->SetEnabled(false);
 		volumeSlider->SetEnabled(false);

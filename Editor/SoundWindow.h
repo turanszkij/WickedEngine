@@ -23,6 +23,7 @@ public:
 
 	wiWindow* soundWindow;
 	wiLabel* filenameLabel;
+	wiTextInputField* nameField;
 	wiButton* addButton;
 	wiButton* playstopButton;
 	wiCheckBox* loopedCheckbox;
