@@ -544,6 +544,12 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 	pickTypeArmatureCheckBox->SetCheck(true);
 	rendererWindow->AddWidget(pickTypeArmatureCheckBox);
 
+	pickTypeSoundCheckBox = new wiCheckBox("Pick Sounds: ");
+	pickTypeSoundCheckBox->SetTooltip("Enable if you want to pick sounds with the pointer");
+	pickTypeSoundCheckBox->SetPos(XMFLOAT2(x, y += step));
+	pickTypeSoundCheckBox->SetCheck(true);
+	rendererWindow->AddWidget(pickTypeSoundCheckBox);
+
 
 
 	freezeCullingCameraCheckBox = new wiCheckBox("Freeze culling camera: ");
@@ -607,6 +613,10 @@ UINT RendererWindow::GetPickType()
 	if (pickTypeArmatureCheckBox->GetCheck())
 	{
 		pickType |= PICK_ARMATURE;
+	}
+	if (pickTypeSoundCheckBox->GetCheck())
+	{
+		pickType |= PICK_SOUND;
 	}
 
 	return pickType;

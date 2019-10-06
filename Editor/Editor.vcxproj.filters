@@ -91,6 +91,9 @@
     <ClInclude Include="xatlas.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="SoundWindow.h">
+      <Filter>Code</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CameraWindow.cpp">
@@ -157,6 +160,9 @@
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="xatlas.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundWindow.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

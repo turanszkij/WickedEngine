@@ -6,6 +6,7 @@
 #include "wiHairParticle.h"
 #include "ShaderInterop_Renderer.h"
 #include "wiJobSystem.h"
+#include "wiAudio.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
@@ -953,6 +954,31 @@ namespace wiSceneSystem
 		void Serialize(wiArchive& archive, uint32_t seed = 0);
 	};
 
+	struct SoundComponent
+	{
+		enum FLAGS
+		{
+			EMPTY = 0,
+			PLAYING = 1 << 0,
+			LOOPED = 1 << 1,
+		};
+		uint32_t _flags = LOOPED;
+
+		std::string filename;
+		wiAudio::Sound* sound = nullptr;
+		wiAudio::SoundInstance soundinstance;
+		float volume = 1;
+
+		inline bool IsPlaying() const { return _flags & PLAYING; }
+		inline bool IsLooped() const { return _flags & LOOPED; }
+
+		inline void Play() { _flags |= PLAYING; }
+		inline void Stop() { _flags &= ~PLAYING; }
+		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+
+		void Serialize(wiArchive& archive, uint32_t seed = 0);
+	};
+
 	struct Scene
 	{
 		wiECS::ComponentManager<NameComponent> names;
@@ -980,6 +1006,7 @@ namespace wiSceneSystem
 		wiECS::ComponentManager<wiEmittedParticle> emitters;
 		wiECS::ComponentManager<wiHairParticle> hairs;
 		wiECS::ComponentManager<WeatherComponent> weathers;
+		wiECS::ComponentManager<SoundComponent> sounds;
 
 		// Non-serialized attributes:
 		AABB bounds;
@@ -1045,6 +1072,10 @@ namespace wiSceneSystem
 		);
 		wiECS::Entity Entity_CreateHair(
 			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
+		);
+		wiECS::Entity Entity_CreateSound(
+			const std::string& filename,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
 
@@ -1147,6 +1178,11 @@ namespace wiSceneSystem
 		const wiECS::ComponentManager<WeatherComponent>& weathers,
 		const wiECS::ComponentManager<LightComponent>& lights,
 		WeatherComponent& weather
+	);
+	void RunSoundUpdateSystem(
+		wiJobSystem::context& ctx,
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<SoundComponent>& sounds
 	);
 
 

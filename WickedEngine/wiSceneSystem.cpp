@@ -1073,6 +1073,8 @@ namespace wiSceneSystem
 		wiJobSystem::Wait(ctx); // dependecies
 
 		RunWeatherUpdateSystem(ctx, weathers, lights, weather);
+
+		RunSoundUpdateSystem(ctx, transforms, sounds);
 	}
 	void Scene::Clear()
 	{
@@ -1101,6 +1103,7 @@ namespace wiSceneSystem
 		emitters.Clear();
 		hairs.Clear();
 		weathers.Clear();
+		sounds.Clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -1129,6 +1132,7 @@ namespace wiSceneSystem
 		emitters.Merge(other.emitters);
 		hairs.Merge(other.hairs);
 		weathers.Merge(other.weathers);
+		sounds.Merge(other.sounds);
 
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
@@ -1160,6 +1164,7 @@ namespace wiSceneSystem
 		emitters.Remove(entity);
 		hairs.Remove(entity);
 		weathers.Remove(entity);
+		sounds.Remove(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name)
 	{
@@ -1386,6 +1391,24 @@ namespace wiSceneSystem
 		transform.UpdateTransform();
 
 		materials.Create(entity);
+
+		return entity;
+	}
+	Entity Scene::Entity_CreateSound(
+		const std::string& filename,
+		const XMFLOAT3& position
+	)
+	{
+		Entity entity = CreateEntity();
+
+		SoundComponent& sound = sounds.Create(entity);
+		sound.filename = filename;
+		sound.sound = (wiAudio::Sound*)wiResourceManager::GetGlobal().add(filename);
+		wiAudio::CreateSoundInstance(sound.sound, &sound.soundinstance);
+
+		TransformComponent& transform = transforms.Create(entity);
+		transform.Translate(position);
+		transform.UpdateTransform();
 
 		return entity;
 	}
@@ -2101,6 +2124,43 @@ namespace wiSceneSystem
 				weather.sunColor = light.color;
 				weather.sunDirection = light.direction;
 			}
+		}
+	}
+	void RunSoundUpdateSystem(
+		wiJobSystem::context& ctx,
+		const wiECS::ComponentManager<TransformComponent>& transforms,
+		wiECS::ComponentManager<SoundComponent>& sounds
+	)
+	{
+		const CameraComponent& camera = wiRenderer::GetCamera();
+		wiAudio::SoundInstance3D instance3D;
+		instance3D.listenerPos = camera.Eye;
+		instance3D.listenerUp = camera.Up;
+		instance3D.listenerFront = camera.At;
+
+		for (size_t i = 0; i < sounds.GetCount(); ++i)
+		{
+			SoundComponent& sound = sounds[i];
+			Entity entity = sounds.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				instance3D.emitterPos = transform->GetPosition();
+				wiAudio::Update3D(&sound.soundinstance, instance3D);
+			}
+			if (sound.IsPlaying())
+			{
+				wiAudio::Play(&sound.soundinstance);
+			}
+			else
+			{
+				wiAudio::Stop(&sound.soundinstance);
+			}
+			if (!sound.IsLooped())
+			{
+				wiAudio::ExitLoop(&sound.soundinstance);
+			}
+			wiAudio::SetVolume(sound.volume, &sound.soundinstance);
 		}
 	}
 

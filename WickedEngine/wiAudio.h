@@ -15,17 +15,49 @@ namespace wiAudio
 		SUBMIX_TYPE_USER0,
 		SUBMIX_TYPE_USER1,
 		SUBMIX_TYPE_COUNT,
+
+		ENUM_FORCE_UINT32 = 0xFFFFFFFF, // submix type can be serialized
 	};
 
 	struct Sound
 	{
 		wiCPUHandle handle = WI_NULL_HANDLE;
+
+		void operator=(Sound&& other)
+		{
+			handle = other.handle;
+			other.handle = WI_NULL_HANDLE;
+		}
+
+		Sound() {}
+		Sound(Sound&& other)
+		{
+			handle = other.handle;
+
+			other.handle = WI_NULL_HANDLE;
+		}
 		~Sound();
 	};
 	struct SoundInstance
 	{
 		SUBMIX_TYPE type = SUBMIX_TYPE_SOUNDEFFECT;
 		wiCPUHandle handle = WI_NULL_HANDLE;
+
+		void operator=(SoundInstance&& other)
+		{
+			type = other.type;
+			handle = other.handle;
+			other.handle = WI_NULL_HANDLE;
+		}
+
+		SoundInstance() {}
+		SoundInstance(SoundInstance&& other)
+		{
+			type = other.type;
+			handle = other.handle;
+
+			other.handle = WI_NULL_HANDLE;
+		}
 		~SoundInstance();
 	};
 
@@ -39,6 +71,7 @@ namespace wiAudio
 	void Stop(SoundInstance* instance);
 	void SetVolume(float volume, SoundInstance* instance = nullptr);
 	float GetVolume(const SoundInstance* instance = nullptr);
+	void ExitLoop(SoundInstance* instance);
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume);
 	float GetSubmixVolume(SUBMIX_TYPE type);

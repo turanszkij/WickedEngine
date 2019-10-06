@@ -17,6 +17,7 @@ class EmitterWindow;
 class HairParticleWindow;
 class ForceFieldWindow;
 class OceanWindow;
+class SoundWindow;
 
 class EditorLoadingScreen : public LoadingScreen
 {
@@ -33,7 +34,7 @@ class Editor;
 class EditorComponent : public RenderPath2D
 {
 private:
-	wiGraphics::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex;
+	wiGraphics::Texture2D pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	std::unique_ptr<MaterialWindow>			materialWnd;
 	std::unique_ptr<PostprocessWindow>		postprocessWnd;
@@ -44,6 +45,7 @@ public:
 	std::unique_ptr<RendererWindow>			rendererWnd;
 	std::unique_ptr<EnvProbeWindow>			envProbeWnd;
 	std::unique_ptr<DecalWindow>			decalWnd;
+	std::unique_ptr<SoundWindow>			soundWnd;
 	std::unique_ptr<LightWindow>			lightWnd;
 	std::unique_ptr<AnimationWindow>		animWnd;
 	std::unique_ptr<EmitterWindow>			emitterWnd;

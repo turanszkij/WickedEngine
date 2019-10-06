@@ -21,6 +21,7 @@ public:
 	int Stop(lua_State* L);
 	int GetVolume(lua_State* L);
 	int SetVolume(lua_State* L);
+	int ExitLoop(lua_State* L);
 
 	int GetSubmixVolume(lua_State* L);
 	int SetSubmixVolume(lua_State* L);
@@ -57,7 +58,6 @@ public:
 	static Luna<wiSoundInstance_BindLua>::PropertyType properties[];
 
 	wiSoundInstance_BindLua(lua_State* L) { }
-	wiSoundInstance_BindLua(const wiAudio::SoundInstance& soundinstance) : soundinstance(soundinstance) {}
 	~wiSoundInstance_BindLua() { }
 
 	int SetSubmixType(lua_State* L);

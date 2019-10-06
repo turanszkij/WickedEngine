@@ -16,6 +16,7 @@
 #include "HairParticleWindow.h"
 #include "ForceFieldWindow.h"
 #include "OceanWindow.h"
+#include "SoundWindow.h"
 
 #include "ModelImporter.h"
 #include "Translator.h"
@@ -144,6 +145,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	cameraWnd.reset(new CameraWindow(&GetGUI()));
 	rendererWnd.reset(new RendererWindow(&GetGUI(), renderPath));
 	envProbeWnd.reset(new EnvProbeWindow(&GetGUI()));
+	soundWnd.reset(new SoundWindow(&GetGUI()));
 	decalWnd.reset(new DecalWindow(&GetGUI()));
 	lightWnd.reset(new LightWindow(&GetGUI()));
 	animWnd.reset(new AnimationWindow(&GetGUI()));
@@ -248,6 +250,15 @@ void EditorComponent::Load()
 		decalWnd->decalWindow->SetVisible(!decalWnd->decalWindow->IsVisible());
 	});
 	GetGUI().AddWidget(decalWnd_Toggle);
+
+	wiButton* soundWnd_Toggle = new wiButton("Sound");
+	soundWnd_Toggle->SetTooltip("Sound settings window");
+	soundWnd_Toggle->SetPos(XMFLOAT2(x, y += step));
+	soundWnd_Toggle->SetSize(option_size);
+	soundWnd_Toggle->OnClick([=](wiEventArgs args) {
+		soundWnd->soundWindow->SetVisible(!soundWnd->soundWindow->IsVisible());
+		});
+	GetGUI().AddWidget(soundWnd_Toggle);
 
 	wiButton* lightWnd_Toggle = new wiButton("Light");
 	lightWnd_Toggle->SetTooltip("Light settings window");
@@ -543,6 +554,7 @@ void EditorComponent::Load()
 		objectWnd->SetEntity(INVALID_ENTITY);
 		meshWnd->SetEntity(INVALID_ENTITY);
 		lightWnd->SetEntity(INVALID_ENTITY);
+		soundWnd->SetEntity(INVALID_ENTITY);
 		decalWnd->SetEntity(INVALID_ENTITY);
 		envProbeWnd->SetEntity(INVALID_ENTITY);
 		materialWnd->SetEntity(INVALID_ENTITY);
@@ -694,6 +706,7 @@ void EditorComponent::Load()
 	hairTex = *(Texture2D*)Content.add("images/hair.dds");
 	cameraTex = *(Texture2D*)Content.add("images/camera.dds");
 	armatureTex = *(Texture2D*)Content.add("images/armature.dds");
+	soundTex = *(Texture2D*)Content.add("images/sound.dds");
 }
 void EditorComponent::Start()
 {
@@ -1007,6 +1020,23 @@ void EditorComponent::Update(float dt)
 					}
 				}
 			}
+			if (pickMask & PICK_SOUND)
+			{
+				for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
+				{
+					Entity entity = scene.sounds.GetEntity(i);
+					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
+					float dis = XMVectorGetX(disV);
+					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					{
+						hovered = wiSceneSystem::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
+					}
+				}
+			}
 
 		}
 
@@ -1187,6 +1217,7 @@ void EditorComponent::Update(float dt)
 			meshWnd->SetEntity(INVALID_ENTITY);
 			materialWnd->SetEntity(INVALID_ENTITY);
 			lightWnd->SetEntity(INVALID_ENTITY);
+			soundWnd->SetEntity(INVALID_ENTITY);
 			decalWnd->SetEntity(INVALID_ENTITY);
 			envProbeWnd->SetEntity(INVALID_ENTITY);
 			forceFieldWnd->SetEntity(INVALID_ENTITY);
@@ -1202,6 +1233,7 @@ void EditorComponent::Update(float dt)
 			emitterWnd->SetEntity(picked.entity);
 			hairWnd->SetEntity(picked.entity);
 			lightWnd->SetEntity(picked.entity);
+			soundWnd->SetEntity(picked.entity);
 			decalWnd->SetEntity(picked.entity);
 			envProbeWnd->SetEntity(picked.entity);
 			forceFieldWnd->SetEntity(picked.entity);
@@ -1748,6 +1780,40 @@ void EditorComponent::Compose(CommandList cmd) const
 
 
 			wiImage::Draw(&hairTex, fx, cmd);
+		}
+	}
+
+	if (rendererWnd->GetPickType() & PICK_SOUND)
+	{
+		for (size_t i = 0; i < scene.sounds.GetCount(); ++i)
+		{
+			Entity entity = scene.sounds.GetEntity(i);
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+
+			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+
+			wiImageParams fx;
+			fx.pos = transform.GetPosition();
+			fx.siz = XMFLOAT2(dist, dist);
+			fx.typeFlag = ImageType::WORLD;
+			fx.pivot = XMFLOAT2(0.5f, 0.5f);
+			fx.col = XMFLOAT4(1, 1, 1, 0.5f);
+
+			if (hovered.entity == entity)
+			{
+				fx.col = XMFLOAT4(1, 1, 1, 1);
+			}
+			for (auto& picked : selected)
+			{
+				if (picked.entity == entity)
+				{
+					fx.col = XMFLOAT4(1, 1, 0, 1);
+					break;
+				}
+			}
+
+
+			wiImage::Draw(&soundTex, fx, cmd);
 		}
 	}
 

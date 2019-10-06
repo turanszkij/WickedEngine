@@ -13,6 +13,7 @@ Luna<wiAudio_BindLua>::FunctionType wiAudio_BindLua::methods[] = {
 	lunamethod(wiAudio_BindLua, Stop),
 	lunamethod(wiAudio_BindLua, GetVolume),
 	lunamethod(wiAudio_BindLua, SetVolume),
+	lunamethod(wiAudio_BindLua, ExitLoop),
 	lunamethod(wiAudio_BindLua, GetSubmixVolume),
 	lunamethod(wiAudio_BindLua, SetSubmixVolume),
 	lunamethod(wiAudio_BindLua, Update3D),
@@ -174,6 +175,25 @@ int wiAudio_BindLua::SetVolume(lua_State* L)
 	}
 	else
 		wiLua::SError(L, "SetVolume(float volume, opt SoundInstance soundinstance) not enough arguments!");
+	return 0;
+}
+int wiAudio_BindLua::ExitLoop(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wiSoundInstance_BindLua* soundinstance = Luna<wiSoundInstance_BindLua>::lightcheck(L, 1);
+		if (soundinstance != nullptr)
+		{
+			wiAudio::ExitLoop(&soundinstance->soundinstance);
+		}
+		else
+		{
+			wiLua::SError(L, "ExitLoop(SoundInstance soundinstance) argument is not a SoundInstance!");
+		}
+	}
+	else
+		wiLua::SError(L, "ExitLoop(SoundInstance soundinstance) not enough arguments!");
 	return 0;
 }
 int wiAudio_BindLua::GetSubmixVolume(lua_State* L)

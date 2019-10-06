@@ -45,13 +45,14 @@ namespace wiAudio
 	struct SoundInternal
 	{
 		WAVEFORMATEX wfx = {};
-		XAUDIO2_BUFFER buffer = {};
+		std::vector<uint8_t> audioData;
 	};
 	struct SoundInstanceInternal
 	{
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
 		std::vector<float> outputMatrix;
+		XAUDIO2_BUFFER buffer = {};
 		const SoundInternal* soundinternal = nullptr;
 	};
 
@@ -85,8 +86,8 @@ namespace wiAudio
 		{
 			audioEngine->CreateSubmixVoice(
 				&submixVoices[i], 
-				masteringVoiceDetails.InputChannels, 
-				masteringVoiceDetails.InputSampleRate, 
+				masteringVoiceDetails.InputChannels,
+				masteringVoiceDetails.InputSampleRate,
 				0, 0, 0, 0);
 		}
 
@@ -97,10 +98,12 @@ namespace wiAudio
 	}
 	void CleanUp()
 	{
+		for (int i = 0; i < SUBMIX_TYPE_COUNT; ++i)
+		{
+			if (submixVoices[i] != nullptr) submixVoices[i]->DestroyVoice();
+		}
 		if (masteringVoice != nullptr) masteringVoice->DestroyVoice();
-		SAFE_DELETE(masteringVoice);
 		SAFE_RELEASE(audioEngine);
-		SAFE_DELETE(audioEngine);
 	}
 
 	HRESULT FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition)
@@ -221,13 +224,9 @@ namespace wiAudio
 		hr = FindChunk(hFile, fourccDATA, dwChunkSize, dwChunkPosition);
 		assert(SUCCEEDED(hr));
 
-		BYTE* pDataBuffer = new BYTE[dwChunkSize];
-		hr = ReadChunkData(hFile, pDataBuffer, dwChunkSize, dwChunkPosition);
+		soundinternal->audioData.resize(dwChunkSize);
+		hr = ReadChunkData(hFile, soundinternal->audioData.data(), dwChunkSize, dwChunkPosition);
 		assert(SUCCEEDED(hr));
-
-		soundinternal->buffer.AudioBytes = dwChunkSize;
-		soundinternal->buffer.pAudioData = pDataBuffer;
-		soundinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
 
 		sound->handle = (wiCPUHandle)soundinternal;
 
@@ -257,7 +256,12 @@ namespace wiAudio
 		
 		instanceinternal->outputMatrix.resize(masteringVoiceDetails.InputChannels);
 
-		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&soundinternal->buffer);
+		instanceinternal->buffer.AudioBytes = (UINT32)soundinternal->audioData.size();
+		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
+		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
+		instanceinternal->buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
+
+		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
 		if (FAILED(hr))
 		{
 			assert(0);
@@ -273,7 +277,6 @@ namespace wiAudio
 		if (sound != nullptr && sound->handle != WI_NULL_HANDLE)
 		{
 			SoundInternal* soundinternal = (SoundInternal*)sound->handle;
-			delete[] soundinternal->buffer.pAudioData;
 			delete soundinternal;
 			sound->handle = WI_NULL_HANDLE;
 		}
@@ -316,7 +319,7 @@ namespace wiAudio
 			assert(SUCCEEDED(hr)); 
 			hr = instanceinternal->sourceVoice->FlushSourceBuffers(); // reset submitted audio buffer
 			assert(SUCCEEDED(hr)); 
-			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->soundinternal->buffer); // resubmit
+			hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer); // resubmit
 			assert(SUCCEEDED(hr));
 		}
 	}
@@ -347,6 +350,15 @@ namespace wiAudio
 			instanceinternal->sourceVoice->GetVolume(&volume);
 		}
 		return volume;
+	}
+	void ExitLoop(SoundInstance* instance)
+	{
+		if (instance != nullptr && instance->handle != WI_NULL_HANDLE)
+		{
+			SoundInstanceInternal* instanceinternal = (SoundInstanceInternal*)instance->handle;
+			HRESULT hr = instanceinternal->sourceVoice->ExitLoop();
+			assert(SUCCEEDED(hr));
+		}
 	}
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume)

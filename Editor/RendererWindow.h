@@ -19,6 +19,7 @@ enum PICKTYPE
 	PICK_HAIR				= 256,
 	PICK_CAMERA				= 512,
 	PICK_ARMATURE			= 1024,
+	PICK_SOUND				= 2048,
 };
 
 class RendererWindow
@@ -65,6 +66,7 @@ public:
 	wiCheckBox* pickTypeHairCheckBox;
 	wiCheckBox* pickTypeCameraCheckBox;
 	wiCheckBox* pickTypeArmatureCheckBox;
+	wiCheckBox* pickTypeSoundCheckBox;
 	wiSlider*	speedMultiplierSlider;
 	wiCheckBox* transparentShadowsCheckBox;
 	wiComboBox* shadowProps2DComboBox;

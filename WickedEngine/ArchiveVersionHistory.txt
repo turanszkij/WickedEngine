@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+30: serialized sound components
 29: serialized soft body rest pose vertices
 28: extended MaterialComponent with occlusionMap and uvsets, and displacement map factor; MeshComponent extended with second uv set
 27: removed ArmatureComponent::rootBoneID

@@ -696,6 +696,41 @@ namespace wiSceneSystem
 			archive << oceanParameters.surfaceDisplacementTolerance;
 		}
 	}
+	void SoundComponent::Serialize(wiArchive& archive, uint32_t seed)
+	{
+		std::string dir = archive.GetSourceDirectory();
+
+		if (archive.IsReadMode())
+		{
+			archive >> _flags;
+			archive >> filename;
+			archive >> volume;
+			archive >> (uint32_t&)soundinstance.type;
+
+			if (!filename.empty())
+			{
+				sound = (wiAudio::Sound*)wiResourceManager::GetGlobal().add(dir + filename);
+				wiAudio::CreateSoundInstance(sound, &soundinstance);
+			}
+
+		}
+		else
+		{
+			// If detecting an absolute path in textures, remove it and convert to relative:
+			{
+				size_t found = filename.rfind(dir);
+				if (found != std::string::npos)
+				{
+					filename = filename.substr(found + dir.length());
+				}
+			}
+
+			archive << _flags;
+			archive << filename;
+			archive << volume;
+			archive << soundinstance.type;
+		}
+	}
 
 	void Scene::Serialize(wiArchive& archive)
 	{
@@ -738,6 +773,10 @@ namespace wiSceneSystem
 		emitters.Serialize(archive, seed);
 		hairs.Serialize(archive, seed);
 		weathers.Serialize(archive, seed);
+		if (archive.GetVersion() >= 30)
+		{
+			sounds.Serialize(archive, seed);
+		}
 
 	}
 
@@ -970,6 +1009,16 @@ namespace wiSceneSystem
 				if (component_exists)
 				{
 					auto& component = weathers.Create(entity);
+					component.Serialize(archive, propagateSeedDeep ? seed : 0);
+				}
+			}
+			if (archive.GetVersion() >= 30)
+			{
+				bool component_exists;
+				archive >> component_exists;
+				if (component_exists)
+				{
+					auto& component = sounds.Create(entity);
 					component.Serialize(archive, propagateSeedDeep ? seed : 0);
 				}
 			}
@@ -1267,6 +1316,19 @@ namespace wiSceneSystem
 			}
 			{
 				auto component = weathers.GetComponent(entity);
+				if (component != nullptr)
+				{
+					archive << true;
+					component->Serialize(archive, seed);
+				}
+				else
+				{
+					archive << false;
+				}
+			}
+			if(archive.GetVersion() >= 30)
+			{
+				auto component = sounds.GetComponent(entity);
 				if (component != nullptr)
 				{
 					archive << true;

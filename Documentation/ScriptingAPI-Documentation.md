@@ -290,6 +290,7 @@ Loads and plays an audio files.
 - Stop(SoundInsance soundinstance)
 - GetVolume(opt SoundInsance soundinstance) : float  -- returns the volume of a soundinstance. If soundinstance is not provided, returns the master volume
 - SetVolume(float volume, opt SoundInsance soundinstance)  -- sets the volume of a soundinstance. If soundinstance is not provided, sets the master volume
+- ExitLoop(SoundInsance soundinstance)  -- disable looping. By default, sound instances are looped when created.
 - GetSubmixVolume(int submixtype) : float  -- returns the volume of the submix group
 - SetSubmixVolume(int submixtype, float volume)  -- sets the volume for a submix group
 - Update3D(SoundInstance soundinstance, SoundInstance3D instance3D)  -- adds 3D effect to the sound instance
