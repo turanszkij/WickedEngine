@@ -22,9 +22,10 @@ public:
 	wiGUI* GUI;
 
 	wiWindow* soundWindow;
+	wiComboBox* reverbComboBox;
+	wiButton* addButton;
 	wiLabel* filenameLabel;
 	wiTextInputField* nameField;
-	wiButton* addButton;
 	wiButton* playstopButton;
 	wiCheckBox* loopedCheckbox;
 	wiSlider* volumeSlider;

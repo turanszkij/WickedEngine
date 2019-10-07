@@ -27,6 +27,7 @@ public:
 	int SetSubmixVolume(lua_State* L);
 
 	int Update3D(lua_State* L);
+	int SetReverb(lua_State* L);
 
 	static void Bind();
 };

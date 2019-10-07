@@ -145,7 +145,7 @@ namespace wiECS
 			lookup[entity] = components.size();
 
 			// New components are always pushed to the end:
-			components.push_back(Component());
+			components.emplace_back();
 
 			// Also push corresponding entity:
 			entities.push_back(entity);

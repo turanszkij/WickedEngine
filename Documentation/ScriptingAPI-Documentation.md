@@ -17,6 +17,9 @@ The documentation completion is still pending....
 		4. DrawRecAnim
 	3. Texture
 	4. Audio
+		1. Sound
+		2. SoundInstance
+		3. SoundInstance3D
 	5. Vector
 	6. Matrix
 	7. Scene System (using entity-component system)
@@ -294,6 +297,7 @@ Loads and plays an audio files.
 - GetSubmixVolume(int submixtype) : float  -- returns the volume of the submix group
 - SetSubmixVolume(int submixtype, float volume)  -- sets the volume for a submix group
 - Update3D(SoundInstance soundinstance, SoundInstance3D instance3D)  -- adds 3D effect to the sound instance
+- SetReverb(int reverbtype)  -- sets an environment effect for reverb globally. Refer to Reverb Types section for acceptable input values
 
 #### Sound
 An audio file. Can be instanced several times via SoundInstance.
@@ -323,6 +327,39 @@ The submix types group sound instances together to be controlled together
 - [outer]SUBMIX_TYPE_MUSIC : int  -- music group
 - [outer]SUBMIX_TYPE_USER0 : int  -- user submix group
 - [outer]SUBMIX_TYPE_USER1 : int  -- user submix group
+
+#### Reverb Types
+The reverb types are built in presets that can mimic a specific kind of environment
+- [outer]REVERB_PRESET_DEFAULT : int
+- [outer]REVERB_PRESET_GENERIC : int
+- [outer]REVERB_PRESET_FOREST : int
+- [outer]REVERB_PRESET_PADDEDCELL : int
+- [outer]REVERB_PRESET_ROOM : int
+- [outer]REVERB_PRESET_BATHROOM : int
+- [outer]REVERB_PRESET_LIVINGROOM : int
+- [outer]REVERB_PRESET_STONEROOM : int
+- [outer]REVERB_PRESET_AUDITORIUM : int
+- [outer]REVERB_PRESET_CONCERTHALL : int
+- [outer]REVERB_PRESET_CAVE : int
+- [outer]REVERB_PRESET_ARENA : int
+- [outer]REVERB_PRESET_HANGAR : int
+- [outer]REVERB_PRESET_CARPETEDHALLWAY : int
+- [outer]REVERB_PRESET_HALLWAY : int
+- [outer]REVERB_PRESET_STONECORRIDOR : int
+- [outer]REVERB_PRESET_ALLEY : int
+- [outer]REVERB_PRESET_CITY : int
+- [outer]REVERB_PRESET_MOUNTAINS : int
+- [outer]REVERB_PRESET_QUARRY : int
+- [outer]REVERB_PRESET_PLAIN : int
+- [outer]REVERB_PRESET_PARKINGLOT : int
+- [outer]REVERB_PRESET_SEWERPIPE : int
+- [outer]REVERB_PRESET_UNDERWATER : int
+- [outer]REVERB_PRESET_SMALLROOM : int
+- [outer]REVERB_PRESET_MEDIUMROOM : int
+- [outer]REVERB_PRESET_LARGEROOM : int
+- [outer]REVERB_PRESET_MEDIUMHALL : int
+- [outer]REVERB_PRESET_LARGEHALL : int
+- [outer]REVERB_PRESET_PLATE : int
 
 ### Vector
 A four component floating point vector. Provides efficient calculations with SIMD support.

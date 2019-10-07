@@ -17,6 +17,7 @@ Luna<wiAudio_BindLua>::FunctionType wiAudio_BindLua::methods[] = {
 	lunamethod(wiAudio_BindLua, GetSubmixVolume),
 	lunamethod(wiAudio_BindLua, SetSubmixVolume),
 	lunamethod(wiAudio_BindLua, Update3D),
+	lunamethod(wiAudio_BindLua, SetReverb),
 	{ NULL, NULL }
 };
 Luna<wiAudio_BindLua>::PropertyType wiAudio_BindLua::properties[] = {
@@ -244,6 +245,17 @@ int wiAudio_BindLua::Update3D(lua_State* L)
 		wiLua::SError(L, "Update3D(SoundInstance soundinstance, SoundInstance3D instance3D) not enough arguments!");
 	return 0;
 }
+int wiAudio_BindLua::SetReverb(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		wiAudio::SetReverb((wiAudio::REVERB_PRESET)wiLua::SGetInt(L, 1));
+	}
+	else
+		wiLua::SError(L, "SetReverb(int reverbtype) not enough arguments!");
+	return 0;
+}
 
 void wiAudio_BindLua::Bind()
 {
@@ -252,7 +264,44 @@ void wiAudio_BindLua::Bind()
 	{
 		initialized = true;
 		Luna<wiAudio_BindLua>::Register(wiLua::GetGlobal()->GetLuaState());
+
 		wiLua::GetGlobal()->RunText("audio = Audio()");
+
+		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_SOUNDEFFECT = 0");
+		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_MUSIC = 1");
+		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_USER0 = 2");
+		wiLua::GetGlobal()->RunText("SUBMIX_TYPE_USER1 = 3");
+
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_DEFAULT = 0");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_GENERIC = 1");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_FOREST = 2");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_PADDEDCELL = 3");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_ROOM = 4");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_BATHROOM = 5");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_LIVINGROOM = 6");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_STONEROOM = 7");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_AUDITORIUM = 8");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_CONCERTHALL = 9");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_CAVE = 10");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_ARENA = 11");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_HANGAR = 12");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_CARPETEDHALLWAY = 13");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_HALLWAY = 14");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_STONECORRIDOR = 15");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_ALLEY = 16");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_CITY = 17");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_MOUNTAINS = 18");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_QUARRY = 19");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_PLAIN = 20");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_PARKINGLOT = 21");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_SEWERPIPE = 22");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_UNDERWATER = 23");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_SMALLROOM = 24");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_MEDIUMROOM = 25");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_LARGEROOM = 26");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_MEDIUMHALL = 27");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_LARGEHALL = 28");
+		wiLua::GetGlobal()->RunText("REVERB_PRESET_PLATE = 29");
 
 		wiSound_BindLua::Bind();
 		wiSoundInstance_BindLua::Bind();

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "SoundWindow.h"
+#include "wiAudio.h"
 
 #include <sstream>
 
@@ -19,13 +20,54 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
 
 	soundWindow = new wiWindow(GUI, "Sound Window");
-	soundWindow->SetSize(XMFLOAT2(440, 240));
+	soundWindow->SetSize(XMFLOAT2(440, 340));
 	soundWindow->SetEnabled(false);
 	GUI->AddWidget(soundWindow);
 
 	float x = 20;
 	float y = 0;
 	float step = 35;
+
+	reverbComboBox = new wiComboBox("Reverb: ");
+	reverbComboBox->SetPos(XMFLOAT2(x + 80, y += step));
+	reverbComboBox->SetSize(XMFLOAT2(180, 25));
+	reverbComboBox->OnSelect([&](wiEventArgs args) {
+		wiAudio::SetReverb((wiAudio::REVERB_PRESET)args.iValue);
+	});
+	reverbComboBox->AddItem("DEFAULT");
+	reverbComboBox->AddItem("GENERIC");
+	reverbComboBox->AddItem("FOREST");
+	reverbComboBox->AddItem("PADDEDCELL");
+	reverbComboBox->AddItem("ROOM");
+	reverbComboBox->AddItem("BATHROOM");
+	reverbComboBox->AddItem("LIVINGROOM");
+	reverbComboBox->AddItem("STONEROOM");
+	reverbComboBox->AddItem("AUDITORIUM");
+	reverbComboBox->AddItem("CONCERTHALL");
+	reverbComboBox->AddItem("CAVE");
+	reverbComboBox->AddItem("ARENA");
+	reverbComboBox->AddItem("HANGAR");
+	reverbComboBox->AddItem("CARPETEDHALLWAY");
+	reverbComboBox->AddItem("HALLWAY");
+	reverbComboBox->AddItem("STONECORRIDOR");
+	reverbComboBox->AddItem("ALLEY");
+	reverbComboBox->AddItem("CITY");
+	reverbComboBox->AddItem("MOUNTAINS");
+	reverbComboBox->AddItem("QUARRY");
+	reverbComboBox->AddItem("PLAIN");
+	reverbComboBox->AddItem("PARKINGLOT");
+	reverbComboBox->AddItem("SEWERPIPE");
+	reverbComboBox->AddItem("UNDERWATER");
+	reverbComboBox->AddItem("SMALLROOM");
+	reverbComboBox->AddItem("MEDIUMROOM");
+	reverbComboBox->AddItem("LARGEROOM");
+	reverbComboBox->AddItem("MEDIUMHALL");
+	reverbComboBox->AddItem("LARGEHALL");
+	reverbComboBox->AddItem("PLATE");
+	reverbComboBox->SetTooltip("Set the global reverb setting.");
+	soundWindow->AddWidget(reverbComboBox);
+
+	y += step;
 
 	addButton = new wiButton("Add Sound");
 	addButton->SetTooltip("Add a sound file to the scene.");

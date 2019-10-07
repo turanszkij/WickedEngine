@@ -184,6 +184,7 @@ namespace wiSceneSystem
 			archive << texAnimElapsedTime;
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
+			if(!dir.empty())
 			{
 				size_t found = baseColorMapName.rfind(dir);
 				if (found != std::string::npos)
@@ -498,12 +499,15 @@ namespace wiSceneSystem
 			archive << height;
 
 			// If detecting an absolute path in textures, remove it and convert to relative:
-			for (size_t i = 0; i < lensFlareNames.size(); ++i)
+			if (!dir.empty())
 			{
-				size_t found = lensFlareNames[i].rfind(dir);
-				if (found != std::string::npos)
+				for (size_t i = 0; i < lensFlareNames.size(); ++i)
 				{
-					lensFlareNames[i] = lensFlareNames[i].substr(found + dir.length());
+					size_t found = lensFlareNames[i].rfind(dir);
+					if (found != std::string::npos)
+					{
+						lensFlareNames[i] = lensFlareNames[i].substr(found + dir.length());
+					}
 				}
 			}
 			archive << lensFlareNames;
@@ -717,6 +721,7 @@ namespace wiSceneSystem
 		else
 		{
 			// If detecting an absolute path in textures, remove it and convert to relative:
+			if(!dir.empty())
 			{
 				size_t found = filename.rfind(dir);
 				if (found != std::string::npos)
