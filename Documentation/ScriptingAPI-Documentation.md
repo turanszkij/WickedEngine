@@ -42,8 +42,6 @@ The documentation completion is still pending....
 				2. RenderPath3D_Deferred
 			3. LoadingScreen
 	9. Network
-		1. Server
-		2. Client
 	10. Input Handling
 	11. ResourceManager
 		
@@ -283,7 +281,7 @@ Just holds texture information in VRAM.
 
 ### Audio
 Loads and plays an audio files.
-- [outer]audio  -- the audio device
+- [outer]audio : Audio  -- the audio device
 - CreateSound(string filename, Sound sound) : bool  -- Creates a sound file, returns true if successful, false otherwise
 - CreateSoundInstance(Sound sound, SoundInstance soundinstance) : bool  -- Creates a sound instance that can be replayed, returns true if successful, false otherwise
 - Destroy(Sound sound)
@@ -679,16 +677,8 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - GetRadius() : float result
 
 ### Network
-Here are the network communication features.
-- TODO
-
-#### Server
-A TCP host to which clients can connect and communicate with each other or the server.
-- TODO
-
-#### Client
-A TCP client which provides features to communicate with other clients over the internet or local area network connection.
-- TODO
+Handles the network communication features.
+- [outer]network : Network
 
 ### Input Handling
 These provide functions to check the state of the input devices.

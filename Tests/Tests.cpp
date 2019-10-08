@@ -109,6 +109,7 @@ TestsRenderer::TestsRenderer()
 	testSelector->AddItem("Volumetric Test");
 	testSelector->AddItem("Sprite Test");
 	testSelector->AddItem("Lightmap Bake Test");
+	testSelector->AddItem("Network Test");
 	testSelector->SetMaxVisibleItemCount(100);
 	testSelector->OnSelect([=](wiEventArgs args) {
 
@@ -198,6 +199,9 @@ TestsRenderer::TestsRenderer()
 			wiRenderer::GetDevice()->SetVSyncEnabled(false); // turn off vsync if we can to accelerate the baking
 			wiRenderer::SetTemporalAAEnabled(true);
 			wiSceneSystem::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			break;
+		case 15:
+			RunNetworkTest();
 			break;
 		default:
 			assert(0);
@@ -662,4 +666,82 @@ void TestsRenderer::RunSpriteTest()
 		params.pos.x += sprite.params.siz.x + step;
 	}
 
+}
+void TestsRenderer::RunNetworkTest()
+{
+	static wiFont font;
+
+	wiNetwork::Connection connection;
+	connection.ipaddress = { 127,0,0,1 }; // localhost
+	connection.port = 12345; // just any random port really
+
+	std::thread sender([&] {
+		// Create sender socket:
+		wiNetwork::Socket sock;
+		wiNetwork::CreateSocket(&sock);
+
+		// Create a text message:
+		const char message[] = "Hi, this is a text message sent over the network!\nYou can find out more in Tests.cpp, RunNetworkTest() function.";
+		const size_t message_size = sizeof(message);
+
+		// First, send the text message size:
+		wiNetwork::Send(&sock, &connection, &message_size, sizeof(message_size));
+
+		// Then send the actual text message:
+		wiNetwork::Send(&sock, &connection, message, message_size);
+
+		});
+
+	std::thread receiver([&] {
+		// Create receiver socket:
+		wiNetwork::Socket sock;
+		wiNetwork::CreateSocket(&sock);
+
+		// Listen on the port which the sender uses:
+		wiNetwork::ListenPort(&sock, connection.port);
+		
+		// We can check for incoming messages with CanReceive(). A timeout value can be specified in microseconds
+		//	to let the function block for some time, otherwise it returns imediately
+		//	It is not necessary to use this, but the wiNetwork::Receive() will block until there is a message
+		if (wiNetwork::CanReceive(&sock, 1000000))
+		{
+			// We know that we want a text message in this simple example, but we don't know the size.
+			//	We also know that the sender sends the text size before the actual text, so first we will receive the text size:
+			size_t message_size;
+			wiNetwork::Connection sender_connection; // this will be filled out with the sender's address
+			wiNetwork::Receive(&sock, &sender_connection, &message_size, sizeof(message_size));
+
+			if (wiNetwork::CanReceive(&sock, 1000000))
+			{
+				// Once we know the text message length, we can receive the message itself:
+				char* message = new char[message_size]; // allocate text buffer
+				wiNetwork::Receive(&sock, &sender_connection, message, message_size);
+
+				// Write the message to the screen:
+				font.SetText(message);
+
+				// delete the message:
+				delete[] message;
+			}
+			else
+			{
+				font.SetText("Failed to receive the message in time");
+			}
+		}
+		else
+		{
+			font.SetText("Failed to receive the message length in time");
+		}
+
+		});
+
+	sender.join();
+	receiver.join();
+
+	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
+	font.params.h_align = WIFALIGN_CENTER;
+	font.params.v_align = WIFALIGN_CENTER;
+	font.params.size = 24;
+	this->addFont(&font);
 }

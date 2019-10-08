@@ -99,13 +99,15 @@ The following quick reference shows an overview of common resource formats and s
 ![InformationSheet](information_sheet.png)
 
 ## Audio
-The audio system handles audio playback and spatial audio.
+Handles audio playback and spatial audio.
 - wiAudio
 	- The namespace that is a collection of audio related functionality
 - Sound
 	- Represents a sound file in memory. Load a sound file via wiAudio interface.
 - SoundInstance
 	- An instance of a sound file that can be played and controlled in various ways through the wiAudio interface.
+- SoundInstance3D
+	- This structure describes a relation between listener and sound emitter in 3D space. Used together with a SoundInstance in wiAudio::Update3D() function
 
 ## Helpers
 A collection of engine-level helper classes
@@ -130,7 +132,7 @@ The input interface can be found here
 	- There are several functions, such as down(), press(), etc. to check button states.
 
 ## Network
-TODO: Rewrite the networking systems
+Handles network communication features.
 
 ## Scripting
 This is the place for the Lua scipt interface. The systems that are bound to Lua have the name of the system prefixed by _BindLua. 

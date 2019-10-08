@@ -1,95 +1,69 @@
-#ifndef NETWORK_H
-#define NETWORK_H
+#pragma once
+#include "CommonInclude.h"
 
-#include "wiBackLog.h"
-
-#include <Windows.h>
-#include <winsock.h>
 #include <string>
-#include <sstream>
+#include <array>
 
-#ifndef WINSTORE_SUPPORT
-#pragma comment(lib,"ws2_32.lib")
-#endif
-
-class wiNetwork
+namespace wiNetwork
 {
-public:
-	static const int PORT = 65000;
-
-	static const int PACKET_TYPE_CHANGENAME = 0;
-	static const int PACKET_TYPE_TEXTMESSAGE = 1;
-	static const int PACKET_TYPE_OTHER = 2;
-
-#ifndef WINSTORE_SUPPORT
-protected:
-	
-#define SCK_VERSION2            0x0202
-
-	SOCKET s;
-	WSADATA w;
-	fd_set readfds;
-
-	std::string name;
-
-public:
-	bool success;
-
-	wiNetwork(void);
-	~wiNetwork(void);
-
-	virtual bool changeName(const std::string& newName){
-		name=newName;
-		return true;
-	}
-	
-	void CloseConnection()
+	struct Socket
 	{
-		if(s)
-			closesocket(s);
+		wiCPUHandle handle = WI_NULL_HANDLE;
 
-		WSACleanup();
-
-
-		//wiBackLog::post("\n\nClosed Connection");
-	}
-
-	static bool sendText(const std::string& text, SOCKET socket);
-	template <typename T>
-	static bool sendData(const T& value, SOCKET socket){
-		int sent = send(socket, (const char*)&value, sizeof(value), 0);
-
-		if(sent==SOCKET_ERROR) {
-			//stringstream ss("");
-			//ss << "\n[Error] Sending data failed with error: " << WSAGetLastError();
-			//wiBackLog::post(ss.str().c_str());
-			return false;
+		void operator=(Socket&& other)
+		{
+			handle = other.handle;
+			other.handle = WI_NULL_HANDLE;
 		}
 
-		return true;
-	}
+		Socket() {}
+		Socket(Socket&& other)
+		{
+			handle = other.handle;
 
-	static bool receiveText(std::string& text, SOCKET socket);
-	template <typename T>
-	static bool receiveData(T& value, SOCKET socket){
-		char puffer[sizeof(value)];
-		int received = recv(socket, puffer, sizeof(puffer), 0);
-		if(received<=0){
-			//cout<< "[Error][receiveNumber] The recv call failed with error!\n";
-		} 
-		else if (received <= sizeof(value)) {
-			value = *((T*)puffer);
-			return true;
+			other.handle = WI_NULL_HANDLE;
 		}
-		else{
-			//cout<< "[Error][receiveNumber] Too long request!\n";
-		}
-		return false;
-	}
-#endif // WINSTORE_SUPPORT
+		~Socket();
+	};
 
-};
+	static const uint16_t DEFAULT_PORT = 777;
+	struct Connection
+	{
+		std::array<uint8_t, 4> ipaddress = { 127,0,0,1 };
+		uint16_t port = DEFAULT_PORT;
+	};
 
+	void Initialize();
+	void CleanUp();
 
-#endif
+	// Creates a socket that can be used to send or receive data
+	HRESULT CreateSocket(Socket* sock);
 
+	// Destroys socket
+	HRESULT Destroy(Socket* sock);
+
+	// Sends data packet to destination connection
+	//	sock		:	socket that sends the packet
+	//	connection	:	connection to the receiver, it is provided by the call site
+	//	data		:	buffer that contains data to send
+	//	dataSize	:	size of the data to send in bytes
+	HRESULT Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize);
+
+	// Enables the socket to receive data on a port
+	//	sock		:	socket that receives packet
+	//	port		:	port number to open
+	HRESULT ListenPort(const Socket* sock, uint16_t port = DEFAULT_PORT);
+
+	// Checks whether any data can be received at the moment, returns immediately
+	//	sock		:	socket that receives packet
+	//	timeout_microseconds : timeout period in microseconds. Specify this to let the function block
+	//	returns true if there are any messages in the queue, false otherwise
+	bool CanReceive(const Socket* sock, long timeout_microseconds = 1);
+
+	// Receive data. This function will block until a packet has been received. Use CanReceive() function to check if this function will block or not.
+	//	sock		:	socket that receives packet
+	//	connection	:	sender's connection data will be written to it when the function returns
+	//	data		:	buffer to hold received data, must be already allocated to a sufficient size
+	//	dataSize	:	expected data size in bytes
+	HRESULT Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize);
+}

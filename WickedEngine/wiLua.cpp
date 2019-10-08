@@ -75,8 +75,7 @@ wiLua* wiLua::GetGlobal()
 		wiInputManager_BindLua::Bind();
 		wiFont_BindLua::Bind();
 		wiBackLog_BindLua::Bind();
-		wiClient_BindLua::Bind();
-		wiServer_BindLua::Bind();
+		wiNetwork_BindLua::Bind();
 		wiIntersect_BindLua::Bind();
 
 	}

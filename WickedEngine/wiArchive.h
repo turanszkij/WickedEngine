@@ -8,11 +8,11 @@
 class wiArchive
 {
 private:
-	uint64_t version;
-	bool readMode;
-	size_t pos;
-	char* DATA;
-	size_t dataSize;
+	uint64_t version = 0;
+	bool readMode = false;
+	size_t pos = 0;
+	uint8_t* DATA = nullptr;
+	size_t dataSize = 0;
 
 	std::string fileName; // save to this file on closing if not empty
 
@@ -25,14 +25,16 @@ public:
 	wiArchive(const std::string& fileName, bool readMode = true);
 	~wiArchive();
 
-	uint64_t GetVersion() { return version; }
-	bool IsReadMode() { return readMode; }
+	const uint8_t* GetData() const { return DATA; }
+	size_t GetSize() const { return pos; }
+	uint64_t GetVersion() const { return version; }
+	bool IsReadMode() const { return readMode; }
 	void SetReadModeAndResetPos(bool isReadMode);
 	bool IsOpen();
 	void Close();
 	bool SaveFile(const std::string& fileName);
-	std::string GetSourceDirectory();
-	std::string GetSourceFileName();
+	std::string GetSourceDirectory() const;
+	std::string GetSourceFileName() const;
 
 	// It could be templated but we have to be extremely careful of different datasizes on different platforms
 	// because serialized data should be interchangeable!
@@ -318,7 +320,7 @@ private:
 		size_t _right = pos + _size;
 		if (_right > dataSize)
 		{
-			char* NEWDATA = new char[_right * 2];
+			uint8_t* NEWDATA = new uint8_t[_right * 2];
 			memcpy(NEWDATA, DATA, dataSize);
 			dataSize = _right * 2;
 			SAFE_DELETE_ARRAY(DATA);

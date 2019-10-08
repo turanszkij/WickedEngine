@@ -62,6 +62,7 @@
 #include "wiGPUBVH.h"
 #include "wiGPUSortLib.h"
 #include "wiJobSystem.h"
+#include "wiNetwork.h"
 
 #ifdef _WIN32
 

@@ -17,7 +17,7 @@ wiArchive::wiArchive()
 {
 	CreateEmpty();
 }
-wiArchive::wiArchive(const std::string& fileName, bool readMode):readMode(readMode),pos(0),DATA(nullptr),dataSize(0),fileName(fileName)
+wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(fileName), readMode(readMode)
 {
 	if (!fileName.empty())
 	{
@@ -28,8 +28,8 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode):readMode(readMo
 			{
 				dataSize = (size_t)file.tellg();
 				file.seekg(0, file.beg);
-				DATA = new char[(size_t)dataSize];
-				file.read(DATA, dataSize);
+				DATA = new uint8_t[(size_t)dataSize];
+				file.read((char*)DATA, dataSize);
 				file.close();
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
@@ -69,7 +69,7 @@ void wiArchive::CreateEmpty()
 
 	version = __archiveVersion;
 	dataSize = 128; // this will grow if necessary anyway...
-	DATA = new char[dataSize];
+	DATA = new uint8_t[dataSize];
 	(*this) << version;
 }
 
@@ -113,7 +113,7 @@ bool wiArchive::SaveFile(const std::string& fileName)
 	ofstream file(fileName, ios::binary | ios::trunc);
 	if (file.is_open())
 	{
-		file.write(DATA, (streamsize)pos);
+		file.write((const char*)DATA, (streamsize)pos);
 		file.close();
 		return true;
 	}
@@ -121,12 +121,12 @@ bool wiArchive::SaveFile(const std::string& fileName)
 	return false;
 }
 
-string wiArchive::GetSourceDirectory()
+string wiArchive::GetSourceDirectory() const
 {
 	return wiHelper::GetDirectoryFromPath(fileName);
 }
 
-string wiArchive::GetSourceFileName()
+string wiArchive::GetSourceFileName() const
 {
 	return fileName;
 }

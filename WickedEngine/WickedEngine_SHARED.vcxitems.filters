@@ -891,12 +891,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiClient.h">
-      <Filter>ENGINE\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiServer.h">
-      <Filter>ENGINE\Network</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -908,9 +902,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLua.h">
       <Filter>ENGINE\Scripting</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
-      <Filter>ENGINE\Network</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiResourceManager.h">
       <Filter>ENGINE\Helpers</Filter>
@@ -1133,6 +1124,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h">
+      <Filter>ENGINE\Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1742,20 +1736,11 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiClient.cpp">
-      <Filter>ENGINE\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiServer.cpp">
-      <Filter>ENGINE\Network</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp">
       <Filter>ENGINE\Scripting</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork.cpp">
-      <Filter>ENGINE\Network</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiResourceManager.cpp">
       <Filter>ENGINE\Helpers</Filter>
@@ -1906,6 +1891,12 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Windows.cpp">
+      <Filter>ENGINE\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_UWP.cpp">
+      <Filter>ENGINE\Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
