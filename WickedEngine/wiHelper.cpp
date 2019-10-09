@@ -13,6 +13,9 @@
 #include <sstream>
 #include <codecvt> // string conversion
 
+#include <Commdlg.h> // openfile
+#include <WinBase.h>
+
 using namespace std;
 
 namespace wiHelper
@@ -325,6 +328,77 @@ namespace wiHelper
 		bool exists = f.is_open();
 		f.close();
 		return exists;
+	}
+
+	void FileDialog(const FileDialogParams& params, FileDialogResult& result)
+	{
+#ifdef _WIN32
+#ifndef WINSTORE_SUPPORT
+
+		char szFile[256];
+
+		OPENFILENAMEA ofn;
+		ZeroMemory(&ofn, sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = nullptr;
+		ofn.lpstrFile = szFile;
+		// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+		// use the contents of szFile to initialize itself.
+		ofn.lpstrFile[0] = '\0';
+		ofn.nMaxFile = sizeof(szFile);
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.lpstrInitialDir = NULL;
+		ofn.nFilterIndex = 1;
+
+		// Slightly convoluted way to create the filter.
+		//	First string is description, ended by '\0'
+		//	Second string is extensions, each separated by ';' and at the end of all, a '\0'
+		//	Then the whole container string is closed with an other '\0'
+		//		For example: "model files\0*.model;*.obj;\0"  <-- this string literal has "model files" as description and two accepted extensions "model" and "obj"
+		std::vector<char> filter;
+		filter.reserve(256);
+		{
+			for (auto& x : params.description)
+			{
+				filter.push_back(x);
+			}
+			filter.push_back(0);
+
+			for (auto& x : params.extensions)
+			{
+				filter.push_back('*');
+				filter.push_back('.');
+				for (auto& y : x)
+				{
+					filter.push_back(y);
+				}
+				filter.push_back(';');
+			}
+			filter.push_back(0);
+			filter.push_back(0);
+		}
+		ofn.lpstrFilter = filter.data();
+
+		switch (params.type)
+		{
+		case FileDialogParams::OPEN:
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+			result.ok = GetOpenFileNameA(&ofn) == TRUE;
+			break;
+		case FileDialogParams::SAVE:
+			ofn.Flags = OFN_OVERWRITEPROMPT;
+			result.ok = GetSaveFileNameA(&ofn) == TRUE;
+			break;
+		}
+
+		if (result.ok) 
+		{
+			result.filenames.push_back(ofn.lpstrFile);
+		}
+
+#endif // WINSTORE_SUPPORT
+#endif // _WIN32
 	}
 
 	void StringConvert(const std::string from, std::wstring& to)

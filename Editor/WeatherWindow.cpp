@@ -2,8 +2,6 @@
 #include "WeatherWindow.h"
 
 #include <thread>
-#include <Commdlg.h> // openfile
-#include <WinBase.h>
 
 using namespace std;
 using namespace wiECS;
@@ -101,25 +99,15 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 
 		if (x == nullptr)
 		{
-			char szFile[260];
+			wiHelper::FileDialogParams params;
+			wiHelper::FileDialogResult result;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Cubemap texture";
+			params.extensions.push_back("dds");
+			wiHelper::FileDialog(params, result);
 
-			OPENFILENAMEA ofn;
-			ZeroMemory(&ofn, sizeof(ofn));
-			ofn.lStructSize = sizeof(ofn);
-			ofn.hwndOwner = nullptr;
-			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-			// use the contents of szFile to initialize itself.
-			ofn.lpstrFile[0] = '\0';
-			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Cubemap texture\0*.dds\0";
-			ofn.nFilterIndex = 1;
-			ofn.lpstrFileTitle = NULL;
-			ofn.nMaxFileTitle = 0;
-			ofn.lpstrInitialDir = NULL;
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			if (GetOpenFileNameA(&ofn) == TRUE) {
-				string fileName = ofn.lpstrFile;
+			if (result.ok) {
+				string fileName = result.filenames.front();
 				wiRenderer::SetEnvironmentMap((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
 				skyButton->SetText(fileName);
 			}

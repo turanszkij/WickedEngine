@@ -50,6 +50,23 @@ namespace wiHelper
 
 	bool FileExists(const std::string& fileName);
 
+	struct FileDialogParams
+	{
+		enum TYPE
+		{
+			OPEN,
+			SAVE,
+		} type = OPEN;
+		std::string description;
+		std::vector<std::string> extensions;
+	};
+	struct FileDialogResult
+	{
+		bool ok = false;
+		std::vector<std::string> filenames;
+	};
+	void FileDialog(const FileDialogParams& params, FileDialogResult& result);
+
 	void StringConvert(const std::string from, std::wstring& to);
 
 	void StringConvert(const std::wstring from, std::string& to);

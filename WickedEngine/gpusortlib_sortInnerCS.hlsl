@@ -51,7 +51,7 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	uint NumElements = __ReadSortElementCount__;
+	uint NumElements = counterBuffer.Load(counterReadOffset);
 
 	uint4 tgp;
 

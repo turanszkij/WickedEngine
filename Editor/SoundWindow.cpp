@@ -4,9 +4,6 @@
 
 #include <sstream>
 
-#include <Commdlg.h> // openfile
-#include <WinBase.h>
-
 using namespace std;
 using namespace wiGraphics;
 using namespace wiECS;
@@ -74,25 +71,15 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 	addButton->SetPos(XMFLOAT2(x, y += step));
 	addButton->SetSize(XMFLOAT2(80, 30));
 	addButton->OnClick([&](wiEventArgs args) {
-		char szFile[260];
+		wiHelper::FileDialogParams params;
+		wiHelper::FileDialogResult result;
+		params.type = wiHelper::FileDialogParams::OPEN;
+		params.description = "Sound";
+		params.extensions.push_back("wav");
+		wiHelper::FileDialog(params, result);
 
-		OPENFILENAMEA ofn;
-		ZeroMemory(&ofn, sizeof(ofn));
-		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = nullptr;
-		ofn.lpstrFile = szFile;
-		// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-		// use the contents of szFile to initialize itself.
-		ofn.lpstrFile[0] = '\0';
-		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFilter = "Sound\0*.wav;\0";
-		ofn.nFilterIndex = 1;
-		ofn.lpstrFileTitle = NULL;
-		ofn.nMaxFileTitle = 0;
-		ofn.lpstrInitialDir = NULL;
-		ofn.Flags = 0;
-		if (GetOpenFileNameA(&ofn) == TRUE) {
-			string fileName = ofn.lpstrFile;
+		if (result.ok) {
+			string fileName = result.filenames.front();
 			Entity entity = GetScene().Entity_CreateSound(fileName);
 		}
 	});

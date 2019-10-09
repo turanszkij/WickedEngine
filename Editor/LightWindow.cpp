@@ -257,25 +257,18 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 			}
 			else
 			{
-				char szFile[260];
+				wiHelper::FileDialogParams params;
+				wiHelper::FileDialogResult result;
+				params.type = wiHelper::FileDialogParams::OPEN;
+				params.description = "Texture";
+				params.extensions.push_back("dds");
+				params.extensions.push_back("png");
+				params.extensions.push_back("jpg");
+				params.extensions.push_back("tga");
+				wiHelper::FileDialog(params, result);
 
-				OPENFILENAMEA ofn;
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = nullptr;
-				ofn.lpstrFile = szFile;
-				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-				// use the contents of szFile to initialize itself.
-				ofn.lpstrFile[0] = '\0';
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = "Texture\0*.dds;*.png;*.jpg;*.tga;\0";
-				ofn.nFilterIndex = 1;
-				ofn.lpstrFileTitle = NULL;
-				ofn.nMaxFileTitle = 0;
-				ofn.lpstrInitialDir = NULL;
-				ofn.Flags = 0;
-				if (GetSaveFileNameA(&ofn) == TRUE) {
-					std::string fileName = ofn.lpstrFile;
+				if (result.ok) {
+					std::string fileName = result.filenames.front();
 					light->lensFlareRimTextures[i] = (Texture2D*)wiResourceManager::GetGlobal().add(fileName);
 					light->lensFlareNames[i] = fileName;
 					fileName = wiHelper::GetFileNameFromPath(fileName);
@@ -338,7 +331,7 @@ void LightWindow::SetEntity(Entity entity)
 
 		for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
 		{
-			if (light->lensFlareRimTextures[i] && !light->lensFlareNames[i].empty())
+			if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i] && !light->lensFlareNames[i].empty())
 			{
 				lensflare_Button[i]->SetText(light->lensFlareNames[i]);
 			}

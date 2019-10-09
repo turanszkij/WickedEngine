@@ -1,7 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
 
-#include <string>
 #include <array>
 
 namespace wiNetwork

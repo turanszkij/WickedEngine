@@ -21,9 +21,6 @@
 #include "ModelImporter.h"
 #include "Translator.h"
 
-#include <Commdlg.h> // openfile
-#include <WinBase.h>
-
 #include <sstream>
 
 using namespace std;
@@ -382,25 +379,15 @@ void EditorComponent::Load()
 	saveButton->OnClick([=](wiEventArgs args) {
 		EndTranslate();
 
-		char szFile[260];
+		wiHelper::FileDialogParams params;
+		wiHelper::FileDialogResult result;
+		params.type = wiHelper::FileDialogParams::SAVE;
+		params.description = "Wicked Scene";
+		params.extensions.push_back("wiscene");
+		wiHelper::FileDialog(params, result);
 
-		OPENFILENAMEA ofn;
-		ZeroMemory(&ofn, sizeof(ofn));
-		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = nullptr;
-		ofn.lpstrFile = szFile;
-		// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-		// use the contents of szFile to initialize itself.
-		ofn.lpstrFile[0] = '\0';
-		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFilter = "Wicked Scene\0*.wiscene\0";
-		ofn.nFilterIndex = 1;
-		ofn.lpstrFileTitle = NULL;
-		ofn.nMaxFileTitle = 0;
-		ofn.lpstrInitialDir = NULL;
-		ofn.Flags = OFN_OVERWRITEPROMPT;
-		if (GetSaveFileNameA(&ofn) == TRUE) {
-			string fileName = ofn.lpstrFile;
+		if (result.ok) {
+			string fileName = result.filenames.front();
 			if (fileName.substr(fileName.length() - 8).compare(".wiscene") != 0)
 			{
 				fileName += ".wiscene";
@@ -431,26 +418,20 @@ void EditorComponent::Load()
 	modelButton->SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
 	modelButton->OnClick([=](wiEventArgs args) {
 		thread([&] {
-			char szFile[260];
 
-			OPENFILENAMEA ofn;
-			ZeroMemory(&ofn, sizeof(ofn));
-			ofn.lStructSize = sizeof(ofn);
-			ofn.hwndOwner = nullptr;
-			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-			// use the contents of szFile to initialize itself.
-			ofn.lpstrFile[0] = '\0';
-			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Model Formats\0*.wiscene;*.obj;*.gltf;*.glb\0";
-			ofn.nFilterIndex = 1;
-			ofn.lpstrFileTitle = NULL;
-			ofn.nMaxFileTitle = 0;
-			ofn.lpstrInitialDir = NULL;
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			if (GetOpenFileNameA(&ofn) == TRUE) 
+			wiHelper::FileDialogParams params;
+			wiHelper::FileDialogResult result;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Model formats (.wiscene, .obj, .gltf, .glb)";
+			params.extensions.push_back("wiscene");
+			params.extensions.push_back("obj");
+			params.extensions.push_back("gltf");
+			params.extensions.push_back("glb");
+			wiHelper::FileDialog(params, result);
+
+			if (result.ok) 
 			{
-				string fileName = ofn.lpstrFile;
+				string fileName = result.filenames.front();
 
 				loader->addLoadingFunction([=] {
 					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
@@ -498,25 +479,16 @@ void EditorComponent::Load()
 	scriptButton->SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	scriptButton->OnClick([=](wiEventArgs args) {
 		thread([&] {
-			char szFile[260];
 
-			OPENFILENAMEA ofn;
-			ZeroMemory(&ofn, sizeof(ofn));
-			ofn.lStructSize = sizeof(ofn);
-			ofn.hwndOwner = nullptr;
-			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-			// use the contents of szFile to initialize itself.
-			ofn.lpstrFile[0] = '\0';
-			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = "Lua script file\0*.lua\0";
-			ofn.nFilterIndex = 1;
-			ofn.lpstrFileTitle = NULL;
-			ofn.nMaxFileTitle = 0;
-			ofn.lpstrInitialDir = NULL;
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-			if (GetOpenFileNameA(&ofn) == TRUE) {
-				string fileName = ofn.lpstrFile;
+			wiHelper::FileDialogParams params;
+			wiHelper::FileDialogResult result;
+			params.type = wiHelper::FileDialogParams::OPEN;
+			params.description = "Lua script";
+			params.extensions.push_back("lua");
+			wiHelper::FileDialog(params, result);
+
+			if (result.ok) {
+				string fileName = result.filenames.front();
 				wiLua::GetGlobal()->RunFile(fileName);
 			}
 		}).detach();

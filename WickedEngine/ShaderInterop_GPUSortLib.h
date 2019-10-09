@@ -9,7 +9,4 @@ CBUFFER(SortConstants, CBSLOT_OTHER_GPUSORTLIB)
 	uint counterReadOffset;
 };
 
-#define __ReadSortElementCount__ counterBuffer.Load(counterReadOffset);
-
-
 #endif // WI_SHADERINTEROP_GPUSORTLIB_H

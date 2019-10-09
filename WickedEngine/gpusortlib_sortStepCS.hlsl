@@ -33,7 +33,7 @@ RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
 void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID)
 {
-	uint NumElements = __ReadSortElementCount__;
+	uint NumElements = counterBuffer.Load(counterReadOffset);
 
 	uint4 tgp;
 

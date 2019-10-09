@@ -9,7 +9,7 @@ RWRAWBUFFER(indirectBuffers, 0);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// retrieve GPU itemcount:
-	uint itemCount = __ReadSortElementCount__;
+	uint itemCount = counterBuffer.Load(counterReadOffset);
 
 	if (itemCount > 0)
 	{

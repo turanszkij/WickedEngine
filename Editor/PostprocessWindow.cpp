@@ -2,8 +2,6 @@
 #include "PostprocessWindow.h"
 
 #include <thread>
-#include <Commdlg.h> // openfile
-#include <WinBase.h>
 
 using namespace std;
 using namespace wiGraphics;
@@ -207,26 +205,18 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		if (x == nullptr)
 		{
 			thread([&] {
-				char szFile[260];
+				wiHelper::FileDialogParams params;
+				wiHelper::FileDialogResult result;
+				params.type = wiHelper::FileDialogParams::OPEN;
+				params.description = "Texture";
+				params.extensions.push_back("dds");
+				params.extensions.push_back("png");
+				params.extensions.push_back("jpg");
+				params.extensions.push_back("tga");
+				wiHelper::FileDialog(params, result);
 
-				OPENFILENAMEA ofn;
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = nullptr;
-				ofn.lpstrFile = szFile;
-				// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
-				// use the contents of szFile to initialize itself.
-				ofn.lpstrFile[0] = '\0';
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = "Color Grading texture\0*.dds;*.png;*.tga\0";
-				ofn.nFilterIndex = 1;
-				ofn.lpstrFileTitle = NULL;
-				ofn.nMaxFileTitle = 0;
-				ofn.lpstrInitialDir = NULL;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-				if (GetOpenFileNameA(&ofn) == TRUE) {
-					string fileName = ofn.lpstrFile;
-					//wiRenderer::SetColorGrading((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
+				if (result.ok) {
+					string fileName = result.filenames.front();
 					component->setColorGradingTexture((Texture2D*)wiResourceManager::GetGlobal().add(fileName));
 					if (component->getColorGradingTexture() != nullptr)
 					{
@@ -237,7 +227,6 @@ PostprocessWindow::PostprocessWindow(wiGUI* gui, RenderPath3D* comp) : GUI(gui),
 		}
 		else
 		{
-			//wiRenderer::SetColorGrading(nullptr);
 			component->setColorGradingTexture(nullptr);
 			colorGradingButton->SetText("Load Color Grading LUT...");
 		}
