@@ -212,61 +212,34 @@ namespace wiECS
 			}
 		}
 
-		// Swap two components' data
-		inline void Swap(Entity a, Entity b)
+		// Place an entity-component to the specified index position while keeping the ordering intact
+		inline void MoveItem(size_t index_from, size_t index_to)
 		{
-			auto it_a = lookup.find(a);
-			auto it_b = lookup.find(b);
-
-			if (it_a != lookup.end() && it_b != lookup.end())
-			{
-				const size_t index_a = it_a->second;
-				const size_t index_b = it_b->second;
-
-				const Entity entity_tmp = entities[index_a];
-				const Component component_tmp = std::move(components[index_a]);
-
-				entities[index_a] = entities[index_b];
-				components[index_a] = std::move(components[index_b]);
-
-				entities[index_b] = entity_tmp;
-				components[index_b] = std::move(component_tmp);
-
-				lookup[a] = index_b;
-				lookup[b] = index_a;
-			}
-
-		}
-
-		// Place the last added entity-component to the specified index position while keeping the ordering intact
-		inline void MoveLastTo(size_t index)
-		{
-			// No operation if less than two components, or the target index is already the last index:
-			if (GetCount() < 2 || index == GetCount() - 1)
+			assert(index_from < GetCount());
+			assert(index_to < GetCount());
+			if (index_from == index_to)
 			{
 				return;
 			}
 
-			// Save the last component and entity:
-			Component component = std::move(components.back());
-			Entity entity = entities.back();
+			// Save the moved component and entity:
+			Component component = std::move(components[index_from]);
+			Entity entity = entities[index_from];
 
-			// Each component gets moved to the right by one after the index:
-			for (size_t i = components.size() - 1; i > index; --i)
+			// Every other entity-component that's in the way gets moved by one and lut is kept updated:
+			const int direction = index_from < index_to ? 1 : -1;
+			for (size_t i = index_from; i != index_to; i += direction)
 			{
-				components[i] = std::move(components[i - 1]);
-			}
-			// Each entity gets moved to the right by one after the index and lut is updated:
-			for (size_t i = entities.size() - 1; i > index; --i)
-			{
-				entities[i] = entities[i - 1];
+				const size_t next = i + direction;
+				components[i] = std::move(components[next]);
+				entities[i] = entities[next];
 				lookup[entities[i]] = i;
 			}
 
 			// Saved entity-component moved to the required position:
-			components[index] = std::move(component);
-			entities[index] = entity;
-			lookup[entity] = index;
+			components[index_to] = std::move(component);
+			entities[index_to] = entity;
+			lookup[entity] = index_to;
 		}
 
 		// Check if a component exists for a given entity or not

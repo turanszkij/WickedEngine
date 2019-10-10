@@ -1139,11 +1139,12 @@ namespace wiSceneSystem
 
 	void Scene::Entity_Remove(Entity entity)
 	{
+		Component_Detach(entity); // special case, this will also remove entity from hierarchy but also do more!
+
 		names.Remove(entity);
 		layers.Remove(entity);
 		transforms.Remove(entity);
 		prev_transforms.Remove(entity);
-		hierarchy.Remove_KeepSorted(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		impostors.Remove(entity);
@@ -1425,19 +1426,29 @@ namespace wiSceneSystem
 		// Add a new hierarchy node to the end of container:
 		hierarchy.Create(entity).parentID = parent;
 
-		// If this entity was already a part of a tree however, we must move it before children:
-		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+		// Detect breaks in the tree and fix them:
+		//	when children are before parents, we move the parents before the children while keeping ordering of other components intact
+		if (hierarchy.GetCount() > 1)
 		{
-			const HierarchyComponent& parent = hierarchy[i];
-			
-			if (parent.parentID == entity)
+			for (size_t i = hierarchy.GetCount() - 1; i > 0; --i)
 			{
-				hierarchy.MoveLastTo(i);
-				break;
+				Entity parent_candidate_entity = hierarchy.GetEntity(i);
+				const HierarchyComponent& parent_candidate = hierarchy[i];
+				for (size_t j = 0; j < i; ++j)
+				{
+					const HierarchyComponent& child_candidate = hierarchy[j];
+
+					if (child_candidate.parentID == parent_candidate_entity)
+					{
+						hierarchy.MoveItem(i, j);
+						++i; // next outer iteration will check the same index again as parent candidate, however things were moved upwards, so it will be a different entity!
+						break;
+					}
+				}
 			}
 		}
 
-		// Re-query parent after potential MoveLastTo(), because it invalidates references:
+		// Re-query parent after potential MoveItem(), because it invalidates references:
 		HierarchyComponent& parentcomponent = *hierarchy.GetComponent(entity);
 
 		TransformComponent* transform_parent = transforms.GetComponent(parent);
