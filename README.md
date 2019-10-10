@@ -58,9 +58,9 @@ You can download the engine by using Git and cloning the repository, or download
 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/trace.gif"/>
 
-Wicked Engine is provided as a static library. This means, that when creating a new project, the developer has to link against the compiled library before using its features. 
-For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. 
-Then set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
+There are a couple of projects that you can run up front: Editor, Tests and Template. You just have to set either as startup project and press F5 in Visual Studio to build and run.
+
+If you wish to integrate Wicked Engine into your own project, you can use it as a static library and link it to your application. For this, you must first compile the engine library project for the desired platform. For Windows Desktop, this is the WickedEngine_Windows project. After that, set the following dependencies to this library in Visual Studio this way in the implementing project (paths are as if your project is inside the engine root folder):
 
 1. Open Project Properties -> Configuration Properties
 2. C/C++ -> General -> Additional Include Directories: 
@@ -71,8 +71,9 @@ Then set the following dependencies to this library in Visual Studio this way in
 	- Project settings -> C/C++ -> Code Generation -> Runtime Library -> Multi threaded
 5. If you want to create an UWP application, #define WINSTORE_SUPPORT preprocessor for the whole implementing project and link against the WickedEngine_UWP library.
 	
-When your project settings are set up, time to #include "WickedEngine.h" in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project. If you are having difficulties, there are some projects that  you can compare against, such as the Editor, Tests or Template projects.
-Once the build is succesful, you can start using the engine.
+When your project settings are set up, put #include "WickedEngine.h" in your source. This will enable the use of all the engine features and link the necessary binaries. After this, you should already be able to build your project.
+
+If you have trouble, you can always look at or copy the project settings for Editor, Tests and Template projects to get an idea how to link with Wicked Engine.
 
 Initialization example (C++):
 
