@@ -3307,7 +3307,7 @@ void SetUpStates()
 	dsd.DepthFunc = COMPARISON_GREATER;
 
 	dsd.StencilEnable = true;
-	dsd.StencilReadMask = 0xFF;
+	dsd.StencilReadMask = 0;
 	dsd.StencilWriteMask = 0xFF;
 	dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_REPLACE;
@@ -3336,7 +3336,7 @@ void SetUpStates()
 	dsd.DepthEnable = true;
 	dsd.DepthFunc = COMPARISON_LESS;
 	dsd.StencilEnable = true;
-	dsd.StencilReadMask = 0xFF;
+	dsd.StencilReadMask = 0x0F; // only read from engine stencil ref, don't care about user stencil
 	dsd.StencilWriteMask = 0;
 	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
@@ -3353,7 +3353,7 @@ void SetUpStates()
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
 	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilReadMask = 0xFF;
+	dsd.StencilReadMask = 0x0F; // only read from engine stencil ref, don't care about user stencil
 	dsd.StencilWriteMask = 0x00;
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
@@ -3370,7 +3370,7 @@ void SetUpStates()
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
 	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilReadMask = 0xFF;
+	dsd.StencilReadMask = 0x0F; // only read from engine stencil ref, don't care about user stencil
 	dsd.StencilWriteMask = 0x00;
 	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
@@ -3387,7 +3387,7 @@ void SetUpStates()
 	dsd.DepthEnable = false;
 	dsd.StencilEnable = true;
 	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilReadMask = 0xFF;
+	dsd.StencilReadMask = 0x0F; // only read from engine stencil ref, don't care about user stencil
 	dsd.StencilWriteMask = 0x00;
 	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
