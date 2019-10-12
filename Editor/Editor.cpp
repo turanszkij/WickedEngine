@@ -1251,25 +1251,30 @@ void EditorComponent::Update(float dt)
 
 		}
 
-		// Clear material highlite state:
+		// Clear highlite state:
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
-			scene.materials[i].SetUserStencilRef(EditorComponent::EDITORSTENCILREF_CLEAR);
+			scene.materials[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
+		}
+		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
+		{
+			scene.objects[i].SetUserStencilRef(EDITORSTENCILREF_CLEAR);
 		}
 		for (auto& x : selected)
 		{
 			if (x.subsetIndex >= 0)
 			{
-				const ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				ObjectComponent* object = scene.objects.GetComponent(x.entity);
 				if (object != nullptr) // maybe it was deleted...
 				{
+					object->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT_OBJECT);
 					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 					if (mesh != nullptr && (int)mesh->subsets.size() > x.subsetIndex)
 					{
 						MaterialComponent* material = scene.materials.GetComponent(mesh->subsets[x.subsetIndex].materialID);
 						if (material != nullptr)
 						{
-							material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
+							material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
 						}
 					}
 				}
@@ -1542,13 +1547,6 @@ void EditorComponent::Render() const
 
 		device->EventBegin("Editor - Selection Outline", cmd);
 
-		const Texture2D* rts[] = {
-			&rt_selectionOutline[0],
-		};
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
-		const float rgba[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], rgba, cmd);
-
 		ViewPort vp;
 		vp.Width = (float)rt_selectionOutline[0].GetDesc().Width;
 		vp.Height = (float)rt_selectionOutline[0].GetDesc().Height;
@@ -1558,18 +1556,50 @@ void EditorComponent::Render() const
 		fx.enableFullScreen();
 		fx.stencilComp = STENCILMODE::STENCILMODE_EQUAL;
 
-		// Draw solid blocks of selected materials with STENCILREF_DEFAULT engine stencil ref
-		fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_DEFAULT, EDITORSTENCILREF_HIGHLIGHT);
-		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-
-		// Draw solid blocks of selected materials with STENCILREF_SKIN engine stencil ref
-		fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_SKIN, EDITORSTENCILREF_HIGHLIGHT);
-		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-
-		// Outline the solid blocks:
+		const float rgba[] = { 0,0,0,0 };
 		device->ClearRenderTarget(&rt_selectionOutline[1], rgba, cmd);
-		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, XMFLOAT4(1, 0.6f, 0, 1));
+
+		// Materials outline (green):
+		{
+			const Texture2D* rts[] = {
+				&rt_selectionOutline[0],
+			};
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
+			device->ClearRenderTarget(rts[0], rgba, cmd);
+
+			// Draw solid blocks of selected materials with STENCILREF_DEFAULT engine stencil ref
+			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_DEFAULT, EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
+			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+			// Draw solid blocks of selected materials with STENCILREF_SKIN engine stencil ref
+			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_SKIN, EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
+			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+			// Outline the solid blocks:
+			wiRenderer::BindCommonResources(cmd);
+			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, XMFLOAT4(0, 1, 0.6f, 0.35f));
+		}
+
+		// Objects outline (orange):
+		{
+			const Texture2D* rts[] = {
+				&rt_selectionOutline[0],
+			};
+			device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
+			device->ClearRenderTarget(rts[0], rgba, cmd);
+
+			// Draw solid blocks of selected materials with STENCILREF_DEFAULT engine stencil ref
+			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_DEFAULT, EDITORSTENCILREF_HIGHLIGHT_OBJECT);
+			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+			// Draw solid blocks of selected materials with STENCILREF_SKIN engine stencil ref
+			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_SKIN, EDITORSTENCILREF_HIGHLIGHT_OBJECT);
+			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+			// Outline the solid blocks:
+			wiRenderer::BindCommonResources(cmd);
+			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, XMFLOAT4(1, 0.6f, 0, 1));
+		}
 
 		device->EventEnd(cmd);
 	}

@@ -1445,28 +1445,35 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			uint32_t meshIndex;
 			int instanceCount;
 			uint32_t dataOffset;
-			int forceAlphatestForDithering;
+			uint8_t userStencilRefOverride;
+			uint8_t forceAlphatestForDithering; // padded bool
 			AABB aabb;
 		};
 		InstancedBatch* instancedBatchArray = nullptr;
 		int instancedBatchCount = 0;
 
 		size_t prevMeshIndex = ~0;
+		uint8_t prevUserStencilRefOverride = 0;
 		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
 		{
 			const RenderBatch& batch = renderQueue.batchArray[batchID];
 			const uint32_t meshIndex = batch.GetMeshIndex();
 			const uint32_t instanceIndex = batch.GetInstanceIndex();
+			const ObjectComponent& instance = scene.objects[instanceIndex];
+			const uint8_t userStencilRefOverride = instance.userStencilRef;
 
 			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
-			if (meshIndex != prevMeshIndex)
+			if (meshIndex != prevMeshIndex || userStencilRefOverride != prevUserStencilRefOverride)
 			{
 				prevMeshIndex = meshIndex;
+				prevUserStencilRefOverride = userStencilRefOverride;
+
 				instancedBatchCount++;
 				InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
 				instancedBatch->meshIndex = meshIndex;
 				instancedBatch->instanceCount = 0;
 				instancedBatch->dataOffset = instances.offset + batchID * instanceDataSize;
+				instancedBatch->userStencilRefOverride = userStencilRefOverride;
 				instancedBatch->forceAlphatestForDithering = 0;
 				instancedBatch->aabb = AABB();
 				if (instancedBatchArray == nullptr)
@@ -1476,7 +1483,6 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			}
 
 			InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
-			const ObjectComponent& instance = scene.objects[instanceIndex];
 
 			float dither = instance.GetTransparency(); 
 			
@@ -1526,6 +1532,7 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
 			const MeshComponent& mesh = scene.meshes[instancedBatch.meshIndex];
 			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
+			const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
@@ -1728,7 +1735,11 @@ void RenderMeshes(const RenderQueue& renderQueue, RENDERPASS renderPass, UINT re
 
 				SetAlphaRef(material.alphaRef, cmd);
 
-				device->BindStencilRef(material.GetStencilRef(), cmd);
+				STENCILREF engineStencilRef = material.engineStencilRef;
+				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
+				UINT stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
+				device->BindStencilRef(stencilRef, cmd);
+
 				device->BindPipelineState(pso, cmd);
 
 				device->BindConstantBuffer(VS, material.constantBuffer.get(), CB_GETBINDSLOT(MaterialCB), cmd);

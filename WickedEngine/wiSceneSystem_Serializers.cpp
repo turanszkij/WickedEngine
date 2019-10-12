@@ -338,6 +338,10 @@ namespace wiSceneSystem
 				archive >> lightmapHeight;
 				archive >> lightmapTextureData;
 			}
+			if (archive.GetVersion() >= 31)
+			{
+				archive >> userStencilRef;
+			}
 		}
 		else
 		{
@@ -352,6 +356,10 @@ namespace wiSceneSystem
 				archive << lightmapWidth;
 				archive << lightmapHeight;
 				archive << lightmapTextureData;
+			}
+			if (archive.GetVersion() >= 31)
+			{
+				archive << userStencilRef;
 			}
 		}
 	}

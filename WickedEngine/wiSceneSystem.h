@@ -465,6 +465,8 @@ namespace wiSceneSystem
 		uint32_t lightmapHeight = 0;
 		std::vector<uint8_t> lightmapTextureData;
 
+		uint8_t userStencilRef = 0;
+
 		// Non-serialized attributes:
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
@@ -509,6 +511,14 @@ namespace wiSceneSystem
 
 		inline float GetTransparency() const { return 1 - color.w; }
 		inline uint32_t GetRenderTypes() const { return rendertypeMask; }
+
+		// User stencil value can be in range [0, 15]
+		//	Values greater than 0 can be used to override userStencilRef of MaterialComponent
+		inline void SetUserStencilRef(uint8_t value)
+		{
+			assert(value < 16);
+			userStencilRef = value & 0x0F;
+		}
 
 		void ClearLightmap();
 		void SaveLightmap();
