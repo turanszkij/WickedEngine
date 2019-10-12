@@ -1268,13 +1268,19 @@ void EditorComponent::Update(float dt)
 			// Copy
 			if (wiInputManager::press('C'))
 			{
+				auto prevSel = selected;
+				EndTranslate();
+
 				SAFE_DELETE(clipboard);
 				clipboard = new wiArchive();
-				*clipboard << selected.size();
-				for (auto& x : selected)
+				*clipboard << prevSel.size();
+				for (auto& x : prevSel)
 				{
 					scene.Entity_Serialize(*clipboard, x.entity, 0);
+					AddSelected(x);
 				}
+
+				BeginTranslate();
 			}
 			// Paste
 			if (wiInputManager::press('V'))
