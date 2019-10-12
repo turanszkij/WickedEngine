@@ -1396,11 +1396,14 @@ namespace wiSceneSystem
 		return entity;
 	}
 	Entity Scene::Entity_CreateSound(
+		const std::string& name,
 		const std::string& filename,
 		const XMFLOAT3& position
 	)
 	{
 		Entity entity = CreateEntity();
+
+		names.Create(entity) = name;
 
 		SoundComponent& sound = sounds.Create(entity);
 		sound.filename = filename;

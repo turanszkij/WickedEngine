@@ -80,7 +80,7 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 
 		if (result.ok) {
 			string fileName = result.filenames.front();
-			Entity entity = GetScene().Entity_CreateSound(fileName);
+			Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
 		}
 	});
 	soundWindow->AddWidget(addButton);

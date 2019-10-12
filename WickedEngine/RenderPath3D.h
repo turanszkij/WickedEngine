@@ -15,7 +15,7 @@ private:
 	float sharpenFilterAmount = 0.28f;
 	float outlineThreshold = 0.2f;
 	float outlineThickness = 1.0f;
-	XMFLOAT3 outlineColor = XMFLOAT3(0, 0, 0);
+	XMFLOAT4 outlineColor = XMFLOAT4(0, 0, 0, 1);
 	float ssaoRange = 1.0f;
 	UINT ssaoSampleCount = 16;
 	float chromaticAberrationAmount = 2.0f;
@@ -112,7 +112,7 @@ public:
 	inline float getSharpenFilterAmount() const { return sharpenFilterAmount; }
 	inline float getOutlineThreshold() const { return outlineThreshold; }
 	inline float getOutlineThickness() const { return outlineThickness; }
-	inline XMFLOAT3 getOutlineColor() const { return outlineColor; }
+	inline XMFLOAT4 getOutlineColor() const { return outlineColor; }
 	inline float getSSAORange() const { return ssaoRange; }
 	inline UINT getSSAOSampleCount() const { return ssaoSampleCount; }
 	inline float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
@@ -151,7 +151,7 @@ public:
 	inline void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
 	inline void setOutlineThreshold(float value) { outlineThreshold = value; }
 	inline void setOutlineThickness(float value) { outlineThickness = value; }
-	inline void setOutlineColor(const XMFLOAT3& value) { outlineColor = value; }
+	inline void setOutlineColor(const XMFLOAT4& value) { outlineColor = value; }
 	inline void setSSAORange(float value) { ssaoRange = value; }
 	inline void setSSAOSampleCount(UINT value) { ssaoSampleCount = value; }
 	inline void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }

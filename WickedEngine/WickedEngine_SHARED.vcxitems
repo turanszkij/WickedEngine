@@ -257,6 +257,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\tinyddsloader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocators.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h" />

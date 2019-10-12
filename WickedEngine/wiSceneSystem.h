@@ -7,6 +7,7 @@
 #include "ShaderInterop_Renderer.h"
 #include "wiJobSystem.h"
 #include "wiAudio.h"
+#include "wiRenderer.h"
 
 #include "wiECS.h"
 #include "wiSceneSystem_Decl.h"
@@ -168,7 +169,7 @@ namespace wiSceneSystem
 		}
 		inline UINT GetStencilRef() const
 		{
-			return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
+			return wiRenderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 		}
 
 		const wiGraphics::Texture2D* GetBaseColorMap() const;
@@ -1075,6 +1076,7 @@ namespace wiSceneSystem
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
 		wiECS::Entity Entity_CreateSound(
+			const std::string& name,
 			const std::string& filename,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);

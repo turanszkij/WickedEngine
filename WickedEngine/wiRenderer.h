@@ -32,6 +32,11 @@ namespace wiRenderer
 	static const wiGraphics::FORMAT DSFormat_small = wiGraphics::FORMAT_D16_UNORM;
 	static const wiGraphics::FORMAT DSFormat_small_alias = wiGraphics::FORMAT_R16_TYPELESS;
 
+	inline UINT CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)
+	{
+		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
+	}
+
 	const wiGraphics::Sampler* GetSampler(int slot);
 	const wiGraphics::VertexShader* GetVertexShader(VSTYPES id);
 	const wiGraphics::HullShader* GetHullShader(VSTYPES id);
@@ -244,12 +249,12 @@ namespace wiRenderer
 		float focus = 10.0f
 	);
 	void Postprocess_Outline(
-		const wiGraphics::Texture2D& lineardepth,
+		const wiGraphics::Texture2D& input,
 		const wiGraphics::Texture2D& output,
 		wiGraphics::CommandList cmd,
 		float threshold = 0.1f,
 		float thickness = 1.0f,
-		const XMFLOAT3& color = XMFLOAT3(0, 0, 0)
+		const XMFLOAT4& color = XMFLOAT4(0, 0, 0, 1)
 	);
 	void Postprocess_MotionBlur(
 		const wiGraphics::Texture2D& input,

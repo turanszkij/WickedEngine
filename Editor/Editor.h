@@ -69,6 +69,7 @@ public:
 	};
 	void ChangeRenderPath(RENDERPATH path);
 
+	void ResizeBuffers() override;
 	void Load() override;
 	void Start() override;
 	void FixedUpdate() override;
@@ -84,6 +85,7 @@ public:
 		EDITORSTENCILREF_HIGHLIGHT = 0x01,
 		EDITORSTENCILREF_LAST = 0x0F,
 	};
+	wiGraphics::Texture2D rt_selectionOutline[2];
 
 	Translator translator;
 	std::list<wiSceneSystem::PickResult> selected;

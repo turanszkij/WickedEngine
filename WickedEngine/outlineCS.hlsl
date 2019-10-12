@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
+
 RWTEXTURE2D(output, float4, 0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -8,30 +10,30 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
-	const float midDepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0);
+	const float middle = input.SampleLevel(sampler_linear_clamp, uv, 0);
 
 	const float outlineThickness = xPPParams0.y;
-	const float3 outlineColor = xPPParams1.xyz;
-	const float outlineThreshold = xPPParams0.x * midDepth;
+	const float4 outlineColor = xPPParams1;
+	const float outlineThreshold = xPPParams0.x * middle;
 
 	float2 dim;
-	texture_lineardepth.GetDimensions(dim.x, dim.y);
+	input.GetDimensions(dim.x, dim.y);
 
 	float2 ox = float2(outlineThickness / dim.x, 0.0);
 	float2 oy = float2(0.0, outlineThickness / dim.y);
 	float2 PP = uv - oy;
 
-	float CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP - ox), 0); float g00 = (CC);
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, PP, 0);				float g01 = (CC);
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP + ox), 0);		float g02 = (CC);
+	float CC = input.SampleLevel(sampler_linear_clamp, (PP - ox), 0);	float g00 = (CC);
+	CC = input.SampleLevel(sampler_linear_clamp, PP, 0);				float g01 = (CC);
+	CC = input.SampleLevel(sampler_linear_clamp, (PP + ox), 0);			float g02 = (CC);
 	PP = uv;
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP - ox), 0);		float g10 = (CC);
-	CC = midDepth;																	float g11 = (CC)*0.01f;
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP + ox), 0);		float g12 = (CC);
+	CC = input.SampleLevel(sampler_linear_clamp, (PP - ox), 0);			float g10 = (CC);
+	CC = middle;														float g11 = (CC) * 0.01f;
+	CC = input.SampleLevel(sampler_linear_clamp, (PP + ox), 0);			float g12 = (CC);
 	PP = uv + oy;
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP - ox), 0);		float g20 = (CC);
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, PP, 0);				float g21 = (CC);
-	CC = texture_lineardepth.SampleLevel(sampler_linear_clamp, (PP + ox), 0);		float g22 = (CC);
+	CC = input.SampleLevel(sampler_linear_clamp, (PP - ox), 0);			float g20 = (CC);
+	CC = input.SampleLevel(sampler_linear_clamp, PP, 0);				float g21 = (CC);
+	CC = input.SampleLevel(sampler_linear_clamp, (PP + ox), 0);			float g22 = (CC);
 	float K00 = -1;
 	float K01 = -2;
 	float K02 = -1;
@@ -66,5 +68,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float edge = dist > outlineThreshold ? 1 : 0;
 
 	float4 color_prev = output[DTid.xy];
-	output[DTid.xy] = lerp(color_prev, float4(outlineColor.rgb, color_prev.a), edge);
+	output[DTid.xy] = lerp(color_prev, outlineColor, edge);
 }

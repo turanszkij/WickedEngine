@@ -9025,12 +9025,12 @@ void Postprocess_DepthOfField(
 	device->EventEnd(cmd);
 }
 void Postprocess_Outline(
-	const Texture2D& lineardepth,
+	const Texture2D& input,
 	const Texture2D& output,
 	CommandList cmd,
 	float threshold,
 	float thickness,
-	const XMFLOAT3& color
+	const XMFLOAT4& color
 )
 {
 	GraphicsDevice* device = GetDevice();
@@ -9042,7 +9042,7 @@ void Postprocess_Outline(
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE], cmd);
 
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -9056,6 +9056,7 @@ void Postprocess_Outline(
 	cb.xPPParams1.x = color.x;
 	cb.xPPParams1.y = color.y;
 	cb.xPPParams1.z = color.z;
+	cb.xPPParams1.w = color.w;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 

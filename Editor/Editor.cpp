@@ -152,12 +152,30 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	oceanWnd.reset(new OceanWindow(&GetGUI()));
 }
 
+void EditorComponent::ResizeBuffers()
+{
+	__super::ResizeBuffers();
+
+	TextureDesc desc;
+	desc.Width = wiRenderer::GetInternalResolution().x;
+	desc.Height = wiRenderer::GetInternalResolution().y;
+
+	HRESULT hr;
+	desc.Format = wiRenderer::RTFormat_lineardepth;
+	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+	hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[0]);
+	assert(SUCCEEDED(hr));
+
+	desc.Format = wiRenderer::RTFormat_hdr;
+	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[1]);
+	assert(SUCCEEDED(hr));
+}
 void EditorComponent::Load()
 {
 	__super::Load();
 
 	translator.enabled = false;
-
 
 	float screenW = (float)wiRenderer::GetDevice()->GetScreenWidth();
 	float screenH = (float)wiRenderer::GetDevice()->GetScreenHeight();
@@ -1144,6 +1162,7 @@ void EditorComponent::Update(float dt)
 					// Union selection:
 					list<wiSceneSystem::PickResult> saved = selected;
 					EndTranslate();
+					selected.clear(); // endtranslate would clear it, but not if translator is not enabled
 					for (const wiSceneSystem::PickResult& picked : saved)
 					{
 						AddSelected(picked);
@@ -1230,6 +1249,31 @@ void EditorComponent::Update(float dt)
 				materialWnd->SetEntity(picked.entity);
 			}
 
+		}
+
+		// Clear material highlite state:
+		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			scene.materials[i].SetUserStencilRef(EditorComponent::EDITORSTENCILREF_CLEAR);
+		}
+		for (auto& x : selected)
+		{
+			if (x.subsetIndex >= 0)
+			{
+				const ObjectComponent* object = scene.objects.GetComponent(x.entity);
+				if (object != nullptr) // maybe it was deleted...
+				{
+					const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+					if (mesh != nullptr && (int)mesh->subsets.size() > x.subsetIndex)
+					{
+						MaterialComponent* material = scene.materials.GetComponent(mesh->subsets[x.subsetIndex].materialID);
+						if (material != nullptr)
+						{
+							material->SetUserStencilRef(EDITORSTENCILREF_HIGHLIGHT);
+						}
+					}
+				}
+			}
 		}
 
 		// Delete
@@ -1490,6 +1534,45 @@ void EditorComponent::Render() const
 
 	renderPath->Render();
 
+	// Selection outline:
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		CommandList cmd = device->BeginCommandList();
+
+		device->EventBegin("Editor - Selection Outline", cmd);
+
+		const Texture2D* rts[] = {
+			&rt_selectionOutline[0],
+		};
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
+		const float rgba[] = { 0,0,0,0 };
+		device->ClearRenderTarget(rts[0], rgba, cmd);
+
+		ViewPort vp;
+		vp.Width = (float)rt_selectionOutline[0].GetDesc().Width;
+		vp.Height = (float)rt_selectionOutline[0].GetDesc().Height;
+		device->BindViewports(1, &vp, cmd);
+
+		wiImageParams fx;
+		fx.enableFullScreen();
+		fx.stencilComp = STENCILMODE::STENCILMODE_EQUAL;
+
+		// Draw solid blocks of selected materials with STENCILREF_DEFAULT engine stencil ref
+		fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_DEFAULT, EDITORSTENCILREF_HIGHLIGHT);
+		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+		// Draw solid blocks of selected materials with STENCILREF_SKIN engine stencil ref
+		fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_SKIN, EDITORSTENCILREF_HIGHLIGHT);
+		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+		// Outline the solid blocks:
+		device->ClearRenderTarget(&rt_selectionOutline[1], rgba, cmd);
+		wiRenderer::BindCommonResources(cmd);
+		wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, XMFLOAT4(1, 0.6f, 0, 1));
+
+		device->EventEnd(cmd);
+	}
+
 	__super::Render();
 
 }
@@ -1500,6 +1583,13 @@ void EditorComponent::Compose(CommandList cmd) const
 	if (cinemaModeCheckBox->GetCheck())
 	{
 		return;
+	}
+
+	// Compose the selection outline to the screen:
+	{
+		wiImageParams fx;
+		fx.enableFullScreen();
+		wiImage::Draw(&rt_selectionOutline[1], fx, cmd);
 	}
 
 	const CameraComponent& camera = wiRenderer::GetCamera();

@@ -783,8 +783,6 @@ void MaterialWindow::SetEntity(Entity entity)
 
 	if (material != nullptr)
 	{
-		material->SetUserStencilRef(0);
-
 		const NameComponent& name = *scene.names.GetComponent(entity);
 		stringstream ss("");
 		ss << name.name << " (" << entity << ")";
