@@ -161,7 +161,7 @@ void EditorComponent::ResizeBuffers()
 	desc.Height = wiRenderer::GetInternalResolution().y;
 
 	HRESULT hr;
-	desc.Format = wiRenderer::RTFormat_lineardepth;
+	desc.Format = wiRenderer::GetDevice()->GetBackBufferFormat(); // todo: smaller format, but then somehow need to specify custom rt format for wiImage PSO!
 	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 	hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[0]);
 	assert(SUCCEEDED(hr));
@@ -1535,6 +1535,7 @@ void EditorComponent::Render() const
 	renderPath->Render();
 
 	// Selection outline:
+	if(!selected.empty())
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		CommandList cmd = device->BeginCommandList();
@@ -1586,6 +1587,7 @@ void EditorComponent::Compose(CommandList cmd) const
 	}
 
 	// Compose the selection outline to the screen:
+	if (!selected.empty())
 	{
 		wiImageParams fx;
 		fx.enableFullScreen();
