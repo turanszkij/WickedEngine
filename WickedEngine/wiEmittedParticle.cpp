@@ -746,20 +746,6 @@ void wiEmittedParticle::Initialize()
 
 	wiBackLog::post("wiEmittedParticle Initialized");
 }
-void wiEmittedParticle::CleanUp()
-{
-	SAFE_DELETE(vertexShader);
-	for (int i = 0; i < ARRAYSIZE(pixelShader); ++i)
-	{
-		SAFE_DELETE(pixelShader[i]);
-	}
-	SAFE_DELETE(emitCS);
-	SAFE_DELETE(emitCS_FROMMESH);
-	SAFE_DELETE(simulateCS);
-	SAFE_DELETE(simulateCS_SORTING);
-	SAFE_DELETE(simulateCS_DEPTHCOLLISIONS);
-	SAFE_DELETE(simulateCS_SORTING_DEPTHCOLLISIONS);
-}
 
 
 void wiEmittedParticle::Serialize(wiArchive& archive, uint32_t seed)

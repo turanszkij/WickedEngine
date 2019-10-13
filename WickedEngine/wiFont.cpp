@@ -292,6 +292,10 @@ void wiFont::Initialize()
 }
 void wiFont::CleanUp()
 {
+	for (auto& x : fontStyles)
+	{
+		SAFE_DELETE(x);
+	}
 	fontStyles.clear();
 }
 

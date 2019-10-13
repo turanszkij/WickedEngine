@@ -9,6 +9,8 @@ namespace wiInitializer
 	void InitializeComponentsAsync();
 	// Check if systems have been initialized or not
 	bool IsInitializeFinished();
+
+	void CleanUp();
 }
 
 

@@ -298,17 +298,6 @@ void wiHairParticle::LoadShaders()
 	cs_simulate = static_cast<const ComputeShader*>(wiResourceManager::GetShaderManager().add(path + "hairparticle_simulateCS.cso", wiResourceManager::COMPUTESHADER));
 
 }
-void wiHairParticle::CleanUp()
-{
-	SAFE_DELETE(vs);
-	for (int i = 0; i < RENDERPASS_COUNT; ++i)
-	{
-		SAFE_DELETE(ps[i]);
-	}
-
-	SAFE_DELETE(ps_simplest);
-	SAFE_DELETE(cs_simulate);
-}
 void wiHairParticle::Initialize()
 {
 

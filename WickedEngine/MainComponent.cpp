@@ -27,8 +27,10 @@ using namespace wiGraphics;
 
 MainComponent::~MainComponent()
 {
-	// This usually means appllication is terminating. Wait for GPU to finish rendering.
+	// This means application is terminating. Wait for GPU to finish rendering.
 	wiRenderer::GetDevice()->WaitForGPU();
+
+	wiInitializer::CleanUp();
 }
 
 void MainComponent::Initialize()

@@ -511,8 +511,6 @@ void Initialize()
 }
 void CleanUp()
 {
-	wiHairParticle::CleanUp();
-	wiEmittedParticle::CleanUp();
 	wiCube::CleanUp();
 
 	for (int i = 0; i < TEXTYPE_LAST; ++i)
@@ -520,7 +518,8 @@ void CleanUp()
 		SAFE_DELETE(textures[i]);
 	}
 
-	SAFE_DELETE(graphicsDevice);
+	// TODO: Currently it is not safe to ever delete graphics device, because of resource destructors might be referencing it!
+	//SAFE_DELETE(graphicsDevice);
 }
 void ClearWorld()
 {

@@ -1,10 +1,7 @@
 #include "wiInitializer.h"
 #include "WickedEngine.h"
 
-#include <thread>
 #include <sstream>
-
-using namespace std;
 
 namespace wiInitializer
 {
@@ -20,7 +17,10 @@ namespace wiInitializer
 	{
 		initializationStarted = true;
 
-		wiBackLog::post("\n[wiInitializer] Initializing Wicked Engine, please wait...\n");
+		std::stringstream ss;
+		ss << std::endl << "[wiInitializer] Initializing Wicked Engine, please wait..." << std::endl;
+		ss << "Version: " << wiVersion::GetVersionString() << std::endl;
+		wiBackLog::post(ss.str().c_str());
 
 		wiJobSystem::Initialize();
 
@@ -43,5 +43,14 @@ namespace wiInitializer
 	bool IsInitializeFinished()
 	{
 		return initializationStarted && !wiJobSystem::IsBusy(ctx);
+	}
+
+	void CleanUp()
+	{
+		wiFont::CleanUp();
+		wiRenderer::CleanUp();
+		wiAudio::CleanUp();
+		wiNetwork::CleanUp();
+		wiPhysicsEngine::CleanUp();
 	}
 }

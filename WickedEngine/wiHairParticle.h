@@ -51,7 +51,6 @@ public:
 
 	static void LoadShaders();
 	static void Initialize();
-	static void CleanUp();
 };
 
 }
