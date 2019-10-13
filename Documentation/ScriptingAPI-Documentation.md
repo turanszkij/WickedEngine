@@ -457,6 +457,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetAnimationArray() : AnimationComponent[] result  -- returns the array of all components of this type
 - Component_GetMaterialArray() : MaterialComponent[] result  -- returns the array of all components of this type
 - Component_GetEmitterArray() : EmitterComponent[] result  -- returns the array of all components of this type
+- Component_GetLightArray() : LightComponent[] result  -- returns the array of all components of this type
 - Component_GetObjectArray() : ObjectComponent[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
