@@ -700,7 +700,9 @@ void wiEmittedParticle::Initialize()
 
 
 	DepthStencilStateDesc dsd;
-	dsd.DepthEnable = false;
+	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
 	dsd.StencilEnable = false;
 	wiRenderer::GetDevice()->CreateDepthStencilState(&dsd, &depthStencilState);
 

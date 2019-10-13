@@ -467,7 +467,7 @@ void RenderPath3D::RenderParticles(bool isDistrortionPass, CommandList cmd) cons
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		const Texture2D* rts[] = { &rtParticle };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
+		device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
 		float clear[] = { 0,0,0,0 };
 		device->ClearRenderTarget(rts[0], clear, cmd);
 

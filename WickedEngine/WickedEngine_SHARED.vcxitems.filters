@@ -891,9 +891,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHelper.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiCube.h">
-      <Filter>ENGINE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLuna.h">
       <Filter>ENGINE\Scripting</Filter>
     </ClInclude>
@@ -1738,9 +1735,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp">
       <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiCube.cpp">
-      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLua.cpp">
       <Filter>ENGINE\Scripting</Filter>

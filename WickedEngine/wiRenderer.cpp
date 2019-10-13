@@ -8,7 +8,6 @@
 #include "wiHelper.h"
 #include "wiMath.h"
 #include "wiTextureHelper.h"
-#include "wiCube.h"
 #include "wiEnums.h"
 #include "wiRandom.h"
 #include "wiFont.h"
@@ -505,14 +504,10 @@ void Initialize()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D, SOFTSHADOWQUALITY_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-	wiCube::Initialize();
-
 	wiBackLog::post("wiRenderer Initialized");
 }
 void CleanUp()
 {
-	wiCube::CleanUp();
-
 	for (int i = 0; i < TEXTYPE_LAST; ++i)
 	{
 		SAFE_DELETE(textures[i]);
@@ -5535,6 +5530,48 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 	GraphicsDevice* device = GetDevice();
 	const Scene& scene = GetScene();
 
+	static GPUBuffer wirecubeVB;
+	static GPUBuffer wirecubeIB;
+	static bool initialized = false;
+	if (!initialized)
+	{
+
+		XMFLOAT4 min = XMFLOAT4(-1, -1, -1, 1);
+		XMFLOAT4 max = XMFLOAT4(1, 1, 1, 1);
+
+		XMFLOAT4 verts[] = {
+			min,							XMFLOAT4(1,1,1,1),
+			XMFLOAT4(min.x,max.y,min.z,1),	XMFLOAT4(1,1,1,1),
+			XMFLOAT4(min.x,max.y,max.z,1),	XMFLOAT4(1,1,1,1),
+			XMFLOAT4(min.x,min.y,max.z,1),	XMFLOAT4(1,1,1,1),
+			XMFLOAT4(max.x,min.y,min.z,1),	XMFLOAT4(1,1,1,1),
+			XMFLOAT4(max.x,max.y,min.z,1),	XMFLOAT4(1,1,1,1),
+			max,							XMFLOAT4(1,1,1,1),
+			XMFLOAT4(max.x,min.y,max.z,1),	XMFLOAT4(1,1,1,1),
+		};
+
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(verts);
+		bd.BindFlags = BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		SubresourceData InitData;
+		InitData.pSysMem = verts;
+		device->CreateBuffer(&bd, &InitData, &wirecubeVB);
+
+		uint16_t indices[] = {
+			0,1,1,2,0,3,0,4,1,5,4,5,
+			5,6,4,7,2,6,3,7,2,3,6,7
+		};
+
+		bd.Usage = USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(indices);
+		bd.BindFlags = BIND_INDEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+		InitData.pSysMem = indices;
+		device->CreateBuffer(&bd, &InitData, &wirecubeIB);
+	}
+
 	device->EventBegin("DrawDebugWorld", cmd);
 
 	BindCommonResources(cmd);
@@ -5548,14 +5585,14 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
-		GPUBuffer* vbs[] = {
-			wiCube::GetVertexBuffer(),
+		const GPUBuffer* vbs[] = {
+			&wirecubeVB,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
+		device->BindIndexBuffer(&wirecubeIB, INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 
@@ -5811,14 +5848,14 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
-		GPUBuffer* vbs[] = {
-			wiCube::GetVertexBuffer(),
+		const GPUBuffer* vbs[] = {
+			&wirecubeVB,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
+		device->BindIndexBuffer(&wirecubeIB, INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 
@@ -5873,14 +5910,14 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
-		GPUBuffer* vbs[] = {
-			wiCube::GetVertexBuffer(),
+		const GPUBuffer* vbs[] = {
+			&wirecubeVB,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
+		device->BindIndexBuffer(&wirecubeIB, INDEXFORMAT_16BIT, 0, cmd);
 
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{
@@ -6019,14 +6056,14 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 			{
 				// No mesh, just draw a box:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
-				GPUBuffer* vbs[] = {
-					wiCube::GetVertexBuffer(),
+				const GPUBuffer* vbs[] = {
+					&wirecubeVB,
 				};
 				const UINT strides[] = {
 					sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 				};
 				device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-				device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
+				device->BindIndexBuffer(&wirecubeIB, INDEXFORMAT_16BIT, 0, cmd);
 				device->DrawIndexed(24, 0, 0, cmd);
 			}
 			else
@@ -6090,14 +6127,14 @@ void DrawDebugWorld(const CameraComponent& camera, CommandList cmd)
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
-		GPUBuffer* vbs[] = {
-			wiCube::GetVertexBuffer(),
+		const GPUBuffer* vbs[] = {
+			&wirecubeVB,
 		};
 		const UINT strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, ARRAYSIZE(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(wiCube::GetIndexBuffer(), INDEXFORMAT_16BIT, 0, cmd);
+		device->BindIndexBuffer(&wirecubeIB, INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
