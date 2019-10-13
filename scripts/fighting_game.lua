@@ -1234,17 +1234,17 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			self.request_face = face
 			self.position = Vector(self.face * -4)
 
-			-- Set shirt color to differentiate between characters:
+			-- Set material colors to differentiate between characters:
 			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_skin")).SetBaseColor(skin_color)
 			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_shirt")).SetBaseColor(shirt_color)
 			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_hair")).SetBaseColor(hair_color)
 			model_scene.Component_GetMaterial(model_scene.Entity_FindByName("material_shoes")).SetBaseColor(shoe_color)
 
-			-- Set user stencil ref for all materials:
-			for i,material in ipairs(model_scene.Component_GetMaterialArray()) do
-				material.SetUserStencilRef(1)
+			-- Set user stencil ref for all objects:
+			local stencilref_cutout = 1
+			for i,object in ipairs(model_scene.Component_GetObjectArray()) do
+				object.SetUserStencilRef(stencilref_cutout)
 			end
-			local stencilref_cutout = model_scene.Component_GetMaterialArray()[1].GetStencilRef() -- we will use the final material stencilref from the first material to cut out the hp bar sprites...
 		
 			-- Initialize states:
 			for i,state in pairs(self.states) do
@@ -1302,6 +1302,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 
 			self.sprite_hpbar_background = Sprite("../images/hp_bar.png")
 			local fx = self.sprite_hpbar_background.GetParams()
+			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
 			fx.EnableDrawRect(Vector(0, 180, 1430, 180))
 			fx.SetColor(Vector(0,0,0,0.5))
@@ -1317,6 +1318,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 
 			self.sprite_hpbar_hp = Sprite("../images/hp_bar.png")
 			fx = self.sprite_hpbar_hp.GetParams()
+			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
 			fx.EnableDrawRect(Vector(0, 180, 1430, 180))
 			fx.SetColor(Vector(0,1,0.5,1))
@@ -1332,6 +1334,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 
 			self.sprite_hpbar_pattern = Sprite("../images/hp_bar.png", "../images/hp_bar.png")
 			fx = self.sprite_hpbar_pattern.GetParams()
+			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
 			fx.EnableDrawRect(Vector(0, 360, 1430, 180))
 			fx.EnableDrawRect2(Vector(0, 180, 1430, 180))
@@ -1353,6 +1356,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 
 			self.sprite_hpbar_pattern2 = Sprite("../images/hp_bar.png", "../images/hp_bar.png")
 			fx = self.sprite_hpbar_pattern2.GetParams()
+			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
 			fx.EnableDrawRect(Vector(0, 360, 1430, 180))
 			fx.EnableDrawRect2(Vector(0, 180, 1430, 180))
@@ -1374,6 +1378,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 
 			self.sprite_hpbar_border = Sprite("../images/hp_bar.png")
 			fx = self.sprite_hpbar_border.GetParams()
+			fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 			fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
 			fx.EnableDrawRect(Vector(0, 0, 1430, 180))
 			if(self.face > 0) then
@@ -1389,6 +1394,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			if(self.face > 0) then
 				self.sprite_timer = Sprite("../images/hp_bar.png")
 				fx = self.sprite_timer.GetParams()
+				fx.SetStencilRefMode(STENCILREFMODE_USER) -- we set the stencil ref in user space
 				fx.SetStencil(STENCILMODE_NOT, stencilref_cutout)
 				fx.EnableDrawRect(Vector(0,540,360,180))
 				fx.SetPivot(Vector(0.5,0))

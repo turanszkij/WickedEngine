@@ -27,6 +27,7 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, SetOpacity),
 	lunamethod(wiImageParams_BindLua, SetFade),
 	lunamethod(wiImageParams_BindLua, SetStencil),
+	lunamethod(wiImageParams_BindLua, SetStencilRefMode),
 	lunamethod(wiImageParams_BindLua, SetBlendMode),
 	lunamethod(wiImageParams_BindLua, SetQuality),
 	lunamethod(wiImageParams_BindLua, SetSampleMode),
@@ -235,6 +236,19 @@ int wiImageParams_BindLua::SetStencil(lua_State* L)
 	}
 	return 0;
 }
+int wiImageParams_BindLua::SetStencilRefMode(lua_State* L)
+{
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		params.stencilRefMode = (STENCILREFMODE)wiLua::SGetInt(L, 1);
+	}
+	else
+	{
+		wiLua::SError(L, "SetStencilRefMode(int stencilrefmode) not enough arguments!");
+	}
+	return 0;
+}
 int wiImageParams_BindLua::SetBlendMode(lua_State* L)
 {
 	int argc = wiLua::SGetArgCount(L);
@@ -439,6 +453,10 @@ void wiImageParams_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("STENCILMODE_GREATER		= 4");
 		wiLua::GetGlobal()->RunText("STENCILMODE_GREATEREQUAL	= 5");
 		wiLua::GetGlobal()->RunText("STENCILMODE_NOT			= 6");
+
+		wiLua::GetGlobal()->RunText("STENCILREFMODE_ENGINE		= 0");
+		wiLua::GetGlobal()->RunText("STENCILREFMODE_USER		= 1");
+		wiLua::GetGlobal()->RunText("STENCILREFMODE_ALL			= 2");
 
 		wiLua::GetGlobal()->RunText("SAMPLEMODE_CLAMP			= 0");
 		wiLua::GetGlobal()->RunText("SAMPLEMODE_WRAP			= 1");

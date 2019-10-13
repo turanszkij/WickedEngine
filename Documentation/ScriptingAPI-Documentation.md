@@ -33,6 +33,7 @@ The documentation completion is still pending....
 		8. MaterialComponent
 		9. EmitterComponent
 		10. LightComponent
+		11. ObjectComponent
 	8. High Level Interface
 		1. MainComponent
 		2. RenderPath
@@ -196,6 +197,7 @@ Specify Sprite properties, like position, size, etc.
 - SetOpacity(float opacity)
 - SetFade(float fade)
 - SetStencil(int stencilMode,stencilRef)
+- SetStencilRefMode(int stencilrefmode)
 - SetBlendMode(int blendMode)
 - SetQuality(int quality)
 - SetSampleMode(int sampleMode)
@@ -217,6 +219,10 @@ Specify Sprite properties, like position, size, etc.
 - [outer]STENCILMODE_GREATER : int
 - [outer]STENCILMODE_GREATEREQUAL : int
 - [outer]STENCILMODE_NOT : int
+
+- [outer]STENCILREFMODE_ENGINE : int
+- [outer]STENCILREFMODE_USER : int
+- [outer]STENCILREFMODE_ALL : int
 
 - [outer]SAMPLEMODE_CLAMP : int
 - [outer]SAMPLEMODE_WRAP : int
@@ -432,15 +438,17 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateLayer(Entity entity) : LayerComponent result  -- attach a layer component to an entity. The returned LayerComponent is associated with the entity and can be manipulated
 - Component_CreateTransform(Entity entity) : TransformComponent result  -- attach a transform component to an entity. The returned TransformComponent is associated with the entity and can be manipulated
 - Component_CreateLight(Entity entity) : LightComponent result  -- attach a light component to an entity. The returned LightComponent is associated with the entity and can be manipulated
+- Component_CreateObject(Entity entity) : ObjectComponent result  -- attach a light component to an entity. The returned ObjectComponent is associated with the entity and can be manipulated
 
 - Component_GetName(Entity entity) : NameComponent? result  -- query the name component of the entity (if exists)
 - Component_GetLayer(Entity entity) : LayerComponent? result  -- query the layer component of the entity (if exists)
 - Component_GetTransform(Entity entity) : TransformComponent? result  -- query the transform component of the entity (if exists)
 - Component_GetCamera(Entity entity) : CameraComponent? result  -- query the camera component of the entity (if exists)
 - Component_GetAnimation(Entity entity) : AnimationComponent? result  -- query the animation component of the entity (if exists)
-- Component_GetMaterial(Entity entity) : MaterialComponent? result  -- query the animation component of the entity (if exists)
-- Component_GetEmitter(Entity entity) : EmitterComponent? result  -- query the animation component of the entity (if exists)
-- Component_GetLight(Entity entity) : LightComponent? result  -- query the animation component of the entity (if exists)
+- Component_GetMaterial(Entity entity) : MaterialComponent? result  -- query the material component of the entity (if exists)
+- Component_GetEmitter(Entity entity) : EmitterComponent? result  -- query the emitter component of the entity (if exists)
+- Component_GetLight(Entity entity) : LightComponent? result  -- query the light component of the entity (if exists)
+- Component_GetObject(Entity entity) : ObjectComponent? result  -- query the object component of the entity (if exists)
 
 - Component_GetNameArray() : NameComponent[] result  -- returns the array of all components of this type
 - Component_GetLayerArray() : LayerComponent[] result  -- returns the array of all components of this type
@@ -449,7 +457,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetAnimationArray() : AnimationComponent[] result  -- returns the array of all components of this type
 - Component_GetMaterialArray() : MaterialComponent[] result  -- returns the array of all components of this type
 - Component_GetEmitterArray() : EmitterComponent[] result  -- returns the array of all components of this type
-- Component_GetLightArray() : LightComponent[] result  -- returns the array of all components of this type
+- Component_GetObjectArray() : ObjectComponent[] result  -- returns the array of all components of this type
 
 - Entity_GetNameArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLayerArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -459,6 +467,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetMaterialArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetEmitterArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetLightArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetObjectArray() : Entity[] result  -- returns the array of all entities that have this component type
 
 - Component_Attach(Entity entity,parent)  -- attaches entity to parent (adds a hierarchy component to entity). From now on, entity will inherit certain properties from parent, such as transform (entity will move with parent) or layer (entity's layer will be a sublayer of parent's layer)
 - Component_Detach(Entity entity)  -- detaches entity from parent (if hierarchycomponent exists for it). Restores entity's original layer, and applies current transformation to entity
@@ -546,6 +555,14 @@ Describes an orientation in 3D space.
 - SetEnergy(float value)
 - SetColor(Vector value)
 - SetCastShadow(bool value)
+
+#### ObjectComponent
+- GetMeshID() : Entity
+- GetColor() : Vector
+- GetUserStencilRef() : int
+- SetMeshID(Entity entity)
+- SetColor(Vector value)
+- SetUserStencilRef(int value)
 
 ## High Level Interface
 ### MainComponent

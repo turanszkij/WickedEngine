@@ -25,6 +25,13 @@ enum STENCILMODE
 	STENCILMODE_NOT,
 	STENCILMODE_COUNT
 };
+enum STENCILREFMODE
+{
+	STENCILREFMODE_ENGINE,
+	STENCILREFMODE_USER,
+	STENCILREFMODE_ALL,
+	STENCILREFMODE_COUNT
+};
 enum SAMPLEMODE
 {
 	SAMPLEMODE_CLAMP,
@@ -78,6 +85,7 @@ struct wiImageParams
 
 	uint8_t stencilRef;
 	STENCILMODE stencilComp;
+	STENCILREFMODE stencilRefMode;
 	BLENDMODE blendFlag;
 	ImageType typeFlag;
 	SAMPLEMODE sampleFlag;
@@ -105,6 +113,7 @@ struct wiImageParams
 		mipLevel = 0.f;
 		stencilRef = 0;
 		stencilComp = STENCILMODE_DISABLED;
+		stencilRefMode = STENCILREFMODE_ALL;
 		blendFlag = BLENDMODE_ALPHA;
 		typeFlag = SCREEN;
 		sampleFlag = SAMPLEMODE_MIRROR;

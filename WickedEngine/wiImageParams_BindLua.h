@@ -39,6 +39,7 @@ public:
 	int SetOpacity(lua_State* L);
 	int SetFade(lua_State* L);
 	int SetStencil(lua_State* L);
+	int SetStencilRefMode(lua_State* L);
 	int SetBlendMode(lua_State* L);
 	int SetQuality(lua_State* L);
 	int SetSampleMode(lua_State* L);

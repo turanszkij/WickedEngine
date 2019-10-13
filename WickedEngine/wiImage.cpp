@@ -43,8 +43,8 @@ namespace wiImage
 	const PixelShader*		imagePS[IMAGE_SHADER_COUNT][IMAGE_SAMPLING_COUNT];
 	BlendState				blendStates[BLENDMODE_COUNT];
 	RasterizerState			rasterizerState;
-	DepthStencilState		depthStencilStates[STENCILMODE_COUNT];
-	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][IMAGE_HDR_COUNT][IMAGE_SAMPLING_COUNT];
+	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
+	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][IMAGE_HDR_COUNT][IMAGE_SAMPLING_COUNT];
 
 	std::atomic_bool initialized{ false };
 
@@ -63,7 +63,12 @@ namespace wiImage
 
 		device->BindResource(PS, texture, TEXSLOT_ONDEMAND0, cmd);
 
-		device->BindStencilRef(params.stencilRef, cmd);
+		UINT stencilRef = params.stencilRef;
+		if (params.stencilRefMode == STENCILREFMODE_USER)
+		{
+			stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
+		}
+		device->BindStencilRef(stencilRef, cmd);
 
 		IMAGE_SAMPLING sampling_type = params.quality == QUALITY_BICUBIC ? IMAGE_SAMPLING_BICUBIC : IMAGE_SAMPLING_SIMPLE;
 
@@ -101,7 +106,7 @@ namespace wiImage
 
 		if (params.isFullScreenEnabled())
 		{
-			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], cmd);
+			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode][params.isHDREnabled()][sampling_type], cmd);
 			device->UpdateBuffer(&constantBuffer, &cb, cmd);
 			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 			device->Draw(3, 0, cmd);
@@ -223,7 +228,7 @@ namespace wiImage
 			}
 		}
 
-		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.isHDREnabled()][sampling_type], cmd);
+		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode][params.isHDREnabled()][sampling_type], cmd);
 
 		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
@@ -276,25 +281,28 @@ namespace wiImage
 					desc.bs = &blendStates[j];
 					for (int k = 0; k < STENCILMODE_COUNT; ++k)
 					{
-						desc.dss = &depthStencilStates[k];
-
-						if (k == STENCILMODE_DISABLED)
+						for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
 						{
-							desc.DSFormat = FORMAT_UNKNOWN;
+							desc.dss = &depthStencilStates[k][m];
+
+							if (k == STENCILMODE_DISABLED)
+							{
+								desc.DSFormat = FORMAT_UNKNOWN;
+							}
+							else
+							{
+								desc.DSFormat = wiRenderer::DSFormat_full;
+							}
+
+							desc.numRTs = 1;
+
+							desc.RTFormats[0] = device->GetBackBufferFormat();
+							device->CreatePipelineState(&desc, &imagePSO[i][j][k][m][0][l]);
+
+							desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+							device->CreatePipelineState(&desc, &imagePSO[i][j][k][m][1][l]);
+
 						}
-						else
-						{
-							desc.DSFormat = wiRenderer::DSFormat_full;
-						}
-
-						desc.numRTs = 1;
-
-						desc.RTFormats[0] = device->GetBackBufferFormat();
-						device->CreatePipelineState(&desc, &imagePSO[i][j][k][0][l]);
-
-						desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
-						device->CreatePipelineState(&desc, &imagePSO[i][j][k][1][l]);
-
 					}
 				}
 			}
@@ -332,45 +340,58 @@ namespace wiImage
 
 
 
+		for (int i = 0; i < STENCILREFMODE_COUNT; ++i)
+		{
+			DepthStencilStateDesc dsd;
+			dsd.DepthEnable = false;
+			dsd.StencilEnable = false;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_DISABLED][i]);
 
-		DepthStencilStateDesc dsd;
-		dsd.DepthEnable = false;
-		dsd.StencilEnable = false;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_DISABLED]);
+			dsd.StencilEnable = true;
+			switch (i)
+			{
+			case STENCILREFMODE_ENGINE:
+				dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
+				break;
+			case STENCILREFMODE_USER:
+				dsd.StencilReadMask = STENCILREF_MASK_USER;
+				break;
+			default:
+				dsd.StencilReadMask = STENCILREF_MASK_ALL;
+				break;
+			}
+			dsd.StencilWriteMask = 0;
+			dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
+			dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
+			dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+			dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
+			dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
+			dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 
-		dsd.StencilEnable = true;
-		dsd.StencilReadMask = 0xff;
-		dsd.StencilWriteMask = 0;
-		dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-		dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-		dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-		dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-		dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-		dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+			dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
+			dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_EQUAL][i]);
 
-		dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
-		dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_EQUAL]);
+			dsd.FrontFace.StencilFunc = COMPARISON_LESS;
+			dsd.BackFace.StencilFunc = COMPARISON_LESS;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESS][i]);
 
-		dsd.FrontFace.StencilFunc = COMPARISON_LESS;
-		dsd.BackFace.StencilFunc = COMPARISON_LESS;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESS]);
+			dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
+			dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESSEQUAL][i]);
 
-		dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
-		dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_LESSEQUAL]);
+			dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
+			dsd.BackFace.StencilFunc = COMPARISON_GREATER;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATER][i]);
 
-		dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
-		dsd.BackFace.StencilFunc = COMPARISON_GREATER;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATER]);
+			dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+			dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATEREQUAL][i]);
 
-		dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
-		dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_GREATEREQUAL]);
-
-		dsd.FrontFace.StencilFunc = COMPARISON_NOT_EQUAL;
-		dsd.BackFace.StencilFunc = COMPARISON_NOT_EQUAL;
-		device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_NOT]);
+			dsd.FrontFace.StencilFunc = COMPARISON_NOT_EQUAL;
+			dsd.BackFace.StencilFunc = COMPARISON_NOT_EQUAL;
+			device->CreateDepthStencilState(&dsd, &depthStencilStates[STENCILMODE_NOT][i]);
+		}
 
 
 		BlendStateDesc bd;

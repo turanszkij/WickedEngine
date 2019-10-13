@@ -33,6 +33,7 @@ namespace wiSceneSystem_BindLua
 		int Component_CreateLayer(lua_State* L);
 		int Component_CreateTransform(lua_State* L);
 		int Component_CreateLight(lua_State* L);
+		int Component_CreateObject(lua_State* L);
 
 		int Component_GetName(lua_State* L);
 		int Component_GetLayer(lua_State* L);
@@ -42,6 +43,7 @@ namespace wiSceneSystem_BindLua
 		int Component_GetMaterial(lua_State* L);
 		int Component_GetEmitter(lua_State* L);
 		int Component_GetLight(lua_State* L);
+		int Component_GetObject(lua_State* L);
 
 		int Component_GetNameArray(lua_State* L);
 		int Component_GetLayerArray(lua_State* L);
@@ -51,6 +53,7 @@ namespace wiSceneSystem_BindLua
 		int Component_GetMaterialArray(lua_State* L);
 		int Component_GetEmitterArray(lua_State* L);
 		int Component_GetLightArray(lua_State* L);
+		int Component_GetObjectArray(lua_State* L);
 
 		int Entity_GetNameArray(lua_State* L);
 		int Entity_GetLayerArray(lua_State* L);
@@ -60,6 +63,7 @@ namespace wiSceneSystem_BindLua
 		int Entity_GetMaterialArray(lua_State* L);
 		int Entity_GetEmitterArray(lua_State* L);
 		int Entity_GetLightArray(lua_State* L);
+		int Entity_GetObjectArray(lua_State* L);
 
 		int Component_Attach(lua_State* L);
 		int Component_Detach(lua_State* L);
@@ -250,6 +254,29 @@ namespace wiSceneSystem_BindLua
 		int SetEnergy(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetCastShadow(lua_State* L);
+	};
+
+	class ObjectComponent_BindLua
+	{
+	public:
+		bool owning = false;
+		wiSceneSystem::ObjectComponent* component = nullptr;
+
+		static const char className[];
+		static Luna<ObjectComponent_BindLua>::FunctionType methods[];
+		static Luna<ObjectComponent_BindLua>::PropertyType properties[];
+
+		ObjectComponent_BindLua(wiSceneSystem::ObjectComponent* component) :component(component) {}
+		ObjectComponent_BindLua(lua_State* L);
+		~ObjectComponent_BindLua();
+
+		int GetMeshID(lua_State* L);
+		int GetColor(lua_State* L);
+		int GetUserStencilRef(lua_State* L);
+
+		int SetMeshID(lua_State* L);
+		int SetColor(lua_State* L);
+		int SetUserStencilRef(lua_State* L);
 	};
 
 }

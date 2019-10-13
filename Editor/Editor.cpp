@@ -1556,6 +1556,10 @@ void EditorComponent::Render() const
 		fx.enableFullScreen();
 		fx.stencilComp = STENCILMODE::STENCILMODE_EQUAL;
 
+		// We will specify the stencil ref in user-space, don't cae about engine stencil refs here:
+		//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
+		fx.stencilRefMode = STENCILREFMODE_USER; 
+
 		const float rgba[] = { 0,0,0,0 };
 		device->ClearRenderTarget(&rt_selectionOutline[1], rgba, cmd);
 
@@ -1567,12 +1571,8 @@ void EditorComponent::Render() const
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
 			device->ClearRenderTarget(rts[0], rgba, cmd);
 
-			// Draw solid blocks of selected materials with STENCILREF_DEFAULT engine stencil ref
-			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_DEFAULT, EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
-			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-
-			// Draw solid blocks of selected materials with STENCILREF_SKIN engine stencil ref
-			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_SKIN, EDITORSTENCILREF_HIGHLIGHT_MATERIAL);
+			// Draw solid blocks of selected materials
+			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 			// Outline the solid blocks:
@@ -1588,12 +1588,8 @@ void EditorComponent::Render() const
 			device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
 			device->ClearRenderTarget(rts[0], rgba, cmd);
 
-			// Draw solid blocks of selected materials with STENCILREF_DEFAULT engine stencil ref
-			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_DEFAULT, EDITORSTENCILREF_HIGHLIGHT_OBJECT);
-			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
-
-			// Draw solid blocks of selected materials with STENCILREF_SKIN engine stencil ref
-			fx.stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_SKIN, EDITORSTENCILREF_HIGHLIGHT_OBJECT);
+			// Draw solid blocks of selected objects
+			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
 
 			// Outline the solid blocks:

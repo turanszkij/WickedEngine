@@ -34,6 +34,16 @@ enum RENDERPASS
 	RENDERPASS_COUNT
 };
 
+// There are two different kinds of stencil refs:
+//	ENGINE	: managed by the engine systems (STENCILREF enum values between 0-15)
+//	USER	: managed by the user (raw numbers between 0-15)
+enum STENCILREF_MASK
+{
+	STENCILREF_MASK_ENGINE = 0x0F,
+	STENCILREF_MASK_USER = 0xF0,
+	STENCILREF_MASK_ALL = STENCILREF_MASK_ENGINE | STENCILREF_MASK_USER,
+};
+
 // engine stencil reference values. These can be in range of [0, 15].
 // Do not alter order or value because it is bound to lua manually!
 enum STENCILREF 
