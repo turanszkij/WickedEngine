@@ -87,6 +87,7 @@ public:
 		EDITORSTENCILREF_LAST = 0x0F,
 	};
 	wiGraphics::Texture2D rt_selectionOutline[2];
+	float selectionOutlineTimer = 0;
 
 	Translator translator;
 	std::list<wiSceneSystem::PickResult> selected;

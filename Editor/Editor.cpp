@@ -715,6 +715,8 @@ void EditorComponent::Update(float dt)
 
 	animWnd->Update();
 
+	selectionOutlineTimer += dt;
+
 	// Exit cinema mode:
 	if (wiInputManager::down(VK_ESCAPE))
 	{
@@ -1617,6 +1619,7 @@ void EditorComponent::Compose(CommandList cmd) const
 	{
 		wiImageParams fx;
 		fx.enableFullScreen();
+		fx.opacity = wiMath::Lerp(0.4f, 1.0f, std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f);;
 		wiImage::Draw(&rt_selectionOutline[1], fx, cmd);
 	}
 
