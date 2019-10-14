@@ -3336,12 +3336,11 @@ void SetUpStates()
 	dsd.StencilEnable = false;
 	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_CAPTUREIMPOSTOR]);
 
-
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthEnable = true;
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
 	dsd.DepthFunc = COMPARISON_LESS;
-	dsd.StencilEnable = true;
-	dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
+	dsd.StencilEnable = false;
+	dsd.StencilReadMask = 0;
 	dsd.StencilWriteMask = 0;
 	dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
@@ -3353,30 +3352,12 @@ void SetUpStates()
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_DEFERREDLIGHT]);
 
-
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	dsd.DepthEnable = false;
-	dsd.StencilEnable = true;
-	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
-	dsd.StencilWriteMask = 0x00;
-	dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
-	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
-	dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-	device->CreateDepthStencilState(&dsd, &depthStencils[DSSTYPE_STENCILREAD_MATCH]);
-
-
+	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthEnable = false;
-	dsd.StencilEnable = true;
-	dsd.DepthFunc = COMPARISON_GREATER;
-	dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
-	dsd.StencilWriteMask = 0x00;
+	dsd.DepthFunc = COMPARISON_LESS;
+	dsd.StencilEnable = false;
+	dsd.StencilReadMask = 0;
+	dsd.StencilWriteMask = 0;
 	dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
 	dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
 	dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
@@ -4602,8 +4583,6 @@ void DrawDeferredLights(
 	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(PS, &gbuffer1, TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(PS, &gbuffer2, TEXSLOT_GBUFFER2, cmd);
-
-	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 
 	// Environmental light (envmap + voxelGI) is always drawn
 	{
@@ -8534,7 +8513,6 @@ void DeferredComposition(
 
 	device->EventBegin("DeferredComposition", cmd);
 
-	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 	device->BindPipelineState(&PSO_deferredcomposition, cmd);
 
 	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);

@@ -102,6 +102,12 @@ namespace wiImage
 
 		ImageCB cb;
 		cb.xColor = params.col;
+		const float darken = 1 - params.fade;
+		cb.xColor.x *= darken;
+		cb.xColor.y *= darken;
+		cb.xColor.z *= darken;
+		cb.xColor.w *= params.opacity;
+		cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
 		cb.xMipLevel = params.mipLevel;
 
 		if (params.isFullScreenEnabled())
@@ -196,15 +202,6 @@ namespace wiImage
 		}
 		cb.xTexMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
 		cb.xTexMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
-
-		cb.xColor = params.col;
-		const float darken = 1 - params.fade;
-		cb.xColor.x *= darken;
-		cb.xColor.y *= darken;
-		cb.xColor.z *= darken;
-		cb.xColor.w *= params.opacity;
-		cb.xMirror = params.isMirrorEnabled() ? 1 : 0;
-		cb.xMipLevel = params.mipLevel;
 
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
