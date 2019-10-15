@@ -125,3 +125,27 @@ bool GraphicsDevice::IsFormatUnorm(FORMAT value) const
 	return false;
 }
 
+bool GraphicsDevice::IsFormatBlockCompressed(FORMAT value) const
+{
+	switch (value)
+	{
+	case FORMAT_BC1_UNORM:
+	case FORMAT_BC1_UNORM_SRGB:
+	case FORMAT_BC2_UNORM:
+	case FORMAT_BC2_UNORM_SRGB:
+	case FORMAT_BC3_UNORM:
+	case FORMAT_BC3_UNORM_SRGB:
+	case FORMAT_BC4_UNORM:
+	case FORMAT_BC4_SNORM:
+	case FORMAT_BC5_UNORM:
+	case FORMAT_BC5_SNORM:
+	case FORMAT_BC6H_UF16:
+	case FORMAT_BC6H_SF16:
+	case FORMAT_BC7_UNORM:
+	case FORMAT_BC7_UNORM_SRGB:
+		return true;
+	}
+
+	return false;
+}
+

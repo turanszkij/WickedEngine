@@ -86,8 +86,10 @@ namespace wiGraphics
 		{
 			bool dirty = true;
 
-			VkImageView attachments[9] = {};
 			uint32_t attachmentCount = 0;
+			uint32_t colorAttachmentCount = 0;
+			VkFormat attachmentFormats[9] = {};
+			VkImageView attachments[9] = {};
 			VkExtent2D attachmentsExtents = {};
 			uint32_t attachmentLayers = 0;
 			VkClearValue clearColor[9] = {};
@@ -100,7 +102,6 @@ namespace wiGraphics
 			// RTFormats hash <-> renderpass+framebuffer
 			std::unordered_map<uint64_t, RenderPassAndFramebuffer> renderPassCollection;
 			size_t activeRTHash = 0;
-			const PipelineStateDesc* pDesc = nullptr;
 
 			VkRenderPass overrideRenderPass = VK_NULL_HANDLE;
 			VkFramebuffer overrideFramebuffer = VK_NULL_HANDLE;

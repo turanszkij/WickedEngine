@@ -373,6 +373,39 @@ namespace wiGraphics
 		}
 		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	}
+	inline VkStencilOp _ConvertStencilOp(STENCIL_OP value)
+	{
+		switch (value)
+		{
+		case wiGraphics::STENCIL_OP_KEEP:
+			return VK_STENCIL_OP_KEEP;
+			break;
+		case wiGraphics::STENCIL_OP_ZERO:
+			return VK_STENCIL_OP_ZERO;
+			break;
+		case wiGraphics::STENCIL_OP_REPLACE:
+			return VK_STENCIL_OP_REPLACE;
+			break;
+		case wiGraphics::STENCIL_OP_INCR_SAT:
+			return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+			break;
+		case wiGraphics::STENCIL_OP_DECR_SAT:
+			return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+			break;
+		case wiGraphics::STENCIL_OP_INVERT:
+			return VK_STENCIL_OP_INVERT;
+			break;
+		case wiGraphics::STENCIL_OP_INCR:
+			return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+			break;
+		case wiGraphics::STENCIL_OP_DECR:
+			return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+			break;
+		default:
+			break;
+		}
+		return VK_STENCIL_OP_KEEP;
+	}
 	
 	// Extension functions:
 	PFN_vkSetDebugUtilsObjectNameEXT setDebugUtilsObjectNameEXT;
@@ -1298,7 +1331,6 @@ namespace wiGraphics
 		memset(clearColor, 0, sizeof(clearColor));
 
 		activeRTHash = 0;
-		pDesc = nullptr;
 
 		overrideRenderPass = VK_NULL_HANDLE;
 		overrideFramebuffer = VK_NULL_HANDLE;
@@ -1342,13 +1374,6 @@ namespace wiGraphics
 
 			if (renderPass == VK_NULL_HANDLE || frameBuffer == VK_NULL_HANDLE)
 			{
-				assert(pDesc != nullptr);
-
-				uint32_t psoAttachmentCount = pDesc->numRTs + (pDesc->DSFormat == FORMAT_UNKNOWN ? 0 : 1);
-
-				assert(psoAttachmentCount <= attachmentCount);
-
-
 				RenderPassAndFramebuffer& states = renderPassCollection[requestRTHash];
 
 				if (states.renderPass == VK_NULL_HANDLE)
@@ -1356,10 +1381,10 @@ namespace wiGraphics
 					VkAttachmentDescription attachmentDescriptions[9];
 					VkAttachmentReference colorAttachmentRefs[9];
 
-					for (UINT i = 0; i < pDesc->numRTs; ++i)
+					for (UINT i = 0; i < colorAttachmentCount; ++i)
 					{
 						VkAttachmentDescription attachment = {};
-						attachment.format = _ConvertFormat(pDesc->RTFormats[i]);
+						attachment.format = attachmentFormats[i];
 						attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 						attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 						attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1378,14 +1403,14 @@ namespace wiGraphics
 
 					VkSubpassDescription subpass = {};
 					subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-					subpass.colorAttachmentCount = pDesc->numRTs;
+					subpass.colorAttachmentCount = colorAttachmentCount;
 					subpass.pColorAttachments = colorAttachmentRefs;
 
 					VkAttachmentDescription depthAttachment = {};
 					VkAttachmentReference depthAttachmentRef = {};
-					if (pDesc->DSFormat != FORMAT_UNKNOWN)
+					if (attachmentCount > colorAttachmentCount)
 					{
-						depthAttachment.format = _ConvertFormat(pDesc->DSFormat);
+						depthAttachment.format = attachmentFormats[colorAttachmentCount];
 						depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 						depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 						depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1393,9 +1418,9 @@ namespace wiGraphics
 						depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 						depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 						depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachmentDescriptions[pDesc->numRTs] = depthAttachment;
+						attachmentDescriptions[colorAttachmentCount] = depthAttachment;
 
-						depthAttachmentRef.attachment = pDesc->numRTs;
+						depthAttachmentRef.attachment = colorAttachmentCount;
 						depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 						subpass.pDepthStencilAttachment = &depthAttachmentRef;
@@ -1403,7 +1428,7 @@ namespace wiGraphics
 
 					VkRenderPassCreateInfo renderPassInfo = {};
 					renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-					renderPassInfo.attachmentCount = psoAttachmentCount;
+					renderPassInfo.attachmentCount = attachmentCount;
 					renderPassInfo.pAttachments = attachmentDescriptions;
 					renderPassInfo.subpassCount = 1;
 					renderPassInfo.pSubpasses = &subpass;
@@ -1417,7 +1442,7 @@ namespace wiGraphics
 					VkFramebufferCreateInfo framebufferInfo = {};
 					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 					framebufferInfo.renderPass = states.renderPass;
-					framebufferInfo.attachmentCount = psoAttachmentCount;
+					framebufferInfo.attachmentCount = attachmentCount;
 					framebufferInfo.pAttachments = attachments;
 					framebufferInfo.width = attachmentsExtents.width;
 					framebufferInfo.height = attachmentsExtents.height;
@@ -1450,76 +1475,75 @@ namespace wiGraphics
 			activeRTHash = requestRTHash;
 			dirty = false;
 
+		}
 
-			// Performing texture clear requests if needed:
-			if (!clearRequests.empty())
+		// Performing texture clear requests if needed:
+		if (!clearRequests.empty())
+		{
+			VkClearAttachment clearInfos[9];
+			UINT realClearCount = 0;
+			bool remainingClearRequests = false;
+			for (UINT i = 0; i < clearRequests.size(); ++i)
 			{
-				VkClearAttachment clearInfos[9];
-				UINT realClearCount = 0;
-				bool remainingClearRequests = false;
-				for (UINT i = 0; i < clearRequests.size(); ++i)
+				if (clearRequests[i].attachment == VK_NULL_HANDLE)
 				{
-					if (clearRequests[i].attachment == VK_NULL_HANDLE)
-					{
-						continue;
-					}
-					remainingClearRequests = true;
+					continue;
+				}
+				remainingClearRequests = true;
 
-					for (UINT j = 0; j < attachmentCount; ++j)
+				for (UINT j = 0; j < attachmentCount; ++j)
+				{
+					if (clearRequests[i].attachment == attachments[j])
 					{
-						if (clearRequests[i].attachment == attachments[j])
+						if (clearRequests[i].clearFlags == 0)
 						{
-							if (clearRequests[i].clearFlags == 0)
-							{
-								clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-								clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-								clearInfos[realClearCount].colorAttachment = j;
+							clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
+							clearInfos[realClearCount].colorAttachment = j;
 
-								realClearCount++;
-								clearRequests[i].attachment = VK_NULL_HANDLE;
-							}
-							else
-							{
-								clearInfos[realClearCount].aspectMask = 0;
-								if (clearRequests[i].clearFlags & CLEAR_DEPTH)
-								{
-									clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-								}
-								if (clearRequests[i].clearFlags & CLEAR_STENCIL)
-								{
-									clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-								}
-								clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-								clearInfos[realClearCount].colorAttachment = j;
-
-								realClearCount++;
-								clearRequests[i].attachment = VK_NULL_HANDLE;
-							}
-
-							remainingClearRequests = false;
-							break;
+							realClearCount++;
+							clearRequests[i].attachment = VK_NULL_HANDLE;
 						}
+						else
+						{
+							clearInfos[realClearCount].aspectMask = 0;
+							if (clearRequests[i].clearFlags & CLEAR_DEPTH)
+							{
+								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+							}
+							if (clearRequests[i].clearFlags & CLEAR_STENCIL)
+							{
+								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+							}
+							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
+							clearInfos[realClearCount].colorAttachment = j;
+
+							realClearCount++;
+							clearRequests[i].attachment = VK_NULL_HANDLE;
+						}
+
+						remainingClearRequests = false;
+						break;
 					}
-				}
-				if (realClearCount > 0)
-				{
-					VkClearRect rect = {};
-					rect.baseArrayLayer = 0;
-					rect.layerCount = 1;
-					rect.rect.offset.x = 0;
-					rect.rect.offset.y = 0;
-					rect.rect.extent.width = attachmentsExtents.width;
-					rect.rect.extent.height = attachmentsExtents.height;
-
-					vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
-				}
-
-				if (!remainingClearRequests)
-				{
-					clearRequests.clear();
 				}
 			}
+			if (realClearCount > 0)
+			{
+				VkClearRect rect = {};
+				rect.baseArrayLayer = 0;
+				rect.layerCount = 1;
+				rect.rect.offset.x = 0;
+				rect.rect.offset.y = 0;
+				rect.rect.extent.width = attachmentsExtents.width;
+				rect.rect.extent.height = attachmentsExtents.height;
 
+				vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
+			}
+
+			if (!remainingClearRequests)
+			{
+				clearRequests.clear();
+			}
 		}
 	}
 
@@ -2648,14 +2672,9 @@ namespace wiGraphics
 					{
 						const SubresourceData& subresourceData = pInitialData[initDataIdx++];
 						size_t cpysize = subresourceData.SysMemPitch * height;
-						switch (pDesc->Format)
+						if (IsFormatBlockCompressed(pDesc->Format))
 						{
-						case FORMAT_BC1_UNORM:
-						case FORMAT_BC2_UNORM:
-						case FORMAT_BC3_UNORM:
 							cpysize /= 4;
-						default:
-							break;
 						}
 						uint8_t* cpyaddr = dest + cpyoffset;
 						memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
@@ -3477,12 +3496,29 @@ namespace wiGraphics
 		depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		if (pDesc->dss != nullptr)
 		{
-			depthstencil.depthTestEnable = pDesc->dss->desc.DepthEnable ? 1 : 0;
-			depthstencil.depthWriteEnable = pDesc->dss->desc.DepthWriteMask != DEPTH_WRITE_MASK_ZERO;
+			depthstencil.depthTestEnable = pDesc->dss->desc.DepthEnable ? VK_TRUE : VK_FALSE;
+			depthstencil.depthWriteEnable = pDesc->dss->desc.DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
 			depthstencil.depthCompareOp = _ConvertComparisonFunc(pDesc->dss->desc.DepthFunc);
 
-			// TODO stencil!
-			depthstencil.stencilTestEnable = /*pDesc->dss->desc.StencilEnable ? 1 : 0*/ VK_FALSE;
+			depthstencil.stencilTestEnable = pDesc->dss->desc.StencilEnable ? VK_TRUE : VK_FALSE;
+
+			depthstencil.front.compareMask = pDesc->dss->desc.StencilReadMask;
+			depthstencil.front.writeMask = pDesc->dss->desc.StencilWriteMask;
+			depthstencil.front.reference = 0; // runtime supplied
+			depthstencil.front.compareOp = _ConvertComparisonFunc(pDesc->dss->desc.FrontFace.StencilFunc);
+			depthstencil.front.passOp = _ConvertStencilOp(pDesc->dss->desc.FrontFace.StencilPassOp);
+			depthstencil.front.failOp = _ConvertStencilOp(pDesc->dss->desc.FrontFace.StencilFailOp);
+			depthstencil.front.depthFailOp = _ConvertStencilOp(pDesc->dss->desc.FrontFace.StencilDepthFailOp);
+
+			depthstencil.back.compareMask = pDesc->dss->desc.StencilReadMask;
+			depthstencil.back.writeMask = pDesc->dss->desc.StencilWriteMask;
+			depthstencil.back.reference = 0; // runtime supplied
+			depthstencil.back.compareOp = _ConvertComparisonFunc(pDesc->dss->desc.BackFace.StencilFunc);
+			depthstencil.back.passOp = _ConvertStencilOp(pDesc->dss->desc.BackFace.StencilPassOp);
+			depthstencil.back.failOp = _ConvertStencilOp(pDesc->dss->desc.BackFace.StencilFailOp);
+			depthstencil.back.depthFailOp = _ConvertStencilOp(pDesc->dss->desc.BackFace.StencilDepthFailOp);
+
+			depthstencil.depthBoundsTestEnable = VK_FALSE;
 		}
 
 		pipelineInfo.pDepthStencilState = &depthstencil;
@@ -4321,10 +4357,12 @@ namespace wiGraphics
 				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->subresourceRTVs[subresource];
 			}
 
+			renderPass[cmd].attachmentFormats[i] = _ConvertFormat(ppRenderTargets[i]->desc.Format);
 			renderPass[cmd].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
 			renderPass[cmd].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
 			renderPass[cmd].attachmentLayers = ppRenderTargets[i]->desc.ArraySize;
 		}
+		renderPass[cmd].colorAttachmentCount = NumViews;
 		renderPass[cmd].attachmentCount = NumViews;
 
 		if (depthStencilTexture != nullptr)
@@ -4338,6 +4376,7 @@ namespace wiGraphics
 				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid DSV subresource!");
 				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->subresourceDSVs[subresource];
 			}
+			renderPass[cmd].attachmentFormats[renderPass[cmd].attachmentCount] = _ConvertFormat(depthStencilTexture->desc.Format);
 			renderPass[cmd].attachmentCount++;
 
 			renderPass[cmd].attachmentsExtents.width = depthStencilTexture->desc.Width;
@@ -4364,6 +4403,7 @@ namespace wiGraphics
 		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
 
 		renderPass[cmd].clearRequests.push_back(clear);
+		renderPass[cmd].dirty = true;
 	}
 	void GraphicsDevice_Vulkan::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource)
 	{
@@ -4383,6 +4423,7 @@ namespace wiGraphics
 		clear.clearFlags = ClearFlags;
 
 		renderPass[cmd].clearRequests.push_back(clear);
+		renderPass[cmd].dirty = true;
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
@@ -4487,7 +4528,6 @@ namespace wiGraphics
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pso->pipeline);
-		renderPass[cmd].pDesc = &pso->desc;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const ComputeShader* cs, CommandList cmd)
 	{
