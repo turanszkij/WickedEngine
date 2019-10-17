@@ -1897,9 +1897,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
-      <Filter>fonts</Filter>
-    </Image>
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png">
       <Filter>Documentation</Filter>
     </Image>
@@ -1914,9 +1911,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)..\README.md" />
-    <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
-      <Filter>fonts</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)..\Documentation\ScriptingAPI-Documentation.md">
       <Filter>Documentation</Filter>
     </None>
@@ -1966,5 +1960,10 @@
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml">
       <Filter>Documentation</Filter>
     </Xml>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf">
+      <Filter>fonts</Filter>
+    </Font>
   </ItemGroup>
 </Project>

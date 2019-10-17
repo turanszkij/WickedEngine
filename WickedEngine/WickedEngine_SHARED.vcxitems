@@ -698,9 +698,6 @@
   <ItemGroup>
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\information_sheet.png" />
     <Image Include="$(MSBuildThisFileDirectory)..\Documentation\orderofexecution.png" />
-    <Image Include="$(MSBuildThisFileDirectory)fonts\default_font.dds">
-      <DeploymentContent>true</DeploymentContent>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <Text Include="$(MSBuildThisFileDirectory)..\features.txt" />
@@ -725,11 +722,11 @@
     <None Include="$(MSBuildThisFileDirectory)..\scripts\rotate_model.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_color.lua" />
     <None Include="$(MSBuildThisFileDirectory)..\scripts\set_material_emissive.lua" />
-    <None Include="$(MSBuildThisFileDirectory)fonts\default_font.wifont">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="$(MSBuildThisFileDirectory)..\Documentation\OrderOfExecution.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="$(MSBuildThisFileDirectory)fonts\arial.ttf" />
   </ItemGroup>
 </Project>
