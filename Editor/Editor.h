@@ -88,6 +88,8 @@ public:
 	};
 	wiGraphics::Texture2D rt_selectionOutline[2];
 	float selectionOutlineTimer = 0;
+	const XMFLOAT4 selectionColor = XMFLOAT4(1, 0.6f, 0, 1);
+	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 
 	Translator translator;
 	std::list<wiSceneSystem::PickResult> selected;

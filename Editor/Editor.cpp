@@ -1579,7 +1579,7 @@ void EditorComponent::Render() const
 
 			// Outline the solid blocks:
 			wiRenderer::BindCommonResources(cmd);
-			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, XMFLOAT4(0, 1, 0.6f, 0.35f));
+			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, selectionColor2);
 		}
 
 		// Objects outline (orange):
@@ -1596,7 +1596,7 @@ void EditorComponent::Render() const
 
 			// Outline the solid blocks:
 			wiRenderer::BindCommonResources(cmd);
-			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, XMFLOAT4(1, 0.6f, 0, 1));
+			wiRenderer::Postprocess_Outline(rt_selectionOutline[0], rt_selectionOutline[1], cmd, 0.1f, 1, selectionColor);
 		}
 
 		device->EventEnd(cmd);
@@ -1652,7 +1652,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1700,7 +1700,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1735,7 +1735,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1770,7 +1770,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1804,7 +1804,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1838,7 +1838,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1872,7 +1872,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
@@ -1906,7 +1906,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = XMFLOAT4(1, 1, 0, 1);
+					fx.col = selectionColor;
 					break;
 				}
 			}
