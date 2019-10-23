@@ -17,7 +17,6 @@ MaterialWindow::MaterialWindow(wiGUI* gui) : GUI(gui)
 
 	materialWindow = new wiWindow(GUI, "Material Window");
 	materialWindow->SetSize(XMFLOAT2(760, 890));
-	materialWindow->SetEnabled(false);
 	GUI->AddWidget(materialWindow);
 
 	materialNameField = new wiTextInputField("MaterialName");
@@ -773,9 +772,6 @@ MaterialWindow::~MaterialWindow()
 
 void MaterialWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	Scene& scene = wiSceneSystem::GetScene();

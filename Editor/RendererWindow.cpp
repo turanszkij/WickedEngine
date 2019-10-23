@@ -16,7 +16,6 @@ RendererWindow::RendererWindow(wiGUI* gui, RenderPath3D* path) : GUI(gui)
 
 	rendererWindow = new wiWindow(GUI, "Renderer Window");
 	rendererWindow->SetSize(XMFLOAT2(640, 790));
-	rendererWindow->SetEnabled(true);
 	GUI->AddWidget(rendererWindow);
 
 	float x = 260, y = 20, step = 30;

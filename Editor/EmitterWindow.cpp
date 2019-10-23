@@ -17,7 +17,6 @@ EmitterWindow::EmitterWindow(wiGUI* gui) : GUI(gui)
 
 	emitterWindow = new wiWindow(GUI, "Emitter Window");
 	emitterWindow->SetSize(XMFLOAT2(800, 1100));
-	emitterWindow->SetEnabled(false);
 	GUI->AddWidget(emitterWindow);
 
 	float x = 150;
@@ -434,10 +433,6 @@ EmitterWindow::~EmitterWindow()
 
 void EmitterWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
-
 	// first try to turn off any debug readbacks for emitters:
 	if (GetEmitter() != nullptr)
 	{
@@ -473,14 +468,10 @@ void EmitterWindow::SetEntity(Entity entity)
 		sph_K_Slider->SetValue(emitter->SPH_K);
 		sph_p0_Slider->SetValue(emitter->SPH_p0);
 		sph_e_Slider->SetValue(emitter->SPH_e);
-
-		//emitterWindow->SetEnabled(true);
 	}
 	else
 	{
 		infoLabel->SetText("No emitter object selected.");
-
-		//emitterWindow->SetEnabled(false);
 	}
 
 }

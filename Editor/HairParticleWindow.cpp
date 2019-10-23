@@ -15,7 +15,6 @@ HairParticleWindow::HairParticleWindow(wiGUI* gui) : GUI(gui)
 
 	hairWindow = new wiWindow(GUI, "Hair Particle System Window");
 	hairWindow->SetSize(XMFLOAT2(800, 600));
-	hairWindow->SetEnabled(false);
 	GUI->AddWidget(hairWindow);
 
 	float x = 150;
@@ -155,9 +154,6 @@ HairParticleWindow::~HairParticleWindow()
 
 void HairParticleWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	auto hair = GetHair();

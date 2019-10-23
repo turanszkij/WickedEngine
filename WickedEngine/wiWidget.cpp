@@ -1478,7 +1478,7 @@ void wiWindow::SetVisible(bool value)
 }
 void wiWindow::SetEnabled(bool value)
 {
-	//wiWidget::SetEnabled(value);
+	wiWidget::SetEnabled(value);
 	for (auto& x : childrenWidgets)
 	{
 		if (x == moveDragger)
@@ -1610,7 +1610,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 	{
 		if (state == ACTIVE)
 		{
-			// continue drag if already grabbed wheter it is intersecting or not
+			// continue drag if already grabbed whether it is intersecting or not
 			dragged = true;
 		}
 	}
@@ -1645,7 +1645,7 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		wiEventArgs args;
 		args.clickPos = pointer;
 		args.fValue = angle;
-		args.color = wiColor::fromFloat4(final_color);
+		args.color = GetPickColor();
 		onColorChanged(args);
 	}
 }
@@ -1669,7 +1669,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	static wiGraphics::GPUBuffer vb_picker;
 	static wiGraphics::GPUBuffer vb_preview;
 
-	static std::vector<Vertex> vertices_saturation(0);
+	static std::vector<Vertex> vertices_saturation;
 
 	static bool buffersComplete = false;
 	if (!buffersComplete)
@@ -1697,7 +1697,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		}
 		// hue
 		{
-			std::vector<Vertex> vertices(0);
+			std::vector<Vertex> vertices;
 			for (float i = 0; i <= 100; i += 1.0f)
 			{
 				float p = i / 100;
@@ -1712,10 +1712,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
-			desc.CPUAccessFlags = CPU_ACCESS_WRITE;
+			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_DYNAMIC;
+			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_hue);
@@ -1724,7 +1724,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		{
 			float _radius = 3;
 			float _width = 3;
-			std::vector<Vertex> vertices(0);
+			std::vector<Vertex> vertices;
 			for (float i = 0; i <= 100; i += 1.0f)
 			{
 				float p = i / 100;
@@ -1749,31 +1749,31 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		// preview
 		{
 			float _width = 20;
-
-			std::vector<Vertex> vertices(0);
-			vertices.push_back({ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
-			vertices.push_back({ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
-			vertices.push_back({ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
-			vertices.push_back({ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
-			vertices.push_back({ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) });
-			vertices.push_back({ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) });
+			Vertex vertices[] = {
+				{ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(-_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
+				{ XMFLOAT4(_width, -_width, 0, 1),XMFLOAT4(1,1,1,1) },
+			};
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (UINT)(vertices.size() * sizeof(Vertex));
+			desc.ByteWidth = (UINT)(ARRAYSIZE(vertices) * sizeof(Vertex));
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
 			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
-			data.pSysMem = vertices.data();
+			data.pSysMem = vertices;
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
 		}
 
 
 	}
 
-	XMMATRIX __cam = wiRenderer::GetDevice()->GetScreenProjection();
+	const XMMATRIX Projection = wiRenderer::GetDevice()->GetScreenProjection();
 
 	wiRenderer::GetDevice()->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 	wiRenderer::GetDevice()->BindPipelineState(&PSO_colorpicker, cmd);
@@ -1791,11 +1791,11 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixRotationZ(-angle) *
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
-			__cam
+			Projection
 		);
-		cb.g_xColor = XMFLOAT4(1, 1, 1, 1);
+		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			&vb_saturation,
 		};
 		const UINT strides[] = {
@@ -1809,11 +1809,11 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
-			__cam
+			Projection
 		);
-		cb.g_xColor = float4(1, 1, 1, 1);
+		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
 		const UINT strides[] = {
@@ -1824,14 +1824,15 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	}
 
 	// render hue picker
+	if(IsEnabled())
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
-			__cam
+			Projection
 		);
 		cb.g_xColor = float4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
 		const UINT strides[] = {
@@ -1842,14 +1843,15 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	}
 
 	// render saturation picker
+	if (IsEnabled())
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
-			__cam
+			Projection
 		);
 		cb.g_xColor = float4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			&vb_picker,
 		};
 		const UINT strides[] = {
@@ -1863,11 +1865,11 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
-			__cam
+			Projection
 		);
-		cb.g_xColor = GetPickColor();
+		cb.g_xColor = GetPickColor().toFloat4();
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		GPUBuffer* vbs[] = {
+		const GPUBuffer* vbs[] = {
 			&vb_preview,
 		};
 		const UINT strides[] = {
@@ -1886,11 +1888,11 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 		textColor, textShadowColor)).Draw(cmd);
 
 }
-const XMFLOAT4& wiColorPicker::GetPickColor() const
+const wiColor& wiColorPicker::GetPickColor() const
 {
-	return final_color;
+	return wiColor::fromFloat4(final_color);
 }
-void wiColorPicker::SetPickColor(const XMFLOAT4& value)
+void wiColorPicker::SetPickColor(const wiColor& value)
 {
 	// TODO
 }

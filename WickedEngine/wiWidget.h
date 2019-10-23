@@ -302,8 +302,8 @@ public:
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
-	const XMFLOAT4& GetPickColor() const;
-	void SetPickColor(const XMFLOAT4& value);
+	const wiColor& GetPickColor() const;
+	void SetPickColor(const wiColor& value);
 
 	void OnColorChanged(std::function<void(wiEventArgs args)> func);
 };

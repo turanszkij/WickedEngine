@@ -254,7 +254,6 @@ ObjectWindow::ObjectWindow(EditorComponent* editor) : editor(editor)
 
 	objectWindow = new wiWindow(GUI, "Object Window");
 	objectWindow->SetSize(XMFLOAT2(600, 520));
-	objectWindow->SetEnabled(false);
 	GUI->AddWidget(objectWindow);
 
 	float x = 450;
@@ -593,9 +592,6 @@ ObjectWindow::~ObjectWindow()
 
 void ObjectWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	Scene& scene = wiSceneSystem::GetScene();
@@ -604,6 +600,8 @@ void ObjectWindow::SetEntity(Entity entity)
 
 	if (object != nullptr)
 	{
+		objectWindow->SetEnabled(true);
+
 		const NameComponent* name = scene.names.GetComponent(entity);
 		if (name != nullptr)
 		{
@@ -654,7 +652,9 @@ void ObjectWindow::SetEntity(Entity entity)
 		}
 
 	}
-
-	objectWindow->SetEnabled(!editor->selected.empty());
+	else
+	{
+		objectWindow->SetEnabled(false);
+	}
 
 }

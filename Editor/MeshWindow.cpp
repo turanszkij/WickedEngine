@@ -17,7 +17,6 @@ MeshWindow::MeshWindow(wiGUI* gui) : GUI(gui)
 
 	meshWindow = new wiWindow(GUI, "Mesh Window");
 	meshWindow->SetSize(XMFLOAT2(800, 700));
-	meshWindow->SetEnabled(false);
 	GUI->AddWidget(meshWindow);
 
 	float x = 200;

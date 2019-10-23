@@ -13,7 +13,6 @@ EnvProbeWindow::EnvProbeWindow(wiGUI* gui) : GUI(gui)
 
 	envProbeWindow = new wiWindow(GUI, "Environment Probe Window");
 	envProbeWindow->SetSize(XMFLOAT2(600, 400));
-	envProbeWindow->SetEnabled(true);
 	GUI->AddWidget(envProbeWindow);
 
 	float x = 250, y = 0, step = 45;

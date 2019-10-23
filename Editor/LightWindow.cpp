@@ -17,7 +17,6 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 
 	lightWindow = new wiWindow(GUI, "Light Window");
 	lightWindow->SetSize(XMFLOAT2(650, 520));
-	//lightWindow->SetEnabled(false);
 	GUI->AddWidget(lightWindow);
 
 	float x = 450;
@@ -178,7 +177,16 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	addLightButton->SetPos(XMFLOAT2(x, y += step));
 	addLightButton->SetSize(XMFLOAT2(150, 30));
 	addLightButton->OnClick([&](wiEventArgs args) {
-		wiSceneSystem::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+		Entity entity = wiSceneSystem::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
+		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
+		if (light != nullptr)
+		{
+			light->type = (LightComponent::LightType)typeSelectorComboBox->GetSelected();
+		}
+		else
+		{
+			assert(0);
+		}
 	});
 	addLightButton->SetTooltip("Add a light to the scene.");
 	lightWindow->AddWidget(addLightButton);
@@ -188,7 +196,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	colorPicker->SetPos(XMFLOAT2(10, 30));
 	colorPicker->RemoveWidgets();
 	colorPicker->SetVisible(true);
-	colorPicker->SetEnabled(true);
+	colorPicker->SetEnabled(false);
 	colorPicker->OnColorChanged([&](wiEventArgs args) {
 		LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
@@ -209,7 +217,6 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 			biasSlider->SetValue(light->shadowBias);
 		}
 	});
-	typeSelectorComboBox->SetEnabled(false);
 	typeSelectorComboBox->AddItem("Directional");
 	typeSelectorComboBox->AddItem("Point");
 	typeSelectorComboBox->AddItem("Spot");
@@ -218,6 +225,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 	typeSelectorComboBox->AddItem("Rectangle");
 	typeSelectorComboBox->AddItem("Tube");
 	typeSelectorComboBox->SetTooltip("Choose the light source type...");
+	typeSelectorComboBox->SetSelected((int)LightComponent::POINT);
 	lightWindow->AddWidget(typeSelectorComboBox);
 
 
@@ -228,7 +236,7 @@ LightWindow::LightWindow(wiGUI* gui) : GUI(gui)
 
 	lensflare_Label = new wiLabel("Lens flare textures: ");
 	lensflare_Label->SetPos(XMFLOAT2(x, y += step));
-	lensflare_Label->SetSize(XMFLOAT2(120, 20));
+	lensflare_Label->SetSize(XMFLOAT2(140, 20));
 	lightWindow->AddWidget(lensflare_Label);
 
 	for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
@@ -296,16 +304,12 @@ LightWindow::~LightWindow()
 
 void LightWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	const LightComponent* light = wiSceneSystem::GetScene().lights.GetComponent(entity);
 
 	if (light != nullptr)
 	{
-		//lightWindow->SetEnabled(true);
 		energySlider->SetEnabled(true);
 		energySlider->SetValue(light->energy);
 		rangeSlider->SetValue(light->range_local);
@@ -324,7 +328,6 @@ void LightWindow::SetEntity(Entity entity)
 		staticCheckBox->SetEnabled(true);
 		staticCheckBox->SetCheck(light->IsStatic());
 		colorPicker->SetEnabled(true);
-		typeSelectorComboBox->SetEnabled(true);
 		typeSelectorComboBox->SetSelected((int)light->GetType());
 		
 		SetLightType(light->GetType());
@@ -356,8 +359,6 @@ void LightWindow::SetEntity(Entity entity)
 		staticCheckBox->SetEnabled(false);
 		energySlider->SetEnabled(false);
 		colorPicker->SetEnabled(false);
-		typeSelectorComboBox->SetEnabled(false);
-		//lightWindow->SetEnabled(false);
 
 		for (size_t i = 0; i < ARRAYSIZE(lensflare_Button); ++i)
 		{

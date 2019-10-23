@@ -14,7 +14,6 @@ DecalWindow::DecalWindow(wiGUI* gui) : GUI(gui)
 
 	decalWindow = new wiWindow(GUI, "Decal Window");
 	decalWindow->SetSize(XMFLOAT2(400, 300));
-	decalWindow->SetEnabled(false);
 	GUI->AddWidget(decalWindow);
 
 	float x = 200;
@@ -48,9 +47,6 @@ DecalWindow::~DecalWindow()
 
 void DecalWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	Scene& scene = wiSceneSystem::GetScene();
@@ -61,11 +57,11 @@ void DecalWindow::SetEntity(Entity entity)
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
 		decalNameField->SetValue(name.name);
-		decalWindow->SetEnabled(true);
+		decalNameField->SetEnabled(true);
 	}
 	else
 	{
 		decalNameField->SetValue("No decal selected");
-		decalWindow->SetEnabled(false);
+		decalNameField->SetEnabled(false);
 	}
 }

@@ -18,7 +18,6 @@ SoundWindow::SoundWindow(wiGUI* gui) : GUI(gui)
 
 	soundWindow = new wiWindow(GUI, "Sound Window");
 	soundWindow->SetSize(XMFLOAT2(440, 340));
-	soundWindow->SetEnabled(false);
 	GUI->AddWidget(soundWindow);
 
 	float x = 20;
@@ -173,9 +172,6 @@ SoundWindow::~SoundWindow()
 
 void SoundWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
-
 	this->entity = entity;
 
 	Scene& scene = wiSceneSystem::GetScene();

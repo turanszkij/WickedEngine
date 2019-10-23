@@ -1558,7 +1558,7 @@ void EditorComponent::Render() const
 		fx.enableFullScreen();
 		fx.stencilComp = STENCILMODE::STENCILMODE_EQUAL;
 
-		// We will specify the stencil ref in user-space, don't cae about engine stencil refs here:
+		// We will specify the stencil ref in user-space, don't care about engine stencil refs here:
 		//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
 		fx.stencilRefMode = STENCILREFMODE_USER; 
 
@@ -1615,17 +1615,20 @@ void EditorComponent::Compose(CommandList cmd) const
 	}
 
 	// Compose the selection outline to the screen:
+	const float selectionColorIntensity = std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (!selected.empty())
 	{
 		wiImageParams fx;
 		fx.enableFullScreen();
-		fx.opacity = wiMath::Lerp(0.4f, 1.0f, std::sinf(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f);;
+		fx.opacity = wiMath::Lerp(0.4f, 1.0f, selectionColorIntensity);
 		wiImage::Draw(&rt_selectionOutline[1], fx, cmd);
 	}
 
 	const CameraComponent& camera = wiRenderer::GetCamera();
 
 	Scene& scene = wiSceneSystem::GetScene();
+
+	const XMFLOAT4 selectedEntityColor = wiMath::Lerp(wiMath::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
 
 	if (rendererWnd->GetPickType() & PICK_LIGHT)
 	{
@@ -1652,7 +1655,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1700,7 +1703,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1735,7 +1738,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1770,7 +1773,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1804,7 +1807,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1838,7 +1841,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1872,7 +1875,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
@@ -1906,7 +1909,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			{
 				if (picked.entity == entity)
 				{
-					fx.col = selectionColor;
+					fx.col = selectedEntityColor;
 					break;
 				}
 			}
