@@ -157,7 +157,7 @@ namespace wiTextureHelper
 		return getColor(wiColor(0, 0, 0, 0));
 	}
 
-	const Texture2D* getColor(const wiColor& color)
+	const Texture2D* getColor(wiColor color)
 	{
 		colorlock.lock();
 		auto it = colorTextures.find(color.rgba);

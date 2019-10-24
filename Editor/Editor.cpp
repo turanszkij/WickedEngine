@@ -479,7 +479,7 @@ void EditorComponent::Load()
 				});
 				loader->onFinished([=] {
 					main->ActivatePath(this, 0.2f, wiColor::Black());
-					weatherWnd->UpdateFromRenderer();
+					weatherWnd->Update();
 				});
 				main->ActivatePath(loader, 0.2f, wiColor::Black());
 				ResetHistory();
@@ -714,6 +714,7 @@ void EditorComponent::Update(float dt)
 	CameraComponent& camera = wiRenderer::GetCamera();
 
 	animWnd->Update();
+	weatherWnd->Update();
 
 	selectionOutlineTimer += dt;
 

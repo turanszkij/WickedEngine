@@ -88,13 +88,6 @@ namespace wiMath
 		return Distance(point, projection);
 	}
 
-	XMFLOAT3 HueToRGB(float H)
-	{
-		float R = fabsf(H * 6 - 3) - 1;
-		float G = 2 - fabsf(H * 6 - 2);
-		float B = 2 - fabsf(H * 6 - 4);
-		return XMFLOAT3(saturate(R), saturate(G), saturate(B));
-	}
 	float GetAngle(const XMFLOAT2& a, const XMFLOAT2& b)
 	{
 		float dot = a.x*b.x + a.y*b.y;      // dot product

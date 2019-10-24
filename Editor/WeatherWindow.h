@@ -14,7 +14,7 @@ public:
 	WeatherWindow(wiGUI* gui);
 	~WeatherWindow();
 
-	void UpdateFromRenderer();
+	void Update();
 
 	wiSceneSystem::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;

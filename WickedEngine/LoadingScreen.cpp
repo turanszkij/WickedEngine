@@ -16,7 +16,7 @@ void LoadingScreen::addLoadingFunction(function<void()> loadingFunction)
 	}
 }
 
-void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds, const wiColor& fadeColor)
+void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds, wiColor fadeColor)
 {
 	addLoadingFunction([=] {
 		component->Load();

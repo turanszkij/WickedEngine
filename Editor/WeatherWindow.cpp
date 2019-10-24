@@ -211,8 +211,8 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 
 		auto& weather = GetWeather();
 		weather.ambient = XMFLOAT3(0.01f, 0.01f, 0.02f);
-		weather.horizon = XMFLOAT3(0.02f, 0.05f, 0.1f);
-		weather.zenith = XMFLOAT3(0.01f, 0.02f, 0.04f);
+		weather.horizon = XMFLOAT3(0.04f, 0.1f, 0.2f);
+		weather.zenith = XMFLOAT3(0.02f, 0.04f, 0.08f);
 		weather.cloudiness = 0.28f;
 		weather.fogStart = 10;
 		weather.fogEnd = 400;
@@ -278,7 +278,6 @@ WeatherWindow::WeatherWindow(wiGUI* gui) : GUI(gui)
 	});
 	weatherWindow->AddWidget(zenithColorPicker);
 
-
 	weatherWindow->Translate(XMFLOAT3(130, 30, 0));
 	weatherWindow->SetVisible(false);
 }
@@ -291,17 +290,25 @@ WeatherWindow::~WeatherWindow()
 	SAFE_DELETE(weatherWindow);
 }
 
-void WeatherWindow::UpdateFromRenderer()
+void WeatherWindow::Update()
 {
-	auto& weather = GetWeather();
+	Scene& scene = wiSceneSystem::GetScene();
+	if (scene.weathers.GetCount() > 0)
+	{
+		auto& weather = scene.weathers[0];
 
-	fogStartSlider->SetValue(weather.fogStart);
-	fogEndSlider->SetValue(weather.fogEnd);
-	fogHeightSlider->SetValue(weather.fogHeight);
-	cloudinessSlider->SetValue(weather.cloudiness);
-	cloudScaleSlider->SetValue(weather.cloudScale);
-	cloudSpeedSlider->SetValue(weather.cloudSpeed);
-	windSpeedSlider->SetValue(wiMath::Length(weather.windDirection));
+		fogStartSlider->SetValue(weather.fogStart);
+		fogEndSlider->SetValue(weather.fogEnd);
+		fogHeightSlider->SetValue(weather.fogHeight);
+		cloudinessSlider->SetValue(weather.cloudiness);
+		cloudScaleSlider->SetValue(weather.cloudScale);
+		cloudSpeedSlider->SetValue(weather.cloudSpeed);
+		windSpeedSlider->SetValue(wiMath::Length(weather.windDirection));
+
+		ambientColorPicker->SetPickColor(wiColor::fromFloat3(weather.ambient));
+		horizonColorPicker->SetPickColor(wiColor::fromFloat3(weather.horizon));
+		zenithColorPicker->SetPickColor(wiColor::fromFloat3(weather.zenith));
+	}
 }
 
 WeatherComponent& WeatherWindow::GetWeather() const

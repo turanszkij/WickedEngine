@@ -20,35 +20,14 @@ using namespace wiSceneSystem;
 
 static wiGraphics::PipelineState PSO_colorpicker;
 
-
-wiWidget::wiWidget() : TransformComponent()
-{
-	state = IDLE;
-	enabled = true;
-	visible = true;
-	colors[IDLE] = wiColor::Booger();
-	colors[FOCUS] = wiColor::Gray();
-	colors[ACTIVE] = wiColor::White();
-	colors[DEACTIVATING] = wiColor::Gray();
-	scissorRect.bottom = 0;
-	scissorRect.left = 0;
-	scissorRect.right = 0;
-	scissorRect.top = 0;
-	parent = nullptr;
-	tooltipTimer = 0;
-	textColor = wiColor(255, 255, 255, 255);
-	textShadowColor = wiColor(0, 0, 0, 255);
-	translation = XMFLOAT3(0, 0, 0);
-	scale = XMFLOAT3(1, 1, 1);
-}
-wiWidget::~wiWidget()
-{
-}
 void wiWidget::Update(wiGUI* gui, float dt)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
-	if (GetState() == WIDGETSTATE::FOCUS && !tooltip.empty())
+	Hitbox2D pointerHitbox = Hitbox2D(gui->GetPointerPos(), XMFLOAT2(1, 1));
+	hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
+
+	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && pointerHitbox.intersects(hitBox))
 	{
 		tooltipTimer++;
 	}
@@ -88,7 +67,7 @@ void wiWidget::Detach()
 }
 void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 {
-	if (!IsEnabled() || !IsVisible())
+	if (!IsVisible())
 	{
 		return;
 	}
@@ -219,7 +198,7 @@ void wiWidget::Deactivate()
 {
 	state = DEACTIVATING;
 }
-void wiWidget::SetColor(const wiColor& color, WIDGETSTATE state)
+void wiWidget::SetColor(wiColor color, WIDGETSTATE state)
 {
 	if (state == WIDGETSTATE_COUNT)
 	{
@@ -420,7 +399,7 @@ void wiButton::OnDragEnd(function<void(wiEventArgs args)> func)
 
 
 
-wiLabel::wiLabel(const std::string& name) :wiWidget()
+wiLabel::wiLabel(const std::string& name)
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -471,7 +450,7 @@ void wiLabel::Render(const wiGUI* gui, CommandList cmd) const
 
 
 string wiTextInputField::value_new = "";
-wiTextInputField::wiTextInputField(const std::string& name) :wiWidget()
+wiTextInputField::wiTextInputField(const std::string& name)
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -648,8 +627,7 @@ void wiTextInputField::DeleteFromInput()
 
 
 
-wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) :wiWidget()
-, start(start), end(end), value(defaultValue), step(std::max(step, 1.0f))
+wiSlider::wiSlider(float start, float end, float defaultValue, float step, const std::string& name) : start(start), end(end), value(defaultValue), step(std::max(step, 1.0f))
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -833,8 +811,7 @@ void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
 
 
 
-wiCheckBox::wiCheckBox(const std::string& name) :wiWidget()
-, checked(false)
+wiCheckBox::wiCheckBox(const std::string& name)
 {
 	SetName(name);
 	SetText(fastName.GetString());
@@ -968,15 +945,12 @@ bool wiCheckBox::GetCheck() const
 
 
 
-wiComboBox::wiComboBox(const std::string& name) :wiWidget()
-, selected(-1), combostate(COMBOSTATE_INACTIVE), hovered(-1)
+wiComboBox::wiComboBox(const std::string& name)
 {
 	SetName(name);
 	SetText(fastName.GetString());
 	OnSelect([](wiEventArgs args) {});
 	SetSize(XMFLOAT2(100, 20));
-	SetMaxVisibleItemCount(8);
-	firstItemVisible = 0;
 }
 wiComboBox::~wiComboBox()
 {
@@ -1257,8 +1231,7 @@ int wiComboBox::GetSelected()
 
 
 static const float windowcontrolSize = 20.0f;
-wiWindow::wiWindow(wiGUI* gui, const std::string& name) :wiWidget()
-, gui(gui)
+wiWindow::wiWindow(wiGUI* gui, const std::string& name) : gui(gui)
 {
 	assert(gui != nullptr && "Ivalid GUI!");
 
@@ -1521,27 +1494,133 @@ bool wiWindow::IsMinimized() const
 
 
 
+struct rgb {
+	float r;       // a fraction between 0 and 1
+	float g;       // a fraction between 0 and 1
+	float b;       // a fraction between 0 and 1
+};
+
+struct hsv {
+	float h;       // angle in degrees
+	float s;       // a fraction between 0 and 1
+	float v;       // a fraction between 0 and 1
+};
+
+hsv rgb2hsv(rgb in)
+{
+	hsv         out;
+	float		min, max, delta;
+
+	min = in.r < in.g ? in.r : in.g;
+	min = min < in.b ? min : in.b;
+
+	max = in.r > in.g ? in.r : in.g;
+	max = max > in.b ? max : in.b;
+
+	out.v = max;                                // v
+	delta = max - min;
+	if (delta < 0.00001f)
+	{
+		out.s = 0;
+		out.h = 0; // undefined, maybe nan?
+		return out;
+	}
+	if (max > 0.0f) { // NOTE: if Max is == 0, this divide would cause a crash
+		out.s = (delta / max);                  // s
+	}
+	else {
+		// if max is 0, then r = g = b = 0              
+		// s = 0, h is undefined
+		out.s = 0.0f;
+		out.h = NAN;                            // its now undefined
+		return out;
+	}
+	if (in.r >= max)                           // > is bogus, just keeps compilor happy
+		out.h = (in.g - in.b) / delta;        // between yellow & magenta
+	else
+		if (in.g >= max)
+			out.h = 2.0f + (in.b - in.r) / delta;  // between cyan & yellow
+		else
+			out.h = 4.0f + (in.r - in.g) / delta;  // between magenta & cyan
+
+	out.h *= 60.0f;                              // degrees
+
+	if (out.h < 0.0f)
+		out.h += 360.0f;
+
+	return out;
+}
+
+
+rgb hsv2rgb(hsv in)
+{
+	float		hh, p, q, t, ff;
+	long        i;
+	rgb         out;
+
+	if (in.s <= 0.0f) {       // < is bogus, just shuts up warnings
+		out.r = in.v;
+		out.g = in.v;
+		out.b = in.v;
+		return out;
+	}
+	hh = in.h;
+	if (hh >= 360.0f) hh = 0.0f;
+	hh /= 60.0f;
+	i = (long)hh;
+	ff = hh - i;
+	p = in.v * (1.0f - in.s);
+	q = in.v * (1.0f - (in.s * ff));
+	t = in.v * (1.0f - (in.s * (1.0f - ff)));
+
+	switch (i) {
+	case 0:
+		out.r = in.v;
+		out.g = t;
+		out.b = p;
+		break;
+	case 1:
+		out.r = q;
+		out.g = in.v;
+		out.b = p;
+		break;
+	case 2:
+		out.r = p;
+		out.g = in.v;
+		out.b = t;
+		break;
+
+	case 3:
+		out.r = p;
+		out.g = q;
+		out.b = in.v;
+		break;
+	case 4:
+		out.r = t;
+		out.g = p;
+		out.b = in.v;
+		break;
+	case 5:
+	default:
+		out.r = in.v;
+		out.g = p;
+		out.b = q;
+		break;
+	}
+	return out;
+}
+
 wiColorPicker::wiColorPicker(wiGUI* gui, const std::string& name) :wiWindow(gui, name)
 {
 	SetSize(XMFLOAT2(300, 260));
 	SetColor(wiColor::Ghost());
 	RemoveWidget(resizeDragger_BottomRight);
 	RemoveWidget(resizeDragger_UpperLeft);
-
-	hue_picker = XMFLOAT2(0, 0);
-	saturation_picker = XMFLOAT2(0, 0);
-	saturation_picker_barycentric = XMFLOAT3(0, 1, 0);
-	hue_color = XMFLOAT4(1, 0, 0, 1);
-	final_color = XMFLOAT4(1, 1, 1, 1);
-	angle = 0;
 }
-wiColorPicker::~wiColorPicker()
-{
-}
-static const float __colorpicker_center = 120;
-static const float __colorpicker_radius_triangle = 75;
-static const float __colorpicker_radius = 80;
-static const float __colorpicker_width = 16;
+static const float colorpicker_center = 120;
+static const float colorpicker_radius_triangle = 75;
+static const float colorpicker_radius = 80;
+static const float colorpicker_width = 16;
 void wiColorPicker::Update(wiGUI* gui, float dt)
 {
 	wiWindow::Update(gui, dt);
@@ -1561,18 +1640,18 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		state = IDLE;
 	}
 
-	XMFLOAT2 center = XMFLOAT2(translation.x + __colorpicker_center, translation.y + __colorpicker_center);
+	XMFLOAT2 center = XMFLOAT2(translation.x + colorpicker_center, translation.y + colorpicker_center);
 	XMFLOAT2 pointer = gui->GetPointerPos();
 	float distance = wiMath::Distance(center, pointer);
-	bool hover_hue = (distance > __colorpicker_radius) && (distance < __colorpicker_radius + __colorpicker_width);
+	bool hover_hue = (distance > colorpicker_radius) && (distance < colorpicker_radius + colorpicker_width);
 
 	float distTri = 0;
 	XMFLOAT4 A, B, C;
-	wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, A, B, C);
+	wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle, A, B, C);
 	XMVECTOR _A = XMLoadFloat4(&A);
 	XMVECTOR _B = XMLoadFloat4(&B);
 	XMVECTOR _C = XMLoadFloat4(&C);
-	XMMATRIX _triTransform = XMMatrixRotationZ(-angle) * XMMatrixTranslation(center.x, center.y, 0);
+	XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * XMMatrixTranslation(center.x, center.y, 0);
 	_A = XMVector4Transform(_A, _triTransform);
 	_B = XMVector4Transform(_B, _triTransform);
 	_C = XMVector4Transform(_C, _triTransform);
@@ -1619,15 +1698,38 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 	if (huefocus && dragged)
 	{
 		//hue pick
-		angle = wiMath::GetAngle(XMFLOAT2(pointer.x - center.x, pointer.y - center.y), XMFLOAT2(__colorpicker_radius, 0));
-		XMFLOAT3 color3 = wiMath::HueToRGB(angle / XM_2PI);
-		hue_color = XMFLOAT4(color3.x, color3.y, color3.z, 1);
+		const float angle = wiMath::GetAngle(XMFLOAT2(pointer.x - center.x, pointer.y - center.y), XMFLOAT2(colorpicker_radius, 0));
+		hue = angle / XM_2PI * 360.0f;
 		gui->ActivateWidget(this);
 	}
 	else if (!huefocus && dragged)
 	{
 		// saturation pick
-		wiMath::GetBarycentric(O, _A, _B, _C, saturation_picker_barycentric.x, saturation_picker_barycentric.y, saturation_picker_barycentric.z, true);
+		float u, v, w;
+		wiMath::GetBarycentric(O, _A, _B, _C, u, v, w, true);
+		// u = saturated corner (color)
+		// v = desaturated corner (white)
+		// w = no luminosity corner (black)
+
+		hsv source;
+		source.h = hue;
+		source.s = 1;
+		source.v = 1;
+		rgb result = hsv2rgb(source);
+
+		XMVECTOR color_corner = XMVectorSet(result.r, result.g, result.b, 1);
+		XMVECTOR white_corner = XMVectorSet(1, 1, 1, 1);
+		XMVECTOR black_corner = XMVectorSet(0, 0, 0, 1);
+		XMVECTOR inner_point = u * color_corner + v * white_corner + w * black_corner;
+
+		result.r = XMVectorGetX(inner_point);
+		result.g = XMVectorGetY(inner_point);
+		result.b = XMVectorGetZ(inner_point);
+		source = rgb2hsv(result);
+
+		saturation = source.s;
+		luminance = source.v;
+
 		gui->ActivateWidget(this);
 	}
 	else if (state != IDLE)
@@ -1635,16 +1737,10 @@ void wiColorPicker::Update(wiGUI* gui, float dt)
 		gui->DeactivateWidget(this);
 	}
 
-	float r = __colorpicker_radius + __colorpicker_width * 0.5f;
-	hue_picker = XMFLOAT2(center.x + r * cos(angle), center.y + r * -sin(angle));
-	XMStoreFloat2(&saturation_picker, _A*saturation_picker_barycentric.x + _B * saturation_picker_barycentric.y + _C * saturation_picker_barycentric.z);
-	XMStoreFloat4(&final_color, XMLoadFloat4(&hue_color)*saturation_picker_barycentric.x + XMVectorSet(1, 1, 1, 1)*saturation_picker_barycentric.y + XMVectorSet(0, 0, 0, 1)*saturation_picker_barycentric.z);
-
 	if (dragged)
 	{
 		wiEventArgs args;
 		args.clickPos = pointer;
-		args.fValue = angle;
 		args.color = GetPickColor();
 		onColorChanged(args);
 	}
@@ -1682,7 +1778,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
 			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });	// white
 			vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
-			wiMath::ConstructTriangleEquilateral(__colorpicker_radius_triangle, vertices_saturation[0].pos, vertices_saturation[1].pos, vertices_saturation[2].pos);
+			wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle, vertices_saturation[0].pos, vertices_saturation[1].pos, vertices_saturation[2].pos);
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
@@ -1704,9 +1800,14 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 				float t = p * XM_2PI;
 				float x = cos(t);
 				float y = -sin(t);
-				XMFLOAT3 rgb = wiMath::HueToRGB(p);
-				vertices.push_back({ XMFLOAT4(__colorpicker_radius * x, __colorpicker_radius * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
-				vertices.push_back({ XMFLOAT4((__colorpicker_radius + __colorpicker_width) * x, (__colorpicker_radius + __colorpicker_width) * y, 0, 1), XMFLOAT4(rgb.x,rgb.y,rgb.z,1) });
+				hsv source;
+				source.h = p * 360.0f;
+				source.s = 1;
+				source.v = 1;
+				rgb result = hsv2rgb(source);
+				XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
+				vertices.push_back({ XMFLOAT4(colorpicker_radius * x, colorpicker_radius * y, 0, 1), color });
+				vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width) * x, (colorpicker_radius + colorpicker_width) * y, 0, 1), color });
 			}
 
 			GPUBufferDesc desc;
@@ -1770,8 +1871,10 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			hr = wiRenderer::GetDevice()->CreateBuffer(&desc, &data, &vb_preview);
 		}
 
-
 	}
+
+	const wiColor final_color = GetPickColor();
+	const float angle = hue / 360.0f * XM_2PI;
 
 	const XMMATRIX Projection = wiRenderer::GetDevice()->GetScreenProjection();
 
@@ -1784,13 +1887,18 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	{
 		if (vb_saturation.IsValid() && !vertices_saturation.empty())
 		{
-			vertices_saturation[0].col = hue_color;
+			hsv source;
+			source.h = hue;
+			source.s = 1;
+			source.v = 1;
+			rgb result = hsv2rgb(source);
+			vertices_saturation[0].col = XMFLOAT4(result.r, result.g, result.b, 1);
 			wiRenderer::GetDevice()->UpdateBuffer(&vb_saturation, vertices_saturation.data(), cmd, vb_saturation.GetDesc().ByteWidth);
 		}
 
 		XMStoreFloat4x4(&cb.g_xTransform, 
 			XMMatrixRotationZ(-angle) *
-			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
+			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
@@ -1808,7 +1916,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render hue circle
 	{
 		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(translation.x + __colorpicker_center, translation.y + __colorpicker_center, 0) *
+			XMMatrixTranslation(translation.x + colorpicker_center, translation.y + colorpicker_center, 0) *
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
@@ -1826,11 +1934,19 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render hue picker
 	if(IsEnabled())
 	{
+		const float angle = hue / 360.0f * XM_2PI;
+		const float r = colorpicker_radius + colorpicker_width * 0.5f;
 		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(hue_picker.x, hue_picker.y, 0) *
+			XMMatrixTranslation(translation.x + colorpicker_center + r * cos(angle), translation.y + colorpicker_center + r * -sin(angle), 0) *
 			Projection
 		);
-		cb.g_xColor = float4(1 - hue_color.x, 1 - hue_color.y, 1 - hue_color.z, 1);
+
+		hsv source;
+		source.h = hue;
+		source.s = 1;
+		source.v = 1;
+		rgb result = hsv2rgb(source);
+		cb.g_xColor = float4(1 - result.r, 1 - result.g, 1 - result.b, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_picker,
@@ -1845,11 +1961,43 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	// render saturation picker
 	if (IsEnabled())
 	{
+		XMFLOAT2 center = XMFLOAT2(translation.x + colorpicker_center, translation.y + colorpicker_center);
+		XMFLOAT4 A, B, C;
+		wiMath::ConstructTriangleEquilateral(colorpicker_radius_triangle, A, B, C);
+		XMVECTOR _A = XMLoadFloat4(&A);
+		XMVECTOR _B = XMLoadFloat4(&B);
+		XMVECTOR _C = XMLoadFloat4(&C);
+		XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * XMMatrixTranslation(center.x, center.y, 0);
+		_A = XMVector4Transform(_A, _triTransform);
+		_B = XMVector4Transform(_B, _triTransform);
+		_C = XMVector4Transform(_C, _triTransform);
+
+		hsv source;
+		source.h = hue;
+		source.s = 1;
+		source.v = 1;
+		rgb result = hsv2rgb(source);
+
+		XMVECTOR color_corner = XMVectorSet(result.r, result.g, result.b, 1);
+		XMVECTOR white_corner = XMVectorSet(1, 1, 1, 1);
+		XMVECTOR black_corner = XMVectorSet(0, 0, 0, 1);
+
+		source.h = hue;
+		source.s = saturation;
+		source.v = luminance;
+		result = hsv2rgb(source);
+		XMVECTOR inner_point = XMVectorSet(result.r, result.g, result.b, 1);
+
+		float u, v, w;
+		wiMath::GetBarycentric(inner_point, color_corner, white_corner, black_corner, u, v, w, true);
+
+		XMVECTOR picker_center = u * _A + v * _B + w * _C;
+
 		XMStoreFloat4x4(&cb.g_xTransform, 
-			XMMatrixTranslation(saturation_picker.x, saturation_picker.y, 0) *
+			XMMatrixTranslationFromVector(picker_center) *
 			Projection
 		);
-		cb.g_xColor = float4(1 - final_color.x, 1 - final_color.y, 1 - final_color.z, 1);
+		cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_picker,
@@ -1867,7 +2015,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 			XMMatrixTranslation(translation.x + 260, translation.y + 40, 0) *
 			Projection
 		);
-		cb.g_xColor = GetPickColor().toFloat4();
+		cb.g_xColor = final_color.toFloat4();
 		wiRenderer::GetDevice()->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_preview,
@@ -1880,21 +2028,43 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	}
 
 	// RGB values:
-	stringstream _rgb("");
-	_rgb << "R: " << (int)(final_color.x * 255) << endl;
-	_rgb << "G: " << (int)(final_color.y * 255) << endl;
-	_rgb << "B: " << (int)(final_color.z * 255) << endl;
-	wiFont(_rgb.str(), wiFontParams((int)(translation.x + 200), (int)(translation.y + 200), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
+	stringstream ss("");
+	ss << "R: " << int(final_color.getR()) << endl;
+	ss << "G: " << int(final_color.getG()) << endl;
+	ss << "B: " << int(final_color.getB()) << endl;
+	ss << endl;
+	ss << "H: " << int(hue) << endl;
+	ss << "S: " << int(saturation * 100) << endl;
+	ss << "V: " << int(luminance * 100) << endl;
+	wiFont(ss.str(), wiFontParams((int)(translation.x + 240), (int)(translation.y + 80), WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP, 0, 0,
 		textColor, textShadowColor)).Draw(cmd);
 
 }
-const wiColor& wiColorPicker::GetPickColor() const
+wiColor wiColorPicker::GetPickColor() const
 {
-	return wiColor::fromFloat4(final_color);
+	hsv source;
+	source.h = hue;
+	source.s = saturation;
+	source.v = luminance;
+	rgb result = hsv2rgb(source);
+	return wiColor::fromFloat3(XMFLOAT3(result.r, result.g, result.b));
 }
-void wiColorPicker::SetPickColor(const wiColor& value)
+void wiColorPicker::SetPickColor(wiColor value)
 {
-	// TODO
+	rgb source;
+	source.r = value.toFloat3().x;
+	source.g = value.toFloat3().y;
+	source.b = value.toFloat3().z;
+	hsv result = rgb2hsv(source);
+	if (
+		(value.getR() < 255 || value.getG() < 255 || value.getB() < 255) &&
+		(value.getR() > 0 || value.getG() > 0 || value.getB() > 0)
+		)
+	{
+		hue = result.h; // only change the hue when not pure black or white because those don't retain the saturation value
+	}
+	saturation = result.s;
+	luminance = result.v;
 }
 void wiColorPicker::OnColorChanged(function<void(wiEventArgs args)> func)
 {

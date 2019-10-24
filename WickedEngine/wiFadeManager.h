@@ -28,7 +28,7 @@ public:
 		Clear();
 	}
 	void Clear();
-	void Start(float seconds, const wiColor& color, std::function<void()> onFadeFunction)
+	void Start(float seconds, wiColor color, std::function<void()> onFadeFunction)
 	{
 		targetFadeTimeInSeconds = seconds;
 		this->color = color;

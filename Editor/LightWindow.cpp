@@ -328,6 +328,7 @@ void LightWindow::SetEntity(Entity entity)
 		staticCheckBox->SetEnabled(true);
 		staticCheckBox->SetCheck(light->IsStatic());
 		colorPicker->SetEnabled(true);
+		colorPicker->SetPickColor(wiColor::fromFloat3(light->color));
 		typeSelectorComboBox->SetSelected((int)light->GetType());
 		
 		SetLightType(light->GetType());

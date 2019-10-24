@@ -21,7 +21,7 @@ public:
 	//use std::bind( YourFunctionPointer )
 	void addLoadingFunction(std::function<void()> loadingFunction);
 	//Helper for loading a whole renderable component
-	void addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds = 0, const wiColor& fadeColor = wiColor(0, 0, 0, 255));
+	void addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds = 0, wiColor fadeColor = wiColor(0, 0, 0, 255));
 	//Set a function that should be called when the loading finishes
 	//use std::bind( YourFunctionPointer )
 	void onFinished(std::function<void()> finishFunction);

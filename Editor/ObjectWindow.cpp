@@ -619,6 +619,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		renderableCheckBox->SetCheck(object->IsRenderable());
 		cascadeMaskSlider->SetValue((float)object->cascadeMask);
 		ditherSlider->SetValue(object->GetTransparency());
+		colorPicker->SetPickColor(wiColor::fromFloat4(object->color));
 
 		const RigidBodyPhysicsComponent* physicsComponent = scene.rigidbodies.GetComponent(entity);
 

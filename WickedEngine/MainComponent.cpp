@@ -81,7 +81,7 @@ void MainComponent::Initialize()
 	wiLua::GetGlobal()->RunFile("startup.lua");
 }
 
-void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, const wiColor& fadeColor)
+void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiColor fadeColor)
 {
 	if (component == nullptr)
 	{

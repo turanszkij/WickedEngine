@@ -810,7 +810,9 @@ void MaterialWindow::SetEntity(Entity entity)
 		alphaRefSlider->SetValue(material->alphaRef);
 		materialWindow->SetEnabled(true);
 		baseColorPicker->SetEnabled(true);
+		baseColorPicker->SetPickColor(wiColor::fromFloat4(material->baseColor));
 		emissiveColorPicker->SetEnabled(true);
+		emissiveColorPicker->SetPickColor(wiColor::fromFloat4(material->emissiveColor));
 		blendModeComboBox->SetSelected((int)material->userBlendMode);
 		shaderTypeComboBox->SetSelected(max(0, material->GetCustomShaderID() + 1));
 

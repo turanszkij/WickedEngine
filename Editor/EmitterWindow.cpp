@@ -446,6 +446,34 @@ void EmitterWindow::SetEntity(Entity entity)
 
 	if (emitter != nullptr)
 	{
+		emitterNameField->SetEnabled(true);
+		restartButton->SetEnabled(true);
+		shaderTypeComboBox->SetEnabled(true);
+		meshComboBox->SetEnabled(true);
+		debugCheckBox->SetEnabled(true);
+		sortCheckBox->SetEnabled(true);
+		depthCollisionsCheckBox->SetEnabled(true);
+		sphCheckBox->SetEnabled(true);
+		pauseCheckBox->SetEnabled(true);
+		maxParticlesSlider->SetEnabled(true);
+		emitCountSlider->SetEnabled(true);
+		emitSizeSlider->SetEnabled(true);
+		emitRotationSlider->SetEnabled(true);
+		emitNormalSlider->SetEnabled(true);
+		emitScalingSlider->SetEnabled(true);
+		emitLifeSlider->SetEnabled(true);
+		emitRandomnessSlider->SetEnabled(true);
+		emitLifeRandomnessSlider->SetEnabled(true);
+		emitMotionBlurSlider->SetEnabled(true);
+		emitMassSlider->SetEnabled(true);
+		timestepSlider->SetEnabled(true);
+		sph_h_Slider->SetEnabled(true);
+		sph_K_Slider->SetEnabled(true);
+		sph_p0_Slider->SetEnabled(true);
+		sph_e_Slider->SetEnabled(true);
+
+		shaderTypeComboBox->SetSelected((int)emitter->shaderType);
+
 		sortCheckBox->SetCheck(emitter->IsSorted());
 		depthCollisionsCheckBox->SetCheck(emitter->IsDepthCollisionEnabled());
 		sphCheckBox->SetCheck(emitter->IsSPHEnabled());
@@ -472,6 +500,32 @@ void EmitterWindow::SetEntity(Entity entity)
 	else
 	{
 		infoLabel->SetText("No emitter object selected.");
+
+		emitterNameField->SetEnabled(false);
+		restartButton->SetEnabled(false);
+		shaderTypeComboBox->SetEnabled(false);
+		meshComboBox->SetEnabled(false);
+		debugCheckBox->SetEnabled(false);
+		sortCheckBox->SetEnabled(false);
+		depthCollisionsCheckBox->SetEnabled(false);
+		sphCheckBox->SetEnabled(false);
+		pauseCheckBox->SetEnabled(false);
+		maxParticlesSlider->SetEnabled(false);
+		emitCountSlider->SetEnabled(false);
+		emitSizeSlider->SetEnabled(false);
+		emitRotationSlider->SetEnabled(false);
+		emitNormalSlider->SetEnabled(false);
+		emitScalingSlider->SetEnabled(false);
+		emitLifeSlider->SetEnabled(false);
+		emitRandomnessSlider->SetEnabled(false);
+		emitLifeRandomnessSlider->SetEnabled(false);
+		emitMotionBlurSlider->SetEnabled(false);
+		emitMassSlider->SetEnabled(false);
+		timestepSlider->SetEnabled(false);
+		sph_h_Slider->SetEnabled(false);
+		sph_K_Slider->SetEnabled(false);
+		sph_p0_Slider->SetEnabled(false);
+		sph_e_Slider->SetEnabled(false);
 	}
 
 }

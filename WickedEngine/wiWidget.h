@@ -31,39 +31,38 @@ class wiWidget : public wiSceneSystem::TransformComponent
 public:
 	enum WIDGETSTATE
 	{
-		// widget is doing nothing
-		IDLE,
-		// widget got pointer dragged on or selected
-		FOCUS,
-		// widget is interacted with right now
-		ACTIVE,
-		// widget has last been active but no more interactions are occuring
-		DEACTIVATING,
+		IDLE,			// widget is doing nothing
+		FOCUS,			// widget got pointer dragged on or selected
+		ACTIVE,			// widget is interacted with right now
+		DEACTIVATING,	// widget has last been active but no more interactions are occuring
 		WIDGETSTATE_COUNT,
 	};
 private:
-	float fontScaling;
-	int tooltipTimer;
+	int tooltipTimer = 0;
 protected:
 	wiHashString fastName;
 	std::string text;
 	std::string tooltip;
 	std::string scriptTip;
-	bool enabled;
-	bool visible;
+	bool enabled = true;
+	bool visible = true;
 
-	WIDGETSTATE state;
+	WIDGETSTATE state = IDLE;
 	void Activate();
 	void Deactivate();
-	wiColor colors[WIDGETSTATE_COUNT];
 	wiGraphics::Rect scissorRect;
 
-	wiColor textColor;
-	wiColor textShadowColor;
-public:
-	wiWidget();
-	virtual ~wiWidget();
+	wiColor colors[WIDGETSTATE_COUNT] = {
+		wiColor::Booger(),
+		wiColor::Gray(),
+		wiColor::White(),
+		wiColor::Gray(),
+	};
+	static_assert(ARRAYSIZE(colors) == WIDGETSTATE_COUNT, "Every WIDGETSTATE needs a default color!");
 
+	wiColor textColor = wiColor(255, 255, 255, 255);
+	wiColor textShadowColor = wiColor(0, 0, 0, 255);
+public:
 	const wiHashString& GetName() const;
 	void SetName(const std::string& value);
 	const std::string& GetText() const;
@@ -78,23 +77,23 @@ public:
 	virtual void SetVisible(bool val);
 	bool IsVisible() const;
 	// last param default: set color for all states
-	void SetColor(const wiColor& color, WIDGETSTATE state = WIDGETSTATE_COUNT);
+	void SetColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor() const;
 	void SetScissorRect(const wiGraphics::Rect& rect);
-	void SetTextColor(const wiColor& value) { textColor = value; }
-	void SetTextShadowColor(const wiColor& value) { textShadowColor = value; }
+	void SetTextColor(wiColor value) { textColor = value; }
+	void SetTextShadowColor(wiColor value) { textShadowColor = value; }
 
 	virtual void Update(wiGUI* gui, float dt);
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const = 0;
 	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
 
-	XMFLOAT3 translation;
-	XMFLOAT3 scale;
+	XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 
 	Hitbox2D hitBox;
 
-	wiSceneSystem::TransformComponent* parent;
-	XMFLOAT4X4 world_parent_bind;
+	wiSceneSystem::TransformComponent* parent = nullptr;
+	XMFLOAT4X4 world_parent_bind = IDENTITYMATRIX;
 	void AttachTo(wiSceneSystem::TransformComponent* parent);
 	void Detach();
 
@@ -109,8 +108,8 @@ protected:
 	std::function<void(wiEventArgs args)> onDragStart;
 	std::function<void(wiEventArgs args)> onDrag;
 	std::function<void(wiEventArgs args)> onDragEnd;
-	XMFLOAT2 dragStart;
-	XMFLOAT2 prevPos;
+	XMFLOAT2 dragStart = XMFLOAT2(0, 0);
+	XMFLOAT2 prevPos = XMFLOAT2(0, 0);
 public:
 	wiButton(const std::string& name = "");
 	virtual ~wiButton();
@@ -168,9 +167,9 @@ class wiSlider : public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onSlide;
-	float start, end;
-	float step;
-	float value;
+	float start = 0, end = 1;
+	float step = 1000;
+	float value = 0;
 
 	wiTextInputField* valueInputField;
 public:
@@ -196,7 +195,7 @@ class wiCheckBox :public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onClick;
-	bool checked;
+	bool checked = false;
 public:
 	wiCheckBox(const std::string& name = "");
 	virtual ~wiCheckBox();
@@ -215,22 +214,19 @@ class wiComboBox :public wiWidget
 {
 protected:
 	std::function<void(wiEventArgs args)> onSelect;
-	int selected;
-	int maxVisibleItemCount;
-	int firstItemVisible;
+	int selected = -1;
+	int maxVisibleItemCount = 8;
+	int firstItemVisible = 0;
 
 	// While the widget is active (rolled down) these are the inner states that control behaviour
 	enum COMBOSTATE
 	{
-		// When the list is just being dropped down, or the widget is not active
-		COMBOSTATE_INACTIVE,
-		// The widget is in drop-down state with the last item hovered highlited
-		COMBOSTATE_HOVER,
-		// The hovered item is clicked
-		COMBOSTATE_SELECTING,
+		COMBOSTATE_INACTIVE,	// When the list is just being dropped down, or the widget is not active
+		COMBOSTATE_HOVER,		// The widget is in drop-down state with the last item hovered highlited
+		COMBOSTATE_SELECTING,	// The hovered item is clicked
 		COMBOSTATE_COUNT,
-	} combostate;
-	int hovered;
+	} combostate = COMBOSTATE_INACTIVE;
+	int hovered = -1;
 
 	std::vector<std::string> items;
 
@@ -265,7 +261,7 @@ protected:
 	wiButton* resizeDragger_BottomRight = nullptr;
 	wiButton* moveDragger = nullptr;
 	std::list<wiWidget*> childrenWidgets;
-	bool minimized;
+	bool minimized = false;
 public:
 	wiWindow(wiGUI* gui, const std::string& name = "");
 	virtual ~wiWindow();
@@ -288,22 +284,18 @@ class wiColorPicker : public wiWindow
 {
 protected:
 	std::function<void(wiEventArgs args)> onColorChanged;
-	XMFLOAT2 hue_picker;
-	XMFLOAT2 saturation_picker;
-	XMFLOAT3 saturation_picker_barycentric;
-	XMFLOAT4 hue_color;
-	XMFLOAT4 final_color;
-	float angle;
-	bool huefocus; // whether the hue is in focus or the saturation
+	bool huefocus = false; // whether the hue picker is in focus or the saturation
+	float hue = 0.0f;			// [0, 360] degrees
+	float saturation = 0.0f;	// [0, 1]
+	float luminance = 1.0f;		// [0, 1]
 public:
 	wiColorPicker(wiGUI* gui, const std::string& name = "");
-	virtual ~wiColorPicker();
 
 	virtual void Update(wiGUI* gui, float dt ) override;
 	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
 
-	const wiColor& GetPickColor() const;
-	void SetPickColor(const wiColor& value);
+	wiColor GetPickColor() const;
+	void SetPickColor(wiColor value);
 
 	void OnColorChanged(std::function<void(wiEventArgs args)> func);
 };

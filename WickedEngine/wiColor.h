@@ -46,7 +46,7 @@ struct wiColor
 		return wiColor((uint8_t)(value.x * 255), (uint8_t)(value.y * 255), (uint8_t)(value.z * 255));
 	}
 
-	static constexpr wiColor lerp(const wiColor& a, const wiColor& b, float i)
+	static constexpr wiColor lerp(wiColor a, wiColor b, float i)
 	{
 		return fromFloat4(wiMath::Lerp(a.toFloat4(), b.toFloat4(), i));
 	}
