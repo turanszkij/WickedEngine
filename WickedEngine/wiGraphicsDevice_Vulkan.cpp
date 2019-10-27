@@ -489,20 +489,16 @@ namespace wiGraphics
 		for (const auto& queueFamily : queueFamilies) {
 			VkBool32 presentSupport = false;
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-			if (queueFamily.queueCount > 0 && presentSupport) {
+			if (indices.presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport) {
 				indices.presentFamily = i;
 			}
 
-			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			if (indices.graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				indices.graphicsFamily = i;
 			}
 
-			if (queueFamily.queueCount > 0 && queueFamily.queueFlags == VK_QUEUE_TRANSFER_BIT) {
+			if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
 				indices.copyFamily = i;
-			}
-
-			if (indices.isComplete()) {
-				break;
 			}
 
 			i++;
