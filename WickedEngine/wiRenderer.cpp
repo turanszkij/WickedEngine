@@ -151,6 +151,9 @@ std::unique_ptr<wiOcean> ocean;
 Texture2D shadowMapArray_2D;
 Texture2D shadowMapArray_Cube;
 Texture2D shadowMapArray_Transparent;
+std::vector<RenderPass> renderpasses_shadow2D;
+std::vector<RenderPass> renderpasses_shadow2DTransparent;
+std::vector<RenderPass> renderpasses_shadowCube;
 
 deque<wiSprite*> waterRipples;
 
@@ -4992,7 +4995,15 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = RTFormat_ldr;
+		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
+		desc.clear.color[0] = 1;
+		desc.clear.color[1] = 1;
+		desc.clear.color[2] = 1;
+		desc.clear.color[3] = 0;
 		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Transparent);
+
+		renderpasses_shadow2D.resize(SHADOWCOUNT_2D);
+		renderpasses_shadow2DTransparent.resize(SHADOWCOUNT_2D);
 
 		for (UINT i = 0; i < SHADOWCOUNT_2D; ++i)
 		{
@@ -5001,6 +5012,17 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 			assert(subresource_index == i);
 			subresource_index = device->CreateSubresource(&shadowMapArray_Transparent, RTV, i, 1, 0, 1);
 			assert(subresource_index == i);
+
+			RenderPassDesc renderpassdesc;
+
+			renderpassdesc.numAttachments = 1;
+			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR,&shadowMapArray_2D, subresource_index };
+			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2D[subresource_index]);
+
+			renderpassdesc.numAttachments = 2;
+			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_LOAD,&shadowMapArray_2D, subresource_index };
+			renderpassdesc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_CLEAR,&shadowMapArray_Transparent, subresource_index };
+			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2DTransparent[subresource_index]);
 		}
 	}
 
@@ -5034,11 +5056,18 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 		device->CreateTexture2D(&desc, nullptr, &shadowMapArray_Cube);
 
+		renderpasses_shadowCube.resize(SHADOWCOUNT_CUBE);
+
 		for (UINT i = 0; i < SHADOWCOUNT_CUBE; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(&shadowMapArray_Cube, DSV, i * 6, 6, 0, 1);
 			assert(subresource_index == i);
+
+			RenderPassDesc renderpassdesc;
+			renderpassdesc.numAttachments = 1;
+			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR,&shadowMapArray_Cube, subresource_index };
+			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadowCube[subresource_index]);
 		}
 	}
 
@@ -5062,9 +5091,6 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 
 
 		ViewPort vp;
-
-		// RGB: Shadow tint (multiplicative), A: Refraction caustics(additive)
-		const float transparentShadowClearColor[] = { 1,1,1,0 };
 
 
 		const Scene& scene = GetScene();
@@ -5162,24 +5188,18 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
 							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-							device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, cmd, light.shadowMap_index + cascade);
-
-							// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-							device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, cmd, light.shadowMap_index + cascade);
-
-							// render opaque shadowmap:
-							device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, cmd, light.shadowMap_index + cascade);
+							device->BeginRenderPass(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+							device->EndRenderPass(cmd);
 
+							// Transparent renderpass will always be started so that it is clear:
+							device->BeginRenderPass(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
-								// render transparent shadowmap:
-								const Texture2D* rts[] = {
-									&shadowMapArray_Transparent
-								};
-								device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, cmd, light.shadowMap_index + cascade);
 								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 							}
+							device->EndRenderPass(cmd);
+
 							GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
 
@@ -5226,24 +5246,18 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-						device->ClearDepthStencil(&shadowMapArray_2D, CLEAR_DEPTH, 0.0f, 0, cmd, light.shadowMap_index);
-
-						// unfortunately we will always have to clear the associated transparent shadowmap to avoid discrepancy with shadowmap indexing changes across frames
-						device->ClearRenderTarget(&shadowMapArray_Transparent, transparentShadowClearColor, cmd, light.shadowMap_index);
-
-						// render opaque shadowmap:
-						device->BindRenderTargets(0, nullptr, &shadowMapArray_2D, cmd, light.shadowMap_index);
+						device->BeginRenderPass(&renderpasses_shadow2D[light.shadowMap_index], cmd);
 						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
+						device->EndRenderPass(cmd);
 
+						// Transparent renderpass will always be started so that it is clear:
+						device->BeginRenderPass(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
-							// render transparent shadowmap:
-							const Texture2D* rts[] = {
-								&shadowMapArray_Transparent
-							};
-							device->BindRenderTargets(ARRAYSIZE(rts), rts, &shadowMapArray_2D, cmd, light.shadowMap_index);
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
+						device->EndRenderPass(cmd);
+
 						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
 
@@ -5282,9 +5296,6 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 					}
 					if (!renderQueue.empty())
 					{
-						device->BindRenderTargets(0, nullptr, &shadowMapArray_Cube, cmd, light.shadowMap_index);
-						device->ClearDepthStencil(&shadowMapArray_Cube, CLEAR_DEPTH, 0.0f, 0, cmd, light.shadowMap_index);
-
 						MiscCB miscCb;
 						miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 1.0f / light.GetRange()); // reciprocal range, to avoid division in shader
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
@@ -5310,7 +5321,9 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						}
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
 
+						device->BeginRenderPass(&renderpasses_shadowCube[light.shadowMap_index], cmd);
 						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd);
+						device->EndRenderPass(cmd);
 
 						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -5321,8 +5334,6 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 			}
 
 		}
-
-		device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 
 		wiProfiler::EndRange(range); // Shadow Rendering
@@ -6318,10 +6329,26 @@ void RefreshEnvProbes(CommandList cmd)
 
 	static const UINT envmapRes = 128;
 	static const UINT envmapMIPs = 8;
+	static Texture2D envrenderingDepthBuffer;
+	static std::vector<RenderPass> renderpasses_envmap;
 
 	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] == nullptr)
 	{
 		TextureDesc desc;
+
+		desc.ArraySize = 6;
+		desc.BindFlags = BIND_DEPTH_STENCIL;
+		desc.CPUAccessFlags = 0;
+		desc.Format = DSFormat_small;
+		desc.Height = envmapRes;
+		desc.Width = envmapRes;
+		desc.MipLevels = 1;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		desc.Usage = USAGE_DEFAULT;
+
+		HRESULT hr = device->CreateTexture2D(&desc, nullptr, &envrenderingDepthBuffer);
+		assert(SUCCEEDED(hr));
+
 		desc.ArraySize = envmapCount * 6;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
@@ -6333,14 +6360,22 @@ void RefreshEnvProbes(CommandList cmd)
 		desc.Usage = USAGE_DEFAULT;
 
 		textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY] = new Texture2D;
-		HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
+		hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
 		assert(SUCCEEDED(hr));
+
+		renderpasses_envmap.resize(envmapCount);
 
 		for (UINT i = 0; i < envmapCount; ++i)
 		{
 			int subresource_index;
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i * 6, 6, 0, 1);
 			assert(subresource_index == i);
+
+			RenderPassDesc renderpassdesc;
+			renderpassdesc.numAttachments = 2;
+			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_DONTCARE,(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], subresource_index };
+			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR,&envrenderingDepthBuffer, -1 };
+			device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
 		}
 		for (UINT i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
 		{
@@ -6358,25 +6393,6 @@ void RefreshEnvProbes(CommandList cmd)
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i * 6, 6, 0, -1);
 			assert(subresource_index == textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels + i);
 		}
-	}
-
-	static std::unique_ptr<Texture2D> envrenderingDepthBuffer;
-	if (envrenderingDepthBuffer == nullptr)
-	{
-		TextureDesc desc;
-		desc.ArraySize = 6;
-		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.CPUAccessFlags = 0;
-		desc.Format = DSFormat_small;
-		desc.Height = envmapRes;
-		desc.Width = envmapRes;
-		desc.MipLevels = 1;
-		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		desc.Usage = USAGE_DEFAULT;
-
-		envrenderingDepthBuffer.reset(new Texture2D);
-		HRESULT hr = device->CreateTexture2D(&desc, nullptr, envrenderingDepthBuffer.get());
-		assert(SUCCEEDED(hr));
 	}
 
 	ViewPort VP;
@@ -6397,10 +6413,7 @@ void RefreshEnvProbes(CommandList cmd)
 		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 		Entity entity = scene.probes.GetEntity(probeIndex);
 
-		device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], envrenderingDepthBuffer.get(), cmd, probe.textureIndex);
-		const float clearColor[4] = { 0,0,0,1 };
-		device->ClearRenderTarget(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], clearColor, cmd, probe.textureIndex);
-		device->ClearDepthStencil(envrenderingDepthBuffer.get(), CLEAR_DEPTH, 0.0f, 0, cmd);
+		device->BeginRenderPass(&renderpasses_envmap[probe.textureIndex], cmd);
 
 		const XMVECTOR probePos = XMLoadFloat3(&probe.position);
 		const SHCAM cameras[] = {
@@ -6482,7 +6495,8 @@ void RefreshEnvProbes(CommandList cmd)
 			device->Draw(240, 0, cmd);
 		}
 
-		device->BindRenderTargets(0, nullptr, nullptr, cmd);
+		device->EndRenderPass(cmd);
+
 		GenerateMipChain(*(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
 
 		// Filter the enviroment map mip chain according to BRDF:
@@ -6569,39 +6583,44 @@ void RefreshImpostors(CommandList cmd)
 		static const UINT textureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
 		static const UINT textureDim = 128;
 		static Texture2D depthStencil;
+		static std::vector<RenderPass> renderpasses_impostor;
 
 		if (textures[TEXTYPE_2D_IMPOSTORARRAY] == nullptr)
 		{
 			TextureDesc desc;
-			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.Usage = USAGE_DEFAULT;
-			desc.CPUAccessFlags = 0;
-			desc.ArraySize = textureArraySize;
 			desc.Width = textureDim;
 			desc.Height = textureDim;
-			desc.Depth = 1;
-			desc.MipLevels = 1;
+
+			desc.BindFlags = BIND_DEPTH_STENCIL;
+			desc.ArraySize = 1;
+			desc.Format = DSFormat_small;
+			HRESULT hr = device->CreateTexture2D(&desc, nullptr, &depthStencil);
+			assert(SUCCEEDED(hr));
+			device->SetName(&depthStencil, "ImpostorDepthTarget");
+
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.ArraySize = textureArraySize;
 			desc.Format = RTFormat_impostor;
-			desc.MiscFlags = 0;
 
 			textures[TEXTYPE_2D_IMPOSTORARRAY] = new Texture2D;
-			HRESULT hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
+			hr = device->CreateTexture2D(&desc, nullptr, (Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY]);
 			assert(SUCCEEDED(hr));
 			device->SetName(textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorTarget");
+
+			renderpasses_impostor.resize(desc.ArraySize);
 
 			for (UINT i = 0; i < desc.ArraySize; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1, 0, 1);
 				assert(subresource_index == i);
-			}
 
-			desc.BindFlags = BIND_DEPTH_STENCIL;
-			desc.ArraySize = 1;
-			desc.Format = DSFormat_small;
-			hr = device->CreateTexture2D(&desc, nullptr, &depthStencil);
-			assert(SUCCEEDED(hr));
-			device->SetName(&depthStencil, "ImpostorDepthTarget");
+				RenderPassDesc renderpassdesc;
+				renderpassdesc.numAttachments = 2;
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,(Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
+				renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_CLEAR,&depthStencil, subresource_index };
+				hr = device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+			}
 		}
 
 		struct InstBuf
@@ -6675,10 +6694,7 @@ void RefreshImpostors(CommandList cmd)
 				for (size_t i = 0; i < impostorCaptureAngles; ++i)
 				{
 					int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-					device->BindRenderTargets(1, (Texture2D**)&textures[TEXTYPE_2D_IMPOSTORARRAY], &depthStencil, cmd, textureIndex);
-					const float clearColor[4] = { 0,0,0,0 };
-					device->ClearRenderTarget(textures[TEXTYPE_2D_IMPOSTORARRAY], clearColor, cmd, textureIndex);
-					device->ClearDepthStencil(&depthStencil, CLEAR_DEPTH, 0.0f, 0, cmd);
+					device->BeginRenderPass(&renderpasses_impostor[textureIndex], cmd);
 
 					ViewPort viewPort;
 					viewPort.Height = (float)textureDim;
@@ -6726,6 +6742,7 @@ void RefreshImpostors(CommandList cmd)
 						device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 					}
 
+					device->EndRenderPass(cmd);
 				}
 			}
 
@@ -6750,6 +6767,8 @@ void VoxelRadiance(CommandList cmd)
 	auto range = wiProfiler::BeginRangeGPU("Voxel Radiance", cmd);
 
 	const Scene& scene = GetScene();
+
+	static RenderPass renderpass_voxelize;
 
 	if (textures[TEXTYPE_3D_VOXELRADIANCE] == nullptr)
 	{
@@ -6776,6 +6795,10 @@ void VoxelRadiance(CommandList cmd)
 			subresource_index = device->CreateSubresource(textures[TEXTYPE_3D_VOXELRADIANCE], UAV, 0, 1, i, 1);
 			assert(subresource_index == i);
 		}
+
+		RenderPassDesc renderpassdesc;
+		renderpassdesc.numAttachments = 0;
+		device->CreateRenderPass(&renderpassdesc, &renderpass_voxelize);
 	}
 	if (voxelSceneData.secondaryBounceEnabled && textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] == nullptr)
 	{
@@ -6850,12 +6873,14 @@ void VoxelRadiance(CommandList cmd)
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);
 
+		device->BeginRenderPass(&renderpass_voxelize, cmd);
 		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
+		device->EndRenderPass(cmd);
+
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", cmd);
-		device->BindRenderTargets(0, nullptr, nullptr, cmd);
 		device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
 		device->BindUAV(CS, textures[TEXTYPE_3D_VOXELRADIANCE], 1, cmd);
 
@@ -7115,8 +7140,6 @@ void ResolveMSAADepthBuffer(const Texture2D& dst, const Texture2D& src, CommandL
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("ResolveMSAADepthBuffer", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindResource(CS, &src, TEXSLOT_ONDEMAND0, cmd);
 	device->BindUAV(CS, &dst, 0, cmd);
 
@@ -7164,8 +7187,6 @@ void GenerateMipChain(const Texture2D& texture, MIPGENFILTER filter, CommandList
 
 
 	bool hdr = !device->IsFormatUnorm(desc.Format);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 	{
@@ -7335,8 +7356,6 @@ void GenerateMipChain(const Texture3D& texture, MIPGENFILTER filter, CommandList
 	}
 
 	bool hdr = !device->IsFormatUnorm(desc.Format);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	switch (filter)
 	{
@@ -7947,6 +7966,18 @@ void ManageLightmapAtlas()
 				HRESULT hr = device->CreateTexture2D(&desc, nullptr, object.lightmap.get());
 				assert(SUCCEEDED(hr));
 				device->SetName(object.lightmap.get(), "objectLightmap");
+
+				RenderPassDesc renderpassdesc;
+
+				renderpassdesc.numAttachments = 1;
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,object.lightmap.get(),-1 };
+				object.renderpass_lightmap_clear = std::make_unique<RenderPass>();
+				hr = device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_clear.get());
+
+				renderpassdesc.numAttachments = 1;
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_LOAD,object.lightmap.get(),-1 };
+				object.renderpass_lightmap_accumulate = std::make_unique<RenderPass>();
+				hr = device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_accumulate.get());
 			}
 			object.lightmapIterationCount++;
 		}
@@ -8060,15 +8091,15 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 
 	const TextureDesc& desc = object.lightmap->GetDesc();
 
-	const Texture2D* rts[] = { object.lightmap.get() };
-	device->BindRenderTargets(1, rts, nullptr, cmd);
-
 	const uint32_t lightmapIterationCount = std::max(1u, object.lightmapIterationCount) - 1; // ManageLightMapAtlas incremented before refresh
 
 	if (lightmapIterationCount == 0)
 	{
-		float clearColor[4] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clearColor, cmd);
+		device->BeginRenderPass(object.renderpass_lightmap_clear.get(), cmd);
+	}
+	else
+	{
+		device->BeginRenderPass(object.renderpass_lightmap_accumulate.get(), cmd);
 	}
 
 	ViewPort vp;
@@ -8121,7 +8152,7 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	device->BindPipelineState(&PSO_renderlightmap, cmd);
 	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
+	device->EndRenderPass(cmd);
 
 	device->EventEnd(cmd);
 }
@@ -8411,8 +8442,6 @@ const Texture2D* ComputeLuminance(const Texture2D& sourceImage, CommandList cmd)
 {
 	GraphicsDevice* device = GetDevice();
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	static std::unique_ptr<Texture2D> luminance_map;
 	static std::vector<Texture2D*> luminance_avg(0);
 	if (luminance_map == nullptr)
@@ -8541,8 +8570,6 @@ void Postprocess_Blur_Gaussian(
 	GraphicsDevice* device = GetDevice();
 	device->EventBegin("Postprocess_Blur_Gaussian", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	CSTYPES cs = CSTYPE_POSTPROCESS_BLUR_GAUSSIAN_FLOAT4;
 	switch (output.GetDesc().Format)
 	{
@@ -8650,8 +8677,6 @@ void Postprocess_Blur_Bilateral(
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Postprocess_Blur_Bilateral", cmd);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	CSTYPES cs = CSTYPE_POSTPROCESS_BLUR_BILATERAL_FLOAT4;
 	switch (output.GetDesc().Format)
@@ -8763,7 +8788,6 @@ void Postprocess_SSAO(
 	device->EventBegin("Postprocess_SSAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SSAO", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 	device->UnbindResources(TEXSLOT_RENDERPATH_SSAO, 1, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSAO], cmd);
@@ -8817,7 +8841,6 @@ void Postprocess_SSR(
 	device->EventBegin("Postprocess_SSR", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSR", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SSR], cmd);
@@ -8861,12 +8884,11 @@ void Postprocess_SSR(
 	device->EventEnd(cmd);
 }
 void Postprocess_SSS(
-	const Texture2D& depthbuffer,
 	const Texture2D& lineardepth,
 	const Texture2D& gbuffer0,
-	const Texture2D& input_output_lightbuffer_diffuse,
-	const Texture2D& input_output_temp1,
-	const Texture2D& input_output_temp2,
+	const RenderPass& input_output_lightbuffer_diffuse,
+	const RenderPass& input_output_temp1,
+	const RenderPass& input_output_temp2,
 	CommandList cmd
 )
 {
@@ -8881,8 +8903,8 @@ void Postprocess_SSS(
 	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(PS, &gbuffer0, TEXSLOT_GBUFFER0, cmd);
 
-	const Texture2D* rt_read = &input_output_lightbuffer_diffuse;
-	const Texture2D* rt_write = &input_output_temp1;
+	const RenderPass* rt_read = &input_output_lightbuffer_diffuse;
+	const RenderPass* rt_write = &input_output_temp1;
 
 	static int sssPassCount = 6;
 	for (int i = 0; i < sssPassCount; ++i)
@@ -8895,9 +8917,9 @@ void Postprocess_SSS(
 			rt_write = &input_output_lightbuffer_diffuse;
 		}
 
-		const TextureDesc& desc = rt_write->GetDesc();
+		const TextureDesc& desc = rt_write->GetDesc().attachments[0].texture->GetDesc();
 
-		device->BindRenderTargets(1, &rt_write, &depthbuffer, cmd);
+		device->BeginRenderPass(rt_write, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)desc.Width;
@@ -8924,9 +8946,11 @@ void Postprocess_SSS(
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(PS, rt_read, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(PS, rt_read->GetDesc().attachments[0].texture, TEXSLOT_ONDEMAND0, cmd);
 
 		device->Draw(3, 0, cmd);
+
+		device->EndRenderPass(cmd);
 
 		if (i == 0)
 		{
@@ -8955,8 +8979,6 @@ void Postprocess_LightShafts(
 
 	device->EventBegin("Postprocess_LightShafts", cmd);
 	auto range = wiProfiler::BeginRangeGPU("LightShafts", cmd);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], cmd);
 
@@ -9011,8 +9033,6 @@ void Postprocess_DepthOfField(
 	device->EventBegin("Postprocess_DepthOfField", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Depth of Field", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD], cmd);
 
 	device->BindResource(CS, &input_sharp, TEXSLOT_ONDEMAND0, cmd);
@@ -9062,8 +9082,6 @@ void Postprocess_Outline(
 
 	device->EventBegin("Postprocess_Outline", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Outline", cmd);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_OUTLINE], cmd);
 
@@ -9116,8 +9134,6 @@ void Postprocess_MotionBlur(
 	device->EventBegin("Postprocess_MotionBlur", cmd);
 	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_MOTIONBLUR], cmd);
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
@@ -9163,8 +9179,6 @@ void Postprocess_BloomSeparate(
 
 	device->EventBegin("Postprocess_BloomSeparate", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
@@ -9208,8 +9222,6 @@ void Postprocess_FXAA(
 
 	device->EventBegin("Postprocess_FXAA", cmd);
 	auto range = wiProfiler::BeginRangeGPU("FXAA", cmd);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_FXAA], cmd);
 
@@ -9257,8 +9269,6 @@ void Postprocess_TemporalAA(
 	device->EventBegin("Postprocess_TemporalAA", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
 
 	device->BindResource(CS, &input_current, TEXSLOT_ONDEMAND0, cmd);
@@ -9305,8 +9315,6 @@ void Postprocess_Colorgrade(
 
 	device->EventBegin("Postprocess_Colorgrade", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_COLORGRADE], cmd);
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
@@ -9350,8 +9358,6 @@ void Postprocess_Lineardepth(
 
 	device->EventBegin("Postprocess_Lineardepth", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_LINEARDEPTH], cmd);
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
@@ -9394,8 +9400,6 @@ void Postprocess_Sharpen(
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Postprocess_Sharpen", cmd);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_SHARPEN], cmd);
 
@@ -9443,8 +9447,6 @@ void Postprocess_Tonemap(
 
 	device->EventBegin("Postprocess_Tonemap", cmd);
 
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
-
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_TONEMAP], cmd);
 
 	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
@@ -9490,8 +9492,6 @@ void Postprocess_Chromatic_Aberration(
 	GraphicsDevice* device = GetDevice();
 
 	device->EventBegin("Postprocess_Chromatic_Aberration", cmd);
-
-	device->BindRenderTargets(0, nullptr, nullptr, cmd);
 
 	device->BindComputeShader(computeShaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], cmd);
 

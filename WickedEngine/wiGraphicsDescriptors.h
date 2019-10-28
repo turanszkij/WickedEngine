@@ -13,7 +13,7 @@ namespace wiGraphics
 	struct RasterizerState;
 	struct DepthStencilState;
 	struct VertexLayout;
-	struct Texture;
+	struct Texture2D;
 
 	enum SHADERSTAGE
 	{
@@ -353,6 +353,15 @@ namespace wiGraphics
 		UINT Count = 1;
 		UINT Quality = 0;
 	};
+	union ClearValue
+	{
+		float color[4];
+		struct ClearDepthStencil
+		{
+			float depth;
+			UINT stencil;
+		} depthstencil;
+	};
 	struct TextureDesc
 	{
 		UINT Width = 0;
@@ -366,6 +375,7 @@ namespace wiGraphics
 		UINT BindFlags = 0;
 		UINT CPUAccessFlags = 0;
 		UINT MiscFlags = 0;
+		ClearValue clear = {};
 	};
 	struct SamplerDesc
 	{
@@ -468,6 +478,27 @@ namespace wiGraphics
 		FORMAT						DSFormat = FORMAT_UNKNOWN;
 		SampleDesc					sampleDesc; 
 		UINT						sampleMask = 0xFFFFFFFF;
+	};
+	struct RenderPassAttachment
+	{
+		enum TYPE
+		{
+			RENDERTARGET,
+			DEPTH_STENCIL,
+		} type = RENDERTARGET;
+		enum OPERATION
+		{
+			OP_LOAD,
+			OP_CLEAR,
+			OP_DONTCARE,
+		} op = OP_LOAD;
+		const Texture2D* texture = nullptr;
+		int subresource = -1;
+	};
+	struct RenderPassDesc
+	{
+		UINT numAttachments = 0;
+		RenderPassAttachment attachments[9] = {};
 	};
 	struct IndirectDrawArgsInstanced
 	{

@@ -12,6 +12,14 @@ protected:
 	wiGraphics::Texture2D lightbuffer_diffuse;
 	wiGraphics::Texture2D lightbuffer_specular;
 
+	wiGraphics::RenderPass renderpass_gbuffer;
+	wiGraphics::RenderPass renderpass_lights;
+	wiGraphics::RenderPass renderpass_decals;
+	wiGraphics::RenderPass renderpass_deferredcomposition;
+	wiGraphics::RenderPass renderpass_SSS[3];
+	wiGraphics::RenderPass renderpass_transparent;
+	wiGraphics::RenderPass renderpass_bloom;
+
 	void ResizeBuffers() override;
 
 	virtual void RenderSSS(wiGraphics::CommandList cmd) const;

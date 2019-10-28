@@ -35,6 +35,10 @@ class RenderPath2D :
 private:
 	wiGraphics::Texture2D rtStenciled;
 	wiGraphics::Texture2D rtFinal;
+
+	wiGraphics::RenderPass renderpass_stenciled;
+	wiGraphics::RenderPass renderpass_final;
+
 	wiGUI GUI;
 	float spriteSpeed = 1.0f;
 

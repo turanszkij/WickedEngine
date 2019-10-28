@@ -34,24 +34,17 @@ void RenderPath3D_TiledDeferred::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			const Texture2D* rts[] = {
-				&rtGBuffer[0],
-				&rtGBuffer[1],
-				&rtGBuffer[2],
-				&lightbuffer_diffuse,
-				&lightbuffer_specular,
-			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(&rtGBuffer[1], clear, cmd);
-			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, cmd);
+			device->BeginRenderPass(&renderpass_gbuffer, cmd);
+
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)depthBuffer.GetDesc().Width;
+			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
+
+			device->EndRenderPass(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
@@ -105,13 +98,13 @@ void RenderPath3D_TiledDeferred::Render() const
 
 		RenderRefractionSource(rtDeferred, cmd);
 
-		RenderTransparents(rtDeferred, RENDERPASS_TILEDFORWARD, cmd);
+		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
 
 		RenderParticles(true, cmd);
 
 		TemporalAAResolve(rtDeferred, rtGBuffer[1], cmd);
 
-		RenderBloom(rtDeferred, cmd);
+		RenderBloom(renderpass_bloom, cmd);
 
 		RenderPostprocessChain(rtDeferred, rtGBuffer[1], cmd);
 

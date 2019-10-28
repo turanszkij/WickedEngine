@@ -2437,6 +2437,15 @@ namespace wiGraphics
 
 		return hr;
 	}
+	HRESULT GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	{
+		DestroyRenderPass(renderpass);
+		renderpass->Register(this);
+
+		renderpass->desc = *pDesc;
+
+		return S_OK;
+	}
 
 	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
 	{
@@ -2932,6 +2941,10 @@ namespace wiGraphics
 			pso->pipeline = WI_NULL_HANDLE;
 		}
 	}
+	void GraphicsDevice_DX12::DestroyRenderPass(RenderPass* renderpass)
+	{
+
+	}
 
 	bool GraphicsDevice_DX12::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 	{
@@ -3174,6 +3187,14 @@ namespace wiGraphics
 	}
 
 
+	void GraphicsDevice_DX12::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
+	{
+
+	}
+	void GraphicsDevice_DX12::EndRenderPass(CommandList cmd)
+	{
+
+	}
 	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
 		assert(numRects <= 8);

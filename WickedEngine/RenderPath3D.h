@@ -69,6 +69,14 @@ protected:
 	wiGraphics::Texture2D smallDepth; // downsampled depth buffer
 	wiGraphics::Texture2D depthBuffer_reflection; // depth-test for reflection rendering
 
+	wiGraphics::RenderPass renderpass_occlusionculling;
+	wiGraphics::RenderPass renderpass_reflection;
+	wiGraphics::RenderPass renderpass_downsampledepthbuffer;
+	wiGraphics::RenderPass renderpass_lightshafts;
+	wiGraphics::RenderPass renderpass_volumetriclight;
+	wiGraphics::RenderPass renderpass_particles;
+	wiGraphics::RenderPass renderpass_waterripples;
+
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture2D* GetLastPostprocessRT() const
 	{
@@ -96,9 +104,9 @@ protected:
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
 	virtual void RenderParticles(bool isDistrortionPass, wiGraphics::CommandList cmd) const;
 	virtual void RenderRefractionSource(const wiGraphics::Texture2D& srcSceneRT, wiGraphics::CommandList cmd) const;
-	virtual void RenderTransparents(const wiGraphics::Texture2D& dstSceneRT, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
+	virtual void RenderTransparents(const wiGraphics::RenderPass& renderpass_transparent, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 	virtual void TemporalAAResolve(const wiGraphics::Texture2D& srcdstSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
-	virtual void RenderBloom(const wiGraphics::Texture2D& srcdstSceneRT, wiGraphics::CommandList cmd) const;
+	virtual void RenderBloom(const wiGraphics::RenderPass& renderpass_bloom, wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(const wiGraphics::Texture2D& srcSceneRT, const wiGraphics::Texture2D& srcGbuffer1, wiGraphics::CommandList cmd) const;
 	
 public:
@@ -141,7 +149,7 @@ public:
 
 	inline const wiGraphics::Texture2D* getColorGradingTexture() const { return colorGradingTex; }
 
-	inline UINT getMSAASampleCount() const { return msaaSampleCount; }
+	inline constexpr UINT getMSAASampleCount() const { return msaaSampleCount; }
 
 	inline void setExposure(float value) { exposure = value; }
 	inline void setBloomThreshold(float value){ bloomThreshold = value; }

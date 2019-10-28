@@ -288,6 +288,7 @@ namespace wiGraphics
 		HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) override;
 		HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) override;
 		HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
+		HRESULT CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
 		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) override;
 
@@ -309,6 +310,7 @@ namespace wiGraphics
 		void DestroySamplerState(Sampler *pSamplerState) override;
 		void DestroyQuery(GPUQuery *pQuery) override;
 		void DestroyPipelineState(PipelineState* pso) override;
+		void DestroyRenderPass(RenderPass* renderpass) override;
 
 		bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) override;
 
@@ -327,6 +329,8 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		void BeginRenderPass(const RenderPass* renderpass, CommandList cmd) override;
+		void EndRenderPass(CommandList cmd) override;
 		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
 		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) override;

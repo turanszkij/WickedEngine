@@ -39,6 +39,14 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 	}
 
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,&traceResult,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_debugbvh);
+	}
+
 	// also reset accumulation buffer state:
 	sam = -1;
 }
@@ -110,17 +118,17 @@ void RenderPath3D_PathTracing::Render() const
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
 		{
-			const Texture2D* rts[] = { &traceResult };
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, nullptr, cmd);
-			float clear[] = { 0,0,0,1 };
-			device->ClearRenderTarget(rts[0], clear, cmd);
+			device->BeginRenderPass(&renderpass_debugbvh, cmd);
 
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)traceResult.GetDesc().Width;
+			vp.Height = (float)traceResult.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
+			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 			wiRenderer::RayTraceSceneBVH(cmd);
+
+			device->EndRenderPass(cmd);
 		}
 		else
 		{

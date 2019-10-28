@@ -1841,6 +1841,15 @@ HRESULT GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc,
 
 	return S_OK;
 }
+HRESULT GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+{
+	DestroyRenderPass(renderpass);
+	renderpass->Register(this);
+
+	renderpass->desc = *pDesc;
+
+	return S_OK;
+}
 
 int GraphicsDevice_DX11::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
 {
@@ -2431,6 +2440,10 @@ void GraphicsDevice_DX11::DestroyQuery(GPUQuery *pQuery)
 void GraphicsDevice_DX11::DestroyPipelineState(PipelineState* pso)
 {
 }
+void GraphicsDevice_DX11::DestroyRenderPass(RenderPass* renderpass)
+{
+
+}
 
 bool GraphicsDevice_DX11::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 {
@@ -2615,23 +2628,6 @@ void GraphicsDevice_DX11::WaitForGPU()
 }
 
 
-void GraphicsDevice_DX11::validate_raster_uavs(CommandList cmd) 
-{
-	// This is a helper function to defer the graphics stage UAV bindings to OMSetRenderTargetsAndUnorderedAccessViews (if there was an update)
-	//	It is intended to be called before graphics stage executions (eg. Draw)
-	//	It is also explicitly maintained in BindRenderTargets function, because in that case, we will also bind some render targets in the same call
-
-	if(raster_uavs_count[cmd] > 0)
-	{
-		const UINT count = raster_uavs_count[cmd];
-		const UINT slot = raster_uavs_slot[cmd];
-
-		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr, slot, count, &raster_uavs[cmd][slot], nullptr);
-
-		raster_uavs_count[cmd] = 0;
-		raster_uavs_slot[cmd] = 8;
-	}
-}
 void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 {
 	// DX11 needs to unmap allocations before it can execute safely
@@ -2643,6 +2639,78 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 	}
 }
 
+
+void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
+{
+	const RenderPassDesc& desc = renderpass->GetDesc();
+
+	UINT rt_count = 0;
+	ID3D11RenderTargetView* renderTargetViews[8] = {};
+	ID3D11DepthStencilView* depthStencilView = nullptr;
+	for (UINT i = 0; i < desc.numAttachments; ++i)
+	{
+		const RenderPassAttachment& attachment = desc.attachments[i];
+		const Texture2D* texture = attachment.texture;
+		int subresource = attachment.subresource;
+
+		if (attachment.type == RenderPassAttachment::RENDERTARGET)
+		{
+			if (subresource < 0 || texture->subresourceRTVs.empty())
+			{
+				renderTargetViews[rt_count] = (ID3D11RenderTargetView*)texture->RTV;
+			}
+			else
+			{
+				assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
+				renderTargetViews[rt_count] = (ID3D11RenderTargetView*)texture->subresourceRTVs[subresource];
+			}
+
+			if (attachment.op == RenderPassAttachment::OP_CLEAR)
+			{
+				deviceContexts[cmd]->ClearRenderTargetView(renderTargetViews[rt_count], texture->desc.clear.color);
+			}
+
+			rt_count++;
+		}
+		else
+		{
+			if (subresource < 0 || texture->subresourceDSVs.empty())
+			{
+				depthStencilView = (ID3D11DepthStencilView*)texture->DSV;
+			}
+			else
+			{
+				assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
+				depthStencilView = (ID3D11DepthStencilView*)texture->subresourceDSVs[subresource];
+			}
+
+			if (attachment.op == RenderPassAttachment::OP_CLEAR)
+			{
+				deviceContexts[cmd]->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil);
+			}
+		}
+	}
+
+	if (raster_uavs_count[cmd] > 0)
+	{
+		// UAVs:
+		const UINT count = raster_uavs_count[cmd];
+		const UINT slot = raster_uavs_slot[cmd];
+
+		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(rt_count, renderTargetViews, depthStencilView, slot, count, &raster_uavs[cmd][slot], nullptr);
+
+		raster_uavs_count[cmd] = 0;
+		raster_uavs_slot[cmd] = 8;
+	}
+	else
+	{
+		deviceContexts[cmd]->OMSetRenderTargets(rt_count, renderTargetViews, depthStencilView);
+	}
+}
+void GraphicsDevice_DX11::EndRenderPass(CommandList cmd)
+{
+	deviceContexts[cmd]->OMSetRenderTargets(0, nullptr, nullptr);
+}
 void GraphicsDevice_DX11::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 	assert(rects != nullptr);
 	assert(numRects <= 8);
@@ -3089,42 +3157,36 @@ void GraphicsDevice_DX11::BindComputeShader(const ComputeShader* cs, CommandList
 }
 void GraphicsDevice_DX11::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd) 
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->Draw(vertexCount, startVertexLocation);
 }
 void GraphicsDevice_DX11::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 }
 void GraphicsDevice_DX11::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd) 
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);
 }
 void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 {
-	validate_raster_uavs(cmd);
 	commit_allocations(cmd);
 
 	deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)args->resource, args_offset);

@@ -471,6 +471,8 @@ namespace wiSceneSystem
 
 		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 		std::unique_ptr<wiGraphics::Texture2D> lightmap;
+		std::unique_ptr<wiGraphics::RenderPass> renderpass_lightmap_clear;
+		std::unique_ptr<wiGraphics::RenderPass> renderpass_lightmap_accumulate;
 		uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);

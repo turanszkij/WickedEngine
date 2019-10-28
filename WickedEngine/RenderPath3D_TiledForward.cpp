@@ -13,13 +13,6 @@ void RenderPath3D_TiledForward::Render() const
 	wiJobSystem::context ctx;
 	CommandList cmd;
 
-	const Texture2D* scene_read[] = { &rtMain[0], &rtMain[1] };
-	if (getMSAASampleCount() > 1)
-	{
-		scene_read[0] = &rtMain_resolved[0];
-		scene_read[1] = &rtMain_resolved[1];
-	}
-
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd] { RenderFrameSetUp(cmd); });
 	cmd = device->BeginCommandList();
@@ -40,8 +33,7 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			device->BindRenderTargets(0, nullptr, &depthBuffer, cmd);
-			device->ClearDepthStencil(&depthBuffer, CLEAR_DEPTH | CLEAR_STENCIL, 0, 0, cmd);
+			device->BeginRenderPass(&renderpass_depthprepass, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -50,7 +42,7 @@ void RenderPath3D_TiledForward::Render() const
 
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true);
 
-			device->BindRenderTargets(0, nullptr, nullptr, cmd);
+			device->EndRenderPass(cmd);
 
 			wiProfiler::EndRange(range);
 		}
@@ -74,7 +66,7 @@ void RenderPath3D_TiledForward::Render() const
 	});
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd, scene_read] {
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
 		wiRenderer::ComputeTiledLightCulling(
 			depthBuffer_Copy, 
@@ -87,17 +79,11 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			const Texture2D* rts[] = {
-				&rtMain[0],
-				&rtMain[1],
-			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, &depthBuffer, cmd);
-			float clear[] = { 0,0,0,0 };
-			device->ClearRenderTarget(rts[1], clear, cmd);
+			device->BeginRenderPass(&renderpass_main, cmd);
 
 			ViewPort vp;
-			vp.Width = (float)rts[0]->GetDesc().Width;
-			vp.Height = (float)rts[0]->GetDesc().Height;
+			vp.Width = (float)depthBuffer.GetDesc().Width;
+			vp.Height = (float)depthBuffer.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
@@ -106,24 +92,24 @@ void RenderPath3D_TiledForward::Render() const
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_TILEDFORWARD, true, true);
 			wiRenderer::DrawSky(cmd);
 
-			device->BindRenderTargets(0, nullptr, nullptr, cmd);
+			device->EndRenderPass(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}
 	});
 
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, device, cmd, scene_read] {
+	wiJobSystem::Execute(ctx, [this, device, cmd] {
 
 		wiRenderer::BindCommonResources(cmd);
 
 		if (getMSAASampleCount() > 1)
 		{
-			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
-			device->MSAAResolve(scene_read[1], &rtMain[1], cmd);
+			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
+			device->MSAAResolve(GetSceneRT_Read(1), &rtMain[1], cmd);
 		}
 
-		RenderSSR(*scene_read[0], rtMain[1], cmd);
+		RenderSSR(*GetSceneRT_Read(0), rtMain[1], cmd);
 
 		DownsampleDepthBuffer(cmd);
 
@@ -137,20 +123,20 @@ void RenderPath3D_TiledForward::Render() const
 
 		RenderParticles(false, cmd);
 
-		RenderRefractionSource(*scene_read[0], cmd);
+		RenderRefractionSource(*GetSceneRT_Read(0), cmd);
 
-		RenderTransparents(rtMain[0], RENDERPASS_TILEDFORWARD, cmd);
+		RenderTransparents(renderpass_transparent, RENDERPASS_TILEDFORWARD, cmd);
 
 		if (getMSAASampleCount() > 1)
 		{
-			device->MSAAResolve(scene_read[0], &rtMain[0], cmd);
+			device->MSAAResolve(GetSceneRT_Read(0), &rtMain[0], cmd);
 		}
 
-		TemporalAAResolve(*scene_read[0], *scene_read[1], cmd);
+		TemporalAAResolve(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 
-		RenderBloom(*scene_read[0], cmd);
+		RenderBloom(renderpass_bloom, cmd);
 
-		RenderPostprocessChain(*scene_read[0], *scene_read[1], cmd);
+		RenderPostprocessChain(*GetSceneRT_Read(0), *GetSceneRT_Read(1), cmd);
 	});
 
 	RenderPath2D::Render();

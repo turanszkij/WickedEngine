@@ -150,26 +150,46 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	hairWnd.reset(new HairParticleWindow(&GetGUI()));
 	forceFieldWnd.reset(new ForceFieldWindow(&GetGUI()));
 	oceanWnd.reset(new OceanWindow(&GetGUI()));
+
+	ResizeBuffers();
 }
 
 void EditorComponent::ResizeBuffers()
 {
 	__super::ResizeBuffers();
 
-	TextureDesc desc;
-	desc.Width = wiRenderer::GetInternalResolution().x;
-	desc.Height = wiRenderer::GetInternalResolution().y;
-
+	GraphicsDevice* device = wiRenderer::GetDevice();
 	HRESULT hr;
-	desc.Format = wiRenderer::GetDevice()->GetBackBufferFormat(); // todo: smaller format, but then somehow need to specify custom rt format for wiImage PSO!
-	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-	hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[0]);
-	assert(SUCCEEDED(hr));
 
-	desc.Format = wiRenderer::RTFormat_hdr;
-	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	hr = wiRenderer::GetDevice()->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[1]);
-	assert(SUCCEEDED(hr));
+	{
+		TextureDesc desc;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
+
+		desc.Format = wiRenderer::GetDevice()->GetBackBufferFormat(); // todo: smaller format, but then somehow need to specify custom rt format for wiImage PSO!
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[0]);
+		assert(SUCCEEDED(hr));
+
+		desc.Format = wiRenderer::RTFormat_hdr;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		hr = device->CreateTexture2D(&desc, nullptr, &rt_selectionOutline[1]);
+		assert(SUCCEEDED(hr));
+	}
+
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_CLEAR, &rt_selectionOutline[0], -1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_LOAD, renderPath->GetDepthStencil(), -1 };
+		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
+		assert(SUCCEEDED(hr));
+
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_CLEAR, &rt_selectionOutline[1], -1 };
+		hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
+		assert(SUCCEEDED(hr));
+	}
 }
 void EditorComponent::Load()
 {
@@ -1223,7 +1243,16 @@ void EditorComponent::Update(float dt)
 
 			assert(picked.entity != INVALID_ENTITY);
 
-			objectWnd->SetEntity(picked.entity);
+			objectWnd->SetEntity(INVALID_ENTITY);
+			for (auto& x : selected)
+			{
+				if (scene.objects.GetComponent(x.entity) != nullptr)
+				{
+					objectWnd->SetEntity(x.entity);
+					break;
+				}
+			}
+
 			emitterWnd->SetEntity(picked.entity);
 			hairWnd->SetEntity(picked.entity);
 			lightWnd->SetEntity(picked.entity);
@@ -1563,20 +1592,18 @@ void EditorComponent::Render() const
 		//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
 		fx.stencilRefMode = STENCILREFMODE_USER; 
 
-		const float rgba[] = { 0,0,0,0 };
-		device->ClearRenderTarget(&rt_selectionOutline[1], rgba, cmd);
+		device->BeginRenderPass(&renderpass_selectionOutline[1], cmd); // this renderpass just clears so its empty
+		device->EndRenderPass(cmd);
 
 		// Materials outline (green):
 		{
-			const Texture2D* rts[] = {
-				&rt_selectionOutline[0],
-			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
-			device->ClearRenderTarget(rts[0], rgba, cmd);
+			device->BeginRenderPass(&renderpass_selectionOutline[0], cmd);
 
 			// Draw solid blocks of selected materials
 			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+			device->EndRenderPass(cmd);
 
 			// Outline the solid blocks:
 			wiRenderer::BindCommonResources(cmd);
@@ -1585,15 +1612,13 @@ void EditorComponent::Render() const
 
 		// Objects outline (orange):
 		{
-			const Texture2D* rts[] = {
-				&rt_selectionOutline[0],
-			};
-			device->BindRenderTargets(ARRAYSIZE(rts), rts, renderPath->GetDepthStencil(), cmd);
-			device->ClearRenderTarget(rts[0], rgba, cmd);
+			device->BeginRenderPass(&renderpass_selectionOutline[0], cmd);
 
 			// Draw solid blocks of selected objects
 			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
 			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+
+			device->EndRenderPass(cmd);
 
 			// Outline the solid blocks:
 			wiRenderer::BindCommonResources(cmd);

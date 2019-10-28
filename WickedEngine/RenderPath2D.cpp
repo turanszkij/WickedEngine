@@ -41,6 +41,32 @@ void RenderPath2D::ResizeBuffers()
 		device->SetName(&rtFinal, "rtFinal");
 	}
 
+	const Texture2D* dsv = GetDepthStencil();
+	if (dsv != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 2;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,&rtStenciled,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_LOAD,dsv,-1 };
+
+		device->CreateRenderPass(&desc, &renderpass_stenciled);
+
+		dsv = nullptr;
+	}
+	{
+		RenderPassDesc desc;
+		desc.numAttachments = 1;
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,&rtFinal,-1 };
+		
+		if(dsv != nullptr)
+		{
+			desc.numAttachments = 2;
+			desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_LOAD,dsv,-1 };
+		}
+
+		device->CreateRenderPass(&desc, &renderpass_final);
+	}
+
 }
 
 void RenderPath2D::Initialize()
@@ -114,17 +140,12 @@ void RenderPath2D::Render() const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
 
-	const Texture2D* dsv = GetDepthStencil();
 
 	// Special care for internal resolution, because stencil buffer is of internal resolution, 
 	//	so we might need to render stencil sprites to separate render target that matches internal resolution!
 	if (GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
 	{
-		const Texture2D* rts[] = { &rtStenciled };
-		device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, cmd);
-
-		float clear[] = { 0,0,0,0 };
-		device->ClearRenderTarget(rts[0], clear, cmd);
+		device->BeginRenderPass(&renderpass_stenciled, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rtStenciled.GetDesc().Width;
@@ -144,15 +165,10 @@ void RenderPath2D::Render() const
 		}
 		wiRenderer::GetDevice()->EventEnd(cmd);
 
-		dsv = nullptr;
+		device->EndRenderPass(cmd);
 	}
 
-
-	const Texture2D* rts[] = { &rtFinal };
-	device->BindRenderTargets(ARRAYSIZE(rts), rts, dsv, cmd);
-
-	float clear[] = { 0,0,0,0 };
-	device->ClearRenderTarget(rts[0], clear, cmd);
+	device->BeginRenderPass(&renderpass_final, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rtFinal.GetDesc().Width;
@@ -204,6 +220,8 @@ void RenderPath2D::Render() const
 	wiRenderer::GetDevice()->EventEnd(cmd);
 
 	GetGUI().Render(cmd);
+
+	device->EndRenderPass(cmd);
 
 	RenderPath::Render();
 }

@@ -204,4 +204,16 @@ namespace wiGraphics
 		~PipelineState();
 	};
 
+
+	struct RenderPass : public GraphicsDeviceChild
+	{
+		wiCPUHandle	framebuffer = WI_NULL_HANDLE;
+		wiCPUHandle	renderpass = WI_NULL_HANDLE;
+		RenderPassDesc desc;
+
+		const RenderPassDesc& GetDesc() const { return desc; }
+
+		~RenderPass();
+	};
+
 }

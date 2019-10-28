@@ -3617,6 +3617,15 @@ namespace wiGraphics
 
 		return hr;
 	}
+	HRESULT GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+	{
+		DestroyRenderPass(renderpass);
+		renderpass->Register(this);
+
+		renderpass->desc = *pDesc;
+
+		return E_FAIL;
+	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
 	{
@@ -3979,6 +3988,10 @@ namespace wiGraphics
 		DeferredDestroy({ DestroyItem::PIPELINE, pso->pipeline });
 		pso->pipeline = WI_NULL_HANDLE;
 	}
+	void GraphicsDevice_Vulkan::DestroyRenderPass(RenderPass* renderpass)
+	{
+
+	}
 
 	bool GraphicsDevice_Vulkan::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
 	{
@@ -4311,6 +4324,14 @@ namespace wiGraphics
 	}
 
 
+	void GraphicsDevice_Vulkan::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
+	{
+
+	}
+	void GraphicsDevice_Vulkan::EndRenderPass(CommandList cmd)
+	{
+
+	}
 	void GraphicsDevice_Vulkan::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
 		assert(numRects <= 8);

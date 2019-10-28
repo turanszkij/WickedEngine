@@ -46,6 +46,7 @@ namespace wiGraphics
 		virtual HRESULT CreateSamplerState(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) = 0;
 		virtual HRESULT CreateQuery(const GPUQueryDesc *pDesc, GPUQuery *pQuery) = 0;
 		virtual HRESULT CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;
+		virtual HRESULT CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
 
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount) = 0;
 
@@ -67,6 +68,7 @@ namespace wiGraphics
 		virtual void DestroySamplerState(Sampler *pSamplerState) = 0;
 		virtual void DestroyQuery(GPUQuery *pQuery) = 0;
 		virtual void DestroyPipelineState(PipelineState* pso) = 0;
+		virtual void DestroyRenderPass(RenderPass* renderpass) = 0;
 
 		virtual bool DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest) = 0;
 
@@ -118,6 +120,8 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		virtual void BeginRenderPass(const RenderPass* renderpass, CommandList cmd) = 0;
+		virtual void EndRenderPass(CommandList cmd) = 0;
 		virtual void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) = 0;
 		virtual void BindRenderTargets(UINT NumViews, const Texture2D* const * ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) = 0;

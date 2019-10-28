@@ -11,6 +11,8 @@ private:
 protected:
 	wiGraphics::Texture2D traceResult;
 
+	wiGraphics::RenderPass renderpass_debugbvh;
+
 	void ResizeBuffers() override;
 
 public:
