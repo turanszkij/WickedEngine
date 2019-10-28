@@ -3624,7 +3624,171 @@ namespace wiGraphics
 
 		renderpass->desc = *pDesc;
 
-		return E_FAIL;
+		VkImageView attachments[9] = {};
+		VkAttachmentDescription attachmentDescriptions[9] = {};
+		VkAttachmentReference colorAttachmentRefs[8] = {};
+		VkAttachmentReference depthAttachmentRef = {};
+
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+		const RenderPassDesc& desc = renderpass->desc;
+
+		uint32_t attachmentCount = 0;
+		for (UINT i = 0; i < renderpass->desc.numAttachments; ++i)
+		{
+			const Texture2D* texture = desc.attachments[i].texture;
+			const TextureDesc& texdesc = texture->desc;
+			int subresource = desc.attachments[i].subresource;
+
+			attachmentDescriptions[attachmentCount].format = _ConvertFormat(texdesc.Format);
+			switch (texdesc.SampleDesc.Count)
+			{
+			case 2:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_2_BIT;
+				break;
+			case 4:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_4_BIT;
+				break;
+			case 8:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_8_BIT;
+				break;
+			case 16:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_16_BIT;
+				break;
+			case 32:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_32_BIT;
+				break;
+			case 64:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_64_BIT;
+				break;
+			default:
+				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
+				break;
+			}
+
+			switch (desc.attachments[i].op)
+			{
+			default:
+			case RenderPassAttachment::OP_LOAD:
+				attachmentDescriptions[attachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				break;
+			case RenderPassAttachment::OP_CLEAR:
+				attachmentDescriptions[attachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				break;
+			case RenderPassAttachment::OP_DONTCARE:
+				attachmentDescriptions[attachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				break;
+			}
+			attachmentDescriptions[attachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+			attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachmentDescriptions[attachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachmentDescriptions[attachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachmentDescriptions[attachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+			if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
+			{
+				if (subresource < 0 || texture->subresourceRTVs.empty())
+				{
+					attachments[attachmentCount] = (VkImageView)texture->RTV;
+				}
+				else
+				{
+					assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
+					attachments[attachmentCount] = (VkImageView)texture->subresourceRTVs[subresource];
+				}
+				if (attachments[attachmentCount] == VK_NULL_HANDLE)
+				{
+					continue;
+				}
+
+				colorAttachmentRefs[attachmentCount].attachment = attachmentCount;
+				colorAttachmentRefs[attachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				subpass.colorAttachmentCount++;
+				subpass.pColorAttachments = colorAttachmentRefs;
+			}
+			else if (desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
+			{
+				if (subresource < 0 || texture->subresourceDSVs.empty())
+				{
+					attachments[attachmentCount] = (VkImageView)texture->DSV;
+				}
+				else
+				{
+					assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
+					attachments[attachmentCount] = (VkImageView)texture->subresourceDSVs[subresource];
+				}
+				if (attachments[attachmentCount] == VK_NULL_HANDLE)
+				{
+					continue;
+				}
+
+				if (IsFormatStencilSupport(texdesc.Format))
+				{
+					switch (desc.attachments[i].op)
+					{
+					default:
+					case RenderPassAttachment::OP_LOAD:
+						attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+						break;
+					case RenderPassAttachment::OP_CLEAR:
+						attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+						break;
+					case RenderPassAttachment::OP_DONTCARE:
+						attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+						break;
+					}
+					attachmentDescriptions[attachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				}
+
+				depthAttachmentRef.attachment = attachmentCount;
+				depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				subpass.pDepthStencilAttachment = &depthAttachmentRef;
+			}
+			else
+			{
+				assert(0);
+			}
+
+			attachmentCount++;
+		}
+		renderpass->desc.numAttachments = attachmentCount;
+
+		VkRenderPassCreateInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = renderpass->desc.numAttachments;
+		renderPassInfo.pAttachments = attachmentDescriptions;
+		renderPassInfo.subpassCount = 1;
+		renderPassInfo.pSubpasses = &subpass;
+
+		VkRenderPass renderpass_handle = VK_NULL_HANDLE;
+		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_handle) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create render pass!");
+		}
+
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = renderpass_handle;
+		framebufferInfo.attachmentCount = renderpass->desc.numAttachments;
+		framebufferInfo.pAttachments = attachments;
+
+		if (desc.numAttachments > 0)
+		{
+			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+			framebufferInfo.width = texdesc.Width;
+			framebufferInfo.height = texdesc.Height;
+			framebufferInfo.layers = texdesc.ArraySize;
+		}
+
+		VkFramebuffer framebuffer_handle = VK_NULL_HANDLE;
+		if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer_handle) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+
+		renderpass->renderpass = (wiCPUHandle)renderpass_handle;
+		renderpass->framebuffer = (wiCPUHandle)framebuffer_handle;
+
+		return S_OK;
 	}
 
 	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, UINT firstSlice, UINT sliceCount, UINT firstMip, UINT mipCount)
@@ -4326,11 +4490,51 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
 	{
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = (VkRenderPass)renderpass->renderpass;
+		renderPassInfo.framebuffer = (VkFramebuffer)renderpass->framebuffer;
 
+		const RenderPassDesc& desc = renderpass->desc;
+
+		VkClearValue clearColors[9] = {};
+		if (renderpass->desc.numAttachments > 0)
+		{
+			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent.width = texdesc.Width;
+			renderPassInfo.renderArea.extent.height = texdesc.Height;
+			renderPassInfo.clearValueCount = renderpass->desc.numAttachments;
+			renderPassInfo.pClearValues = clearColors;
+
+			for (UINT i = 0; i < desc.numAttachments; ++i)
+			{
+				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
+				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
+				{
+					clearColors[i].color.float32[0] = clear.color[0];
+					clearColors[i].color.float32[1] = clear.color[1];
+					clearColors[i].color.float32[2] = clear.color[2];
+					clearColors[i].color.float32[3] = clear.color[3];
+				}
+				else if(desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
+				{
+					clearColors[i].depthStencil.depth = clear.depthstencil.depth;
+					clearColors[i].depthStencil.stencil = clear.depthstencil.stencil;
+				}
+				else
+				{
+					assert(0);
+				}
+			}
+		}
+
+		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 	void GraphicsDevice_Vulkan::EndRenderPass(CommandList cmd)
 	{
-
+		vkCmdEndRenderPass(GetDirectCommandList(cmd));
 	}
 	void GraphicsDevice_Vulkan::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
