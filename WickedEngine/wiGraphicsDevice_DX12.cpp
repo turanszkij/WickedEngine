@@ -2047,12 +2047,12 @@ namespace wiGraphics
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
 
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
-		optimizedClearValue.Color[0] = 0;
-		optimizedClearValue.Color[1] = 0;
-		optimizedClearValue.Color[2] = 0;
-		optimizedClearValue.Color[3] = 0;
-		optimizedClearValue.DepthStencil.Depth = 0.0f;
-		optimizedClearValue.DepthStencil.Stencil = 0;
+		optimizedClearValue.Color[0] = pTexture2D->desc.clear.color[0];
+		optimizedClearValue.Color[1] = pTexture2D->desc.clear.color[1];
+		optimizedClearValue.Color[2] = pTexture2D->desc.clear.color[2];
+		optimizedClearValue.Color[3] = pTexture2D->desc.clear.color[3];
+		optimizedClearValue.DepthStencil.Depth = pTexture2D->desc.clear.depthstencil.depth;
+		optimizedClearValue.DepthStencil.Stencil = pTexture2D->desc.clear.depthstencil.stencil;
 		optimizedClearValue.Format = desc.Format;
 		if (optimizedClearValue.Format == DXGI_FORMAT_R16_TYPELESS)
 		{
@@ -3189,11 +3189,63 @@ namespace wiGraphics
 
 	void GraphicsDevice_DX12::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
 	{
+		const RenderPassDesc& desc = renderpass->GetDesc();
 
+		UINT rt_count = 0;
+		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[8] = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE* DSV = nullptr;
+		for (UINT i = 0; i < desc.numAttachments; ++i)
+		{
+			const RenderPassAttachment& attachment = desc.attachments[i];
+			const Texture2D* texture = attachment.texture;
+			int subresource = attachment.subresource;
+
+			if (attachment.type == RenderPassAttachment::RENDERTARGET)
+			{
+				if (subresource < 0 || texture->subresourceRTVs.empty())
+				{
+					RTVs[rt_count] = ToNativeHandle(texture->RTV);
+				}
+				else
+				{
+					assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
+					RTVs[rt_count] = ToNativeHandle(texture->subresourceRTVs[subresource]);
+				}
+
+				if (attachment.op == RenderPassAttachment::OP_CLEAR)
+				{
+					GetDirectCommandList(cmd)->ClearRenderTargetView(RTVs[rt_count], texture->desc.clear.color, 0, nullptr);
+				}
+
+				rt_count++;
+			}
+			else
+			{
+				if (subresource < 0 || texture->subresourceDSVs.empty())
+				{
+					DSV = &ToNativeHandle(texture->DSV);
+				}
+				else
+				{
+					assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
+					DSV = &ToNativeHandle(texture->subresourceDSVs[subresource]);
+				}
+
+				if (attachment.op == RenderPassAttachment::OP_CLEAR)
+				{
+					UINT _flags = D3D12_CLEAR_FLAG_DEPTH;
+					if (IsFormatStencilSupport(texture->desc.Format))
+						_flags |= D3D12_CLEAR_FLAG_STENCIL;
+					GetDirectCommandList(cmd)->ClearDepthStencilView(*DSV, (D3D12_CLEAR_FLAGS)_flags, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil, 0, nullptr);
+				}
+			}
+		}
+
+		GetDirectCommandList(cmd)->OMSetRenderTargets(rt_count, RTVs, FALSE, DSV);
 	}
 	void GraphicsDevice_DX12::EndRenderPass(CommandList cmd)
 	{
-
+		GetDirectCommandList(cmd)->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
 	}
 	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);

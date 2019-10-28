@@ -107,6 +107,7 @@ namespace wiGraphics
 		uint32_t GetFormatStride(FORMAT value) const;
 		bool IsFormatUnorm(FORMAT value) const;
 		bool IsFormatBlockCompressed(FORMAT value) const;
+		bool IsFormatStencilSupport(FORMAT value) const;
 
 		inline XMMATRIX GetScreenProjection() const
 		{

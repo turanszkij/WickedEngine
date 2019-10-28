@@ -149,3 +149,17 @@ bool GraphicsDevice::IsFormatBlockCompressed(FORMAT value) const
 	return false;
 }
 
+bool GraphicsDevice::IsFormatStencilSupport(FORMAT value) const
+{
+	switch (value)
+	{
+	case FORMAT_R32G8X24_TYPELESS:
+	case FORMAT_D32_FLOAT_S8X24_UINT:
+	case FORMAT_R24G8_TYPELESS:
+	case FORMAT_D24_UNORM_S8_UINT:
+		return true;
+	}
+
+	return false;
+}
+

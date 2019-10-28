@@ -88,8 +88,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = wiRenderer::RTFormat_hdr;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
+		desc.Width = wiRenderer::GetInternalResolution().x;
+		desc.Height = wiRenderer::GetInternalResolution().y;
 		device->CreateTexture2D(&desc, nullptr, &rtReflection);
 		device->SetName(&rtReflection, "rtReflection");
 	}
@@ -235,15 +235,6 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture2D(&desc, nullptr, &smallDepth);
 		device->SetName(&smallDepth, "smallDepth");
 	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.Format = wiRenderer::DSFormat_small;
-		desc.Width = wiRenderer::GetInternalResolution().x / 2;
-		desc.Height = wiRenderer::GetInternalResolution().y / 2;
-		device->CreateTexture2D(&desc, nullptr, &depthBuffer_reflection);
-		device->SetName(&depthBuffer_reflection, "depthBuffer_reflection");
-	}
 
 	// Render passes:
 	{
@@ -257,7 +248,7 @@ void RenderPath3D::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_DONTCARE,&rtReflection,-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_CLEAR,&depthBuffer_reflection,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_CLEAR,&depthBuffer,-1 };
 
 		device->CreateRenderPass(&desc, &renderpass_reflection);
 	}
@@ -362,8 +353,8 @@ void RenderPath3D::RenderReflections(CommandList cmd) const
 		device->BeginRenderPass(&renderpass_reflection, cmd);
 
 		ViewPort vp;
-		vp.Width = (float)depthBuffer_reflection.GetDesc().Width;
-		vp.Height = (float)depthBuffer_reflection.GetDesc().Height;
+		vp.Width = (float)depthBuffer.GetDesc().Width;
+		vp.Height = (float)depthBuffer.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
 		// reverse clipping if underwater

@@ -2645,8 +2645,8 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 	const RenderPassDesc& desc = renderpass->GetDesc();
 
 	UINT rt_count = 0;
-	ID3D11RenderTargetView* renderTargetViews[8] = {};
-	ID3D11DepthStencilView* depthStencilView = nullptr;
+	ID3D11RenderTargetView* RTVs[8] = {};
+	ID3D11DepthStencilView* DSV = nullptr;
 	for (UINT i = 0; i < desc.numAttachments; ++i)
 	{
 		const RenderPassAttachment& attachment = desc.attachments[i];
@@ -2657,17 +2657,17 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 		{
 			if (subresource < 0 || texture->subresourceRTVs.empty())
 			{
-				renderTargetViews[rt_count] = (ID3D11RenderTargetView*)texture->RTV;
+				RTVs[rt_count] = (ID3D11RenderTargetView*)texture->RTV;
 			}
 			else
 			{
 				assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
-				renderTargetViews[rt_count] = (ID3D11RenderTargetView*)texture->subresourceRTVs[subresource];
+				RTVs[rt_count] = (ID3D11RenderTargetView*)texture->subresourceRTVs[subresource];
 			}
 
 			if (attachment.op == RenderPassAttachment::OP_CLEAR)
 			{
-				deviceContexts[cmd]->ClearRenderTargetView(renderTargetViews[rt_count], texture->desc.clear.color);
+				deviceContexts[cmd]->ClearRenderTargetView(RTVs[rt_count], texture->desc.clear.color);
 			}
 
 			rt_count++;
@@ -2676,17 +2676,20 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 		{
 			if (subresource < 0 || texture->subresourceDSVs.empty())
 			{
-				depthStencilView = (ID3D11DepthStencilView*)texture->DSV;
+				DSV = (ID3D11DepthStencilView*)texture->DSV;
 			}
 			else
 			{
 				assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
-				depthStencilView = (ID3D11DepthStencilView*)texture->subresourceDSVs[subresource];
+				DSV = (ID3D11DepthStencilView*)texture->subresourceDSVs[subresource];
 			}
 
 			if (attachment.op == RenderPassAttachment::OP_CLEAR)
 			{
-				deviceContexts[cmd]->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil);
+				UINT _flags = D3D11_CLEAR_DEPTH;
+				if (IsFormatStencilSupport(texture->desc.Format))
+					_flags |= D3D11_CLEAR_STENCIL;
+				deviceContexts[cmd]->ClearDepthStencilView(DSV, _flags, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil);
 			}
 		}
 	}
@@ -2697,14 +2700,14 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 		const UINT count = raster_uavs_count[cmd];
 		const UINT slot = raster_uavs_slot[cmd];
 
-		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(rt_count, renderTargetViews, depthStencilView, slot, count, &raster_uavs[cmd][slot], nullptr);
+		deviceContexts[cmd]->OMSetRenderTargetsAndUnorderedAccessViews(rt_count, RTVs, DSV, slot, count, &raster_uavs[cmd][slot], nullptr);
 
 		raster_uavs_count[cmd] = 0;
 		raster_uavs_slot[cmd] = 8;
 	}
 	else
 	{
-		deviceContexts[cmd]->OMSetRenderTargets(rt_count, renderTargetViews, depthStencilView);
+		deviceContexts[cmd]->OMSetRenderTargets(rt_count, RTVs, DSV);
 	}
 }
 void GraphicsDevice_DX11::EndRenderPass(CommandList cmd)
