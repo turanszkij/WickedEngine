@@ -1315,236 +1315,6 @@ namespace wiGraphics
 	}
 
 
-
-	void GraphicsDevice_Vulkan::RenderPassManager::reset()
-	{
-		dirty = true;
-
-		memset(attachments, 0, sizeof(attachments));
-		attachmentCount = 0;
-		attachmentLayers = 1;
-
-		memset(clearColor, 0, sizeof(clearColor));
-
-		activeRTHash = 0;
-
-		overrideRenderPass = VK_NULL_HANDLE;
-		overrideFramebuffer = VK_NULL_HANDLE;
-
-		clearRequests.clear();
-	}
-	void GraphicsDevice_Vulkan::RenderPassManager::disable(VkCommandBuffer commandBuffer)
-	{
-		if (activeRTHash)
-		{
-			vkCmdEndRenderPass(commandBuffer);
-		}
-		activeRTHash = 0;
-		dirty = true;
-	}
-	void GraphicsDevice_Vulkan::RenderPassManager::validate(VkDevice device, VkCommandBuffer commandBuffer)
-	{
-		if (!dirty || attachmentCount == 0)
-		{
-			return;
-		}
-
-		size_t requestRTHash = 0;
-
-		if (!overrideRenderPass && !overrideFramebuffer)
-		{
-			for (uint32_t i = 0; i < attachmentCount; ++i)
-			{
-				wiHelper::hash_combine(requestRTHash, attachments[i]);
-			}
-		}
-		else
-		{
-			requestRTHash = 0xFFFFFFFF; // override setrendertarget hashing with custom renderpass (eg. presentation render pass because it has some custom setup)
-		}
-
-		if (activeRTHash == 0 || activeRTHash != requestRTHash)
-		{
-			VkRenderPass renderPass = overrideRenderPass;
-			VkFramebuffer frameBuffer = overrideFramebuffer;
-
-			if (renderPass == VK_NULL_HANDLE || frameBuffer == VK_NULL_HANDLE)
-			{
-				RenderPassAndFramebuffer& states = renderPassCollection[requestRTHash];
-
-				if (states.renderPass == VK_NULL_HANDLE)
-				{
-					VkAttachmentDescription attachmentDescriptions[9];
-					VkAttachmentReference colorAttachmentRefs[9];
-
-					for (UINT i = 0; i < colorAttachmentCount; ++i)
-					{
-						VkAttachmentDescription attachment = {};
-						attachment.format = attachmentFormats[i];
-						attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-						attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-						attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-						attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-						attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachmentDescriptions[i] = attachment;
-
-						VkAttachmentReference ref = {};
-						ref.attachment = i;
-						ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-						colorAttachmentRefs[i] = ref;
-					}
-
-
-					VkSubpassDescription subpass = {};
-					subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-					subpass.colorAttachmentCount = colorAttachmentCount;
-					subpass.pColorAttachments = colorAttachmentRefs;
-
-					VkAttachmentDescription depthAttachment = {};
-					VkAttachmentReference depthAttachmentRef = {};
-					if (attachmentCount > colorAttachmentCount)
-					{
-						depthAttachment.format = attachmentFormats[colorAttachmentCount];
-						depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-						depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-						depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-						depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-						depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-						depthAttachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-						attachmentDescriptions[colorAttachmentCount] = depthAttachment;
-
-						depthAttachmentRef.attachment = colorAttachmentCount;
-						depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-						subpass.pDepthStencilAttachment = &depthAttachmentRef;
-					}
-
-					VkRenderPassCreateInfo renderPassInfo = {};
-					renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-					renderPassInfo.attachmentCount = attachmentCount;
-					renderPassInfo.pAttachments = attachmentDescriptions;
-					renderPassInfo.subpassCount = 1;
-					renderPassInfo.pSubpasses = &subpass;
-
-					if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &states.renderPass) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create render pass!");
-					}
-				}
-				if (states.frameBuffer == VK_NULL_HANDLE)
-				{
-					VkFramebufferCreateInfo framebufferInfo = {};
-					framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-					framebufferInfo.renderPass = states.renderPass;
-					framebufferInfo.attachmentCount = attachmentCount;
-					framebufferInfo.pAttachments = attachments;
-					framebufferInfo.width = attachmentsExtents.width;
-					framebufferInfo.height = attachmentsExtents.height;
-					framebufferInfo.layers = attachmentLayers;
-
-					if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &states.frameBuffer) != VK_SUCCESS) {
-						throw std::runtime_error("failed to create framebuffer!");
-					}
-				}
-
-				renderPass = states.renderPass;
-				frameBuffer = states.frameBuffer;
-			}
-
-			if (activeRTHash)
-			{
-				vkCmdEndRenderPass(commandBuffer);
-			}
-
-			VkRenderPassBeginInfo renderPassInfo = {};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = renderPass;
-			renderPassInfo.framebuffer = frameBuffer;
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = attachmentsExtents;
-			renderPassInfo.clearValueCount = attachmentCount;
-			renderPassInfo.pClearValues = clearColor;
-			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			activeRTHash = requestRTHash;
-			dirty = false;
-
-		}
-
-		// Performing texture clear requests if needed:
-		if (!clearRequests.empty())
-		{
-			VkClearAttachment clearInfos[9];
-			UINT realClearCount = 0;
-			bool remainingClearRequests = false;
-			for (UINT i = 0; i < clearRequests.size(); ++i)
-			{
-				if (clearRequests[i].attachment == VK_NULL_HANDLE)
-				{
-					continue;
-				}
-				remainingClearRequests = true;
-
-				for (UINT j = 0; j < attachmentCount; ++j)
-				{
-					if (clearRequests[i].attachment == attachments[j])
-					{
-						if (clearRequests[i].clearFlags == 0)
-						{
-							clearInfos[realClearCount].aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-							clearInfos[realClearCount].colorAttachment = j;
-
-							realClearCount++;
-							clearRequests[i].attachment = VK_NULL_HANDLE;
-						}
-						else
-						{
-							clearInfos[realClearCount].aspectMask = 0;
-							if (clearRequests[i].clearFlags & CLEAR_DEPTH)
-							{
-								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-							}
-							if (clearRequests[i].clearFlags & CLEAR_STENCIL)
-							{
-								clearInfos[realClearCount].aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-							}
-							clearInfos[realClearCount].clearValue = clearRequests[i].clearValue;
-							clearInfos[realClearCount].colorAttachment = j;
-
-							realClearCount++;
-							clearRequests[i].attachment = VK_NULL_HANDLE;
-						}
-
-						remainingClearRequests = false;
-						break;
-					}
-				}
-			}
-			if (realClearCount > 0)
-			{
-				VkClearRect rect = {};
-				rect.baseArrayLayer = 0;
-				rect.layerCount = 1;
-				rect.rect.offset.x = 0;
-				rect.rect.offset.y = 0;
-				rect.rect.extent.width = attachmentsExtents.width;
-				rect.rect.extent.height = attachmentsExtents.height;
-
-				vkCmdClearAttachments(commandBuffer, realClearCount, clearInfos, 1, &rect);
-			}
-
-			if (!remainingClearRequests)
-			{
-				clearRequests.clear();
-			}
-		}
-	}
-
-
-
 	// Engine functions
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiWindowRegistration::window_type window, bool fullscreen, bool debuglayer)
 	{
@@ -4154,7 +3924,10 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DestroyRenderPass(RenderPass* renderpass)
 	{
-
+		DeferredDestroy({ DestroyItem::RENDERPASS, renderpass->renderpass });
+		renderpass->renderpass = WI_NULL_HANDLE;
+		DeferredDestroy({ DestroyItem::FRAMEBUFFER, renderpass->framebuffer });
+		renderpass->framebuffer = WI_NULL_HANDLE;
 	}
 
 	bool GraphicsDevice_Vulkan::DownloadResource(const GPUResource* resourceToDownload, const GPUResource* resourceDest, void* dataDest)
@@ -4184,19 +3957,17 @@ namespace wiGraphics
 
 	void GraphicsDevice_Vulkan::PresentBegin(CommandList cmd)
 	{
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-		
-		renderPass[cmd].dirty = true;
-		renderPass[cmd].attachmentCount = 1;
-		renderPass[cmd].attachments[0] = GetFrameResources().swapChainImageView;
-		renderPass[cmd].attachmentsExtents = swapChainExtent;
-		renderPass[cmd].clearColor[0] = clearColor;
-		renderPass[cmd].overrideRenderPass = defaultRenderPass;
-		renderPass[cmd].overrideFramebuffer = GetFrameResources().swapChainFramebuffer;
 
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
+		VkRenderPassBeginInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = defaultRenderPass;
+		renderPassInfo.framebuffer = GetFrameResources().swapChainFramebuffer;
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 
 		VkClearAttachment clearInfo = {};
@@ -4225,10 +3996,7 @@ namespace wiGraphics
 		vkAcquireNextImageKHR(device, swapChain, 0xFFFFFFFFFFFFFFFF, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 		assert(imageIndex == currentframe);
 
-
-
-		// ...end presentation render pass
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
+		vkCmdEndRenderPass(GetDirectCommandList(cmd));
 
 
 		// Sync up copy queue:
@@ -4284,8 +4052,6 @@ namespace wiGraphics
 			CommandList cmd;
 			while (active_commandlists.pop_front(cmd))
 			{
-				renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 				if (vkEndCommandBuffer(GetDirectCommandList(cmd)) != VK_SUCCESS) {
 					throw std::runtime_error("failed to record command buffer!");
 				}
@@ -4379,6 +4145,12 @@ namespace wiGraphics
 					break;
 				case DestroyItem::PIPELINE:
 					vkDestroyPipeline(device, (VkPipeline)item.handle, nullptr);
+					break;
+				case DestroyItem::RENDERPASS:
+					vkDestroyRenderPass(device, (VkRenderPass)item.handle, nullptr);
+					break;
+				case DestroyItem::FRAMEBUFFER:
+					vkDestroyFramebuffer(device, (VkFramebuffer)item.handle, nullptr);
 					break;
 				default:
 					break;
@@ -4475,8 +4247,6 @@ namespace wiGraphics
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd]->clear();
 
-		renderPass[cmd].reset();
-
 
 		active_commandlists.push_back(cmd);
 		return cmd;
@@ -4562,89 +4332,6 @@ namespace wiGraphics
 			viewports[i].maxDepth = pViewports[i].MaxDepth;
 		}
 		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, viewports);
-	}
-	void GraphicsDevice_Vulkan::BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource)
-	{
-		assert(NumViews <= 8);
-		for (UINT i = 0; i < NumViews; ++i)
-		{
-			if (subresource < 0 || ppRenderTargets[i]->subresourceRTVs.empty())
-			{
-				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->RTV;
-			}
-			else
-			{
-				assert(ppRenderTargets[i]->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid RTV subresource!");
-				renderPass[cmd].attachments[i] = (VkImageView)ppRenderTargets[i]->subresourceRTVs[subresource];
-			}
-
-			renderPass[cmd].attachmentFormats[i] = _ConvertFormat(ppRenderTargets[i]->desc.Format);
-			renderPass[cmd].attachmentsExtents.width = ppRenderTargets[i]->desc.Width;
-			renderPass[cmd].attachmentsExtents.height = ppRenderTargets[i]->desc.Height;
-			renderPass[cmd].attachmentLayers = ppRenderTargets[i]->desc.ArraySize;
-		}
-		renderPass[cmd].colorAttachmentCount = NumViews;
-		renderPass[cmd].attachmentCount = NumViews;
-
-		if (depthStencilTexture != nullptr)
-		{
-			if (subresource < 0 || depthStencilTexture->subresourceDSVs.empty())
-			{
-				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->DSV;
-			}
-			else
-			{
-				assert(depthStencilTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid DSV subresource!");
-				renderPass[cmd].attachments[renderPass[cmd].attachmentCount] = (VkImageView)depthStencilTexture->subresourceDSVs[subresource];
-			}
-			renderPass[cmd].attachmentFormats[renderPass[cmd].attachmentCount] = _ConvertFormat(depthStencilTexture->desc.Format);
-			renderPass[cmd].attachmentCount++;
-
-			renderPass[cmd].attachmentsExtents.width = depthStencilTexture->desc.Width;
-			renderPass[cmd].attachmentsExtents.height = depthStencilTexture->desc.Height;
-			renderPass[cmd].attachmentLayers = depthStencilTexture->desc.ArraySize;
-		}
-
-		renderPass[cmd].dirty = true;
-
-	}
-	void GraphicsDevice_Vulkan::ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource)
-	{
-		RenderPassManager::ClearRequest clear;
-
-		if (subresource < 0 || pTexture->subresourceRTVs.empty())
-		{
-			clear.attachment = (VkImageView)pTexture->RTV;
-		}
-		else
-		{
-			assert(pTexture->subresourceRTVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
-			clear.attachment = (VkImageView)pTexture->subresourceRTVs[subresource];
-		}
-		clear.clearValue = { ColorRGBA[0], ColorRGBA[1], ColorRGBA[2], ColorRGBA[3] };
-
-		renderPass[cmd].clearRequests.push_back(clear);
-		renderPass[cmd].dirty = true;
-	}
-	void GraphicsDevice_Vulkan::ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource)
-	{
-		RenderPassManager::ClearRequest clear;
-
-		if (subresource < 0 || pTexture->subresourceDSVs.empty())
-		{
-			clear.attachment = (VkImageView)pTexture->DSV;
-		}
-		else
-		{
-			assert(pTexture->subresourceDSVs.size() > static_cast<size_t>(subresource) && "Invalid subresource!");
-			clear.attachment = (VkImageView)pTexture->subresourceDSVs[subresource];
-		}
-		clear.clearValue.depthStencil.depth = Depth;
-		clear.clearValue.depthStencil.stencil = Stencil;
-		clear.clearFlags = ClearFlags;
-
-		renderPass[cmd].clearRequests.push_back(clear);
-		renderPass[cmd].dirty = true;
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource)
 	{
@@ -4756,25 +4443,21 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::Draw(UINT vertexCount, UINT startVertexLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(UINT indexCount, UINT startIndexLocation, UINT baseVertexLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(UINT vertexCount, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstanced(UINT indexCount, UINT instanceCount, UINT startIndexLocation, UINT baseVertexLocation, UINT startInstanceLocation, CommandList cmd)
 	{
-		renderPass[cmd].validate(device, GetDirectCommandList(cmd));
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
@@ -4786,8 +4469,6 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
 	{
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
-
 		GetFrameResources().descriptors[cmd]->validate(cmd);
 		vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
@@ -4862,8 +4543,6 @@ namespace wiGraphics
 		else
 		{
 			// Contents will be transferred to device memory:
-
-			renderPass[cmd].disable(GetDirectCommandList(cmd));
 
 
 			// barrier to transfer:
@@ -5038,7 +4717,6 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::TransitionBarrier(const GPUResource *const* resources, UINT NumBarriers, RESOURCE_STATES stateBefore, RESOURCE_STATES stateAfter, CommandList cmd)
 	{
-		renderPass[cmd].disable(GetDirectCommandList(cmd));
 
 		//if (stateBefore == RESOURCE_STATE_UNORDERED_ACCESS && stateAfter == RESOURCE_STATE_GENERIC_READ)
 		//{

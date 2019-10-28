@@ -125,9 +125,6 @@ namespace wiGraphics
 		virtual void EndRenderPass(CommandList cmd) = 0;
 		virtual void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) = 0;
-		virtual void BindRenderTargets(UINT NumViews, const Texture2D* const * ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) = 0;
-		virtual void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) = 0;
-		virtual void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) = 0;
 		virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;
 		virtual void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) = 0;
 		virtual void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;

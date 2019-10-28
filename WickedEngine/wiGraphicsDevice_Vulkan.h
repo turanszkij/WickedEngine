@@ -82,45 +82,6 @@ namespace wiGraphics
 		VkSampler		nullSampler;
 
 
-		struct RenderPassManager
-		{
-			bool dirty = true;
-
-			uint32_t attachmentCount = 0;
-			uint32_t colorAttachmentCount = 0;
-			VkFormat attachmentFormats[9] = {};
-			VkImageView attachments[9] = {};
-			VkExtent2D attachmentsExtents = {};
-			uint32_t attachmentLayers = 0;
-			VkClearValue clearColor[9] = {};
-
-			struct RenderPassAndFramebuffer
-			{
-				VkRenderPass renderPass = VK_NULL_HANDLE;
-				VkFramebuffer frameBuffer = VK_NULL_HANDLE;
-			};
-			// RTFormats hash <-> renderpass+framebuffer
-			std::unordered_map<uint64_t, RenderPassAndFramebuffer> renderPassCollection;
-			size_t activeRTHash = 0;
-
-			VkRenderPass overrideRenderPass = VK_NULL_HANDLE;
-			VkFramebuffer overrideFramebuffer = VK_NULL_HANDLE;
-
-			struct ClearRequest
-			{
-				VkImageView attachment = VK_NULL_HANDLE;
-				VkClearValue clearValue = {};
-				uint32_t clearFlags = 0;
-			};
-			std::vector<ClearRequest> clearRequests;
-
-			void reset();
-			void disable(VkCommandBuffer commandBuffer);
-			void validate(VkDevice device, VkCommandBuffer commandBuffer);
-		};
-		RenderPassManager renderPass[COMMANDLIST_COUNT];
-
-
 		struct FrameResources
 		{
 			VkFence frameFence;
@@ -254,6 +215,8 @@ namespace wiGraphics
 				BUFFERVIEW,
 				SAMPLER,
 				PIPELINE,
+				RENDERPASS,
+				FRAMEBUFFER,
 			} type;
 			uint64_t frame;
 			wiCPUHandle handle;
@@ -333,9 +296,6 @@ namespace wiGraphics
 		void EndRenderPass(CommandList cmd) override;
 		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
-		void BindRenderTargets(UINT NumViews, const Texture2D* const *ppRenderTargets, const Texture2D* depthStencilTexture, CommandList cmd, int subresource = -1) override;
-		void ClearRenderTarget(const Texture* pTexture, const FLOAT ColorRGBA[4], CommandList cmd, int subresource = -1) override;
-		void ClearDepthStencil(const Texture2D* pTexture, UINT ClearFlags, FLOAT Depth, UINT8 Stencil, CommandList cmd, int subresource = -1) override;
 		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
 		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, UINT slot, UINT count, CommandList cmd) override;
 		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;
