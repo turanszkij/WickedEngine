@@ -133,6 +133,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->Initialize();
 	renderPath->Load();
+	renderPath->Update(0);
 
 	materialWnd.reset(new MaterialWindow(&GetGUI()));
 	postprocessWnd.reset(new PostprocessWindow(&GetGUI(), renderPath));

@@ -11,8 +11,6 @@ using namespace wiGraphics;
 
 void RenderPath3D::ResizeBuffers()
 {
-	RenderPath2D::ResizeBuffers();
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
@@ -289,6 +287,8 @@ void RenderPath3D::ResizeBuffers()
 
 		device->CreateRenderPass(&desc, &renderpass_waterripples);
 	}
+
+	RenderPath2D::ResizeBuffers();
 }
 
 void RenderPath3D::Update(float dt)
