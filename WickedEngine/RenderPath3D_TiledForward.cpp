@@ -33,7 +33,7 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			device->BeginRenderPass(&renderpass_depthprepass, cmd);
+			device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -42,7 +42,7 @@ void RenderPath3D_TiledForward::Render() const
 
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true);
 
-			device->EndRenderPass(cmd);
+			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range);
 		}
@@ -79,7 +79,7 @@ void RenderPath3D_TiledForward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			device->BeginRenderPass(&renderpass_main, cmd);
+			device->RenderPassBegin(&renderpass_main, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -92,7 +92,7 @@ void RenderPath3D_TiledForward::Render() const
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_TILEDFORWARD, true, true);
 			wiRenderer::DrawSky(cmd);
 
-			device->EndRenderPass(cmd);
+			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}

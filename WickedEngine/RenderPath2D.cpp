@@ -46,8 +46,8 @@ void RenderPath2D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,&rtStenciled,-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_LOAD,dsv,-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtStenciled,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,dsv,-1 };
 
 		device->CreateRenderPass(&desc, &renderpass_stenciled);
 
@@ -56,12 +56,12 @@ void RenderPath2D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,&rtFinal,-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&rtFinal,-1 };
 		
 		if(dsv != nullptr)
 		{
 			desc.numAttachments = 2;
-			desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_LOAD,dsv,-1 };
+			desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,dsv,-1 };
 		}
 
 		device->CreateRenderPass(&desc, &renderpass_final);
@@ -145,7 +145,7 @@ void RenderPath2D::Render() const
 	//	so we might need to render stencil sprites to separate render target that matches internal resolution!
 	if (GetDepthStencil() != nullptr && wiRenderer::GetResolutionScale() != 1.0f)
 	{
-		device->BeginRenderPass(&renderpass_stenciled, cmd);
+		device->RenderPassBegin(&renderpass_stenciled, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)rtStenciled.GetDesc().Width;
@@ -165,10 +165,10 @@ void RenderPath2D::Render() const
 		}
 		wiRenderer::GetDevice()->EventEnd(cmd);
 
-		device->EndRenderPass(cmd);
+		device->RenderPassEnd(cmd);
 	}
 
-	device->BeginRenderPass(&renderpass_final, cmd);
+	device->RenderPassBegin(&renderpass_final, cmd);
 
 	ViewPort vp;
 	vp.Width = (float)rtFinal.GetDesc().Width;
@@ -221,7 +221,7 @@ void RenderPath2D::Render() const
 
 	GetGUI().Render(cmd);
 
-	device->EndRenderPass(cmd);
+	device->RenderPassEnd(cmd);
 
 	RenderPath::Render();
 }

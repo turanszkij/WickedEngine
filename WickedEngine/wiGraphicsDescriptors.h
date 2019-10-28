@@ -269,11 +269,6 @@ namespace wiGraphics
 	};
 
 	// Flags ////////////////////////////////////////////
-	enum CLEAR_FLAG
-	{
-		CLEAR_DEPTH = 0x1L,
-		CLEAR_STENCIL = 0x2L,
-	};
 	enum BIND_FLAG
 	{
 		BIND_VERTEX_BUFFER = 0x1L,
@@ -486,14 +481,19 @@ namespace wiGraphics
 			RENDERTARGET,
 			DEPTH_STENCIL,
 		} type = RENDERTARGET;
-		enum OPERATION
+		enum LOAD_OPERATION
 		{
-			OP_LOAD,
-			OP_CLEAR,
-			OP_DONTCARE,
-		} op = OP_LOAD;
+			LOADOP_LOAD,
+			LOADOP_CLEAR,
+			LOADOP_DONTCARE,
+		} loadop = LOADOP_LOAD;
 		const Texture2D* texture = nullptr;
 		int subresource = -1;
+		enum STORE_OPERATION
+		{
+			STOREOP_STORE,
+			STOREOP_DONTCARE,
+		} storeop = STOREOP_STORE;
 	};
 	struct RenderPassDesc
 	{

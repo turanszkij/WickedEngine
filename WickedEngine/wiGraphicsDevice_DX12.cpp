@@ -3187,7 +3187,7 @@ namespace wiGraphics
 	}
 
 
-	void GraphicsDevice_DX12::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
+	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
 		const RenderPassDesc& desc = renderpass->GetDesc();
 
@@ -3212,7 +3212,7 @@ namespace wiGraphics
 					RTVs[rt_count] = ToNativeHandle(texture->subresourceRTVs[subresource]);
 				}
 
-				if (attachment.op == RenderPassAttachment::OP_CLEAR)
+				if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
 				{
 					GetDirectCommandList(cmd)->ClearRenderTargetView(RTVs[rt_count], texture->desc.clear.color, 0, nullptr);
 				}
@@ -3231,7 +3231,7 @@ namespace wiGraphics
 					DSV = &ToNativeHandle(texture->subresourceDSVs[subresource]);
 				}
 
-				if (attachment.op == RenderPassAttachment::OP_CLEAR)
+				if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
 				{
 					UINT _flags = D3D12_CLEAR_FLAG_DEPTH;
 					if (IsFormatStencilSupport(texture->desc.Format))
@@ -3243,7 +3243,7 @@ namespace wiGraphics
 
 		GetDirectCommandList(cmd)->OMSetRenderTargets(rt_count, RTVs, FALSE, DSV);
 	}
-	void GraphicsDevice_DX12::EndRenderPass(CommandList cmd)
+	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
 		GetDirectCommandList(cmd)->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
 	}

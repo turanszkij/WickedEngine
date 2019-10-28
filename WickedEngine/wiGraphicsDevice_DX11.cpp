@@ -2640,7 +2640,7 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 }
 
 
-void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
+void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 {
 	const RenderPassDesc& desc = renderpass->GetDesc();
 
@@ -2665,7 +2665,7 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 				RTVs[rt_count] = (ID3D11RenderTargetView*)texture->subresourceRTVs[subresource];
 			}
 
-			if (attachment.op == RenderPassAttachment::OP_CLEAR)
+			if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
 			{
 				deviceContexts[cmd]->ClearRenderTargetView(RTVs[rt_count], texture->desc.clear.color);
 			}
@@ -2684,7 +2684,7 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 				DSV = (ID3D11DepthStencilView*)texture->subresourceDSVs[subresource];
 			}
 
-			if (attachment.op == RenderPassAttachment::OP_CLEAR)
+			if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
 			{
 				UINT _flags = D3D11_CLEAR_DEPTH;
 				if (IsFormatStencilSupport(texture->desc.Format))
@@ -2710,7 +2710,7 @@ void GraphicsDevice_DX11::BeginRenderPass(const RenderPass* renderpass, CommandL
 		deviceContexts[cmd]->OMSetRenderTargets(rt_count, RTVs, DSV);
 	}
 }
-void GraphicsDevice_DX11::EndRenderPass(CommandList cmd)
+void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
 {
 	deviceContexts[cmd]->OMSetRenderTargets(0, nullptr, nullptr);
 }

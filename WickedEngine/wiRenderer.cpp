@@ -2788,7 +2788,7 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_SSS];
 
 		desc.numRTs = 1;
-		desc.RTFormats[0] = RTFormat_hdr;
+		desc.RTFormats[0] = RTFormat_deferred_lightbuffer;
 		desc.DSFormat = DSFormat_full;
 
 		device->CreatePipelineState(&desc, &PSO_sss);
@@ -5016,12 +5016,12 @@ void SetShadowProps2D(int resolution, int count, int softShadowQuality)
 			RenderPassDesc renderpassdesc;
 
 			renderpassdesc.numAttachments = 1;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR,&shadowMapArray_2D, subresource_index };
+			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&shadowMapArray_2D, subresource_index };
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2D[subresource_index]);
 
 			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_LOAD,&shadowMapArray_2D, subresource_index };
-			renderpassdesc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_CLEAR,&shadowMapArray_Transparent, subresource_index };
+			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD,&shadowMapArray_2D, subresource_index };
+			renderpassdesc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR,&shadowMapArray_Transparent, subresource_index };
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadow2DTransparent[subresource_index]);
 		}
 	}
@@ -5066,7 +5066,7 @@ void SetShadowPropsCube(int resolution, int count)
 
 			RenderPassDesc renderpassdesc;
 			renderpassdesc.numAttachments = 1;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR,&shadowMapArray_Cube, subresource_index };
+			renderpassdesc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&shadowMapArray_Cube, subresource_index };
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_shadowCube[subresource_index]);
 		}
 	}
@@ -5188,17 +5188,17 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 							XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].getVP());
 							device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-							device->BeginRenderPass(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
+							device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index + cascade], cmd);
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
-							device->EndRenderPass(cmd);
+							device->RenderPassEnd(cmd);
 
 							// Transparent renderpass will always be started so that it is clear:
-							device->BeginRenderPass(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
+							device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index + cascade], cmd);
 							if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 							{
 								RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 							}
-							device->EndRenderPass(cmd);
+							device->RenderPassEnd(cmd);
 
 							GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 						}
@@ -5246,17 +5246,17 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.getVP());
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
-						device->BeginRenderPass(&renderpasses_shadow2D[light.shadowMap_index], cmd);
+						device->RenderPassBegin(&renderpasses_shadow2D[light.shadowMap_index], cmd);
 						RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
-						device->EndRenderPass(cmd);
+						device->RenderPassEnd(cmd);
 
 						// Transparent renderpass will always be started so that it is clear:
-						device->BeginRenderPass(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
+						device->RenderPassBegin(&renderpasses_shadow2DTransparent[light.shadowMap_index], cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
 							RenderMeshes(renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
-						device->EndRenderPass(cmd);
+						device->RenderPassEnd(cmd);
 
 						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -5321,9 +5321,9 @@ void DrawShadowmaps(const CameraComponent& camera, CommandList cmd, uint32_t lay
 						}
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
 
-						device->BeginRenderPass(&renderpasses_shadowCube[light.shadowMap_index], cmd);
+						device->RenderPassBegin(&renderpasses_shadowCube[light.shadowMap_index], cmd);
 						RenderMeshes(renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_OPAQUE, cmd);
-						device->EndRenderPass(cmd);
+						device->RenderPassEnd(cmd);
 
 						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
@@ -6373,8 +6373,8 @@ void RefreshEnvProbes(CommandList cmd)
 
 			RenderPassDesc renderpassdesc;
 			renderpassdesc.numAttachments = 2;
-			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_DONTCARE,(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], subresource_index };
-			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR,&envrenderingDepthBuffer, -1 };
+			renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE,(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], subresource_index };
+			renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR,&envrenderingDepthBuffer, -1 };
 			device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
 		}
 		for (UINT i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]->GetDesc().MipLevels; ++i)
@@ -6413,7 +6413,7 @@ void RefreshEnvProbes(CommandList cmd)
 		const EnvironmentProbeComponent& probe = scene.probes[probeIndex];
 		Entity entity = scene.probes.GetEntity(probeIndex);
 
-		device->BeginRenderPass(&renderpasses_envmap[probe.textureIndex], cmd);
+		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
 
 		const XMVECTOR probePos = XMLoadFloat3(&probe.position);
 		const SHCAM cameras[] = {
@@ -6495,7 +6495,7 @@ void RefreshEnvProbes(CommandList cmd)
 			device->Draw(240, 0, cmd);
 		}
 
-		device->EndRenderPass(cmd);
+		device->RenderPassEnd(cmd);
 
 		GenerateMipChain(*(Texture2D*)textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, probe.textureIndex);
 
@@ -6617,8 +6617,8 @@ void RefreshImpostors(CommandList cmd)
 
 				RenderPassDesc renderpassdesc;
 				renderpassdesc.numAttachments = 2;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,(Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
-				renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_CLEAR,&depthStencil, subresource_index };
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,(Texture2D*)textures[TEXTYPE_2D_IMPOSTORARRAY], subresource_index };
+				renderpassdesc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_CLEAR,&depthStencil, subresource_index };
 				hr = device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
 			}
 		}
@@ -6694,7 +6694,7 @@ void RefreshImpostors(CommandList cmd)
 				for (size_t i = 0; i < impostorCaptureAngles; ++i)
 				{
 					int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-					device->BeginRenderPass(&renderpasses_impostor[textureIndex], cmd);
+					device->RenderPassBegin(&renderpasses_impostor[textureIndex], cmd);
 
 					ViewPort viewPort;
 					viewPort.Height = (float)textureDim;
@@ -6742,7 +6742,7 @@ void RefreshImpostors(CommandList cmd)
 						device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 					}
 
-					device->EndRenderPass(cmd);
+					device->RenderPassEnd(cmd);
 				}
 			}
 
@@ -6873,9 +6873,9 @@ void VoxelRadiance(CommandList cmd)
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);
 
-		device->BeginRenderPass(&renderpass_voxelize, cmd);
+		device->RenderPassBegin(&renderpass_voxelize, cmd);
 		RenderMeshes(renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd);
-		device->EndRenderPass(cmd);
+		device->RenderPassEnd(cmd);
 
 		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 
@@ -7970,12 +7970,12 @@ void ManageLightmapAtlas()
 				RenderPassDesc renderpassdesc;
 
 				renderpassdesc.numAttachments = 1;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,object.lightmap.get(),-1 };
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,object.lightmap.get(),-1 };
 				object.renderpass_lightmap_clear = std::make_unique<RenderPass>();
 				hr = device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_clear.get());
 
 				renderpassdesc.numAttachments = 1;
-				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_LOAD,object.lightmap.get(),-1 };
+				renderpassdesc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,object.lightmap.get(),-1 };
 				object.renderpass_lightmap_accumulate = std::make_unique<RenderPass>();
 				hr = device->CreateRenderPass(&renderpassdesc, object.renderpass_lightmap_accumulate.get());
 			}
@@ -8095,11 +8095,11 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 
 	if (lightmapIterationCount == 0)
 	{
-		device->BeginRenderPass(object.renderpass_lightmap_clear.get(), cmd);
+		device->RenderPassBegin(object.renderpass_lightmap_clear.get(), cmd);
 	}
 	else
 	{
-		device->BeginRenderPass(object.renderpass_lightmap_accumulate.get(), cmd);
+		device->RenderPassBegin(object.renderpass_lightmap_accumulate.get(), cmd);
 	}
 
 	ViewPort vp;
@@ -8152,7 +8152,7 @@ void RenderObjectLightMap(const ObjectComponent& object, CommandList cmd)
 	device->BindPipelineState(&PSO_renderlightmap, cmd);
 	device->DrawIndexedInstanced((UINT)mesh.indices.size(), 1, 0, 0, 0, cmd);
 
-	device->EndRenderPass(cmd);
+	device->RenderPassEnd(cmd);
 
 	device->EventEnd(cmd);
 }
@@ -8919,7 +8919,7 @@ void Postprocess_SSS(
 
 		const TextureDesc& desc = rt_write->GetDesc().attachments[0].texture->GetDesc();
 
-		device->BeginRenderPass(rt_write, cmd);
+		device->RenderPassBegin(rt_write, cmd);
 
 		ViewPort vp;
 		vp.Width = (float)desc.Width;
@@ -8950,7 +8950,7 @@ void Postprocess_SSS(
 
 		device->Draw(3, 0, cmd);
 
-		device->EndRenderPass(cmd);
+		device->RenderPassEnd(cmd);
 
 		if (i == 0)
 		{

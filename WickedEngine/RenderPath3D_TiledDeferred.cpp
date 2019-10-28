@@ -34,7 +34,7 @@ void RenderPath3D_TiledDeferred::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			device->BeginRenderPass(&renderpass_gbuffer, cmd);
+			device->RenderPassBegin(&renderpass_gbuffer, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -44,7 +44,7 @@ void RenderPath3D_TiledDeferred::Render() const
 			device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEFERRED, getHairParticlesEnabled(), true);
 
-			device->EndRenderPass(cmd);
+			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}

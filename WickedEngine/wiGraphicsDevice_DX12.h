@@ -262,8 +262,8 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
-		void BeginRenderPass(const RenderPass* renderpass, CommandList cmd) override;
-		void EndRenderPass(CommandList cmd) override;
+		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
+		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) override;
 		void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) override;

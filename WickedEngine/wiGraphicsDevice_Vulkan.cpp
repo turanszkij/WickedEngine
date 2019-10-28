@@ -3404,76 +3404,87 @@ namespace wiGraphics
 
 		const RenderPassDesc& desc = renderpass->desc;
 
-		uint32_t attachmentCount = 0;
+		uint32_t validAttachmentCount = 0;
 		for (UINT i = 0; i < renderpass->desc.numAttachments; ++i)
 		{
 			const Texture2D* texture = desc.attachments[i].texture;
 			const TextureDesc& texdesc = texture->desc;
 			int subresource = desc.attachments[i].subresource;
 
-			attachmentDescriptions[attachmentCount].format = _ConvertFormat(texdesc.Format);
+			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
 			switch (texdesc.SampleDesc.Count)
 			{
 			case 2:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_2_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_2_BIT;
 				break;
 			case 4:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_4_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_4_BIT;
 				break;
 			case 8:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_8_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_8_BIT;
 				break;
 			case 16:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_16_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_16_BIT;
 				break;
 			case 32:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_32_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_32_BIT;
 				break;
 			case 64:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_64_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_64_BIT;
 				break;
 			default:
-				attachmentDescriptions[attachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
+				attachmentDescriptions[validAttachmentCount].samples = VK_SAMPLE_COUNT_1_BIT;
 				break;
 			}
 
-			switch (desc.attachments[i].op)
+			switch (desc.attachments[i].loadop)
 			{
 			default:
-			case RenderPassAttachment::OP_LOAD:
-				attachmentDescriptions[attachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+			case RenderPassAttachment::LOADOP_LOAD:
+				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				break;
-			case RenderPassAttachment::OP_CLEAR:
-				attachmentDescriptions[attachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+			case RenderPassAttachment::LOADOP_CLEAR:
+				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				break;
-			case RenderPassAttachment::OP_DONTCARE:
-				attachmentDescriptions[attachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			case RenderPassAttachment::LOADOP_DONTCARE:
+				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				break;
 			}
-			attachmentDescriptions[attachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			attachmentDescriptions[attachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			attachmentDescriptions[attachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			attachmentDescriptions[attachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+			switch (desc.attachments[i].storeop)
+			{
+			default:
+			case RenderPassAttachment::STOREOP_STORE:
+				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				break;
+			case RenderPassAttachment::STOREOP_DONTCARE:
+				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				break;
+			}
+
+			attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			attachmentDescriptions[validAttachmentCount].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			attachmentDescriptions[validAttachmentCount].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 			if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
 			{
 				if (subresource < 0 || texture->subresourceRTVs.empty())
 				{
-					attachments[attachmentCount] = (VkImageView)texture->RTV;
+					attachments[validAttachmentCount] = (VkImageView)texture->RTV;
 				}
 				else
 				{
 					assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
-					attachments[attachmentCount] = (VkImageView)texture->subresourceRTVs[subresource];
+					attachments[validAttachmentCount] = (VkImageView)texture->subresourceRTVs[subresource];
 				}
-				if (attachments[attachmentCount] == VK_NULL_HANDLE)
+				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
 				{
 					continue;
 				}
 
-				colorAttachmentRefs[attachmentCount].attachment = attachmentCount;
-				colorAttachmentRefs[attachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				colorAttachmentRefs[validAttachmentCount].attachment = validAttachmentCount;
+				colorAttachmentRefs[validAttachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				subpass.colorAttachmentCount++;
 				subpass.pColorAttachments = colorAttachmentRefs;
 			}
@@ -3481,37 +3492,47 @@ namespace wiGraphics
 			{
 				if (subresource < 0 || texture->subresourceDSVs.empty())
 				{
-					attachments[attachmentCount] = (VkImageView)texture->DSV;
+					attachments[validAttachmentCount] = (VkImageView)texture->DSV;
 				}
 				else
 				{
 					assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
-					attachments[attachmentCount] = (VkImageView)texture->subresourceDSVs[subresource];
+					attachments[validAttachmentCount] = (VkImageView)texture->subresourceDSVs[subresource];
 				}
-				if (attachments[attachmentCount] == VK_NULL_HANDLE)
+				if (attachments[validAttachmentCount] == VK_NULL_HANDLE)
 				{
 					continue;
 				}
 
 				if (IsFormatStencilSupport(texdesc.Format))
 				{
-					switch (desc.attachments[i].op)
+					switch (desc.attachments[i].loadop)
 					{
 					default:
-					case RenderPassAttachment::OP_LOAD:
-						attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+					case RenderPassAttachment::LOADOP_LOAD:
+						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 						break;
-					case RenderPassAttachment::OP_CLEAR:
-						attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+					case RenderPassAttachment::LOADOP_CLEAR:
+						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 						break;
-					case RenderPassAttachment::OP_DONTCARE:
-						attachmentDescriptions[attachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+					case RenderPassAttachment::LOADOP_DONTCARE:
+						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 						break;
 					}
-					attachmentDescriptions[attachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+					switch (desc.attachments[i].storeop)
+					{
+					default:
+					case RenderPassAttachment::STOREOP_STORE:
+						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+						break;
+					case RenderPassAttachment::STOREOP_DONTCARE:
+						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+						break;
+					}
 				}
 
-				depthAttachmentRef.attachment = attachmentCount;
+				depthAttachmentRef.attachment = validAttachmentCount;
 				depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 			}
@@ -3520,9 +3541,9 @@ namespace wiGraphics
 				assert(0);
 			}
 
-			attachmentCount++;
+			validAttachmentCount++;
 		}
-		renderpass->desc.numAttachments = attachmentCount;
+		renderpass->desc.numAttachments = validAttachmentCount;
 
 		VkRenderPassCreateInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -3547,7 +3568,7 @@ namespace wiGraphics
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
 			framebufferInfo.width = texdesc.Width;
 			framebufferInfo.height = texdesc.Height;
-			framebufferInfo.layers = texdesc.ArraySize;
+			framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
 		}
 
 		VkFramebuffer framebuffer_handle = VK_NULL_HANDLE;
@@ -4247,7 +4268,6 @@ namespace wiGraphics
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd]->clear();
 
-
 		active_commandlists.push_back(cmd);
 		return cmd;
 	}
@@ -4258,7 +4278,7 @@ namespace wiGraphics
 	}
 
 
-	void GraphicsDevice_Vulkan::BeginRenderPass(const RenderPass* renderpass, CommandList cmd)
+	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -4302,7 +4322,7 @@ namespace wiGraphics
 
 		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
-	void GraphicsDevice_Vulkan::EndRenderPass(CommandList cmd)
+	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
 		vkCmdEndRenderPass(GetDirectCommandList(cmd));
 	}
@@ -4543,7 +4563,6 @@ namespace wiGraphics
 		else
 		{
 			// Contents will be transferred to device memory:
-
 
 			// barrier to transfer:
 

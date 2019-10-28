@@ -42,7 +42,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_CLEAR,&traceResult,-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_CLEAR,&traceResult,-1 };
 
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
@@ -118,7 +118,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
 		{
-			device->BeginRenderPass(&renderpass_debugbvh, cmd);
+			device->RenderPassBegin(&renderpass_debugbvh, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)traceResult.GetDesc().Width;
@@ -128,7 +128,7 @@ void RenderPath3D_PathTracing::Render() const
 			wiRenderer::UpdateCameraCB(wiRenderer::GetCamera(), cmd);
 			wiRenderer::RayTraceSceneBVH(cmd);
 
-			device->EndRenderPass(cmd);
+			device->RenderPassEnd(cmd);
 		}
 		else
 		{

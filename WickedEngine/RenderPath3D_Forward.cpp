@@ -54,27 +54,27 @@ void RenderPath3D_Forward::ResizeBuffers()
 		RenderPassDesc desc;
 
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_CLEAR, &depthBuffer, -1 };
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_CLEAR, &depthBuffer, -1 };
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.numAttachments = 3;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_DONTCARE, &rtMain[0], -1 };
-		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::OP_CLEAR, &rtMain[1], -1 };
-		desc.attachments[2] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::OP_LOAD, &depthBuffer, -1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_DONTCARE, &rtMain[0], -1 };
+		desc.attachments[1] = { RenderPassAttachment::RENDERTARGET, RenderPassAttachment::LOADOP_CLEAR, &rtMain[1], -1 };
+		desc.attachments[2] = { RenderPassAttachment::DEPTH_STENCIL, RenderPassAttachment::LOADOP_LOAD, &depthBuffer, -1 };
 		device->CreateRenderPass(&desc, &renderpass_main);
 	}
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_LOAD,&rtMain[0],-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::OP_LOAD,&depthBuffer,-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtMain[0],-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
 
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::OP_LOAD,GetSceneRT_Read(0),-1 };
+		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,GetSceneRT_Read(0),-1 };
 
 		device->CreateRenderPass(&desc, &renderpass_bloom);
 	}
@@ -106,7 +106,7 @@ void RenderPath3D_Forward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			device->BeginRenderPass(&renderpass_depthprepass, cmd);
+			device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -115,7 +115,7 @@ void RenderPath3D_Forward::Render() const
 
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_DEPTHONLY, getHairParticlesEnabled(), true);
 
-			device->EndRenderPass(cmd);
+			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range);
 		}
@@ -150,7 +150,7 @@ void RenderPath3D_Forward::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
-			device->BeginRenderPass(&renderpass_main, cmd);
+			device->RenderPassBegin(&renderpass_main, cmd);
 
 			ViewPort vp;
 			vp.Width = (float)depthBuffer.GetDesc().Width;
@@ -163,7 +163,7 @@ void RenderPath3D_Forward::Render() const
 			wiRenderer::DrawScene(wiRenderer::GetCamera(), getTessellationEnabled(), cmd, RENDERPASS_FORWARD, getHairParticlesEnabled(), true);
 			wiRenderer::DrawSky(cmd);
 
-			device->EndRenderPass(cmd);
+			device->RenderPassEnd(cmd);
 
 			wiProfiler::EndRange(range); // Opaque Scene
 		}

@@ -121,8 +121,8 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
-		virtual void BeginRenderPass(const RenderPass* renderpass, CommandList cmd) = 0;
-		virtual void EndRenderPass(CommandList cmd) = 0;
+		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
+		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(UINT NumViewports, const ViewPort *pViewports, CommandList cmd) = 0;
 		virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, UINT slot, CommandList cmd, int subresource = -1) = 0;
