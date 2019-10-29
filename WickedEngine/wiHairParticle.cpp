@@ -74,10 +74,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, simulationBuffer.get());
 			}
 
-			bd.Usage = USAGE_DYNAMIC;
+			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(HairParticleCB);
 			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
+			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = 0;
 			wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, cb.get());
 		}

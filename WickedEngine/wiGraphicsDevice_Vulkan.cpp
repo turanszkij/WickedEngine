@@ -4483,9 +4483,13 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd]->validate(cmd);
+		vkCmdDrawIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd]->validate(cmd);
+		vkCmdDrawIndexedIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ, CommandList cmd)
 	{
@@ -4494,6 +4498,8 @@ namespace wiGraphics
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, UINT args_offset, CommandList cmd)
 	{
+		GetFrameResources().descriptors[cmd]->validate(cmd);
+		vkCmdDispatchIndirect(GetDirectCommandList(cmd), (VkBuffer)args->resource, (VkDeviceSize)args_offset);
 	}
 	void GraphicsDevice_Vulkan::CopyTexture2D(const Texture2D* pDst, const Texture2D* pSrc, CommandList cmd)
 	{
