@@ -1815,7 +1815,7 @@ namespace wiGraphics
 			VkAttachmentDescription colorAttachment = {};
 			colorAttachment.format = swapChainImageFormat;
 			colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 			colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 			colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1920,12 +1920,10 @@ namespace wiGraphics
 			}
 		}
 
+		QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
 		// Create resources for copy (transfer) queue:
 		{
-			QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface); // redundant!!
-
-
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.queueFamilyIndex = queueFamilyIndices.copyFamily;
@@ -1959,6 +1957,37 @@ namespace wiGraphics
 			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 			//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 			vkCreateFence(device, &fenceInfo, nullptr, &copyFence);
+		}
+
+
+		// Create resources for transition command buffer:
+		{
+			VkCommandPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+			poolInfo.flags = 0; // Optional
+
+			if (vkCreateCommandPool(device, &poolInfo, nullptr, &transitionCommandPool) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create command pool!");
+			}
+
+			VkCommandBufferAllocateInfo commandBufferInfo = {};
+			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			commandBufferInfo.commandBufferCount = 1;
+			commandBufferInfo.commandPool = transitionCommandPool;
+			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+			if (vkAllocateCommandBuffers(device, &commandBufferInfo, &transitionCommandBuffer) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create command buffers!");
+			}
+
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			VkResult res = vkBeginCommandBuffer(transitionCommandBuffer, &beginInfo);
+			assert(res == VK_SUCCESS);
 		}
 
 
@@ -2497,7 +2526,6 @@ namespace wiGraphics
 
 				vkCmdCopyBufferToImage(copyCommandBuffer, textureUploader->resource, (VkImage)pTexture2D->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
-
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -2507,17 +2535,42 @@ namespace wiGraphics
 				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
 				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
-				vkCmdPipelineBarrier(
-					copyCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
+				loadedimagetransitions.push_back(barrier);
 
 			}
+			copyQueueLock.unlock();
+		}
+		else
+		{
+			copyQueueLock.lock();
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = (VkImage)pTexture2D->resource;
+			barrier.oldLayout = imageInfo.initialLayout;
+			barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			if (pTexture2D->desc.BindFlags & BIND_DEPTH_STENCIL)
+			{
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if (IsFormatStencilSupport(pTexture2D->desc.Format))
+				{
+					barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+			}
+			else
+			{
+				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			}
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = pDesc->ArraySize;
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = pDesc->MipLevels;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			loadedimagetransitions.push_back(barrier);
+
 			copyQueueLock.unlock();
 		}
 
@@ -3990,23 +4043,6 @@ namespace wiGraphics
 		renderPassInfo.pClearValues = &clearColor;
 		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-
-		VkClearAttachment clearInfo = {};
-		clearInfo.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		clearInfo.clearValue = clearColor;
-		clearInfo.colorAttachment = 0;
-
-		VkClearRect rect = {};
-		rect.baseArrayLayer = 0;
-		rect.layerCount = 1;
-		rect.rect.offset.x = 0;
-		rect.rect.offset.y = 0;
-		rect.rect.extent.width = SCREENWIDTH;
-		rect.rect.extent.height = SCREENHEIGHT;
-
-		vkCmdClearAttachments(GetDirectCommandList(cmd), 1, &clearInfo, 1, &rect);
-
-
 	}
 	void GraphicsDevice_Vulkan::PresentEnd(CommandList cmd)
 	{
@@ -4020,44 +4056,88 @@ namespace wiGraphics
 		vkCmdEndRenderPass(GetDirectCommandList(cmd));
 
 
-		// Sync up copy queue:
+		// Sync up copy queue and transitions:
 		copyQueueLock.lock();
 		{
-			if (vkEndCommandBuffer(copyCommandBuffer) != VK_SUCCESS) {
-				throw std::runtime_error("failed to record copy command buffer!");
+			// Copies:
+			{
+				if (vkEndCommandBuffer(copyCommandBuffer) != VK_SUCCESS) {
+					throw std::runtime_error("failed to record copy command buffer!");
+				}
+
+				VkSubmitInfo submitInfo = {};
+				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &copyCommandBuffer;
+
+				if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
+					throw std::runtime_error("failed to submit copy command buffer!");
+				}
+
+				//vkQueueWaitIdle(copyQueue);
+
+				res = vkWaitForFences(device, 1, &copyFence, true, 0xFFFFFFFFFFFFFFFF);
+				assert(res == VK_SUCCESS);
+
+				res = vkResetFences(device, 1, &copyFence);
+				assert(res == VK_SUCCESS);
+
+
+				res = vkResetCommandPool(device, copyCommandPool, 0);
+				assert(res == VK_SUCCESS);
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
+				assert(res == VK_SUCCESS);
+
+				bufferUploader->clear();
+				textureUploader->clear();
 			}
 
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &copyCommandBuffer;
+			// Transitions:
+			{
+				for (auto& barrier : loadedimagetransitions)
+				{
+					vkCmdPipelineBarrier(
+						transitionCommandBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier
+					);
+				}
+				loadedimagetransitions.clear();
 
-			if (vkQueueSubmit(copyQueue, 1, &submitInfo, copyFence) != VK_SUCCESS) {
-				throw std::runtime_error("failed to submit copy command buffer!");
+				if (vkEndCommandBuffer(transitionCommandBuffer) != VK_SUCCESS) {
+					throw std::runtime_error("failed to record transition command buffer!");
+				}
+
+				VkSubmitInfo submitInfo = {};
+				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &transitionCommandBuffer;
+
+				if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, nullptr) != VK_SUCCESS) {
+					throw std::runtime_error("failed to submit copy command buffer!");
+				}
+
+				res = vkResetCommandPool(device, transitionCommandPool, 0);
+				assert(res == VK_SUCCESS);
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				res = vkBeginCommandBuffer(transitionCommandBuffer, &beginInfo);
+				assert(res == VK_SUCCESS);
 			}
-
-			//vkQueueWaitIdle(copyQueue);
-
-			res = vkWaitForFences(device, 1, &copyFence, true, 0xFFFFFFFFFFFFFFFF);
-			assert(res == VK_SUCCESS);
-
-			res = vkResetFences(device, 1, &copyFence);
-			assert(res == VK_SUCCESS);
-
-
-			res = vkResetCommandPool(device, copyCommandPool, 0);
-			assert(res == VK_SUCCESS);
-
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-			beginInfo.pInheritanceInfo = nullptr; // Optional
-
-			res = vkBeginCommandBuffer(copyCommandBuffer, &beginInfo);
-			assert(res == VK_SUCCESS);
-
-			bufferUploader->clear();
-			textureUploader->clear();
 		}
 		copyQueueLock.unlock();
 

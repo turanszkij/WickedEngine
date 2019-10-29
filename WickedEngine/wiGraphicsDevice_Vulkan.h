@@ -61,6 +61,10 @@ namespace wiGraphics
 		VkFence copyFence;
 		std::mutex copyQueueLock;
 
+		VkCommandPool transitionCommandPool;
+		VkCommandBuffer transitionCommandBuffer;
+		std::vector<VkImageMemoryBarrier> loadedimagetransitions;
+
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
 
