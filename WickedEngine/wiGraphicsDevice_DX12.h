@@ -14,6 +14,14 @@
 #include <atomic>
 #include <mutex>
 
+
+//#define DX12_REAL_RENDERPASS
+#ifdef DX12_REAL_RENDERPASS
+typedef ID3D12GraphicsCommandList4 DX12_CommandList;
+#else
+typedef ID3D12GraphicsCommandList DX12_CommandList;
+#endif // DX12_REAL_RENDERPASS
+
 namespace wiGraphics
 {
 
@@ -141,7 +149,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BACKBUFFER_COUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		inline ID3D12GraphicsCommandList* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[cmd]); }
+		inline DX12_CommandList* GetDirectCommandList(CommandList cmd) { return static_cast<DX12_CommandList*>(GetFrameResources().commandLists[cmd]); }
 
 		struct DynamicResourceState
 		{

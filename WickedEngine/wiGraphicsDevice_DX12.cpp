@@ -3134,8 +3134,8 @@ namespace wiGraphics
 			for (UINT fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&frames[fr].commandAllocators[cmd]);
-				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&frames[fr].commandLists[cmd]);
-				hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].commandLists[cmd])->Close();
+				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, __uuidof(DX12_CommandList), (void**)&frames[fr].commandLists[cmd]);
+				hr = static_cast<DX12_CommandList*>(frames[fr].commandLists[cmd])->Close();
 
 				frames[fr].descriptors[cmd] = new FrameResources::DescriptorTableFrameAllocator(this, 1024, 16);
 				frames[fr].resourceBuffer[cmd] = new FrameResources::ResourceFrameAllocator(device, 1024 * 1024 * 4);
@@ -3147,7 +3147,7 @@ namespace wiGraphics
 
 		HRESULT hr = GetFrameResources().commandAllocators[cmd]->Reset();
 		assert(SUCCEEDED(hr));
-		hr = static_cast<ID3D12GraphicsCommandList*>(GetFrameResources().commandLists[cmd])->Reset(GetFrameResources().commandAllocators[cmd], nullptr);
+		hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd], nullptr);
 		assert(SUCCEEDED(hr));
 
 
@@ -3190,6 +3190,118 @@ namespace wiGraphics
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
 		const RenderPassDesc& desc = renderpass->GetDesc();
+
+#ifdef DX12_REAL_RENDERPASS
+
+		UINT rt_count = 0;
+		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTVs[8] = {};
+		bool dsv = false;
+		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC DSV = {};
+		for (UINT i = 0; i < desc.numAttachments; ++i)
+		{
+			const RenderPassAttachment& attachment = desc.attachments[i];
+			const Texture2D* texture = attachment.texture;
+			int subresource = attachment.subresource;
+
+			D3D12_CLEAR_VALUE clear_value;
+			clear_value.Format = _ConvertFormat(texture->desc.Format);
+
+			if (attachment.type == RenderPassAttachment::RENDERTARGET)
+			{
+				if (subresource < 0 || texture->subresourceRTVs.empty())
+				{
+					RTVs[rt_count].cpuDescriptor = ToNativeHandle(texture->RTV);
+				}
+				else
+				{
+					assert(texture->subresourceRTVs.size() > size_t(subresource) && "Invalid RTV subresource!");
+					RTVs[rt_count].cpuDescriptor = ToNativeHandle(texture->subresourceRTVs[subresource]);
+				}
+
+				switch (attachment.loadop)
+				{
+				default:
+				case RenderPassAttachment::LOADOP_LOAD:
+					RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::LOADOP_CLEAR:
+					RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+					clear_value.Color[0] = texture->desc.clear.color[0];
+					clear_value.Color[1] = texture->desc.clear.color[1];
+					clear_value.Color[2] = texture->desc.clear.color[2];
+					clear_value.Color[3] = texture->desc.clear.color[3];
+					RTVs[rt_count].BeginningAccess.Clear.ClearValue = clear_value;
+					break;
+				case RenderPassAttachment::LOADOP_DONTCARE:
+					RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+
+				switch (attachment.storeop)
+				{
+				default:
+				case RenderPassAttachment::STOREOP_STORE:
+					RTVs[rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::STOREOP_DONTCARE:
+					RTVs[rt_count].EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+
+				rt_count++;
+			}
+			else
+			{
+				dsv = true;
+				if (subresource < 0 || texture->subresourceDSVs.empty())
+				{
+					DSV.cpuDescriptor = ToNativeHandle(texture->DSV);
+				}
+				else
+				{
+					assert(texture->subresourceDSVs.size() > size_t(subresource) && "Invalid DSV subresource!");
+					DSV.cpuDescriptor = ToNativeHandle(texture->subresourceDSVs[subresource]);
+				}
+
+				switch (attachment.loadop)
+				{
+				default:
+				case RenderPassAttachment::LOADOP_LOAD:
+					DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+					DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::LOADOP_CLEAR:
+					DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+					DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+					clear_value.DepthStencil.Depth = texture->desc.clear.depthstencil.depth;
+					clear_value.DepthStencil.Stencil = texture->desc.clear.depthstencil.stencil;
+					DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
+					DSV.StencilBeginningAccess.Clear.ClearValue = clear_value;
+					break;
+				case RenderPassAttachment::LOADOP_DONTCARE:
+					DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+					DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+
+				switch (attachment.storeop)
+				{
+				default:
+				case RenderPassAttachment::STOREOP_STORE:
+					DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+					DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+					break;
+				case RenderPassAttachment::STOREOP_DONTCARE:
+					DSV.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+					DSV.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+					break;
+				}
+			}
+		}
+
+		GetDirectCommandList(cmd)->BeginRenderPass(rt_count, RTVs, dsv ? &DSV : nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+
+#else
 
 		UINT rt_count = 0;
 		D3D12_CPU_DESCRIPTOR_HANDLE RTVs[8] = {};
@@ -3242,10 +3354,16 @@ namespace wiGraphics
 		}
 
 		GetDirectCommandList(cmd)->OMSetRenderTargets(rt_count, RTVs, FALSE, DSV);
+
+#endif // DX12_REAL_RENDERPASS
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
+#ifdef DX12_REAL_RENDERPASS
+		GetDirectCommandList(cmd)->EndRenderPass();
+#else
 		GetDirectCommandList(cmd)->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
+#endif // DX12_REAL_RENDERPASS
 	}
 	void GraphicsDevice_DX12::BindScissorRects(UINT numRects, const Rect* rects, CommandList cmd) {
 		assert(rects != nullptr);
