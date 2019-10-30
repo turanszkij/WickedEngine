@@ -2206,6 +2206,10 @@ namespace wiGraphics
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 		bufferInfo.flags = 0;
@@ -2530,10 +2534,6 @@ namespace wiGraphics
 				barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-
-				// transfer queue-ownership from copy to graphics:
-				barrier.srcQueueFamilyIndex = queueIndices.copyFamily;
-				barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
 				loadedimagetransitions.push_back(barrier);
 

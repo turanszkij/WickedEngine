@@ -148,7 +148,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 	// Indirect Execution buffer:
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_DRAWINDIRECT_ARGS;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
 	bd.ByteWidth = 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
@@ -648,6 +648,7 @@ void wiEmittedParticle::LoadShaders()
 		desc.dss = &depthStencilState;
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+		desc.DSFormat = wiRenderer::DSFormat_full;
 
 		desc.ps = pixelShader[SOFT];
 		device->CreatePipelineState(&desc, &PSO[i][SOFT]);
@@ -666,6 +667,7 @@ void wiEmittedParticle::LoadShaders()
 		desc.dss = &depthStencilState;
 		desc.numRTs = 1;
 		desc.RTFormats[0] = wiRenderer::RTFormat_hdr;
+		desc.DSFormat = wiRenderer::DSFormat_full;
 
 		device->CreatePipelineState(&desc, &PSO_wire);
 	}

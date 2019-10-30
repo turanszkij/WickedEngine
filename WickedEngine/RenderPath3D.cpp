@@ -238,7 +238,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		RenderPassDesc desc;
 		desc.numAttachments = 1;
-		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1 };
+		desc.attachments[0] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&smallDepth,-1,RenderPassAttachment::STOREOP_DONTCARE };
 
 		device->CreateRenderPass(&desc, &renderpass_occlusionculling);
 	}
@@ -582,6 +582,9 @@ void RenderPath3D::RenderTransparents(const RenderPass& renderpass_transparent, 
 	wiImageParams fx;
 	fx.enableFullScreen();
 	fx.enableHDR();
+
+	// Note set a stencilmode that always passes, because pipeline state with depthbuffer will be used in this render pass (shuts up warnings):
+	fx.stencilComp = STENCILMODE_ALWAYS;
 
 	if (getEmittedParticlesEnabled())
 	{

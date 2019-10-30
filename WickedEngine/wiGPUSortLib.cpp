@@ -29,7 +29,7 @@ namespace wiGPUSortLib
 		bd.Usage = USAGE_DEFAULT;
 		bd.CPUAccessFlags = 0;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		bd.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 

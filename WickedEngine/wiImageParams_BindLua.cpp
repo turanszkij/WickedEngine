@@ -453,6 +453,7 @@ void wiImageParams_BindLua::Bind()
 		wiLua::GetGlobal()->RunText("STENCILMODE_GREATER		= 4");
 		wiLua::GetGlobal()->RunText("STENCILMODE_GREATEREQUAL	= 5");
 		wiLua::GetGlobal()->RunText("STENCILMODE_NOT			= 6");
+		wiLua::GetGlobal()->RunText("STENCILMODE_ALWAYS			= 7");
 
 		wiLua::GetGlobal()->RunText("STENCILREFMODE_ENGINE		= 0");
 		wiLua::GetGlobal()->RunText("STENCILREFMODE_USER		= 1");

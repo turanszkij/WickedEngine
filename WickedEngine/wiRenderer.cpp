@@ -7611,7 +7611,7 @@ void RayTraceScene(
 		desc.ByteWidth = desc.StructureByteStride;
 		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_DRAWINDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		desc.Usage = USAGE_DEFAULT;
 		hr = device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		assert(SUCCEEDED(hr));

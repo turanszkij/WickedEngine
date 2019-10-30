@@ -67,7 +67,7 @@ void RenderPath3D_Forward::ResizeBuffers()
 		RenderPassDesc desc;
 		desc.numAttachments = 2;
 		desc.attachments[0] = { RenderPassAttachment::RENDERTARGET,RenderPassAttachment::LOADOP_LOAD,&rtMain[0],-1 };
-		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1 };
+		desc.attachments[1] = { RenderPassAttachment::DEPTH_STENCIL,RenderPassAttachment::LOADOP_LOAD,&depthBuffer,-1,RenderPassAttachment::STOREOP_DONTCARE };
 
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
